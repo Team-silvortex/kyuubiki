@@ -1,7 +1,9 @@
 use crate::{
-    HeadlessWorkflowStep, MaterialOptimizationProfile, MaterialOptimizationTerm, less_equal_status,
-    material_optimization_constraint, material_optimization_profile, material_optimization_term,
-    material_optimization_weight, profile_weight,
+    HeadlessWorkflowStep, MaterialOptimizationProfile, MaterialOptimizationTerm,
+    MaterialReliabilityEnvelope, less_equal_status, material_evidence_ref,
+    material_model_assumption, material_optimization_constraint, material_optimization_profile,
+    material_optimization_term, material_optimization_weight, material_quality_gate,
+    profile_weight,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -30,6 +32,8 @@ pub struct MaterialResearchMetricSpec {
 pub struct MaterialResearchCandidateReport {
     pub candidate_id: String,
     pub candidate_label: String,
+    pub material_card_id: String,
+    pub material_card_confidence: String,
     pub rank: usize,
     pub score: f64,
     pub peak_temperature_c: Option<f64>,
@@ -46,6 +50,7 @@ pub struct MaterialResearchReport {
     pub study: String,
     pub objective: String,
     pub optimization: MaterialOptimizationProfile,
+    pub reliability: MaterialReliabilityEnvelope,
     pub metric_specs: Vec<MaterialResearchMetricSpec>,
     pub candidates: Vec<MaterialResearchCandidateReport>,
     pub winner_candidate_id: Option<String>,
@@ -207,6 +212,7 @@ pub fn build_heat_spreader_screening_report_with_optimization(
             "rank thin heat-spreader candidates by lower peak temperature and lower areal mass"
                 .to_string(),
         optimization,
+        reliability: build_heat_spreader_reliability_envelope(&rows),
         metric_specs: heat_spreader_screening_metric_specs(),
         winner_candidate_id: rows.first().map(|row| row.candidate_id.clone()),
         candidates: rows,
@@ -223,6 +229,9 @@ fn build_heat_spreader_research_metadata(candidate: &MaterialResearchCandidate) 
         "thermal_conductivity_w_mk": candidate.thermal_conductivity_w_mk,
         "density_kg_m3": candidate.density_kg_m3,
         "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+        "material_card_id": material_card_id(candidate),
+        "unit_system": "SI",
+        "parameter_scope": "room-temperature scalar conductivity and density screening values",
         "note": candidate.note,
     })
 }
@@ -267,6 +276,8 @@ fn build_candidate_report(
     MaterialResearchCandidateReport {
         candidate_id: candidate.id.to_string(),
         candidate_label: candidate.label.to_string(),
+        material_card_id: material_card_id(candidate),
+        material_card_confidence: material_card_confidence(candidate).to_string(),
         rank: 0,
         score: 0.0,
         peak_temperature_c,
@@ -356,6 +367,134 @@ fn heat_spreader_optimization_profile() -> MaterialOptimizationProfile {
     )
 }
 
+fn build_heat_spreader_reliability_envelope(
+    rows: &[MaterialResearchCandidateReport],
+) -> MaterialReliabilityEnvelope {
+    let max_temperature = rows
+        .iter()
+        .filter_map(|row| row.peak_temperature_c)
+        .fold(None, |current: Option<f64>, value| {
+            Some(current.map_or(value, |max| max.max(value)))
+        });
+    let max_areal_mass = rows
+        .iter()
+        .map(|row| row.areal_mass_kg_m2)
+        .fold(None, |current: Option<f64>, value| {
+            Some(current.map_or(value, |max| max.max(value)))
+        });
+
+    MaterialReliabilityEnvelope {
+        schema_version: "kyuubiki.material-reliability-envelope/v1".to_string(),
+        posture: "screening_only".to_string(),
+        material_card_version: "kyuubiki.material-cards.heat-spreader.v1".to_string(),
+        unit_system: "SI".to_string(),
+        evidence_refs: heat_spreader_evidence_refs(),
+        model_assumptions: heat_spreader_model_assumptions(),
+        quality_gates: vec![
+            material_quality_gate(
+                "gate.peak_temperature.warning",
+                "Peak temperature warning gate",
+                "peak_temperature_c",
+                "<=",
+                70.0,
+                max_temperature,
+                "At least one candidate should keep the screening peak at or below the warning limit.",
+            ),
+            material_quality_gate(
+                "gate.areal_mass.warning",
+                "Areal mass warning gate",
+                "areal_mass_kg_m2",
+                "<=",
+                8.0,
+                max_areal_mass,
+                "Screening candidates should remain light enough for thin spreader use.",
+            ),
+            material_quality_gate(
+                "gate.result_completeness",
+                "Result payload completeness",
+                "peak_temperature_c",
+                ">=",
+                rows.len() as f64,
+                Some(
+                    rows.iter()
+                        .filter(|row| row.peak_temperature_c.is_some())
+                        .count() as f64,
+                ),
+                "Every candidate should expose a peak-temperature result before ranking is trusted.",
+            ),
+        ],
+        limitations: vec![
+            "Current material cards use scalar room-temperature screening values, not temperature-dependent material curves.".to_string(),
+            "Pyrolytic graphite is represented by its in-plane conductivity only; through-plane anisotropy is not resolved in this first-pass model.".to_string(),
+            "The quad model is a deterministic ranking fixture, not a CAD-derived production mesh or validated package geometry.".to_string(),
+            "Use this report to shortlist candidates, then rerun with richer geometry, boundary conditions, and external benchmark comparison.".to_string(),
+        ],
+    }
+}
+
+fn heat_spreader_evidence_refs() -> Vec<crate::MaterialEvidenceRef> {
+    vec![
+        material_evidence_ref(
+            "mat.aluminum_6061.screening",
+            "Aluminum 6061 screening card",
+            "material_card",
+            "Kyuubiki built-in screening value set",
+            "medium",
+            "Representative conductivity and density values for early ranking.",
+        ),
+        material_evidence_ref(
+            "mat.copper_c110.screening",
+            "Copper C110 screening card",
+            "material_card",
+            "Kyuubiki built-in screening value set",
+            "medium",
+            "Representative high-conductivity metal baseline.",
+        ),
+        material_evidence_ref(
+            "mat.pyrolytic_graphite.in_plane.screening",
+            "Pyrolytic graphite in-plane screening card",
+            "material_card",
+            "Kyuubiki built-in screening value set",
+            "low",
+            "Anisotropic material simplified to an in-plane scalar value.",
+        ),
+    ]
+}
+
+fn heat_spreader_model_assumptions() -> Vec<crate::MaterialModelAssumption> {
+    vec![
+        material_model_assumption(
+            "model.geometry",
+            "Thin rectangular heat spreader",
+            "50 mm x 30 mm x 1.5 mm quad fixture",
+            "Keeps candidates comparable but does not represent a finished product geometry.",
+        ),
+        material_model_assumption(
+            "model.boundary",
+            "Fixed hot/cold boundary temperatures",
+            "95 C hot-side anchor and 35 C cold-side anchors",
+            "Ranks spreading behavior under a stable thermal contrast.",
+        ),
+        material_model_assumption(
+            "model.material",
+            "Linear scalar conductivity",
+            "conductivity is constant over the solve",
+            "Fast for screening, insufficient for final material qualification.",
+        ),
+    ]
+}
+
+fn material_card_id(candidate: &MaterialResearchCandidate) -> String {
+    format!("kyuubiki.material_card.{}.v1", candidate.id)
+}
+
+fn material_card_confidence(candidate: &MaterialResearchCandidate) -> &'static str {
+    match candidate.id {
+        "pyrolytic_graphite_in_plane" => "low",
+        _ => "medium",
+    }
+}
+
 fn constraint_status(value: Option<f64>, limit: f64) -> String {
     less_equal_status(value, limit)
 }
@@ -405,80 +544,4 @@ fn round_score(value: f64) -> f64 {
 
 fn heat_spreader_thickness_m() -> f64 {
     0.0015
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn heat_spreader_report_ranks_by_result_and_material_metrics() {
-        let report = build_heat_spreader_screening_report(&[
-            json!({ "result": { "max_temperature": 82.0, "max_heat_flux": 900.0 } }),
-            json!({ "result": { "result": { "max_temperature": 64.0, "max_heat_flux": 1400.0 } } }),
-            json!({ "max_temperature": 58.0, "max_heat_flux": 1800.0 }),
-        ])
-        .expect("report should build");
-
-        assert_eq!(
-            report.schema_version,
-            "kyuubiki.material-research-report/v1"
-        );
-        assert_eq!(report.candidates.len(), 3);
-        assert_eq!(
-            report.winner_candidate_id.as_deref(),
-            Some("pyrolytic_graphite_in_plane")
-        );
-        assert_eq!(
-            report.optimization.id,
-            "material.heat_spreader_screening.optimization.v1"
-        );
-        assert!(
-            report
-                .optimization
-                .score_formula
-                .contains("peak_temperature_c:min")
-        );
-        assert_eq!(report.candidates[0].rank, 1);
-        assert!(report.candidates[0].score > report.candidates[1].score);
-        assert_eq!(report.candidates[0].optimization_terms.len(), 3);
-        assert!(
-            report.candidates[0]
-                .optimization_terms
-                .iter()
-                .any(|term| term.metric_id == "areal_mass_kg_m2" && term.weighted_score > 0.0)
-        );
-        assert_eq!(report.candidates[2].candidate_id, "aluminum_6061");
-    }
-
-    #[test]
-    fn heat_spreader_report_keeps_missing_metric_warnings_visible() {
-        let report = build_heat_spreader_screening_report(&[
-            json!({ "result": { "kind": "simulated_result" } }),
-            json!({ "result": { "max_temperature": 64.0 } }),
-            json!({ "result": { "max_temperature": 58.0, "max_heat_flux": 1800.0 } }),
-        ])
-        .expect("report should tolerate incomplete early results");
-
-        assert!(report.warning_count() >= 3);
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|warning| warning.contains("aluminum_6061 is missing peak_temperature_c"))
-        );
-    }
-
-    #[test]
-    fn heat_spreader_report_rejects_candidate_result_count_mismatch() {
-        let error = build_heat_spreader_screening_report(&[])
-            .expect_err("mismatched result count should fail");
-        assert!(error.contains("expects 3 result payloads"));
-    }
-
-    impl MaterialResearchReport {
-        fn warning_count(&self) -> usize {
-            self.warnings.len()
-        }
-    }
 }

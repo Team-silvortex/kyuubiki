@@ -7,15 +7,12 @@ import { HUB_I18N_EN } from "./hub-i18n-en.js";
 import { createHubI18nEs } from "./hub-i18n-es.js";
 import { HUB_I18N_JA } from "./hub-i18n-ja.js";
 import { HUB_I18N_ZH } from "./hub-i18n-zh.js";
-
 export const HUB_I18N = {
-  en: HUB_I18N_EN,
-  zh: HUB_I18N_ZH,
-  ja: HUB_I18N_JA,
+    en: HUB_I18N_EN,
+    zh: HUB_I18N_ZH,
+    ja: HUB_I18N_JA,
 };
-
 HUB_I18N.es = createHubI18nEs(HUB_I18N.en);
-
 applyHubDocsI18n(HUB_I18N);
 applyHubGuidesI18n(HUB_I18N);
 applyHubLocalizationI18n(HUB_I18N);

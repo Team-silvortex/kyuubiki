@@ -2,7 +2,7 @@ export function buildDiagnosticsTemplateChainGraph() {
   return {
     id: "workflow.test",
     name: "workflow test",
-    version: "1.11.5",
+    version: "1.12.0",
     nodes: [
       { id: "extract_electrostatic_diagnostics" },
       { id: "existing_node" },

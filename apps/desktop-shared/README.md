@@ -13,22 +13,35 @@ packaging remains predictable and app-local.
 
 Current shared source files:
 
-- `ui/tauri-bridge.js`
-  Desktop-safe Tauri invoke/listen helpers plus light brand loading helpers.
+- `src/platform.ts`
+  TypeScript source for shared desktop platform normalization, labels, and
+  release-root helpers. It compiles to `ui/platform.js` before synchronization.
+- `src/tauri-bridge.ts`
+  TypeScript source for desktop-safe Tauri invoke/listen helpers, language
+  preference sync, brand loading, and shared desktop state styling.
+- `src/runtime-status-model.ts`
+  TypeScript source for the shared runtime/mesh status model, filters, and
+  detail selection contract used by the desktop status plane.
+- `src/runtime-status-summary.ts`
+  TypeScript source for formatting and rendering the shared runtime status
+  plane from the typed model contract.
 - `ui/desktop-shell.css`
   Shared desktop shell tokens plus runtime status, mesh topology, and shell
   surface styles used across the desktop app family.
 - `ui/desktop-shell-runtime-mesh.css`
   Runtime mesh, filter, and topology presentation layer imported by the shared
   desktop shell stylesheet.
-- `ui/runtime-status-summary.js`
-  Shared runtime status formatting and status-plane rendering helpers.
 - `ui/platform.js`
-  Shared desktop platform normalization, labels, and release-root helpers used
-  by installer, hub, and workbench shells.
+  Generated JavaScript consumed by installer, hub, and workbench shells.
+- `ui/tauri-bridge.js`
+  Generated JavaScript bridge consumed by installer, hub, and workbench shells.
+- `ui/runtime-status-model.js`
+  Generated JavaScript runtime status model consumed by the shared renderer.
+- `ui/runtime-status-summary.js`
+  Generated JavaScript runtime status renderer consumed by desktop shells.
 - `scripts/sync-desktop-shared.mjs`
-  Refreshes lightweight app-local wrappers plus the canonical brand manifest
-  into each desktop app.
+  Compiles shared TypeScript, then refreshes lightweight app-local wrappers plus
+  the canonical brand manifest into each desktop app.
 
 Canonical brand data still lives under:
 

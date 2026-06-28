@@ -8,7 +8,7 @@ import {
 } from "@/lib/workbench/workflow-bridge-contract";
 
 export const metadata: Metadata = {
-  title: "Workflow Bridge Contracts | tamamono 1.11.5",
+  title: "Workflow Bridge Contracts | tamamono 1.12.0",
   description: "Bridge contract reference for cross-operator workflow transforms.",
 };
 
@@ -30,7 +30,7 @@ export default function WorkflowBridgeContractsPage() {
     >
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <p style={{ color: "#7fb3ff", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          tamamono 1.11.5
+          tamamono 1.12.0
         </p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Bridge Contracts

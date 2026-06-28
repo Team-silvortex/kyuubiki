@@ -1,0 +1,33 @@
+@media (max-width: 1180px) {
+  .workbench-shell {
+    grid-template-columns: var(--rail-width) minmax(260px, 34vw) minmax(0, 1fr);
+  }
+
+  .workspace-main {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .workbench-shell {
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    grid-template-areas:
+      "rail sidebar"
+      "rail workspace";
+  }
+
+  .workbench-shell__sidebar,
+  .workbench-shell__workspace {
+    min-width: 0;
+  }
+
+  .workspace-sidebar {
+    max-height: 42vh;
+  }
+}
+
+@media (display-mode: fullscreen) {
+  .workbench-shell {
+    min-height: 100vh;
+  }
+}

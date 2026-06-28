@@ -66,6 +66,7 @@ export function Workbench() {
 
   return (
     <WorkbenchShellFrame
+      sidebarSection={sidebarMountProps.sidebarSection}
       rail={
         <WorkbenchAppRail
           shortTitle={sidebarMountProps.shortTitle}

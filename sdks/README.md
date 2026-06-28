@@ -69,6 +69,9 @@ Recent additions:
 - material reports include first-class optimization profiles so downstream
   agents can inspect score formulas, constraints, normalized scores, and
   weighted metric contributions
+- heat-spreader reports now include a reliability envelope with material-card
+  provenance, unit-system metadata, model assumptions, quality gates, and
+  explicit screening-only limitations
 - Rust, Python, and Elixir SDK callers can now use one material-report dispatch surface to extract
   successful `result_fetch` payloads from a headless run and build the matching
   heat-spreader, dielectric, thermo-shield, or structural-panel report

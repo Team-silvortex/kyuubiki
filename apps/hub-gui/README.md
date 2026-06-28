@@ -1,85 +1,41 @@
 # Hub GUI
 
-This app is the unified desktop entrypoint and workload shell for `kyuubiki`.
+Hub GUI is the desktop operator shell for workload entry, runtime posture, and
+project/workflow navigation.
 
-In the `tamamono 1.x` product shape, Hub is the everyday desktop entrypoint
-for launch, runtime target overview, bundle intake, and operator guidance.
+## UI Source Layout
 
-It sits above:
+- `src/`
+  TypeScript source for Hub-owned UI contracts as they are migrated.
+  Current migrated sources include `hub-app-config.ts`, `hub-state.ts`,
+  `hub-storage.ts`, `hub-workload-library.ts`, `hub-action-contexts.ts`, and
+  `hub-action-runner.ts`, `hub-copy-registry.ts`, `hub-i18n-core.ts`,
+  `hub-i18n-docs.ts`, `hub-i18n-guides.ts`,
+  `hub-i18n-localization.ts`, `hub-i18n-assistant.ts`,
+  `hub-i18n-workloads.ts`, `hub-localization-panel.ts`,
+  `hub-workflow-catalog.ts`, `hub-workload-runtime.ts`,
+  `hub-workload-list.ts`, `hub-workload-panel.ts`,
+  `hub-library-controls.ts`, `hub-streaming-runtime.ts`,
+  `hub-streaming-setup.ts`, `hub-startup-phases.ts`,
+  `hub-localized-shell.ts`, `hub-assistant-shell.ts`,
+  `hub-bundles-copy.ts`, `hub-library-copy.ts`,
+  `hub-workspace-groups.ts`, plus direct project/runtime/workload/desktop
+  action handlers.
+- `ui/`
+  Tauri-facing JavaScript, HTML, CSS, and generated output consumed by the
+  desktop shell.
+- `ui/shared/`
+  Generated shared desktop files synchronized from `apps/desktop-shared`.
+- `scripts/compile-ui.mjs`
+  Compiles Hub-owned TypeScript into `ui/` before smoke tests or packaging.
 
-- [installer-gui](../installer-gui)
-- [workbench-gui](../workbench-gui)
+Do not edit generated TypeScript outputs in `ui/` when a matching source file
+exists under `src/`. Update the source and run:
 
-Its job is not to replace the modeling workbench or the deployment installer.
-Its job is to sit above those runtime-facing surfaces and give one short runway
-into the right next shell.
+```sh
+npm --prefix apps/hub-gui run compile:ui
+```
 
-## Responsibilities
-
-- desktop entry shell for `Workbench`, `Installer`, and runtime-facing tools
-- local and remote workload intake through bundle tools and workload catalogs
-- runtime target overview, health visibility, and operator-facing diagnostics
-- guided assistant entrypoint with local hints and optional model-backed plans
-- desktop packaging readiness and short preflight checks before handing off to
-  `Installer` for heavier deployment work
-
-Quick launch behavior now prefers an already-built host desktop bundle when one
-exists, and falls back to the repo-local `tauri:dev` shell during development.
-
-## Main paths
-
-- UI shell:
-  [ui/](ui)
-- Desktop docs shelf:
-  [ui/docs](ui/docs)
-- Tauri backend:
-  [src-tauri/](src-tauri)
-- Packaged icons:
-  [src-tauri/icons](src-tauri/icons)
-- Product split and IA notes:
-  [docs/hub-architecture.md](../../docs/hub-architecture.md)
-
-## Commands
-
-- `npm run sync:shared`
-- `make hub-gui-dev`
-- `make hub-gui-build`
-- `make hot-local`
-- `make hot-cloud`
-- `make hot-distributed`
-- `make test-hub-gui`
-- `make desktop-status PLATFORM=all`
-- `make desktop-build-host`
-- `make desktop-verify PLATFORM=macos|linux|windows`
-- `./scripts/kyuubiki build-hub-gui macos|linux|windows`
-- `./scripts/kyuubiki package-desktop macos|linux|windows`
-
-## Validation
-
-- shared UI sync:
-  `cd apps/hub-gui && npm run sync:shared`
-- smoke test:
-  `cd apps/hub-gui && npm run test:smoke`
-- Tauri shell check:
-  `cargo check --offline --manifest-path src-tauri/Cargo.toml`
-
-## Output
-
-Tauri build output lands under:
-
-- `apps/hub-gui/src-tauri/target`
-
-Platform-scoped staged desktop manifests land under:
-
-- `dist/<platform>/desktop/hub-gui`
-
-Do not treat that directory as source-owned. The source of truth is:
-
-- the Hub Tauri shell source in this app
-- the shared desktop runtime crate
-- the repository-level desktop packaging flow
-- the repository-level documentation under `docs/`, with `ui/docs/` as the
-  desktop-facing mirror/shelf for shorter operator reading
-- [docs/hub-architecture.md](../../docs/hub-architecture.md)
-- [deploy/workload-catalog.example.json](../../deploy/workload-catalog.example.json)
-- [docs/packaging-and-deployment.md](../../docs/packaging-and-deployment.md)
+Some `.d.ts` files under `src/` intentionally bridge legacy `ui/` JavaScript
+modules while their callers move to TypeScript. Remove those shims as the
+matching modules are migrated.

@@ -1,16 +1,37 @@
 "use client";
 
-import { WorkbenchAssistantFloat } from "@/components/workbench/workbench-assistant-float";
-import { WorkbenchConsoleMount } from "@/components/workbench/workbench-console-mount";
-import { WorkbenchInspectorMount } from "@/components/workbench/workbench-inspector-mount";
-import { WorkbenchMainViewportPanelMount } from "@/components/workbench/workbench-main-viewport-panel-mount";
+import { lazy, Suspense, type ReactNode } from "react";
+import type { WorkbenchUiChunkId } from "@/components/workbench/workbench-ui-streaming";
+
+const WorkbenchAssistantFloat = lazy(() =>
+  import("@/components/workbench/workbench-assistant-float").then((module) => ({
+    default: module.WorkbenchAssistantFloat,
+  })),
+);
+const WorkbenchConsoleMount = lazy(() =>
+  import("@/components/workbench/workbench-console-mount").then((module) => ({
+    default: module.WorkbenchConsoleMount,
+  })),
+);
+const WorkbenchInspectorMount = lazy(() =>
+  import("@/components/workbench/workbench-inspector-mount").then((module) => ({
+    default: module.WorkbenchInspectorMount,
+  })),
+);
+const WorkbenchMainViewportPanelMount = lazy(() =>
+  import("@/components/workbench/workbench-main-viewport-panel-mount").then((module) => ({
+    default: module.WorkbenchMainViewportPanelMount,
+  })),
+);
 
 type WorkbenchMainShellMountProps = Record<string, any>;
 
 export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
   return (
     <>
-      <WorkbenchAssistantFloat
+      {workspaceChunk(
+        "overlay.assistant",
+        <WorkbenchAssistantFloat
         t={props.t}
         assistantWindowOpen={props.assistantWindowOpen}
         setAssistantWindowOpen={props.setAssistantWindowOpen}
@@ -38,11 +59,14 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         setAssistantModel={props.setAssistantModel}
         setAssistantMode={props.setAssistantMode}
         requestLlmAssistantPlan={props.requestLlmAssistantPlan}
-        rollbackAssistantTransaction={props.rollbackAssistantTransaction}
-      />
+          rollbackAssistantTransaction={props.rollbackAssistantTransaction}
+        />,
+      )}
 
       <main className="workspace-main">
-        <WorkbenchMainViewportPanelMount
+        {workspaceChunk(
+          "workspace.viewport",
+          <WorkbenchMainViewportPanelMount
           viewportPanelRef={props.viewportPanelRef}
           canvasStageRef={props.canvasStageRef}
           viewportPixelWidth={props.viewportPixelWidth}
@@ -218,9 +242,12 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           openSample={props.openSample}
           openSavedModel={props.openSavedModel}
           openHistoryJob={props.openHistoryJob}
-        />
+          />,
+        )}
 
-        <WorkbenchConsoleMount
+        {workspaceChunk(
+          "workspace.console",
+          <WorkbenchConsoleMount
           sidebarSection={props.sidebarSection}
           message={props.message}
           importNotice={props.importNotice}
@@ -259,10 +286,13 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           displayTruss3dElements={props.displayTruss3dElements}
           displayTrussElements={props.displayTrussElements}
           planeElements={props.planeElements}
-        />
+          />,
+        )}
       </main>
 
-      <WorkbenchInspectorMount
+      {workspaceChunk(
+        "workspace.inspector",
+        <WorkbenchInspectorMount
         t={props.t}
         reportScopeLabel={props.currentStudyFamilyLabel}
         reportScopeHint={props.currentStudyFamilyHint}
@@ -378,7 +408,30 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         setFocusedPlaneElement={props.setFocusedPlaneElement}
         setFocusedFrameElement={props.setFocusedFrameElement}
         setPlaneHotspotLimit={props.setPlaneHotspotLimit}
-      />
+        />,
+      )}
     </>
+  );
+}
+
+function workspaceChunk(chunkId: WorkbenchUiChunkId, children: ReactNode) {
+  return (
+    <Suspense fallback={<WorkspaceChunkFallback chunkId={chunkId} />}>
+      <div className="workbench-ui-chunk" data-workbench-ui-chunk={chunkId}>
+        {children}
+      </div>
+    </Suspense>
+  );
+}
+
+function WorkspaceChunkFallback({ chunkId }: { chunkId: WorkbenchUiChunkId }) {
+  return (
+    <div
+      className="panel"
+      data-workbench-ui-chunk={chunkId}
+      data-workbench-ui-chunk-loading="true"
+    >
+      <p className="muted-copy">Loading {chunkId}...</p>
+    </div>
   );
 }

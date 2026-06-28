@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Workflow Architecture | tamamono 1.11.5",
+  title: "Workflow Architecture | tamamono 1.12.0",
   description: "Architecture overview for the tamamono workflow operator system.",
 };
 
@@ -119,7 +119,7 @@ export default function WorkflowArchitecturePage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.11.5</p>
+        <p style={eyebrowStyle}>tamamono 1.12.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Architecture
         </h1>

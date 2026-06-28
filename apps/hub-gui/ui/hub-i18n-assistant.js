@@ -1,234 +1,175 @@
 export const HUB_ASSISTANT_I18N = {
-  en: {
-    assistant: {
-      introLabel: "Need help?",
-      introTitle: "Pick the next safe step",
-      introCopy: "Start with the local guide. Reach for a model only when the built-in path is not enough.",
-      quickActions: "Quick actions",
-      askLabel: "Ask the local guide",
-      askButton: "Ask local guide",
-      askEmpty: "Ask about the next step, bundle inspection, runtime health, documentation, or packaging.",
-      suggested: "Suggested next steps",
-      llmIntro: "Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.",
+    en: {
+        assistant: {
+            introLabel: "Need help?",
+            introTitle: "Pick the next safe step",
+            introCopy: "Start with the local guide. Reach for a model only when the built-in path is not enough.",
+            quickActions: "Quick actions",
+            askLabel: "Ask the local guide",
+            askButton: "Ask local guide",
+            askEmpty: "Ask about the next step, bundle inspection, runtime health, documentation, or packaging.",
+            suggested: "Suggested next steps",
+            llmIntro: "Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.",
+        },
+        dynamic: {
+            assistantPromptEmpty: "Ask something short, like: what should I do first, how do I inspect a bundle, how do I open Workbench, or why is packaging still partial.",
+            assistantNoUrgent: "The local guide does not see an urgent next step right now.",
+            assistantNoPlan: "No model plan yet.",
+            assistantNoExecutable: "The model returned no executable Hub actions.",
+            assistantCancelled: "Cancelled {action}.",
+            assistantFocusedSection: "Focused {section} section.",
+            assistantUpdatedBundle: "Updated bundle context in the Hub.",
+            assistantExecuteCount: "Executed {count} assistant actions.",
+            assistantNoPlanToExecute: "No assistant plan is available to execute.",
+            assistantReviewFirst: "Review the generated plan and confirm execution first.",
+            guideFirstNoRuntime: "Start with the local stack, then sync or register work, inspect once, and only then open Workbench. Right now the local runtime does not look ready, so `Start local stack` is the safest first move.",
+            guideFirstNoBundle: "Start with the local stack if needed, then open `Bundle tools` and paste a `.kyuubiki` path. After that, inspect once and move into Workbench.",
+            guideFirstReady: "You already have a runtime and bundle context. The safe path now is: inspect the current bundle, confirm the result looks sane, then open Workbench.",
+            guideBundleNoPath: "Bundle operations live under `Home > Bundle tools`. Paste a `.kyuubiki` bundle path first. Then use `Inspect` for a quick read, `Validate` for schema checks, and `Normalize` only when you also have an output path.",
+            guideNormalizeNoOutput: "Normalization needs both a bundle path and an output path. You already have the bundle, so the missing piece is the output destination in `Bundle tools`.",
+            guideDiffNoCompare: "Bundle diff needs both the current bundle and a compare path. Fill the compare field in `Bundle tools`, then run `Diff bundles`.",
+            guideBundleGeneral: "Use `Inspect` first for a safe structural read. Use `Validate` when you want schema confidence, `Normalize` when you want a cleaned output bundle, and `Diff` only after both bundle paths are filled.",
+            guideWorkbench: "Open Workbench only after the runtime is healthy and the bundle context looks sane. In Hub, the short path is: `Home > Start here`, then `Open workbench`.",
+            guideDocs: "Use `Home > Guides` as the single documentation shelf. Start with `Docs index`, then open `Current line`, `Operations`, or `Troubleshooting` only when you know which kind of question you are answering.",
+            guideRuntime: "Use `Runtimes` when you want to change the loop, and `Observe` when you only want to scan or copy state. `Local runtime` is the short health read, `Hot loop` is for dev tails, and `Stack watch` is for sanitized runtime logs.",
+            guideLibrary: "Use `Home > Library` for workload intake. `Sync local control plane` pulls first-party work in, `Sync remote catalog` brings remote entries in, and the domain/family filters help you narrow the shelf before opening Workbench.",
+            guidePackaging: "Use `Installer` when you need release layout or workstation bootstrap. In Hub, `Tools > Packages` is for build actions, `Status` is the readiness wall, and `Output` is where the packaging logs land. In this automation session, `.app` bundles are reliable, while `.dmg` can still show as partial because `hdiutil` is session-sensitive.",
+            guideFailure: "If something looks partial, read the shortest surface first: `Observe > Health` for runtime issues, `Tools > Status` for desktop packaging readiness, and `Bundle tools > Inspect` for project bundle shape. Then decide whether the problem is runtime, bundle, or packaging.",
+            guideFallback: "The local guide can help with first steps, bundle inspection, runtime health, Workbench launch, workload library intake, and desktop packaging. Try asking one of those directly.",
+        },
     },
-    dynamic: {
-      assistantPromptEmpty:
-        "Ask something short, like: what should I do first, how do I inspect a bundle, how do I open Workbench, or why is packaging still partial.",
-      assistantNoUrgent: "The local guide does not see an urgent next step right now.",
-      assistantNoPlan: "No model plan yet.",
-      assistantNoExecutable: "The model returned no executable Hub actions.",
-      assistantCancelled: "Cancelled {action}.",
-      assistantFocusedSection: "Focused {section} section.",
-      assistantUpdatedBundle: "Updated bundle context in the Hub.",
-      assistantExecuteCount: "Executed {count} assistant actions.",
-      assistantNoPlanToExecute: "No assistant plan is available to execute.",
-      assistantReviewFirst: "Review the generated plan and confirm execution first.",
-      guideFirstNoRuntime:
-        "Start with the local stack, then sync or register work, inspect once, and only then open Workbench. Right now the local runtime does not look ready, so `Start local stack` is the safest first move.",
-      guideFirstNoBundle:
-        "Start with the local stack if needed, then open `Bundle tools` and paste a `.kyuubiki` path. After that, inspect once and move into Workbench.",
-      guideFirstReady:
-        "You already have a runtime and bundle context. The safe path now is: inspect the current bundle, confirm the result looks sane, then open Workbench.",
-      guideBundleNoPath:
-        "Bundle operations live under `Home > Bundle tools`. Paste a `.kyuubiki` bundle path first. Then use `Inspect` for a quick read, `Validate` for schema checks, and `Normalize` only when you also have an output path.",
-      guideNormalizeNoOutput:
-        "Normalization needs both a bundle path and an output path. You already have the bundle, so the missing piece is the output destination in `Bundle tools`.",
-      guideDiffNoCompare:
-        "Bundle diff needs both the current bundle and a compare path. Fill the compare field in `Bundle tools`, then run `Diff bundles`.",
-      guideBundleGeneral:
-        "Use `Inspect` first for a safe structural read. Use `Validate` when you want schema confidence, `Normalize` when you want a cleaned output bundle, and `Diff` only after both bundle paths are filled.",
-      guideWorkbench:
-        "Open Workbench only after the runtime is healthy and the bundle context looks sane. In Hub, the short path is: `Home > Start here`, then `Open workbench`.",
-      guideDocs:
-        "Use `Home > Guides` as the single documentation shelf. Start with `Docs index`, then open `Current line`, `Operations`, or `Troubleshooting` only when you know which kind of question you are answering.",
-      guideRuntime:
-        "Use `Runtimes` when you want to change the loop, and `Observe` when you only want to scan or copy state. `Local runtime` is the short health read, `Hot loop` is for dev tails, and `Stack watch` is for sanitized runtime logs.",
-      guideLibrary:
-        "Use `Home > Library` for workload intake. `Sync local control plane` pulls first-party work in, `Sync remote catalog` brings remote entries in, and the domain/family filters help you narrow the shelf before opening Workbench.",
-      guidePackaging:
-        "Use `Installer` when you need release layout or workstation bootstrap. In Hub, `Tools > Packages` is for build actions, `Status` is the readiness wall, and `Output` is where the packaging logs land. In this automation session, `.app` bundles are reliable, while `.dmg` can still show as partial because `hdiutil` is session-sensitive.",
-      guideFailure:
-        "If something looks partial, read the shortest surface first: `Observe > Health` for runtime issues, `Tools > Status` for desktop packaging readiness, and `Bundle tools > Inspect` for project bundle shape. Then decide whether the problem is runtime, bundle, or packaging.",
-      guideFallback:
-        "The local guide can help with first steps, bundle inspection, runtime health, Workbench launch, workload library intake, and desktop packaging. Try asking one of those directly.",
+    zh: {
+        assistant: {
+            introLabel: "需要帮助？",
+            introTitle: "选择更安全的下一步",
+            introCopy: "先用本地向导。只有当内建路径不够时，再接模型。",
+            quickActions: "快捷动作",
+            askLabel: "询问本地向导",
+            askButton: "询问本地向导",
+            askEmpty: "可以问下一步该做什么、如何检查 bundle、运行时健康、文档入口或打包路径。",
+            suggested: "建议的下一步",
+            llmIntro: "只有在你想要更长的 onboarding 或运维计划时，才连接 OpenAI-compatible 模型。",
+        },
+        dynamic: {
+            assistantPromptEmpty: "可以直接问：第一步该做什么、如何检查 bundle、怎么打开 Workbench，或者为什么打包还是 partial。",
+            assistantNoUrgent: "本地向导暂时没有看到特别紧急的下一步。",
+            assistantNoPlan: "还没有模型计划。",
+            assistantNoExecutable: "模型没有返回可执行的 Hub 动作。",
+            assistantCancelled: "已取消 {action}。",
+            assistantFocusedSection: "已聚焦到 {section} 页面。",
+            assistantUpdatedBundle: "已更新 Hub 里的 bundle 上下文。",
+            assistantExecuteCount: "已执行 {count} 个助手动作。",
+            assistantNoPlanToExecute: "当前没有可执行的助手计划。",
+            assistantReviewFirst: "请先阅读生成的计划并确认执行。",
+            guideFirstNoRuntime: "先启动本地栈，再同步或注册工作，检查一次，然后再打开 Workbench。当前本地运行时看起来还没准备好，所以 `启动本地栈` 是最安全的第一步。",
+            guideFirstNoBundle: "如果需要，先启动本地栈，然后打开 `Bundle 工具`，填入 `.kyuubiki` 路径。之后先检查一次，再进入 Workbench。",
+            guideFirstReady: "你现在已经有运行时和 bundle 上下文了。更安全的下一步是：先检查当前 bundle，确认结果正常，再打开 Workbench。",
+            guideBundleNoPath: "Bundle 相关操作都在 `首页 > Bundle 工具`。先填入 `.kyuubiki` 路径。然后用 `检查` 做快速结构读取，用 `验证` 做 schema 检查；只有填了输出路径时再做 `规范化`。",
+            guideNormalizeNoOutput: "规范化需要同时提供 bundle 路径和输出路径。你现在已经有 bundle 了，缺的是 `Bundle 工具` 里的输出目标。",
+            guideDiffNoCompare: "Bundle 对比需要当前 bundle 和 compare path。先在 `Bundle 工具` 里填 compare path，然后运行 `对比 bundle`。",
+            guideBundleGeneral: "更稳的顺序是先 `检查` 做结构读取，再用 `验证` 看 schema，只有在两边路径都填好后再 `规范化` 或 `对比`。",
+            guideWorkbench: "只有在运行时健康、bundle 上下文也看起来正常时，再打开 Workbench。Hub 里的短路径是：`首页 > 从这里开始`，然后点 `打开 Workbench`。",
+            guideDocs: "把 `首页 > 文档` 当成单一文档入口。先看 `文档索引`，只有在明确问题类型后，再进入 `当前版本线`、`Operations` 或 `故障排查`。",
+            guideRuntime: "当你需要改变 loop 时去 `运行时`；当你只是想扫一眼或复制状态时去 `观察`。`本地运行时` 负责短健康读，`Hot loop` 看开发 tail，`Stack watch` 看脱敏后的运行时日志。",
+            guideLibrary: "工作负载入口在 `首页 > 库`。`同步本地控制平面` 会拉入第一方工作，`同步远程目录` 会带入远端条目，domain/family 筛选则帮助你在进入 Workbench 前先把 shelf 收窄。",
+            guidePackaging: "当你需要发布布局、工作站 bootstrap、打包、修复或验证时，就去 `Installer`。在 Hub 里，`工具 > Packages` 现在主要承担就绪度和诊断，`Status` 是 readiness 墙，`Output` 看辅助日志。",
+            guideFailure: "如果某件事看起来是 partial，先走最短路径：`观察 > 健康` 看运行时问题，`工具 > Status` 看桌面打包就绪度，`Bundle 工具 > 检查` 看项目 bundle 结构。然后再判断问题属于 runtime、bundle 还是 packaging。",
+            guideFallback: "本地向导可以帮你处理第一步、bundle 检查、运行时健康、Workbench 打开、工作负载导入和桌面打包这些问题。可以直接围绕这些提问。",
+        },
     },
-  },
-  zh: {
-    assistant: {
-      introLabel: "需要帮助？",
-      introTitle: "选择更安全的下一步",
-      introCopy: "先用本地向导。只有当内建路径不够时，再接模型。",
-      quickActions: "快捷动作",
-      askLabel: "询问本地向导",
-      askButton: "询问本地向导",
-      askEmpty: "可以问下一步该做什么、如何检查 bundle、运行时健康、文档入口或打包路径。",
-      suggested: "建议的下一步",
-      llmIntro: "只有在你想要更长的 onboarding 或运维计划时，才连接 OpenAI-compatible 模型。",
+    ja: {
+        assistant: {
+            introLabel: "困ったら",
+            introTitle: "安全な次の一手を選ぶ",
+            introCopy: "まずはローカルガイドを使います。組み込みの道筋で足りないときだけモデルを使います。",
+            quickActions: "クイック操作",
+            askLabel: "ローカルガイドに聞く",
+            askButton: "ローカルガイドに聞く",
+            askEmpty: "次の一手、bundle の確認、runtime の健康、ドキュメント、パッケージングについて聞けます。",
+            suggested: "おすすめの次の一手",
+            llmIntro: "より長い onboarding や運用計画が必要なときだけ OpenAI-compatible モデルを接続します。",
+        },
+        dynamic: {
+            assistantPromptEmpty: "短く聞けます。たとえば、最初に何をすべきか、bundle をどう確認するか、Workbench をどう開くか、なぜ packaging が partial のままなのか、などです。",
+            assistantNoUrgent: "ローカルガイドは今のところ緊急の次の一手を見つけていません。",
+            assistantNoPlan: "モデル計画はまだありません。",
+            assistantNoExecutable: "モデルは実行可能な Hub アクションを返しませんでした。",
+            assistantCancelled: "{action} を取り消しました。",
+            assistantFocusedSection: "{section} セクションに移動しました。",
+            assistantUpdatedBundle: "Hub 内の bundle コンテキストを更新しました。",
+            assistantExecuteCount: "{count} 件のアシスタントアクションを実行しました。",
+            assistantNoPlanToExecute: "実行できるアシスタント計画がありません。",
+            assistantReviewFirst: "まず生成された計画を確認してから実行してください。",
+            guideFirstNoRuntime: "まずローカルスタックを起動し、その後で作業を同期または登録し、一度確認してから Workbench を開いてください。今はローカルランタイムがまだ準備完了に見えないため、`ローカルスタックを起動` が最も安全な第一歩です。",
+            guideFirstNoBundle: "必要なら先にローカルスタックを起動し、その後 `Bundle tools` を開いて `.kyuubiki` パスを貼り付けてください。そのあと一度確認してから Workbench に進みます。",
+            guideFirstReady: "すでにランタイムと bundle コンテキストがあります。安全な次の一手は、現在の bundle を確認し、結果が妥当に見えることを確認してから Workbench を開くことです。",
+            guideBundleNoPath: "bundle 操作は `ホーム > Bundle tools` にあります。まず `.kyuubiki` パスを入力してください。その後 `Inspect` で短い構造確認、`Validate` で schema 確認、出力先があるときだけ `Normalize` を使います。",
+            guideNormalizeNoOutput: "Normalize には bundle パスと出力パスの両方が必要です。bundle はすでにあるので、足りないのは `Bundle tools` の出力先です。",
+            guideDiffNoCompare: "bundle diff には現在の bundle と compare path の両方が必要です。`Bundle tools` の compare フィールドを埋めてから `Diff bundles` を実行してください。",
+            guideBundleGeneral: "まず `Inspect` で安全に構造を読み、`Validate` で schema の確信を取り、両方のパスが埋まっているときだけ `Normalize` や `Diff` を使うのがよい流れです。",
+            guideWorkbench: "Workbench はランタイムが健全で、bundle コンテキストも妥当に見えるときにだけ開いてください。Hub の短い流れは `ホーム > Start here` から `Open workbench` です。",
+            guideDocs: "`ホーム > Guides` を単一のドキュメント棚として使ってください。まず `Docs index` を見て、質問の種類が分かってから `Current line`、`Operations`、`Troubleshooting` に進みます。",
+            guideRuntime: "loop を変えたいなら `Runtimes`、状態を見たりコピーしたりするだけなら `Observe` を使います。`Local runtime` は短い health 読み、`Hot loop` は開発 tail、`Stack watch` はサニタイズ済み runtime ログです。",
+            guideLibrary: "workload の取り込みは `ホーム > Library` です。`Sync local control plane` は第一者の作業を取り込み、`Sync remote catalog` はリモート項目を取り込み、domain/family filter で Workbench を開く前に棚を絞れます。",
+            guidePackaging: "release layout、workstation bootstrap、packaging、repair、verification が必要なときは `Installer` を使ってください。Hub の `Tools > Packages` は readiness と diagnostics、`Status` は readiness wall、`Output` は補助ログの置き場です。",
+            guideFailure: "何かが partial に見えるなら、まず最短面を見てください。`Observe > Health` で runtime、`Tools > Status` で desktop packaging readiness、`Bundle tools > Inspect` で project bundle の形を見て、それが runtime・bundle・packaging のどれかを判断します。",
+            guideFallback: "ローカルガイドは、最初の一歩、bundle 確認、runtime の健康、Workbench 起動、workload library の取り込み、desktop packaging について手伝えます。そのあたりを直接聞いてください。",
+        },
     },
-    dynamic: {
-      assistantPromptEmpty: "可以直接问：第一步该做什么、如何检查 bundle、怎么打开 Workbench，或者为什么打包还是 partial。",
-      assistantNoUrgent: "本地向导暂时没有看到特别紧急的下一步。",
-      assistantNoPlan: "还没有模型计划。",
-      assistantNoExecutable: "模型没有返回可执行的 Hub 动作。",
-      assistantCancelled: "已取消 {action}。",
-      assistantFocusedSection: "已聚焦到 {section} 页面。",
-      assistantUpdatedBundle: "已更新 Hub 里的 bundle 上下文。",
-      assistantExecuteCount: "已执行 {count} 个助手动作。",
-      assistantNoPlanToExecute: "当前没有可执行的助手计划。",
-      assistantReviewFirst: "请先阅读生成的计划并确认执行。",
-      guideFirstNoRuntime:
-        "先启动本地栈，再同步或注册工作，检查一次，然后再打开 Workbench。当前本地运行时看起来还没准备好，所以 `启动本地栈` 是最安全的第一步。",
-      guideFirstNoBundle:
-        "如果需要，先启动本地栈，然后打开 `Bundle 工具`，填入 `.kyuubiki` 路径。之后先检查一次，再进入 Workbench。",
-      guideFirstReady:
-        "你现在已经有运行时和 bundle 上下文了。更安全的下一步是：先检查当前 bundle，确认结果正常，再打开 Workbench。",
-      guideBundleNoPath:
-        "Bundle 相关操作都在 `首页 > Bundle 工具`。先填入 `.kyuubiki` 路径。然后用 `检查` 做快速结构读取，用 `验证` 做 schema 检查；只有填了输出路径时再做 `规范化`。",
-      guideNormalizeNoOutput:
-        "规范化需要同时提供 bundle 路径和输出路径。你现在已经有 bundle 了，缺的是 `Bundle 工具` 里的输出目标。",
-      guideDiffNoCompare:
-        "Bundle 对比需要当前 bundle 和 compare path。先在 `Bundle 工具` 里填 compare path，然后运行 `对比 bundle`。",
-      guideBundleGeneral:
-        "更稳的顺序是先 `检查` 做结构读取，再用 `验证` 看 schema，只有在两边路径都填好后再 `规范化` 或 `对比`。",
-      guideWorkbench:
-        "只有在运行时健康、bundle 上下文也看起来正常时，再打开 Workbench。Hub 里的短路径是：`首页 > 从这里开始`，然后点 `打开 Workbench`。",
-      guideDocs:
-        "把 `首页 > 文档` 当成单一文档入口。先看 `文档索引`，只有在明确问题类型后，再进入 `当前版本线`、`Operations` 或 `故障排查`。",
-      guideRuntime:
-        "当你需要改变 loop 时去 `运行时`；当你只是想扫一眼或复制状态时去 `观察`。`本地运行时` 负责短健康读，`Hot loop` 看开发 tail，`Stack watch` 看脱敏后的运行时日志。",
-      guideLibrary:
-        "工作负载入口在 `首页 > 库`。`同步本地控制平面` 会拉入第一方工作，`同步远程目录` 会带入远端条目，domain/family 筛选则帮助你在进入 Workbench 前先把 shelf 收窄。",
-      guidePackaging:
-        "当你需要发布布局、工作站 bootstrap、打包、修复或验证时，就去 `Installer`。在 Hub 里，`工具 > Packages` 现在主要承担就绪度和诊断，`Status` 是 readiness 墙，`Output` 看辅助日志。",
-      guideFailure:
-        "如果某件事看起来是 partial，先走最短路径：`观察 > 健康` 看运行时问题，`工具 > Status` 看桌面打包就绪度，`Bundle 工具 > 检查` 看项目 bundle 结构。然后再判断问题属于 runtime、bundle 还是 packaging。",
-      guideFallback:
-        "本地向导可以帮你处理第一步、bundle 检查、运行时健康、Workbench 打开、工作负载导入和桌面打包这些问题。可以直接围绕这些提问。",
+    es: {
+        assistant: {
+            introLabel: "¿Necesitas ayuda?",
+            introTitle: "Elige el siguiente paso seguro",
+            introCopy: "Empieza con la guía local. Recurre a un modelo solo cuando la ruta integrada no sea suficiente.",
+            quickActions: "Acciones rápidas",
+            askLabel: "Pregunta a la guía local",
+            askButton: "Preguntar a la guía local",
+            askEmpty: "Pregunta por el siguiente paso, la inspección de bundles, la salud del runtime, la documentación o el empaquetado.",
+            suggested: "Siguientes pasos sugeridos",
+            llmIntro: "Conecta un modelo compatible con OpenAI solo cuando quieras un plan de onboarding u operaciones más largo.",
+        },
+        dynamic: {
+            assistantPromptEmpty: "Pregunta algo corto, por ejemplo: qué debo hacer primero, cómo inspecciono un bundle, cómo abro Workbench o por qué el empaquetado sigue en partial.",
+            assistantNoUrgent: "La guía local no ve un siguiente paso urgente ahora mismo.",
+            assistantNoPlan: "Todavía no hay plan del modelo.",
+            assistantNoExecutable: "El modelo no devolvió acciones ejecutables para Hub.",
+            assistantCancelled: "Se canceló {action}.",
+            assistantFocusedSection: "Se enfocó la sección {section}.",
+            assistantUpdatedBundle: "Se actualizó el contexto del bundle en Hub.",
+            assistantExecuteCount: "Se ejecutaron {count} acciones del asistente.",
+            assistantNoPlanToExecute: "No hay un plan del asistente disponible para ejecutar.",
+            assistantReviewFirst: "Revisa primero el plan generado y confirma la ejecución.",
+            guideFirstNoRuntime: "Empieza por la pila local, luego sincroniza o registra trabajo, inspecciónalo una vez y solo entonces abre Workbench. Ahora mismo el runtime local no parece listo, así que `Iniciar pila local` es el primer paso más seguro.",
+            guideFirstNoBundle: "Empieza por la pila local si hace falta, luego abre `Bundle tools` y pega una ruta `.kyuubiki`. Después inspecciona una vez y pasa a Workbench.",
+            guideFirstReady: "Ya tienes runtime y contexto de bundle. La ruta segura ahora es: inspecciona el bundle actual, confirma que el resultado parece razonable y después abre Workbench.",
+            guideBundleNoPath: "Las operaciones con bundles viven en `Inicio > Bundle tools`. Pega primero una ruta de bundle `.kyuubiki`. Luego usa `Inspect` para una lectura rápida, `Validate` para comprobaciones de esquema y `Normalize` solo cuando también tengas una ruta de salida.",
+            guideNormalizeNoOutput: "La normalización necesita tanto la ruta del bundle como la ruta de salida. Ya tienes el bundle; lo que falta es el destino de salida en `Bundle tools`.",
+            guideDiffNoCompare: "El diff de bundles necesita tanto el bundle actual como una ruta de comparación. Rellena el campo compare en `Bundle tools` y luego ejecuta `Diff bundles`.",
+            guideBundleGeneral: "Usa `Inspect` primero para una lectura estructural segura. Usa `Validate` cuando quieras confianza de esquema, `Normalize` cuando quieras un bundle de salida limpio y `Diff` solo cuando ambas rutas de bundle estén completas.",
+            guideWorkbench: "Abre Workbench solo cuando el runtime esté sano y el contexto del bundle parezca coherente. En Hub, la ruta corta es: `Inicio > Empezar aquí`, luego `Abrir Workbench`.",
+            guideDocs: "Usa `Inicio > Guías` como estantería única de documentación. Empieza por `Índice de docs` y abre `Línea actual`, `Operaciones` o `Troubleshooting` solo cuando sepas qué clase de pregunta estás respondiendo.",
+            guideRuntime: "Usa `Runtimes` cuando quieras cambiar el bucle, y `Observe` cuando solo quieras escanear o copiar estado. `Local runtime` es la lectura corta de salud, `Hot loop` es para tails de desarrollo y `Stack watch` es para logs saneados del runtime.",
+            guideLibrary: "Usa `Inicio > Biblioteca` para la entrada de workloads. `Sincronizar control local` trae trabajo de primera parte, `Sincronizar catálogo remoto` trae entradas remotas, y los filtros de dominio/familia ayudan a estrechar la estantería antes de abrir Workbench.",
+            guidePackaging: "Usa `Installer` cuando necesites layout de release o bootstrap de estación. En Hub, `Tools > Packages` es para acciones de build, `Status` es el muro de readiness y `Output` es donde cae el log de empaquetado. En esta sesión automática, los `.app` son fiables, mientras que los `.dmg` pueden seguir apareciendo como partial porque `hdiutil` es sensible a la sesión.",
+            guideFailure: "Si algo parece partial, lee primero la superficie más corta: `Observe > Health` para problemas de runtime, `Tools > Status` para readiness del empaquetado de escritorio y `Bundle tools > Inspect` para la forma del bundle. Luego decide si el problema es runtime, bundle o packaging.",
+            guideFallback: "La guía local puede ayudarte con los primeros pasos, la inspección de bundles, la salud del runtime, el arranque de Workbench, la entrada a la biblioteca de workloads y el empaquetado de escritorio. Prueba a preguntar directamente por una de esas cosas.",
+        },
     },
-  },
-  ja: {
-    assistant: {
-      introLabel: "困ったら",
-      introTitle: "安全な次の一手を選ぶ",
-      introCopy: "まずはローカルガイドを使います。組み込みの道筋で足りないときだけモデルを使います。",
-      quickActions: "クイック操作",
-      askLabel: "ローカルガイドに聞く",
-      askButton: "ローカルガイドに聞く",
-      askEmpty: "次の一手、bundle の確認、runtime の健康、ドキュメント、パッケージングについて聞けます。",
-      suggested: "おすすめの次の一手",
-      llmIntro: "より長い onboarding や運用計画が必要なときだけ OpenAI-compatible モデルを接続します。",
-    },
-    dynamic: {
-      assistantPromptEmpty:
-        "短く聞けます。たとえば、最初に何をすべきか、bundle をどう確認するか、Workbench をどう開くか、なぜ packaging が partial のままなのか、などです。",
-      assistantNoUrgent: "ローカルガイドは今のところ緊急の次の一手を見つけていません。",
-      assistantNoPlan: "モデル計画はまだありません。",
-      assistantNoExecutable: "モデルは実行可能な Hub アクションを返しませんでした。",
-      assistantCancelled: "{action} を取り消しました。",
-      assistantFocusedSection: "{section} セクションに移動しました。",
-      assistantUpdatedBundle: "Hub 内の bundle コンテキストを更新しました。",
-      assistantExecuteCount: "{count} 件のアシスタントアクションを実行しました。",
-      assistantNoPlanToExecute: "実行できるアシスタント計画がありません。",
-      assistantReviewFirst: "まず生成された計画を確認してから実行してください。",
-      guideFirstNoRuntime:
-        "まずローカルスタックを起動し、その後で作業を同期または登録し、一度確認してから Workbench を開いてください。今はローカルランタイムがまだ準備完了に見えないため、`ローカルスタックを起動` が最も安全な第一歩です。",
-      guideFirstNoBundle:
-        "必要なら先にローカルスタックを起動し、その後 `Bundle tools` を開いて `.kyuubiki` パスを貼り付けてください。そのあと一度確認してから Workbench に進みます。",
-      guideFirstReady:
-        "すでにランタイムと bundle コンテキストがあります。安全な次の一手は、現在の bundle を確認し、結果が妥当に見えることを確認してから Workbench を開くことです。",
-      guideBundleNoPath:
-        "bundle 操作は `ホーム > Bundle tools` にあります。まず `.kyuubiki` パスを入力してください。その後 `Inspect` で短い構造確認、`Validate` で schema 確認、出力先があるときだけ `Normalize` を使います。",
-      guideNormalizeNoOutput:
-        "Normalize には bundle パスと出力パスの両方が必要です。bundle はすでにあるので、足りないのは `Bundle tools` の出力先です。",
-      guideDiffNoCompare:
-        "bundle diff には現在の bundle と compare path の両方が必要です。`Bundle tools` の compare フィールドを埋めてから `Diff bundles` を実行してください。",
-      guideBundleGeneral:
-        "まず `Inspect` で安全に構造を読み、`Validate` で schema の確信を取り、両方のパスが埋まっているときだけ `Normalize` や `Diff` を使うのがよい流れです。",
-      guideWorkbench:
-        "Workbench はランタイムが健全で、bundle コンテキストも妥当に見えるときにだけ開いてください。Hub の短い流れは `ホーム > Start here` から `Open workbench` です。",
-      guideDocs:
-        "`ホーム > Guides` を単一のドキュメント棚として使ってください。まず `Docs index` を見て、質問の種類が分かってから `Current line`、`Operations`、`Troubleshooting` に進みます。",
-      guideRuntime:
-        "loop を変えたいなら `Runtimes`、状態を見たりコピーしたりするだけなら `Observe` を使います。`Local runtime` は短い health 読み、`Hot loop` は開発 tail、`Stack watch` はサニタイズ済み runtime ログです。",
-      guideLibrary:
-        "workload の取り込みは `ホーム > Library` です。`Sync local control plane` は第一者の作業を取り込み、`Sync remote catalog` はリモート項目を取り込み、domain/family filter で Workbench を開く前に棚を絞れます。",
-      guidePackaging:
-        "release layout、workstation bootstrap、packaging、repair、verification が必要なときは `Installer` を使ってください。Hub の `Tools > Packages` は readiness と diagnostics、`Status` は readiness wall、`Output` は補助ログの置き場です。",
-      guideFailure:
-        "何かが partial に見えるなら、まず最短面を見てください。`Observe > Health` で runtime、`Tools > Status` で desktop packaging readiness、`Bundle tools > Inspect` で project bundle の形を見て、それが runtime・bundle・packaging のどれかを判断します。",
-      guideFallback:
-        "ローカルガイドは、最初の一歩、bundle 確認、runtime の健康、Workbench 起動、workload library の取り込み、desktop packaging について手伝えます。そのあたりを直接聞いてください。",
-    },
-  },
-  es: {
-    assistant: {
-      introLabel: "¿Necesitas ayuda?",
-      introTitle: "Elige el siguiente paso seguro",
-      introCopy: "Empieza con la guía local. Recurre a un modelo solo cuando la ruta integrada no sea suficiente.",
-      quickActions: "Acciones rápidas",
-      askLabel: "Pregunta a la guía local",
-      askButton: "Preguntar a la guía local",
-      askEmpty: "Pregunta por el siguiente paso, la inspección de bundles, la salud del runtime, la documentación o el empaquetado.",
-      suggested: "Siguientes pasos sugeridos",
-      llmIntro: "Conecta un modelo compatible con OpenAI solo cuando quieras un plan de onboarding u operaciones más largo.",
-    },
-    dynamic: {
-      assistantPromptEmpty:
-        "Pregunta algo corto, por ejemplo: qué debo hacer primero, cómo inspecciono un bundle, cómo abro Workbench o por qué el empaquetado sigue en partial.",
-      assistantNoUrgent: "La guía local no ve un siguiente paso urgente ahora mismo.",
-      assistantNoPlan: "Todavía no hay plan del modelo.",
-      assistantNoExecutable: "El modelo no devolvió acciones ejecutables para Hub.",
-      assistantCancelled: "Se canceló {action}.",
-      assistantFocusedSection: "Se enfocó la sección {section}.",
-      assistantUpdatedBundle: "Se actualizó el contexto del bundle en Hub.",
-      assistantExecuteCount: "Se ejecutaron {count} acciones del asistente.",
-      assistantNoPlanToExecute: "No hay un plan del asistente disponible para ejecutar.",
-      assistantReviewFirst: "Revisa primero el plan generado y confirma la ejecución.",
-      guideFirstNoRuntime:
-        "Empieza por la pila local, luego sincroniza o registra trabajo, inspecciónalo una vez y solo entonces abre Workbench. Ahora mismo el runtime local no parece listo, así que `Iniciar pila local` es el primer paso más seguro.",
-      guideFirstNoBundle:
-        "Empieza por la pila local si hace falta, luego abre `Bundle tools` y pega una ruta `.kyuubiki`. Después inspecciona una vez y pasa a Workbench.",
-      guideFirstReady:
-        "Ya tienes runtime y contexto de bundle. La ruta segura ahora es: inspecciona el bundle actual, confirma que el resultado parece razonable y después abre Workbench.",
-      guideBundleNoPath:
-        "Las operaciones con bundles viven en `Inicio > Bundle tools`. Pega primero una ruta de bundle `.kyuubiki`. Luego usa `Inspect` para una lectura rápida, `Validate` para comprobaciones de esquema y `Normalize` solo cuando también tengas una ruta de salida.",
-      guideNormalizeNoOutput:
-        "La normalización necesita tanto la ruta del bundle como la ruta de salida. Ya tienes el bundle; lo que falta es el destino de salida en `Bundle tools`.",
-      guideDiffNoCompare:
-        "El diff de bundles necesita tanto el bundle actual como una ruta de comparación. Rellena el campo compare en `Bundle tools` y luego ejecuta `Diff bundles`.",
-      guideBundleGeneral:
-        "Usa `Inspect` primero para una lectura estructural segura. Usa `Validate` cuando quieras confianza de esquema, `Normalize` cuando quieras un bundle de salida limpio y `Diff` solo cuando ambas rutas de bundle estén completas.",
-      guideWorkbench:
-        "Abre Workbench solo cuando el runtime esté sano y el contexto del bundle parezca coherente. En Hub, la ruta corta es: `Inicio > Empezar aquí`, luego `Abrir Workbench`.",
-      guideDocs:
-        "Usa `Inicio > Guías` como estantería única de documentación. Empieza por `Índice de docs` y abre `Línea actual`, `Operaciones` o `Troubleshooting` solo cuando sepas qué clase de pregunta estás respondiendo.",
-      guideRuntime:
-        "Usa `Runtimes` cuando quieras cambiar el bucle, y `Observe` cuando solo quieras escanear o copiar estado. `Local runtime` es la lectura corta de salud, `Hot loop` es para tails de desarrollo y `Stack watch` es para logs saneados del runtime.",
-      guideLibrary:
-        "Usa `Inicio > Biblioteca` para la entrada de workloads. `Sincronizar control local` trae trabajo de primera parte, `Sincronizar catálogo remoto` trae entradas remotas, y los filtros de dominio/familia ayudan a estrechar la estantería antes de abrir Workbench.",
-      guidePackaging:
-        "Usa `Installer` cuando necesites layout de release o bootstrap de estación. En Hub, `Tools > Packages` es para acciones de build, `Status` es el muro de readiness y `Output` es donde cae el log de empaquetado. En esta sesión automática, los `.app` son fiables, mientras que los `.dmg` pueden seguir apareciendo como partial porque `hdiutil` es sensible a la sesión.",
-      guideFailure:
-        "Si algo parece partial, lee primero la superficie más corta: `Observe > Health` para problemas de runtime, `Tools > Status` para readiness del empaquetado de escritorio y `Bundle tools > Inspect` para la forma del bundle. Luego decide si el problema es runtime, bundle o packaging.",
-      guideFallback:
-        "La guía local puede ayudarte con los primeros pasos, la inspección de bundles, la salud del runtime, el arranque de Workbench, la entrada a la biblioteca de workloads y el empaquetado de escritorio. Prueba a preguntar directamente por una de esas cosas.",
-    },
-  },
 };
-
 export function applyHubAssistantI18n(target) {
-  for (const [language, overrides] of Object.entries(HUB_ASSISTANT_I18N)) {
-    if (!target[language]) continue;
-    target[language] = {
-      ...target[language],
-      assistant: {
-        ...target[language].assistant,
-        ...overrides.assistant,
-      },
-      dynamic: {
-        ...target[language].dynamic,
-        ...overrides.dynamic,
-      },
-    };
-  }
+    for (const [language, overrides] of Object.entries(HUB_ASSISTANT_I18N)) {
+        if (!target[language])
+            continue;
+        target[language] = {
+            ...target[language],
+            assistant: {
+                ...target[language].assistant,
+                ...overrides.assistant,
+            },
+            dynamic: {
+                ...target[language].dynamic,
+                ...overrides.dynamic,
+            },
+        };
+    }
 }

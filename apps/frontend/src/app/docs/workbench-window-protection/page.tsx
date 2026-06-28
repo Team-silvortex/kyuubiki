@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Workbench Window Protection | tamamono 1.11.5",
+  title: "Workbench Window Protection | tamamono 1.12.0",
   description: "Responsive protection rules for the built-in tamamono workbench shell.",
 };
 
@@ -95,7 +95,7 @@ export default function WorkbenchWindowProtectionPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.11.5</p>
+        <p style={eyebrowStyle}>tamamono 1.12.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workbench Window Protection
         </h1>

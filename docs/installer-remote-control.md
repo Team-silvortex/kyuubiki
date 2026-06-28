@@ -1,7 +1,7 @@
 # Installer Remote Control Surface
 
 Use this page as the source-of-truth note for the Installer remote deployment
-and remote runtime control surface in the `tamamono 1.11.x` preparation line.
+and remote runtime control surface in the `tamamono 1.12.x` preparation line.
 
 This document explains:
 
@@ -189,15 +189,15 @@ Failure advice should prefer:
 
 instead of generic “something failed” messaging.
 
-## Relationship to `1.11.x`
+## Relationship to `1.12.x`
 
-Inside the `1.11.x` to `1.20.x` industrialization range, this surface is
-especially relevant to the `1.11.x` and `1.11.x` themes:
+Inside the `1.12.x` to `1.20.x` industrialization range, this surface is
+especially relevant to the `1.12.x` and `1.12.x` themes:
 
-- `1.11.x`
+- `1.12.x`
   trust hardening, clearer operator-facing runtime claims, and fewer ambiguous
   control paths
-- `1.11.x`
+- `1.12.x`
   asset and lineage formalization, where remote workflow snapshots should stop
   being isolated UI history and become part of a clearer execution record
 

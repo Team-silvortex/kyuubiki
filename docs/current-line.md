@@ -28,9 +28,9 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current published release snapshot in this line is `tamamono 1.11.5`.
+The current published release snapshot in this line is `tamamono 1.12.0`.
 
-The current shipping point now sits inside the wider `1.11.x` to `1.20.x`
+The current shipping point now sits inside the wider `1.12.x` to `1.20.x`
 industrialization range, where the main job is still hardening trust,
 contracts, and operator-visible runtime behavior rather than inflating feature
 count.
@@ -77,24 +77,27 @@ agent surfaces.
    credible `2.0` early-commercial product.
 4. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.
-5. [accuracy-baselines.md](accuracy-baselines.md)
+5. [material-research-roadmap.md](material-research-roadmap.md)
+   Reliability roadmap for turning material studies from runnable prototypes
+   into reproducible screening, review, and qualification-oriented workflows.
+6. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
-6. [operator-sdk.md](operator-sdk.md)
+7. [operator-sdk.md](operator-sdk.md)
    Current extension-contract direction for growing operator capabilities
    without turning every family into a one-off vertical slice.
-7. [workflow-graph.md](workflow-graph.md)
+8. [workflow-graph.md](workflow-graph.md)
    Multi-operator composition direction for shader-like workflow growth.
    The first headless reference runner now exists for
    `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
    exposes a first built-in workflow catalog entry for
    `workflow.heat-to-thermo-quad-2d`.
-8. [workflow-dataset.md](workflow-dataset.md)
+9. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.
-9. [installer-remote-control.md](installer-remote-control.md)
+10. [installer-remote-control.md](installer-remote-control.md)
    Installer-owned remote deployment and runtime-control surface, including
    workflow snapshots, certificate alignment, and mesh-oriented operator
    guidance.
-10. [language-packs.md](language-packs.md)
+11. [language-packs.md](language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

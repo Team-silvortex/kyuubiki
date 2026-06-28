@@ -1,10 +1,33 @@
 "use client";
 
-import { WorkbenchLibrarySectionMount } from "@/components/workbench/workbench-library-section-mount";
-import { WorkbenchModelSectionMount } from "@/components/workbench/workbench-model-section-mount";
-import { WorkbenchStudySectionMount } from "@/components/workbench/workbench-study-section-mount";
-import { WorkbenchSystemSidebarMount } from "@/components/workbench/workbench-system-sidebar-mount";
-import { WorkbenchWorkflowSectionMount } from "@/components/workbench/workbench-workflow-section-mount";
+import { lazy, Suspense, type ReactNode } from "react";
+import type { WorkbenchUiChunkId } from "@/components/workbench/workbench-ui-streaming";
+
+const WorkbenchLibrarySectionMount = lazy(() =>
+  import("@/components/workbench/workbench-library-section-mount").then((module) => ({
+    default: module.WorkbenchLibrarySectionMount,
+  })),
+);
+const WorkbenchModelSectionMount = lazy(() =>
+  import("@/components/workbench/workbench-model-section-mount").then((module) => ({
+    default: module.WorkbenchModelSectionMount,
+  })),
+);
+const WorkbenchStudySectionMount = lazy(() =>
+  import("@/components/workbench/workbench-study-section-mount").then((module) => ({
+    default: module.WorkbenchStudySectionMount,
+  })),
+);
+const WorkbenchSystemSidebarMount = lazy(() =>
+  import("@/components/workbench/workbench-system-sidebar-mount").then((module) => ({
+    default: module.WorkbenchSystemSidebarMount,
+  })),
+);
+const WorkbenchWorkflowSectionMount = lazy(() =>
+  import("@/components/workbench/workbench-workflow-section-mount").then((module) => ({
+    default: module.WorkbenchWorkflowSectionMount,
+  })),
+);
 
 export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
   return {
@@ -18,7 +41,8 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
     assistantLabel: props.t.assistant,
     assistantOpen: props.assistantWindowOpen,
     onAssistantToggle: () => props.setAssistantWindowOpen((current: boolean) => !current),
-    studySection: (
+    studySection: sectionChunk(
+      "section.study",
       <WorkbenchStudySectionMount
         studyTab={props.studyTab}
         onStudyTabChange={props.handleStudyTabChange}
@@ -45,9 +69,10 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         runLabel={props.t.run}
         runningLabel={props.t.running}
         onRun={props.runAnalysis}
-      />
+      />,
     ),
-    modelSection: (
+    modelSection: sectionChunk(
+      "section.model",
       <WorkbenchModelSectionMount
         modelTab={props.modelTab}
         onModelTabChange={props.handleModelTabChange}
@@ -71,9 +96,10 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         materialsContent={props.modelMaterialsContent}
         generateContent={props.modelGenerateContent}
         treeContent={props.modelTreeContent}
-      />
+      />,
     ),
-    workflowSection: (
+    workflowSection: sectionChunk(
+      "section.workflow",
       <WorkbenchWorkflowSectionMount
         surfaceTab={props.workflowPanelTab}
         onSurfaceTabChange={props.handleWorkflowPanelTabChange}
@@ -99,9 +125,10 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         runWorkflowDraft={props.runWorkflowDraft}
         openHistoryJob={props.openHistoryJob}
         setSystemAlerts={props.setSystemAlerts}
-      />
+      />,
     ),
-    librarySection: (
+    librarySection: sectionChunk(
+      "section.library",
       <WorkbenchLibrarySectionMount
         labels={props.t}
         libraryTab={props.libraryTab}
@@ -147,9 +174,10 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         refreshJobHistory={props.refreshJobHistory}
         refreshProjects={props.refreshProjects}
         importModel={props.importModel}
-      />
+      />,
     ),
-    systemSection: (
+    systemSection: sectionChunk(
+      "section.system",
       <WorkbenchSystemSidebarMount
         t={props.t}
         systemPanelTab={props.systemPanelTab === "assistant" ? "config" : props.systemPanelTab}
@@ -274,4 +302,32 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />
     ),
   };
+}
+
+function sectionChunk(chunkId: WorkbenchUiChunkId, children: ReactNode) {
+  return (
+    <Suspense fallback={<SidebarChunkFallback chunkId={chunkId} />}>
+      <div className="workbench-ui-chunk" data-workbench-ui-chunk={chunkId}>
+        {children}
+      </div>
+    </Suspense>
+  );
+}
+
+function SidebarChunkFallback({ chunkId }: { chunkId: WorkbenchUiChunkId }) {
+  return (
+    <div
+      className="sidebar-stack panel-scroll-window"
+      data-workbench-ui-chunk={chunkId}
+      data-workbench-ui-chunk-loading="true"
+    >
+      <section className="sidebar-card sidebar-card--compact">
+        <div className="card-head">
+          <h2>Loading</h2>
+          <span>{chunkId}</span>
+        </div>
+        <p className="muted-copy">Loading this workspace panel only when it is needed.</p>
+      </section>
+    </div>
+  );
 }

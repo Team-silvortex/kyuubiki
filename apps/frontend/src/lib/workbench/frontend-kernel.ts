@@ -7,8 +7,15 @@ import type {
 export const FRONTEND_KERNEL_CONTRACT_VERSION = "kyuubiki.frontend-kernel/v1";
 
 export type FrontendKernelBackend = "typescript" | "wasm";
+export type FrontendKernelOperation =
+  | "workflow_topology"
+  | "workflow_search"
+  | "material_ranking"
+  | "layout_collision"
+  | "ui_render";
 
 export type FrontendKernelWorkload = {
+  operation?: FrontendKernelOperation;
   workflowNodeCount?: number;
   workflowEdgeCount?: number;
   materialCandidateCount?: number;
@@ -47,10 +54,26 @@ const WASM_EDGE_THRESHOLD = 1024;
 const WASM_MATERIAL_THRESHOLD = 2048;
 const WASM_LAYOUT_THRESHOLD = 768;
 const HOT_PATH_SCORE_THRESHOLD = 1500;
+const WASM_ELIGIBLE_OPERATIONS = new Set<FrontendKernelOperation>([
+  "workflow_topology",
+  "workflow_search",
+  "material_ranking",
+  "layout_collision",
+]);
 
 export function selectFrontendKernelBackend(
   workload: FrontendKernelWorkload,
 ): FrontendKernelBackendDecision {
+  const operation = workload.operation ?? "workflow_topology";
+  if (!WASM_ELIGIBLE_OPERATIONS.has(operation)) {
+    return {
+      backend: "typescript",
+      coldStartProtected: true,
+      hotPathScore: 0,
+      reason: `${operation} is not a wasm-eligible hot path`,
+    };
+  }
+
   const workflowNodeCount = positiveCount(workload.workflowNodeCount);
   const workflowEdgeCount = positiveCount(workload.workflowEdgeCount);
   const materialCandidateCount = positiveCount(workload.materialCandidateCount);

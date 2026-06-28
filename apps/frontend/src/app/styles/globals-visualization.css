@@ -368,3 +368,7 @@ th {
 }
 
 .heartbeat-badge--healthy {
+  border-color: rgba(62, 138, 90, 0.35);
+  background: rgba(62, 138, 90, 0.12);
+  color: #2f6f48;
+}

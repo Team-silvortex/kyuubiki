@@ -8,7 +8,7 @@ test("normalizeImportedWorkflowGraph keeps bridge normalization diagnostics and 
     schema_version: "kyuubiki.workflow-graph/v1",
     id: "workflow.bridge-import",
     name: "workflow bridge import",
-    version: "1.11.5",
+    version: "1.12.0",
     nodes: [
       {
         id: "bridge_1",

@@ -323,6 +323,7 @@ That is the shortest path from “promising FEM app” to “FEM creation platfo
 - [workflow-graph.md](workflow-graph.md)
 - [workflow-dataset.md](workflow-dataset.md)
 - [operator-sdk.md](operator-sdk.md)
+- [material-research-roadmap.md](material-research-roadmap.md)
 - [headless-sdks.md](headless-sdks.md)
 - [frontend-style.md](frontend-style.md)
 - [frontend-implementation.md](frontend-implementation.md)

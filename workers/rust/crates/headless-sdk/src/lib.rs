@@ -8,8 +8,11 @@ mod hybrid_executor;
 mod material_dielectric;
 mod material_exploration;
 mod material_optimization;
+mod material_reliability;
 mod material_reports;
 mod material_research;
+#[cfg(test)]
+mod material_research_tests;
 mod material_structural;
 mod material_thermo;
 mod plan;
@@ -53,6 +56,10 @@ pub use material_optimization::{
     MaterialOptimizationWeight, less_equal_status, material_optimization_constraint,
     material_optimization_profile, material_optimization_term, material_optimization_weight,
     profile_weight,
+};
+pub use material_reliability::{
+    MaterialEvidenceRef, MaterialModelAssumption, MaterialQualityGate, MaterialReliabilityEnvelope,
+    gate_status, material_evidence_ref, material_model_assumption, material_quality_gate,
 };
 pub use material_reports::{
     MaterialStudyCatalogEntry, MaterialStudyDescriptor, build_material_report,

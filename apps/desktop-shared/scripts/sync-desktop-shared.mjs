@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -7,6 +8,7 @@ const APPS = ["hub-gui", "installer-gui", "workbench-gui"];
 
 const brandSource = path.join(ROOT, "assets/brand/brand.json");
 const sharedUiDir = path.join(ROOT, "apps/desktop-shared/ui");
+const desktopSharedDir = path.join(ROOT, "apps/desktop-shared");
 const sharedUiFiles = [
   "desktop-shell.css",
   "desktop-shell-runtime-mesh.css",
@@ -29,6 +31,17 @@ function writeFile(target, contents) {
   ensureDir(path.dirname(target));
   fs.writeFileSync(target, contents);
 }
+
+function compileDesktopSharedTypeScript() {
+  const tscBin = path.join(ROOT, "apps/frontend/node_modules/.bin/tsc");
+  execFileSync(tscBin, ["-p", path.join(desktopSharedDir, "tsconfig.json")], {
+    cwd: desktopSharedDir,
+    stdio: "inherit",
+  });
+  fs.rmSync(path.join(sharedUiDir, "runtime-status-types.js"), { force: true });
+}
+
+compileDesktopSharedTypeScript();
 
 for (const app of APPS) {
   const sharedTargetDir = path.join(ROOT, "apps", app, "ui/shared");

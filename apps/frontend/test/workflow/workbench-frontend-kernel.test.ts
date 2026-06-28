@@ -31,6 +31,31 @@ test("selectFrontendKernelBackend protects cold starts and only uses wasm for wa
   assert.equal(warmDecision.backend, "wasm");
 });
 
+test("selectFrontendKernelBackend keeps render work out of wasm", () => {
+  const decision = selectFrontendKernelBackend({
+    operation: "ui_render",
+    layoutRectCount: 4000,
+    repeated: true,
+    wasmReady: true,
+    wasmWarmed: true,
+  });
+
+  assert.equal(decision.backend, "typescript");
+  assert.equal(decision.coldStartProtected, true);
+  assert.match(decision.reason, /not a wasm-eligible hot path/);
+});
+
+test("selectFrontendKernelBackend allows warm layout collision hot paths", () => {
+  const decision = selectFrontendKernelBackend({
+    operation: "layout_collision",
+    layoutRectCount: 1200,
+    wasmReady: true,
+    wasmWarmed: true,
+  });
+
+  assert.equal(decision.backend, "wasm");
+});
+
 test("buildWorkflowGraphKernelIndex reports duplicate nodes and missing edge endpoints", () => {
   const index = buildWorkflowGraphKernelIndex({
     nodes: [{ id: "a", kind: "source" }, { id: "a", kind: "duplicate" }],

@@ -18,6 +18,10 @@
   display: contents;
 }
 
+.workbench-ui-chunk {
+  display: contents;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--editor-radius);

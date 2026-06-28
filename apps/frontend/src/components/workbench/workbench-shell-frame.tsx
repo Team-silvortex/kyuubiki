@@ -2,10 +2,16 @@
 
 import { useLayoutEffect, useState } from "react";
 import type { ReactNode } from "react";
+import {
+  WORKBENCH_UI_STREAMING_CONTRACT_VERSION,
+  resolveWorkbenchUiStreamingState,
+} from "@/components/workbench/workbench-ui-streaming";
+import type { SidebarSection } from "@/components/workbench/workbench-types";
 
 type WorkbenchShellFrameProps = {
   assistantOverlay?: ReactNode;
   rail: ReactNode;
+  sidebarSection: SidebarSection;
   sidebar: ReactNode;
   workspace: ReactNode;
 };
@@ -22,11 +28,13 @@ function resolveWorkbenchWindowMode(width: number): WorkbenchWindowMode {
 export function WorkbenchShellFrame({
   assistantOverlay,
   rail,
+  sidebarSection,
   sidebar,
   workspace,
 }: WorkbenchShellFrameProps) {
   const [windowMode, setWindowMode] = useState<WorkbenchWindowMode>("standard");
   const [fullscreen, setFullscreen] = useState(false);
+  const streamingState = resolveWorkbenchUiStreamingState(sidebarSection);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -53,6 +61,11 @@ export function WorkbenchShellFrame({
       data-workbench-shell-extensible="false"
       data-workbench-window-mode={windowMode}
       data-workbench-fullscreen={fullscreen ? "true" : "false"}
+      data-workbench-ui-streaming-contract={WORKBENCH_UI_STREAMING_CONTRACT_VERSION}
+      data-workbench-active-ui-chunks={streamingState.activeChunks.join(" ")}
+      data-workbench-prefetch-ui-chunks={streamingState.prefetchChunks.join(" ")}
+      data-workbench-evictable-ui-chunks={streamingState.evictableChunks.join(" ")}
+      data-workbench-ui-chunk-budget={streamingState.budgetStatus}
     >
       {assistantOverlay}
       <div className="workbench-shell__rail">{rail}</div>

@@ -1,13 +1,15 @@
 {
   "name": "kyuubiki-hub-gui",
-  "version": "1.11.5",
+  "version": "1.12.0",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=20.19.2 <21"
   },
   "scripts": {
+    "compile:ui": "node ./scripts/compile-ui.mjs",
     "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",
-    "test:smoke": "node --test ./test/smoke.test.mjs",
+    "test:smoke": "npm run compile:ui && node --test ./test/smoke.test.mjs",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
