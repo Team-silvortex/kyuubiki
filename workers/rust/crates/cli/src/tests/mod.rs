@@ -8,12 +8,13 @@ use crate::config::{AgentConfig, Command, WorkerConfig};
 use crate::transport::AgentReply;
 use crate::worker::format_event;
 use kyuubiki_protocol::{
-    AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor,
-    ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput,
-    ElectrostaticPlaneQuadElementInput, ElectrostaticPlaneTriangleElementInput,
-    HeatBar1dElementInput, HeatBar1dNodeInput, JobStatus, MagnetostaticBar1dElementInput,
-    MagnetostaticBar1dNodeInput, PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput,
-    ProgressEvent, RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
+    AcousticBar1dElementInput, AcousticBar1dNodeInput, AgentDescriptor, Beam1dElementInput,
+    Beam1dNodeInput, ClusterPeerDescriptor, ElectrostaticBar1dElementInput,
+    ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
+    ElectrostaticPlaneTriangleElementInput, HeatBar1dElementInput, HeatBar1dNodeInput, JobStatus,
+    MagnetostaticBar1dElementInput, MagnetostaticBar1dNodeInput, PlaneNodeInput,
+    PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
+    RpcRequest, SolveAcousticBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
     SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolveHeatBar1dRequest, SolveMagnetostaticBar1dRequest, SolvePlaneQuad2dRequest,

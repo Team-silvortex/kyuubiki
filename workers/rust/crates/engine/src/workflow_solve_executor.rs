@@ -4,6 +4,7 @@ use serde_json::Value;
 
 pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.bar_1d",
+    "solve.acoustic_bar_1d",
     "solve.thermal_bar_1d",
     "solve.heat_bar_1d",
     "solve.electrostatic_bar_1d",
@@ -45,6 +46,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::Bar1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::Bar1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.acoustic_bar_1d" => encode_solve_result(
+            solve(EngineSolveRequest::AcousticBar1d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::AcousticBar1d(result) => Some(result),
                 _ => None,
             },
             operator_id,

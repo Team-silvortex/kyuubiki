@@ -1,5 +1,6 @@
 mod bridge;
 mod catalog;
+mod cfd_diagnostics;
 mod chunking;
 mod coupled_workflows;
 mod heat_bridge;
@@ -48,8 +49,8 @@ pub use workflow::run_workflow_graph;
 pub use workflow_executor::{is_supported_workflow_operator, supported_workflow_operator_ids};
 
 use kyuubiki_protocol::{
-    AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveContactGap1dRequest,
-    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    AnalysisResult, SolveAcousticBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
+    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
     SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
@@ -62,14 +63,14 @@ use kyuubiki_protocol::{
     SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_contact_gap_1d, solve_electrostatic_bar_1d,
-    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
-    solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
-    solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
-    solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
-    solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d,
-    solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d, solve_thermal_bar_1d,
-    solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_acoustic_bar_1d, solve_bar_1d, solve_beam_1d, solve_contact_gap_1d,
+    solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
+    solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d,
+    solve_modal_frame_3d, solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d,
+    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
     solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
@@ -77,6 +78,7 @@ use kyuubiki_solver::{
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineSolveRequest {
     Bar1d(SolveBarRequest),
+    AcousticBar1d(SolveAcousticBar1dRequest),
     ThermalBar1d(SolveThermalBar1dRequest),
     HeatBar1d(SolveHeatBar1dRequest),
     ElectrostaticBar1d(SolveElectrostaticBar1dRequest),
@@ -115,6 +117,9 @@ pub enum EngineSolveRequest {
 pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
     match request {
         EngineSolveRequest::Bar1d(request) => solve_bar_1d(&request).map(AnalysisResult::Bar1d),
+        EngineSolveRequest::AcousticBar1d(request) => {
+            solve_acoustic_bar_1d(&request).map(AnalysisResult::AcousticBar1d)
+        }
         EngineSolveRequest::ThermalBar1d(request) => {
             solve_thermal_bar_1d(&request).map(AnalysisResult::ThermalBar1d)
         }

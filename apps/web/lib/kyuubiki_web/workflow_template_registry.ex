@@ -12,6 +12,12 @@ defmodule KyuubikiWeb.WorkflowTemplateRegistry do
       entry_node_id: "bar_1d_model"
     },
     %{
+      id: "workflow.acoustic-bar-1d-summary-json",
+      name: "Acoustic bar 1D summary JSON",
+      operator_id: "solve.acoustic_bar_1d",
+      entry_node_id: "acoustic_bar_1d_model"
+    },
+    %{
       id: "workflow.thermal-bar-1d-summary-json",
       name: "Thermal bar 1D summary JSON",
       operator_id: "solve.thermal_bar_1d",
@@ -68,7 +74,8 @@ defmodule KyuubikiWeb.WorkflowTemplateRegistry do
   ]
 
   def list do
-    WorkflowTemplateCustomEntries.list() ++ Enum.map(@summary_specs, &build_summary_workflow_entry/1)
+    WorkflowTemplateCustomEntries.list() ++
+      Enum.map(@summary_specs, &build_summary_workflow_entry/1)
   end
 
   def fetch(workflow_id) when is_binary(workflow_id) do

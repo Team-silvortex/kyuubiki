@@ -23,6 +23,8 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.select_best_summary",
     "transform.evaluate_thermal_guard",
     "transform.benchmark_coupled_heat_pair",
+    "transform.evaluate_cfd_guard",
+    "transform.benchmark_cfd_pair",
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
@@ -39,6 +41,7 @@ const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
     "extract.field_hotspots",
     "extract.electrostatic_result_diagnostics",
     "extract.electrostatic_peak_field",
+    "extract.stokes_flow_result_diagnostics",
     "extract.thermal_result_diagnostics",
     "extract.heat_peak_flux",
     "extract.thermo_result_diagnostics",
@@ -252,6 +255,8 @@ pub fn run_transform_operator(
         | "transform.benchmark_coupled_heat_pair"
         | "transform.evaluate_magnetostatic_guard"
         | "transform.benchmark_magnetostatic_pair"
+        | "transform.evaluate_cfd_guard"
+        | "transform.benchmark_cfd_pair"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

@@ -67,6 +67,12 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"transform.benchmark_magnetostatic_pair", "benchmark_magnetostatic_pair",
      "Benchmark paired magnetostatic summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
      ["transform", "magnetostatic", "benchmark", "compare", "headless_safe"]},
+    {"transform.evaluate_cfd_guard", "evaluate_cfd_guard",
+     "Evaluate CFD diagnostics against visible threshold rules and emit pass, warn, or block guard state.",
+     ["transform", "fluid", "cfd", "guard", "threshold", "headless_safe"]},
+    {"transform.benchmark_cfd_pair", "benchmark_cfd_pair",
+     "Benchmark paired CFD summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
+     ["transform", "fluid", "cfd", "benchmark", "compare", "headless_safe"]},
     {"transform.validate_heat_thermo_bridge", "validate_heat_thermo_bridge",
      "Rebuild and verify a bridged thermo-mechanical model against its heat source result and bridge contract before downstream solve execution.",
      [

@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowOperatorModules do
   @moduledoc false
 
   @domain_labels %{
+    "acoustic" => "Acoustic",
     "electromagnetic" => "Electromagnetic",
     "fluid" => "Fluid",
     "mechanical" => "Structural",
@@ -87,7 +88,7 @@ defmodule KyuubikiWeb.WorkflowOperatorModules do
   defp lane_for(_domain, "export"), do: "delivery"
 
   defp lane_for(domain, "solver")
-       when domain in ["mechanical", "thermal", "electromagnetic", "fluid"],
+       when domain in ["mechanical", "thermal", "electromagnetic", "fluid", "acoustic"],
        do: "physics"
 
   defp lane_for(_domain, _kind), do: "workflow"

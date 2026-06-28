@@ -73,6 +73,8 @@ pub enum RpcMethod {
     DescribeAgent,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
+    #[serde(rename = "solve_acoustic_bar_1d")]
+    SolveAcousticBar1d,
     #[serde(rename = "solve_thermal_bar_1d")]
     SolveThermalBar1d,
     #[serde(rename = "solve_heat_bar_1d")]
@@ -236,6 +238,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
+                RpcMethod::SolveAcousticBar1d,
                 RpcMethod::SolveThermalBar1d,
                 RpcMethod::SolveHeatBar1d,
                 RpcMethod::SolveElectrostaticBar1d,
@@ -284,6 +287,12 @@ impl AgentDescriptor {
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveBar1d],
                     tags: vec!["bar".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "acoustic-bar-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveAcousticBar1d],
+                    tags: tags(&["acoustic", "wave", "frequency", "duct", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-bar-1d".to_string(),

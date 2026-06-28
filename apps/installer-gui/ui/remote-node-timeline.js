@@ -22,8 +22,17 @@ function stringifyDetailValue(value) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function escapeAttribute(value) {
-  return String(value).replaceAll("&", "&amp;").replaceAll("\"", "&quot;").replaceAll("<", "&lt;");
+  return escapeHtml(value);
 }
 
 function workflowKindMeta(kind) {
@@ -68,17 +77,17 @@ function renderSemanticBadges(entry) {
   const diagnosis = diagnosisMeta(entry);
   return `
     <div class="remote-node-timeline__badges">
-      <span class="remote-node-timeline__badge" data-tone="${kind.tone}">${kind.label}</span>
-      <span class="remote-node-timeline__badge" data-tone="${stage.tone}">${stage.label}</span>
-      <span class="remote-node-timeline__badge" data-tone="${status.tone}">${status.label}</span>
-      <span class="remote-node-timeline__badge" data-tone="${diagnosis.tone}">${diagnosis.label}</span>
+      <span class="remote-node-timeline__badge" data-tone="${escapeAttribute(kind.tone)}">${escapeHtml(kind.label)}</span>
+      <span class="remote-node-timeline__badge" data-tone="${escapeAttribute(stage.tone)}">${escapeHtml(stage.label)}</span>
+      <span class="remote-node-timeline__badge" data-tone="${escapeAttribute(status.tone)}">${escapeHtml(status.label)}</span>
+      <span class="remote-node-timeline__badge" data-tone="${escapeAttribute(diagnosis.tone)}">${escapeHtml(diagnosis.label)}</span>
     </div>
   `;
 }
 
 function detailValue(details, key, fallback = "n/a") {
   const value = details[key];
-  return value === undefined || value === null || value === "" ? fallback : stringifyDetailValue(value);
+  return escapeHtml(value === undefined || value === null || value === "" ? fallback : stringifyDetailValue(value));
 }
 
 function renderSummarySlots(details) {
@@ -112,8 +121,8 @@ function renderAdditionalDetails(details) {
   }
   return entries.map(([key, value]) => `
       <div class="remote-node-timeline__detail-row">
-        <span>${key}</span>
-        <code>${stringifyDetailValue(value)}</code>
+        <span>${escapeHtml(key)}</span>
+        <code>${escapeHtml(stringifyDetailValue(value))}</code>
       </div>
     `).join("");
 }
@@ -170,12 +179,12 @@ function renderRecommendations(entry, details, selectedNodeIndex) {
         ${actions.map((action) => `
           <div class="remote-node-timeline__recommendation-item">
             <span>Next</span>
-            <strong>${action.detail}</strong>
+            <strong>${escapeHtml(action.detail)}</strong>
             <button
               class="remote-node-timeline__recommendation-action"
               data-recommended-action="${escapeAttribute(action.kind)}"
               data-recommended-node-index="${selectedNodeIndex}"
-            >${action.label}</button>
+            >${escapeHtml(action.label)}</button>
           </div>
         `).join("")}
       </div>
@@ -190,9 +199,9 @@ function renderDetails(entry, selectedNodeIndex) {
   const details = entry.details && typeof entry.details === "object" ? entry.details : {};
   return `
     <article class="remote-node-timeline__details">
-      <strong>${workflowKindMeta(entry.workflow_kind).label} · ${stageMeta(entry.stage).label}</strong>
-      <span>${entry.status} · ${formatTime(entry.recorded_at_unix_ms)}</span>
-      <span>${entry.summary || "no summary"}</span>
+      <strong>${escapeHtml(workflowKindMeta(entry.workflow_kind).label)} · ${escapeHtml(stageMeta(entry.stage).label)}</strong>
+      <span>${escapeHtml(entry.status || "unknown")} · ${formatTime(entry.recorded_at_unix_ms)}</span>
+      <span>${escapeHtml(entry.summary || "no summary")}</span>
       ${renderSemanticBadges(entry)}
       ${renderSummarySlots(details)}
       ${renderRecommendations(entry, details, selectedNodeIndex)}
@@ -232,11 +241,11 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
     }
     const activeEntry = entries[selectedEntryIndex] || entries[0] || null;
     host.innerHTML = entries.length === 0
-      ? `<article class="remote-node-timeline__empty"><strong>${node.label || node.target_host}</strong><span>No workflow snapshots recorded yet.</span></article>`
+      ? `<article class="remote-node-timeline__empty"><strong>${escapeHtml(node.label || node.target_host)}</strong><span>No workflow snapshots recorded yet.</span></article>`
       : `
         <article class="remote-node-timeline__header">
-          <strong>${node.label || node.target_host}</strong>
-          <span>${node.agent_id || "agent unset"} · ${node.control_mode || "orchestrated"}</span>
+          <strong>${escapeHtml(node.label || node.target_host)}</strong>
+          <span>${escapeHtml(node.agent_id || "agent unset")} · ${escapeHtml(node.control_mode || "orchestrated")}</span>
           <span>${entries.length} snapshot(s) · latest ${formatTime(entries[0]?.recorded_at_unix_ms)}</span>
           <span class="remote-node-timeline__follow-state" data-fresh="${shouldFollowLatest ? "true" : "false"}">
             ${shouldFollowLatest ? "Auto-focused latest snapshot" : "Following selected node context"}
@@ -247,16 +256,16 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
             ${entries.map((entry, index) => `
               <article
                 class="remote-node-timeline__item"
-                data-status="${entry.status}"
-                data-stage-tone="${stageMeta(entry.stage).tone}"
+                data-status="${escapeAttribute(entry.status || "unknown")}"
+                data-stage-tone="${escapeAttribute(stageMeta(entry.stage).tone)}"
                 data-timeline-entry-index="${index}"
                 data-selected="${index === selectedEntryIndex ? "true" : "false"}"
                 data-latest="${index === 0 ? "true" : "false"}"
               >
-                <strong>${workflowKindMeta(entry.workflow_kind).label} · ${stageMeta(entry.stage).label}</strong>
-                <span>${statusMeta(entry.status).label} · ${formatTime(entry.recorded_at_unix_ms)}</span>
+                <strong>${escapeHtml(workflowKindMeta(entry.workflow_kind).label)} · ${escapeHtml(stageMeta(entry.stage).label)}</strong>
+                <span>${escapeHtml(statusMeta(entry.status).label)} · ${formatTime(entry.recorded_at_unix_ms)}</span>
                 ${renderSemanticBadges(entry)}
-                <span>${entry.summary || "no summary"}</span>
+                <span>${escapeHtml(entry.summary || "no summary")}</span>
               </article>
             `).join("")}
           </div>

@@ -188,6 +188,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.evaluate_magnetostatic_guard" when is_map(config) ->
         KyuubikiWeb.WorkflowMagnetostaticRuntime.evaluate_magnetostatic_guard(payload, config)
 
+      "transform.evaluate_cfd_guard" when is_map(config) ->
+        WorkflowCfdRuntime.evaluate_cfd_guard(payload, config)
+
       "transform.validate_electrostatic_heat_bridge" when is_map(config) ->
         WorkflowBridgeIntegrityRuntime.validate_electrostatic_heat_bridge(payload, config)
 
@@ -199,6 +202,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.benchmark_magnetostatic_pair" when is_map(config) ->
         KyuubikiWeb.WorkflowMagnetostaticRuntime.benchmark_magnetostatic_pair(payload, config)
+
+      "transform.benchmark_cfd_pair" when is_map(config) ->
+        WorkflowCfdRuntime.benchmark_cfd_pair(payload, config)
 
       "transform.validate_heat_thermo_bridge" when is_map(config) ->
         WorkflowBridgeIntegrityRuntime.validate_heat_thermo_bridge(payload, config)

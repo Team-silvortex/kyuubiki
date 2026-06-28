@@ -77,6 +77,20 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_extract_descriptor(
+            "extract.stokes_flow_result_diagnostics",
+            "fluid",
+            "stokes_flow_result_diagnostics",
+            "Extract CFD diagnostics such as velocity range, pressure range, divergence error, Reynolds number, and viscous dissipation from a Stokes flow result.",
+            &[
+                "extract",
+                "fluid",
+                "cfd",
+                "stokes",
+                "diagnostics",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
             "extract.thermal_result_diagnostics",
             "multi_domain",
             "thermal_result_diagnostics",

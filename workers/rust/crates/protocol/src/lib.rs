@@ -4,6 +4,8 @@ mod operator;
 mod workflow;
 
 mod types {
+    pub mod acoustic;
+    pub mod acoustic_results;
     pub mod field;
     pub mod field_results;
     pub mod fluid_results;
@@ -24,6 +26,8 @@ pub use operator::{
     WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
     WorkflowDatasetValueInfo,
 };
+pub use types::acoustic::*;
+pub use types::acoustic_results::*;
 pub use types::field::*;
 pub use types::field_results::*;
 pub use types::fluid_results::*;

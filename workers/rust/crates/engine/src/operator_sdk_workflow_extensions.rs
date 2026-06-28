@@ -1,3 +1,4 @@
+mod operator_sdk_cfd_transforms;
 mod operator_sdk_focus_chain_operators;
 mod operator_sdk_magnetostatic_transforms;
 mod operator_sdk_peak_summaries;
@@ -5,6 +6,9 @@ mod operator_sdk_peak_summaries;
 use crate::catalog::describe_built_in_operator;
 use crate::magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics;
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
+use crate::operator_sdk_workflow_extensions::operator_sdk_cfd_transforms::{
+    register_cfd_extract_extensions, register_cfd_transform_extensions,
+};
 use crate::operator_sdk_workflow_extensions::operator_sdk_focus_chain_operators::register_focus_chain_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_magnetostatic_transforms::register_magnetostatic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
@@ -505,6 +509,7 @@ pub fn register_workflow_extract_extensions(registry: &mut OperatorRegistry) {
             descriptor: descriptor("extract.magnetostatic_peak_field"),
         })
         .expect("extract.magnetostatic_peak_field should register");
+    register_cfd_extract_extensions(registry);
     registry
         .register_json(ThermalResultDiagnosticsOperator {
             descriptor: descriptor("extract.thermal_result_diagnostics"),
@@ -539,6 +544,7 @@ pub fn register_workflow_transform_extensions(registry: &mut OperatorRegistry) {
         })
         .expect("transform.benchmark_coupled_heat_pair should register");
     register_magnetostatic_transform_extensions(registry);
+    register_cfd_transform_extensions(registry);
     registry
         .register_json(ComposeDiagnosticsBundleOperator {
             descriptor: descriptor("transform.compose_diagnostics_bundle"),

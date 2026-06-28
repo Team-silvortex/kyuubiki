@@ -86,6 +86,17 @@ fn resolve_sensitive_env_value(
     None
 }
 
+fn env_line_value(label: &str, value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed
+        .chars()
+        .any(|ch| ch == '\0' || ch == '\n' || ch == '\r' || ch.is_control())
+    {
+        return Err(format!("{label} contains unsupported control characters"));
+    }
+    Ok(trimmed.to_string())
+}
+
 #[tauri::command]
 pub fn read_env_file() -> Result<EnvFormPayload, String> {
     let path = workspace_root().join(".env.local");
@@ -158,21 +169,30 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         .map(|contents| parse_env_lines(&contents))
         .unwrap_or_default();
     let mut lines = vec![
-        format!("KYUUBIKI_DEPLOYMENT_MODE={}", payload.deployment_mode),
-        format!("KYUUBIKI_AGENT_DISCOVERY={}", payload.agent_discovery),
-        format!("KYUUBIKI_STORAGE_BACKEND={}", payload.storage_backend),
+        format!(
+            "KYUUBIKI_DEPLOYMENT_MODE={}",
+            env_line_value("deployment mode", &payload.deployment_mode)?
+        ),
+        format!(
+            "KYUUBIKI_AGENT_DISCOVERY={}",
+            env_line_value("agent discovery", &payload.agent_discovery)?
+        ),
+        format!(
+            "KYUUBIKI_STORAGE_BACKEND={}",
+            env_line_value("storage backend", &payload.storage_backend)?
+        ),
     ];
 
     if !payload.agent_manifest_path.trim().is_empty() {
         lines.push(format!(
             "KYUUBIKI_AGENT_MANIFEST_PATH={}",
-            payload.agent_manifest_path.trim()
+            env_line_value("agent manifest path", &payload.agent_manifest_path)?
         ));
     }
     if !payload.sqlite_database_path.trim().is_empty() {
         lines.push(format!(
             "SQLITE_DATABASE_PATH={}",
-            payload.sqlite_database_path.trim()
+            env_line_value("sqlite database path", &payload.sqlite_database_path)?
         ));
     }
     if let Some(database_url) = resolve_sensitive_env_value(
@@ -181,12 +201,15 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         &existing_entries,
         "DATABASE_URL",
     ) {
-        lines.push(format!("DATABASE_URL={database_url}"));
+        lines.push(format!(
+            "DATABASE_URL={}",
+            env_line_value("database url", &database_url)?
+        ));
     }
     if !payload.agent_endpoints.trim().is_empty() {
         lines.push(format!(
             "KYUUBIKI_AGENT_ENDPOINTS={}",
-            payload.agent_endpoints.trim()
+            env_line_value("agent endpoints", &payload.agent_endpoints)?
         ));
     }
     if let Some(api_token) = resolve_sensitive_env_value(
@@ -195,7 +218,10 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         &existing_entries,
         "KYUUBIKI_API_TOKEN",
     ) {
-        lines.push(format!("KYUUBIKI_API_TOKEN={api_token}"));
+        lines.push(format!(
+            "KYUUBIKI_API_TOKEN={}",
+            env_line_value("api token", &api_token)?
+        ));
     }
     if let Some(cluster_api_token) = resolve_sensitive_env_value(
         &payload.kyuubiki_cluster_api_token,
@@ -203,12 +229,18 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         &existing_entries,
         "KYUUBIKI_CLUSTER_API_TOKEN",
     ) {
-        lines.push(format!("KYUUBIKI_CLUSTER_API_TOKEN={cluster_api_token}"));
+        lines.push(format!(
+            "KYUUBIKI_CLUSTER_API_TOKEN={}",
+            env_line_value("cluster api token", &cluster_api_token)?
+        ));
     }
     if !payload.kyuubiki_cluster_allowed_agent_ids.trim().is_empty() {
         lines.push(format!(
             "KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS={}",
-            payload.kyuubiki_cluster_allowed_agent_ids.trim()
+            env_line_value(
+                "cluster allowed agent ids",
+                &payload.kyuubiki_cluster_allowed_agent_ids
+            )?
         ));
     }
     if !payload
@@ -218,7 +250,10 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     {
         lines.push(format!(
             "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS={}",
-            payload.kyuubiki_cluster_allowed_cluster_ids.trim()
+            env_line_value(
+                "cluster allowed cluster ids",
+                &payload.kyuubiki_cluster_allowed_cluster_ids
+            )?
         ));
     }
     lines.push(format!(
@@ -236,7 +271,10 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     {
         lines.push(format!(
             "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS={}",
-            payload.kyuubiki_cluster_timestamp_window_ms.trim()
+            env_line_value(
+                "cluster timestamp window",
+                &payload.kyuubiki_cluster_timestamp_window_ms
+            )?
         ));
     }
     lines.push(format!(
@@ -261,11 +299,30 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         &existing_entries,
         "KYUUBIKI_DIRECT_MESH_TOKEN",
     ) {
-        lines.push(format!("KYUUBIKI_DIRECT_MESH_TOKEN={direct_mesh_token}"));
+        lines.push(format!(
+            "KYUUBIKI_DIRECT_MESH_TOKEN={}",
+            env_line_value("direct mesh token", &direct_mesh_token)?
+        ));
     }
 
     fs::write(&path, format!("{}\n", lines.join("\n")))
         .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
     validate_env_file()?;
     Ok(format!("wrote {}", path.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::env_line_value;
+
+    #[test]
+    fn env_line_value_rejects_newline_injection() {
+        let error = env_line_value("api token", "safe\nEVIL=true").unwrap_err();
+        assert!(error.contains("control characters"));
+    }
+
+    #[test]
+    fn env_line_value_trims_safe_values() {
+        assert_eq!(env_line_value("api token", " token ").unwrap(), "token");
+    }
 }

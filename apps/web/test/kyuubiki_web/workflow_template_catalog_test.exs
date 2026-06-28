@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
       |> MapSet.new()
 
     assert MapSet.member?(workflow_ids, "workflow.bar-1d-summary-json")
+    assert MapSet.member?(workflow_ids, "workflow.acoustic-bar-1d-summary-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-plane-triangle-summary-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-plane-quad-field-statistics-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-markdown")
@@ -53,6 +54,11 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
     assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "solve.thermal_truss_2d"))
     assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "extract.result_summary"))
     assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "export.summary_json"))
+
+    assert {:ok, %{"id" => "workflow.acoustic-bar-1d-summary-json"} = acoustic_graph} =
+             WorkflowTemplateCatalog.graph_by_id("workflow.acoustic-bar-1d-summary-json")
+
+    assert Enum.any?(acoustic_graph["nodes"], &(&1["operator_id"] == "solve.acoustic_bar_1d"))
   end
 
   test "can resolve graphs for triangle coupled workflows" do

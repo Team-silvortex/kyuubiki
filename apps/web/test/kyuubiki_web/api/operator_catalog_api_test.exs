@@ -20,6 +20,9 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     electrostatic_operator =
       Enum.find(operators, fn operator -> operator["id"] == "solve.electrostatic_bar_1d" end)
 
+    acoustic_operator =
+      Enum.find(operators, fn operator -> operator["id"] == "solve.acoustic_bar_1d" end)
+
     electrostatic_heat_bridge_operator =
       Enum.find(operators, fn operator ->
         operator["id"] == "bridge.electrostatic_field_to_heat_quad_2d"
@@ -95,6 +98,13 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
                "dataset_value" => "result"
              }
            ] = electrostatic_operator["outputs"]
+
+    assert acoustic_operator["kind"] == "solver"
+    assert acoustic_operator["family"] == "acoustic_bar_1d"
+    assert acoustic_operator["domain"] == "acoustic"
+    assert acoustic_operator["module"]["id"] == "acoustic.solver"
+    assert acoustic_operator["module"]["lane"] == "physics"
+    assert "wave" in acoustic_operator["capability_tags"]
 
     assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
     assert electrostatic_heat_bridge_operator["module"]["id"] == "electromagnetic.workflow_bridge"

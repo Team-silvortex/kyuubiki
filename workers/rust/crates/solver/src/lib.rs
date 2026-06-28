@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{Job, JobStatus, ProgressEvent};
 
+mod acoustic_bar_1d;
 mod bar_1d;
 mod beam_1d;
 mod electrostatic_plane_2d;
@@ -28,6 +29,7 @@ mod thermal_truss;
 mod torsion_1d;
 mod truss;
 
+pub use acoustic_bar_1d::solve_acoustic_bar_1d;
 pub use bar_1d::{
     solve_bar_1d, solve_electrostatic_bar_1d, solve_heat_bar_1d, solve_thermal_bar_1d,
 };

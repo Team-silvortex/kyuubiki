@@ -120,6 +120,46 @@ fn solves_a_small_heat_bar_1d_gradient() {
 }
 
 #[test]
+fn solves_a_small_acoustic_bar_1d_frequency_response() {
+    let result = solve_acoustic_bar_1d(&SolveAcousticBar1dRequest {
+        frequency_hz: 100.0,
+        nodes: vec![
+            AcousticBar1dNodeInput {
+                id: "a0".to_string(),
+                x: 0.0,
+                fix_pressure: true,
+                pressure: 1.0,
+                volume_velocity_source: 0.0,
+            },
+            AcousticBar1dNodeInput {
+                id: "a1".to_string(),
+                x: 1.0,
+                fix_pressure: false,
+                pressure: 0.0,
+                volume_velocity_source: 0.01,
+            },
+        ],
+        elements: vec![AcousticBar1dElementInput {
+            id: "ae0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.1,
+            density: 1.2,
+            bulk_modulus: 142_000.0,
+            damping_ratio: 0.02,
+        }],
+    })
+    .expect("acoustic bar should solve");
+
+    assert_eq!(result.nodes.len(), 2);
+    assert_eq!(result.elements.len(), 1);
+    assert!(result.max_pressure >= 1.0);
+    assert!(result.max_sound_pressure_level_db > 90.0);
+    assert!(result.elements[0].speed_of_sound > 300.0);
+    assert!(result.max_acoustic_intensity >= 0.0);
+}
+
+#[test]
 fn solves_a_small_electrostatic_bar_1d_gradient() {
     let result = solve_electrostatic_bar_1d(&SolveElectrostaticBar1dRequest {
         nodes: vec![

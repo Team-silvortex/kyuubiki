@@ -10,6 +10,12 @@ pub fn chunk_result(
         (AnalysisResult::Bar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::AcousticBar1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::AcousticBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::ThermalBar1d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }

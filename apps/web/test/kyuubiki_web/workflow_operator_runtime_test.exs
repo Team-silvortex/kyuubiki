@@ -10,6 +10,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
       send(self(), {:solve_request, method, payload, opts})
 
       case method do
+        "solve_acoustic_bar_1d" ->
+          {:ok, %{"solver" => "acoustic_bar_1d", "payload" => payload}}
+
         "solve_electrostatic_bar_1d" ->
           {:ok, %{"solver" => "electrostatic_bar_1d", "payload" => payload}}
 
@@ -23,6 +26,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
 
     def solve_electrostatic_bar_1d(payload),
       do: {:ok, %{"solver" => "electrostatic_bar_1d", "payload" => payload}}
+
+    def solve_acoustic_bar_1d(payload),
+      do: {:ok, %{"solver" => "acoustic_bar_1d", "payload" => payload}}
 
     def solve_heat_plane_triangle_2d(payload),
       do: {:ok, %{"solver" => "heat_plane_triangle_2d", "payload" => payload}}
@@ -61,6 +67,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
 
     assert {:ok, %{"solver" => "frame_3d", "payload" => %{"model" => 3}}} =
              WorkflowOperatorRuntime.run_solve_operator("solve.frame_3d", %{"model" => 3})
+
+    assert {:ok, %{"solver" => "acoustic_bar_1d", "payload" => %{"model" => 4}}} =
+             WorkflowOperatorRuntime.run_solve_operator("solve.acoustic_bar_1d", %{"model" => 4})
   end
 
   test "rejects unsupported solve operators" do
@@ -117,6 +126,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     operators = WorkflowOperatorCatalog.list() |> Enum.map(& &1["id"]) |> MapSet.new()
 
     assert MapSet.member?(operators, "solve.electrostatic_bar_1d")
+    assert MapSet.member?(operators, "solve.acoustic_bar_1d")
     assert MapSet.member?(operators, "solve.heat_plane_triangle_2d")
     assert MapSet.member?(operators, "solve.frame_3d")
   end
@@ -481,12 +491,14 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert diagnostics["diagnostic_prefix"] == "thermal"
     assert diagnostics["diagnostic_node_count"] == 3
     assert diagnostics["diagnostic_element_count"] == 2
+
     assert diagnostics["diagnostic_metric_groups"] == [
              "temperature",
              "heat_load",
              "gradient",
              "flux"
            ]
+
     assert diagnostics["thermal_temperature_max"] == 80.0
     assert diagnostics["thermal_temperature_span"] == 60.0
     assert diagnostics["thermal_heat_load_count"] == 3
@@ -559,11 +571,13 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert diagnostics["diagnostic_prefix"] == "thermo"
     assert diagnostics["diagnostic_node_count"] == 3
     assert diagnostics["diagnostic_element_count"] == 2
+
     assert diagnostics["diagnostic_metric_groups"] == [
              "temperature_delta",
              "displacement",
              "stress"
            ]
+
     assert diagnostics["thermo_temperature_delta_span"] == 35.0
     assert diagnostics["thermo_heated_node_count"] == 2
     assert diagnostics["thermo_peak_displacement"] == 10.0

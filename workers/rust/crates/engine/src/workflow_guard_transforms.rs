@@ -18,6 +18,10 @@ pub fn evaluate_magnetostatic_guard(payload: Value, config: Value) -> Result<Val
     )
 }
 
+pub fn evaluate_cfd_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(payload, config, "transform.evaluate_cfd_guard", "fluid")
+}
+
 pub fn benchmark_magnetostatic_pair(payload: Value, config: Value) -> Result<Value, String> {
     benchmark_pair(
         payload,
@@ -25,6 +29,10 @@ pub fn benchmark_magnetostatic_pair(payload: Value, config: Value) -> Result<Val
         "transform.benchmark_magnetostatic_pair",
         "magnetostatic",
     )
+}
+
+pub fn benchmark_cfd_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(payload, config, "transform.benchmark_cfd_pair", "fluid")
 }
 
 fn evaluate_threshold_guard(

@@ -63,6 +63,31 @@ fn runs_heat_bar_1d_extract_export_graph() {
 }
 
 #[test]
+fn runs_acoustic_bar_1d_extract_export_graph() {
+    assert_solver_summary(
+        "workflow.acoustic-bar-1d-summary-json",
+        "study_model/acoustic_bar_1d",
+        "solve.acoustic_bar_1d",
+        "result/acoustic_bar_1d",
+        serde_json::json!({
+            "frequency_hz": 100.0,
+            "nodes": [
+                { "id": "a0", "x": 0.0, "fix_pressure": true, "pressure": 1.0, "volume_velocity_source": 0.0 },
+                { "id": "a1", "x": 1.0, "fix_pressure": false, "pressure": 0.0, "volume_velocity_source": 0.01 }
+            ],
+            "elements": [
+                { "id": "ae0", "node_i": 0, "node_j": 1, "area": 0.1, "density": 1.2, "bulk_modulus": 142000.0, "damping_ratio": 0.02 }
+            ]
+        }),
+        &[
+            "max_pressure",
+            "max_sound_pressure_level_db",
+            "max_acoustic_intensity",
+        ],
+    );
+}
+
+#[test]
 fn runs_heat_plane_triangle_extract_export_graph() {
     assert_solver_summary(
         "workflow.heat-plane-triangle-summary-json",

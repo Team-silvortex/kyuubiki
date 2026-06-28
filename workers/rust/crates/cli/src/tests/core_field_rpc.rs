@@ -82,6 +82,58 @@ fn handles_thermal_bar_1d_rpc_requests() {
 }
 
 #[test]
+fn handles_acoustic_bar_1d_rpc_requests() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-acoustic-bar".to_string(),
+        method: RpcMethod::SolveAcousticBar1d,
+        params: serde_json::to_value(SolveAcousticBar1dRequest {
+            frequency_hz: 100.0,
+            nodes: vec![
+                AcousticBar1dNodeInput {
+                    id: "a0".to_string(),
+                    x: 0.0,
+                    fix_pressure: true,
+                    pressure: 1.0,
+                    volume_velocity_source: 0.0,
+                },
+                AcousticBar1dNodeInput {
+                    id: "a1".to_string(),
+                    x: 1.0,
+                    fix_pressure: false,
+                    pressure: 0.0,
+                    volume_velocity_source: 0.01,
+                },
+            ],
+            elements: vec![AcousticBar1dElementInput {
+                id: "ae0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.1,
+                density: 1.2,
+                bulk_modulus: 142_000.0,
+                damping_ratio: 0.02,
+            }],
+        })
+        .expect("params"),
+    };
+
+    let response =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    let AgentReply::Stream(progress_frames, final_response) = response;
+
+    assert_eq!(progress_frames.len(), 4);
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveAcousticBar1dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("acoustic bar result");
+    assert!(result.max_pressure >= 1.0);
+    assert!(result.max_sound_pressure_level_db > 90.0);
+    assert_eq!(result.elements.len(), 1);
+}
+
+#[test]
 fn handles_heat_bar_1d_rpc_requests() {
     let request = RpcRequest {
         rpc_version: RPC_VERSION,

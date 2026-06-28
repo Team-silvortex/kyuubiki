@@ -20,6 +20,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             &["verified", "mechanical", "bar", "1d"],
         ),
         built_in_solver_descriptor(
+            "solve.acoustic_bar_1d",
+            "acoustic",
+            "acoustic_bar_1d",
+            "Solve a frequency-domain 1D acoustic duct model with pressure, SPL, particle velocity, and intensity outputs.",
+            &[
+                "verified",
+                "acoustic",
+                "wave",
+                "frequency_domain",
+                "bar",
+                "1d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.thermal_bar_1d",
             "thermo_mechanical",
             "thermal_bar_1d",

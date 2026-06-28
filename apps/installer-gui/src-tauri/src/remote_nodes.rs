@@ -227,7 +227,16 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
         workflow_snapshots: if workflow_snapshots.is_empty() {
             None
         } else {
-            Some(workflow_snapshots.into_iter().rev().take(16).collect::<Vec<_>>().into_iter().rev().collect())
+            Some(
+                workflow_snapshots
+                    .into_iter()
+                    .rev()
+                    .take(16)
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .collect(),
+            )
         },
     })
 }
