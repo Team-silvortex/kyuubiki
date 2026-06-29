@@ -2,19 +2,25 @@ use kyuubiki_headless_sdk::{SdkError, WorkflowDatasetContract, WorkflowGraphDefi
 
 #[test]
 fn validates_reference_workflow_examples() {
-    let dataset: WorkflowDatasetContract =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-dataset.json")).expect("dataset example");
+    let dataset: WorkflowDatasetContract = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-dataset.json"
+    ))
+    .expect("dataset example");
     dataset.validate().expect("dataset validates");
 
-    let graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     graph.validate().expect("graph validates");
 }
 
 #[test]
 fn rejects_unknown_dataset_value_reference() {
-    let mut graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     graph.edges[0].dataset_value = Some("missing_value".into());
     match graph.validate() {
         Err(SdkError::Validation { errors }) => {
@@ -26,8 +32,10 @@ fn rejects_unknown_dataset_value_reference() {
 
 #[test]
 fn validates_execution_hints() {
-    let mut graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     graph.dispatch_policy = Some("central_fetch".into());
     graph.placement_tags = vec!["mesh-enabled".into()];
     graph.required_capabilities = vec!["artifact-cache".into()];
@@ -53,8 +61,10 @@ fn validates_execution_hints() {
 
 #[test]
 fn rejects_invalid_dispatch_policy() {
-    let mut graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     graph.dispatch_policy = Some("mystery_mode".into());
     match graph.validate() {
         Err(SdkError::Validation { errors }) => {

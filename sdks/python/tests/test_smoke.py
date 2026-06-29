@@ -342,6 +342,8 @@ class SmokeTest(unittest.TestCase):
             "solve_modal_frame_2d",
             "solve_nonlinear_spring_1d",
             "solve_contact_gap_1d",
+            "solve_acoustic_bar_1d",
+            "solve_stokes_flow_plane_quad_2d",
         ]
 
         def serve_once() -> None:
@@ -373,9 +375,13 @@ class SmokeTest(unittest.TestCase):
             modal = session.solve_direct("modal_frame_2d", {"nodes": [], "elements": []})
             nonlinear = session.solve_direct("nonlinear_spring_1d", {"nodes": [], "elements": []})
             contact = session.solve_direct("contact_gap_1d", {"nodes": [], "elements": [], "contacts": []})
+            acoustic = session.solve_direct("acoustic_bar_1d", {"nodes": [], "elements": []})
+            stokes = session.solve_direct("stokes_flow_quad_2d", {"nodes": [], "elements": []})
             self.assertEqual(modal["solver"], "modal_frame_2d")
             self.assertEqual(nonlinear["solver"], "nonlinear_spring_1d")
             self.assertEqual(contact["solver"], "contact_gap_1d")
+            self.assertEqual(acoustic["solver"], "acoustic_bar_1d")
+            self.assertEqual(stokes["solver"], "stokes_flow_plane_quad_2d")
         finally:
             listener.close()
             thread.join(timeout=1)

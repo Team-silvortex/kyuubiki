@@ -19,7 +19,10 @@ pub struct JobWaitOutcome {
 }
 
 impl KyuubikiSession {
-    pub fn new(control_plane: Option<ControlPlaneClient>, solver_rpc: Option<SolverRpcClient>) -> Self {
+    pub fn new(
+        control_plane: Option<ControlPlaneClient>,
+        solver_rpc: Option<SolverRpcClient>,
+    ) -> Self {
         Self {
             control_plane,
             solver_rpc,
@@ -33,7 +36,10 @@ impl KyuubikiSession {
         })
     }
 
-    pub fn from_control_plane_with_auth(base_url: &str, auth: Option<KyuubikiAuth>) -> SdkResult<Self> {
+    pub fn from_control_plane_with_auth(
+        base_url: &str,
+        auth: Option<KyuubikiAuth>,
+    ) -> SdkResult<Self> {
         Ok(Self {
             control_plane: Some(ControlPlaneClient::new_with_auth(base_url, auth)?),
             solver_rpc: None,
@@ -53,7 +59,11 @@ impl KyuubikiSession {
         control_plane.submit_fem_job(solve_kind, payload)
     }
 
-    pub fn submit_workflow_catalog_job(&self, workflow_id: &str, input_artifacts: &Value) -> SdkResult<Value> {
+    pub fn submit_workflow_catalog_job(
+        &self,
+        workflow_id: &str,
+        input_artifacts: &Value,
+    ) -> SdkResult<Value> {
         let control_plane = self
             .control_plane
             .as_ref()
@@ -61,7 +71,11 @@ impl KyuubikiSession {
         control_plane.submit_workflow_catalog_job(workflow_id, input_artifacts)
     }
 
-    pub fn submit_workflow_graph_job(&self, graph: &Value, input_artifacts: &Value) -> SdkResult<Value> {
+    pub fn submit_workflow_graph_job(
+        &self,
+        graph: &Value,
+        input_artifacts: &Value,
+    ) -> SdkResult<Value> {
         let control_plane = self
             .control_plane
             .as_ref()
@@ -76,18 +90,20 @@ impl KyuubikiSession {
     }
 
     pub fn solve_direct(&self, solve_kind: &str, payload: Value) -> SdkResult<Value> {
-        let solver_rpc = self
-            .solver_rpc
-            .as_ref()
-            .ok_or_else(|| SdkError::Rpc {
-                message: "solver rpc client is not configured".into(),
-                code: None,
-            })?;
+        let solver_rpc = self.solver_rpc.as_ref().ok_or_else(|| SdkError::Rpc {
+            message: "solver rpc client is not configured".into(),
+            code: None,
+        })?;
         let outcome = solver_rpc.solve_study(solve_kind, payload)?;
         Ok(outcome.result)
     }
 
-    pub fn wait_for_job(&self, job_id: &str, poll_interval: Duration, timeout: Duration) -> SdkResult<JobWaitOutcome> {
+    pub fn wait_for_job(
+        &self,
+        job_id: &str,
+        poll_interval: Duration,
+        timeout: Duration,
+    ) -> SdkResult<JobWaitOutcome> {
         let control_plane = self
             .control_plane
             .as_ref()
@@ -118,16 +134,24 @@ impl KyuubikiSession {
                     return Ok(JobWaitOutcome {
                         terminal: payload,
                         history,
-                    })
+                    });
                 }
                 _ => thread::sleep(poll_interval),
             }
         }
 
-        Err(SdkError::Timeout(format!("timed out waiting for job {job_id}")))
+        Err(SdkError::Timeout(format!(
+            "timed out waiting for job {job_id}"
+        )))
     }
 
-    pub fn submit_and_wait(&self, solve_kind: &str, payload: &Value, poll_interval: Duration, timeout: Duration) -> SdkResult<JobWaitOutcome> {
+    pub fn submit_and_wait(
+        &self,
+        solve_kind: &str,
+        payload: &Value,
+        poll_interval: Duration,
+        timeout: Duration,
+    ) -> SdkResult<JobWaitOutcome> {
         let submitted = self.submit_job(solve_kind, payload)?;
         let job_id = submitted
             .get("job")

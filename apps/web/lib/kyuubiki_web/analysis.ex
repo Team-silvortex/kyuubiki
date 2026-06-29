@@ -16,6 +16,7 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.WorkflowTemplateCatalog
 
   defdelegate submit_axial_bar(params), to: AnalysisSolverSubmissions
+  defdelegate submit_acoustic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_bar_1d(params), to: AnalysisSolverSubmissions
@@ -26,12 +27,15 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_magnetostatic_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_plane_triangle_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_stokes_flow_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_truss_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_truss_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_beam_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_beam_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_torsion_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_nonlinear_spring_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_contact_gap_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_truss_2d(params), to: AnalysisSolverSubmissions
@@ -41,7 +45,9 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_frame_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_modal_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_frame_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_modal_frame_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_frame_3d(params), to: AnalysisSolverSubmissions
 

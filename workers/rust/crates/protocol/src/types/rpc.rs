@@ -95,12 +95,18 @@ pub enum RpcMethod {
     SolveHeatPlaneTriangle2d,
     #[serde(rename = "solve_heat_plane_quad_2d")]
     SolveHeatPlaneQuad2d,
+    #[serde(rename = "solve_stokes_flow_plane_quad_2d")]
+    SolveStokesFlowPlaneQuad2d,
     #[serde(rename = "solve_thermal_truss_2d")]
     SolveThermalTruss2d,
     #[serde(rename = "solve_thermal_truss_3d")]
     SolveThermalTruss3d,
     #[serde(rename = "solve_spring_1d")]
     SolveSpring1d,
+    #[serde(rename = "solve_nonlinear_spring_1d")]
+    SolveNonlinearSpring1d,
+    #[serde(rename = "solve_contact_gap_1d")]
+    SolveContactGap1d,
     #[serde(rename = "solve_spring_2d")]
     SolveSpring2d,
     #[serde(rename = "solve_spring_3d")]
@@ -271,9 +277,12 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
                 RpcMethod::SolveHeatPlaneQuad2d,
+                RpcMethod::SolveStokesFlowPlaneQuad2d,
                 RpcMethod::SolveThermalTruss2d,
                 RpcMethod::SolveThermalTruss3d,
                 RpcMethod::SolveSpring1d,
+                RpcMethod::SolveNonlinearSpring1d,
+                RpcMethod::SolveContactGap1d,
                 RpcMethod::SolveSpring2d,
                 RpcMethod::SolveSpring3d,
                 RpcMethod::SolveBeam1d,
@@ -344,53 +353,25 @@ impl AgentDescriptor {
                     id: "magnetostatic-plane-triangle-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveMagnetostaticPlaneTriangle2d],
-                    tags: tags(&[
-                        "electromagnetic",
-                        "magnetostatic",
-                        "plane",
-                        "triangle",
-                        "2d",
-                        "cpu",
-                    ]),
+                    tags: field_plane_tags("magnetostatic", "triangle"),
                 },
                 CapabilityDescriptor {
                     id: "magnetostatic-plane-quad-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveMagnetostaticPlaneQuad2d],
-                    tags: tags(&[
-                        "electromagnetic",
-                        "magnetostatic",
-                        "plane",
-                        "quad",
-                        "2d",
-                        "cpu",
-                    ]),
+                    tags: field_plane_tags("magnetostatic", "quad"),
                 },
                 CapabilityDescriptor {
                     id: "electrostatic-plane-triangle-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveElectrostaticPlaneTriangle2d],
-                    tags: vec![
-                        "electromagnetic".to_string(),
-                        "electrostatic".to_string(),
-                        "plane".to_string(),
-                        "triangle".to_string(),
-                        "2d".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: field_plane_tags("electrostatic", "triangle"),
                 },
                 CapabilityDescriptor {
                     id: "electrostatic-plane-quad-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveElectrostaticPlaneQuad2d],
-                    tags: vec![
-                        "electromagnetic".to_string(),
-                        "electrostatic".to_string(),
-                        "plane".to_string(),
-                        "quad".to_string(),
-                        "2d".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: field_plane_tags("electrostatic", "quad"),
                 },
                 CapabilityDescriptor {
                     id: "heat-plane-triangle-2d".to_string(),
@@ -591,4 +572,8 @@ impl AgentDescriptor {
 
 fn tags(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_string()).collect()
+}
+
+fn field_plane_tags(kind: &str, shape: &str) -> Vec<String> {
+    tags(&["electromagnetic", kind, "plane", shape, "2d", "cpu"])
 }

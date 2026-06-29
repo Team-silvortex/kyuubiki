@@ -32,6 +32,7 @@ use kyuubiki_protocol::{
     Truss3dNodeInput,
 };
 
+mod advanced_rpc;
 mod config_and_transport;
 mod core_field_rpc;
 mod electrostatic_and_truss_rpc;

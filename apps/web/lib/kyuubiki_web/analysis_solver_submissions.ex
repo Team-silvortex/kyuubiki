@@ -10,6 +10,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   def submit_axial_bar(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
 
+  def submit_acoustic_bar_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_acoustic_bar_1d/1,
+        "solve_acoustic_bar_1d"
+      )
+
   def submit_thermal_bar_1d(params),
     do:
       submit_solver_job(
@@ -86,6 +94,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_heat_plane_quad_2d"
       )
 
+  def submit_stokes_flow_plane_quad_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_stokes_flow_plane_quad_2d/1,
+        "solve_stokes_flow_plane_quad_2d"
+      )
+
   def submit_thermal_truss_2d(params),
     do:
       submit_solver_job(
@@ -118,6 +134,22 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   def submit_spring_1d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_spring_1d/1, "solve_spring_1d")
+
+  def submit_nonlinear_spring_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_nonlinear_spring_1d/1,
+        "solve_nonlinear_spring_1d"
+      )
+
+  def submit_contact_gap_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_contact_gap_1d/1,
+        "solve_contact_gap_1d"
+      )
 
   def submit_spring_2d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_spring_2d/1, "solve_spring_2d")
@@ -166,8 +198,24 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   def submit_frame_2d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_frame_2d/1, "solve_frame_2d")
 
+  def submit_modal_frame_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_modal_frame_2d/1,
+        "solve_modal_frame_2d"
+      )
+
   def submit_frame_3d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
+
+  def submit_modal_frame_3d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_modal_frame_3d/1,
+        "solve_modal_frame_3d"
+      )
 
   def submit_thermal_frame_2d(params),
     do:

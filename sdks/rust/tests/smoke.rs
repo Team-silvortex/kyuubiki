@@ -47,7 +47,9 @@ fn agent_client_runs_study_and_browses_chunks() {
                 "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).expect("write response");
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
         }
     });
 
@@ -78,7 +80,10 @@ fn agent_client_runs_study_and_browses_chunks() {
     let page = agent
         .browse_result_chunks("job-smoke", "nodes", 0, 2)
         .expect("chunk page");
-    assert_eq!(page.get("returned").and_then(|value| value.as_u64()), Some(2));
+    assert_eq!(
+        page.get("returned").and_then(|value| value.as_u64()),
+        Some(2)
+    );
     assert_eq!(page.get("total").and_then(|value| value.as_u64()), Some(3));
 
     server.join().expect("server thread");
@@ -126,16 +131,22 @@ fn control_plane_lists_and_fetches_workflow_operators() {
                 "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).expect("write response");
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
         }
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr)).expect("control plane client");
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+        .expect("control plane client");
 
     let workflow = client
         .fetch_workflow_catalog_workflow("workflow.test-graph")
         .expect("workflow descriptor");
-    assert_eq!(workflow["workflow"]["graph"]["id"].as_str(), Some("workflow.test-graph"));
+    assert_eq!(
+        workflow["workflow"]["graph"]["id"].as_str(),
+        Some("workflow.test-graph")
+    );
 
     let operators = client.list_workflow_operators().expect("operator list");
     assert_eq!(
@@ -149,10 +160,7 @@ fn control_plane_lists_and_fetches_workflow_operators() {
             ("family", "solver".to_string()),
         ]))
         .expect("filtered operator list");
-    assert_eq!(
-        filtered["operators"][0]["family"].as_str(),
-        Some("solver")
-    );
+    assert_eq!(filtered["operators"][0]["family"].as_str(), Some("solver"));
 
     let operator = client
         .fetch_workflow_operator("solver.truss_2d")
@@ -213,7 +221,9 @@ fn agent_client_runs_workflow_jobs() {
                 "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).expect("write response");
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
         }
     });
 
@@ -232,7 +242,10 @@ fn agent_client_runs_workflow_jobs() {
         )
         .expect("run workflow catalog");
     assert_eq!(
-        catalog_outcome.result.as_ref().and_then(|value| value["result"]["artifacts"]["mesh.result"]["artifact_id"].as_str()),
+        catalog_outcome
+            .result
+            .as_ref()
+            .and_then(|value| value["result"]["artifacts"]["mesh.result"]["artifact_id"].as_str()),
         Some("artifact.catalog.result")
     );
     assert_eq!(
@@ -243,7 +256,10 @@ fn agent_client_runs_workflow_jobs() {
         Some("artifact.catalog.result")
     );
     assert_eq!(
-        catalog_outcome.workflow_runtime.as_ref().and_then(|value| value.run_id.as_deref()),
+        catalog_outcome
+            .workflow_runtime
+            .as_ref()
+            .and_then(|value| value.run_id.as_deref()),
         Some("run-workflow-catalog")
     );
     assert_eq!(
@@ -279,11 +295,17 @@ fn agent_client_runs_workflow_jobs() {
         )
         .expect("run workflow graph");
     assert_eq!(
-        graph_outcome.result.as_ref().and_then(|value| value["result"]["artifacts"]["mesh.result"]["artifact_id"].as_str()),
+        graph_outcome
+            .result
+            .as_ref()
+            .and_then(|value| value["result"]["artifacts"]["mesh.result"]["artifact_id"].as_str()),
         Some("artifact.graph.result")
     );
     assert_eq!(
-        graph_outcome.output_manifest.as_ref().map(|value| value.graph_id.as_str()),
+        graph_outcome
+            .output_manifest
+            .as_ref()
+            .map(|value| value.graph_id.as_str()),
         Some("workflow.test-inline")
     );
     assert_eq!(
@@ -294,7 +316,10 @@ fn agent_client_runs_workflow_jobs() {
         Some("artifact.graph.result")
     );
     assert_eq!(
-        graph_outcome.workflow_runtime.as_ref().and_then(|value| value.current_node.as_deref()),
+        graph_outcome
+            .workflow_runtime
+            .as_ref()
+            .and_then(|value| value.current_node.as_deref()),
         Some("output")
     );
     assert_eq!(
@@ -315,7 +340,7 @@ fn session_supports_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..2 {
+        for _ in 0..5 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_http_request(&mut stream);
             let path = request
@@ -333,6 +358,19 @@ fn session_supports_expanded_solve_kinds() {
                     202,
                     r#"{"job":{"job_id":"job-thermal-frame-3d","status":"queued"}}"#.to_string(),
                 ),
+                "/api/v1/fem/magnetostatic-plane-quad-2d/jobs" => (
+                    202,
+                    r#"{"job":{"job_id":"job-magnetostatic-plane-quad","status":"queued"}}"#
+                        .to_string(),
+                ),
+                "/api/v1/fem/nonlinear-spring-1d/jobs" => (
+                    202,
+                    r#"{"job":{"job_id":"job-nonlinear-spring","status":"queued"}}"#.to_string(),
+                ),
+                "/api/v1/fem/stokes-flow-plane-quad-2d/jobs" => (
+                    202,
+                    r#"{"job":{"job_id":"job-stokes-flow","status":"queued"}}"#.to_string(),
+                ),
                 _ => (404, r#"{"error":"not_found"}"#.to_string()),
             };
 
@@ -340,23 +378,62 @@ fn session_supports_expanded_solve_kinds() {
                 "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).expect("write response");
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
         }
     });
 
-    let session = KyuubikiSession::from_control_plane(&format!("http://{}", addr), None).expect("session");
+    let session =
+        KyuubikiSession::from_control_plane(&format!("http://{}", addr), None).expect("session");
     let axial = session
-        .submit_job("axial_bar_1d", &serde_json::json!({"nodes": [], "elements": []}))
+        .submit_job(
+            "axial_bar_1d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
         .expect("axial alias submit");
     assert_eq!(axial["job"]["job_id"].as_str(), Some("job-axial"));
 
     let thermal_frame = session
-        .submit_job("thermal_frame_3d", &serde_json::json!({"nodes": [], "elements": []}))
+        .submit_job(
+            "thermal_frame_3d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
         .expect("thermal frame submit");
     assert_eq!(
         thermal_frame["job"]["job_id"].as_str(),
         Some("job-thermal-frame-3d")
     );
+
+    let magnetostatic = session
+        .submit_job(
+            "magnetostatic_plane_quad_2d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("magnetostatic plane quad submit");
+    assert_eq!(
+        magnetostatic["job"]["job_id"].as_str(),
+        Some("job-magnetostatic-plane-quad")
+    );
+
+    let nonlinear = session
+        .submit_job(
+            "nonlinear_spring_1d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("nonlinear spring submit");
+    assert_eq!(
+        nonlinear["job"]["job_id"].as_str(),
+        Some("job-nonlinear-spring")
+    );
+
+    let stokes = session
+        .submit_job(
+            "stokes_flow_quad_2d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("stokes flow submit");
+    assert_eq!(stokes["job"]["job_id"].as_str(), Some("job-stokes-flow"));
 
     server.join().expect("server thread");
 }
@@ -367,21 +444,21 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("rpc listener addr");
 
     let server = thread::spawn(move || {
-        let (mut stream, _) = listener.accept().expect("accept");
-        let request = read_rpc_request(&mut stream);
-        assert_eq!(
-            request["method"].as_str(),
-            Some("solve_electrostatic_plane_quad_2d")
-        );
+        for _ in 0..5 {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let request = read_rpc_request(&mut stream);
+            let method = request["method"].as_str().expect("rpc method");
+            let solver = method.strip_prefix("solve_").expect("solve method");
 
-        let body = serde_json::json!({
-            "ok": true,
-            "result": {
-                "solver": "electrostatic_plane_quad_2d",
-                "input": request["params"].clone(),
-            }
-        });
-        write_rpc_response(&mut stream, &body);
+            let body = serde_json::json!({
+                "ok": true,
+                "result": {
+                    "solver": solver,
+                    "input": request["params"].clone(),
+                }
+            });
+            write_rpc_response(&mut stream, &body);
+        }
     });
 
     let session = KyuubikiSession::new(None, None).with_solver_rpc("127.0.0.1", addr.port());
@@ -395,6 +472,38 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
         result["solver"].as_str(),
         Some("electrostatic_plane_quad_2d")
     );
+
+    let nonlinear = session
+        .solve_direct(
+            "nonlinear_spring_1d",
+            serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("nonlinear direct solve");
+    assert_eq!(nonlinear["solver"].as_str(), Some("nonlinear_spring_1d"));
+
+    let contact = session
+        .solve_direct(
+            "contact_gap_1d",
+            serde_json::json!({"nodes": [], "elements": [], "contacts": []}),
+        )
+        .expect("contact direct solve");
+    assert_eq!(contact["solver"].as_str(), Some("contact_gap_1d"));
+
+    let modal = session
+        .solve_direct(
+            "modal_frame_3d",
+            serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("modal direct solve");
+    assert_eq!(modal["solver"].as_str(), Some("modal_frame_3d"));
+
+    let stokes = session
+        .solve_direct(
+            "stokes_flow_quad_2d",
+            serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("stokes direct solve");
+    assert_eq!(stokes["solver"].as_str(), Some("stokes_flow_plane_quad_2d"));
 
     server.join().expect("server thread");
 }
@@ -432,7 +541,9 @@ fn read_http_request(stream: &mut std::net::TcpStream) -> String {
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack.windows(needle.len()).position(|window| window == needle)
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
 }
 
 fn read_rpc_request(stream: &mut std::net::TcpStream) -> serde_json::Value {

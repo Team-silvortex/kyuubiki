@@ -63,7 +63,9 @@ fn minimal_truss_2d_payload() -> serde_json::Value {
 
 fn main() -> SdkResult<()> {
     let base_url = env::var("KYUUBIKI_BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:4000".into());
-    let auth = env::var("KYUUBIKI_TOKEN").ok().map(KyuubikiAuth::access_token);
+    let auth = env::var("KYUUBIKI_TOKEN")
+        .ok()
+        .map(KyuubikiAuth::access_token);
 
     let session = KyuubikiSession::from_control_plane_with_auth(&base_url, auth)?;
     let agent = KyuubikiAgentClient::new(session);

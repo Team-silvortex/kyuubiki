@@ -8,30 +8,75 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("bar_1d", "/api/v1/fem/axial-bar/jobs"),
     ("thermal_bar_1d", "/api/v1/fem/thermal-bar-1d/jobs"),
     ("heat_bar_1d", "/api/v1/fem/heat-bar-1d/jobs"),
-    ("electrostatic_bar_1d", "/api/v1/fem/electrostatic-bar-1d/jobs"),
-    ("magnetostatic_bar_1d", "/api/v1/fem/magnetostatic-bar-1d/jobs"),
+    (
+        "electrostatic_bar_1d",
+        "/api/v1/fem/electrostatic-bar-1d/jobs",
+    ),
+    (
+        "magnetostatic_bar_1d",
+        "/api/v1/fem/magnetostatic-bar-1d/jobs",
+    ),
+    (
+        "magnetostatic_plane_triangle_2d",
+        "/api/v1/fem/magnetostatic-plane-triangle-2d/jobs",
+    ),
+    (
+        "magnetostatic_plane_quad_2d",
+        "/api/v1/fem/magnetostatic-plane-quad-2d/jobs",
+    ),
+    ("acoustic_bar_1d", "/api/v1/fem/acoustic-bar-1d/jobs"),
     ("beam_1d", "/api/v1/fem/beam-1d/jobs"),
     ("thermal_beam_1d", "/api/v1/fem/thermal-beam-1d/jobs"),
     ("torsion_1d", "/api/v1/fem/torsion-1d/jobs"),
     ("spring_1d", "/api/v1/fem/spring-1d/jobs"),
+    (
+        "nonlinear_spring_1d",
+        "/api/v1/fem/nonlinear-spring-1d/jobs",
+    ),
+    ("contact_gap_1d", "/api/v1/fem/contact-gap-1d/jobs"),
     ("spring_2d", "/api/v1/fem/spring-2d/jobs"),
     ("spring_3d", "/api/v1/fem/spring-3d/jobs"),
     ("truss_2d", "/api/v1/fem/truss-2d/jobs"),
     ("thermal_truss_2d", "/api/v1/fem/thermal-truss-2d/jobs"),
     ("frame_2d", "/api/v1/fem/frame-2d/jobs"),
+    ("modal_frame_2d", "/api/v1/fem/modal-frame-2d/jobs"),
     ("thermal_frame_2d", "/api/v1/fem/thermal-frame-2d/jobs"),
     ("plane_triangle_2d", "/api/v1/fem/plane-triangle-2d/jobs"),
-    ("heat_plane_triangle_2d", "/api/v1/fem/heat-plane-triangle-2d/jobs"),
-    ("thermal_plane_triangle_2d", "/api/v1/fem/thermal-plane-triangle-2d/jobs"),
-    ("electrostatic_plane_triangle_2d", "/api/v1/fem/electrostatic-plane-triangle-2d/jobs"),
+    (
+        "heat_plane_triangle_2d",
+        "/api/v1/fem/heat-plane-triangle-2d/jobs",
+    ),
+    (
+        "thermal_plane_triangle_2d",
+        "/api/v1/fem/thermal-plane-triangle-2d/jobs",
+    ),
+    (
+        "electrostatic_plane_triangle_2d",
+        "/api/v1/fem/electrostatic-plane-triangle-2d/jobs",
+    ),
     ("plane_quad_2d", "/api/v1/fem/plane-quad-2d/jobs"),
     ("heat_plane_quad_2d", "/api/v1/fem/heat-plane-quad-2d/jobs"),
-    ("thermal_plane_quad_2d", "/api/v1/fem/thermal-plane-quad-2d/jobs"),
-    ("electrostatic_plane_quad_2d", "/api/v1/fem/electrostatic-plane-quad-2d/jobs"),
+    (
+        "thermal_plane_quad_2d",
+        "/api/v1/fem/thermal-plane-quad-2d/jobs",
+    ),
+    (
+        "electrostatic_plane_quad_2d",
+        "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
+    ),
     ("truss_3d", "/api/v1/fem/truss-3d/jobs"),
     ("thermal_truss_3d", "/api/v1/fem/thermal-truss-3d/jobs"),
     ("frame_3d", "/api/v1/fem/frame-3d/jobs"),
+    ("modal_frame_3d", "/api/v1/fem/modal-frame-3d/jobs"),
     ("thermal_frame_3d", "/api/v1/fem/thermal-frame-3d/jobs"),
+    (
+        "stokes_flow_quad_2d",
+        "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
+    ),
+    (
+        "stokes_flow_plane_quad_2d",
+        "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
+    ),
 ];
 
 pub struct ControlPlaneClient {
@@ -52,15 +97,19 @@ impl ControlPlaneClient {
 
     pub fn new_with_auth(base_url: &str, auth: Option<KyuubikiAuth>) -> SdkResult<Self> {
         let trimmed = base_url.trim_end_matches('/');
-        let without_scheme = trimmed
-            .strip_prefix("http://")
-            .ok_or_else(|| SdkError::InvalidUrl("only http:// URLs are supported by the minimal Rust SDK".into()))?;
+        let without_scheme = trimmed.strip_prefix("http://").ok_or_else(|| {
+            SdkError::InvalidUrl("only http:// URLs are supported by the minimal Rust SDK".into())
+        })?;
         let (host_port, base_path) = match without_scheme.split_once('/') {
             Some((host_port, rest)) => (host_port, format!("/{}", rest)),
             None => (without_scheme, String::new()),
         };
         let (host, port) = match host_port.split_once(':') {
-            Some((host, port)) => (host.to_string(), port.parse().map_err(|_| SdkError::InvalidUrl(base_url.into()))?),
+            Some((host, port)) => (
+                host.to_string(),
+                port.parse()
+                    .map_err(|_| SdkError::InvalidUrl(base_url.into()))?,
+            ),
             None => (host_port.to_string(), 80),
         };
 
@@ -100,13 +149,20 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/operators", None)
     }
 
-    pub fn list_workflow_operators_with_query(&self, query: Option<&[(&str, String)]>) -> SdkResult<Value> {
+    pub fn list_workflow_operators_with_query(
+        &self,
+        query: Option<&[(&str, String)]>,
+    ) -> SdkResult<Value> {
         let path = append_query("/api/v1/operators", query);
         self.request_json("GET", &path, None)
     }
 
     pub fn fetch_workflow_operator(&self, operator_id: &str) -> SdkResult<Value> {
-        self.request_json("GET", &format!("/api/v1/operators/{}", percent_encode(operator_id)), None)
+        self.request_json(
+            "GET",
+            &format!("/api/v1/operators/{}", percent_encode(operator_id)),
+            None,
+        )
     }
 
     pub fn list_jobs(&self) -> SdkResult<Value> {
@@ -157,7 +213,11 @@ impl ControlPlaneClient {
         self.request_json("POST", path, Some(payload))
     }
 
-    pub fn submit_workflow_catalog_job(&self, workflow_id: &str, input_artifacts: &Value) -> SdkResult<Value> {
+    pub fn submit_workflow_catalog_job(
+        &self,
+        workflow_id: &str,
+        input_artifacts: &Value,
+    ) -> SdkResult<Value> {
         self.request_json(
             "POST",
             &format!("/api/v1/workflows/catalog/{workflow_id}/jobs"),
@@ -165,7 +225,11 @@ impl ControlPlaneClient {
         )
     }
 
-    pub fn submit_workflow_graph_job(&self, graph: &Value, input_artifacts: &Value) -> SdkResult<Value> {
+    pub fn submit_workflow_graph_job(
+        &self,
+        graph: &Value,
+        input_artifacts: &Value,
+    ) -> SdkResult<Value> {
         self.request_json(
             "POST",
             "/api/v1/workflows/graph/jobs",
@@ -181,7 +245,13 @@ impl ControlPlaneClient {
         self.request_json("GET", &format!("/api/v1/results/{job_id}"), None)
     }
 
-    pub fn fetch_result_chunk(&self, job_id: &str, kind: &str, offset: Option<usize>, limit: Option<usize>) -> SdkResult<Value> {
+    pub fn fetch_result_chunk(
+        &self,
+        job_id: &str,
+        kind: &str,
+        offset: Option<usize>,
+        limit: Option<usize>,
+    ) -> SdkResult<Value> {
         let mut path = format!("/api/v1/results/{job_id}/chunks/{kind}");
         let mut query = Vec::new();
         if let Some(offset) = offset {
@@ -198,7 +268,11 @@ impl ControlPlaneClient {
     }
 
     pub fn update_result(&self, job_id: &str, result: &Value) -> SdkResult<Value> {
-        self.request_json("PATCH", &format!("/api/v1/results/{job_id}"), Some(&serde_json::json!({ "result": result })))
+        self.request_json(
+            "PATCH",
+            &format!("/api/v1/results/{job_id}"),
+            Some(&serde_json::json!({ "result": result })),
+        )
     }
 
     pub fn delete_result(&self, job_id: &str) -> SdkResult<Value> {
@@ -214,14 +288,20 @@ impl ControlPlaneClient {
         self.request_json("GET", &path, None)
     }
 
-    pub fn export_security_events_csv(&self, query: Option<&[(&str, String)]>) -> SdkResult<String> {
+    pub fn export_security_events_csv(
+        &self,
+        query: Option<&[(&str, String)]>,
+    ) -> SdkResult<String> {
         let path = append_query("/api/v1/export/security-events.csv", query);
         self.request_text("GET", &path)
     }
 
     fn request_json(&self, method: &str, path: &str, payload: Option<&Value>) -> SdkResult<Value> {
         let request_path = format!("{}{}", self.base_path, path);
-        let body = payload.map(serde_json::to_vec).transpose()?.unwrap_or_default();
+        let body = payload
+            .map(serde_json::to_vec)
+            .transpose()?
+            .unwrap_or_default();
 
         let mut request = format!(
             "{method} {request_path} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: {}\r\n",
@@ -317,6 +397,7 @@ fn append_query(path: &str, query: Option<&[(&str, String)]>) -> String {
 fn normalize_solve_kind(kind: &str) -> &str {
     match kind {
         "axial_bar_1d" => "bar_1d",
+        "stokes_flow_plane_quad_2d" => "stokes_flow_quad_2d",
         other => other,
     }
 }
@@ -325,7 +406,9 @@ fn percent_encode(value: &str) -> String {
     let mut encoded = String::new();
     for byte in value.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => encoded.push(byte as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                encoded.push(byte as char)
+            }
             _ => encoded.push_str(&format!("%{byte:02X}")),
         }
     }

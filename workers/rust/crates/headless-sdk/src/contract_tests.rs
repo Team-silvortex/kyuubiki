@@ -153,7 +153,7 @@ fn solver_contract_ids_are_unique_and_sorted_by_catalog_order() {
     let ids = direct_solver_contract_ids();
     let unique = ids.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(ids.len(), unique.len(), "duplicate solver contract ids");
-    assert_eq!(ids.len(), 26, "unexpected solver contract coverage drift");
+    assert_eq!(ids.len(), 35, "unexpected solver contract coverage drift");
 }
 
 fn direct_solver_contract_ids() -> Vec<&'static str> {

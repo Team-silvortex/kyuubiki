@@ -18,10 +18,13 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
         "magnetostatic_plane_quad_2d",
         "solve_magnetostatic_plane_quad_2d",
     ),
+    ("acoustic_bar_1d", "solve_acoustic_bar_1d"),
     ("beam_1d", "solve_beam_1d"),
     ("thermal_beam_1d", "solve_thermal_beam_1d"),
     ("torsion_1d", "solve_torsion_1d"),
     ("spring_1d", "solve_spring_1d"),
+    ("nonlinear_spring_1d", "solve_nonlinear_spring_1d"),
+    ("contact_gap_1d", "solve_contact_gap_1d"),
     ("spring_2d", "solve_spring_2d"),
     ("spring_3d", "solve_spring_3d"),
     ("truss_2d", "solve_truss_2d"),
@@ -31,12 +34,26 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("thermal_frame_2d", "solve_thermal_frame_2d"),
     ("plane_triangle_2d", "solve_plane_triangle_2d"),
     ("heat_plane_triangle_2d", "solve_heat_plane_triangle_2d"),
-    ("thermal_plane_triangle_2d", "solve_thermal_plane_triangle_2d"),
-    ("electrostatic_plane_triangle_2d", "solve_electrostatic_plane_triangle_2d"),
+    (
+        "thermal_plane_triangle_2d",
+        "solve_thermal_plane_triangle_2d",
+    ),
+    (
+        "electrostatic_plane_triangle_2d",
+        "solve_electrostatic_plane_triangle_2d",
+    ),
     ("plane_quad_2d", "solve_plane_quad_2d"),
     ("heat_plane_quad_2d", "solve_heat_plane_quad_2d"),
     ("thermal_plane_quad_2d", "solve_thermal_plane_quad_2d"),
-    ("electrostatic_plane_quad_2d", "solve_electrostatic_plane_quad_2d"),
+    (
+        "electrostatic_plane_quad_2d",
+        "solve_electrostatic_plane_quad_2d",
+    ),
+    ("stokes_flow_quad_2d", "solve_stokes_flow_plane_quad_2d"),
+    (
+        "stokes_flow_plane_quad_2d",
+        "solve_stokes_flow_plane_quad_2d",
+    ),
     ("truss_3d", "solve_truss_3d"),
     ("thermal_truss_3d", "solve_thermal_truss_3d"),
     ("frame_3d", "solve_frame_3d"),
@@ -84,6 +101,33 @@ impl SolverRpcClient {
         self.solve_study("truss_3d", payload)
     }
 
+    pub fn solve_modal_frame_2d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("modal_frame_2d", payload)
+    }
+
+    pub fn solve_modal_frame_3d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("modal_frame_3d", payload)
+    }
+
+    pub fn solve_nonlinear_spring_1d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("nonlinear_spring_1d", payload)
+    }
+
+    pub fn solve_contact_gap_1d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("contact_gap_1d", payload)
+    }
+
+    pub fn solve_magnetostatic_plane_triangle_2d(
+        &self,
+        payload: Value,
+    ) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("magnetostatic_plane_triangle_2d", payload)
+    }
+
+    pub fn solve_magnetostatic_plane_quad_2d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("magnetostatic_plane_quad_2d", payload)
+    }
+
     pub fn solve_plane_triangle_2d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
         self.solve_study("plane_triangle_2d", payload)
     }
@@ -109,7 +153,13 @@ impl SolverRpcClient {
         stream.set_read_timeout(Some(self.timeout))?;
         stream.set_write_timeout(Some(self.timeout))?;
 
-        let request_id = format!("rust-sdk-{}", std::time::SystemTime::now().elapsed().map(|value| value.as_nanos()).unwrap_or(0));
+        let request_id = format!(
+            "rust-sdk-{}",
+            std::time::SystemTime::now()
+                .elapsed()
+                .map(|value| value.as_nanos())
+                .unwrap_or(0)
+        );
         let payload = serde_json::to_vec(&json!({
             "rpc_version": 1,
             "id": request_id,
@@ -158,6 +208,7 @@ impl SolverRpcClient {
 fn normalize_solve_kind(kind: &str) -> &str {
     match kind {
         "axial_bar_1d" => "bar_1d",
+        "stokes_flow_plane_quad_2d" => "stokes_flow_quad_2d",
         other => other,
     }
 }

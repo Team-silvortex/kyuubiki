@@ -5,6 +5,24 @@ import {
   DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
   PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,
 } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset.ts";
+import { listBuiltInWorkflowTemplateChains } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-library.ts";
+import { isWorkflowOperatorSupportedInRuntime } from "../../src/components/workbench/workflow/workbench-workflow-runtime-support.ts";
+
+test("built-in template chains only use runtime-supported operators", () => {
+  const unsupported = listBuiltInWorkflowTemplateChains()
+    .flatMap((chain) =>
+      chain.templates.map((template) => ({
+        chainId: chain.id,
+        operatorId: template.operatorId,
+      })),
+    )
+    .filter((entry): entry is { chainId: string; operatorId: string } =>
+      Boolean(entry.operatorId),
+    )
+    .filter((entry) => !isWorkflowOperatorSupportedInRuntime(entry.operatorId));
+
+  assert.deepEqual(unsupported, []);
+});
 
 test("diagnostics bundle chain stays registered with expected operators and guard defaults", () => {
   const chain = DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN;

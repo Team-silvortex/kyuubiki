@@ -1,11 +1,15 @@
 use crate::workflow_contracts::{
-    WorkflowAxis, WorkflowDatasetContract, WorkflowDatasetValue, WorkflowDefaults, WorkflowGraphDefinition, WorkflowGraphEdge,
-    WorkflowGraphNode, WorkflowGraphPort, WorkflowNodePortRef, WorkflowOperatorFetchEntry, WorkflowSchemaRef, WorkflowShape,
-    WORKFLOW_DATASET_SCHEMA_VERSION, WORKFLOW_GRAPH_SCHEMA_VERSION,
+    WORKFLOW_DATASET_SCHEMA_VERSION, WORKFLOW_GRAPH_SCHEMA_VERSION, WorkflowAxis,
+    WorkflowDatasetContract, WorkflowDatasetValue, WorkflowDefaults, WorkflowGraphDefinition,
+    WorkflowGraphEdge, WorkflowGraphNode, WorkflowGraphPort, WorkflowNodePortRef,
+    WorkflowOperatorFetchEntry, WorkflowSchemaRef, WorkflowShape,
 };
 use std::collections::HashMap;
 
-pub fn workflow_schema_ref(schema: impl Into<String>, version: impl Into<String>) -> WorkflowSchemaRef {
+pub fn workflow_schema_ref(
+    schema: impl Into<String>,
+    version: impl Into<String>,
+) -> WorkflowSchemaRef {
     WorkflowSchemaRef {
         schema: schema.into(),
         version: version.into(),
@@ -56,7 +60,10 @@ pub fn workflow_dataset_contract(
     }
 }
 
-pub fn workflow_port(port_id: impl Into<String>, artifact_type: impl Into<String>) -> WorkflowGraphPort {
+pub fn workflow_port(
+    port_id: impl Into<String>,
+    artifact_type: impl Into<String>,
+) -> WorkflowGraphPort {
     WorkflowGraphPort {
         id: port_id.into(),
         name: None,
@@ -314,7 +321,10 @@ impl WorkflowGraphDefinition {
         self
     }
 
-    pub fn with_operator_fetch_plan(mut self, operator_fetch_plan: Vec<WorkflowOperatorFetchEntry>) -> Self {
+    pub fn with_operator_fetch_plan(
+        mut self,
+        operator_fetch_plan: Vec<WorkflowOperatorFetchEntry>,
+    ) -> Self {
         self.operator_fetch_plan = operator_fetch_plan;
         self
     }

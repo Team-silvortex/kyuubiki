@@ -1,7 +1,8 @@
 use crate::{
-    build_workflow_output_manifest, normalize_workflow_progression, normalize_workflow_runtime, validate_workflow_result_against_graph,
-    KyuubikiSession, SdkError, SdkResult, WorkflowOutputManifest, WorkflowProgression, WorkflowRuntimeSnapshot,
-    WorkflowValidatedArtifacts,
+    KyuubikiSession, SdkError, SdkResult, WorkflowOutputManifest, WorkflowProgression,
+    WorkflowRuntimeSnapshot, WorkflowValidatedArtifacts, build_workflow_output_manifest,
+    normalize_workflow_progression, normalize_workflow_runtime,
+    validate_workflow_result_against_graph,
 };
 use serde_json::Value;
 use std::time::Duration;
@@ -89,7 +90,9 @@ impl KyuubikiAgentClient {
             None
         };
         let resolved_graph = workflow_graph.or(fetched_graph.as_ref());
-        let submitted = self.session.submit_workflow_catalog_job(workflow_id, input_artifacts)?;
+        let submitted = self
+            .session
+            .submit_workflow_catalog_job(workflow_id, input_artifacts)?;
         let job_id = submitted
             .get("job")
             .and_then(|job| job.get("job_id"))
@@ -108,7 +111,9 @@ impl KyuubikiAgentClient {
         timeout: Duration,
         include_result: bool,
     ) -> SdkResult<StudyRunOutcome> {
-        let submitted = self.session.submit_workflow_graph_job(graph, input_artifacts)?;
+        let submitted = self
+            .session
+            .submit_workflow_graph_job(graph, input_artifacts)?;
         let job_id = submitted
             .get("job")
             .and_then(|job| job.get("job_id"))
@@ -170,12 +175,15 @@ impl KyuubikiAgentClient {
         })
     }
 
-    pub fn fetch_job_bundle(&self, job_id: &str, include_result: bool) -> SdkResult<(Value, Option<Value>)> {
-        let control_plane = self
-            .session
-            .control_plane
-            .as_ref()
-            .ok_or_else(|| SdkError::Transport("control plane client is not configured".into()))?;
+    pub fn fetch_job_bundle(
+        &self,
+        job_id: &str,
+        include_result: bool,
+    ) -> SdkResult<(Value, Option<Value>)> {
+        let control_plane =
+            self.session.control_plane.as_ref().ok_or_else(|| {
+                SdkError::Transport("control plane client is not configured".into())
+            })?;
         let job = control_plane.fetch_job(job_id)?;
         let result = if include_result {
             self.fetch_result_optional(job_id)?
@@ -185,12 +193,17 @@ impl KyuubikiAgentClient {
         Ok((job, result))
     }
 
-    pub fn browse_result_chunks(&self, job_id: &str, kind: &str, offset: usize, limit: usize) -> SdkResult<Value> {
-        let control_plane = self
-            .session
-            .control_plane
-            .as_ref()
-            .ok_or_else(|| SdkError::Transport("control plane client is not configured".into()))?;
+    pub fn browse_result_chunks(
+        &self,
+        job_id: &str,
+        kind: &str,
+        offset: usize,
+        limit: usize,
+    ) -> SdkResult<Value> {
+        let control_plane =
+            self.session.control_plane.as_ref().ok_or_else(|| {
+                SdkError::Transport("control plane client is not configured".into())
+            })?;
         control_plane.fetch_result_chunk(job_id, kind, Some(offset), Some(limit))
     }
 
@@ -233,7 +246,7 @@ impl KyuubikiAgentClient {
                         outcome,
                         attempt_count: attempt,
                         attempts,
-                    })
+                    });
                 }
                 Err(error) => {
                     let class = Self::classify_error(&error);
@@ -244,7 +257,8 @@ impl KyuubikiAgentClient {
                         return Err(error);
                     }
                     std::thread::sleep(backoff);
-                    backoff = Duration::from_secs_f32(backoff.as_secs_f32() * policy.backoff_multiplier);
+                    backoff =
+                        Duration::from_secs_f32(backoff.as_secs_f32() * policy.backoff_multiplier);
                 }
             }
         }
@@ -257,8 +271,13 @@ impl KyuubikiAgentClient {
             SdkError::Timeout(_) => FailureClass::Timeout,
             SdkError::Transport(_) | SdkError::Io(_) => FailureClass::Transport,
             SdkError::Rpc { .. } => FailureClass::Rpc,
-            SdkError::HttpStatus { status_code: 401 | 403, .. } => FailureClass::Auth,
-            SdkError::HttpStatus { status_code: 404, .. } => FailureClass::NotFound,
+            SdkError::HttpStatus {
+                status_code: 401 | 403,
+                ..
+            } => FailureClass::Auth,
+            SdkError::HttpStatus {
+                status_code: 404, ..
+            } => FailureClass::NotFound,
             SdkError::HttpStatus { status_code, .. } if *status_code >= 500 => FailureClass::Server,
             SdkError::HttpStatus { .. } => FailureClass::Http,
             _ => FailureClass::Unknown,
@@ -287,7 +306,9 @@ impl KyuubikiAgentClient {
 
         match control_plane.fetch_result(job_id) {
             Ok(value) => Ok(Some(value)),
-            Err(SdkError::HttpStatus { status_code: 404, .. }) => Ok(None),
+            Err(SdkError::HttpStatus {
+                status_code: 404, ..
+            }) => Ok(None),
             Err(error) => Err(error),
         }
     }
@@ -342,13 +363,14 @@ impl<'a> Iterator for ResultChunkIter<'a> {
             }
         }
 
-        let page = self
-            .client
-            .browse_result_chunks(&self.job_id, &self.kind, self.offset, self.limit);
+        let page =
+            self.client
+                .browse_result_chunks(&self.job_id, &self.kind, self.offset, self.limit);
 
         match page {
             Ok(payload) => {
-                let returned = payload.get("returned").and_then(Value::as_u64).unwrap_or(0) as usize;
+                let returned =
+                    payload.get("returned").and_then(Value::as_u64).unwrap_or(0) as usize;
                 let total = payload.get("total").and_then(Value::as_u64).unwrap_or(0) as usize;
                 self.pages += 1;
                 if returned == 0 || self.offset + returned >= total {

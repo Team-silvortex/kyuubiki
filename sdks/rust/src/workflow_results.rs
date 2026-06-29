@@ -57,7 +57,9 @@ pub struct WorkflowProgression {
     pub latest: Option<Value>,
 }
 
-pub fn build_workflow_output_manifest(graph: &WorkflowGraphDefinition) -> SdkResult<WorkflowOutputManifest> {
+pub fn build_workflow_output_manifest(
+    graph: &WorkflowGraphDefinition,
+) -> SdkResult<WorkflowOutputManifest> {
     graph.validate()?;
     let outputs = graph
         .output_nodes
@@ -128,17 +130,41 @@ pub fn validate_workflow_result_against_graph(
 
 pub fn normalize_workflow_runtime(payload: &Value) -> SdkResult<WorkflowRuntimeSnapshot> {
     let runtime = extract_runtime_payload(payload)?;
-    let workflow_id = read_optional_string(runtime, "workflow_id", "workflow runtime workflow_id must be a string")?;
-    let run_id = read_optional_string(runtime, "run_id", "workflow runtime run_id must be a string")?;
-    let status = read_optional_string(runtime, "status", "workflow runtime status must be a string")?;
-    let current_node = read_optional_string(runtime, "current_node", "workflow runtime current_node must be a string")?;
-    let completed_nodes = read_string_list(runtime, "completed_nodes", "workflow runtime completed_nodes must be a list")?;
-    let progress_events = read_value_list(runtime, "progress_events", "workflow runtime progress_events must be a list")?;
+    let workflow_id = read_optional_string(
+        runtime,
+        "workflow_id",
+        "workflow runtime workflow_id must be a string",
+    )?;
+    let run_id = read_optional_string(
+        runtime,
+        "run_id",
+        "workflow runtime run_id must be a string",
+    )?;
+    let status = read_optional_string(
+        runtime,
+        "status",
+        "workflow runtime status must be a string",
+    )?;
+    let current_node = read_optional_string(
+        runtime,
+        "current_node",
+        "workflow runtime current_node must be a string",
+    )?;
+    let completed_nodes = read_string_list(
+        runtime,
+        "completed_nodes",
+        "workflow runtime completed_nodes must be a list",
+    )?;
+    let progress_events = read_value_list(
+        runtime,
+        "progress_events",
+        "workflow runtime progress_events must be a list",
+    )?;
     let failure = match runtime.get("failure") {
         Some(value) if !value.is_object() => {
             return Err(SdkError::Validation {
                 errors: vec!["workflow runtime failure must be an object".into()],
-            })
+            });
         }
         Some(value) => Some(value.clone()),
         None => None,
@@ -163,13 +189,33 @@ pub fn normalize_workflow_progression(
         let Some(job) = payload.get("job").and_then(Value::as_object) else {
             continue;
         };
-        let current_node = read_optional_string(job, "current_node", "workflow progression current_node must be a string")?;
-        let completed_nodes = read_string_list(job, "completed_nodes", "workflow progression completed_nodes must be a list")?;
-        let progress_events = read_value_list(job, "progress_events", "workflow progression progress_events must be a list")?;
+        let current_node = read_optional_string(
+            job,
+            "current_node",
+            "workflow progression current_node must be a string",
+        )?;
+        let completed_nodes = read_string_list(
+            job,
+            "completed_nodes",
+            "workflow progression completed_nodes must be a list",
+        )?;
+        let progress_events = read_value_list(
+            job,
+            "progress_events",
+            "workflow progression progress_events must be a list",
+        )?;
         snapshots.push(WorkflowProgressSnapshot {
             index,
-            job_id: read_optional_string(job, "job_id", "workflow progression job_id must be a string")?,
-            status: read_optional_string(job, "status", "workflow progression status must be a string")?,
+            job_id: read_optional_string(
+                job,
+                "job_id",
+                "workflow progression job_id must be a string",
+            )?,
+            status: read_optional_string(
+                job,
+                "status",
+                "workflow progression status must be a string",
+            )?,
             progress: job.get("progress").cloned(),
             current_node,
             completed_nodes,
@@ -214,7 +260,9 @@ fn extract_artifacts<'a>(payload: &'a Value) -> SdkResult<&'a serde_json::Map<St
     })
 }
 
-fn extract_runtime_payload<'a>(payload: &'a Value) -> SdkResult<&'a serde_json::Map<String, Value>> {
+fn extract_runtime_payload<'a>(
+    payload: &'a Value,
+) -> SdkResult<&'a serde_json::Map<String, Value>> {
     let object = payload.as_object().ok_or_else(|| SdkError::Validation {
         errors: vec!["workflow result payload must be an object".into()],
     })?;

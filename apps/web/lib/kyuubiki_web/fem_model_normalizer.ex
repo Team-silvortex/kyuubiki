@@ -19,6 +19,9 @@ defmodule KyuubikiWeb.FemModelNormalizer do
     end
   end
 
+  def normalize_acoustic_bar_1d(params),
+    do: normalize_graph_model(params, :invalid_acoustic_model)
+
   def normalize_truss_2d(params), do: normalize_graph_model(params, :invalid_truss_model)
 
   def normalize_thermal_truss_2d(params),
@@ -58,10 +61,34 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_torsion_1d(params), do: normalize_graph_model(params, :invalid_torsion_model)
   def normalize_spring_1d(params), do: normalize_graph_model(params, :invalid_spring_model)
+
+  def normalize_nonlinear_spring_1d(params),
+    do: normalize_graph_model(params, :invalid_nonlinear_spring_model)
+
+  def normalize_contact_gap_1d(%{
+        "nodes" => nodes,
+        "elements" => elements,
+        "contacts" => contacts
+      })
+      when is_list(nodes) and is_list(elements) and is_list(contacts),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements, "contacts" => contacts}}
+
+  def normalize_contact_gap_1d(%{nodes: nodes, elements: elements, contacts: contacts})
+      when is_list(nodes) and is_list(elements) and is_list(contacts),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements, "contacts" => contacts}}
+
+  def normalize_contact_gap_1d(_params), do: {:error, :invalid_contact_gap_model}
+
   def normalize_spring_2d(params), do: normalize_graph_model(params, :invalid_spring_2d_model)
   def normalize_spring_3d(params), do: normalize_graph_model(params, :invalid_spring_3d_model)
   def normalize_frame_2d(params), do: normalize_graph_model(params, :invalid_frame_model)
   def normalize_frame_3d(params), do: normalize_graph_model(params, :invalid_frame_3d_model)
+
+  def normalize_modal_frame_2d(params),
+    do: normalize_graph_model(params, :invalid_modal_frame_model)
+
+  def normalize_modal_frame_3d(params),
+    do: normalize_graph_model(params, :invalid_modal_frame_3d_model)
 
   def normalize_thermal_frame_2d(params),
     do: normalize_graph_model(params, :invalid_thermal_frame_model)
@@ -133,6 +160,17 @@ defmodule KyuubikiWeb.FemModelNormalizer do
       do: {:ok, %{nodes: nodes, elements: elements}}
 
   def normalize_heat_plane_quad_2d(_params), do: {:error, :invalid_heat_plane_quad_model}
+
+  def normalize_stokes_flow_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  def normalize_stokes_flow_plane_quad_2d(%{nodes: nodes, elements: elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  def normalize_stokes_flow_plane_quad_2d(_params),
+    do: {:error, :invalid_stokes_flow_plane_quad_model}
 
   defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements}, _error)
        when is_list(nodes) and is_list(elements) do

@@ -3,20 +3,34 @@ use std::{fmt, io};
 #[derive(Debug)]
 pub enum SdkError {
     InvalidUrl(String),
-    Validation { errors: Vec<String> },
+    Validation {
+        errors: Vec<String>,
+    },
     Transport(String),
-    HttpStatus { status_code: u16, body: String },
+    HttpStatus {
+        status_code: u16,
+        body: String,
+    },
     Io(io::Error),
     Json(serde_json::Error),
-    Rpc { message: String, code: Option<String> },
+    Rpc {
+        message: String,
+        code: Option<String>,
+    },
     Timeout(String),
 }
 
 impl fmt::Display for SdkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidUrl(message) | Self::Transport(message) | Self::Timeout(message) => write!(f, "{message}"),
-            Self::Validation { errors } => write!(f, "workflow contract validation failed:\n- {}", errors.join("\n- ")),
+            Self::InvalidUrl(message) | Self::Transport(message) | Self::Timeout(message) => {
+                write!(f, "{message}")
+            }
+            Self::Validation { errors } => write!(
+                f,
+                "workflow contract validation failed:\n- {}",
+                errors.join("\n- ")
+            ),
             Self::HttpStatus { status_code, body } => write!(f, "http {status_code}: {body}"),
             Self::Rpc { message, code } => match code {
                 Some(code) => write!(f, "{code}: {message}"),

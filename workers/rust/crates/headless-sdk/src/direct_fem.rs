@@ -23,6 +23,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/axial-bar/jobs",
     },
     DirectFemRoute {
+        action: "solve_acoustic_bar_1d",
+        route: "/api/v1/fem/acoustic-bar-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_thermal_bar_1d",
         route: "/api/v1/fem/thermal-bar-1d/jobs",
     },
@@ -61,6 +65,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
     DirectFemRoute {
         action: "solve_heat_plane_quad_2d",
         route: "/api/v1/fem/heat-plane-quad-2d/jobs",
+    },
+    DirectFemRoute {
+        action: "solve_stokes_flow_plane_quad_2d",
+        route: "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
     },
     DirectFemRoute {
         action: "solve_thermal_truss_2d",
@@ -103,6 +111,14 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/spring-1d/jobs",
     },
     DirectFemRoute {
+        action: "solve_nonlinear_spring_1d",
+        route: "/api/v1/fem/nonlinear-spring-1d/jobs",
+    },
+    DirectFemRoute {
+        action: "solve_contact_gap_1d",
+        route: "/api/v1/fem/contact-gap-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_spring_2d",
         route: "/api/v1/fem/spring-2d/jobs",
     },
@@ -131,8 +147,16 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/frame-2d/jobs",
     },
     DirectFemRoute {
+        action: "solve_modal_frame_2d",
+        route: "/api/v1/fem/modal-frame-2d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_frame_3d",
         route: "/api/v1/fem/frame-3d/jobs",
+    },
+    DirectFemRoute {
+        action: "solve_modal_frame_3d",
+        route: "/api/v1/fem/modal-frame-3d/jobs",
     },
 ];
 
@@ -215,12 +239,24 @@ mod tests {
             Some("/api/v1/fem/axial-bar/jobs")
         );
         assert_eq!(
+            direct_fem_submit_route("solve_acoustic_bar_1d"),
+            Some("/api/v1/fem/acoustic-bar-1d/jobs")
+        );
+        assert_eq!(
             direct_fem_submit_route("solve_truss_3d"),
             Some("/api/v1/fem/truss-3d/jobs")
         );
         assert_eq!(
             direct_fem_submit_route("solve_thermal_frame_3d"),
             Some("/api/v1/fem/thermal-frame-3d/jobs")
+        );
+        assert_eq!(
+            direct_fem_submit_route("solve_stokes_flow_plane_quad_2d"),
+            Some("/api/v1/fem/stokes-flow-plane-quad-2d/jobs")
+        );
+        assert_eq!(
+            direct_fem_submit_route("solve_nonlinear_spring_1d"),
+            Some("/api/v1/fem/nonlinear-spring-1d/jobs")
         );
         assert_eq!(direct_fem_submit_route("solve_unknown"), None);
     }
@@ -237,7 +273,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 29);
+        assert_eq!(routes.len(), 35);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 

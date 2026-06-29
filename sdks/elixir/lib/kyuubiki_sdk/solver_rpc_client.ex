@@ -11,6 +11,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "magnetostatic_bar_1d" => "solve_magnetostatic_bar_1d",
     "magnetostatic_plane_triangle_2d" => "solve_magnetostatic_plane_triangle_2d",
     "magnetostatic_plane_quad_2d" => "solve_magnetostatic_plane_quad_2d",
+    "acoustic_bar_1d" => "solve_acoustic_bar_1d",
     "beam_1d" => "solve_beam_1d",
     "thermal_beam_1d" => "solve_thermal_beam_1d",
     "torsion_1d" => "solve_torsion_1d",
@@ -32,6 +33,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "heat_plane_quad_2d" => "solve_heat_plane_quad_2d",
     "thermal_plane_quad_2d" => "solve_thermal_plane_quad_2d",
     "electrostatic_plane_quad_2d" => "solve_electrostatic_plane_quad_2d",
+    "stokes_flow_quad_2d" => "solve_stokes_flow_plane_quad_2d",
     "truss_3d" => "solve_truss_3d",
     "thermal_truss_3d" => "solve_thermal_truss_3d",
     "frame_3d" => "solve_frame_3d",
@@ -61,6 +63,11 @@ defmodule KyuubikiSdk.SolverRpcClient do
     do: solve_study(client, "nonlinear_spring_1d", payload)
 
   def solve_contact_gap_1d(client, payload), do: solve_study(client, "contact_gap_1d", payload)
+
+  def solve_acoustic_bar_1d(client, payload), do: solve_study(client, "acoustic_bar_1d", payload)
+
+  def solve_stokes_flow_quad_2d(client, payload),
+    do: solve_study(client, "stokes_flow_quad_2d", payload)
 
   def solve_plane_triangle_2d(client, payload),
     do: solve_study(client, "plane_triangle_2d", payload)
@@ -134,5 +141,6 @@ defmodule KyuubikiSdk.SolverRpcClient do
     do: normalize_solve_kind(Atom.to_string(kind))
 
   defp normalize_solve_kind("axial_bar_1d"), do: "bar_1d"
+  defp normalize_solve_kind("stokes_flow_plane_quad_2d"), do: "stokes_flow_quad_2d"
   defp normalize_solve_kind(kind) when is_binary(kind), do: String.downcase(kind)
 end

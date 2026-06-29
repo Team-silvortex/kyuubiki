@@ -1,3 +1,4 @@
+mod advanced_rpc;
 mod core;
 mod field_rpc;
 mod frame_beam_rpc;

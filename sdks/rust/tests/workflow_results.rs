@@ -1,12 +1,15 @@
 use kyuubiki_headless_sdk::{
-    build_workflow_output_manifest, normalize_workflow_progression, normalize_workflow_runtime,
-    validate_workflow_result_against_graph, SdkError, WorkflowGraphDefinition,
+    SdkError, WorkflowGraphDefinition, build_workflow_output_manifest,
+    normalize_workflow_progression, normalize_workflow_runtime,
+    validate_workflow_result_against_graph,
 };
 
 #[test]
 fn builds_output_manifest_from_graph() {
-    let graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     let manifest = build_workflow_output_manifest(&graph).expect("manifest");
     assert_eq!(manifest.graph_id, "workflow.heat-to-thermo-quad-2d");
     assert_eq!(manifest.outputs[0].key, "thermo_summary.result");
@@ -14,8 +17,10 @@ fn builds_output_manifest_from_graph() {
 
 #[test]
 fn validates_result_payload_with_artifact_type_fallback() {
-    let graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     let payload = serde_json::json!({
         "result": {
             "workflow_id": "workflow.demo",
@@ -33,7 +38,8 @@ fn validates_result_payload_with_artifact_type_fallback() {
             }
         }
     });
-    let validated = validate_workflow_result_against_graph(&graph, &payload).expect("validated payload");
+    let validated =
+        validate_workflow_result_against_graph(&graph, &payload).expect("validated payload");
     assert_eq!(
         validated.artifacts["thermo_summary.result"]["artifact_id"].as_str(),
         Some("artifact.thermo.result")
@@ -43,12 +49,18 @@ fn validates_result_payload_with_artifact_type_fallback() {
 
 #[test]
 fn rejects_missing_required_output_artifact() {
-    let graph: WorkflowGraphDefinition =
-        serde_json::from_str(include_str!("../../../schemas/examples.workflow-graph.json")).expect("graph example");
+    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
     let payload = serde_json::json!({"result": {"artifacts": {}}});
     match validate_workflow_result_against_graph(&graph, &payload) {
         Err(SdkError::Validation { errors }) => {
-            assert!(errors.iter().any(|item| item.contains("thermo_summary.result")));
+            assert!(
+                errors
+                    .iter()
+                    .any(|item| item.contains("thermo_summary.result"))
+            );
         }
         other => panic!("expected validation error, got {other:?}"),
     }
@@ -93,10 +105,17 @@ fn normalizes_workflow_progression() {
             "artifacts": {}
         }
     });
-    let progression = normalize_workflow_progression(&history, Some(&result_payload)).expect("progression");
-    assert_eq!(progression.snapshots[0].current_node.as_deref(), Some("solve"));
+    let progression =
+        normalize_workflow_progression(&history, Some(&result_payload)).expect("progression");
     assert_eq!(
-        progression.latest.as_ref().and_then(|value| value["run_id"].as_str()),
+        progression.snapshots[0].current_node.as_deref(),
+        Some("solve")
+    );
+    assert_eq!(
+        progression
+            .latest
+            .as_ref()
+            .and_then(|value| value["run_id"].as_str()),
         Some("run-1")
     );
 }

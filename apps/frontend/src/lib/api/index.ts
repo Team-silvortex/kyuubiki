@@ -15,3 +15,4 @@ export * from "./fem-2d-line";
 export * from "./fem-2d-surface";
 export * from "./fem-3d";
 export * from "./fem-electromagnetic";
+export * from "./fem-advanced";
