@@ -6,9 +6,9 @@ import type {
   WorkbenchScriptActionLogEntry,
   WorkbenchScriptMacroStep,
   WorkbenchScriptSnapshot,
-} from "./workbench-script-runtime-types";
-import { assertMacroPresetIsSafe } from "./workbench-script-preset-security";
-import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format";
+} from "./workbench-script-runtime-types.ts";
+import { assertMacroPresetIsSafe } from "./workbench-script-preset-security.ts";
+import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format.ts";
 
 const MACRO_TEMPLATE_EXACT_RE = /^\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}$/;
 const MACRO_TEMPLATE_INLINE_RE = /\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}/g;

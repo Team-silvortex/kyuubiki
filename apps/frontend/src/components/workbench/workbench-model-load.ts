@@ -1,7 +1,7 @@
 "use client";
 
-import { createMaterialDefinition } from "@/lib/materials";
-import { parsePlaygroundModel } from "@/lib/models";
+import { createMaterialDefinition } from "@/lib/materials/materials";
+import { parsePlaygroundModel } from "@/lib/models/model-import";
 import {
   ensureFrameModelMaterials,
   ensurePlaneModelMaterials,

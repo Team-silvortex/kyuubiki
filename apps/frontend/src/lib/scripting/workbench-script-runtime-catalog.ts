@@ -3,7 +3,7 @@
 import type {
   WorkbenchScriptActionDefinition,
   WorkbenchScriptMacroDefinition,
-} from "./workbench-script-runtime-types";
+} from "./workbench-script-runtime-types.ts";
 
 export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
   {
@@ -534,4 +534,3 @@ export function isWorkbenchScriptActionHighRisk(actionId: string) {
 export function getWorkbenchScriptMacroDefinition(macroId: string) {
   return WORKBENCH_SCRIPT_MACROS.find((entry) => entry.id === macroId) ?? null;
 }
-

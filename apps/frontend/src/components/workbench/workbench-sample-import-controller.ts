@@ -1,7 +1,7 @@
 "use client";
 
 import { applyImportedWorkbenchModel } from "@/components/workbench/workbench-model-load";
-import { parsePlaygroundModel } from "@/lib/models";
+import { parsePlaygroundModel } from "@/lib/models/model-import";
 
 type ImportedModelDeps = Parameters<typeof applyImportedWorkbenchModel>[1];
 
@@ -81,4 +81,3 @@ export async function openWorkbenchSample(params: {
     setMessage(error instanceof Error ? `${labels.importFailed}: ${error.message}` : labels.importFailed);
   }
 }
-

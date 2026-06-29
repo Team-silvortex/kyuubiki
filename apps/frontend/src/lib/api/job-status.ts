@@ -1,4 +1,4 @@
-import type { WorkflowProgressEvent } from "./workflow-types";
+import type { WorkflowProgressEvent } from "./workflow-types.ts";
 
 export type WorkflowRunStatus = WorkflowProgressEvent["stage"];
 export type WorkflowRunPollingState = "attached" | "detached";

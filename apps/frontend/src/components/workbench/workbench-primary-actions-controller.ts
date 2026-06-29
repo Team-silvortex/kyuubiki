@@ -15,7 +15,10 @@ import {
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
 import { resetActiveResult } from "@/components/workbench/workbench-file-helpers";
-import { applyHistoryJobPayload } from "@/components/workbench/workbench-history-result";
+import {
+  applyHistoryJobPayload,
+  type HistoryJobResult,
+} from "@/components/workbench/workbench-history-result";
 import {
   importWorkbenchModelFile,
   openWorkbenchSample,
@@ -27,6 +30,9 @@ import {
 } from "@/lib/workbench/material-commands";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import { scientific, serializeCurrentModel } from "@/lib/workbench/helpers";
+import type {
+  WorkbenchAdminDataBackendService,
+} from "@/lib/workbench/admin-data-backend-service-core";
 import {
   generatePrattTruss,
   generateRectangularPanelMesh,
@@ -41,8 +47,8 @@ type PrimaryActionsControllerDeps = {
   setParametric: (value: any) => void;
   setPanelParametric: (value: any) => void;
   startTransition: (callback: () => void) => void;
+  adminDataBackendService: WorkbenchAdminDataBackendService;
   resultRefreshSeqRef: { current: number };
-  fetchResults: () => Promise<{ results: any[] }>;
   setResultRecords: (value: any[] | ((current: any[]) => any[])) => void;
   setSelectedAdminResultJobId: (value: any) => void;
   directMeshEndpointsText: string;
@@ -75,7 +81,6 @@ type PrimaryActionsControllerDeps = {
   truss3dModel: any;
   trussDiagnostics: any;
   refreshJobHistory: () => Promise<void>;
-  fetchJobStatus: (jobId: string) => Promise<any>;
   setSidebarSection: (value: any) => void;
   setWorkflowPanelTab: (value: any) => void;
   setSelectedWorkflowId: (value: any) => void;
@@ -112,15 +117,11 @@ type PrimaryActionsControllerDeps = {
   parametric: any;
   panelParametric: any;
   loadedModelName: string;
-  updateJobRecord: (jobId: string, payload: Record<string, unknown>) => Promise<unknown>;
-  deleteJobRecord: (jobId: string) => Promise<unknown>;
   selectedAdminJobId: string | null;
   adminJobMessage: string;
   adminJobProjectId: string;
   adminJobModelVersionId: string;
   adminJobCaseId: string;
-  updateResultRecord: (jobId: string, payload: Record<string, unknown>) => Promise<unknown>;
-  deleteResultRecord: (jobId: string) => Promise<unknown>;
   adminResultDraft: string;
   selectedAdminResultJobId: string | null;
   downloadTextFile: (name: string, contents: string) => void;
@@ -131,7 +132,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
   async function refreshResults() {
     await refreshWorkbenchResults({
       resultRefreshSeqRef: deps.resultRefreshSeqRef,
-      fetchResults: deps.fetchResults,
+      adminDataBackendService: deps.adminDataBackendService,
       setResultRecords: deps.setResultRecords,
       setSelectedAdminResultJobId: deps.setSelectedAdminResultJobId,
     });
@@ -210,7 +211,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
       void (async () => {
         try {
           dismissWorkbenchAlert(deps.setSystemAlerts, "history-open-error");
-          const payload = await deps.fetchJobStatus(jobId);
+          const payload = await deps.adminDataBackendService.fetchJob<HistoryJobResult>(jobId);
           applyHistoryJobPayload(payload, {
             activeMaterial: deps.activeMaterial,
             copy: {
@@ -436,7 +437,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void (async () => {
         try {
-          await deps.updateJobRecord(deps.selectedAdminJobId!, {
+          await deps.adminDataBackendService.updateJob(deps.selectedAdminJobId!, {
             message: deps.adminJobMessage,
             project_id: deps.adminJobProjectId || undefined,
             model_version_id: deps.adminJobModelVersionId || undefined,
@@ -457,7 +458,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void (async () => {
         try {
-          await deps.deleteJobRecord(deps.selectedAdminJobId!);
+          await deps.adminDataBackendService.deleteJob(deps.selectedAdminJobId!);
           await deps.refreshJobHistory();
           await refreshResults();
           deps.setMessage(deps.t.jobDeleted);
@@ -481,13 +482,11 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void saveWorkbenchAdminResultRecord({
         resultRefreshSeqRef: deps.resultRefreshSeqRef,
-        fetchResults: deps.fetchResults,
+        adminDataBackendService: deps.adminDataBackendService,
         setResultRecords: deps.setResultRecords as any,
         setSelectedAdminResultJobId: deps.setSelectedAdminResultJobId,
         selectedAdminResultJobId: deps.selectedAdminResultJobId,
         adminResultDraft: deps.adminResultDraft,
-        updateResultRecord: deps.updateResultRecord,
-        deleteResultRecord: deps.deleteResultRecord,
         downloadTextFile: deps.downloadTextFile,
         setMessage: deps.setMessage,
         labels: adminResultLabels,
@@ -500,13 +499,11 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void deleteWorkbenchAdminResultRecord({
         resultRefreshSeqRef: deps.resultRefreshSeqRef,
-        fetchResults: deps.fetchResults,
+        adminDataBackendService: deps.adminDataBackendService,
         setResultRecords: deps.setResultRecords as any,
         setSelectedAdminResultJobId: deps.setSelectedAdminResultJobId,
         selectedAdminResultJobId: deps.selectedAdminResultJobId,
         adminResultDraft: deps.adminResultDraft,
-        updateResultRecord: deps.updateResultRecord,
-        deleteResultRecord: deps.deleteResultRecord,
         downloadTextFile: deps.downloadTextFile,
         setMessage: deps.setMessage,
         labels: adminResultLabels,
@@ -517,13 +514,11 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
   const exportAdminResultRecord = () => {
     exportWorkbenchAdminResultRecord({
       resultRefreshSeqRef: deps.resultRefreshSeqRef,
-      fetchResults: deps.fetchResults,
+      adminDataBackendService: deps.adminDataBackendService,
       setResultRecords: deps.setResultRecords as any,
       setSelectedAdminResultJobId: deps.setSelectedAdminResultJobId,
       selectedAdminResultJobId: deps.selectedAdminResultJobId,
       adminResultDraft: deps.adminResultDraft,
-      updateResultRecord: deps.updateResultRecord,
-      deleteResultRecord: deps.deleteResultRecord,
       downloadTextFile: deps.downloadTextFile,
       setMessage: deps.setMessage,
       labels: adminResultLabels,

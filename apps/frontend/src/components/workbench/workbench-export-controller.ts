@@ -8,9 +8,9 @@ import {
   exportSecurityEvents,
   exportSecurityEventsCsv,
   fetchDatabaseExport,
-  type JobResultRecord,
-  type ProjectRecord,
-} from "@/lib/api";
+} from "@/lib/api/security-results-client";
+import type { JobResultRecord } from "@/lib/api/fem-shared";
+import type { ProjectRecord } from "@/lib/api/project-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 import { exportProjectBundleZip } from "@/lib/projects/project-format";
 

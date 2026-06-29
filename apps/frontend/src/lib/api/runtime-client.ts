@@ -8,7 +8,7 @@ import type {
   HealthPayload,
   ProtocolAgentListPayload,
   RegisteredAgentRegistryPayload,
-} from "./runtime-types";
+} from "./runtime-types.ts";
 import type {
   WorkflowCatalogQuery,
   WorkflowCatalogPayload,
@@ -17,9 +17,9 @@ import type {
   WorkflowGraphResponseOptions,
   WorkflowOperatorCatalogQuery,
   WorkflowOperatorCatalogPayload,
-} from "./workflow-types";
-import type { JobEnvelope, JobHistoryPayload, JobState } from "./fem-shared";
-import { requestJson } from "./core";
+} from "./workflow-types.ts";
+import type { JobEnvelope, JobHistoryPayload, JobState } from "./fem-shared.ts";
+import { requestJson } from "./core.ts";
 
 const LARGE_WORKFLOW_COMPACT_THRESHOLD = 1024;
 

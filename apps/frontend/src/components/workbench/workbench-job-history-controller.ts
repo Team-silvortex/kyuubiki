@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction, type TransitionStartFunction } from "react";
-import { cancelJob, fetchJobHistory, type JobEnvelope, type JobState } from "@/lib/api";
+import type { JobEnvelope, JobState } from "@/lib/api/fem-shared";
+import {
+  workbenchJobHistoryBackendService,
+} from "@/lib/workbench/job-history-backend-service";
+import type {
+  WorkbenchJobHistoryBackendService,
+} from "@/lib/workbench/job-history-backend-service-core";
 
 type JobHistoryControllerLabels = {
   jobCancelled: string;
@@ -12,6 +18,7 @@ type JobHistoryControllerLabels = {
 type UseWorkbenchJobHistoryControllerArgs = {
   labels: JobHistoryControllerLabels;
   job: JobEnvelope["job"] | null;
+  jobHistoryBackendService?: WorkbenchJobHistoryBackendService;
   jobIsActive: boolean;
   jobPollTokenRef: MutableRefObject<number>;
   setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>;
@@ -22,6 +29,7 @@ type UseWorkbenchJobHistoryControllerArgs = {
 export function useWorkbenchJobHistoryController({
   labels,
   job,
+  jobHistoryBackendService = workbenchJobHistoryBackendService,
   jobIsActive,
   jobPollTokenRef,
   setJob,
@@ -36,7 +44,7 @@ export function useWorkbenchJobHistoryController({
     const refreshSeq = ++jobHistoryRefreshSeqRef.current;
 
     try {
-      const payload = await fetchJobHistory();
+      const payload = await jobHistoryBackendService.fetchHistory();
       if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
       setJobHistory(payload.jobs);
       setSelectedAdminJobId((current) =>
@@ -47,7 +55,7 @@ export function useWorkbenchJobHistoryController({
       setJobHistory([]);
       setSelectedAdminJobId(null);
     }
-  }, []);
+  }, [jobHistoryBackendService]);
 
   const cancelCurrentJob = useCallback(() => {
     if (!job?.job_id || !jobIsActive) return;
@@ -55,7 +63,7 @@ export function useWorkbenchJobHistoryController({
 
     startTransition(async () => {
       try {
-        const payload = await cancelJob(job.job_id);
+        const payload = await jobHistoryBackendService.cancelJob(job.job_id);
         setJob(payload.job);
         setMessage(labels.jobCancelled);
         await refreshJobHistory();
@@ -71,6 +79,7 @@ export function useWorkbenchJobHistoryController({
     });
   }, [
     job,
+    jobHistoryBackendService,
     jobIsActive,
     jobPollTokenRef,
     labels.initialFailed,

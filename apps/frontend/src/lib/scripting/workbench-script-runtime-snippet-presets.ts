@@ -3,8 +3,8 @@
 import type {
   WorkbenchScriptSnippetParameters,
   WorkbenchScriptSnippetPresetRecord,
-} from "./workbench-script-runtime-types";
-import { assertSnippetPresetIsSafe } from "./workbench-script-preset-security";
+} from "./workbench-script-runtime-types.ts";
+import { assertSnippetPresetIsSafe } from "./workbench-script-preset-security.ts";
 
 const WORKBENCH_SNIPPET_PRESETS_KEY = "kyuubiki-workbench-snippet-presets";
 

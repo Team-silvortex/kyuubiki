@@ -5,8 +5,8 @@ import type {
   ModelVersionListPayload,
   ProjectEnvelope,
   ProjectListPayload,
-} from "./project-types";
-import { requestJson } from "./core";
+} from "./project-types.ts";
+import { requestJson } from "./core.ts";
 
 export function fetchProjects(): Promise<ProjectListPayload> {
   return requestJson<ProjectListPayload>("/api/v1/projects", { method: "GET", cache: "no-store" });

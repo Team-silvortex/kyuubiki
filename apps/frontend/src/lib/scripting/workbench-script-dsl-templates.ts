@@ -3,7 +3,7 @@
 import {
   WORKBENCH_FRONTEND_DSL_REPORT_PREFIX,
   type WorkbenchFrontendDslDocument,
-} from "./workbench-script-dsl";
+} from "./workbench-script-dsl.ts";
 
 const DSL_VERSION = "kyuubiki.frontend-dsl/v1";
 

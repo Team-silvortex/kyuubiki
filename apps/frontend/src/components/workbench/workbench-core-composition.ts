@@ -46,6 +46,12 @@ import {
   formatTime,
   serializeCurrentModel,
 } from "@/lib/workbench/helpers";
+import {
+  workbenchProjectLibraryBackendService,
+} from "@/lib/workbench/project-library-backend-service";
+import {
+  workbenchAdminDataBackendService,
+} from "@/lib/workbench/admin-data-backend-service";
 
 export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const { rootState } = props;
@@ -137,6 +143,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
     setLibraryTab: rootState.setLibraryTab,
     activeMaterial: rootState.activeMaterial,
+    projectLibraryBackendService:
+      props.projectLibraryBackendService ?? workbenchProjectLibraryBackendService,
     createProject: props.createProject,
     createModel: props.createModel,
     createModelVersion: props.createModelVersion,
@@ -196,7 +204,6 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     deleteModel: props.deleteModel,
     deleteModelVersion: props.deleteModelVersion,
     fetchModelVersions: props.fetchModelVersions,
-    fetchJobStatus: props.fetchJobStatus,
     serializeCurrentModel: () =>
       serializeCurrentModel(
         rootState.studyKind,
@@ -383,8 +390,12 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     studyResultDerived,
     startTransition: rootState.startTransition,
     jobPollTokenRef: rootState.jobPollTokenRef,
+    adminDataBackendService:
+      props.adminDataBackendService ?? workbenchAdminDataBackendService,
     downloadTextFile: props.downloadTextFile,
     resetActiveResult: () => resetActiveResult(rootState.setResult, rootState.setJob),
+    projectLibraryBackendService:
+      props.projectLibraryBackendService ?? workbenchProjectLibraryBackendService,
     createProject: props.createProject,
     updateProject: props.updateProject,
     deleteProject: props.deleteProject,
@@ -394,12 +405,6 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     createModelVersion: props.createModelVersion,
     updateModelVersion: props.updateModelVersion,
     deleteModelVersion: props.deleteModelVersion,
-    fetchResults: props.fetchResults,
-    fetchJobStatus: props.fetchJobStatus,
-    updateJobRecord: props.updateJobRecord,
-    deleteJobRecord: props.deleteJobRecord,
-    updateResultRecord: props.updateResultRecord,
-    deleteResultRecord: props.deleteResultRecord,
     cancelJob: props.cancelJob,
     resolveTruss2dJobInput: props.resolveTruss2dJobInput,
     resolveTruss3dJobInput: props.resolveTruss3dJobInput,

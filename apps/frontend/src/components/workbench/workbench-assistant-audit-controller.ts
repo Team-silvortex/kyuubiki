@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createSecurityEvent } from "@/lib/api";
 import {
   createAssistantTransactionEntry,
   type AssistantTransactionEntry,
@@ -17,6 +16,12 @@ import {
 } from "@/lib/workbench/security-audit";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import { buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
+import {
+  workbenchSecurityEventBackendService,
+} from "@/lib/workbench/security-event-backend-service";
+import type {
+  WorkbenchSecurityEventBackendService,
+} from "@/lib/workbench/security-event-backend-service-core";
 
 type AssistantPlanAction = {
   action: string;
@@ -33,6 +38,7 @@ type AssistantAuditControllerDeps = {
   clusterApiToken: string;
   directMeshApiToken: string;
   protocolAgents: any[];
+  securityEventBackendService?: WorkbenchSecurityEventBackendService;
   studyKind: string;
   selectedProjectId: string | null;
   selectedModelId: string | null;
@@ -53,6 +59,7 @@ export function useWorkbenchAssistantAuditController({
   clusterApiToken,
   directMeshApiToken,
   protocolAgents,
+  securityEventBackendService = workbenchSecurityEventBackendService,
   studyKind,
   selectedProjectId,
   selectedModelId,
@@ -125,7 +132,7 @@ export function useWorkbenchAssistantAuditController({
 
   const persistSecurityAuditEvent = async (entry: WorkbenchSecurityAuditEntry) => {
     try {
-      await createSecurityEvent({
+      await securityEventBackendService.createEvent({
         event_id: entry.id,
         event_type: "security_high_risk_action",
         source: entry.source,

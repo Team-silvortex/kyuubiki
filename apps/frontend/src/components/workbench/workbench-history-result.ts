@@ -79,7 +79,7 @@ type HistoryOpenEffects = {
   setPlaneModel: (value: any) => void;
 };
 
-type HistoryJobResult =
+export type HistoryJobResult =
   | AxialBarResult
   | HeatBar1dResult
   | ElectrostaticPlaneTriangle2dResult

@@ -1,4 +1,4 @@
-import type { JobStatusDetail, WorkflowRunStatus } from "./job-status";
+import type { JobStatusDetail, WorkflowRunStatus } from "./job-status.ts";
 
 export type ModelMaterial = {
   id: string;

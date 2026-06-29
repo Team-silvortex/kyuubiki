@@ -11,10 +11,16 @@ import {
   openPersistedWorkbenchVersion,
   openPersistedWorkbenchVersionById,
 } from "@/components/workbench/workbench-persisted-model-controller";
-import type { JobResultRecord } from "@/lib/api";
+import type { JobResultRecord } from "@/lib/api/fem-shared";
 import { exportProjectBundle } from "@/lib/models/modeler";
 import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
 import { readWorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
+import type {
+  WorkbenchProjectLibraryBackendService,
+} from "@/lib/workbench/project-library-backend-service-core";
+import type {
+  WorkbenchAdminDataBackendService,
+} from "@/lib/workbench/admin-data-backend-service-core";
 
 type ProjectStorageControllerDeps = {
   t: any;
@@ -54,19 +60,8 @@ type ProjectStorageControllerDeps = {
   setSelectedModelId: (value: string | null) => void;
   setSelectedVersionId: (value: string | null) => void;
   setModelVersions: (value: any[]) => void;
-  createProject: (input: { name: string; description: string }) => Promise<any>;
-  updateProject: (projectId: string, input: { name: string; description: string }) => Promise<any>;
-  deleteProject: (projectId: string) => Promise<any>;
-  createModel: (projectId: string, input: any) => Promise<any>;
-  updateModel: (modelId: string, input: any) => Promise<any>;
-  deleteModel: (modelId: string) => Promise<any>;
-  createModelVersion: (modelId: string, input: any) => Promise<any>;
-  updateModelVersion: (versionId: string, input: { name: string }) => Promise<any>;
-  deleteModelVersion: (versionId: string) => Promise<any>;
-  fetchModel: (modelId: string) => Promise<any>;
-  fetchModelVersion: (versionId: string) => Promise<any>;
-  fetchModelVersions: (modelId: string) => Promise<any>;
-  fetchJobStatus: (jobId: string) => Promise<any>;
+  adminDataBackendService: WorkbenchAdminDataBackendService;
+  projectLibraryBackendService: WorkbenchProjectLibraryBackendService;
   refreshProjects: () => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
   serializeCurrentModel: () => Record<string, unknown>;
@@ -111,19 +106,8 @@ export function createWorkbenchProjectStorageController({
   setSelectedModelId,
   setSelectedVersionId,
   setModelVersions,
-  createProject,
-  updateProject,
-  deleteProject,
-  createModel,
-  updateModel,
-  deleteModel,
-  createModelVersion,
-  updateModelVersion,
-  deleteModelVersion,
-  fetchModel,
-  fetchModelVersion,
-  fetchModelVersions,
-  fetchJobStatus,
+  adminDataBackendService,
+  projectLibraryBackendService,
   refreshProjects,
   refreshVersions,
   serializeCurrentModel,
@@ -139,8 +123,8 @@ export function createWorkbenchProjectStorageController({
 
     const modelDetailsSettled = await Promise.allSettled(
       selectedProjectModels.map(async (model) => {
-        const modelEnvelope = await fetchModel(model.model_id);
-        const versionsEnvelope = await fetchModelVersions(model.model_id);
+        const modelEnvelope = await projectLibraryBackendService.fetchModel(model.model_id);
+        const versionsEnvelope = await projectLibraryBackendService.fetchModelVersions(model.model_id);
         return {
           model: modelEnvelope.model,
           versions: versionsEnvelope.versions,
@@ -155,7 +139,7 @@ export function createWorkbenchProjectStorageController({
         .filter((historyJob) => historyJob.has_result)
         .map(async (historyJob) => {
           try {
-            const payload = await fetchJobStatus(historyJob.job_id);
+            const payload = await adminDataBackendService.fetchJob(historyJob.job_id);
 
             if (!payload.result) {
               return null;
@@ -244,7 +228,7 @@ export function createWorkbenchProjectStorageController({
   const createProjectRecord = () => {
     startTransition(async () => {
       try {
-        const payload = await createProject({
+        const payload = await projectLibraryBackendService.createProject({
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
@@ -262,7 +246,7 @@ export function createWorkbenchProjectStorageController({
 
     startTransition(async () => {
       try {
-        await updateProject(selectedProjectId, {
+        await projectLibraryBackendService.updateProject(selectedProjectId, {
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
@@ -280,7 +264,7 @@ export function createWorkbenchProjectStorageController({
 
     startTransition(async () => {
       try {
-        await deleteProject(selectedProjectId);
+        await projectLibraryBackendService.deleteProject(selectedProjectId);
         setSelectedModelId(null);
         setSelectedVersionId(null);
         await refreshProjects();
@@ -310,7 +294,7 @@ export function createWorkbenchProjectStorageController({
         };
 
         if (!selectedModelId || saveAs) {
-          const created = await createModel(selectedProjectId, modelPayload);
+          const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
           setSelectedModelId(created.model.model_id);
           setSelectedVersionId(created.model.latest_version_id ?? null);
           await refreshProjects();
@@ -319,8 +303,8 @@ export function createWorkbenchProjectStorageController({
           return;
         }
 
-        await updateModel(selectedModelId, modelPayload);
-        const version = await createModelVersion(selectedModelId, modelPayload);
+        await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
+        const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
 
         setSelectedVersionId(version.version.version_id);
         await refreshProjects();
@@ -349,7 +333,7 @@ export function createWorkbenchProjectStorageController({
 
     startTransition(async () => {
       try {
-        await updateModelVersion(selectedVersionId, { name: loadedModelName });
+        await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
         await refreshVersions(selectedModelId ?? "");
         setMessage(t.versionRenamed);
       } catch (error) {
@@ -363,7 +347,7 @@ export function createWorkbenchProjectStorageController({
 
     startTransition(async () => {
       try {
-        await deleteModelVersion(selectedVersionId);
+        await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
         setSelectedVersionId(null);
         if (selectedModelId) {
           await refreshVersions(selectedModelId);
@@ -381,7 +365,7 @@ export function createWorkbenchProjectStorageController({
 
     startTransition(async () => {
       try {
-        await deleteModel(selectedModelId);
+        await projectLibraryBackendService.deleteModel(selectedModelId);
         setSelectedModelId(null);
         setSelectedVersionId(null);
         setModelVersions([]);

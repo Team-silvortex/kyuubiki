@@ -1,11 +1,11 @@
 "use client";
 
-import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format";
+import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format.ts";
 import type {
   WorkbenchScriptLanguage,
   WorkbenchScriptSnippetParameterValue,
   WorkbenchScriptSnippetParameters,
-} from "./workbench-script-runtime-types";
+} from "./workbench-script-runtime-types.ts";
 
 export type WorkbenchScriptSnippetParameter = {
   key: string;

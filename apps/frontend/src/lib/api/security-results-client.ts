@@ -6,8 +6,8 @@ import type {
   SecurityEventEnvelope,
   SecurityEventExportPayload,
   SecurityEventListPayload,
-} from "./security-results-types";
-import { requestJson, requestText } from "./core";
+} from "./security-results-types.ts";
+import { requestJson, requestText } from "./core.ts";
 
 export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
   return requestJson<DatabaseExportPayload>("/api/v1/export/database", {

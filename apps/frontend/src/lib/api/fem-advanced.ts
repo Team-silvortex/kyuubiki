@@ -1,5 +1,5 @@
-import { requestJson } from "./core";
-import type { JobEnvelope } from "./fem-shared";
+import { requestJson } from "./core.ts";
+import type { JobEnvelope } from "./fem-shared.ts";
 
 export type AdvancedFemNodeInput = Record<string, string | number | boolean | null | undefined>;
 export type AdvancedFemElementInput = Record<string, string | number | boolean | null | undefined>;

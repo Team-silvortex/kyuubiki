@@ -3,17 +3,10 @@ import type {
   DirectMeshSelectionMode,
   FrontendRuntimeMode,
   HealthPayload,
-  ModelVersionRecord,
-  ProjectRecord,
   ProtocolAgentDescriptor,
-  SecurityEventRecord,
 } from "@/lib/api";
-import {
-  createProject,
-  fetchModelVersions,
-  fetchProjects,
-  fetchSecurityEvents,
-} from "@/lib/api";
+import type { ModelVersionRecord, ProjectRecord } from "@/lib/api/project-types";
+import type { SecurityEventRecord } from "@/lib/api/security-results-types";
 import { copyByLanguage } from "@/components/workbench/workbench-copy";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
@@ -27,6 +20,14 @@ import {
   workbenchRuntimeStatusBackendService,
   type WorkbenchRuntimeStatusBackendService,
 } from "@/lib/workbench/runtime-status-backend-service";
+import {
+  workbenchSecurityEventBackendService,
+  type WorkbenchSecurityEventBackendService,
+} from "@/lib/workbench/security-event-backend-service";
+import {
+  workbenchProjectLibraryBackendService,
+  type WorkbenchProjectLibraryBackendService,
+} from "@/lib/workbench/project-library-backend-service";
 
 type UseWorkbenchDataRefreshControllerArgs = {
   directMeshEndpointsText: string;
@@ -50,7 +51,9 @@ type UseWorkbenchDataRefreshControllerArgs = {
   setSelectedVersionId: (value: string | null) => void;
   refreshJobHistory: () => Promise<void>;
   refreshResults: () => Promise<void>;
+  projectLibraryBackendService?: WorkbenchProjectLibraryBackendService;
   runtimeStatusBackendService?: WorkbenchRuntimeStatusBackendService;
+  securityEventBackendService?: WorkbenchSecurityEventBackendService;
   securityEventWindowMs: Record<Exclude<SecurityEventWindow, "">, number>;
 };
 
@@ -76,7 +79,9 @@ export function useWorkbenchDataRefreshController({
   setSelectedVersionId,
   refreshJobHistory,
   refreshResults,
+  projectLibraryBackendService = workbenchProjectLibraryBackendService,
   runtimeStatusBackendService = workbenchRuntimeStatusBackendService,
+  securityEventBackendService = workbenchSecurityEventBackendService,
   securityEventWindowMs,
 }: UseWorkbenchDataRefreshControllerArgs) {
   const healthRefreshSeqRef = useRef(0);
@@ -135,11 +140,11 @@ export function useWorkbenchDataRefreshController({
     const refreshSeq = ++projectRefreshSeqRef.current;
 
     try {
-      const payload = await fetchProjects();
+      const payload = await projectLibraryBackendService.fetchProjects();
       let nextProjects = payload.projects;
 
       if (bootstrap && nextProjects.length === 0) {
-        const created = await createProject({
+        const created = await projectLibraryBackendService.createProject({
           name: copyByLanguage.en.defaultProject,
           description: "Local workspace",
         });
@@ -186,7 +191,7 @@ export function useWorkbenchDataRefreshController({
         securityEventWindowFilter && securityEventWindowMs[securityEventWindowFilter]
           ? new Date(Date.now() - securityEventWindowMs[securityEventWindowFilter]).toISOString()
           : undefined;
-      const payload = await fetchSecurityEvents({
+      const payload = await securityEventBackendService.fetchEvents({
         occurred_after: occurredAfter,
         source: securityEventSourceFilter || undefined,
         risk: securityEventRiskFilter || undefined,
@@ -208,7 +213,7 @@ export function useWorkbenchDataRefreshController({
     const refreshSeq = ++versionsRefreshSeqRef.current;
 
     try {
-      const payload = await fetchModelVersions(modelId);
+      const payload = await projectLibraryBackendService.fetchModelVersions(modelId);
       if (refreshSeq !== versionsRefreshSeqRef.current) return;
       setModelVersions(payload.versions);
     } catch {
@@ -237,6 +242,7 @@ export function useWorkbenchDataRefreshController({
     securityEventRiskFilter,
     securityEventStatusFilter,
     securityEventActionFilter,
+    securityEventBackendService,
   ]);
 
   useEffect(() => {

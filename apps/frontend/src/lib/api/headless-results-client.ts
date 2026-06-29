@@ -1,6 +1,6 @@
 "use client";
 
-import { requestJson } from "./core";
+import { requestJson } from "./core.ts";
 
 export function fetchResultRecord(jobId: string): Promise<{ job_id: string; result: Record<string, unknown> }> {
   return requestJson<{ job_id: string; result: Record<string, unknown> }>(`/api/v1/results/${jobId}`, {

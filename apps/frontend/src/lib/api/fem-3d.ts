@@ -1,6 +1,6 @@
-import { requestJson } from "./core";
-import type { JobEnvelope, ModelMaterial } from "./fem-shared";
-import { resolveMaterialLookup } from "./fem-shared";
+import { requestJson } from "./core.ts";
+import type { JobEnvelope, ModelMaterial } from "./fem-shared.ts";
+import { resolveMaterialLookup } from "./fem-shared.ts";
 
 export type Truss3dNodeInput = {
   id: string;

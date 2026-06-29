@@ -1,5 +1,5 @@
-import type { ModelMaterial } from "@/lib/api";
-import { createMaterialDefinition } from "@/lib/materials";
+import type { ModelMaterial } from "@/lib/api/fem-shared";
+import { createMaterialDefinition } from "@/lib/materials/materials";
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 

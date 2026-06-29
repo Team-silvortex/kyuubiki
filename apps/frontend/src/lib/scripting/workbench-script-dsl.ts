@@ -1,14 +1,14 @@
 "use client";
 
-import type { WorkbenchRecordedMacroDraft, WorkbenchScriptActionLogEntry } from "./workbench-script-runtime-types";
-import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format";
+import type { WorkbenchRecordedMacroDraft, WorkbenchScriptActionLogEntry } from "./workbench-script-runtime-types.ts";
+import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format.ts";
 import {
   buildPythonExpression,
   isVariableReference,
   VARIABLE_IDENTIFIER_RE,
   type WorkbenchFrontendDslVarReference,
-} from "./workbench-script-dsl-expressions";
-import { buildDefaultWorkbenchFrontendDslDocument } from "./workbench-script-dsl-templates";
+} from "./workbench-script-dsl-expressions.ts";
+import { buildDefaultWorkbenchFrontendDslDocument } from "./workbench-script-dsl-templates.ts";
 
 export type WorkbenchFrontendDslStep =
   | { kind: "invoke"; action: string; payload?: Record<string, unknown> }

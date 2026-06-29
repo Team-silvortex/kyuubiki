@@ -188,6 +188,68 @@ This prevents React controllers from becoming the only way to run a solver.
 Headless SDKs, mobile WebView clients, and future mesh adapters can share the
 same backend intent contract without importing Workbench component structure.
 
+Job history and cancellation also sit behind a backend service:
+
+- `apps/frontend/src/lib/workbench/job-history-backend-service-core.ts`
+  defines the GUI-facing history and cancellation contract
+- `apps/frontend/src/lib/workbench/job-history-backend-service.ts` binds that
+  contract to the default HTTP job history and cancellation APIs
+- `apps/frontend/src/components/workbench/workbench-job-history-controller.ts`
+  consumes the service contract instead of importing job runtime clients
+
+This keeps job administration usable from desktop GUI, mobile remote GUI, and
+headless callers without requiring a React hook to own the transport.
+
+Workbench administrative job/result editing has its own data boundary:
+
+- `apps/frontend/src/lib/workbench/admin-data-backend-service-core.ts`
+  defines the GUI-facing job/result administration contract
+- `apps/frontend/src/lib/workbench/admin-data-backend-service.ts` binds that
+  contract to the default HTTP job status/update/delete and result
+  list/update/delete APIs
+- primary action and admin-result controllers consume the service contract for
+  history job open, job metadata edits, job deletion, result refresh, result
+  edits, and result deletion
+
+This keeps operator-facing administration usable without coupling Workbench
+buttons directly to one WebView-local HTTP client. A remote GUI, test harness,
+or headless adapter can provide the same job/result contract while preserving
+the UI workflow. Project bundle export also reads completed job results through
+this service, so portable project snapshots do not need a separate UI-only job
+status client.
+
+Security event read/write paths follow the same boundary:
+
+- `apps/frontend/src/lib/workbench/security-event-backend-service-core.ts`
+  defines the GUI-facing security event read/write contract
+- `apps/frontend/src/lib/workbench/security-event-backend-service.ts` binds the
+  contract to the default HTTP security event APIs
+- data refresh and assistant audit controllers consume the service contract
+  instead of importing security event runtime clients directly
+
+This lets safety telemetry work across desktop GUI, mobile remote GUI, and
+headless orchestrated callers while keeping local audit fallback behavior in
+the UI layer.
+
+Project library paths are also backend-service owned:
+
+- `apps/frontend/src/lib/workbench/project-library-backend-service-core.ts`
+  defines the GUI-facing project, model, and model-version CRUD contract
+- `apps/frontend/src/lib/workbench/project-library-backend-service.ts` binds
+  that contract to the default HTTP project/model APIs
+- data refresh controllers consume the service contract instead of importing
+  project runtime clients directly
+- project storage controllers consume the same service for bundle export
+  details, project creation/update/delete, model save/delete, and model-version
+  create/rename/delete
+- script project/model automation consumes the same service so WASM Python,
+  assistant plans, and recorded DSL actions cannot bypass the project library
+  backend boundary
+
+This stops the main Workbench project library path from threading raw backend
+functions through component composition. Remaining project/model adapters should
+converge on this service instead of growing parallel backend bindings.
+
 Result inspection follows the same pattern:
 
 - `apps/frontend/src/lib/workbench/result-backend-service-core.ts` defines the

@@ -123,6 +123,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     setSelectedVersionId: props.setSelectedVersionId,
     refreshJobHistory,
     refreshResults: props.refreshResults,
+    projectLibraryBackendService: props.projectLibraryBackendService,
     securityEventWindowMs: props.securityEventWindowMs,
   });
 
@@ -148,6 +149,8 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     t: props.t,
     startTransition: props.startTransition,
     activeMaterial: props.activeMaterial,
+    adminDataBackendService: props.adminDataBackendService,
+    projectLibraryBackendService: props.projectLibraryBackendService,
     createProject: props.createProject,
     createModel: props.createModel,
     createModelVersion: props.createModelVersion,
@@ -213,7 +216,6 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     deleteModel: props.deleteModel,
     deleteModelVersion: props.deleteModelVersion,
     fetchModelVersions: props.fetchModelVersions,
-    fetchJobStatus: props.fetchJobStatus,
     serializeCurrentModel: props.serializeCurrentModel,
   });
 

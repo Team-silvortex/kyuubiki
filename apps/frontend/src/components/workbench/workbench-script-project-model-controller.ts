@@ -1,5 +1,10 @@
 "use client";
 
+import type {
+  WorkbenchModelCreateInput,
+  WorkbenchProjectLibraryBackendService,
+} from "@/lib/workbench/project-library-backend-service-core";
+
 type ScriptProjectModelControllerDeps = {
   action: string;
   payload: Record<string, unknown>;
@@ -26,15 +31,7 @@ type ScriptProjectModelControllerDeps = {
   generateModel: () => void;
   generatePanelModel: () => void;
   serializeCurrentModel: () => Record<string, unknown>;
-  createProject: (input: { name: string; description: string }) => Promise<any>;
-  updateProject: (projectId: string, input: { name: string; description: string }) => Promise<any>;
-  deleteProject: (projectId: string) => Promise<any>;
-  createModel: (projectId: string, input: ModelMutationInput) => Promise<any>;
-  updateModel: (modelId: string, input: ModelMutationInput) => Promise<any>;
-  deleteModel: (modelId: string) => Promise<any>;
-  createModelVersion: (modelId: string, input: ModelMutationInput) => Promise<any>;
-  updateModelVersion: (versionId: string, input: { name: string }) => Promise<any>;
-  deleteModelVersion: (versionId: string) => Promise<any>;
+  projectLibraryBackendService: WorkbenchProjectLibraryBackendService;
   projectRequiredLabel: string;
   defaultProjectLabel: string;
   projectCreatedLabel: string;
@@ -48,14 +45,6 @@ type ScriptProjectModelControllerDeps = {
   versionRenamedLabel: string;
   versionDeletedLabel: string;
   setMessage: (value: string) => void;
-};
-
-type ModelMutationInput = {
-  name: string;
-  kind: string;
-  material?: string;
-  model_schema_version?: string;
-  payload: Record<string, unknown>;
 };
 
 export async function handleWorkbenchScriptProjectModelAction({
@@ -84,15 +73,7 @@ export async function handleWorkbenchScriptProjectModelAction({
   generateModel,
   generatePanelModel,
   serializeCurrentModel,
-  createProject,
-  updateProject,
-  deleteProject,
-  createModel,
-  updateModel,
-  deleteModel,
-  createModelVersion,
-  updateModelVersion,
-  deleteModelVersion,
+  projectLibraryBackendService,
   projectRequiredLabel,
   defaultProjectLabel,
   projectCreatedLabel,
@@ -111,7 +92,7 @@ export async function handleWorkbenchScriptProjectModelAction({
     case "project/create": {
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : defaultProjectLabel;
       const description = typeof payload.description === "string" ? payload.description : "";
-      const created = await createProject({ name, description });
+      const created = await projectLibraryBackendService.createProject({ name, description });
       setSelectedProjectId(created.project.project_id);
       setProjectNameDraft(created.project.name);
       setProjectDescriptionDraft(created.project.description ?? "");
@@ -132,7 +113,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       }
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : projectNameDraft || defaultProjectLabel;
       const description = typeof payload.description === "string" ? payload.description : projectDescriptionDraft;
-      await updateProject(selectedProjectId, { name, description });
+      await projectLibraryBackendService.updateProject(selectedProjectId, { name, description });
       setProjectNameDraft(name);
       setProjectDescriptionDraft(description);
       await refreshProjects();
@@ -143,7 +124,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
-      await deleteProject(selectedProjectId);
+      await projectLibraryBackendService.deleteProject(selectedProjectId);
       setSelectedProjectId(null);
       setSelectedModelId(null);
       setSelectedVersionId(null);
@@ -173,7 +154,7 @@ export async function handleWorkbenchScriptProjectModelAction({
         throw new Error(projectRequiredLabel);
       }
       const payloadModel = serializeCurrentModel();
-      const modelPayload = {
+      const modelPayload: WorkbenchModelCreateInput = {
         name: loadedModelName,
         kind: studyKind,
         material: activeMaterial,
@@ -182,7 +163,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       };
 
       if (!selectedModelId || action === "model/saveAs") {
-        const created = await createModel(selectedProjectId, modelPayload);
+        const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
         await refreshProjects();
@@ -191,8 +172,8 @@ export async function handleWorkbenchScriptProjectModelAction({
         return { ok: true, action, modelId: created.model.model_id };
       }
 
-      await updateModel(selectedModelId, modelPayload);
-      const version = await createModelVersion(selectedModelId, modelPayload);
+      await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
+      const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
       setSelectedVersionId(version.version.version_id);
       await refreshProjects();
       await refreshVersions(selectedModelId);
@@ -203,7 +184,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedModelId) {
         throw new Error(noSavedModelsLabel);
       }
-      await deleteModel(selectedModelId);
+      await projectLibraryBackendService.deleteModel(selectedModelId);
       setSelectedModelId(null);
       setSelectedVersionId(null);
       setModelVersions([]);
@@ -215,7 +196,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedVersionId) {
         throw new Error(noVersionsLabel);
       }
-      await updateModelVersion(selectedVersionId, { name: loadedModelName });
+      await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
       await refreshVersions(selectedModelId ?? "");
       setMessage(versionRenamedLabel);
       return { ok: true, action, versionId: selectedVersionId };
@@ -224,7 +205,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedVersionId) {
         throw new Error(noVersionsLabel);
       }
-      await deleteModelVersion(selectedVersionId);
+      await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
       setSelectedVersionId(null);
       if (selectedModelId) {
         await refreshVersions(selectedModelId);

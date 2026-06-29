@@ -10,8 +10,8 @@ import {
   type WorkbenchNoticeItem,
   type WorkbenchNoticeStateSetter,
 } from "@/components/workbench/workbench-notice-state";
-import type { ModelRecord, ModelVersionRecord } from "@/lib/api";
-import { parsePlaygroundModel } from "@/lib/models";
+import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
+import { parsePlaygroundModel } from "@/lib/models/model-import";
 import { parseProjectBundleFile } from "@/lib/projects/project-format";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";

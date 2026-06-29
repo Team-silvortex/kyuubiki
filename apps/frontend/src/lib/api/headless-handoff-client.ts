@@ -1,6 +1,6 @@
 "use client";
 
-import { requestJson } from "./core";
+import { requestJson } from "./core.ts";
 import type { HeadlessOrchestraHandoffEnvelope } from "@/lib/scripting/workbench-headless-orchestra-handoff";
 
 export type HeadlessHandoffReceipt = {

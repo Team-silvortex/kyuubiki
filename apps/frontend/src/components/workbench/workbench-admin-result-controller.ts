@@ -1,8 +1,12 @@
 "use client";
 
+import type {
+  WorkbenchAdminDataBackendService,
+} from "@/lib/workbench/admin-data-backend-service-core";
+
 type RefreshWorkbenchResultsDeps = {
+  adminDataBackendService: WorkbenchAdminDataBackendService;
   resultRefreshSeqRef: { current: number };
-  fetchResults: () => Promise<{ results: any[] }>;
   setResultRecords: (value: any[]) => void;
   setSelectedAdminResultJobId: (value: string | null | ((current: string | null) => string | null)) => void;
 };
@@ -10,8 +14,6 @@ type RefreshWorkbenchResultsDeps = {
 type AdminResultMutationDeps = RefreshWorkbenchResultsDeps & {
   selectedAdminResultJobId: string | null;
   adminResultDraft: string;
-  updateResultRecord: (jobId: string, payload: Record<string, unknown>) => Promise<unknown>;
-  deleteResultRecord: (jobId: string) => Promise<unknown>;
   downloadTextFile: (name: string, contents: string) => void;
   setMessage: (value: string) => void;
   labels: {
@@ -24,15 +26,15 @@ type AdminResultMutationDeps = RefreshWorkbenchResultsDeps & {
 };
 
 export async function refreshWorkbenchResults({
+  adminDataBackendService,
   resultRefreshSeqRef,
-  fetchResults,
   setResultRecords,
   setSelectedAdminResultJobId,
 }: RefreshWorkbenchResultsDeps) {
   const refreshSeq = ++resultRefreshSeqRef.current;
 
   try {
-    const payload = await fetchResults();
+    const payload = await adminDataBackendService.fetchResults();
     if (refreshSeq !== resultRefreshSeqRef.current) return;
     setResultRecords(payload.results);
     setSelectedAdminResultJobId((current) =>
@@ -48,7 +50,6 @@ export async function refreshWorkbenchResults({
 export async function saveWorkbenchAdminResultRecord({
   selectedAdminResultJobId,
   adminResultDraft,
-  updateResultRecord,
   setMessage,
   labels,
   ...refreshDeps
@@ -57,7 +58,7 @@ export async function saveWorkbenchAdminResultRecord({
 
   try {
     const parsed = JSON.parse(adminResultDraft) as Record<string, unknown>;
-    await updateResultRecord(selectedAdminResultJobId, parsed);
+    await refreshDeps.adminDataBackendService.updateResult(selectedAdminResultJobId, parsed);
     await refreshWorkbenchResults(refreshDeps);
     setMessage(labels.resultSaved);
   } catch (error) {
@@ -67,7 +68,6 @@ export async function saveWorkbenchAdminResultRecord({
 
 export async function deleteWorkbenchAdminResultRecord({
   selectedAdminResultJobId,
-  deleteResultRecord,
   setMessage,
   labels,
   ...refreshDeps
@@ -75,7 +75,7 @@ export async function deleteWorkbenchAdminResultRecord({
   if (!selectedAdminResultJobId) return;
 
   try {
-    await deleteResultRecord(selectedAdminResultJobId);
+    await refreshDeps.adminDataBackendService.deleteResult(selectedAdminResultJobId);
     await refreshWorkbenchResults(refreshDeps);
     setMessage(labels.resultDeleted);
   } catch (error) {
