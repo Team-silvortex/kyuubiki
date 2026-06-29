@@ -3,7 +3,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use crate::Platform;
+use crate::{ComponentIntegritySpec, Platform, parse_component_specs};
 
 const CONTRACT_PATH: &str = "deploy/installation-integrity-contract.json";
 
@@ -17,6 +17,7 @@ pub struct IntegrityContract {
     pub removable_patterns: Vec<String>,
     pub allowed_dist_children: Vec<String>,
     pub visible_rules: Vec<IntegrityVisibleRule>,
+    pub components: Vec<ComponentIntegritySpec>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -54,6 +55,7 @@ pub fn load_integrity_contract(
         removable_patterns: string_array_field(&payload, "removable_patterns")?,
         allowed_dist_children: string_array_field(&payload, "allowed_dist_children")?,
         visible_rules: visible_rules(&payload, platform)?,
+        components: parse_component_specs(&payload)?,
     })
 }
 

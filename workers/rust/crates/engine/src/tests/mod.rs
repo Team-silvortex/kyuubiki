@@ -27,6 +27,7 @@ mod workflow_heat_benchmark;
 mod workflow_hotspot_alert_export;
 mod workflow_hotspot_condition_alert;
 mod workflow_large_graphs;
+mod workflow_parameter_sweep;
 mod workflow_solver_extended;
 mod workflow_solver_structural;
 mod workflow_solver_templates;

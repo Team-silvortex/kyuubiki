@@ -3,7 +3,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
-use kyuubiki_solver::profile_heat_plane_quad_2d;
+use kyuubiki_solver::{profile_heat_plane_quad_2d, profile_plane_quad_2d};
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
@@ -78,15 +78,22 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                 })
             }
             BenchmarkWorkload::PlaneQuad2d(request) => {
-                solve(EngineSolveRequest::PlaneQuad2d(request.clone())).map(|result| {
-                    let AnalysisResult::PlaneQuad2d(result) = result else {
-                        unreachable!("quad plane solve should return quad plane result")
-                    };
+                profile_plane_quad_2d(request).map(|profile| {
+                    let result = profile.result;
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len() * 2;
                     max_displacement = result.max_displacement;
                     max_stress = result.max_stress;
+                    memory_stages = profile
+                        .stages
+                        .into_iter()
+                        .map(|stage| BenchmarkMemoryStage {
+                            label: stage.label.to_string(),
+                            rss_kib: stage.rss_kib,
+                            elapsed_ms: Some(stage.elapsed_ms),
+                        })
+                        .collect();
                 })
             }
             BenchmarkWorkload::HeatPlaneQuad2d(request) => {
@@ -103,6 +110,7 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                         .map(|stage| BenchmarkMemoryStage {
                             label: stage.label.to_string(),
                             rss_kib: stage.rss_kib,
+                            elapsed_ms: None,
                         })
                         .collect();
                 })

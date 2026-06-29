@@ -4,8 +4,8 @@ use std::path::Path;
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
     cross_platform_audit_report, embedded_runtime_report, expected_release_script_contents,
-    parse_agent_endpoints, parse_agent_manifest, parse_platform, unified_update_plan,
-    unified_update_preview, workspace_root,
+    installation_integrity_report, parse_agent_endpoints, parse_agent_manifest, parse_platform,
+    unified_update_plan, unified_update_preview, workspace_root,
 };
 
 #[test]
@@ -141,4 +141,44 @@ fn unified_update_preview_reports_noop_for_current_channel() {
 fn cross_platform_audit_runs() {
     let report = cross_platform_audit_report();
     assert_eq!(report.checked_platforms.len(), 3);
+}
+
+#[test]
+fn installation_integrity_reports_component_protocol() {
+    let report = installation_integrity_report();
+    assert_eq!(
+        report.component_protocol.schema_version,
+        "kyuubiki.component-integrity/v1"
+    );
+    assert_eq!(
+        report.component_protocol.covered_required_path_count,
+        report.component_protocol.required_path_count
+    );
+    assert!(
+        report
+            .component_protocol
+            .components
+            .iter()
+            .any(|component| component.id == "installer.core")
+    );
+    assert!(
+        report
+            .component_protocol
+            .components
+            .iter()
+            .any(|component| component.id == "runtime.state")
+    );
+    assert!(
+        report
+            .component_protocol
+            .issues
+            .iter()
+            .all(|issue| !issue.message.contains("outside owned paths"))
+    );
+    assert!(
+        report
+            .render()
+            .contains("component_protocol: kyuubiki.component-integrity/v1")
+    );
+    assert!(report.render().contains("required_path_coverage:"));
 }

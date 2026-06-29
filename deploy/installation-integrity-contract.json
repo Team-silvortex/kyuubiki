@@ -82,6 +82,186 @@
     "linux",
     "windows"
   ],
+  "components": [
+    {
+      "id": "workspace.root",
+      "kind": "workspace",
+      "version": "1.12.0",
+      "owner": "kyuubiki",
+      "owned_paths": [
+        "."
+      ],
+      "required_paths": [
+        "."
+      ],
+      "protected_paths": [],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "ownership_scope",
+          "value": "workspace root sentinel",
+          "editable": false,
+          "description": "The workspace root component anchors required layout coverage without granting broad cleanup rights."
+        }
+      ]
+    },
+    {
+      "id": "installer.core",
+      "kind": "installer",
+      "version": "1.12.0",
+      "owner": "kyuubiki-installer",
+      "owned_paths": [
+        "deploy",
+        "workers/rust/crates/installer",
+        "dist",
+        "runtimes"
+      ],
+      "required_paths": [
+        "deploy/installation-integrity-contract.json",
+        "workers/rust/crates/installer",
+        "dist",
+        "runtimes"
+      ],
+      "protected_paths": [],
+      "removable_patterns": [
+        "dist/*/.DS_Store"
+      ],
+      "visible_rules": [
+        {
+          "label": "protocol",
+          "value": "kyuubiki.component-integrity/v1",
+          "editable": false,
+          "description": "Installer-owned components must declare path ownership and cleanup behavior."
+        }
+      ]
+    },
+    {
+      "id": "desktop.installer",
+      "kind": "desktop-shell",
+      "version": "1.12.0",
+      "owner": "kyuubiki-installer",
+      "owned_paths": [
+        "apps/installer-gui"
+      ],
+      "required_paths": [
+        "apps/installer-gui"
+      ],
+      "protected_paths": [
+        "apps/installer-gui"
+      ],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "extension_policy",
+          "value": "fixed-ui-surface",
+          "editable": false,
+          "description": "Installer UI is fixed so deployment and repair controls remain stable."
+        }
+      ]
+    },
+    {
+      "id": "desktop.hub",
+      "kind": "desktop-shell",
+      "version": "1.12.0",
+      "owner": "kyuubiki-hub",
+      "owned_paths": [
+        "apps/hub-gui"
+      ],
+      "required_paths": [
+        "apps/hub-gui"
+      ],
+      "protected_paths": [
+        "apps/hub-gui"
+      ],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "extension_policy",
+          "value": "fixed-ui-surface",
+          "editable": false,
+          "description": "Hub UI is part of the stable automation surface and is not user-extensible."
+        }
+      ]
+    },
+    {
+      "id": "desktop.workbench",
+      "kind": "desktop-shell",
+      "version": "1.12.0",
+      "owner": "kyuubiki-workbench",
+      "owned_paths": [
+        "apps/workbench-gui"
+      ],
+      "required_paths": [
+        "apps/workbench-gui"
+      ],
+      "protected_paths": [
+        "apps/workbench-gui"
+      ],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "extension_policy",
+          "value": "fixed-ui-surface",
+          "editable": false,
+          "description": "Workbench UI is fixed so wasm Python automation has stable controls."
+        }
+      ]
+    },
+    {
+      "id": "release.snapshots",
+      "kind": "release-history",
+      "version": "1.12.0",
+      "owner": "kyuubiki-release",
+      "owned_paths": [
+        "releases/snapshots"
+      ],
+      "required_paths": [
+        "releases/snapshots"
+      ],
+      "protected_paths": [
+        "releases/snapshots"
+      ],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "retention_policy",
+          "value": "protected snapshot history",
+          "editable": false,
+          "description": "Snapshot records are preserved as lightweight version history and must not be removed by repair."
+        }
+      ]
+    },
+    {
+      "id": "runtime.state",
+      "kind": "runtime-state",
+      "version": "1.12.0",
+      "owner": "kyuubiki-runtime",
+      "owned_paths": [
+        "tmp"
+      ],
+      "required_paths": [
+        "tmp/run",
+        "tmp/data"
+      ],
+      "protected_paths": [
+        "tmp/data"
+      ],
+      "removable_patterns": [
+        "tmp/run/*.pid",
+        "tmp/run/*.sock",
+        "tmp/run/*.lock",
+        "tmp/run/*.tmp"
+      ],
+      "visible_rules": [
+        {
+          "label": "cleanup_scope",
+          "value": "tmp/run only",
+          "editable": false,
+          "description": "Runtime repair can clean stale process files but must preserve persisted data."
+        }
+      ]
+    }
+  ],
   "visible_rules": [
     {
       "category": "cleanup",

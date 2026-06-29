@@ -1,4 +1,6 @@
-use crate::catalog::descriptors::{built_in_export_descriptor, built_in_extract_descriptor};
+use crate::catalog::descriptors::{
+    built_in_export_descriptor, built_in_extract_descriptor, built_in_transform_descriptor,
+};
 use kyuubiki_protocol::OperatorDescriptor;
 
 pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
@@ -166,6 +168,45 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
                 "markdown",
                 "diagnostics",
                 "bundle",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
+            "transform.expand_parameter_sweep",
+            "multi_domain",
+            "parameter_sweep",
+            "Expand a base model into a bounded set of parameterized workflow cases for batch solve, material exploration, and optimization flows.",
+            &[
+                "transform",
+                "parameter_sweep",
+                "batch",
+                "material_exploration",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
+            "transform.summarize_parameter_sweep",
+            "multi_domain",
+            "parameter_sweep_summary",
+            "Collect parameter sweep case summaries into a stable row table with numeric column statistics for research and optimization workflows.",
+            &[
+                "transform",
+                "parameter_sweep",
+                "summary_table",
+                "material_exploration",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
+            "transform.score_parameter_sweep",
+            "multi_domain",
+            "parameter_sweep_score",
+            "Score parameter sweep rows with weighted objectives and feasibility limits so automated studies can pick a best candidate.",
+            &[
+                "transform",
+                "parameter_sweep",
+                "objective",
+                "optimization",
                 "headless_safe",
             ],
         ),

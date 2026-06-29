@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::{
-    IntegrityContract, Platform, contract_path,
+    IntegrityContract, Platform, component_integrity_protocol_report, contract_path,
     integrity_versions::{collect_version_checks, current_release_version},
     load_integrity_contract, prepare_layout, workspace_root,
 };
@@ -52,6 +52,7 @@ pub struct InstallationIntegrityReport {
     pub layout: Vec<InstallationIntegrityEntry>,
     pub version_checks: Vec<VersionAlignmentCheck>,
     pub residues: Vec<ResidueCandidate>,
+    pub component_protocol: crate::ComponentIntegrityProtocolReport,
     pub issues: Vec<String>,
 }
 
@@ -120,6 +121,8 @@ impl InstallationIntegrityReport {
             }
         }
 
+        lines.extend(self.component_protocol.render_lines());
+
         if !self.issues.is_empty() {
             lines.push("issues:".to_string());
             for issue in &self.issues {
@@ -166,6 +169,7 @@ pub fn installation_integrity_report() -> InstallationIntegrityReport {
     let layout = expected_layout(&root, &contract);
     let version_checks = collect_version_checks(&root, &contract.shipping_version);
     let residues = collect_residue_candidates(&root, &contract);
+    let component_protocol = component_integrity_protocol_report(&contract);
     issues.extend(collect_layout_issues(&layout));
     if current_version != contract.shipping_version {
         issues.push(format!(
@@ -191,6 +195,12 @@ pub fn installation_integrity_report() -> InstallationIntegrityReport {
         };
         issues.push(format!("{verb}: {}", residue.relative_path));
     }
+    for issue in &component_protocol.issues {
+        issues.push(format!(
+            "component integrity: {}: {}",
+            issue.component_id, issue.message
+        ));
+    }
 
     InstallationIntegrityReport {
         schema_version: INTEGRITY_SCHEMA_VERSION.to_string(),
@@ -201,6 +211,7 @@ pub fn installation_integrity_report() -> InstallationIntegrityReport {
         layout,
         version_checks,
         residues,
+        component_protocol,
         issues,
     }
 }
@@ -378,6 +389,7 @@ fn fallback_contract(platform: Platform, current_version: &str) -> IntegrityCont
             "tmp/run/*.tmp".to_string(),
         ],
         allowed_dist_children: vec!["macos".to_string(), "linux".to_string(), "windows".to_string()],
+        components: Vec::new(),
         visible_rules: vec![IntegrityContractRule {
             category: "contract".to_string(),
             label: "contract source".to_string(),

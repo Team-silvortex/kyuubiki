@@ -19,6 +19,7 @@ mod workflow_diagnostics;
 mod workflow_executor;
 mod workflow_focus_chain;
 mod workflow_guard_transforms;
+mod workflow_parameter_sweep;
 mod workflow_reporting;
 mod workflow_solve_executor;
 mod workflow_summary_transforms;

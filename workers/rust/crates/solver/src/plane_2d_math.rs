@@ -30,7 +30,14 @@ pub(super) fn precompute_plane_triangle_element(
     request: &SolvePlaneTriangle2dRequest,
     element: &PlaneTriangleElementInput,
 ) -> Result<PlaneTriangleComputed, String> {
-    let (stiffness, area, b_matrix, d_matrix) = triangle_element_data(request, element)?;
+    precompute_plane_triangle_element_from_nodes(&request.nodes, element)
+}
+
+pub(super) fn precompute_plane_triangle_element_from_nodes(
+    nodes: &[PlaneNodeInput],
+    element: &PlaneTriangleElementInput,
+) -> Result<PlaneTriangleComputed, String> {
+    let (stiffness, area, b_matrix, d_matrix) = triangle_element_data(nodes, element)?;
     Ok(PlaneTriangleComputed {
         stiffness,
         area,
@@ -67,12 +74,12 @@ pub(super) fn signed_triangle_area(
 }
 
 fn triangle_element_data(
-    request: &SolvePlaneTriangle2dRequest,
+    nodes: &[PlaneNodeInput],
     element: &PlaneTriangleElementInput,
 ) -> Result<([[f64; 6]; 6], f64, [[f64; 6]; 3], [[f64; 3]; 3]), String> {
-    let node_i = &request.nodes[element.node_i];
-    let node_j = &request.nodes[element.node_j];
-    let node_k = &request.nodes[element.node_k];
+    let node_i = &nodes[element.node_i];
+    let node_j = &nodes[element.node_j];
+    let node_k = &nodes[element.node_k];
     let area = signed_triangle_area(node_i, node_j, node_k).abs();
     if area <= 1.0e-12 {
         return Err("plane element area must be positive".to_string());

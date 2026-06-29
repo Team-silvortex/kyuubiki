@@ -15,40 +15,44 @@
 - Profile: `10k`
 - Matrix: `mechanical-core`
 - Repeat count: `1`
-- Generated at (unix): `1781958380`
+- Generated at (unix): `1782739900`
 - Baseline generated at (unix): `1781950228`
 
 | Case | Status | Median ms | Delta | Peak RSS | Delta |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `axial-bar-10k` | ok | 0.2895 | +990.88% | 17 MiB | +7.46% |
-| `truss-roof-10k` | ok | 857.4654 | +160.23% | 50 MiB | +1.87% |
-| `space-frame-10k` | ok | 43.9748 | +232.71% | 56 MiB | -1.44% |
-| `plane-panel-10k` | ok | 918.5435 | +178.49% | 69 MiB | -23.50% |
-| `plane-quad-panel-10k` | ok | 8430.1088 | +180.73% | 81 MiB | -32.88% |
+| `axial-bar-10k` | ok | 0.0853 | +221.34% | 16 MiB | +0.20% |
+| `truss-roof-10k` | ok | 281.2433 | -14.65% | 46 MiB | -6.62% |
+| `space-frame-10k` | ok | 16.4900 | +24.76% | 57 MiB | +0.14% |
+| `plane-panel-10k` | ok | 294.6987 | -10.65% | 68 MiB | -24.99% |
+| `plane-quad-panel-10k` | ok | 290.9230 | -90.31% | 78 MiB | -35.58% |
+|  | stage rss | `precompute=2.968 ms/74 MiB, assemble_global=4.868 ms/78 MiB, solve_system=279.737 ms/78 MiB, assemble=1.070 ms/78 MiB` |  |  |  |
 
 ## thermal-core
 
 - Profile: `10k`
 - Matrix: `thermal-core`
 - Repeat count: `1`
-- Generated at (unix): `1781958388`
+- Generated at (unix): `1782739900`
 - Baseline generated at (unix): `1781950237`
 
 | Case | Status | Median ms | Delta | Peak RSS | Delta |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `heat-plane-quad-10k` | ok | 5884.9923 | +125.81% | 20 MiB | +13.36% |
+| `heat-plane-quad-10k` | ok | 47.7954 | -98.17% | 14 MiB | -19.77% |
+|  | stage rss | `precompute=10 MiB, assemble_global=11 MiB, reduce_system=12 MiB, solve_system=13 MiB, assemble=14 MiB` |  |  |  |
 
 ## compound-core
 
 - Profile: `10k`
 - Matrix: `compound-core`
 - Repeat count: `1`
-- Generated at (unix): `1781958401`
+- Generated at (unix): `1782739901`
 - Baseline generated at (unix): `1781950257`
 
 | Case | Status | Median ms | Delta | Peak RSS | Delta |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `truss-roof-10k` | ok | 664.2414 | +102.79% | 50 MiB | -2.76% |
-| `space-frame-10k` | ok | 30.3316 | +89.33% | 57 MiB | -6.25% |
-| `heat-plane-quad-10k` | ok | 5634.3108 | +107.03% | 61 MiB | -4.97% |
-| `compound-surface-panel-10k` | ok | 6932.7983 | +105.61% | 72 MiB | -21.68% |
+| `truss-roof-10k` | ok | 290.9939 | -11.16% | 45 MiB | -12.61% |
+| `space-frame-10k` | ok | 16.5835 | +3.52% | 56 MiB | -7.91% |
+| `heat-plane-quad-10k` | ok | 39.2276 | -98.56% | 56 MiB | -12.97% |
+|  | stage rss | `precompute=56 MiB, assemble_global=56 MiB, reduce_system=56 MiB, solve_system=56 MiB, assemble=56 MiB` |  |  |  |
+| `compound-surface-panel-10k` | ok | 294.6586 | -91.26% | 68 MiB | -25.69% |
+|  | stage rss | `precompute=2.406 ms/63 MiB, assemble_global=5.232 ms/67 MiB, solve_system=284.234 ms/68 MiB, assemble=0.540 ms/68 MiB` |  |  |  |

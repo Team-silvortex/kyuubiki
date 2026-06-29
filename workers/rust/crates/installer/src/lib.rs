@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod component_integrity;
 mod cross_platform;
 mod embedded_runtime;
 mod integrity;
@@ -16,6 +17,11 @@ mod tests;
 mod update_catalog;
 mod update_source;
 
+pub(crate) use component_integrity::parse_component_specs;
+pub use component_integrity::{
+    ComponentIntegrityIssue, ComponentIntegrityProtocolReport, ComponentIntegritySpec,
+    ComponentVisibleRule, component_integrity_protocol_report,
+};
 pub use cross_platform::{
     CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
 };

@@ -218,7 +218,18 @@ fn format_memory_stages(result: &BenchmarkResult) -> String {
     result
         .memory_stages
         .iter()
-        .map(|stage| format!("{}={} MiB", stage.label, kib_to_mib(stage.rss_kib)))
+        .map(|stage| {
+            if let Some(elapsed_ms) = stage.elapsed_ms {
+                format!(
+                    "{}={:.3} ms/{} MiB",
+                    stage.label,
+                    elapsed_ms,
+                    kib_to_mib(stage.rss_kib)
+                )
+            } else {
+                format!("{}={} MiB", stage.label, kib_to_mib(stage.rss_kib))
+            }
+        })
         .collect::<Vec<_>>()
         .join(", ")
 }

@@ -15,14 +15,20 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "bridge.temperature_field_to_thermo_triangle_2d",
     "bridge.electrostatic_field_to_heat_quad_2d",
     "bridge.electrostatic_field_to_heat_triangle_2d",
+    "bridge.magnetostatic_field_to_heat_quad_2d",
     "transform.first_available",
     "transform.merge_summary_pair",
     "transform.compare_summary_pair",
     "transform.aggregate_summary_collection",
     "transform.normalize_summary_fields",
     "transform.select_best_summary",
+    "transform.expand_parameter_sweep",
+    "transform.summarize_parameter_sweep",
+    "transform.score_parameter_sweep",
     "transform.evaluate_thermal_guard",
     "transform.benchmark_coupled_heat_pair",
+    "transform.evaluate_magnetostatic_guard",
+    "transform.benchmark_magnetostatic_pair",
     "transform.evaluate_cfd_guard",
     "transform.benchmark_cfd_pair",
     "transform.compose_diagnostics_bundle",
@@ -41,6 +47,8 @@ const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
     "extract.field_hotspots",
     "extract.electrostatic_result_diagnostics",
     "extract.electrostatic_peak_field",
+    "extract.magnetostatic_result_diagnostics",
+    "extract.magnetostatic_peak_field",
     "extract.stokes_flow_result_diagnostics",
     "extract.thermal_result_diagnostics",
     "extract.heat_peak_flux",
@@ -245,12 +253,16 @@ pub fn run_transform_operator(
         | "bridge.temperature_field_to_thermo_triangle_2d"
         | "bridge.electrostatic_field_to_heat_quad_2d"
         | "bridge.electrostatic_field_to_heat_triangle_2d"
+        | "bridge.magnetostatic_field_to_heat_quad_2d"
         | "transform.first_available"
         | "transform.merge_summary_pair"
         | "transform.compare_summary_pair"
         | "transform.aggregate_summary_collection"
         | "transform.normalize_summary_fields"
         | "transform.select_best_summary"
+        | "transform.expand_parameter_sweep"
+        | "transform.summarize_parameter_sweep"
+        | "transform.score_parameter_sweep"
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
         | "transform.evaluate_magnetostatic_guard"

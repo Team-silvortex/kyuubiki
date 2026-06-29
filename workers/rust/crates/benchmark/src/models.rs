@@ -38,6 +38,8 @@ pub(crate) struct BenchmarkReport {
 pub(crate) struct BenchmarkMemoryStage {
     pub(crate) label: String,
     pub(crate) rss_kib: u64,
+    #[serde(default)]
+    pub(crate) elapsed_ms: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

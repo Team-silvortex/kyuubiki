@@ -50,7 +50,10 @@ pub use magnetostatic_plane_2d::{
 pub use modal_frame_2d::solve_modal_frame_2d;
 pub use modal_frame_3d::solve_modal_frame_3d;
 pub use nonlinear_spring_1d::{solve_contact_gap_1d, solve_nonlinear_spring_1d};
-pub use plane_2d::{solve_plane_quad_2d, solve_plane_triangle_2d};
+pub use plane_2d::{
+    PlaneQuadProfile, PlaneQuadProfileStage, profile_plane_quad_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d,
+};
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
 pub use stokes_flow_plane_2d::solve_stokes_flow_plane_quad_2d;
 pub use thermal_frame_3d::solve_thermal_frame_3d;
