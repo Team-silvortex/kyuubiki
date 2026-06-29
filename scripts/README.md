@@ -3,7 +3,9 @@
 This directory contains host-native operational entry points.
 
 - `kyuubiki`
-  Unified launcher for local, cloud, and distributed development flows.
+  Thin compatibility shim for the native Rust `kyuubiki-script-runner`
+  binary. New operational command logic should land in
+  `workers/rust/crates/script-runner`, not in shell.
 - `kyuubiki-lab`
   Thin operational wrapper for the shared Ubuntu lab machine that now hosts
   the standard download/deploy server plus the shared solver-agent test node.
@@ -45,6 +47,14 @@ This directory contains host-native operational entry points.
 
 Use this directory for operator-facing workflow wrappers, not for source
 libraries or generated output.
+
+Shell migration rule:
+
+- Keep `scripts/kyuubiki` as a tiny launcher only.
+- Prefer Rust native commands for new cross-platform operations.
+- Use `./scripts/kyuubiki native-script-audit` to list remaining shell wrappers.
+- Existing `.sh` files are migration targets unless they are generated,
+  third-party, or platform package payloads.
 
 Typical responsibilities:
 
@@ -110,8 +120,10 @@ Useful smoke wrappers:
   auth, and set `PURGE_LOCAL=1` to remove local `dist/` and platform-matched
   Tauri bundle outputs after a successful upload.
 - `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
-  Build the dedicated Docker harness, run the direct-mesh integration suite
-  multiple times, and write JSON plus Markdown summaries under
+  Compatibility shim for
+  `./scripts/kyuubiki direct-mesh-benchmark-container --repeat 3`. It builds
+  the dedicated Docker harness, runs the direct-mesh integration suite multiple
+  times, and writes JSON plus Markdown summaries under
   `tmp/direct-mesh-benchmark-container/`. For LAN agent discovery, prefer
   `DOCKER_RUN_NETWORK=host`. The current checked-in baseline snapshot is
   `tests/integration/benchmarks/direct-mesh-docker-baseline.json`.
@@ -119,10 +131,12 @@ Useful smoke wrappers:
   Compare a direct-mesh Docker benchmark summary against the checked-in
   baseline and emit both Markdown and machine-readable diff artifacts.
 - `./scripts/run-direct-mesh-benchmark-regression.sh`
-  Run the remote direct-mesh Docker benchmark on `kyuubiki-lab`, copy the
-  resulting summary back into the local workspace, and compare it against the
-  checked-in baseline with regression thresholds. This wrapper expects
-  passwordless `sudo` on the remote lab host.
+  Compatibility shim for
+  `./scripts/kyuubiki direct-mesh-benchmark-regression`. It runs the remote
+  direct-mesh Docker benchmark on `kyuubiki-lab`, copies the resulting summary
+  back into the local workspace, and compares it against the checked-in
+  baseline with regression thresholds. This native command expects a narrow
+  passwordless `sudo` rule for the benchmark wrapper on the remote lab host.
 - `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_large_graph_report_test.exs`
   Runs the orchestrated large-graph workflow benchmark suite and writes a
   machine-readable JSON report with per-case performance summaries at
@@ -146,19 +160,24 @@ Useful smoke wrappers:
   Run the local workflow catalog benchmark report case and compare it against
   the checked-in baseline.
 - `./scripts/run-workflow-catalog-benchmark-regression.sh`
-  Run the remote workflow catalog benchmark on `kyuubiki-lab`, copy the
-  resulting summary back into the local workspace, and compare it against the
-  checked-in baseline with per-case regression thresholds.
+  Compatibility shim for
+  `./scripts/kyuubiki workflow-catalog-benchmark-regression`. It runs the
+  remote workflow catalog benchmark on `kyuubiki-lab`, copies the resulting
+  summary back into the local workspace, and compares it against the checked-in
+  baseline with per-case regression thresholds.
 - `./scripts/run-workflow-mesh-regression.sh`
-  Run the current three-test distributed workflow mesh regression trio in
-  strict sequence on the local machine so the shared local orchestrator port
-  does not collide across tests. This emits `run.log`, `summary.json`, and
-  `README.md` under `tmp/workflow-mesh-regression/<slug>/`.
+  Compatibility shim for the native
+  `./scripts/kyuubiki workflow-mesh-regression` command. It runs the current
+  three-test distributed workflow mesh regression trio in strict sequence on
+  the local machine so the shared local orchestrator port does not collide
+  across tests. This emits `run.log`, `summary.json`, and `README.md` under
+  `tmp/workflow-mesh-regression/<slug>/`.
 - `./scripts/run-workflow-mesh-regression-remote.sh`
-  Sync the mesh workflow regression wrappers plus integration tests to
-  `kyuubiki-lab`, run the distributed workflow mesh regression trio there,
-  and pull the combined run log plus summary artifacts back into
-  `tmp/workflow-mesh-regression/`.
+  Compatibility shim for
+  `./scripts/kyuubiki workflow-mesh-regression-remote`. It syncs the mesh
+  workflow regression wrappers plus integration tests to `kyuubiki-lab`, runs
+  the distributed workflow mesh regression trio there, and pulls the combined
+  run log plus summary artifacts back into `tmp/workflow-mesh-regression/`.
 - `./scripts/build-workflow-mesh-regression-summary.mjs --log tmp/workflow-mesh-regression/<slug>/run.log --output-dir tmp/workflow-mesh-regression/<slug>`
   Rebuild the machine-readable and human-readable summary artifacts for a
   workflow mesh regression run from the captured TAP log.
@@ -173,15 +192,17 @@ Useful smoke wrappers:
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
 - `PROFILE=200k MATRIX=thermal-core REPEAT=3 ./scripts/run-benchmark-profile-remote.sh`
-  Run one remote Rust benchmark profile/matrix smoke without requiring a
-  checked baseline. Use this for new scale tiers before promoting them into
-  the standard regression gate. Outputs land under `tmp/benchmark-profile/`.
+  Compatibility shim for `./scripts/kyuubiki benchmark-profile-remote`. It runs
+  one remote Rust benchmark profile/matrix smoke without requiring a checked
+  baseline. Use this for new scale tiers before promoting them into the
+  standard regression gate. Outputs land under `tmp/benchmark-profile/`.
 - `./scripts/run-standard-benchmark-regression.sh`
-  Sync benchmark-only source to `kyuubiki-lab`, run the standard Rust
-  benchmark regression trio there, and pull the merged/per-matrix comparison
-  reports back into `tmp/standard-benchmark/`. The wrapper also refreshes
-  `tmp/standard-benchmark/index.json` plus `README.md` and prunes old run
-  folders by retention count.
+  Compatibility shim for `./scripts/kyuubiki standard-benchmark-regression`.
+  It syncs benchmark-only source to `kyuubiki-lab`, runs the standard Rust
+  benchmark regression trio there, and pulls the merged/per-matrix comparison
+  reports back into `tmp/standard-benchmark/`. The native command also
+  refreshes `tmp/standard-benchmark/index.json` plus `README.md` and prunes old
+  run folders by retention count.
 - `./scripts/build-standard-benchmark-index.mjs`
   Rebuild the local standard benchmark run index under `tmp/standard-benchmark/`
   and prune older run directories outside the retained window. This emits

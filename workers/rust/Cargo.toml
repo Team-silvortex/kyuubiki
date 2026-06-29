@@ -10,6 +10,7 @@ members = [
   "crates/operator-sdk",
   "crates/platform",
   "crates/protocol",
+  "crates/script-runner",
   "crates/solver",
 ]
 resolver = "2"

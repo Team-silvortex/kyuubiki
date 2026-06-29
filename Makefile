@@ -307,7 +307,7 @@ test-integration-desktop-gui:
 	@node --test tests/integration/desktop-shell-regression.test.mjs tests/integration/workbench-shell-regression.test.mjs
 
 test-integration-direct-mesh-docker:
-	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} bash ./scripts/run-direct-mesh-benchmark-container.sh --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
+	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
 
 test-integration-direct-mesh-docker-compare:
 	@node ./scripts/compare-direct-mesh-benchmark.mjs --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}
@@ -317,13 +317,13 @@ test-integration-direct-mesh-docker-report:
 	@$(MAKE) test-integration-direct-mesh-docker-compare CURRENT=$${CURRENT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/summary.json} COMPARE_OUT=$${COMPARE_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.json} REPORT_OUT=$${REPORT_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.md}
 
 test-integration-direct-mesh-docker-nightly:
-	@bash ./scripts/run-direct-mesh-benchmark-regression.sh
+	@$(ENTRYPOINT) direct-mesh-benchmark-regression
 
 test-integration-workflow-mesh:
 	@bash ./scripts/run-workflow-mesh-regression.sh
 
 test-integration-workflow-mesh-nightly:
-	@bash ./scripts/run-workflow-mesh-regression-remote.sh
+	@$(ENTRYPOINT) workflow-mesh-regression-remote
 
 test-integration-workflow-catalog-compare:
 	@node ./scripts/compare-workflow-catalog-benchmark.mjs --current $${CURRENT:-tmp/workflow-catalog-benchmark.json} --baseline $${BASELINE:-tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json} --json-out $${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} --report-out $${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md} --fail-on-median-regression-pct $${WORKFLOW_MEDIAN_THRESHOLD:-50} --fail-on-avg-regression-pct $${WORKFLOW_AVG_THRESHOLD:-80}
@@ -333,7 +333,7 @@ test-integration-workflow-catalog-report:
 	@$(MAKE) test-integration-workflow-catalog-compare CURRENT=$${CURRENT:-tmp/workflow-catalog-benchmark.json} COMPARE_OUT=$${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} REPORT_OUT=$${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md}
 
 test-integration-workflow-catalog-nightly:
-	@bash ./scripts/run-workflow-catalog-benchmark-regression.sh
+	@$(ENTRYPOINT) workflow-catalog-benchmark-regression
 
 test-integration-ui-mechanical:
 	@node --test tests/integration/workbench-ui-mechanical-smoke.test.mjs
@@ -387,7 +387,7 @@ benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
 
 benchmark-profile-remote:
-	@bash ./scripts/run-benchmark-profile-remote.sh
+	@$(ENTRYPOINT) benchmark-profile-remote
 
 benchmark-baseline:
 	@matrix=$${MATRIX:-core}; profile=$${PROFILE:-10k}; baseline=$$( [ "$$matrix" = "core" ] && printf 'benchmarks/%s-baseline.json' "$$profile" || printf 'benchmarks/%s-%s-baseline.json' "$$matrix" "$$profile" ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $$profile --matrix $$matrix --repeat $${REPEAT:-5} --baseline-out $$baseline
@@ -417,4 +417,4 @@ benchmark-standard-report:
 	@node ./scripts/build-standard-benchmark-report.mjs --profile $${PROFILE:-10k} --output $${OUTPUT:-workers/rust/benchmarks/reports/standard-$${PROFILE:-10k}-compare.md}
 
 benchmark-standard-nightly:
-	@bash ./scripts/run-standard-benchmark-regression.sh
+	@$(ENTRYPOINT) standard-benchmark-regression

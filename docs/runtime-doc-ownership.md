@@ -13,9 +13,20 @@ back to it instead of re-explaining the same boundary in full.
 - Primary:
   `app-runtime-boundaries.md`
 - Owns:
-  Hub vs Workbench vs Installer vs runtime role separation
+  Hub vs Workbench vs Installer vs runtime role separation, including mobile
+  WebView as a remote-control GUI host rather than a runtime host
 - Should not absorb:
   agent registration policy, protocol details, or deployment command recipes
+
+### Mobile GUI host boundary
+
+- Primary:
+  `mobile-gui-runtime-boundary.md`
+- Owns:
+  mobile WebView capability limits, remote-backend-only posture, and forbidden
+  local runtime assumptions
+- Should not absorb:
+  general Hub/Workbench/Installer role definitions or agent protocol details
 
 ### System shape
 

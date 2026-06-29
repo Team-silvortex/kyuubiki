@@ -1,7 +1,11 @@
 "use client";
 
 import { lazy, Suspense, type ReactNode } from "react";
-import type { WorkbenchUiChunkId } from "@/components/workbench/workbench-ui-streaming";
+import {
+  type WorkbenchUiChunkId,
+} from "@/components/workbench/workbench-ui-streaming";
+import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
+import type { SidebarSection } from "@/components/workbench/workbench-types";
 
 const WorkbenchLibrarySectionMount = lazy(() =>
   import("@/components/workbench/workbench-library-section-mount").then((module) => ({
@@ -47,6 +51,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
     assistantOpen: props.assistantWindowOpen,
     onAssistantToggle: () => props.setAssistantWindowOpen((current: boolean) => !current),
     studySection: sectionChunk(
+      props.sidebarSection,
       "section.study",
       <WorkbenchStudySectionMount
         studyTab={props.studyTab}
@@ -77,6 +82,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />,
     ),
     modelSection: sectionChunk(
+      props.sidebarSection,
       "section.model",
       <WorkbenchModelSectionMount
         modelTab={props.modelTab}
@@ -104,6 +110,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />,
     ),
     workflowSection: sectionChunk(
+      props.sidebarSection,
       "section.workflow",
       <WorkbenchWorkflowSectionMount
         surfaceTab={props.workflowPanelTab}
@@ -133,6 +140,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />,
     ),
     storeSection: sectionChunk(
+      props.sidebarSection,
       "section.store",
       <WorkbenchStoreSectionMount
         language={props.language}
@@ -142,6 +150,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />,
     ),
     librarySection: sectionChunk(
+      props.sidebarSection,
       "section.library",
       <WorkbenchLibrarySectionMount
         labels={props.t}
@@ -191,6 +200,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
       />,
     ),
     systemSection: sectionChunk(
+      props.sidebarSection,
       "section.system",
       <WorkbenchSystemSidebarMount
         t={props.t}
@@ -318,22 +328,32 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
   };
 }
 
-function sectionChunk(chunkId: WorkbenchUiChunkId, children: ReactNode) {
+function sectionChunk(activeSection: SidebarSection, chunkId: WorkbenchUiChunkId, children: ReactNode) {
+  const chunkAttrs = buildWorkbenchUiChunkRuntimeAttrs(activeSection, chunkId);
   return (
-    <Suspense fallback={<SidebarChunkFallback chunkId={chunkId} />}>
-      <div className="workbench-ui-chunk" data-workbench-ui-chunk={chunkId}>
+    <Suspense fallback={<SidebarChunkFallback chunkId={chunkId} chunkAttrs={chunkAttrs} />}>
+      <div
+        className="workbench-ui-chunk"
+        {...chunkAttrs}
+      >
         {children}
       </div>
     </Suspense>
   );
 }
 
-function SidebarChunkFallback({ chunkId }: { chunkId: WorkbenchUiChunkId }) {
+function SidebarChunkFallback({
+  chunkId,
+  chunkAttrs,
+}: {
+  chunkId: WorkbenchUiChunkId;
+  chunkAttrs: ReturnType<typeof buildWorkbenchUiChunkRuntimeAttrs>;
+}) {
   return (
     <div
       className="sidebar-stack panel-scroll-window"
-      data-workbench-ui-chunk={chunkId}
       data-workbench-ui-chunk-loading="true"
+      {...chunkAttrs}
     >
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">

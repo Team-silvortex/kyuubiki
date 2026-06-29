@@ -1,4 +1,4 @@
-import type { FrontendRuntimeMode, ResultChunkPayload } from "@/lib/api";
+import type { ResultChunkPayload } from "@/lib/api";
 
 export const RESULT_WINDOW_THRESHOLD = 400;
 export const RESULT_WINDOW_BASE_SIZE = 240;
@@ -49,13 +49,13 @@ export function computeVisibleResultWindowOffset(
 }
 
 export function chunkCacheKey(
-  runtimeMode: FrontendRuntimeMode,
+  backendId: string,
   jobId: string,
   kind: "nodes" | "elements",
   offset: number,
   limit: number,
 ) {
-  return `${runtimeMode}:${jobId}:${kind}:${offset}:${limit}`;
+  return `${backendId}:${jobId}:${kind}:${offset}:${limit}`;
 }
 
 export function readChunkCache(

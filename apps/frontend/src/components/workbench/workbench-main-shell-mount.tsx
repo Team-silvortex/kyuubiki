@@ -1,7 +1,11 @@
 "use client";
 
 import { lazy, Suspense, type ReactNode } from "react";
-import type { WorkbenchUiChunkId } from "@/components/workbench/workbench-ui-streaming";
+import {
+  type WorkbenchUiChunkId,
+} from "@/components/workbench/workbench-ui-streaming";
+import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
+import type { SidebarSection } from "@/components/workbench/workbench-types";
 
 const WorkbenchAssistantFloat = lazy(() =>
   import("@/components/workbench/workbench-assistant-float").then((module) => ({
@@ -30,6 +34,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
   return (
     <>
       {workspaceChunk(
+        props.sidebarSection,
         "overlay.assistant",
         <WorkbenchAssistantFloat
         t={props.t}
@@ -65,6 +70,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
 
       <main className="workspace-main">
         {workspaceChunk(
+          props.sidebarSection,
           "workspace.viewport",
           <WorkbenchMainViewportPanelMount
           viewportPanelRef={props.viewportPanelRef}
@@ -246,6 +252,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         )}
 
         {workspaceChunk(
+          props.sidebarSection,
           "workspace.console",
           <WorkbenchConsoleMount
           sidebarSection={props.sidebarSection}
@@ -291,6 +298,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
       </main>
 
       {workspaceChunk(
+        props.sidebarSection,
         "workspace.inspector",
         <WorkbenchInspectorMount
         t={props.t}
@@ -414,22 +422,36 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
   );
 }
 
-function workspaceChunk(chunkId: WorkbenchUiChunkId, children: ReactNode) {
+function workspaceChunk(
+  activeSection: SidebarSection,
+  chunkId: WorkbenchUiChunkId,
+  children: ReactNode,
+) {
+  const chunkAttrs = buildWorkbenchUiChunkRuntimeAttrs(activeSection, chunkId);
   return (
-    <Suspense fallback={<WorkspaceChunkFallback chunkId={chunkId} />}>
-      <div className="workbench-ui-chunk" data-workbench-ui-chunk={chunkId}>
+    <Suspense fallback={<WorkspaceChunkFallback chunkId={chunkId} chunkAttrs={chunkAttrs} />}>
+      <div
+        className="workbench-ui-chunk"
+        {...chunkAttrs}
+      >
         {children}
       </div>
     </Suspense>
   );
 }
 
-function WorkspaceChunkFallback({ chunkId }: { chunkId: WorkbenchUiChunkId }) {
+function WorkspaceChunkFallback({
+  chunkId,
+  chunkAttrs,
+}: {
+  chunkId: WorkbenchUiChunkId;
+  chunkAttrs: ReturnType<typeof buildWorkbenchUiChunkRuntimeAttrs>;
+}) {
   return (
     <div
       className="panel"
-      data-workbench-ui-chunk={chunkId}
       data-workbench-ui-chunk-loading="true"
+      {...chunkAttrs}
     >
       <p className="muted-copy">Loading {chunkId}...</p>
     </div>

@@ -1,6 +1,7 @@
 export * from "./workflow-types";
 export * from "./job-status";
 export * from "./backend-target";
+export * from "./gui-runtime-capabilities";
 export * from "./project-types";
 export * from "./runtime-types";
 export * from "./security-results-types";

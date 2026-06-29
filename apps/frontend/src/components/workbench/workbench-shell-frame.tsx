@@ -2,10 +2,12 @@
 
 import { useLayoutEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { createWorkbenchUiStreamingRuntime } from "@/components/workbench/workbench-ui-streaming-runtime";
 import {
-  WORKBENCH_UI_STREAMING_CONTRACT_VERSION,
-  resolveWorkbenchUiStreamingState,
-} from "@/components/workbench/workbench-ui-streaming";
+  buildWorkbenchResolutionStyleVars,
+  resolveWorkbenchResolutionAdaptation,
+} from "@/components/workbench/workbench-resolution-adaptation";
+import type { WorkbenchResolutionAdaptation } from "@/components/workbench/workbench-resolution-adaptation";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 
 type WorkbenchShellFrameProps = {
@@ -16,15 +18,6 @@ type WorkbenchShellFrameProps = {
   workspace: ReactNode;
 };
 
-type WorkbenchWindowMode = "standard" | "compact" | "narrow" | "ultranarrow";
-
-function resolveWorkbenchWindowMode(width: number): WorkbenchWindowMode {
-  if (width <= 860) return "ultranarrow";
-  if (width <= 1180) return "narrow";
-  if (width <= 1440) return "compact";
-  return "standard";
-}
-
 export function WorkbenchShellFrame({
   assistantOverlay,
   rail,
@@ -32,15 +25,23 @@ export function WorkbenchShellFrame({
   sidebar,
   workspace,
 }: WorkbenchShellFrameProps) {
-  const [windowMode, setWindowMode] = useState<WorkbenchWindowMode>("standard");
+  const [resolution, setResolution] = useState<WorkbenchResolutionAdaptation>(() =>
+    resolveWorkbenchResolutionAdaptation({ width: 1440, height: 900 }),
+  );
   const [fullscreen, setFullscreen] = useState(false);
-  const streamingState = resolveWorkbenchUiStreamingState(sidebarSection);
+  const uiStreamingRuntime = createWorkbenchUiStreamingRuntime(sidebarSection);
+  const resolutionStyleVars = buildWorkbenchResolutionStyleVars(resolution);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
 
     const syncWindowState = () => {
-      setWindowMode(resolveWorkbenchWindowMode(window.innerWidth));
+      setResolution(
+        resolveWorkbenchResolutionAdaptation({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        }),
+      );
       setFullscreen(Boolean(document.fullscreenElement));
     };
 
@@ -59,13 +60,14 @@ export function WorkbenchShellFrame({
       data-workbench-automation-contract="v1"
       data-workbench-shell="root"
       data-workbench-shell-extensible="false"
-      data-workbench-window-mode={windowMode}
+      data-workbench-window-mode={resolution.windowMode}
+      data-workbench-viewport-profile={resolution.profile}
+      data-workbench-compact-chrome={resolution.shouldCompactChrome ? "true" : "false"}
+      data-workbench-stack-panels={resolution.shouldStackPanels ? "true" : "false"}
+      data-workbench-scrollable-shell={resolution.shouldUseScrollableShell ? "true" : "false"}
       data-workbench-fullscreen={fullscreen ? "true" : "false"}
-      data-workbench-ui-streaming-contract={WORKBENCH_UI_STREAMING_CONTRACT_VERSION}
-      data-workbench-active-ui-chunks={streamingState.activeChunks.join(" ")}
-      data-workbench-prefetch-ui-chunks={streamingState.prefetchChunks.join(" ")}
-      data-workbench-evictable-ui-chunks={streamingState.evictableChunks.join(" ")}
-      data-workbench-ui-chunk-budget={streamingState.budgetStatus}
+      {...uiStreamingRuntime.shellAttrs}
+      style={resolutionStyleVars}
     >
       {assistantOverlay}
       <div className="workbench-shell__rail">{rail}</div>

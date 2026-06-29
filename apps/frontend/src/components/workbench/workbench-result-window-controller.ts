@@ -4,7 +4,11 @@ import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction, 
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import { strategyResultWindowLimit, type ViewportRenderStrategy } from "@/components/workbench/workbench-render-diagnostics";
-import { fetchDirectMeshResultChunk, fetchResultChunk, type FrontendRuntimeMode, type ResultChunkPayload } from "@/lib/api";
+import { type FrontendRuntimeMode, type ResultChunkPayload } from "@/lib/api";
+import {
+  resolveResultBackendService,
+  type WorkbenchResultBackendService,
+} from "@/lib/workbench/result-backend-service";
 import {
   clampChunkOffset,
   chunkCacheKey,
@@ -92,6 +96,7 @@ type UseWorkbenchResultWindowControllerArgs = {
   setResultWindowLimit: Dispatch<SetStateAction<number>>;
   setResultWindowOffset: Dispatch<SetStateAction<number>>;
   studyKind: StudyKind;
+  resultBackendService?: WorkbenchResultBackendService;
 };
 
 function resolveResultWindowStudyKind(
@@ -158,6 +163,7 @@ export function useWorkbenchResultWindowController({
   setResultWindowLimit,
   setResultWindowOffset,
   studyKind,
+  resultBackendService = resolveResultBackendService(frontendRuntimeMode),
 }: UseWorkbenchResultWindowControllerArgs) {
   const {
     isAxialResult,
@@ -265,20 +271,18 @@ export function useWorkbenchResultWindowController({
     (async () => {
       try {
         const safeOffset = clampChunkOffset(resultWindowOffset, totalItems, limit);
-        const chunkFetcher =
-          frontendRuntimeMode === "direct_mesh_gui" ? fetchDirectMeshResultChunk : fetchResultChunk;
         const fetchChunk = async (kind: "nodes" | "elements", offset: number) => {
-          const key = chunkCacheKey(frontendRuntimeMode, jobId, kind, offset, limit);
+          const key = chunkCacheKey(resultBackendService.backendId, jobId, kind, offset, limit);
           const cached = readChunkCache(chunkCacheRef.current, key);
           if (cached) return cached;
 
-          const chunk = await chunkFetcher(jobId, kind, { offset, limit });
+          const chunk = await resultBackendService.fetchChunk({ jobId, kind, offset, limit });
           writeChunkCache(chunkCacheRef.current, key, chunk as ResultChunkPayload<Record<string, unknown>>);
           return chunk;
         };
 
-        const nodesKey = chunkCacheKey(frontendRuntimeMode, jobId, "nodes", safeOffset, limit);
-        const elementsKey = chunkCacheKey(frontendRuntimeMode, jobId, "elements", safeOffset, limit);
+        const nodesKey = chunkCacheKey(resultBackendService.backendId, jobId, "nodes", safeOffset, limit);
+        const elementsKey = chunkCacheKey(resultBackendService.backendId, jobId, "elements", safeOffset, limit);
         const cachedNodes = readChunkCache(chunkCacheRef.current, nodesKey);
         const cachedElements = readChunkCache(chunkCacheRef.current, elementsKey);
 
@@ -371,6 +375,7 @@ export function useWorkbenchResultWindowController({
     resultWindowLimit,
     renderStrategy,
     resultWindowOffset,
+    resultBackendService,
     setMessage,
     setSystemAlerts,
     setResultWindow,

@@ -1,0 +1,150 @@
+.workbench-shell {
+  min-height: 100dvh;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  overflow-x: clip;
+}
+
+.workspace-sidebar,
+.workspace-inspector {
+  max-height: calc(100dvh - 20px);
+}
+
+.app-rail,
+.workspace-sidebar,
+.workspace-inspector,
+.workspace-main,
+.canvas-layout,
+.canvas-layout__main,
+.canvas-layout__viewport {
+  min-width: 0;
+  min-height: 0;
+}
+
+.workbench-shell [data-workbench-bottom-bar],
+.workbench-shell .workbench-bottom-bar,
+.workbench-shell .workbench-event-bar {
+  pointer-events: auto;
+  max-width: calc(100vw - 24px);
+  margin-inline: auto;
+}
+
+[data-workbench-ui-chunk][data-workbench-ui-chunk-loading="true"] {
+  min-height: var(--workbench-min-touch-target, 36px);
+  contain: layout paint;
+}
+
+[data-workbench-ui-chunk][data-workbench-ui-chunk-phase="park"],
+[data-workbench-ui-chunk][data-workbench-ui-render-policy="parked"] {
+  content-visibility: auto;
+  contain-intrinsic-size: 320px 220px;
+}
+
+[data-workbench-ui-chunk][data-workbench-ui-render-policy="hidden"] {
+  content-visibility: auto;
+  contain-intrinsic-size: 320px 180px;
+}
+
+.workbench-shell[data-workbench-scrollable-shell="true"] {
+  min-height: 100dvh;
+  height: auto;
+  overflow-y: auto;
+  padding-bottom: calc(var(--workbench-bottom-safe-area, 56px) + env(safe-area-inset-bottom));
+}
+
+.workbench-shell[data-workbench-scrollable-shell="true"] .assistant-float-launcher {
+  bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.workbench-shell[data-workbench-scrollable-shell="true"] .assistant-float-panel {
+  bottom: calc(var(--workbench-bottom-safe-area, 56px) + env(safe-area-inset-bottom));
+  max-height: min(72dvh, 720px);
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: auto;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__rail,
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__sidebar,
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__workspace {
+  min-width: 0;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--editor-gap);
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workspace-sidebar,
+.workbench-shell[data-workbench-stack-panels="true"] .workspace-inspector {
+  max-height: none;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workspace-main {
+  min-height: min(62dvh, 720px);
+}
+
+.workbench-shell[data-workbench-compact-chrome="true"] button,
+.workbench-shell[data-workbench-compact-chrome="true"] input,
+.workbench-shell[data-workbench-compact-chrome="true"] select,
+.workbench-shell[data-workbench-compact-chrome="true"] textarea,
+.workbench-shell[data-workbench-compact-chrome="true"] .rail-button,
+.workbench-shell[data-workbench-compact-chrome="true"] .panel-tab {
+  min-height: var(--workbench-min-touch-target, 36px);
+}
+
+.workbench-shell[data-workbench-viewport-profile="phone"] {
+  padding: 4px;
+  gap: 4px;
+}
+
+.workbench-shell[data-workbench-viewport-profile="phone"] .app-rail {
+  position: sticky;
+  top: 4px;
+  z-index: 4;
+}
+
+.workbench-shell[data-workbench-viewport-profile="phone"] .rail-nav {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workbench-shell[data-workbench-viewport-profile="phone"] .canvas-layout {
+  padding: 8px;
+}
+
+.workbench-shell[data-workbench-viewport-profile="phone"] .button-row > * {
+  flex-basis: 100%;
+}
+
+@media (max-height: 720px) {
+  .workbench-shell {
+    padding-top: 4px;
+    gap: 6px;
+  }
+
+  .sidebar-header p,
+  .card-copy {
+    line-height: 1.35;
+  }
+
+  .workspace-sidebar,
+  .workspace-inspector {
+    max-height: calc(100dvh - 12px);
+  }
+}
+
+@media (max-width: 520px) {
+  .workbench-shell[data-workbench-viewport-profile="phone"] .sidebar-header__brand {
+    align-items: flex-start;
+  }
+
+  .workbench-shell[data-workbench-viewport-profile="phone"] .sidebar-list__row {
+    grid-template-columns: 1fr;
+  }
+
+  .workbench-shell[data-workbench-viewport-profile="phone"] .assistant-float-launcher__copy {
+    display: none;
+  }
+}

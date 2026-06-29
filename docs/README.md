@@ -119,6 +119,9 @@ Then branch by intent:
   Full runtime map across GUI, control plane, and solver data plane.
 - `app-runtime-boundaries.md`
   Hard role split between Hub, Workbench, Installer, and runtime/agent layers.
+- `mobile-gui-runtime-boundary.md`
+  Mobile WebView GUI contract: remote-control only, no local agent/orchestra
+  hosting.
 - `agent-orchestrator-boundary.md`
   Runtime-side contract for keeping Rust agents, Elixir orchestration, and UI shells decoupled.
   Also includes the current transitional inventory and convergence checklist.

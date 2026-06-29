@@ -157,6 +157,33 @@ The browser-side API client must stay thin:
 That split keeps the TypeScript API client usable in tests, WebView shells, and
 future adapter layers without dragging the whole Workbench UI graph with it.
 
+Workflow execution has one additional seam:
+
+- `apps/frontend/src/lib/workbench/workflow-backend-service-core.ts` defines the
+  GUI-facing workflow backend service contract and pure factory
+- `apps/frontend/src/lib/workbench/workflow-backend-service.ts` binds that
+  contract to the default orchestrated HTTP API implementation
+- `apps/frontend/src/components/workbench/workflow/workbench-workflow-controller.ts`
+  consumes the service contract instead of importing HTTP runtime clients
+  directly
+
+That seam is where future direct-mesh, mobile WebView, mock, or SDK-aligned
+workflow backends should attach. UI components own interaction state and run
+presentation; backend service implementations own catalog fetch, job submit,
+and job polling transport.
+
+Result inspection follows the same pattern:
+
+- `apps/frontend/src/lib/workbench/result-backend-service-core.ts` defines the
+  GUI-facing result chunk service contract and pure factory
+- `apps/frontend/src/lib/workbench/result-backend-service.ts` binds that
+  contract to the default orchestrated and direct-mesh HTTP chunk APIs
+- result viewport controllers consume a result service and cache by backend id
+  rather than hard-coding result URL families in viewport logic
+
+This keeps large-result virtualization reusable across orchestra, direct mesh,
+mobile remote backends, and tests.
+
 The boundary rule is strict:
 
 - UI state may describe intent, selected runtime target, and project context
@@ -194,9 +221,24 @@ This applies equally to:
 
 - browser workbench
 - Hub desktop shell
+- mobile WebView control clients
 - installer GUI
 - headless SDK callers
 - orchestration services
+
+## Mobile WebView Boundary
+
+Mobile GUI support is a remote-control surface, not a runtime deployment mode.
+
+iOS and Android WebViews may host Hub or Workbench UI, select a remote backend,
+submit jobs, inspect workflow state, and observe agents through public APIs.
+They must not host orchestra, run Rust agents, install runtimes, or assume that
+`localhost` is the execution backend.
+
+This makes the decoupling rule concrete: mobile support is possible because the
+GUI calls stable backend contracts instead of embedding runtime ownership in the
+frontend. See [mobile-gui-runtime-boundary.md](mobile-gui-runtime-boundary.md)
+for the focused mobile contract.
 
 ## Monorepo Mapping
 

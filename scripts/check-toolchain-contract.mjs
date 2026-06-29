@@ -109,10 +109,10 @@ async function main() {
   requireContains(issues, "scripts/kyuubiki-runtime-resolver.mjs", runtimeResolver, "KYUUBIKI_RUNTIME_STRICT", "strict runtime mode");
   requireContains(issues, "scripts/kyuubiki-runtime-resolver.mjs", runtimeResolver, "host-fallback", "host fallback visibility");
 
-  const remoteMeshScript = await readText("scripts/run-workflow-mesh-regression-remote.sh");
-  requireContains(issues, "scripts/run-workflow-mesh-regression-remote.sh", remoteMeshScript, "scripts/toolchain-env.mjs", "toolchain env loader");
-  requireContains(issues, "scripts/run-workflow-mesh-regression-remote.sh", remoteMeshScript, "KYUUBIKI_REMOTE_OTP_VERSION", "remote OTP default key");
-  requireContains(issues, "scripts/run-workflow-mesh-regression-remote.sh", remoteMeshScript, "KYUUBIKI_REMOTE_ELIXIR_VERSION", "remote Elixir default key");
+  const remoteMeshRunner = await readText("workers/rust/crates/script-runner/src/workflow_mesh_remote.rs");
+  requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "scripts/toolchain-env.mjs", "toolchain env loader");
+  requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "KYUUBIKI_REMOTE_OTP_VERSION", "remote OTP default key");
+  requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "KYUUBIKI_REMOTE_ELIXIR_VERSION", "remote Elixir default key");
 
   for (const file of [
     "apps/frontend/package.json",

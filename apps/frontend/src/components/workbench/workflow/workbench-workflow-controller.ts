@@ -4,13 +4,6 @@ import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, t
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
-  fetchJobStatus,
-  fetchWorkflowCatalog,
-  fetchWorkflowOperators,
-  submitWorkflowCatalogJob,
-  submitWorkflowGraphJob,
-} from "@/lib/api/runtime-client";
-import {
   isWorkflowRunFailureStatus,
   isWorkflowRunTerminalStatus,
 } from "@/lib/api/job-status";
@@ -37,6 +30,10 @@ import {
   type WorkbenchRuntimeRecoveryState,
 } from "@/components/workbench/workbench-runtime-recovery";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import {
+  orchestratedWorkflowBackendService,
+  type WorkbenchWorkflowBackendService,
+} from "@/lib/workbench/workflow-backend-service";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -57,6 +54,7 @@ type UseWorkbenchWorkflowControllerArgs = {
   setMessage: Dispatch<SetStateAction<string>>;
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
   openWorkflowRunsSurface: (workflowId: string) => void;
+  workflowBackendService?: WorkbenchWorkflowBackendService;
 };
 
 export function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
@@ -87,6 +85,7 @@ export function useWorkbenchWorkflowController({
   setMessage,
   setSystemAlerts,
   openWorkflowRunsSurface,
+  workflowBackendService = orchestratedWorkflowBackendService,
 }: UseWorkbenchWorkflowControllerArgs) {
   const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
   const [workflowOperatorDescriptors, setWorkflowOperatorDescriptors] = useState<WorkflowOperatorDescriptor[]>([]);
@@ -101,8 +100,8 @@ export function useWorkbenchWorkflowController({
 
     try {
       const [payload, operatorPayload] = await Promise.all([
-        fetchWorkflowCatalog(),
-        fetchWorkflowOperators().catch(() => ({
+        workflowBackendService.fetchCatalog(),
+        workflowBackendService.fetchOperators().catch(() => ({
           modules: [] as WorkflowOperatorModuleSummary[],
           operators: [] as WorkflowOperatorDescriptor[],
         })),
@@ -138,7 +137,7 @@ export function useWorkbenchWorkflowController({
     } finally {
       setWorkflowCatalogBusy(false);
     }
-  }, [labels.initialFailed, labels.workflowCatalogLoaded, setMessage, setSystemAlerts]);
+  }, [labels.initialFailed, labels.workflowCatalogLoaded, setMessage, setSystemAlerts, workflowBackendService]);
 
   const runWorkflowJob = useCallback(async (params: {
     sourceWorkflowId: string;
@@ -162,9 +161,11 @@ export function useWorkbenchWorkflowController({
 
     try {
       dismissWorkbenchAlert(setSystemAlerts, "workflow-run-error");
-      const payload = params.graph
-        ? await submitWorkflowGraphJob(params.graph, inputArtifacts)
-        : await submitWorkflowCatalogJob(params.sourceWorkflowId, inputArtifacts);
+      const payload = await workflowBackendService.submitWorkflow({
+        graph: params.graph,
+        inputArtifacts,
+        workflowId: params.sourceWorkflowId,
+      });
       const activeJobId = payload.job.job_id;
       openWorkflowRunsSurface(params.displayWorkflowId);
       setJob(payload.job);
@@ -188,7 +189,7 @@ export function useWorkbenchWorkflowController({
       for (let attempt = 0; attempt < 80; attempt += 1) {
         if (pollToken !== jobPollTokenRef.current) return;
 
-        const next = await fetchJobStatus<WorkflowGraphJobResult>(payload.job.job_id);
+        const next = await workflowBackendService.fetchJob<WorkflowGraphJobResult>(payload.job.job_id);
         if (pollToken !== jobPollTokenRef.current) return;
 
         setJob(next.job);
@@ -283,6 +284,7 @@ export function useWorkbenchWorkflowController({
     setJob,
     setMessage,
     setSystemAlerts,
+    workflowBackendService,
   ]);
 
   const runWorkflowCatalogEntry = useCallback(
