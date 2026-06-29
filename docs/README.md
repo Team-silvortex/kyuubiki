@@ -102,6 +102,13 @@ Then branch by intent:
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
   control-surface note for the `1.12.x` preparation line.
+- `remote-deployment-roadmap.html`
+  Maturity roadmap for moving Installer remote deployment from policy-bounded
+  SSH transport to a deployment service with plans, journals, artifact
+  delivery, host trust, and tests.
+- `component-integrity-protocol.html`
+  Component ownership, required-path coverage, protection, cleanup, and visible
+  rule protocol used by the Installer integrity report.
 - `remote-pilot.md`
   Practical first-Ubuntu-host rollout sketch for introducing remote solver
   nodes, then remote control-plane and workload-source validation.
@@ -181,6 +188,9 @@ Then branch by intent:
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
   inside the `1.12.x` trust-hardening and `1.12.x` asset-formalization path.
+- `component-integrity-protocol.html`
+  Protocol page for adding new components without leaving required layout,
+  brand metadata, protection, or cleanup behavior outside integrity coverage.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`

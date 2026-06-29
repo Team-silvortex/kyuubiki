@@ -12,6 +12,9 @@ mod integrity;
 mod integrity_contract;
 mod integrity_versions;
 mod release;
+mod remote_deployment;
+mod remote_deployment_journal;
+mod remote_deployment_plan;
 #[cfg(test)]
 mod tests;
 mod update_catalog;
@@ -37,6 +40,16 @@ pub(crate) use release::{
     build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
     build_release_manifest, build_release_readme, expected_release_script_contents,
     write_release_scripts,
+};
+pub use remote_deployment::{
+    RemoteDeploymentRoadmap, RemoteDeploymentStage, remote_deployment_roadmap,
+};
+pub use remote_deployment_journal::{
+    RemoteDeploymentJournal, RemoteDeploymentJournalRecord, default_remote_deployment_journal,
+    remote_deployment_journal_for_plan,
+};
+pub use remote_deployment_plan::{
+    RemoteDeploymentPlan, RemoteDeploymentPlanStep, default_remote_deployment_plan,
 };
 pub use update_catalog::{
     StagedUpdateRecord, UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep,
@@ -141,6 +154,9 @@ pub fn print_help() {
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",
         "  prepare-staged-update  Repair, stage, and record a channel update scaffold\n",
+        "  remote-deployment-roadmap  Show SSH remote deployment service maturity plan\n",
+        "  remote-deployment-plan  Preview the structured SSH deployment step contract\n",
+        "  remote-deployment-journal  Preview retry-safe journal records for the plan\n",
         "  repair-installation     Recreate layout and clean removable residue\n",
         "  validate-env     Validate required environment variables from .env.local\n",
         "  init-env         Create .env.local from .env.example when missing\n",

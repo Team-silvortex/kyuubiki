@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Remote Deployment Roadmap</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Installer Remote Deployment · Roadmap</div>
+        <h1>From SSH wrapper to deployment service</h1>
+        <p class="docs-copy">
+          Installer remote deployment currently sits at pilot maturity: bounded
+          SSH transport with policy validation, remote node registry records,
+          certificate material preparation, and agent start commands. The target
+          is an idempotent deployment service with explicit plans, durable
+          journals, artifact delivery, host trust, and remote test coverage.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Current maturity: pilot</span>
+          <span class="docs-chip">Target maturity: service</span>
+          <span class="docs-chip">CLI: remote-deployment-roadmap</span>
+          <span class="docs-chip">Plan preview: remote-deployment-plan</span>
+          <span class="docs-chip">Journal preview: remote-deployment-journal</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch04-runtime-modes.html">Back to runtime chapter</a>
+          <a class="docs-link" href="./installer-remote-control.md">Open remote control source</a>
+          <a class="docs-link" href="./remote-pilot.md">Open remote pilot guide</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Current state</h2>
+        <p class="docs-copy">
+          The current Installer path is useful for controlled LAN and lab
+          pilots. It validates host and workspace policy, wraps SSH and SCP,
+          can bootstrap a workspace command, can start an orchestrated or
+          offline-mesh Rust agent, and can attach certificate material. It is
+          not yet a mature production deployment service because it lacks a
+          durable deployment plan, remote journal, artifact pull flow,
+          rollback, host-key pinning policy, and full integration matrix.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Principles</h2>
+        <ul class="docs-list">
+          <li>Installer owns deployment and repair, not modeling workflow semantics.</li>
+          <li>SSH is transport; deployment intent must be represented as a plan.</li>
+          <li>Remote actions must be policy-bounded, auditable, and replay-safe.</li>
+          <li>Remote hosts should pull staged artifacts instead of relying on ad-hoc shell state.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Roadmap stages</h2>
+        <ol class="docs-list">
+          <li><strong>Policy-bounded SSH transport</strong>: implemented; keep host, workspace, URL, identity, and snapshot validation visible.</li>
+          <li><strong>Structured deployment plan</strong>: started; model bootstrap, package sync, verify, start, health-check, and rollback as explicit steps.</li>
+          <li><strong>Durable remote journal</strong>: started; every action emits local and remote records with retry-safe status.</li>
+          <li><strong>Installer-managed artifact delivery</strong>: planned; remote hosts pull staged packages and verify checksums/component integrity.</li>
+          <li><strong>Host trust hardening</strong>: planned; move beyond <code>accept-new</code> for non-dev deployments and bind node identity.</li>
+          <li><strong>Remote deployment test matrix</strong>: planned; combine containerized SSH fixtures with physical lab-host runs.</li>
+        </ol>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Operator commands</h2>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-deployment-roadmap</code>
+          to print the source-of-truth roadmap from the Installer crate. The
+          GUI and docs should keep reflecting that model rather than diverging
+          into separate maturity claims.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-deployment-plan</code>
+          to preview the first structured remote-agent deployment step contract:
+          policy check, workspace bootstrap, artifact sync, integrity verify,
+          agent start, health check, and rollback guidance.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-deployment-journal</code>
+          to preview the retry-safe journal records that will later be written
+          locally and remotely as each deployment step executes.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -45,8 +45,18 @@
       "required": true
     },
     {
+      "label": "shared brand metadata",
+      "path": "assets/brand/brand.json",
+      "required": true
+    },
+    {
       "label": "desktop installer shell",
       "path": "apps/installer-gui",
+      "required": true
+    },
+    {
+      "label": "desktop installer brand metadata",
+      "path": "apps/installer-gui/ui/assets/brand.json",
       "required": true
     },
     {
@@ -55,8 +65,18 @@
       "required": true
     },
     {
+      "label": "desktop hub brand metadata",
+      "path": "apps/hub-gui/ui/assets/brand.json",
+      "required": true
+    },
+    {
       "label": "desktop workbench shell",
       "path": "apps/workbench-gui",
+      "required": true
+    },
+    {
+      "label": "desktop workbench brand metadata",
+      "path": "apps/workbench-gui/ui/assets/brand.json",
       "required": true
     }
   ],
@@ -106,6 +126,28 @@
       ]
     },
     {
+      "id": "brand.shared",
+      "kind": "brand-metadata",
+      "version": "1.12.0",
+      "owner": "kyuubiki",
+      "owned_paths": [
+        "assets/brand"
+      ],
+      "required_paths": [
+        "assets/brand/brand.json"
+      ],
+      "protected_paths": [],
+      "removable_patterns": [],
+      "visible_rules": [
+        {
+          "label": "release_version",
+          "value": "1.12.0",
+          "editable": false,
+          "description": "Shared brand metadata must expose releaseVersion for every desktop shell copy."
+        }
+      ]
+    },
+    {
       "id": "installer.core",
       "kind": "installer",
       "version": "1.12.0",
@@ -144,7 +186,8 @@
         "apps/installer-gui"
       ],
       "required_paths": [
-        "apps/installer-gui"
+        "apps/installer-gui",
+        "apps/installer-gui/ui/assets/brand.json"
       ],
       "protected_paths": [
         "apps/installer-gui"
@@ -168,7 +211,8 @@
         "apps/hub-gui"
       ],
       "required_paths": [
-        "apps/hub-gui"
+        "apps/hub-gui",
+        "apps/hub-gui/ui/assets/brand.json"
       ],
       "protected_paths": [
         "apps/hub-gui"
@@ -192,7 +236,8 @@
         "apps/workbench-gui"
       ],
       "required_paths": [
-        "apps/workbench-gui"
+        "apps/workbench-gui",
+        "apps/workbench-gui/ui/assets/brand.json"
       ],
       "protected_paths": [
         "apps/workbench-gui"

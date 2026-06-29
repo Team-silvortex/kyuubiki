@@ -2,10 +2,11 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    cross_platform_audit_report, embedded_runtime_report, exit_on_err, export_launch_config,
-    init_env, installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
-    print_help, repair_installation, run_doctor, stage_release, unified_update_plan,
-    unified_update_preview, validate_env_file,
+    cross_platform_audit_report, default_remote_deployment_journal, default_remote_deployment_plan,
+    embedded_runtime_report, exit_on_err, export_launch_config, init_env,
+    installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
+    print_help, remote_deployment_roadmap, repair_installation, run_doctor, stage_release,
+    unified_update_plan, unified_update_preview, validate_env_file,
 };
 
 fn main() {
@@ -34,6 +35,9 @@ fn main() {
                 prepare_staged_update(channel, platform, target_dir).map(|report| report.render()),
             )
         }
+        "remote-deployment-roadmap" => println!("{}", remote_deployment_roadmap().render()),
+        "remote-deployment-plan" => println!("{}", default_remote_deployment_plan().render()),
+        "remote-deployment-journal" => println!("{}", default_remote_deployment_journal().render()),
         "repair-installation" => exit_on_err(repair_installation()),
         "validate-env" => exit_on_err(validate_env_file()),
         "init-env" => {

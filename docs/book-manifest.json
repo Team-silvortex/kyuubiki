@@ -49,6 +49,7 @@
         "docs/operations.md",
         "docs/packaging-and-deployment.md",
         "docs/installer-remote-control.md",
+        "docs/remote-deployment-roadmap.html",
         "docs/desktop-release-checklist.md"
       ]
     },
@@ -86,6 +87,7 @@
         "docs/security.md",
         "docs/testing-and-ci.md",
         "docs/installer-remote-control.md",
+        "docs/component-integrity-protocol.html",
         "docs/installation-integrity-contract.html",
         "docs/update-catalog.html"
       ]
@@ -142,6 +144,7 @@
       "docs/system-overview.md",
       "docs/app-runtime-boundaries.md",
       "docs/installer-remote-control.md",
+      "docs/remote-deployment-roadmap.html",
       "docs/security.md",
       "docs/testing-and-ci.md"
     ],
@@ -149,6 +152,7 @@
       "docs/packaging-and-deployment.md",
       "docs/testing-and-ci.md",
       "docs/desktop-release-checklist.md",
+      "docs/component-integrity-protocol.html",
       "docs/installation-integrity-contract.html",
       "docs/update-catalog.html"
     ],

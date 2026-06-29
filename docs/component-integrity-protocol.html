@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Component Integrity Protocol</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Component Integrity · Protocol</div>
+        <h1>kyuubiki.component-integrity/v1</h1>
+        <p class="docs-copy">
+          Component integrity is the long-term protocol for declaring what a
+          Kyuubiki component owns, requires, protects, and may clean. It turns
+          installation integrity from a one-time repair process into a contract
+          that every new component must join.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Shipping version: 1.12.0</span>
+          <span class="docs-chip">Protocol: kyuubiki.component-integrity/v1</span>
+          <span class="docs-chip">Coverage: required layout ownership</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch07-trust-and-safety.html">Back to trust chapter</a>
+          <a class="docs-link" href="./installation-integrity-contract.html">Open install contract</a>
+          <a class="docs-link" href="../deploy/installation-integrity-contract.json">Open JSON source</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Why this exists</h2>
+        <p class="docs-copy">
+          Kyuubiki has many installable and runtime-adjacent parts: desktop
+          shells, Installer logic, runtime state, release snapshots, brand
+          metadata, future agents, operator libraries, and store sources. A
+          component may add files, but it must also declare ownership and safety
+          behavior. Otherwise repair and update tooling cannot know whether a
+          path is required, user-owned, protected, or removable residue.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Component fields</h2>
+        <ul class="docs-list">
+          <li><strong>id</strong>: stable component id, such as <code>desktop.hub</code> or <code>runtime.state</code>.</li>
+          <li><strong>kind</strong>: class of component, such as <code>desktop-shell</code>, <code>installer</code>, or <code>brand-metadata</code>.</li>
+          <li><strong>version</strong>: expected product-line version for the component.</li>
+          <li><strong>owner</strong>: human/tooling ownership hint used by reports.</li>
+          <li><strong>owned_paths</strong>: path roots the component is allowed to claim.</li>
+          <li><strong>required_paths</strong>: paths that must exist for the component to be healthy.</li>
+          <li><strong>protected_paths</strong>: paths repair must not remove and that must also appear in the global protected set.</li>
+          <li><strong>removable_patterns</strong>: component-local residue patterns, still constrained by global repair policy.</li>
+          <li><strong>visible_rules</strong>: operator-facing read-only or editable behavior metadata.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Current components</h2>
+        <ul class="docs-list">
+          <li><code>workspace.root</code>: root sentinel for required-layout coverage.</li>
+          <li><code>brand.shared</code>: shared brand metadata, including <code>releaseVersion</code>.</li>
+          <li><code>installer.core</code>: installer contract, staging, and runtime payload roots.</li>
+          <li><code>desktop.installer</code>: Installer desktop shell and brand metadata.</li>
+          <li><code>desktop.hub</code>: Hub desktop shell and brand metadata.</li>
+          <li><code>desktop.workbench</code>: Workbench desktop shell and brand metadata.</li>
+          <li><code>release.snapshots</code>: protected lightweight version-history snapshots.</li>
+          <li><code>runtime.state</code>: runtime state roots and stale process-file cleanup.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Validation rules</h2>
+        <ul class="docs-list">
+          <li>Every required installation path must be covered by at least one component's <code>owned_paths</code>.</li>
+          <li>Every component <code>required_paths</code> entry must sit inside one of that component's owned paths.</li>
+          <li>Every component <code>protected_paths</code> entry must also be present in the global protected path set.</li>
+          <li>Installer integrity reports render <code>required_path_coverage</code>; healthy current output is <code>15/15</code>.</li>
+          <li>Brand metadata is now a required component concern, so desktop shells must expose matching <code>releaseVersion</code>.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Adding a new component</h2>
+        <ol class="docs-list">
+          <li>Add the component's required paths to <code>required_layout</code> if they must exist after install or repair.</li>
+          <li>Add a <code>components[]</code> entry in <code>deploy/installation-integrity-contract.json</code>.</li>
+          <li>Keep every required path inside the component's <code>owned_paths</code>.</li>
+          <li>Add protected paths globally before declaring them in the component.</li>
+          <li>Run <code>cargo test -q -p kyuubiki-installer</code> and <code>cargo run -q -p kyuubiki-installer -- installation-integrity</code>.</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

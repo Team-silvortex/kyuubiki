@@ -3,8 +3,9 @@ use std::path::Path;
 
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
-    cross_platform_audit_report, embedded_runtime_report, expected_release_script_contents,
-    installation_integrity_report, parse_agent_endpoints, parse_agent_manifest, parse_platform,
+    cross_platform_audit_report, default_remote_deployment_journal, default_remote_deployment_plan,
+    embedded_runtime_report, expected_release_script_contents, installation_integrity_report,
+    parse_agent_endpoints, parse_agent_manifest, parse_platform, remote_deployment_roadmap,
     unified_update_plan, unified_update_preview, workspace_root,
 };
 
@@ -155,6 +156,10 @@ fn installation_integrity_reports_component_protocol() {
         report.component_protocol.required_path_count
     );
     assert!(
+        report.version_checks.iter().all(|check| check.ok),
+        "version checks should all align after brand metadata is covered"
+    );
+    assert!(
         report
             .component_protocol
             .components
@@ -181,4 +186,69 @@ fn installation_integrity_reports_component_protocol() {
             .contains("component_protocol: kyuubiki.component-integrity/v1")
     );
     assert!(report.render().contains("required_path_coverage:"));
+}
+
+#[test]
+fn remote_deployment_roadmap_marks_ssh_wrapper_as_pilot() {
+    let roadmap = remote_deployment_roadmap();
+    assert_eq!(
+        roadmap.schema_version,
+        "kyuubiki.remote-deployment-roadmap/v1"
+    );
+    assert!(roadmap.current_maturity.contains("pilot"));
+    assert!(
+        roadmap
+            .stages
+            .iter()
+            .any(|stage| stage.id == "deployment-plan" && stage.status == "started")
+    );
+    assert!(
+        roadmap
+            .stages
+            .iter()
+            .any(|stage| stage.id == "remote-journal" && stage.status == "started")
+    );
+    assert!(roadmap.render().contains("Policy-bounded SSH transport"));
+}
+
+#[test]
+fn remote_deployment_plan_has_retry_safe_step_contract() {
+    let plan = default_remote_deployment_plan();
+    assert_eq!(plan.schema_version, "kyuubiki.remote-deployment-plan/v1");
+    assert!(plan.steps.iter().any(|step| step.id == "policy-check"));
+    assert!(plan.steps.iter().any(|step| step.id == "verify-integrity"));
+    assert!(plan.steps.iter().any(|step| step.id == "health-check"));
+    assert!(
+        plan.steps
+            .iter()
+            .all(|step| !step.idempotency_key.is_empty() && !step.failure_class.is_empty())
+    );
+    assert!(plan.render().contains("rollback_hint:"));
+}
+
+#[test]
+fn remote_deployment_journal_matches_plan_steps() {
+    let plan = default_remote_deployment_plan();
+    let journal = default_remote_deployment_journal();
+    assert_eq!(
+        journal.schema_version,
+        "kyuubiki.remote-deployment-journal/v1"
+    );
+    assert_eq!(journal.records.len(), plan.steps.len());
+    assert!(
+        journal
+            .records
+            .iter()
+            .all(|record| record.status == "pending")
+    );
+    assert!(journal.records.iter().all(|record| {
+        record
+            .local_record_path
+            .starts_with(".kyuubiki/remote-journal/")
+    }));
+    assert!(
+        journal
+            .render()
+            .contains("remote deployment journal preview")
+    );
 }

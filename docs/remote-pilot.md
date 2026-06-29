@@ -14,6 +14,7 @@ It is not the primary source for:
 Those remain anchored in:
 
 - [installer-remote-control.md](installer-remote-control.md)
+- [remote-deployment-roadmap.html](remote-deployment-roadmap.html)
 - [agent-control-authority.md](agent-control-authority.md)
 - [headless-agent-contract.md](headless-agent-contract.md)
 

@@ -3,6 +3,23 @@
 Use this page as the source-of-truth note for the Installer remote deployment
 and remote runtime control surface in the `tamamono 1.12.x` preparation line.
 
+For maturity tracking, pair this control-surface note with
+[remote-deployment-roadmap.html](remote-deployment-roadmap.html). The current
+remote path is a policy-bounded SSH pilot, not yet a full production deployment
+service.
+
+The first non-executing step contract is available through:
+
+```bash
+cargo run -p kyuubiki-installer -- remote-deployment-plan
+cargo run -p kyuubiki-installer -- remote-deployment-journal
+```
+
+That command previews the intended deployment phases before the GUI or SSH
+executor is allowed to treat them as mutable remote actions. The journal
+preview mirrors those phases into pending local and remote record paths so the
+future executor has an audit shape before it mutates real hosts.
+
 This document explains:
 
 - what the Installer remote panel owns
@@ -192,7 +209,8 @@ instead of generic “something failed” messaging.
 ## Relationship to `1.12.x`
 
 Inside the `1.12.x` to `1.20.x` industrialization range, this surface is
-especially relevant to the `1.12.x` and `1.12.x` themes:
+especially relevant to the `1.12.x` trust-hardening and remote-deployment
+themes:
 
 - `1.12.x`
   trust hardening, clearer operator-facing runtime claims, and fewer ambiguous
@@ -207,6 +225,7 @@ especially relevant to the `1.12.x` and `1.12.x` themes:
 - [agent-orchestrator-boundary.md](agent-orchestrator-boundary.md)
 - [headless-agent-contract.md](headless-agent-contract.md)
 - [remote-pilot.md](remote-pilot.md)
+- [remote-deployment-roadmap.html](remote-deployment-roadmap.html)
 - [workflow-graph.md](workflow-graph.md)
 - [workflow-dataset.md](workflow-dataset.md)
 - [installation-integrity-contract.html](installation-integrity-contract.html)
