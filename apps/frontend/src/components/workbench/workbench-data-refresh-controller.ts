@@ -10,17 +10,11 @@ import type {
 } from "@/lib/api";
 import {
   createProject,
-  fetchDirectMeshAgents,
-  fetchHealth,
   fetchModelVersions,
   fetchProjects,
-  fetchProtocolAgents,
-  fetchRegisteredAgents,
   fetchSecurityEvents,
 } from "@/lib/api";
 import { copyByLanguage } from "@/components/workbench/workbench-copy";
-import { parseDirectMeshEndpoints } from "@/lib/workbench/helpers";
-import { validateWorkbenchExecutionGovernance } from "@/lib/workbench/governance";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 import {
@@ -29,6 +23,10 @@ import {
   type WorkbenchRuntimeRecoveryState,
 } from "@/components/workbench/workbench-runtime-recovery";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import {
+  workbenchRuntimeStatusBackendService,
+  type WorkbenchRuntimeStatusBackendService,
+} from "@/lib/workbench/runtime-status-backend-service";
 
 type UseWorkbenchDataRefreshControllerArgs = {
   directMeshEndpointsText: string;
@@ -52,6 +50,7 @@ type UseWorkbenchDataRefreshControllerArgs = {
   setSelectedVersionId: (value: string | null) => void;
   refreshJobHistory: () => Promise<void>;
   refreshResults: () => Promise<void>;
+  runtimeStatusBackendService?: WorkbenchRuntimeStatusBackendService;
   securityEventWindowMs: Record<Exclude<SecurityEventWindow, "">, number>;
 };
 
@@ -77,6 +76,7 @@ export function useWorkbenchDataRefreshController({
   setSelectedVersionId,
   refreshJobHistory,
   refreshResults,
+  runtimeStatusBackendService = workbenchRuntimeStatusBackendService,
   securityEventWindowMs,
 }: UseWorkbenchDataRefreshControllerArgs) {
   const healthRefreshSeqRef = useRef(0);
@@ -107,106 +107,27 @@ export function useWorkbenchDataRefreshController({
   async function refreshHealth() {
     const refreshSeq = ++healthRefreshSeqRef.current;
 
-    if (frontendRuntimeMode === "direct_mesh_gui") {
-      try {
-        const governance = validateWorkbenchExecutionGovernance({ frontendRuntimeMode, directMeshEndpointsText });
-        if (!governance.ok) {
-          if (refreshSeq !== healthRefreshSeqRef.current) return;
-          setHealth(null);
-          setProtocolAgents([]);
-          return;
-        }
-        const endpoints = parseDirectMeshEndpoints(governance.directMeshEndpointsText);
-        const nextDirect = await fetchDirectMeshAgents(endpoints);
-        const directMethods = [
-          ...new Set(nextDirect.agents.flatMap((agent) => agent.descriptor?.protocol?.methods ?? [])),
-        ];
-
-        if (refreshSeq !== healthRefreshSeqRef.current) return;
-
-        setProtocolAgents(nextDirect.agents);
-        setHealth({
-          service: "kyuubiki-frontend-direct-mesh",
-          status: nextDirect.agents.length > 0 ? "ok" : "degraded",
-          protocol: {
-            program: "kyuubiki-frontend",
-            role: "gui",
-            protocol: {
-              name: "kyuubiki.direct-mesh/http-v1",
-              version: 1,
-              transport: { kind: "http", encoding: "json" },
-            },
-            compatible_solver_rpc: {
-              name: "kyuubiki.solver-rpc/v1",
-              rpc_version: 1,
-              transport: {
-                kind: "tcp",
-                framing: "length_prefixed_u32",
-                encoding: "json",
-              },
-              methods: directMethods,
-            },
-          },
-          deployment: {
-            mode: "direct_mesh",
-            discovery: nextDirect.discovery,
-            endpoint_count: nextDirect.endpoint_count,
-          },
-          remote_solver_registry: {
-            active_agents: nextDirect.agents.length,
-          },
-        });
-        clearRecovery("health");
-      } catch {
-        if (refreshSeq !== healthRefreshSeqRef.current) return;
-        setHealth(null);
-        setProtocolAgents([]);
-        pushRecovery("health", new Error("Failed to refresh direct mesh health state."), "Direct mesh runtime");
-      }
-      return;
-    }
-
     try {
-      const [nextHealth, nextProtocolAgents, nextRegisteredAgents] = await Promise.all([
-        fetchHealth(),
-        fetchProtocolAgents().catch(() => ({ agents: [] })),
-        fetchRegisteredAgents().catch(() => ({
-          agents: [],
-          summary: { active_execution_lease_count: 0, stale_execution_lease_count: 0 },
-        })),
-      ]);
+      const snapshot = await runtimeStatusBackendService.fetchStatus({
+        directMeshEndpointsText,
+        directMeshSelectionMode,
+        frontendRuntimeMode,
+      });
 
       if (refreshSeq !== healthRefreshSeqRef.current) return;
 
-      setHealth(nextHealth);
-      const registryById = new Map(
-        nextRegisteredAgents.agents.map((agent) => [agent.id, agent] as const),
-      );
-
-      setProtocolAgents(
-        nextProtocolAgents.agents.map((agent) => {
-          const registered = registryById.get(agent.id);
-
-          return registered
-            ? {
-                ...agent,
-                control_mode: registered.control_mode ?? agent.control_mode,
-                orch_id: registered.orch_id ?? agent.orch_id,
-                orch_session_id: registered.orch_session_id ?? agent.orch_session_id,
-                cluster_id: registered.cluster_id ?? agent.cluster_id,
-                execution_state: registered.execution_state,
-                active_lease: registered.active_lease,
-                mesh: registered.mesh ?? agent.mesh,
-              }
-            : agent;
-        }),
-      );
+      setHealth(snapshot.health);
+      setProtocolAgents(snapshot.protocolAgents);
       clearRecovery("health");
     } catch (error) {
       if (refreshSeq !== healthRefreshSeqRef.current) return;
       setHealth(null);
       setProtocolAgents([]);
-      pushRecovery("health", error, "Hub health");
+      pushRecovery(
+        "health",
+        error,
+        frontendRuntimeMode === "direct_mesh_gui" ? "Direct mesh runtime" : "Hub health",
+      );
     }
   }
 

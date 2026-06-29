@@ -172,6 +172,22 @@ workflow backends should attach. UI components own interaction state and run
 presentation; backend service implementations own catalog fetch, job submit,
 and job polling transport.
 
+Study execution uses the same backend-service boundary:
+
+- `apps/frontend/src/lib/workbench/study-run-backend-service-core.ts` defines
+  the GUI-facing study run contract, direct-mesh/orchestrated routing, and job
+  polling seam
+- `apps/frontend/src/lib/workbench/study-run-backend-service.ts` binds that
+  contract to the existing FEM HTTP submitters, direct-mesh solver endpoint,
+  and FEM input payload resolvers
+- `apps/frontend/src/components/workbench/workbench-run-controller.ts`
+  consumes the service contract and keeps only UI state, precheck messaging,
+  result display, and polling presentation logic
+
+This prevents React controllers from becoming the only way to run a solver.
+Headless SDKs, mobile WebView clients, and future mesh adapters can share the
+same backend intent contract without importing Workbench component structure.
+
 Result inspection follows the same pattern:
 
 - `apps/frontend/src/lib/workbench/result-backend-service-core.ts` defines the
@@ -183,6 +199,18 @@ Result inspection follows the same pattern:
 
 This keeps large-result virtualization reusable across orchestra, direct mesh,
 mobile remote backends, and tests.
+
+Runtime status refresh also sits behind a service seam:
+
+- `apps/frontend/src/lib/workbench/runtime-status-backend-service-core.ts`
+  defines the GUI-facing runtime status snapshot contract and pure factory
+- `apps/frontend/src/lib/workbench/runtime-status-backend-service.ts` binds the
+  contract to orchestrated health/agent APIs and direct-mesh agent discovery
+- data refresh controllers consume runtime snapshots instead of manually
+  merging registry leases or synthesizing direct-mesh health inside UI code
+
+This keeps health, agent, lease, and mesh discovery logic reusable across Hub,
+Workbench, mobile remote-control clients, and tests.
 
 The boundary rule is strict:
 
