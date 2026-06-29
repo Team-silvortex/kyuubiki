@@ -30,6 +30,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_electrostatic_bar_1d"
       )
 
+  def submit_magnetostatic_bar_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_magnetostatic_bar_1d/1,
+        "solve_magnetostatic_bar_1d"
+      )
+
   def submit_electrostatic_plane_triangle_2d(params),
     do:
       submit_solver_job(
@@ -44,6 +52,22 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         params,
         &FemModelNormalizer.normalize_electrostatic_plane_quad_2d/1,
         "solve_electrostatic_plane_quad_2d"
+      )
+
+  def submit_magnetostatic_plane_triangle_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_magnetostatic_plane_triangle_2d/1,
+        "solve_magnetostatic_plane_triangle_2d"
+      )
+
+  def submit_magnetostatic_plane_quad_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_magnetostatic_plane_quad_2d/1,
+        "solve_magnetostatic_plane_quad_2d"
       )
 
   def submit_heat_plane_triangle_2d(params),

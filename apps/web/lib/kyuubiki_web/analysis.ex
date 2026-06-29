@@ -19,8 +19,11 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_thermal_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_bar_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_magnetostatic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_plane_triangle_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_magnetostatic_plane_triangle_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_magnetostatic_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_plane_triangle_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_truss_2d(params), to: AnalysisSolverSubmissions

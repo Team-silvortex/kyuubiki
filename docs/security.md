@@ -125,7 +125,7 @@ Behavior:
 
 ### Frontend operator settings
 
-The workbench can now carry optional operator tokens from browser-local
+The workbench can now carry optional operator tokens entered through operator
 settings:
 
 - control-plane token
@@ -137,6 +137,12 @@ preferences remain in local storage. Legacy local-storage and session-storage
 tokens are scrubbed on load after a one-time in-memory migration path so the
 current page can keep working without persisting secrets back into browser
 storage.
+
+The in-memory token store lives in
+`apps/frontend/src/lib/workbench/workbench-secrets.ts`. The frontend API core
+may read that lightweight store to attach governed auth headers, but it must
+not depend on the broader Workbench helper, model, or project-export modules
+just to send a backend request.
 
 The desktop installer follows the same direction for deployment secrets:
 
@@ -308,9 +314,12 @@ Sensitivity levels:
 | `apps/web/lib/kyuubiki_web/playground/agent_client.ex` | Orchestrator TCP client to Rust solver agents. | Timeouts, frame parsing, error propagation, and network boundary assumptions. |
 | `apps/web/lib/kyuubiki_web/storage/**` | SQLite/Postgres repos, schema setup, and persistence records for jobs, results, projects, and model versions. | Migration safety, data export scope, result payload size, and accidental sensitive-data logging. |
 | `apps/web/lib/kyuubiki_web/jobs/**` and `apps/web/lib/kyuubiki_web/results/**` | Job/result persistence and watchdog-driven lifecycle state. | Cancellation semantics, stale job handling, result chunk boundaries, and operator edits. |
-| `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge persistent UI prefs and in-memory operator secrets for tokens and LLM API keys. | In-memory secret lifetime, legacy storage scrubbing, token redaction, export boundaries, and accidental serialization of secrets. |
+| `apps/frontend/src/lib/workbench/workbench-secrets.ts` | Per-page in-memory operator secrets for control-plane, cluster, direct-mesh, and assistant tokens. | In-memory secret lifetime, legacy storage scrubbing, token redaction, export boundaries, and accidental serialization of secrets. |
+| `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge for non-sensitive UI preferences and one-time migration from legacy persisted secret fields. | Do not reintroduce token persistence; keep settings serialization scrubbed and compatible with `workbench-secrets.ts`. |
 | `apps/frontend/src/components/workbench/system/workbench-system-config-card.tsx` | UI surface for entering operator tokens and exporting database snapshots. | Password field behavior, copy/export affordances, and avoiding accidental display of token values. |
 | `apps/frontend/src/lib/api/index.ts` | Frontend API client attaches operator tokens to orchestrator and direct-mesh requests. | Header construction, in-memory secret lookup, token scope separation, and error handling without leaking secrets. |
+| `apps/frontend/src/lib/api/core.ts` | Thin frontend HTTP transport shared by GUI calls, tests, and future adapter layers. | Keep backend target resolution explicit, avoid Workbench UI/module imports, preserve timeout/error normalization, and do not log tokens. |
+| `apps/frontend/src/lib/api/backend-target.ts` | GUI-to-backend target resolver for same-origin, environment, persisted, and query-selected control-plane targets. | Only allow http(s), avoid secret-bearing fragments, keep source visibility, and prevent hidden backend retargeting behavior. |
 | `apps/frontend/src/lib/assistant/openai-compatible.ts` | Optional LLM integration receives workbench context and returns executable action plans. | Prompt data minimization, API key storage, action validation, and tool-result redaction. |
 | `apps/frontend/src/lib/scripting/workbench-script-runtime.ts` | Scriptable workbench actions include project/model CRUD and runtime operations. | Action allowlist, destructive actions, confirmation strategy, and future WASM Python sandboxing. |
 | `apps/frontend/src/components/workbench/workbench.tsx` | Central workbench action executor is shared by manual UI actions, assistant plans, and WASM Python bridge calls. | Keep the high-risk confirmation gate and session audit logging centralized; do not add bypass paths for destructive/export actions. |
@@ -370,6 +379,10 @@ Sensitivity levels:
   an active page session, not persisted browser settings. Do not reintroduce
   token serialization through project/model exports, assistant snapshots, or
   convenience caches.
+- The API core is intentionally a thin transport module. Do not make it import
+  Workbench UI helpers, model import/export, project bundles, or component
+  state; that would couple backend access to the GUI graph and weaken headless
+  parity.
 - Assistant and script actions now depend on a centralized confirmation gate
   for high-risk operations. Keep new destructive or export-capable actions
   classified in the shared action catalog before exposing them to automation.

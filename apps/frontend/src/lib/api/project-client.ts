@@ -5,7 +5,7 @@ import type {
   ModelVersionListPayload,
   ProjectEnvelope,
   ProjectListPayload,
-} from "./index";
+} from "./project-types";
 import { requestJson } from "./core";
 
 export function fetchProjects(): Promise<ProjectListPayload> {

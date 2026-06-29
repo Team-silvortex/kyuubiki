@@ -138,6 +138,25 @@ All of those paths still speak the same public HTTP contract. A GUI can point at
 an orchestrator, a mesh gateway, or another compatible service, and a headless
 SDK can use the same routes without importing GUI internals.
 
+The browser-side API client must stay thin:
+
+- `apps/frontend/src/lib/api/core.ts` owns request transport, timeout, response
+  parsing, backend target resolution, and token header attachment
+- `apps/frontend/src/lib/api/backend-target.ts` owns GUI-to-backend target
+  selection and validation
+- `apps/frontend/src/lib/api/*-types.ts` files own public data contracts for
+  project storage, runtime/agent state, and result/security payloads
+- `apps/frontend/src/lib/api/index.ts` is an export facade only; API clients
+  inside `lib/api` should import concrete contract files instead of importing
+  the facade back into themselves
+- `apps/frontend/src/lib/workbench/workbench-secrets.ts` owns per-page
+  in-memory operator secrets
+- Workbench helpers, model import/export code, and UI components must not be
+  required just to construct a backend request
+
+That split keeps the TypeScript API client usable in tests, WebView shells, and
+future adapter layers without dragging the whole Workbench UI graph with it.
+
 The boundary rule is strict:
 
 - UI state may describe intent, selected runtime target, and project context

@@ -6,11 +6,10 @@ import type {
   AssetStorePayload,
   AssetStoreSourceListPayload,
   HealthPayload,
-  JobEnvelope,
-  JobHistoryPayload,
-  JobState,
   ProtocolAgentListPayload,
   RegisteredAgentRegistryPayload,
+} from "./runtime-types";
+import type {
   WorkflowCatalogQuery,
   WorkflowCatalogPayload,
   WorkflowGraphDefinition,
@@ -18,7 +17,8 @@ import type {
   WorkflowGraphResponseOptions,
   WorkflowOperatorCatalogQuery,
   WorkflowOperatorCatalogPayload,
-} from "./index";
+} from "./workflow-types";
+import type { JobEnvelope, JobHistoryPayload, JobState } from "./fem-shared";
 import { requestJson } from "./core";
 
 const LARGE_WORKFLOW_COMPACT_THRESHOLD = 1024;

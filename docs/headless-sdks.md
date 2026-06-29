@@ -24,6 +24,12 @@ on Workbench state, WebView lifecycle, or GUI automation hooks. The GUI uses the
 same backend HTTP contract through a configurable transport target, so a feature
 is considered headless-ready only when it is reachable without clicking a UI.
 
+The Workbench TypeScript client follows the same rule internally. Its API core
+can run outside a full browser `window`, resolves backend targets explicitly,
+and reads only a lightweight in-memory secret store for operator tokens. That
+keeps GUI convenience code separate from the service contract that headless
+SDKs depend on.
+
 ## Language targets
 
 - Rust
@@ -57,6 +63,8 @@ All three SDKs expose the same conceptual split:
 - usable in cloud, distributed, and direct headless LAN deployments
 - small enough to embed into agent runtimes without dragging UI dependencies
 - explicit auth and error surfaces so higher-level agent loops can branch safely
+- no hidden dependency on Workbench component state, browser-local settings, or
+  GUI-only lifecycle hooks for core backend calls
 
 ## First-cut capabilities
 
