@@ -318,6 +318,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const railItems = [
     { key: "model", label: rootState.t.rail.model, symbol: "M" },
     { key: "workflow", label: rootState.t.rail.workflow, symbol: "W" },
+    { key: "store", label: rootState.t.rail.store, symbol: "S" },
     { key: "library", label: rootState.t.rail.library, symbol: "H" },
     { key: "system", label: rootState.t.rail.system, symbol: "Y" },
   ];

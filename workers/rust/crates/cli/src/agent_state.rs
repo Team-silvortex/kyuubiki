@@ -6,6 +6,7 @@ use kyuubiki_protocol::{
     RpcProgress, RuntimeAuthorityDescriptor,
 };
 
+use crate::agent_watchdog;
 use crate::config::AgentConfig;
 
 pub(crate) fn agent_descriptor() -> AgentDescriptor {
@@ -95,8 +96,24 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "tags": registration_tags(config),
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
-        "health_score": descriptor.runtime.health_score
+        "health_score": descriptor.runtime.health_score,
+        "watchdog": agent_watchdog::snapshot()
     })
+}
+
+pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
+    let mut payload =
+        serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize");
+
+    if let Some(object) = payload.as_object_mut() {
+        object.insert(
+            "watchdog".to_string(),
+            serde_json::to_value(agent_watchdog::snapshot())
+                .expect("agent watchdog snapshot should serialize"),
+        );
+    }
+
+    payload
 }
 
 fn registration_tags(config: &AgentConfig) -> Vec<&'static str> {

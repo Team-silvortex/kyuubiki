@@ -1,5 +1,6 @@
 export * from "./workflow-types";
 export * from "./job-status";
+export * from "./backend-target";
 export * from "./runtime-client";
 export * from "./security-results-client";
 export * from "./headless-results-client";
@@ -159,6 +160,52 @@ export type HealthPayload = {
     active_jobs: number;
     stalled_jobs: number;
     timed_out_jobs: number;
+    watchdog_state?: 'unknown' | 'healthy' | 'watch' | 'critical';
+    orchestra_load?: {
+      state: 'healthy' | 'watch' | 'critical';
+      active_jobs: number;
+      queued_jobs: number;
+      stale_active_jobs: number;
+      timed_out_active_jobs: number;
+      active_by_status: Record<string, number>;
+      thresholds: {
+        warn_active_jobs: number;
+        critical_active_jobs: number;
+      };
+    };
+    agent_load?: {
+      state: 'unknown' | 'healthy' | 'watch' | 'critical';
+      available: boolean;
+      reason?: string;
+      total_agents: number;
+      active_agents: number;
+      stale_agents: number;
+      stale_after_ms?: number;
+      capacity_slots: number;
+      leased_slots: number;
+      utilization: number;
+      stale_execution_lease_count?: number;
+      control_modes?: Record<string, number>;
+      thresholds?: {
+        warn_utilization: number;
+        critical_utilization: number;
+      };
+    };
+    operator_load?: {
+      state: 'healthy' | 'watch' | 'critical';
+      active_jobs: number;
+      active_operator_count: number;
+      active_by_operator: Record<string, number>;
+      hotspots: Array<{
+        operator: string;
+        active_jobs: number;
+        state: 'healthy' | 'watch' | 'critical';
+      }>;
+      thresholds: {
+        warn_active_jobs: number;
+        critical_active_jobs: number;
+      };
+    };
   };
   transport?: {
     http: number;
@@ -169,6 +216,59 @@ export type HealthPayload = {
     host: string;
     port: number;
   }>;
+};
+
+export type AssetStoreEntryKind = 'operator' | 'workflow_template' | 'frontend_dsl_template';
+export type AssetStoreSourceType = 'builtin' | 'catalog_file' | 'remote_http' | string;
+
+export type AssetStoreSource = {
+  id: string;
+  type: AssetStoreSourceType;
+  label: string;
+  enabled: boolean;
+  editable: boolean;
+  status: 'ready' | 'configured' | 'unavailable' | string;
+  url?: string | null;
+  path?: string | null;
+  supports: AssetStoreEntryKind[];
+};
+
+export type AssetStoreEntry = {
+  id: string;
+  kind: AssetStoreEntryKind;
+  title: string;
+  summary?: string | null;
+  version?: string | null;
+  source_id: string;
+  source_kind: AssetStoreSourceType;
+  package_ref?: string | null;
+  domain?: string | null;
+  category?: string | null;
+  tags: string[];
+  install: {
+    mode: string;
+    requires_download: boolean;
+    target?: string | null;
+  };
+  payload?: Record<string, unknown>;
+};
+
+export type AssetStorePayload = {
+  entries: AssetStoreEntry[];
+  sources: AssetStoreSource[];
+  summary: {
+    entry_count: number;
+    kinds: Partial<Record<AssetStoreEntryKind, number>>;
+    sources: Record<string, number>;
+  };
+};
+
+export type AssetStoreSourceListPayload = {
+  sources: AssetStoreSource[];
+};
+
+export type AssetStoreEntryEnvelope = {
+  entry: AssetStoreEntry;
 };
 
 export type ProtocolAgentDescriptor = {
@@ -197,6 +297,7 @@ export type ProtocolAgentDescriptor = {
     age_ms?: number | null;
     is_stale?: boolean | null;
   } | null;
+  watchdog?: AgentWatchdogSnapshot | null;
   mesh?: {
     cluster_id?: string | null;
     peer_group_id?: string | null;
@@ -253,8 +354,31 @@ export type ProtocolAgentDescriptor = {
       tags: string[];
     }>;
     deployment_modes: string[];
+    watchdog?: AgentWatchdogSnapshot | null;
   };
   descriptor_error?: string;
+};
+
+export type AgentWatchdogSnapshot = {
+  state: 'unknown' | 'healthy' | 'watch' | 'critical';
+  active_execution_count: number;
+  recent_failure_count: number;
+  active_executions?: Array<{
+    request_id: string;
+    job_id?: string | null;
+    method: string;
+    elapsed_ms: number;
+    idle_ms: number;
+  }>;
+  recent_failures?: Array<{
+    request_id?: string;
+    job_id?: string | null;
+    method?: string;
+    reason_code: string;
+    message: string;
+    elapsed_ms?: number;
+    occurred_unix_ms?: number;
+  }>;
 };
 
 export type ProtocolAgentListPayload = {

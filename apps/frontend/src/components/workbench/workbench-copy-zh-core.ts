@@ -6,8 +6,8 @@ export const copyZhCore = {
     roleLabel: "分析工作台",
     title: "结构分析工作台",
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
-    rail: { study: "研究", model: "工作区", workflow: "工作流", library: "历史", system: "系统" },
-    sections: { study: "研究设置", model: "工作区", workflow: "工作流工作台", library: "任务历史", system: "系统" },
+    rail: { study: "研究", model: "工作区", workflow: "工作流", store: "商店", library: "历史", system: "系统" },
+    sections: { study: "研究设置", model: "工作区", workflow: "工作流工作台", store: "工作区商店", library: "任务历史", system: "系统" },
     kinds: {
       axial_bar_1d: "一维轴向杆",
       heat_bar_1d: "一维导热杆",

@@ -23,6 +23,7 @@ type WorkbenchSidebarMountProps = {
   studySection?: ReactNode;
   modelSection?: ReactNode;
   workflowSection?: ReactNode;
+  storeSection?: ReactNode;
   librarySection?: ReactNode;
   systemSection?: ReactNode;
   assistantLabel?: string;
@@ -41,6 +42,7 @@ export function WorkbenchSidebarMount({
   studySection,
   modelSection,
   workflowSection,
+  storeSection,
   librarySection,
   systemSection,
   assistantLabel = "Assistant",
@@ -67,6 +69,7 @@ export function WorkbenchSidebarMount({
         studySection={studySection}
         modelSection={modelSection}
         workflowSection={workflowSection}
+        storeSection={storeSection}
         librarySection={librarySection}
         systemSection={systemSection}
       />

@@ -31,12 +31,13 @@ import type {
   ProjectRecord,
 } from "@/lib/api";
 import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
 import {
   PROJECT_SCHEMA_VERSION,
   defaultProjectFileManifest,
   type ProjectAssetMetaRecord,
   type ProjectAssetReferenceRecord,
-} from "@/lib/projects";
+} from "@/lib/projects/project-format";
 import { buildAnalysisMetadata } from "@/lib/models/modeler-analysis";
 import { MODEL_SCHEMA_VERSION, type StudyKind } from "@/lib/models/modeler-types";
 
@@ -146,6 +147,7 @@ export function exportProjectBundle(payload: {
   workspaceSnapshot?: Record<string, unknown> | null;
   automationPresets?: WorkbenchMacroPresetRecord[];
   snippetPresets?: WorkbenchScriptSnippetPresetRecord[];
+  storeManifest?: WorkspaceStoreManifest | null;
   assetCatalog?: ProjectAssetMetaRecord[];
   assetReferences?: ProjectAssetReferenceRecord[];
   jobs?: JobState[];
@@ -164,6 +166,7 @@ export function exportProjectBundle(payload: {
       workspace_snapshot: payload.workspaceSnapshot ?? null,
       automation_presets: payload.automationPresets ?? [],
       snippet_presets: payload.snippetPresets ?? [],
+      store_manifest: payload.storeManifest ?? null,
       asset_catalog: payload.assetCatalog ?? [],
       asset_references: payload.assetReferences ?? [],
       jobs: payload.jobs ?? [],

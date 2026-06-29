@@ -1,11 +1,12 @@
 "use client";
-import type { Dispatch, MouseEvent, ReactNode, SetStateAction } from "react";
-import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
+import { useState } from "react";
 import { buildWorkbenchLanguageOptions } from "@/components/workbench/workbench-language-options";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchSystemDataMount } from "@/components/workbench/workbench-system-data-mount";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
+import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
+import { buildWorkbenchSystemBackendTargetCopy } from "@/components/workbench/system/workbench-system-backend-target-copy";
 import { buildWorkbenchSystemControlModeCopy, buildWorkbenchSystemControlTopologySummary, buildWorkbenchSystemTopologySnapshot } from "@/components/workbench/system/workbench-system-control-mode-contract";
 import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/workbench-system-install-layout-card";
 import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system/workbench-system-install-policy-mount";
@@ -13,157 +14,13 @@ import { buildWorkbenchLanguagePackPresentation } from "@/components/workbench/s
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import { applyWorkbenchGovernancePatch, buildWorkbenchGovernanceConfig, buildWorkbenchGovernanceRows } from "@/lib/workbench/governance";
-import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
+import {
+  persistWorkbenchApiBaseUrl,
+  readPersistedWorkbenchApiBaseUrl,
+  resolveWorkbenchBackendTarget,
+} from "@/lib/api/backend-target";
 import type { ProtocolAgentDescriptor } from "@/lib/api";
-import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
-
-type WorkbenchSystemSidebarMountProps = {
-  t: WorkbenchCopy;
-  systemPanelTab: "config" | "scripts" | "runtime" | "data";
-  handleSystemPanelTabChange: (tab: "config" | "scripts" | "runtime" | "data") => void;
-  setSidebarSection: (section: "study" | "model" | "workflow" | "library" | "system") => void;
-  handleWorkflowPanelTabChange: (tab: WorkflowSurfaceTab) => void;
-  runtimeRecoveryCard?: ReactNode;
-  healthStatus: string | undefined;
-  healthProtocolOnline: boolean;
-  healthWatchdogOnline: boolean;
-  healthSecurityApiTokenConfigured: boolean;
-  runtimeBackendRows: Array<{ label: string; value: ReactNode }>;
-  runtimeProtocolRows: Array<{ label: string; value: ReactNode }>;
-  runtimeProtocolMethods?: string[];
-  securityUi: { security: string; configured: string; notConfigured: string; controlPlaneToken: string; clusterToken: string; directMeshToken: string };
-  runtimeSecurityRows: Array<{ label: string; value: ReactNode }>;
-  runtimeAuditSummaryRows: Array<{ label: string; value: string }>;
-  runtimeAuditTrendBars: Array<{ key: string; label: string; value: string; ratio: number }>;
-  runtimeAuditSourceStatusFacets: Array<{ key: string; label: string; value: string }>;
-  runtimeAuditStudyFacets: Array<{ key: string; label: string; value: string }>;
-  runtimeAuditProjectFacets: Array<{ key: string; label: string; value: string }>;
-  runtimeAuditModelVersionFacets: Array<{ key: string; label: string; value: string }>;
-  securityEventRecords: Array<unknown>;
-  securityEventWindowFilter: SecurityEventWindow;
-  securityEventSourceFilter: WorkbenchSecurityAuditSource | "hub-assistant" | "";
-  securityEventRiskFilter: WorkbenchSecurityAuditRisk | "";
-  securityEventStatusFilter: "" | "allowed" | "blocked";
-  securityEventActionFilter: string;
-  setSecurityEventWindowFilter: (value: SecurityEventWindow) => void;
-  setSecurityEventSourceFilter: (value: WorkbenchSecurityAuditSource | "hub-assistant" | "") => void;
-  setSecurityEventRiskFilter: (value: WorkbenchSecurityAuditRisk | "") => void;
-  setSecurityEventStatusFilter: (value: "" | "allowed" | "blocked") => void;
-  setSecurityEventActionFilter: (value: string) => void;
-  refreshSecurityEvents: () => Promise<void>;
-  downloadSecurityEventExport: () => Promise<void>; downloadSecurityEventCsvExport: () => Promise<void>;
-  runtimeAuditEntries: Array<{ id: string; at: string; action: string; source: string; risk: string; status: string; note: string }>;
-  protocolAgents: Array<unknown>;
-  protocolAgentCards: Array<{
-    id: string;
-    endpoint: string;
-    metrics: Array<{ label: string; value: string | number; tone?: string }>;
-    chips: Array<{ key: string; label: string; tone?: string; title?: string }>;
-    error?: string;
-  }>;
-  runtimeWatchdogRows: Array<{ label: string; value: ReactNode }>;
-  theme: "linen" | "marine" | "graphite";
-  language: string;
-  frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
-  directMeshSelectionMode: "healthiest" | "first_reachable";
-  directMeshEndpointsText: string;
-  controlPlaneApiToken: string;
-  clusterApiToken: string;
-  directMeshApiToken: string;
-  showShortcutHints: boolean;
-  immersiveGuardrails: boolean;
-  languagePacks: Array<{
-    id: string;
-    language: string;
-    name: string;
-    version: string;
-    versionLine?: string;
-    targetAppVersion?: string;
-    source: "imported" | "downloaded";
-    updatedAt: string;
-    description?: string;
-  }>;
-  languagePackCatalogRows: Array<{ id: string; language: string; name: string; status: string }>;
-  setTheme: (value: "linen" | "marine" | "graphite") => void;
-  handleLanguageChange: (value: string) => void;
-  handleDownloadLanguagePackTemplate: () => void;
-  handleExportInstalledLanguagePack: () => void;
-  handleImportLanguagePack: (file: File) => Promise<void>;
-  handleRemoveLanguagePack: (packId: string) => void;
-  setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
-  setDirectMeshSelectionMode: (value: "healthiest" | "first_reachable") => void;
-  setDirectMeshEndpointsText: (value: string) => void;
-  setControlPlaneApiToken: (value: string) => void;
-  setClusterApiToken: (value: string) => void;
-  setDirectMeshApiToken: (value: string) => void;
-  setShowShortcutHints: (value: boolean) => void;
-  setImmersiveGuardrails: (value: boolean) => void;
-  downloadDatabaseSnapshot: () => Promise<void>;
-  scriptActionLog: WorkbenchScriptActionLogEntry[];
-  getScriptSnapshot: () => WorkbenchScriptSnapshot;
-  scriptRecordingMode: boolean;
-  invokeScriptAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
-  setScriptRecordingMode: Dispatch<SetStateAction<boolean>>;
-  scriptSnapshot: WorkbenchScriptSnapshot;
-  systemDataTab: "jobs" | "results";
-  handleSystemDataTabChange: (tab: "jobs" | "results") => void;
-  adminJobRows: Array<{ id: string; status: string; projectId: string | null; heartbeatTone: string; heartbeatLabel: string; statusDetail?: string | null; detail: string }>;
-  selectedAdminJobId: string | null;
-  handleSelectAdminJob: (jobId: string) => void;
-  selectedAdminJob: { job_id?: string; project_id?: string | null; model_version_id?: string | null; status?: string } | null;
-  adminJobMessage: string;
-  setAdminJobMessage: (value: string) => void;
-  adminJobProjectId: string;
-  setAdminJobProjectId: (value: string) => void;
-  adminJobModelVersionId: string;
-  setAdminJobModelVersionId: (value: string) => void;
-  adminJobCaseId: string;
-  setAdminJobCaseId: (value: string) => void;
-  saveAdminJobRecord: () => void;
-  deleteAdminJobRecord: () => void;
-  adminResultRows: Array<{
-    id: string;
-    updatedAt: string;
-    projectId: string | null;
-    modelVersionId: string | null;
-    status: string | null;
-    summary: string;
-  }>;
-  selectedAdminResultJobId: string | null;
-  handleSelectAdminResult: (jobId: string) => void;
-  jobHistory: Array<{
-    job_id: string;
-    project_id?: string | null;
-    model_version_id?: string | null;
-    status: string;
-  }>;
-  adminResultDraft: string;
-  setAdminResultDraft: (value: string) => void;
-  saveAdminResultRecord: () => void;
-  applySelectedAdminResultContext: () => void;
-  openSelectedAdminResultProject: () => void;
-  openSelectedAdminResultVersion: () => void;
-  exportAdminResultRecord: () => void;
-  deleteAdminResultRecord: () => void;
-  adminFilterProjectId: string;
-  handleAdminFilterProjectChange: (value: string) => void;
-  adminFilterModelVersionId: string;
-  handleAdminFilterModelVersionChange: (value: string) => void;
-  selectedProjectId: string | null;
-  selectedVersionId: string | null;
-  useCurrentProjectAsAdminFilter: () => void;
-  useCurrentVersionAsAdminFilter: () => void;
-  clearAdminFilters: () => void;
-  applySelectedAdminJobContext: () => void;
-  openSelectedAdminJobProject: () => void;
-  openSelectedAdminJobVersion: () => void;
-  jobId: string | null;
-  cancelCurrentJob: () => void;
-  cancelJob: (jobId: string) => Promise<unknown>;
-  setMessage: (value: string) => void;
-  refreshJobHistory: () => Promise<void>;
-};
 
 export function WorkbenchSystemSidebarMount({
   t,
@@ -314,6 +171,16 @@ export function WorkbenchSystemSidebarMount({
   });
   const governanceRows = buildWorkbenchGovernanceRows(governanceConfig);
   const installedLanguagePackRows = buildWorkbenchLanguagePackPresentation(language, languagePacks);
+  const [backendApiBaseUrl, setBackendApiBaseUrl] = useState(readPersistedWorkbenchApiBaseUrl);
+  const backendTarget = resolveWorkbenchBackendTarget();
+  const backendTargetCopy = buildWorkbenchSystemBackendTargetCopy(language);
+
+  const handleBackendApiBaseUrlChange = (value: string) => {
+    const nextValue = persistWorkbenchApiBaseUrl(value);
+    setBackendApiBaseUrl(nextValue);
+    setMessage(nextValue ? backendTargetCopy.saved : backendTargetCopy.cleared);
+  };
+
   return (
     <WorkbenchSystemSidebar
       systemPanelTab={systemPanelTab}
@@ -353,6 +220,11 @@ export function WorkbenchSystemSidebarMount({
             languagePackCatalogHint={t.languagePackCatalogHint}
             languagePackCatalogActionLabel={t.languagePackCatalogAction}
             frontendModeLabel={t.frontendMode}
+            backendTargetLabel={backendTargetCopy.label}
+            backendTargetHelp={backendTargetCopy.help}
+            backendTargetPlaceholder={backendTargetCopy.placeholder}
+            backendTargetSourceLabel={backendTargetCopy.source}
+            backendTargetEffectiveLabel={backendTargetCopy.effective}
             directMeshStrategyLabel={t.directMeshStrategy}
             directMeshEndpointsLabel={t.directMeshEndpoints}
             directMeshEndpointsHelp={t.directMeshEndpointsHelp}
@@ -378,6 +250,9 @@ export function WorkbenchSystemSidebarMount({
             theme={theme}
             language={language}
             frontendRuntimeMode={frontendRuntimeMode}
+            backendApiBaseUrl={backendApiBaseUrl}
+            backendTargetSource={backendTargetCopy.sources[backendTarget.source]}
+            backendTargetEffectiveUrl={backendTarget.baseUrl}
             directMeshSelectionMode={directMeshSelectionMode}
             directMeshEndpointsText={directMeshEndpointsText}
             controlPlaneApiToken={controlPlaneApiToken}
@@ -408,6 +283,7 @@ export function WorkbenchSystemSidebarMount({
             onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
             onRemoveLanguagePack={handleRemoveLanguagePack}
             onFrontendRuntimeModeChange={(value) => setFrontendRuntimeMode(applyWorkbenchGovernancePatch({ currentFrontendRuntimeMode: frontendRuntimeMode, currentDirectMeshEndpointsText: directMeshEndpointsText, nextFrontendRuntimeMode: value }).frontendRuntimeMode)}
+            onBackendApiBaseUrlChange={handleBackendApiBaseUrlChange}
             onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
             onDirectMeshEndpointsTextChange={(value) => { const governed = applyWorkbenchGovernancePatch({ currentFrontendRuntimeMode: frontendRuntimeMode, currentDirectMeshEndpointsText: directMeshEndpointsText, nextDirectMeshEndpointsText: value }); setDirectMeshEndpointsText(governed.directMeshEndpointsText); setFrontendRuntimeMode(governed.frontendRuntimeMode); }}
             onControlPlaneApiTokenChange={setControlPlaneApiToken}

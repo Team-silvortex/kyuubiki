@@ -14,6 +14,7 @@ import {
 import type { JobResultRecord } from "@/lib/api";
 import { exportProjectBundle } from "@/lib/models/modeler";
 import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
+import { readWorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
 
 type ProjectStorageControllerDeps = {
   t: any;
@@ -190,6 +191,7 @@ export function createWorkbenchProjectStorageController({
         workspaceSnapshot: serializeCurrentModel(),
         automationPresets: listWorkbenchMacroPresets(selectedProject.project_id),
         snippetPresets: listWorkbenchSnippetPresets(selectedProject.project_id),
+        storeManifest: readWorkspaceStoreManifest(selectedProject.project_id),
         jobs: jobHistory,
         results,
       }),

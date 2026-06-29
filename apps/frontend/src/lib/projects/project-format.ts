@@ -2,6 +2,8 @@ import JSZip from "jszip";
 import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
 import type { JobResultRecord, ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api";
 import { extractAnalysisMetadata } from "@/lib/projects/project-format-analysis";
+import { buildProjectBundleReadme } from "@/lib/projects/project-bundle-readme";
+import type { WorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
 
 export const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v2";
 export const LEGACY_PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
@@ -22,6 +24,7 @@ const STANDARD_WORKSPACE_SNAPSHOT_PATH = `${STANDARD_WORKSPACE_DIRECTORY}/curren
 const STANDARD_WORKSPACE_SETTINGS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/workspace.json`;
 const STANDARD_AUTOMATION_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/automation-presets.json`;
 const STANDARD_SNIPPET_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/snippet-presets.json`;
+const STANDARD_STORE_MANIFEST_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/store-manifest.json`;
 const STANDARD_ASSET_CATALOG_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-catalog.json`;
 const STANDARD_ASSET_REFERENCES_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-references.json`;
 const JOBS_INDEX_PATH = "jobs/jobs.json";
@@ -38,6 +41,7 @@ export type ProjectFileManifest = {
   workspace_snapshot_path: string;
   automation_presets_path: string;
   snippet_presets_path: string;
+  store_manifest_path: string;
   asset_catalog_path: string;
   asset_references_path: string;
   model_directory: string;
@@ -53,6 +57,7 @@ export type ProjectAssetMetaRecord = {
     | "project"
     | "workspace_settings"
     | "workspace_snapshot"
+    | "store_manifest"
     | "automation_preset"
     | "snippet_preset"
     | "model"
@@ -76,6 +81,7 @@ export type ProjectAssetReferenceRecord = {
     | "active_version"
     | "workspace_snapshot_of"
     | "workspace_settings_for"
+    | "store_manifest_for"
     | "automation_for"
     | "snippet_for"
     | "version_of"
@@ -97,6 +103,7 @@ export type ProjectBundle = {
   workspace_snapshot?: Record<string, unknown> | null;
   automation_presets?: WorkbenchMacroPresetRecord[];
   snippet_presets?: WorkbenchScriptSnippetPresetRecord[];
+  store_manifest?: WorkspaceStoreManifest | null;
   asset_catalog?: ProjectAssetMetaRecord[];
   asset_references?: ProjectAssetReferenceRecord[];
   jobs?: Array<Record<string, unknown>>;
@@ -113,6 +120,7 @@ export function defaultProjectFileManifest(): ProjectFileManifest {
     workspace_snapshot_path: STANDARD_WORKSPACE_SNAPSHOT_PATH,
     automation_presets_path: STANDARD_AUTOMATION_PRESETS_PATH,
     snippet_presets_path: STANDARD_SNIPPET_PRESETS_PATH,
+    store_manifest_path: STANDARD_STORE_MANIFEST_PATH,
     asset_catalog_path: STANDARD_ASSET_CATALOG_PATH,
     asset_references_path: STANDARD_ASSET_REFERENCES_PATH,
     model_directory: STANDARD_MODELS_DIRECTORY,
@@ -134,7 +142,7 @@ function normalizeBundle(raw: Partial<ProjectBundle>): ProjectBundle {
   return {
     project_schema_version: raw.project_schema_version === LEGACY_PROJECT_SCHEMA_VERSION ? LEGACY_PROJECT_SCHEMA_VERSION : PROJECT_SCHEMA_VERSION,
     exported_at: raw.exported_at,
-    project_file_manifest: raw.project_file_manifest ?? defaultProjectFileManifest(),
+    project_file_manifest: { ...defaultProjectFileManifest(), ...(raw.project_file_manifest ?? {}) },
     project: raw.project,
     models: raw.models,
     model_versions: raw.model_versions,
@@ -143,6 +151,7 @@ function normalizeBundle(raw: Partial<ProjectBundle>): ProjectBundle {
     workspace_snapshot: raw.workspace_snapshot ?? null,
     automation_presets: raw.automation_presets ?? [],
     snippet_presets: raw.snippet_presets ?? [],
+    store_manifest: raw.store_manifest ?? null,
     asset_catalog: raw.asset_catalog ?? [],
     asset_references: raw.asset_references ?? [],
     jobs: raw.jobs ?? [],
@@ -198,6 +207,18 @@ function buildProjectAssetCatalog(bundle: ProjectBundle, fileManifest: ProjectFi
       source_id: bundle.active_version_id ?? bundle.active_model_id ?? bundle.project.project_id,
       name: "Current workspace snapshot",
       updated_at: bundle.exported_at ?? null,
+    });
+  }
+
+  if (bundle.store_manifest) {
+    catalog.push({
+      guid: stableAssetGuid(`store-manifest:${bundle.project.project_id}`),
+      meta_version: "kyuubiki.asset-meta/v1",
+      kind: "store_manifest",
+      path: fileManifest.store_manifest_path,
+      source_id: bundle.project.project_id,
+      name: `${bundle.project.name} store manifest`,
+      updated_at: bundle.store_manifest.updated_at,
     });
   }
 
@@ -287,9 +308,14 @@ function buildProjectAssetReferences(bundle: ProjectBundle, assetCatalog: Projec
   const refs: ProjectAssetReferenceRecord[] = [];
   const projectGuid = guidByKindAndSource.get(`project:${bundle.project.project_id}`);
   const workspaceSettingsGuid = guidByKindAndSource.get(`workspace_settings:${bundle.project.project_id}`);
+  const storeManifestGuid = guidByKindAndSource.get(`store_manifest:${bundle.project.project_id}`);
 
   if (projectGuid && workspaceSettingsGuid) {
     refs.push({ from_guid: projectGuid, relation: "workspace_settings_for", to_guid: workspaceSettingsGuid });
+  }
+
+  if (projectGuid && storeManifestGuid) {
+    refs.push({ from_guid: projectGuid, relation: "store_manifest_for", to_guid: storeManifestGuid });
   }
 
   if (projectGuid && bundle.active_model_id) {
@@ -311,7 +337,6 @@ function buildProjectAssetReferences(bundle: ProjectBundle, assetCatalog: Projec
   if (projectGuid && workspaceSnapshotGuid) {
     refs.push({ from_guid: projectGuid, relation: "workspace_snapshot_of", to_guid: workspaceSnapshotGuid });
   }
-
   bundle.models.forEach((model) => {
     const modelGuid = guidByKindAndSource.get(`model:${model.model_id}`);
     if (projectGuid && modelGuid) {
@@ -404,21 +429,24 @@ export async function parseProjectBundleFile(file: File): Promise<ProjectBundle>
         bundle.snippet_presets = JSON.parse(await snippetPresets.async("string")) as WorkbenchScriptSnippetPresetRecord[];
       }
     }
-
+    if (!bundle.store_manifest) {
+      const storeManifest = zip.file(fileManifest.store_manifest_path);
+      if (storeManifest) {
+        bundle.store_manifest = JSON.parse(await storeManifest.async("string")) as WorkspaceStoreManifest;
+      }
+    }
     if ((bundle.asset_catalog?.length ?? 0) === 0) {
       const assetCatalog = zip.file(fileManifest.asset_catalog_path);
       if (assetCatalog) {
         bundle.asset_catalog = JSON.parse(await assetCatalog.async("string")) as ProjectAssetMetaRecord[];
       }
     }
-
     if ((bundle.asset_references?.length ?? 0) === 0) {
       const assetReferences = zip.file(fileManifest.asset_references_path) ?? zip.file(STANDARD_ASSET_REFERENCES_PATH);
       if (assetReferences) {
         bundle.asset_references = JSON.parse(await assetReferences.async("string")) as ProjectAssetReferenceRecord[];
       }
     }
-
     if ((bundle.jobs?.length ?? 0) === 0) {
       const jobsIndex = zip.file(`${fileManifest.job_directory}/index.json`) ?? zip.file(JOBS_INDEX_PATH);
       if (jobsIndex) {
@@ -472,6 +500,9 @@ export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> 
   }
   if ((bundle.snippet_presets?.length ?? 0) > 0) {
     zip.file(fileManifest.snippet_presets_path, JSON.stringify(bundle.snippet_presets, null, 2));
+  }
+  if (bundle.store_manifest) {
+    zip.file(fileManifest.store_manifest_path, JSON.stringify(bundle.store_manifest, null, 2));
   }
 
   zip.file(fileManifest.asset_catalog_path, JSON.stringify(assetCatalog, null, 2));
@@ -546,47 +577,18 @@ export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> 
     const presetMetas = assetCatalog.filter((entry) => entry.kind === "snippet_preset");
     zip.file(`${fileManifest.snippet_presets_path}.meta`, JSON.stringify(presetMetas, null, 2));
   }
+  if (bundle.store_manifest) {
+    const storeManifestMeta = assetCatalog.find((entry) => entry.kind === "store_manifest");
+    if (storeManifestMeta) {
+      zip.file(`${fileManifest.store_manifest_path}.meta`, JSON.stringify(storeManifestMeta, null, 2));
+    }
+  }
 
-  zip.file(
-    "README.txt",
-    [
-      "Kyuubiki project bundle",
-      "",
-      `Schema: ${bundle.project_schema_version}`,
-      `Layout: ${fileManifest.layout_version}`,
-      `Manifest: ${PROJECT_MANIFEST_PATH}`,
-      `Engine manifest: ${fileManifest.engine_manifest_path}`,
-      "Standard project layout:",
-      `  ${fileManifest.project_record_path}`,
-      `  ${fileManifest.model_directory}/*.json`,
-      `  ${fileManifest.version_directory}/*.json`,
-      `  ${fileManifest.workspace_settings_path}`,
-      `  ${fileManifest.workspace_snapshot_path}`,
-      `  ${fileManifest.automation_presets_path}`,
-      `  ${fileManifest.snippet_presets_path}`,
-      `  ${fileManifest.asset_catalog_path}`,
-      `  ${fileManifest.asset_references_path}`,
-      `  ${fileManifest.job_directory}/index.json`,
-      `  ${fileManifest.job_directory}/*.json`,
-      `  ${fileManifest.result_directory}/index.json`,
-      `  ${fileManifest.result_directory}/*.json`,
-      "",
-      "Meta sidecars:",
-      "  core assets also emit *.meta files with stable guid records",
-      "Guid graph:",
-      "  asset references describe stable guid-to-guid relations across the project",
-      "",
-      "Legacy compatibility aliases:",
-      "  project/project.json",
-      "  models/*.json",
-      "  versions/*.json",
-      "  jobs/jobs.json",
-      "  jobs/*.json",
-      "  results/results.json",
-      "  results/*.json",
-      "  workspace/current-model.json",
-    ].join("\n"),
-  );
+  zip.file("README.txt", buildProjectBundleReadme({
+    fileManifest,
+    projectManifestPath: PROJECT_MANIFEST_PATH,
+    projectSchemaVersion: bundle.project_schema_version,
+  }));
 
   return zip.generateAsync({
     type: "blob",

@@ -13,6 +13,7 @@ export type WorkbenchUiChunkId =
   | "section.study"
   | "section.model"
   | "section.workflow"
+  | "section.store"
   | "section.library"
   | "section.system"
   | "renderer.truss3d"
@@ -52,6 +53,7 @@ const CHUNK_CONTRACTS: WorkbenchUiChunkContract[] = [
   chunk("section.study", "Study controls", "section", ["study"], "active", false, 3),
   chunk("section.model", "Model tools", "section", ["model"], "active", false, 4),
   chunk("section.workflow", "Workflow builder", "section", ["workflow"], "active", false, 5),
+  chunk("section.store", "Workspace Store", "section", ["store", "assets"], "active", false, 3),
   chunk("section.library", "Library and history", "section", ["library"], "active", false, 4),
   chunk("section.system", "System controls", "section", ["system"], "active", false, 4),
   chunk("renderer.truss3d", "3D renderer", "renderer", ["model", "viewport"], "prefetch", false, 5),
@@ -62,6 +64,7 @@ const SECTION_CHUNKS: Record<SidebarSection, WorkbenchUiChunkId> = {
   study: "section.study",
   model: "section.model",
   workflow: "section.workflow",
+  store: "section.store",
   library: "section.library",
   system: "section.system",
 };
@@ -70,6 +73,7 @@ const SECTION_PREFETCH: Record<SidebarSection, WorkbenchUiChunkId[]> = {
   study: ["section.model", "workspace.inspector"],
   model: ["renderer.truss3d", "section.study", "workspace.inspector"],
   workflow: ["runtime.wasm-python", "workspace.console"],
+  store: ["section.workflow", "workspace.console"],
   library: ["section.workflow", "workspace.console"],
   system: ["workspace.console", "overlay.assistant"],
 };

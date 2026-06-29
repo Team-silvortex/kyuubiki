@@ -6,6 +6,7 @@ use kyuubiki_protocol::{RpcRequest, RpcResponse};
 mod agent_http;
 mod agent_mesh;
 mod agent_state;
+mod agent_watchdog;
 mod config;
 mod rpc;
 mod transport;

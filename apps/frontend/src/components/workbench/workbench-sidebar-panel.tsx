@@ -13,6 +13,7 @@ type WorkbenchSidebarPanelProps = {
   studySection?: ReactNode;
   modelSection?: ReactNode;
   workflowSection?: ReactNode;
+  storeSection?: ReactNode;
   librarySection?: ReactNode;
   systemSection?: ReactNode;
 };
@@ -26,6 +27,7 @@ export function WorkbenchSidebarPanel({
   studySection,
   modelSection,
   workflowSection,
+  storeSection,
   librarySection,
   systemSection,
 }: WorkbenchSidebarPanelProps) {
@@ -48,6 +50,7 @@ export function WorkbenchSidebarPanel({
       {sidebarSection === "study" ? studySection : null}
       {sidebarSection === "model" ? modelSection : null}
       {sidebarSection === "workflow" ? workflowSection : null}
+      {sidebarSection === "store" ? storeSection : null}
       {sidebarSection === "library" ? librarySection : null}
       {sidebarSection === "system" ? systemSection : null}
     </aside>

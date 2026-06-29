@@ -27,7 +27,7 @@ import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workben
 
 export type Language = WorkbenchLanguage;
 export type Theme = "linen" | "marine" | "graphite";
-export type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
+export type SidebarSection = "study" | "model" | "workflow" | "store" | "library" | "system";
 export type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"

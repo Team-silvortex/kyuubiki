@@ -5,8 +5,8 @@ export const copyEnCore = {
     roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
     title: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
     subtitle: brand.workbenchDescription,
-    rail: { study: "Study", model: "Workspace", workflow: "Workflow", library: "History", system: "System" },
-    sections: { study: "Study Setup", model: "Workspace", workflow: "Workflow Studio", library: "Job History", system: "System" },
+    rail: { study: "Study", model: "Workspace", workflow: "Workflow", store: "Store", library: "History", system: "System" },
+    sections: { study: "Study Setup", model: "Workspace", workflow: "Workflow Studio", store: "Workspace Store", library: "Job History", system: "System" },
     kinds: {
       axial_bar_1d: "1D axial bar",
       heat_bar_1d: "1D heat bar",

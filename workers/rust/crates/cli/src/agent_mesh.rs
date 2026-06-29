@@ -34,7 +34,7 @@ impl AgentRegistrationHandle {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = Arc::clone(&running);
         let cluster_id = config.cluster_id.clone();
-        let initial_payload = registration_payload(config);
+        let payload_config = config.clone();
         let orchestrator_url_clone = orchestrator_url.clone();
         let agent_id_clone = agent_id.clone();
 
@@ -44,7 +44,7 @@ impl AgentRegistrationHandle {
                     "{}/api/v1/agents/register",
                     normalize_base_url(&orchestrator_url_clone)
                 ),
-                &initial_payload,
+                &registration_payload(&payload_config),
                 cluster_auth_headers(
                     cluster_api_token.as_deref(),
                     &agent_id,
@@ -66,7 +66,7 @@ impl AgentRegistrationHandle {
                         normalize_base_url(&orchestrator_url_clone),
                         agent_id_clone
                     ),
-                    &initial_payload,
+                    &registration_payload(&payload_config),
                     cluster_auth_headers(
                         cluster_api_token.as_deref(),
                         &agent_id_clone,

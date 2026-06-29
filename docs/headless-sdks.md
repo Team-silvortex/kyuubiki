@@ -19,6 +19,11 @@ The headless SDK layer gives them a cleaner tool surface:
 - build a machine-readable Rust execution plan before running a workflow
 - start concrete material-research examples without opening the workbench
 
+The SDKs are peer clients of the backend service contract. They do not depend
+on Workbench state, WebView lifecycle, or GUI automation hooks. The GUI uses the
+same backend HTTP contract through a configurable transport target, so a feature
+is considered headless-ready only when it is reachable without clicking a UI.
+
 ## Language targets
 
 - Rust
@@ -47,6 +52,7 @@ All three SDKs expose the same conceptual split:
 ## Design goals
 
 - protocol-driven rather than implementation-driven
+- GUI-independent: Workbench is one client, not the runtime owner
 - simple JSON payloads for AI-generated requests
 - usable in cloud, distributed, and direct headless LAN deployments
 - small enough to embed into agent runtimes without dragging UI dependencies

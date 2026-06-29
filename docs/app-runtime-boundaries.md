@@ -114,6 +114,37 @@ plane, see [agent-orchestrator-boundary.md](agent-orchestrator-boundary.md).
 For the headless caller and direct-mesh contract, see
 [headless-agent-contract.md](headless-agent-contract.md).
 
+## GUI / Backend Service Separation
+
+The GUI is a client surface, not the owner of the backend runtime.
+
+This means Workbench and Hub must not assume that the control plane, mesh
+gateway, or agent-compatible service is co-located with the WebView process.
+They may use same-origin APIs as the default developer layout, but that is only
+one deployment topology.
+
+The frontend API layer therefore resolves backend targets through a transport
+adapter:
+
+- default: same-origin `/api/...`
+- deployment default: `NEXT_PUBLIC_KYUUBIKI_API_BASE_URL`
+- persisted override: `kyuubiki-workbench-api-base-url`
+- temporary override: `?kyuubikiApiBaseUrl=...` or `?apiBaseUrl=...`
+
+Workbench exposes the persisted override in `System / Settings / Routing` so
+the active GUI-to-backend binding is visible instead of hidden in code.
+
+All of those paths still speak the same public HTTP contract. A GUI can point at
+an orchestrator, a mesh gateway, or another compatible service, and a headless
+SDK can use the same routes without importing GUI internals.
+
+The boundary rule is strict:
+
+- UI state may describe intent, selected runtime target, and project context
+- backend services own execution, scheduling, mesh membership, and agent state
+- SDKs call backend contracts directly rather than driving Workbench controls
+- no backend service may require Workbench component structure to be present
+
 ## Architectural Consequences
 
 This split implies:

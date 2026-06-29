@@ -37,6 +37,33 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     assert public_agent["last_session_transition"]["reason"] == "registered"
   end
 
+  test "preserves agent watchdog failure reports" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-watchdog-a",
+               "host" => "10.20.0.21",
+               "port" => 6121,
+               "orch_id" => "orch-alpha",
+               "watchdog" => %{
+                 "state" => "watch",
+                 "active_execution_count" => 0,
+                 "recent_failure_count" => 1,
+                 "recent_failures" => [
+                   %{
+                     "job_id" => "job-failed-a",
+                     "reason_code" => "solve_failed",
+                     "message" => "singular stiffness matrix"
+                   }
+                 ]
+               }
+             })
+
+    [public_agent] = AgentRegistry.public_agents()
+    assert public_agent["watchdog"]["state"] == "watch"
+    assert public_agent["watchdog"]["recent_failure_count"] == 1
+    assert [%{"job_id" => "job-failed-a"}] = public_agent["watchdog"]["recent_failures"]
+  end
+
   test "refreshes last seen through heartbeat" do
     assert {:ok, _agent} =
              AgentRegistry.register(%{

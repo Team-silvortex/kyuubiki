@@ -151,6 +151,8 @@ pub struct RpcRequest {
 pub struct RpcError {
     pub code: String,
     pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub details: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -219,6 +221,26 @@ impl RpcResponse {
             error: Some(RpcError {
                 code: code.into(),
                 message: message.into(),
+                details: None,
+            }),
+        }
+    }
+
+    pub fn error_with_details(
+        id: impl Into<String>,
+        code: impl Into<String>,
+        message: impl Into<String>,
+        details: Value,
+    ) -> Self {
+        Self {
+            rpc_version: RPC_VERSION,
+            id: id.into(),
+            ok: false,
+            result: None,
+            error: Some(RpcError {
+                code: code.into(),
+                message: message.into(),
+                details: Some(details),
             }),
         }
     }

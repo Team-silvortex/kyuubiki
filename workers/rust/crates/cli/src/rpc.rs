@@ -32,8 +32,10 @@ use kyuubiki_solver::{
 };
 
 use crate::agent_state::{
-    agent_descriptor, build_progress_frames, extract_job_id, register_cancel, take_cancelled,
+    agent_descriptor_payload, build_progress_frames, extract_job_id, register_cancel,
+    take_cancelled,
 };
+use crate::agent_watchdog;
 use crate::transport::{AgentReply, HeartbeatHandle};
 
 pub(crate) fn handle_request(
@@ -58,11 +60,7 @@ pub(crate) fn handle_request(
         ),
         RpcMethod::DescribeAgent => AgentReply::Stream(
             Vec::new(),
-            RpcResponse::success(
-                request.id,
-                serde_json::to_value(agent_descriptor())
-                    .expect("agent descriptor should serialize"),
-            ),
+            RpcResponse::success(request.id, agent_descriptor_payload()),
         ),
         RpcMethod::CancelJob => handle_cancel_job(request),
         RpcMethod::SolveBar1d => run_solver::<SolveBarRequest, _, _, _>(
@@ -375,13 +373,22 @@ where
     Solver: FnOnce(&Request) -> Result<ResultValue, String>,
 {
     let request_id = request.id;
+    let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
+    let guard = agent_watchdog::begin_execution(request_id.clone(), maybe_job_id.clone(), method);
+
     let params = match serde_json::from_value::<Request>(request.params) {
         Ok(params) => params,
         Err(error) => {
+            let report = agent_watchdog::fail_execution(guard, "invalid_params", error.to_string());
             return AgentReply::Stream(
                 Vec::new(),
-                RpcResponse::error(request_id, "invalid_params", error.to_string()),
+                RpcResponse::error_with_details(
+                    request_id,
+                    "invalid_params",
+                    report.message.clone(),
+                    serde_json::to_value(report).expect("failure report should serialize"),
+                ),
             );
         }
     };
@@ -397,9 +404,16 @@ where
             if let Some(job_id) = maybe_job_id.as_deref() {
                 if take_cancelled(job_id) {
                     stop_heartbeat(heartbeat);
+                    let report =
+                        agent_watchdog::fail_execution(guard, "cancelled", "job was cancelled");
                     return AgentReply::Stream(
                         Vec::new(),
-                        RpcResponse::error(request_id, "cancelled", "job was cancelled"),
+                        RpcResponse::error_with_details(
+                            request_id,
+                            "cancelled",
+                            report.message.clone(),
+                            serde_json::to_value(report).expect("failure report should serialize"),
+                        ),
                     );
                 }
             }
@@ -407,6 +421,7 @@ where
             let progress_frames =
                 build_progress_frames(model_name, &request_id, node_count(&params));
             stop_heartbeat(heartbeat);
+            agent_watchdog::complete_execution(guard);
             AgentReply::Stream(
                 progress_frames,
                 RpcResponse::success(
@@ -418,9 +433,15 @@ where
         }
         Err(error) => {
             stop_heartbeat(heartbeat);
+            let report = agent_watchdog::fail_execution(guard, "solve_failed", error);
             AgentReply::Stream(
                 Vec::new(),
-                RpcResponse::error(request_id, "solve_failed", error),
+                RpcResponse::error_with_details(
+                    request_id,
+                    "solve_failed",
+                    report.message.clone(),
+                    serde_json::to_value(report).expect("failure report should serialize"),
+                ),
             )
         }
     }
@@ -430,4 +451,11 @@ fn stop_heartbeat(heartbeat: Option<HeartbeatHandle>) {
     if let Some(heartbeat) = heartbeat {
         heartbeat.stop();
     }
+}
+
+fn rpc_method_name(method: &RpcMethod) -> String {
+    serde_json::to_value(method)
+        .ok()
+        .and_then(|value| value.as_str().map(ToString::to_string))
+        .unwrap_or_else(|| format!("{method:?}"))
 }

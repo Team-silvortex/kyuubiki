@@ -2,6 +2,8 @@ use super::*;
 
 #[test]
 fn handles_solver_rpc_requests() {
+    agent_watchdog::reset_for_tests();
+
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-1".to_string(),
@@ -30,6 +32,43 @@ fn handles_solver_rpc_requests() {
     let result: kyuubiki_protocol::SolveBarResult =
         serde_json::from_value(final_response.result.expect("solver result")).expect("bar result");
     assert!((result.tip_displacement - 4.761904761904762e-7).abs() < 1.0e-12);
+}
+
+#[test]
+fn records_watchdog_failure_for_invalid_solver_params() {
+    agent_watchdog::reset_for_tests();
+
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-invalid-watchdog".to_string(),
+        method: RpcMethod::SolveBar1d,
+        params: serde_json::json!({
+            "job_id": "job-watchdog-invalid",
+            "length": "not-a-number"
+        }),
+    };
+
+    let AgentReply::Stream(progress_frames, final_response) =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    assert!(progress_frames.is_empty());
+    assert!(!final_response.ok);
+
+    let error = final_response.error.expect("error payload");
+    assert_eq!(error.code, "invalid_params");
+    let details = error.details.expect("failure details");
+    assert_eq!(details["request_id"], "rpc-invalid-watchdog");
+    assert_eq!(details["job_id"], "job-watchdog-invalid");
+    assert_eq!(details["method"], "solve_bar_1d");
+    assert_eq!(details["reason_code"], "invalid_params");
+
+    let snapshot = agent_watchdog::snapshot();
+    assert!(snapshot.recent_failure_count >= 1);
+    assert!(snapshot.recent_failures.iter().any(|failure| {
+        failure.request_id == "rpc-invalid-watchdog"
+            && failure.job_id.as_deref() == Some("job-watchdog-invalid")
+            && failure.reason_code == "invalid_params"
+    }));
 }
 
 #[test]

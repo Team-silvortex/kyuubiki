@@ -71,7 +71,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           canvasStageRef={props.canvasStageRef}
           viewportPixelWidth={props.viewportPixelWidth}
           immersiveViewport={props.immersiveViewport}
-          title={props.sidebarSection === "model" ? props.t.sections.model : props.t.viewport}
+          title={props.sidebarSection === "model" || props.sidebarSection === "store" ? props.t.sections[props.sidebarSection] : props.t.viewport}
           sidebarSection={props.sidebarSection}
           modelTab={props.modelTab}
           modelToolsPage={props.modelToolsPage}

@@ -12,7 +12,7 @@ import {
   type ProjectRecord,
 } from "@/lib/api";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
-import { exportProjectBundleZip } from "@/lib/projects";
+import { exportProjectBundleZip } from "@/lib/projects/project-format";
 
 export async function downloadWorkbenchProjectBundleJson(params: {
   selectedProject: ProjectRecord | null;

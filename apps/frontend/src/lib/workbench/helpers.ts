@@ -1,10 +1,17 @@
-import { buildStudyModelPayload } from "@/lib/models";
+import { buildStudyModelPayload } from "@/lib/models/modeler";
 import {
   buildWorkbenchGovernanceConfig,
   normalizeWorkbenchGovernanceRuntime,
   type WorkbenchGovernanceConfig,
 } from "@/lib/workbench/governance";
 import { mergeLanguagePack } from "@/lib/workbench/language-pack-merge";
+import {
+  readInMemoryWorkbenchSecrets,
+  scrubPersistedWorkbenchSecrets,
+  WORKBENCH_SECRETS_KEY,
+  writeInMemoryWorkbenchSecrets,
+  type StoredWorkbenchSecrets,
+} from "@/lib/workbench/workbench-secrets";
 import type {
   AxialBarJobInput,
   Beam1dJobInput,
@@ -33,7 +40,6 @@ import type {
 } from "@/lib/api";
 
 export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
-export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
 export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
 export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
 export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "tamamono 1.x";
@@ -41,6 +47,11 @@ export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "1.12.0";
 
 export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";
 export { mergeLanguagePack };
+export {
+  readInMemoryWorkbenchSecrets,
+  WORKBENCH_SECRETS_KEY,
+  writeInMemoryWorkbenchSecrets,
+};
 
 export type StoredWorkbenchSettings = {
   theme?: string;
@@ -89,15 +100,6 @@ type PersistedWorkbenchSettings = {
   governanceConfig?: WorkbenchGovernanceConfig;
 };
 
-type StoredWorkbenchSecrets = {
-  controlPlaneApiToken?: string;
-  clusterApiToken?: string;
-  directMeshApiToken?: string;
-  assistantApiKey?: string;
-};
-
-let inMemoryWorkbenchSecrets: StoredWorkbenchSecrets = {};
-
 export type WorkbenchSettingsInput = {
   theme: string;
   language: string;
@@ -128,28 +130,6 @@ function sanitizeStoredSettings(input: StoredWorkbenchSettings): PersistedWorkbe
     assistantApiBaseUrl: input.assistantApiBaseUrl,
     assistantModel: input.assistantModel,
     governanceConfig: input.governanceConfig,
-  };
-}
-
-function scrubPersistedWorkbenchSecrets() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(WORKBENCH_SECRETS_KEY);
-}
-
-export function readInMemoryWorkbenchSecrets(): StoredWorkbenchSecrets {
-  return { ...inMemoryWorkbenchSecrets };
-}
-
-export function writeInMemoryWorkbenchSecrets(input: StoredWorkbenchSecrets) {
-  inMemoryWorkbenchSecrets = {
-    ...(input.controlPlaneApiToken?.trim()
-      ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
-      : {}),
-    ...(input.clusterApiToken?.trim() ? { clusterApiToken: input.clusterApiToken.trim() } : {}),
-    ...(input.directMeshApiToken?.trim()
-      ? { directMeshApiToken: input.directMeshApiToken.trim() }
-      : {}),
-    ...(input.assistantApiKey?.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
   };
 }
 

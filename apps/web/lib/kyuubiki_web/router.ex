@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Router do
   use Plug.Router
 
   alias KyuubikiWeb.Analysis
+  alias KyuubikiWeb.AssetStore
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.Security
@@ -112,7 +113,10 @@ defmodule KyuubikiWeb.Router do
           case KyuubikiWeb.Playground.AgentRegistry.register(body_params) do
             {:ok, agent} ->
               _ = KyuubikiWeb.Playground.AgentPool.reload()
-              respond_json(conn, 201, %{"agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)})
+
+              respond_json(conn, 201, %{
+                "agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)
+              })
 
             {:error, {:invalid_agent_field, field}} ->
               respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
@@ -135,7 +139,10 @@ defmodule KyuubikiWeb.Router do
            :ok <- validate_registered_fingerprint(conn, agent_id),
            {:ok, agent} <- KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, body_params) do
         _ = KyuubikiWeb.Playground.AgentPool.reload()
-        respond_json(conn, 200, %{"agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)})
+
+        respond_json(conn, 200, %{
+          "agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)
+        })
       else
         {:error, {:invalid_agent_field, field}} ->
           respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
@@ -240,6 +247,38 @@ defmodule KyuubikiWeb.Router do
 
         {:error, {:operator_not_found, _}} ->
           respond_json(conn, 404, %{"error" => "operator_not_found", "operator_id" => operator_id})
+
+        {:error, reason} ->
+          unprocessable(conn, reason)
+      end
+    end)
+  end
+
+  get "/api/v1/store" do
+    with_auth(conn, :read, fn conn ->
+      conn = fetch_query_params(conn)
+      respond_json(conn, 200, AssetStore.catalog(conn.query_params))
+    end)
+  end
+
+  get "/api/v1/store/sources" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, %{"sources" => AssetStore.sources()})
+    end)
+  end
+
+  get "/api/v1/store/:kind/:entry_id" do
+    with_auth(conn, :read, fn conn ->
+      case AssetStore.fetch(kind, entry_id) do
+        {:ok, payload} ->
+          respond_json(conn, 200, payload)
+
+        {:error, {:store_entry_not_found, _kind, _id}} ->
+          respond_json(conn, 404, %{
+            "error" => "store_entry_not_found",
+            "kind" => kind,
+            "id" => entry_id
+          })
 
         {:error, reason} ->
           unprocessable(conn, reason)

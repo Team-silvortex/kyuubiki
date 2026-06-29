@@ -433,6 +433,8 @@ fn handles_ping_rpc_requests() {
 
 #[test]
 fn handles_describe_agent_rpc_requests() {
+    agent_watchdog::reset_for_tests();
+
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-describe".to_string(),
@@ -446,9 +448,12 @@ fn handles_describe_agent_rpc_requests() {
     assert!(progress_frames.is_empty());
     assert!(final_response.ok);
 
+    let descriptor_payload = final_response.result.expect("descriptor result");
+    assert!(descriptor_payload["watchdog"]["state"].is_string());
+    assert!(descriptor_payload["watchdog"]["active_execution_count"].is_number());
+
     let descriptor: AgentDescriptor =
-        serde_json::from_value(final_response.result.expect("descriptor result"))
-            .expect("agent descriptor");
+        serde_json::from_value(descriptor_payload).expect("agent descriptor");
 
     assert_eq!(descriptor.program, "kyuubiki-rust-agent");
     assert_eq!(descriptor.protocol.rpc_version, RPC_VERSION);

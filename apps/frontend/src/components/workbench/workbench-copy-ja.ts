@@ -12,8 +12,8 @@ export const copyJa = {
     roleLabel: "解析シェル",
     title: "構造解析ワークベンチ",
     subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",
-    rail: { study: "解析", model: "ワークスペース", workflow: "ワークフロー", library: "履歴", system: "システム" },
-    sections: { study: "解析設定", model: "ワークスペース", workflow: "ワークフロースタジオ", library: "ジョブ履歴", system: "システム" },
+    rail: { study: "解析", model: "ワークスペース", workflow: "ワークフロー", store: "ストア", library: "履歴", system: "システム" },
+    sections: { study: "解析設定", model: "ワークスペース", workflow: "ワークフロースタジオ", store: "ワークスペースストア", library: "ジョブ履歴", system: "システム" },
     studyFamilies: {
       axialAndSprings: "軸・ばね",
       beamsAndFrames: "梁・フレーム",

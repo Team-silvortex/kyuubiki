@@ -12,9 +12,13 @@ import {
 } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api";
 import { parsePlaygroundModel } from "@/lib/models";
-import { parseProjectBundleFile } from "@/lib/projects";
+import { parseProjectBundleFile } from "@/lib/projects/project-format";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
+import {
+  persistWorkspaceStoreManifest,
+  rewriteWorkspaceStoreManifestProject,
+} from "@/lib/workbench/store-manifest";
 
 type PersistedModelEffects = {
   setLoadedModelName: (value: string) => void;
@@ -169,6 +173,12 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
         }
         // Ignore malformed snippet preset payloads so model/project import stays usable.
       }
+    }
+
+    if (bundle.store_manifest) {
+      persistWorkspaceStoreManifest(
+        rewriteWorkspaceStoreManifestProject(bundle.store_manifest, createdProject.project.project_id),
+      );
     }
 
     await effects.refreshProjects();

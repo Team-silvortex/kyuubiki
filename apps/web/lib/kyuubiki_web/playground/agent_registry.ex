@@ -37,6 +37,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           optional(:methods) => [String.t()],
           optional(:capabilities) => [map()],
           optional(:health_score) => non_neg_integer(),
+          optional(:watchdog) => map(),
           optional(:last_session_transition) => map(),
           required(:last_seen_at) => DateTime.t()
         }
@@ -153,6 +154,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       "methods" => Map.get(agent, :methods) || Map.get(agent, "methods") || [],
       "capabilities" => Map.get(agent, :capabilities) || Map.get(agent, "capabilities") || [],
       "health_score" => Map.get(agent, :health_score) || Map.get(agent, "health_score"),
+      "watchdog" => Map.get(agent, :watchdog) || Map.get(agent, "watchdog"),
       "execution_state" => execution_state_for(public_lease),
       "active_lease" => public_lease,
       "last_session_transition" =>
@@ -306,6 +308,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          methods: optional_methods(attrs, "methods"),
          capabilities: optional_capabilities(attrs, "capabilities"),
          health_score: optional_health_score(attrs, "health_score"),
+         watchdog: optional_map(attrs, "watchdog"),
          last_seen_at: now
        }}
     end
@@ -545,6 +548,13 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
       _ ->
         []
+    end
+  end
+
+  defp optional_map(attrs, key) do
+    case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
+      value when is_map(value) -> value
+      _ -> nil
     end
   end
 

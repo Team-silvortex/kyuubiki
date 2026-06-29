@@ -18,6 +18,11 @@ const WorkbenchStudySectionMount = lazy(() =>
     default: module.WorkbenchStudySectionMount,
   })),
 );
+const WorkbenchStoreSectionMount = lazy(() =>
+  import("@/components/workbench/workbench-store-section-mount").then((module) => ({
+    default: module.WorkbenchStoreSectionMount,
+  })),
+);
 const WorkbenchSystemSidebarMount = lazy(() =>
   import("@/components/workbench/workbench-system-sidebar-mount").then((module) => ({
     default: module.WorkbenchSystemSidebarMount,
@@ -125,6 +130,15 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         runWorkflowDraft={props.runWorkflowDraft}
         openHistoryJob={props.openHistoryJob}
         setSystemAlerts={props.setSystemAlerts}
+      />,
+    ),
+    storeSection: sectionChunk(
+      "section.store",
+      <WorkbenchStoreSectionMount
+        language={props.language}
+        selectedModelId={props.selectedModelId}
+        selectedProjectId={props.selectedProjectId}
+        setMessage={props.setMessage}
       />,
     ),
     librarySection: sectionChunk(

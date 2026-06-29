@@ -33,6 +33,11 @@ type WorkbenchSystemConfigCardProps = {
   languagePackCatalogHint: string;
   languagePackCatalogActionLabel: string;
   frontendModeLabel: string;
+  backendTargetLabel: string;
+  backendTargetHelp: string;
+  backendTargetPlaceholder: string;
+  backendTargetSourceLabel: string;
+  backendTargetEffectiveLabel: string;
   directMeshStrategyLabel: string;
   directMeshEndpointsLabel: string;
   directMeshEndpointsHelp: string;
@@ -58,6 +63,9 @@ type WorkbenchSystemConfigCardProps = {
   theme: Theme;
   language: Language;
   frontendRuntimeMode: FrontendRuntimeMode;
+  backendApiBaseUrl: string;
+  backendTargetSource: string;
+  backendTargetEffectiveUrl: string;
   directMeshSelectionMode: DirectMeshSelectionMode;
   directMeshEndpointsText: string;
   controlPlaneApiToken: string;
@@ -90,6 +98,7 @@ type WorkbenchSystemConfigCardProps = {
   onImportLanguagePack: (file: File) => void;
   onRemoveLanguagePack: (packId: string) => void;
   onFrontendRuntimeModeChange: (value: FrontendRuntimeMode) => void;
+  onBackendApiBaseUrlChange: (value: string) => void;
   onDirectMeshSelectionModeChange: (value: DirectMeshSelectionMode) => void;
   onDirectMeshEndpointsTextChange: (value: string) => void;
   onControlPlaneApiTokenChange: (value: string) => void;
@@ -125,6 +134,11 @@ export function WorkbenchSystemConfigCard({
   languagePackCatalogHint,
   languagePackCatalogActionLabel,
   frontendModeLabel,
+  backendTargetLabel,
+  backendTargetHelp,
+  backendTargetPlaceholder,
+  backendTargetSourceLabel,
+  backendTargetEffectiveLabel,
   directMeshStrategyLabel,
   directMeshEndpointsLabel,
   directMeshEndpointsHelp,
@@ -150,6 +164,9 @@ export function WorkbenchSystemConfigCard({
   theme,
   language,
   frontendRuntimeMode,
+  backendApiBaseUrl,
+  backendTargetSource,
+  backendTargetEffectiveUrl,
   directMeshSelectionMode,
   directMeshEndpointsText,
   controlPlaneApiToken,
@@ -170,6 +187,7 @@ export function WorkbenchSystemConfigCard({
   onImportLanguagePack,
   onRemoveLanguagePack,
   onFrontendRuntimeModeChange,
+  onBackendApiBaseUrlChange,
   onDirectMeshSelectionModeChange,
   onDirectMeshEndpointsTextChange,
   onControlPlaneApiTokenChange,
@@ -244,6 +262,18 @@ export function WorkbenchSystemConfigCard({
       ) : null}
       {page === "routing" ? (
         <div className="form-grid compact">
+          <label className="field-span-2">
+            <span>{backendTargetLabel}</span>
+            <small className="field-hint">{backendTargetHelp}</small>
+            <input
+              onChange={(event) => onBackendApiBaseUrlChange(event.target.value)}
+              placeholder={backendTargetPlaceholder}
+              value={backendApiBaseUrl}
+            />
+            <small className="field-hint">
+              {backendTargetEffectiveLabel}: {backendTargetEffectiveUrl || "same-origin"} · {backendTargetSourceLabel}: {backendTargetSource}
+            </small>
+          </label>
           <label>
             <span>{frontendModeLabel}</span>
             <select value={frontendRuntimeMode} onChange={(event) => onFrontendRuntimeModeChange(event.target.value as FrontendRuntimeMode)}>

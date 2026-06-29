@@ -1,6 +1,10 @@
 import type {
   DirectMeshAgentListPayload,
   DirectMeshSelectionMode,
+  AssetStoreEntryEnvelope,
+  AssetStoreEntryKind,
+  AssetStorePayload,
+  AssetStoreSourceListPayload,
   HealthPayload,
   JobEnvelope,
   JobHistoryPayload,
@@ -78,6 +82,34 @@ export function fetchWorkflowOperators(
   query?: WorkflowOperatorCatalogQuery,
 ): Promise<WorkflowOperatorCatalogPayload> {
   return requestJson<WorkflowOperatorCatalogPayload>(appendQuery("/api/v1/operators", query), {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchAssetStore(query?: {
+  kind?: AssetStoreEntryKind;
+  q?: string;
+  source_id?: string;
+}): Promise<AssetStorePayload> {
+  return requestJson<AssetStorePayload>(appendQuery("/api/v1/store", query), {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchAssetStoreSources(): Promise<AssetStoreSourceListPayload> {
+  return requestJson<AssetStoreSourceListPayload>("/api/v1/store/sources", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchAssetStoreEntry(
+  kind: AssetStoreEntryKind,
+  entryId: string,
+): Promise<AssetStoreEntryEnvelope> {
+  return requestJson<AssetStoreEntryEnvelope>(`/api/v1/store/${kind}/${encodeURIComponent(entryId)}`, {
     method: "GET",
     cache: "no-store",
   });

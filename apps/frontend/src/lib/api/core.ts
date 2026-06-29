@@ -3,7 +3,8 @@ import {
   createHttpWorkbenchRequestError,
   normalizeWorkbenchRequestError,
 } from "@/lib/api/request-errors";
-import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/helpers";
+import { resolveWorkbenchApiUrl } from "@/lib/api/backend-target";
+import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
@@ -58,7 +59,7 @@ function buildTimeoutMessage(url: string) {
 
 async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(buildTimeoutMessage(url)), timeoutMs);
+  const timeoutId = globalThis.setTimeout(() => controller.abort(buildTimeoutMessage(url)), timeoutMs);
   const forwardAbort = () => controller.abort(init?.signal?.reason);
 
   if (init?.signal) {
@@ -85,7 +86,7 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEF
 
     throw error;
   } finally {
-    window.clearTimeout(timeoutId);
+    globalThis.clearTimeout(timeoutId);
     init?.signal?.removeEventListener("abort", forwardAbort);
   }
 }
@@ -112,6 +113,7 @@ async function readResponsePayload(response: Response) {
 }
 
 export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
+  const requestUrl = resolveWorkbenchApiUrl(url);
   const headers = new Headers(init?.headers);
   Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
     if (value) headers.set(key, value);
@@ -119,7 +121,7 @@ export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?
 
   try {
     const response = await fetchWithTimeout(
-      url,
+      requestUrl,
       {
         ...init,
         headers,
@@ -134,7 +136,7 @@ export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?
           message: payload.error ?? payload.message ?? `request failed: ${response.status}`,
           responseMessage: payload.error ?? payload.message ?? null,
           statusCode: response.status,
-          url,
+          url: requestUrl,
         });
       }
 
@@ -143,24 +145,25 @@ export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?
           message: payload,
           responseMessage: payload,
           statusCode: response.status,
-          url,
+          url: requestUrl,
         });
       }
 
       throw createHttpWorkbenchRequestError({
         message: `request failed: ${response.status}`,
         statusCode: response.status,
-        url,
+        url: requestUrl,
       });
     }
 
     return (payload ?? {}) as T;
   } catch (error) {
-    throw normalizeWorkbenchRequestError(error, url);
+    throw normalizeWorkbenchRequestError(error, requestUrl);
   }
 }
 
 export async function requestText(url: string, init?: RequestInit, timeoutMs?: number): Promise<string> {
+  const requestUrl = resolveWorkbenchApiUrl(url);
   const headers = new Headers(init?.headers);
   Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
     if (value) headers.set(key, value);
@@ -168,7 +171,7 @@ export async function requestText(url: string, init?: RequestInit, timeoutMs?: n
 
   try {
     const response = await fetchWithTimeout(
-      url,
+      requestUrl,
       {
         ...init,
         headers,
@@ -182,12 +185,12 @@ export async function requestText(url: string, init?: RequestInit, timeoutMs?: n
         message: payload || `request failed: ${response.status}`,
         responseMessage: payload || null,
         statusCode: response.status,
-        url,
+        url: requestUrl,
       });
     }
 
     return payload;
   } catch (error) {
-    throw normalizeWorkbenchRequestError(error, url);
+    throw normalizeWorkbenchRequestError(error, requestUrl);
   }
 }
