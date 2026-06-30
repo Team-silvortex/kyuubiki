@@ -50,10 +50,26 @@ Run with:
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
 - `make test-integration-direct-mesh-docker`
+- `make test-integration-remote-ssh-fixture`
 - `make test-integration-direct-mesh-docker-compare`
 - `make test-integration-direct-mesh-docker-report`
 - `make test-integration-ui-mechanical`
 - `make test-integration-ui-thermal`
+
+Remote deployment SSH fixture scaffolding lives under:
+
+- `tests/integration/remote-ssh-fixture/`
+
+That fixture is manual-only for now. It binds `127.0.0.1:2222`, uses a
+throwaway key under `tests/integration/remote-ssh-fixture/runtime/`, and is not
+started by the default integration targets. Use it explicitly with:
+
+- `make test-integration-remote-ssh-fixture`
+
+Before executable runs, inspect the contracts with:
+
+- `cargo run -p kyuubiki-installer -- remote-ssh-fixture`
+- `cargo run -p kyuubiki-installer -- remote-ssh-fixture-plan`
 
 For repeatable host-independent mesh baselines, prefer the Docker harness:
 

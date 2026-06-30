@@ -1,3 +1,4 @@
+import { markHubUiPerf, measureHubUiPerf } from "./hub-ui-performance.js";
 function afterFirstPaint(task) {
     const schedule = window.requestAnimationFrame
         ? (callback) => window.requestAnimationFrame(() => window.requestAnimationFrame(callback))
@@ -17,15 +18,20 @@ function duringIdle(task) {
     });
 }
 async function settleStartup(label, task) {
+    markHubUiPerf(`startup:${label}:start`);
     try {
         await task();
     }
     catch (error) {
         console.warn(`Hub startup phase failed: ${label}`, error);
     }
+    finally {
+        measureHubUiPerf(`startup:${label}`, `startup:${label}:start`);
+    }
 }
 export async function runHubStartupPhases(context) {
     const { elements, state, loadDesktopLanguagePreference, rerenderLocalizedHubShell, enhanceHubAccessibility, loadHubDensitySettings, loadHubHotLogSettings, loadHubRuntimeLogSettings, renderHotRuntimeLogServiceLabel, syncDesktopStates, renderHubDensityToggles, renderPanelPages, renderHubRecents, applyAssistantSettings, renderAssistantPanel, setEventMessage, setSection, setBusy, } = context;
+    markHubUiPerf("startup:interactive:start");
     state.language = await loadDesktopLanguagePreference();
     rerenderLocalizedHubShell();
     enhanceHubAccessibility();
@@ -43,6 +49,7 @@ export async function runHubStartupPhases(context) {
     setSection(state.activeSection);
     setBusy(false, "idle");
     setEventMessage?.("Hub listeners are mounted.", "startup:ready");
+    measureHubUiPerf("startup:interactive", "startup:interactive:start");
     void afterFirstPaint(() => runDeferredStartup(context));
 }
 function applyRuntimeLogSettings(elements, hotLogSettings, runtimeLogSettings) {

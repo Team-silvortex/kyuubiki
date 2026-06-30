@@ -8,17 +8,45 @@ For maturity tracking, pair this control-surface note with
 remote path is a policy-bounded SSH pilot, not yet a full production deployment
 service.
 
+Credential material for remote deployment should stay inside the Kyuubiki
+sandbox contract. Use this command when reviewing where private keys, pinned
+host trust, and future token files are allowed to live:
+
+```bash
+cargo run -p kyuubiki-installer -- credential-storage
+```
+
+Managed SSH execution defaults to pinned known-host verification through the
+Kyuubiki sandbox. The development-only `accept-new` path requires an explicit
+`KYUUBIKI_INSTALLER_REMOTE_TRUST_MODE=dev-accept-new` override and should be
+limited to local fixtures or disposable lab hosts.
+
 The first non-executing step contract is available through:
 
 ```bash
 cargo run -p kyuubiki-installer -- remote-deployment-plan
 cargo run -p kyuubiki-installer -- remote-deployment-journal
+cargo run -p kyuubiki-installer -- remote-artifacts
+cargo run -p kyuubiki-installer -- remote-deployment-dry-run
+cargo run -p kyuubiki-installer -- remote-host-trust
+cargo run -p kyuubiki-installer -- remote-ssh-fixture
+cargo run -p kyuubiki-installer -- remote-ssh-fixture-plan
 ```
 
 That command previews the intended deployment phases before the GUI or SSH
 executor is allowed to treat them as mutable remote actions. The journal
 preview mirrors those phases into pending local and remote record paths so the
-future executor has an audit shape before it mutates real hosts.
+future executor has an audit shape before it mutates real hosts. The artifact
+preview keeps package movement in a remote-pull manifest tied to update-source
+and component-integrity policy instead of one-off copy commands. The dry-run
+command then combines those previews with local integrity blockers into one
+read-only readiness report. The host-trust command makes the known-host policy
+visible: local fixtures may use `accept-new`, but managed deployment must move
+to pinned host keys and refuse unpinned hosts. The SSH fixture command validates
+local command shape only; it does not open sockets and is the bridge toward a
+containerized sshd fixture. The fixture-plan command points to the manual
+Docker scaffold and the ignored runtime paths for throwaway keys and known-host
+files.
 
 This document explains:
 

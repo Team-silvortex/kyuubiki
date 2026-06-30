@@ -24,6 +24,10 @@
           <span class="docs-chip">CLI: remote-deployment-roadmap</span>
           <span class="docs-chip">Plan preview: remote-deployment-plan</span>
           <span class="docs-chip">Journal preview: remote-deployment-journal</span>
+          <span class="docs-chip">Artifacts: remote-artifacts</span>
+          <span class="docs-chip">Dry-run: remote-deployment-dry-run</span>
+          <span class="docs-chip">Host trust: remote-host-trust</span>
+          <span class="docs-chip">SSH fixture: remote-ssh-fixture</span>
         </div>
         <div class="docs-links">
           <a class="docs-link" href="./book-ch04-runtime-modes.html">Back to runtime chapter</a>
@@ -61,9 +65,10 @@
           <li><strong>Policy-bounded SSH transport</strong>: implemented; keep host, workspace, URL, identity, and snapshot validation visible.</li>
           <li><strong>Structured deployment plan</strong>: started; model bootstrap, package sync, verify, start, health-check, and rollback as explicit steps.</li>
           <li><strong>Durable remote journal</strong>: started; every action emits local and remote records with retry-safe status.</li>
-          <li><strong>Installer-managed artifact delivery</strong>: planned; remote hosts pull staged packages and verify checksums/component integrity.</li>
-          <li><strong>Host trust hardening</strong>: planned; move beyond <code>accept-new</code> for non-dev deployments and bind node identity.</li>
-          <li><strong>Remote deployment test matrix</strong>: planned; combine containerized SSH fixtures with physical lab-host runs.</li>
+          <li><strong>Installer-managed artifact delivery</strong>: started; remote hosts pull staged packages and verify checksums/component integrity.</li>
+          <li><strong>Read-only dry-run</strong>: started; plan, journal, artifact, and integrity readiness are summarized before SSH is allowed.</li>
+          <li><strong>Host trust hardening</strong>: started; expose the dev <code>accept-new</code> path and the managed pinned-host path before executable SSH deployment.</li>
+          <li><strong>Remote deployment test matrix</strong>: started; local SSH command-shape fixture is in place before containerized sshd and physical lab-host runs.</li>
         </ol>
       </section>
 
@@ -85,6 +90,38 @@
           Use <code>cargo run -p kyuubiki-installer -- remote-deployment-journal</code>
           to preview the retry-safe journal records that will later be written
           locally and remotely as each deployment step executes.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-artifacts</code>
+          to preview the remote-pull artifact manifest. This keeps delivery tied
+          to update-source configuration and component-integrity verification
+          rather than ad-hoc SCP state.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-deployment-dry-run</code>
+          to collect the current plan, journal, artifact manifest, and local
+          integrity blockers into one read-only readiness report. The command
+          does not open SSH sessions or mutate remote hosts.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-host-trust</code>
+          to inspect the known-host policy transition. The local fixture may
+          use <code>accept-new</code> with ignored runtime state, while managed
+          deployment uses Kyuubiki sandbox known-host files, pinned host keys,
+          and refuses unpinned hosts by default.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-ssh-fixture</code>
+          to inspect the local command-shape fixture. It validates SSH/SCP
+          arguments, timeout options, fixture-only targets, and secret-free
+          command construction without opening network sockets.
+        </p>
+        <p class="docs-copy">
+          Use <code>cargo run -p kyuubiki-installer -- remote-ssh-fixture-plan</code>
+          to locate the manual Docker sshd scaffold under
+          <code>tests/integration/remote-ssh-fixture/</code>. Runtime keys,
+          known hosts, and copied fixture state remain under ignored
+          <code>runtime/</code> paths.
         </p>
       </section>
     </main>

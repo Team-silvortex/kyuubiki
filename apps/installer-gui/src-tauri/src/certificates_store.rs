@@ -1,8 +1,8 @@
 use std::fs;
 use std::net::IpAddr;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-use kyuubiki_installer::workspace_root;
+use kyuubiki_installer::{credential_sandbox_root, workspace_root};
 use serde_json::{Value, json};
 
 use crate::certificates_types::{
@@ -17,14 +17,15 @@ pub(crate) fn policy_path() -> PathBuf {
 }
 
 pub(crate) fn inventory_path() -> PathBuf {
-    workspace_root()
-        .join("config")
-        .join("installer-certificates.json")
+    credential_sandbox_root(&workspace_root())
+        .join("installer")
+        .join("certificates")
+        .join("inventory.json")
 }
 
 pub(crate) fn default_storage_root() -> String {
-    workspace_root()
-        .join("config")
+    credential_sandbox_root(&workspace_root())
+        .join("installer")
         .join("certificates")
         .display()
         .to_string()
@@ -112,7 +113,11 @@ pub(crate) fn write_policy_config(config: &CertificateAuthorityConfig) -> Result
 }
 
 pub(crate) fn read_inventory() -> Result<Vec<CertificateRecord>, String> {
-    let path = inventory_path();
+    let path = if inventory_path().exists() {
+        inventory_path()
+    } else {
+        legacy_inventory_path()
+    };
     if !path.exists() {
         return Ok(Vec::new());
     }
@@ -170,6 +175,20 @@ pub(crate) fn validate_storage_root(value: &str) -> Result<String, String> {
     if !path.is_absolute() {
         return Err("certificate storage root must be an absolute path".to_string());
     }
+    if path
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err("certificate storage root must not contain parent traversal".to_string());
+    }
+    let sandbox_root = credential_sandbox_root(&workspace_root());
+    if !path.starts_with(&sandbox_root) {
+        return Err(format!(
+            "certificate storage root must stay inside Kyuubiki credential sandbox: {}",
+            sandbox_root.display()
+        ));
+    }
+    reject_symlinked_existing_ancestor(path, &sandbox_root)?;
     Ok(trimmed.to_string())
 }
 
@@ -251,6 +270,42 @@ pub(crate) fn material_paths(config: &CertificateAuthorityConfig) -> MaterialPat
     }
 }
 
+fn legacy_inventory_path() -> PathBuf {
+    workspace_root()
+        .join("config")
+        .join("installer-certificates.json")
+}
+
+fn reject_symlinked_existing_ancestor(path: &Path, sandbox_root: &Path) -> Result<(), String> {
+    let suffix = path
+        .strip_prefix(sandbox_root)
+        .map_err(|_| "certificate storage root must stay inside credential sandbox".to_string())?;
+    let mut current = sandbox_root.to_path_buf();
+    reject_symlink(&current)?;
+    for component in suffix.components() {
+        current.push(component.as_os_str());
+        if current.exists() {
+            reject_symlink(&current)?;
+        }
+    }
+    Ok(())
+}
+
+fn reject_symlink(path: &Path) -> Result<(), String> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(format!("failed to inspect {}: {error}", path.display())),
+    };
+    if metadata.file_type().is_symlink() {
+        return Err(format!(
+            "certificate storage root must not pass through symlinked path: {}",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
 fn read_inventory_record(value: &Value) -> Option<CertificateRecord> {
     Some(CertificateRecord {
         certificate_id: value.get("certificate_id")?.as_str()?.to_string(),
@@ -310,6 +365,37 @@ mod tests {
     fn rejects_relative_storage_root() {
         let error = validate_storage_root("./config/certificates").unwrap_err();
         assert!(error.contains("absolute path"));
+    }
+
+    #[test]
+    fn rejects_storage_root_outside_credential_sandbox() {
+        let error = validate_storage_root("/tmp/kyuubiki-certificates").unwrap_err();
+        assert!(error.contains("credential sandbox"));
+    }
+
+    #[test]
+    fn accepts_storage_root_inside_credential_sandbox() {
+        let root = default_storage_root();
+        assert_eq!(validate_storage_root(&root).unwrap(), root);
+    }
+
+    #[test]
+    fn inventory_defaults_to_credential_sandbox() {
+        let path = inventory_path();
+        assert!(path.starts_with(credential_sandbox_root(&workspace_root())));
+        assert!(path.ends_with("installer/certificates/inventory.json"));
+    }
+
+    #[test]
+    fn rejects_parent_traversal_storage_root() {
+        let root = credential_sandbox_root(&workspace_root())
+            .join("installer")
+            .join("..")
+            .join("certificates")
+            .display()
+            .to_string();
+        let error = validate_storage_root(&root).unwrap_err();
+        assert!(error.contains("parent traversal"));
     }
 
     #[test]

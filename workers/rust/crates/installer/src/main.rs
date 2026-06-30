@@ -2,9 +2,12 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    cross_platform_audit_report, default_remote_deployment_journal, default_remote_deployment_plan,
-    embedded_runtime_report, exit_on_err, export_launch_config, init_env,
-    installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
+    credential_storage_contract, cross_platform_audit_report,
+    default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
+    default_remote_deployment_journal, default_remote_deployment_plan,
+    default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
+    default_remote_ssh_fixture_report, embedded_runtime_report, exit_on_err, export_launch_config,
+    init_env, installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
     print_help, remote_deployment_roadmap, repair_installation, run_doctor, stage_release,
     unified_update_plan, unified_update_preview, validate_env_file,
 };
@@ -17,6 +20,7 @@ fn main() {
         "help" | "--help" | "-h" => print_help(),
         "doctor" => run_doctor(),
         "installation-integrity" => println!("{}", installation_integrity_report().render()),
+        "credential-storage" => println!("{}", credential_storage_contract().render()),
         "cross-platform-audit" => println!("{}", cross_platform_audit_report().render()),
         "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
         "update-plan" => {
@@ -38,6 +42,15 @@ fn main() {
         "remote-deployment-roadmap" => println!("{}", remote_deployment_roadmap().render()),
         "remote-deployment-plan" => println!("{}", default_remote_deployment_plan().render()),
         "remote-deployment-journal" => println!("{}", default_remote_deployment_journal().render()),
+        "remote-artifacts" => exit_on_err(
+            default_remote_artifact_delivery_manifest().map(|manifest| manifest.render()),
+        ),
+        "remote-deployment-dry-run" => {
+            println!("{}", default_remote_deployment_dry_run().render())
+        }
+        "remote-host-trust" => println!("{}", default_remote_host_trust_plan().render()),
+        "remote-ssh-fixture" => println!("{}", default_remote_ssh_fixture_report().render()),
+        "remote-ssh-fixture-plan" => println!("{}", default_remote_ssh_fixture_plan().render()),
         "repair-installation" => exit_on_err(repair_installation()),
         "validate-env" => exit_on_err(validate_env_file()),
         "init-env" => {

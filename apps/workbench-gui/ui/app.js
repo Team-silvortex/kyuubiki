@@ -343,27 +343,29 @@ async function runAction(action) {
   }
 }
 
-for (const button of document.querySelectorAll("[data-action]")) {
-  button.addEventListener("click", () => runAction(button.dataset.action));
-}
+document.addEventListener("click", (event) => {
+  const button = event.target?.closest?.("[data-action]");
+  if (!button) return;
+  void runAction(button.dataset.action);
+});
 
-for (const button of document.querySelectorAll("[data-console-tab]")) {
-  button.addEventListener("click", async () => {
+document.addEventListener("click", async (event) => {
+  const button = event.target?.closest?.("[data-console-tab]");
+  if (!button) return;
     state.consoleTab = button.dataset.consoleTab;
     renderConsoleTabs();
     if (state.consoleTab === "logs") {
       await refreshLog();
     }
-  });
-}
+});
 
-for (const button of document.querySelectorAll("[data-log-service]")) {
-  button.addEventListener("click", async () => {
+document.addEventListener("click", async (event) => {
+  const button = event.target?.closest?.("[data-log-service]");
+  if (!button) return;
     state.logService = button.dataset.logService;
     renderLogServiceTabs();
     await refreshLog();
-  });
-}
+});
 
 for (const button of elements.shellTabs) {
   button.addEventListener("click", () => {
@@ -490,6 +492,9 @@ async function boot() {
   renderLogServiceTabs();
   await refreshStatus();
   window.setInterval(async () => {
+    if (document.visibilityState === "hidden") {
+      return;
+    }
     await refreshStatus();
     if (state.consoleTab === "logs") {
       await refreshLog();

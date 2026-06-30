@@ -1,0 +1,16 @@
+services:
+  ssh-fixture:
+    build:
+      context: .
+    image: kyuubiki/remote-ssh-fixture:local
+    container_name: kyuubiki-remote-ssh-fixture
+    ports:
+      - "127.0.0.1:2222:2222"
+    volumes:
+      - ./runtime/client_key.pub:/home/kyuubiki-fixture/.ssh/authorized_keys:ro
+      - ./runtime/workspace:/tmp/kyuubiki-fixture
+    healthcheck:
+      test: ["CMD", "sh", "-lc", "test -d /tmp/kyuubiki-fixture && pgrep sshd >/dev/null"]
+      interval: 5s
+      timeout: 2s
+      retries: 8

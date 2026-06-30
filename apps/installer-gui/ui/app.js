@@ -32,6 +32,11 @@ import { renderRegressionGateReport } from "./regression-gate-panel.js";
 import { mountRemotePanel } from "./remote-panel.js";
 import { mountRemoteNodePanel } from "./remote-node-panel.js";
 import { createRuntimeLogController } from "./runtime-log-panel.js";
+import {
+  bindInstallerActionHandlers,
+  bindInstallerSensitiveFields,
+  bindInstallerSidebarTabs,
+} from "./installer-event-bindings.js";
 import { runInstallerStartup } from "./installer-startup.js";
 import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js";
 import {
@@ -355,17 +360,10 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderDesktopLanguagePreference();
   });
   watchDesktopLanguagePreference({ getCurrentLanguage: () => currentLanguage, onChange: (language) => { currentLanguage = language; renderDesktopLanguagePreference(); } });
-  document.querySelectorAll(".sidebar-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".sidebar-tab").forEach((item) => item.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("panel-visible"));
-      tab.classList.add("active");
-      document.querySelector(`[data-panel="${tab.dataset.tab}"]`)?.classList.add("panel-visible");
-    });
-  });
+  bindInstallerSidebarTabs();
   ids("storage-mode").addEventListener("change", (event) => setModeCard(event.target.value));
   ui.releasePlatformSelect?.addEventListener("change", (event) => syncReleaseTarget(event.target.value));
-  sensitiveEnvFieldIds.forEach((id) => ids(id)?.addEventListener("input", () => { ids(id).dataset.configured = "false"; }));
+  bindInstallerSensitiveFields(ids, sensitiveEnvFieldIds);
 
   const actionHandlers = {
     doctor: () => runAction("doctor", refreshDoctor),
@@ -548,12 +546,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     "clear-output": () => setOutput(""),
   };
 
-  document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const handler = actionHandlers[button.dataset.action];
-      if (handler) await handler();
-    });
-  });
+  bindInstallerActionHandlers(actionHandlers);
 
   runInstallerStartup({
     invoke,

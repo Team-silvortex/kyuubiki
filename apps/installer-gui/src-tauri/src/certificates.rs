@@ -1,4 +1,7 @@
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::process::Command;
 
 use crate::certificates_openssl::{
@@ -47,6 +50,8 @@ pub fn initialize_certificate_authority() -> Result<String, String> {
         .map_err(|error| format!("failed to create {}: {error}", paths.ca_dir.display()))?;
     fs::create_dir_all(&paths.nodes_dir)
         .map_err(|error| format!("failed to create {}: {error}", paths.nodes_dir.display()))?;
+    set_private_dir_permissions(&paths.ca_dir)?;
+    set_private_dir_permissions(&paths.nodes_dir)?;
 
     if !paths.ca_key.exists() {
         run_command(
@@ -58,6 +63,7 @@ pub fn initialize_certificate_authority() -> Result<String, String> {
             "generate certificate authority key",
         )?;
     }
+    set_private_file_permissions(&paths.ca_key)?;
     if !paths.ca_cert.exists() {
         run_command(
             Command::new("openssl")
@@ -108,6 +114,7 @@ pub fn issue_node_certificate(payload: IssueNodeCertificatePayload) -> Result<St
     let node_dir = paths.nodes_dir.join(&certificate_id);
     fs::create_dir_all(&node_dir)
         .map_err(|error| format!("failed to create {}: {error}", node_dir.display()))?;
+    set_private_dir_permissions(&node_dir)?;
 
     let key_path = node_dir.join("node.key.pem");
     let csr_path = node_dir.join("node.csr.pem");
@@ -126,6 +133,7 @@ pub fn issue_node_certificate(payload: IssueNodeCertificatePayload) -> Result<St
             .arg("2048"),
         "generate node private key",
     )?;
+    set_private_file_permissions(&key_path)?;
     run_command(
         Command::new("openssl")
             .arg("req")
@@ -333,6 +341,25 @@ fn build_certificate_authority_payload() -> Result<CertificateAuthorityPayload, 
         certificates: inventory.into_iter().map(to_payload_record).collect(),
         rendered,
     })
+}
+
+fn set_private_dir_permissions(path: &Path) -> Result<(), String> {
+    set_unix_mode(path, 0o700)
+}
+
+fn set_private_file_permissions(path: &Path) -> Result<(), String> {
+    set_unix_mode(path, 0o600)
+}
+
+#[cfg(unix)]
+fn set_unix_mode(path: &Path, mode: u32) -> Result<(), String> {
+    fs::set_permissions(path, fs::Permissions::from_mode(mode))
+        .map_err(|error| format!("failed to set permissions on {}: {error}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn set_unix_mode(_path: &Path, _mode: u32) -> Result<(), String> {
+    Ok(())
 }
 
 fn to_payload_record(entry: CertificateRecord) -> CertificateRecordPayload {

@@ -210,5 +210,33 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
                 "headless_safe",
             ],
         ),
+        built_in_transform_descriptor(
+            "transform.evaluate_material_margins",
+            "multi_domain",
+            "material_margin",
+            "Evaluate material and physics safety margins from solver summaries using configured field limits.",
+            &[
+                "transform",
+                "material",
+                "failure_index",
+                "safety_factor",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
+            "transform.rank_material_candidates",
+            "multi_domain",
+            "material_candidate_rank",
+            "Rank material candidates from margin summaries and emit the best feasible design with failure reason counts.",
+            &[
+                "transform",
+                "material",
+                "ranking",
+                "candidate_selection",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
     ]
 }

@@ -5,62 +5,29 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod cli_help;
 mod component_integrity;
+mod credential_storage;
 mod cross_platform;
 mod embedded_runtime;
+mod exports;
 mod integrity;
 mod integrity_contract;
 mod integrity_versions;
 mod release;
 mod remote_deployment;
+mod remote_deployment_artifacts;
+mod remote_deployment_dry_run;
 mod remote_deployment_journal;
 mod remote_deployment_plan;
+mod remote_host_trust;
+mod remote_ssh_fixture;
 #[cfg(test)]
 mod tests;
 mod update_catalog;
 mod update_source;
 
-pub(crate) use component_integrity::parse_component_specs;
-pub use component_integrity::{
-    ComponentIntegrityIssue, ComponentIntegrityProtocolReport, ComponentIntegritySpec,
-    ComponentVisibleRule, component_integrity_protocol_report,
-};
-pub use cross_platform::{
-    CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
-};
-pub use embedded_runtime::{
-    EmbeddedRuntimeReport, build_embedded_runtime_manifest, embedded_runtime_report,
-};
-pub use integrity::{
-    InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
-    ResidueCandidate, VersionAlignmentCheck, installation_integrity_report, repair_installation,
-};
-pub(crate) use integrity_contract::{IntegrityContract, contract_path, load_integrity_contract};
-pub(crate) use release::{
-    build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
-    build_release_manifest, build_release_readme, expected_release_script_contents,
-    write_release_scripts,
-};
-pub use remote_deployment::{
-    RemoteDeploymentRoadmap, RemoteDeploymentStage, remote_deployment_roadmap,
-};
-pub use remote_deployment_journal::{
-    RemoteDeploymentJournal, RemoteDeploymentJournalRecord, default_remote_deployment_journal,
-    remote_deployment_journal_for_plan,
-};
-pub use remote_deployment_plan::{
-    RemoteDeploymentPlan, RemoteDeploymentPlanStep, default_remote_deployment_plan,
-};
-pub use update_catalog::{
-    StagedUpdateRecord, UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep,
-    UpdateArtifactRef, latest_staged_update_record, prepare_staged_update, unified_update_plan,
-    unified_update_preview,
-};
-pub use update_source::{
-    AppliedUpdateRecord, DownloadedUpdateRecord, UpdateSourceConfig, apply_downloaded_update,
-    download_update, latest_applied_update_record, latest_downloaded_update_record,
-    read_update_source_config, write_update_source_config,
-};
+pub use exports::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DoctorCheck {
@@ -142,38 +109,6 @@ pub fn run_doctor() {
     println!("{}", doctor_report().render());
 }
 
-pub fn print_help() {
-    println!(concat!(
-        "kyuubiki-installer\n\n",
-        "Commands:\n",
-        "  help             Show this help\n",
-        "  doctor           Check local prerequisites for the current platform\n",
-        "  installation-integrity  Validate install layout, versions, and residue\n",
-        "  cross-platform-audit  Validate dist/ parity across macOS, Linux, and Windows\n",
-        "  embedded-runtimes  Show installer-managed runtime payload contract\n",
-        "  update-plan      Show the unified channel-based update target\n",
-        "  update-preview   Show pre-apply checks and blockers for a channel update\n",
-        "  prepare-staged-update  Repair, stage, and record a channel update scaffold\n",
-        "  remote-deployment-roadmap  Show SSH remote deployment service maturity plan\n",
-        "  remote-deployment-plan  Preview the structured SSH deployment step contract\n",
-        "  remote-deployment-journal  Preview retry-safe journal records for the plan\n",
-        "  repair-installation     Recreate layout and clean removable residue\n",
-        "  validate-env     Validate required environment variables from .env.local\n",
-        "  init-env         Create .env.local from .env.example when missing\n",
-        "  prepare-layout   Create repo-local runtime folders\n",
-        "  export-launch    Print a cross-platform launch manifest as JSON\n",
-        "  stage-release    Create a portable release directory layout under dist/\n",
-        "  bootstrap        Run doctor + prepare-layout + init-env\n\n",
-        "Examples:\n",
-        "  cargo run -p kyuubiki-installer -- doctor\n",
-        "  cargo run -p kyuubiki-installer -- update-plan stable\n",
-        "  cargo run -p kyuubiki-installer -- update-preview stable\n",
-        "  cargo run -p kyuubiki-installer -- prepare-staged-update stable macos\n",
-        "  cargo run -p kyuubiki-installer -- stage-release\n",
-        "  cargo run -p kyuubiki-installer -- stage-release windows ./dist/windows-preview\n",
-    ));
-}
-
 pub fn init_env(force: bool) -> Result<String, String> {
     let root = workspace_root();
     let env_file = root.join(".env.local");
@@ -194,7 +129,13 @@ pub fn prepare_layout() -> Result<String, String> {
     let root = workspace_root();
     let mut prepared = Vec::new();
 
-    for relative in ["tmp/run", "tmp/data", "dist", "runtimes"] {
+    for relative in [
+        "tmp/run",
+        "tmp/data",
+        "dist",
+        "runtimes",
+        ".kyuubiki/credentials",
+    ] {
         let path = root.join(relative);
         fs::create_dir_all(&path)
             .map_err(|error| format!("failed to create {}: {error}", path.display()))?;

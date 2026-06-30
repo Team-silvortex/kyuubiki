@@ -8,6 +8,7 @@ mod magnetostatic_bridge;
 mod magnetostatic_diagnostics;
 mod operator_sdk_bridges;
 mod operator_sdk_host;
+mod operator_sdk_material_margins;
 mod operator_sdk_runtime;
 mod operator_sdk_workflow_extensions;
 mod workflow;

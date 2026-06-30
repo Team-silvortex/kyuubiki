@@ -57,6 +57,8 @@ venv/
 
 # Runtime state
 tmp/
+.kyuubiki/credentials/
+config/installer-certificates.json
 *.log
 *.pid
 
@@ -65,3 +67,6 @@ uploads/
 storage/
 artifacts/
 checkpoints/
+
+# Integration fixture runtime state
+tests/integration/remote-ssh-fixture/runtime/

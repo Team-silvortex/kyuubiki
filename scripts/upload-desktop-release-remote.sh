@@ -11,7 +11,7 @@ RSYNC_BIN="${KYUUBIKI_RELEASE_REMOTE_RSYNC_BIN:-rsync}"
 PLATFORM="${1:-$(uname -s | awk '{ if ($0 == "Darwin") print "macos"; else if ($0 == "Linux") print "linux"; else print "windows"; }')}"
 PURGE_LOCAL="${PURGE_LOCAL:-0}"
 VERSION="${KYUUBIKI_RELEASE_VERSION:-$(node -e 'const fs=require("fs"); const data=JSON.parse(fs.readFileSync("deploy/update-channels.json","utf8")); process.stdout.write(String(data.shipping_version || "").trim());')}"
-SSH_OPTS_STRING="${KYUUBIKI_RELEASE_REMOTE_SSH_OPTS:--o StrictHostKeyChecking=accept-new}"
+SSH_OPTS_STRING="${KYUUBIKI_RELEASE_REMOTE_SSH_OPTS:--o StrictHostKeyChecking=yes}"
 read -r -a SSH_OPTS <<<"$SSH_OPTS_STRING"
 
 usage() {
@@ -29,7 +29,7 @@ Environment:
                                  Optional password for sshpass-backed upload
   KYUUBIKI_RELEASE_VERSION       Override version folder. Default: deploy/update-channels.json shipping_version
   KYUUBIKI_RELEASE_REMOTE_SSH_OPTS
-                                 Extra SSH options. Default: -o StrictHostKeyChecking=accept-new
+                                 Extra SSH options. Default: -o StrictHostKeyChecking=yes
   PURGE_LOCAL                    Set to 1 to delete uploaded local bundle/dist outputs after success
 
 Examples:

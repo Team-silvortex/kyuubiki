@@ -89,7 +89,7 @@ pub fn remote_deployment_roadmap() -> RemoteDeploymentRoadmap {
             stage(
                 "artifact-delivery",
                 "Installer-managed artifact delivery",
-                "planned",
+                "started",
                 &[
                     "remote host pulls staged packages from the deploy/update source",
                     "checksums and component integrity contracts are verified before start",
@@ -97,11 +97,21 @@ pub fn remote_deployment_roadmap() -> RemoteDeploymentRoadmap {
                 ],
             ),
             stage(
+                "dry-run-preflight",
+                "Read-only dry-run and preflight report",
+                "started",
+                &[
+                    "plan, journal, artifacts, and integrity blockers are summarized together",
+                    "dry-run output stays read-only and never opens SSH sessions",
+                    "GUI can reuse the same readiness report before enabling execution",
+                ],
+            ),
+            stage(
                 "host-trust",
                 "Host trust and credential hardening",
-                "planned",
+                "started",
                 &[
-                    "known-host policy moves beyond accept-new for non-dev deployments",
+                    "known-host policy exposes the dev accept-new path and managed pinned-host path",
                     "certificate and node identity binding are required for managed agents",
                     "remote deployment never stores SSH passwords in project files",
                 ],
@@ -109,7 +119,7 @@ pub fn remote_deployment_roadmap() -> RemoteDeploymentRoadmap {
             stage(
                 "integration-tests",
                 "Physical and containerized remote deployment test matrix",
-                "planned",
+                "started",
                 &[
                     "containerized SSH fixture validates command construction and journals",
                     "physical lab host validates bootstrap and agent lifecycle",

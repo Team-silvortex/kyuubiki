@@ -1,3 +1,5 @@
+import { countHubUiPerf } from "./hub-ui-performance.js";
+
 export function bindHubAppEvents({
   answerWithLocalGuide,
   applyDesktopState,
@@ -53,6 +55,43 @@ export function bindHubAppEvents({
   toggleHubDensityPanel,
   updateAssistantEndpointPolicy,
 }) {
+  const scheduleFrame = (callback) => {
+    let frame = 0;
+    return () => {
+      if (frame) {
+        return;
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        callback();
+        countHubUiPerf("assistant-context-renders");
+      });
+    };
+  };
+  const scheduleAssistantContextRender = scheduleFrame(() => {
+    renderAssistantContext();
+    renderHubAssistantLocalCards();
+  });
+  const scheduleCapturedClickMessage = (() => {
+    let frame = 0;
+    let nextMessage = null;
+    return (message, token) => {
+      nextMessage = [message, token];
+      if (frame) {
+        return;
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const [queuedMessage, queuedToken] = nextMessage || [];
+        nextMessage = null;
+        if (queuedMessage) {
+          setEventMessage?.(queuedMessage, queuedToken);
+          countHubUiPerf("coalesced-click-messages");
+        }
+      });
+    };
+  })();
+
   document.addEventListener(
     "click",
     (event) => {
@@ -66,7 +105,7 @@ export function bindHubAppEvents({
         target.getAttribute?.("aria-label") ||
         target.textContent?.trim()?.slice(0, 48) ||
         target.tagName;
-      setEventMessage?.(`captured click: ${label}`, `target:${target.tagName?.toLowerCase?.() || "unknown"}`);
+      scheduleCapturedClickMessage(`captured click: ${label}`, `target:${target.tagName?.toLowerCase?.() || "unknown"}`);
     },
     true,
   );
@@ -219,16 +258,13 @@ export function bindHubAppEvents({
     syncObserveRuntimeLogPolling();
   });
   elements.projectBundlePath?.addEventListener("input", () => {
-    renderAssistantContext();
-    renderHubAssistantLocalCards();
+    scheduleAssistantContextRender();
   });
   elements.projectBundleComparePath?.addEventListener("input", () => {
-    renderAssistantContext();
-    renderHubAssistantLocalCards();
+    scheduleAssistantContextRender();
   });
   elements.projectBundleOutPath?.addEventListener("input", () => {
-    renderAssistantContext();
-    renderHubAssistantLocalCards();
+    scheduleAssistantContextRender();
   });
   
   elements.assistantRequestPlan?.addEventListener("click", async () => {

@@ -29,6 +29,8 @@
           <li>Accuracy baselines and expansion plans are explicit.</li>
           <li>Security and destructive actions stay visible and auditable.</li>
           <li>Installation and update behavior are configuration-visible and residue-conscious.</li>
+          <li>Credentials live in Kyuubiki-owned sandbox roots, not hidden system-global folders or ordinary project config.</li>
+          <li>Mobile credential access is handle-based through native secure storage; WebView code must not receive raw private keys or long-lived token bytes.</li>
           <li>Component integrity is a protocol: new components must declare ownership, required paths, protected paths, cleanup scope, and visible rules.</li>
         </ul>
       </section>

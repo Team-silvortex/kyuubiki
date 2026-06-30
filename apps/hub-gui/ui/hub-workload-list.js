@@ -1,3 +1,4 @@
+import { countHubUiPerf, markHubUiPerf, measureHubUiPerf } from "./hub-ui-performance.js";
 export function renderWorkloadFilters(params) {
     const { elements, state } = params;
     elements.workloadFilterButtons.forEach((button) => {
@@ -74,11 +75,12 @@ function appendHighlightedText(parent, tagName, text, tokens, className = "") {
     return element;
 }
 export function renderHubWorkloadLibraryList(params) {
-    const { elements, entries, state, renderWorkloadFilters, renderEmptyHistoryState, emptyMessage, filterEmptyMessage, matchesWorkloadFilter, matchesWorkloadSearchQuery, workloadSourceBadge, formatProjectActionTime, appendTextElement, workloadDomainLabel, workloadFamilyLabel, workloadProvenanceLabel, setWorkloadLibraryOutput, hubMessage, restoredWorkloadContextMessage, loadedWorkloadContextMessage, removedWorkloadMessage, renderAssistantContext, renderHubAssistantLocalCards, openWorkloadInWorkbench, formatHubOperatorError, runAction, downloadRemoteWorkloadBundle, attachCurrentBundleToWorkload, loadHubWorkloadLibrary, saveHubWorkloadLibrary, workloadIdentity, projectBundlePath, workloadCatalogUrl, hubCopy, hubI18nEn, currentSearchQuery, } = params;
+    const { elements, entries, state, renderWorkloadFilters, renderEmptyHistoryState, emptyMessage, filterEmptyMessage, matchesWorkloadFilter, matchesWorkloadSearchQuery, workloadSourceBadge, formatProjectActionTime, appendTextElement, workloadDomainLabel, workloadFamilyLabel, workloadProvenanceLabel, setWorkloadLibraryOutput, hubMessage, restoredWorkloadContextMessage, loadedWorkloadContextMessage, removedWorkloadMessage, renderAssistantContext, renderHubAssistantLocalCards, openWorkloadInWorkbench, formatHubOperatorError, runAction, downloadRemoteWorkloadBundle, attachCurrentBundleToWorkload, loadHubWorkloadLibrary, saveHubWorkloadLibrary, workloadIdentity, projectBundlePath, workloadCatalogUrl, hubCopy, hubI18nEn, currentSearchQuery, visibleLimit = 24, } = params;
     const workloadLibraryList = elements.workloadLibraryList;
     if (!workloadLibraryList) {
         return;
     }
+    markHubUiPerf("workload-library-render-start");
     renderWorkloadFilters({ elements, state });
     workloadLibraryList.innerHTML = "";
     if (!entries.length) {
@@ -91,7 +93,9 @@ export function renderHubWorkloadLibraryList(params) {
         return;
     }
     const tokens = searchTokens(currentSearchQuery);
-    filteredEntries.forEach((entry) => {
+    const visibleEntries = filteredEntries.slice(0, visibleLimit);
+    const fragment = document.createDocumentFragment();
+    visibleEntries.forEach((entry) => {
         const shell = document.createElement("div");
         shell.className = "hub-history-item";
         const summary = document.createElement("button");
@@ -228,6 +232,16 @@ export function renderHubWorkloadLibraryList(params) {
         });
         controls.append(useButton, workbenchButton, inspectButton, validateButton, downloadButton, attachButton, removeButton);
         shell.append(summary, controls);
-        workloadLibraryList.appendChild(shell);
+        fragment.appendChild(shell);
     });
+    if (filteredEntries.length > visibleEntries.length) {
+        countHubUiPerf("workload-library-overflow-renders");
+        countHubUiPerf("workload-library-hidden-items", filteredEntries.length - visibleEntries.length);
+        const overflow = document.createElement("div");
+        overflow.className = "desktop-shell-note";
+        overflow.textContent = `Showing ${visibleEntries.length} of ${filteredEntries.length} matching workloads. Narrow the search to reveal more.`;
+        fragment.appendChild(overflow);
+    }
+    workloadLibraryList.appendChild(fragment);
+    measureHubUiPerf("workload-library-render", "workload-library-render-start");
 }

@@ -19,6 +19,7 @@ A mobile GUI may:
 - submit jobs to a remote runtime
 - observe agents, mesh state, logs, progress, and results through public APIs
 - export or share client-side reports when the platform allows it
+- request credential operations through native secure-storage handles
 
 ## Forbidden mobile role
 
@@ -29,6 +30,7 @@ A mobile GUI must not:
 - host a Rust agent
 - assume `localhost` is the execution backend
 - write hidden runtime state outside visible app storage
+- expose raw private keys, SSH keys, or long-lived tokens to the WebView layer
 - bypass backend contracts by importing runtime internals
 
 ## Architectural consequence
@@ -39,6 +41,12 @@ hosts, but the capabilities are different:
 - desktop WebView can manage local workstation runtimes through Installer
 - browser can control same-origin or configured remote backends
 - mobile WebView can only control remote backends
+
+Credential storage follows the same split. Desktop shells may use the
+Kyuubiki-owned `.kyuubiki/credentials` sandbox, but mobile shells should bind
+credentials through platform secure storage and pass only opaque handles,
+fingerprints, and configured/not-configured state into the WebView. The
+frontend should never assume that a mobile credential is a readable file path.
 
 This is why GUI and runtime must stay decoupled. Mobile support is only viable
 if Workbench is a stable client of backend contracts rather than a wrapper around

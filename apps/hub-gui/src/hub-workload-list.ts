@@ -1,5 +1,6 @@
 import type { HubWorkloadEntry } from "./hub-workload-library.js";
 import type { HubI18nCopy } from "./hub-i18n-types.js";
+import { countHubUiPerf, markHubUiPerf, measureHubUiPerf } from "./hub-ui-performance.js";
 
 type WorkloadListElements = {
   workloadLibraryList?: HTMLElement | null;
@@ -55,6 +56,7 @@ type RenderHubWorkloadLibraryListParams = {
   hubCopy: () => HubI18nCopy;
   hubI18nEn: HubI18nCopy;
   currentSearchQuery: string;
+  visibleLimit?: number;
 };
 
 export function renderWorkloadFilters(params: RenderWorkloadFiltersParams): void {
@@ -183,6 +185,7 @@ export function renderHubWorkloadLibraryList(params: RenderHubWorkloadLibraryLis
     hubCopy,
     hubI18nEn,
     currentSearchQuery,
+    visibleLimit = 24,
   } = params;
 
   const workloadLibraryList = elements.workloadLibraryList;
@@ -190,6 +193,7 @@ export function renderHubWorkloadLibraryList(params: RenderHubWorkloadLibraryLis
     return;
   }
 
+  markHubUiPerf("workload-library-render-start");
   renderWorkloadFilters({ elements, state });
   workloadLibraryList.innerHTML = "";
   if (!entries.length) {
@@ -204,8 +208,10 @@ export function renderHubWorkloadLibraryList(params: RenderHubWorkloadLibraryLis
   }
 
   const tokens = searchTokens(currentSearchQuery);
+  const visibleEntries = filteredEntries.slice(0, visibleLimit);
+  const fragment = document.createDocumentFragment();
 
-  filteredEntries.forEach((entry) => {
+  visibleEntries.forEach((entry) => {
     const shell = document.createElement("div");
     shell.className = "hub-history-item";
 
@@ -352,6 +358,18 @@ export function renderHubWorkloadLibraryList(params: RenderHubWorkloadLibraryLis
 
     controls.append(useButton, workbenchButton, inspectButton, validateButton, downloadButton, attachButton, removeButton);
     shell.append(summary, controls);
-    workloadLibraryList.appendChild(shell);
+    fragment.appendChild(shell);
   });
+
+  if (filteredEntries.length > visibleEntries.length) {
+    countHubUiPerf("workload-library-overflow-renders");
+    countHubUiPerf("workload-library-hidden-items", filteredEntries.length - visibleEntries.length);
+    const overflow = document.createElement("div");
+    overflow.className = "desktop-shell-note";
+    overflow.textContent = `Showing ${visibleEntries.length} of ${filteredEntries.length} matching workloads. Narrow the search to reveal more.`;
+    fragment.appendChild(overflow);
+  }
+
+  workloadLibraryList.appendChild(fragment);
+  measureHubUiPerf("workload-library-render", "workload-library-render-start");
 }

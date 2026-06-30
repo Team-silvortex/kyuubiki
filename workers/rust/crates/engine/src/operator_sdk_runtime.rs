@@ -1,5 +1,6 @@
 use crate::catalog::describe_built_in_operator;
 use crate::operator_sdk_bridges::register_bridge_transform_operators;
+use crate::operator_sdk_material_margins::register_material_margin_operator;
 use crate::operator_sdk_workflow_extensions::{
     register_workflow_export_extensions, register_workflow_extract_extensions,
     register_workflow_transform_extensions,
@@ -516,6 +517,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("transform.score_parameter_sweep"),
                 })
                 .expect("transform.score_parameter_sweep should register");
+            register_material_margin_operator(&mut registry, descriptor);
             register_workflow_transform_extensions(&mut registry);
         }
     }

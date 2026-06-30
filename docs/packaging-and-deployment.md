@@ -165,7 +165,7 @@ Environment overrides:
 
 - `KYUUBIKI_RELEASE_REMOTE_HOST`
   SSH host or alias for the download server. A typical example is
-  `kyuubiki-dev@192.168.1.12`.
+  `release-user@download-host.example`.
 - `KYUUBIKI_RELEASE_REMOTE_DIR`
   Remote root path that will receive `releases/<version>/...`.
 - `KYUUBIKI_RELEASE_REMOTE_PASSWORD`
@@ -175,7 +175,8 @@ Environment overrides:
   Override the version folder. By default the script uses
   `deploy/update-channels.json` `shipping_version`.
 - `KYUUBIKI_RELEASE_REMOTE_SSH_OPTS`
-  Optional SSH flags. Defaults to `-o StrictHostKeyChecking=accept-new`.
+  Optional SSH flags. Defaults to `-o StrictHostKeyChecking=yes`. Use an
+  explicit temporary override only for disposable bootstrap hosts.
 - `PURGE_LOCAL=1`
   Removes uploaded local `dist/<platform>` trees and Tauri `target/release/bundle`
   directories for the selected platform after a successful upload.

@@ -7,6 +7,51 @@ machine or small trusted LAN, enable the guardrails below.
 Security-sensitive paths are explicitly marked later in this document under
 `Security-Sensitive Modules`.
 
+## Credential storage stance
+
+Kyuubiki should treat credentials as product-owned sandbox state, not as
+ordinary project files and not as implicit system-global state.
+
+The current contract is visible through:
+
+```bash
+cargo run -p kyuubiki-installer -- credential-storage
+```
+
+Default mutable credential material belongs under:
+
+- `.kyuubiki/credentials/installer/certificates`
+- `.kyuubiki/credentials/installer/remote-trust`
+- ignored integration fixture runtime paths for local throwaway keys only
+
+Platform credential backends are intentionally different:
+
+- desktop shells use Kyuubiki-owned sandbox files under `.kyuubiki/credentials`
+- browser shells use in-memory or remote-session state and must not persist
+  private keys locally
+- mobile WebView shells use platform secure storage through the native shell,
+  and the frontend receives opaque credential handles plus configured state
+  instead of raw secret bytes
+
+Denied or discouraged roots include:
+
+- `~/.ssh`
+- system configuration directories such as `/etc` or `/usr/local/etc`
+- generic app-support folders when they hide behavior from Kyuubiki integrity
+  checks
+- old project configuration paths such as `config/certificates`
+
+The design goal is sandboxed ownership: Kyuubiki may reference OS services in
+future, but the product contract must still describe where credentials live,
+which component owns them, whether they are mutable, and how they are excluded
+from git and ordinary project export.
+
+For mobile systems, the sandbox contract is not a filesystem path promise. It
+is a capability promise: iOS and Android shells may bind to Keychain,
+Secure Enclave, or Keystore-style services, but Workbench and Hub should only
+see a stable credential handle, fingerprint metadata, and configured/not
+configured state.
+
 ## Current security model
 
 ### Control plane
@@ -153,6 +198,14 @@ The desktop installer follows the same direction for deployment secrets:
   fields
 - saving the env keeps the existing secret when the operator leaves a sensitive
   input blank intentionally
+- certificate private keys default to the Kyuubiki credential sandbox instead
+  of `config/` or system-global SSH folders
+- certificate storage roots outside `.kyuubiki/credentials` are rejected by the
+  installer policy validator
+- certificate inventory now defaults to
+  `.kyuubiki/credentials/installer/certificates/inventory.json`; the legacy
+  `config/installer-certificates.json` path is ignored by git and read only as
+  a compatibility fallback
 
 Assistant-planned actions and WASM Python scripted actions now share the same
 high-risk confirmation gate inside the workbench action executor. Destructive

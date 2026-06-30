@@ -3,10 +3,13 @@ use std::path::Path;
 
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
-    cross_platform_audit_report, default_remote_deployment_journal, default_remote_deployment_plan,
-    embedded_runtime_report, expected_release_script_contents, installation_integrity_report,
-    parse_agent_endpoints, parse_agent_manifest, parse_platform, remote_deployment_roadmap,
-    unified_update_plan, unified_update_preview, workspace_root,
+    credential_storage_contract, cross_platform_audit_report,
+    default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
+    default_remote_deployment_journal, default_remote_deployment_plan,
+    default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
+    default_remote_ssh_fixture_report, embedded_runtime_report, expected_release_script_contents,
+    installation_integrity_report, parse_agent_endpoints, parse_agent_manifest, parse_platform,
+    remote_deployment_roadmap, unified_update_plan, unified_update_preview, workspace_root,
 };
 
 #[test]
@@ -28,6 +31,25 @@ fn release_manifest_contains_expected_schema() {
     assert!(manifest.contains("\"platform\": \"macos\""));
     assert!(manifest.contains("\"release_dir\": \".\""));
     assert!(manifest.contains("\"workspace\": \"../..\""));
+}
+
+#[test]
+fn credential_storage_contract_keeps_credentials_in_kyuubiki_sandbox() {
+    let contract = credential_storage_contract();
+    assert_eq!(contract.schema_version, "kyuubiki.credential-storage/v1");
+    assert!(contract.sandbox_root.contains(".kyuubiki"));
+    assert!(contract.sandbox_root.contains("credentials"));
+    assert!(contract.platform_backends.iter().any(|backend| {
+        backend.platform == "mobile-webview" && backend.backend == "platform-secure-store-handle"
+    }));
+    assert!(
+        contract
+            .classes
+            .iter()
+            .any(|rule| rule.class_id == "installer-ca" && rule.storage_path.contains(".kyuubiki"))
+    );
+    assert!(contract.denied_roots.iter().any(|root| root == "~/.ssh"));
+    assert!(contract.render().contains("opaque credential handles"));
 }
 
 #[test]
@@ -208,6 +230,24 @@ fn remote_deployment_roadmap_marks_ssh_wrapper_as_pilot() {
             .iter()
             .any(|stage| stage.id == "remote-journal" && stage.status == "started")
     );
+    assert!(
+        roadmap
+            .stages
+            .iter()
+            .any(|stage| stage.id == "artifact-delivery" && stage.status == "started")
+    );
+    assert!(
+        roadmap
+            .stages
+            .iter()
+            .any(|stage| stage.id == "dry-run-preflight" && stage.status == "started")
+    );
+    assert!(
+        roadmap
+            .stages
+            .iter()
+            .any(|stage| stage.id == "integration-tests" && stage.status == "started")
+    );
     assert!(roadmap.render().contains("Policy-bounded SSH transport"));
 }
 
@@ -251,4 +291,119 @@ fn remote_deployment_journal_matches_plan_steps() {
             .render()
             .contains("remote deployment journal preview")
     );
+}
+
+#[test]
+fn remote_artifact_delivery_manifest_uses_remote_pull_contract() {
+    let manifest = default_remote_artifact_delivery_manifest()
+        .expect("default update catalog should declare current-platform artifacts");
+    assert_eq!(
+        manifest.schema_version,
+        "kyuubiki.remote-artifact-delivery/v1"
+    );
+    assert_eq!(manifest.delivery_mode, "remote-pull-from-installer-source");
+    assert!(!manifest.artifacts.is_empty());
+    assert!(manifest.artifacts.iter().all(|artifact| {
+        artifact.remote_path.starts_with(".kyuubiki/artifacts/")
+            && artifact.verify_policy == "checksum-and-component-integrity-before-start"
+    }));
+    assert!(
+        manifest
+            .render()
+            .contains("remote artifact delivery preview")
+    );
+}
+
+#[test]
+fn remote_deployment_dry_run_summarizes_readiness_without_ssh() {
+    let report = default_remote_deployment_dry_run();
+    assert_eq!(
+        report.schema_version,
+        "kyuubiki.remote-deployment-dry-run/v1"
+    );
+    assert_eq!(report.plan.steps.len(), report.journal.records.len());
+    assert!(matches!(
+        report.status.as_str(),
+        "ready_for_preflight" | "blocked"
+    ));
+    assert!(
+        report
+            .render()
+            .contains("does not open SSH sessions or mutate hosts")
+    );
+    assert!(!report.next_actions.is_empty());
+}
+
+#[test]
+fn remote_ssh_fixture_keeps_command_shape_local_and_secret_free() {
+    let report = default_remote_ssh_fixture_report();
+    assert_eq!(report.schema_version, "kyuubiki.remote-ssh-fixture/v1");
+    assert_eq!(report.fixture_target, "kyuubiki-fixture@fixture.local");
+    assert!(
+        report
+            .commands
+            .iter()
+            .any(|command| command.program == "ssh")
+    );
+    assert!(
+        report
+            .commands
+            .iter()
+            .any(|command| command.program == "scp")
+    );
+    assert!(report.checks.iter().all(|check| check.ok));
+    assert!(report.render().contains("does not open network sockets"));
+}
+
+#[test]
+fn remote_host_trust_plan_separates_dev_accept_new_from_pinned_managed_mode() {
+    let plan = default_remote_host_trust_plan();
+    assert_eq!(plan.schema_version, "kyuubiki.remote-host-trust/v1");
+    assert_eq!(plan.current_mode, "dev-accept-new");
+    assert_eq!(plan.target_mode, "pinned-known-host");
+    assert!(plan.options.iter().any(|option| {
+        option.phase == "dev"
+            && option.key == "StrictHostKeyChecking"
+            && option.value == "accept-new"
+    }));
+    assert!(plan.options.iter().any(|option| {
+        option.phase == "managed" && option.key == "StrictHostKeyChecking" && option.value == "yes"
+    }));
+    assert!(plan.render().contains("does not write known_hosts files"));
+}
+
+#[test]
+fn remote_deployment_roadmap_marks_host_trust_as_started() {
+    let roadmap = remote_deployment_roadmap();
+    let host_trust = roadmap
+        .stages
+        .iter()
+        .find(|stage| stage.id == "host-trust")
+        .expect("host trust stage should exist");
+    assert_eq!(host_trust.status, "started");
+    assert!(
+        host_trust
+            .exit_criteria
+            .iter()
+            .any(|criterion| criterion.contains("managed pinned-host path"))
+    );
+}
+
+#[test]
+fn remote_ssh_fixture_plan_points_to_ignored_runtime_state() {
+    let plan = default_remote_ssh_fixture_plan();
+    assert_eq!(plan.schema_version, "kyuubiki.remote-ssh-fixture-plan/v1");
+    assert_eq!(plan.bind_address, "127.0.0.1:2222");
+    assert!(plan.manual_only);
+    assert!(
+        plan.compose_file
+            .ends_with("remote-ssh-fixture/compose.yaml")
+    );
+    assert_eq!(plan.run_script, "scripts/run-remote-ssh-fixture.sh");
+    assert!(
+        plan.ignored_runtime_paths
+            .iter()
+            .all(|path| path.contains("remote-ssh-fixture/runtime"))
+    );
+    assert!(plan.render().contains("does not start containers"));
 }

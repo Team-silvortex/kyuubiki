@@ -50,7 +50,7 @@ export function mountRemotePanel() {
         </p>
       </div>
       <div class="field-grid">
-        <label class="field field-span-2"><span>Storage root</span><input id="certificate-policy-storage-root" type="text" placeholder="/abs/path/to/config/certificates" /></label>
+        <label class="field field-span-2"><span>Storage root</span><input id="certificate-policy-storage-root" type="text" placeholder="/abs/path/to/.kyuubiki/credentials/installer/certificates" /></label>
         <label class="field"><span>Root common name</span><input id="certificate-policy-root-common-name" type="text" placeholder="kyuubiki-local-ca" /></label>
         <label class="field"><span>Default validity days</span><input id="certificate-policy-default-validity-days" type="number" min="1" max="3650" placeholder="365" /></label>
         <label class="field"><span>Require for orchestrated</span><select id="certificate-policy-require-orchestrated"><option value="false">Disabled</option><option value="true">Enabled</option></select></label>
@@ -64,7 +64,7 @@ export function mountRemotePanel() {
         <label class="field field-span-2"><span>CA certificate path</span><code id="certificate-ca-cert-path"></code></label>
         <label class="field field-span-2"><span>CA private key path</span><code id="certificate-ca-key-path"></code></label>
         <label class="field field-span-2"><span>Policy config path</span><code id="certificate-policy-config-path">config/installer-certificate-policy.json</code></label>
-        <label class="field field-span-2"><span>Inventory path</span><code id="certificate-policy-inventory-path">config/installer-certificates.json</code></label>
+        <label class="field field-span-2"><span>Inventory path</span><code id="certificate-policy-inventory-path">.kyuubiki/credentials/installer/certificates/inventory.json</code></label>
       </div>
       <div class="action-row">
         <button data-action="refresh-certificate-policy">Refresh PKI</button>
