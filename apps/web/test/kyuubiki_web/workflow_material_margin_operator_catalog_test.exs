@@ -26,6 +26,26 @@ defmodule KyuubikiWeb.WorkflowMaterialMarginOperatorCatalogTest do
     assert "candidate_selection" in operator["capability_tags"]
   end
 
+  test "catalog exposes material fatigue life transform" do
+    assert {:ok, %{"operator" => operator}} =
+             WorkflowOperatorCatalog.fetch("transform.estimate_material_fatigue_life")
+
+    assert operator["kind"] == "transform"
+    assert operator["family"] == "material_fatigue_life"
+    assert "fatigue" in operator["capability_tags"]
+    assert "life_estimation" in operator["capability_tags"]
+  end
+
+  test "catalog exposes material thermal shock transform" do
+    assert {:ok, %{"operator" => operator}} =
+             WorkflowOperatorCatalog.fetch("transform.evaluate_material_thermal_shock")
+
+    assert operator["kind"] == "transform"
+    assert operator["family"] == "material_thermal_shock"
+    assert "thermal_shock" in operator["capability_tags"]
+    assert "fracture_risk" in operator["capability_tags"]
+  end
+
   test "catalog exposes material candidate scoring transform" do
     assert {:ok, %{"operator" => operator}} =
              WorkflowOperatorCatalog.fetch("transform.score_material_candidates")

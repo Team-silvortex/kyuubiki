@@ -4,8 +4,19 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialCatalogTest do
   alias KyuubikiWeb.WorkflowTemplateCatalog
 
   @material_workflows %{
+    "workflow.material-card-preflight-json" => "transform.validate_material_card",
+    "workflow.material-card-batch-preflight-json" => "transform.validate_material_card_batch",
+    "workflow.material-card-screening-score-json" =>
+      "transform.build_material_card_candidate_summaries",
+    "workflow.material-card-screening-experiment-plan-json" =>
+      "transform.plan_material_experiments",
+    "workflow.material-card-next-round-request-json" =>
+      "transform.prepare_material_next_round_request",
+    "workflow.material-card-exploration-snapshot-json" =>
+      "transform.build_material_exploration_snapshot",
     "workflow.material-margin-summary-json" => "transform.evaluate_material_margins",
     "workflow.material-candidate-ranking-json" => "transform.rank_material_candidates",
+    "workflow.material-fatigue-life-json" => "transform.estimate_material_fatigue_life",
     "workflow.material-candidate-score-json" => "transform.score_material_candidates",
     "workflow.material-experiment-plan-json" => "transform.plan_material_experiments",
     "workflow.material-experiment-result-analysis-json" =>

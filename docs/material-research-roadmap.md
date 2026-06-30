@@ -246,3 +246,11 @@ The next practical sequence should be:
 
 This keeps progress close to a real end-to-end material workflow instead of
 spreading effort across too many speculative solver families at once.
+
+Current implementation note:
+
+- `schemas/material-card.schema.json` now defines the first versioned
+  material-card contract.
+- `transform.validate_material_card` now provides workflow-level preflight for
+  material-card provenance, unit expectations, confidence, parameter presence,
+  temperature scope, and reliability-envelope output.

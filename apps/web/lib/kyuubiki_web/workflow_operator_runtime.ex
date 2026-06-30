@@ -162,6 +162,24 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.rank_material_candidates" when is_map(config) ->
         WorkflowMaterialRuntime.rank_material_candidates(payload, config)
 
+      "transform.validate_material_card" when is_map(config) ->
+        WorkflowMaterialRuntime.validate_material_card(payload, config)
+
+      "transform.validate_material_card_batch" when is_map(config) ->
+        WorkflowMaterialRuntime.validate_material_card_batch(payload, config)
+
+      "transform.build_material_card_candidate_summaries" when is_map(config) ->
+        WorkflowMaterialRuntime.build_material_card_candidate_summaries(payload, config)
+
+      "transform.explain_material_card_screening" when is_map(config) ->
+        WorkflowMaterialRuntime.explain_material_card_screening(payload, config)
+
+      "transform.estimate_material_fatigue_life" when is_map(config) ->
+        WorkflowMaterialRuntime.estimate_material_fatigue_life(payload, config)
+
+      "transform.evaluate_material_thermal_shock" when is_map(config) ->
+        WorkflowMaterialRuntime.evaluate_material_thermal_shock(payload, config)
+
       "transform.score_material_candidates" when is_map(config) ->
         WorkflowMaterialRuntime.score_material_candidates(payload, config)
 

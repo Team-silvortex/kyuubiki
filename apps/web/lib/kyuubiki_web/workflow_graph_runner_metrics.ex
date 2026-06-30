@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
   @moduledoc false
 
+  alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.WorkflowCatalogSupport
 
   def finalize_result(state, graph, artifact_lineage) do
@@ -42,23 +43,25 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         incoming_artifact_keys,
         artifact_key
       ) do
-    run = %{
-      "node_id" => node_id,
-      "kind" => Map.get(node, "kind"),
-      "operator_id" => Map.get(node, "operator_id"),
-      "status" => "completed",
-      "consumed_artifacts" =>
-        consumed_artifacts_for_run(
-          node,
-          incoming,
-          state.artifacts,
-          accepts_partial_inputs?,
-          consumed_artifacts_for_node,
-          incoming_artifact_keys
-        ),
-      "produced_artifacts" => produced_artifacts_for_run(node, incoming, artifact_key),
-      "duration_ms" => duration_ms
-    }
+    run =
+      %{
+        "node_id" => node_id,
+        "kind" => Map.get(node, "kind"),
+        "operator_id" => Map.get(node, "operator_id"),
+        "status" => "completed",
+        "consumed_artifacts" =>
+          consumed_artifacts_for_run(
+            node,
+            incoming,
+            state.artifacts,
+            accepts_partial_inputs?,
+            consumed_artifacts_for_node,
+            incoming_artifact_keys
+          ),
+        "produced_artifacts" => produced_artifacts_for_run(node, incoming, artifact_key),
+        "duration_ms" => duration_ms
+      }
+      |> maybe_put_task_ir_ref(node, state.artifacts, incoming, consumed_artifacts_for_node)
 
     %{
       state
@@ -69,15 +72,17 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
   end
 
   def mark_skipped(state, node_id, node, incoming, incoming_artifact_keys) do
-    run = %{
-      "node_id" => node_id,
-      "kind" => Map.get(node, "kind"),
-      "operator_id" => Map.get(node, "operator_id"),
-      "status" => "skipped",
-      "consumed_artifacts" => incoming_artifact_keys.(incoming, state.artifacts),
-      "produced_artifacts" => [],
-      "duration_ms" => 0.0
-    }
+    run =
+      %{
+        "node_id" => node_id,
+        "kind" => Map.get(node, "kind"),
+        "operator_id" => Map.get(node, "operator_id"),
+        "status" => "skipped",
+        "consumed_artifacts" => incoming_artifact_keys.(incoming, state.artifacts),
+        "produced_artifacts" => [],
+        "duration_ms" => 0.0
+      }
+      |> maybe_put_task_ir_ref(node, state.artifacts, incoming, incoming_artifact_keys)
 
     %{
       state
@@ -113,6 +118,61 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     |> Map.get("outputs", [])
     |> Enum.map(&artifact_key.(node_id, Map.get(&1, "id")))
     |> Enum.sort()
+  end
+
+  defp maybe_put_task_ir_ref(
+         run,
+         %{"operator_id" => operator_id} = node,
+         artifacts,
+         incoming,
+         resolver
+       )
+       when is_binary(operator_id) do
+    with {:ok, payload} <- representative_payload(node, artifacts, incoming, resolver),
+         {:ok, task_ir} <- OperatorTaskIR.from_node(node, payload) do
+      Map.put(run, "task_ir_ref", task_ir_ref(task_ir))
+    else
+      _ -> run
+    end
+  end
+
+  defp maybe_put_task_ir_ref(run, _node, _artifacts, _incoming, _resolver), do: run
+
+  defp representative_payload(node, artifacts, incoming, resolver) do
+    consumed =
+      resolved_consumed_artifacts(node, artifacts, incoming, resolver)
+      |> Enum.filter(&Map.has_key?(artifacts, &1))
+
+    case consumed do
+      [single] ->
+        {:ok, Map.fetch!(artifacts, single)}
+
+      [_first | _rest] ->
+        {:ok, Map.new(consumed, &{&1, Map.fetch!(artifacts, &1)})}
+
+      [] ->
+        {:ok, %{}}
+    end
+  end
+
+  defp resolved_consumed_artifacts(node, artifacts, incoming, resolver)
+       when is_function(resolver, 3),
+       do: resolver.(node, incoming, artifacts)
+
+  defp resolved_consumed_artifacts(_node, artifacts, incoming, resolver)
+       when is_function(resolver, 2),
+       do: resolver.(incoming, artifacts)
+
+  defp task_ir_ref(task_ir) do
+    %{
+      "schema_version" => Map.get(task_ir, "schema_version"),
+      "task_id" => Map.get(task_ir, "task_id"),
+      "agent_rpc_method" => OperatorTaskIR.agent_rpc_method(),
+      "operator_id" => get_in(task_ir, ["operator", "id"]),
+      "operator_kind" => get_in(task_ir, ["operator", "kind"]),
+      "descriptor_digest" => get_in(task_ir, ["integrity", "descriptor_digest"]),
+      "required_capabilities" => get_in(task_ir, ["runtime_hints", "required_capabilities"]) || []
+    }
   end
 
   defp elapsed_ms(started_at_us) do

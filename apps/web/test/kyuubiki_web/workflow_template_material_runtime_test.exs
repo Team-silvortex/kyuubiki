@@ -106,6 +106,40 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialRuntimeTest do
     assert hd(summary["material_score_rankings"])["candidate_id"] == "titanium"
   end
 
+  test "runs material fatigue life template through graph runner" do
+    assert {:ok, result} =
+             run_template("workflow.material-fatigue-life-json", %{
+               "candidates_input" => %{
+                 "candidates" => %{
+                   "aluminum" => %{
+                     "stress_amplitude" => 95.0,
+                     "mean_stress" => 20.0,
+                     "ultimate_strength" => 310.0,
+                     "material_status" => "pass"
+                   },
+                   "polymer" => %{
+                     "stress_amplitude" => 160.0,
+                     "material_status" => "pass"
+                   }
+                 }
+               }
+             })
+
+    summary = exported_summary(result)
+
+    assert result["completed_nodes"] == [
+             "candidates_input",
+             "estimate_fatigue",
+             "export_json",
+             "json_output"
+           ]
+
+    assert dataset_value_emitted?(result, "material_fatigue")
+    assert summary["material_fatigue_candidate_count"] == 2
+    assert summary["material_fatigue_pass_count"] == 1
+    assert summary["material_fatigue_best_candidate_id"] == "aluminum"
+  end
+
   test "runs material experiment plan template through graph runner" do
     assert {:ok, result} =
              run_template("workflow.material-experiment-plan-json", %{

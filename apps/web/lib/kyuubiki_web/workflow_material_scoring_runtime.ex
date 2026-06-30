@@ -279,6 +279,9 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   defp ranking_entries(%{"material_score_rankings" => rankings}) when is_list(rankings),
     do: Enum.filter(rankings, &is_map/1)
 
+  defp ranking_entries(%{"material_screening_rankings" => rankings}) when is_list(rankings),
+    do: Enum.filter(rankings, &is_map/1)
+
   defp ranking_entries(%{"rankings" => rankings}) when is_list(rankings),
     do: Enum.filter(rankings, &is_map/1)
 

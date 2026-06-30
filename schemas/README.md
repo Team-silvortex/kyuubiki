@@ -7,6 +7,8 @@ README.
 - `progress-event.schema.json` is for streamed runtime updates
 - `model.schema.json` is for versioned browser model import/export payloads
 - `material-library.schema.json` is for reusable material library import/export payloads
+- `material-card.schema.json` is for first-class material cards with
+  provenance, confidence, unit-system, parameter, and applicability metadata
 - `project.schema.json` is for portable `.kyuubiki.json` project bundles and
   standardized `.kyuubiki` archive manifests, including asset catalogs and meta
   sidecars plus guid reference graphs

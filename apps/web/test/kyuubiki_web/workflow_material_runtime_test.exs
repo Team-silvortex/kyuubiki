@@ -61,6 +61,83 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert ranking["material_failure_reasons"] == %{"max_temperature" => 1}
   end
 
+  test "estimates material fatigue life for candidate stress amplitudes" do
+    assert {:ok, fatigue} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.estimate_material_fatigue_life",
+               %{
+                 "candidates" => %{
+                   "aluminum" => %{
+                     "stress_amplitude" => 95.0,
+                     "mean_stress" => 20.0,
+                     "ultimate_strength" => 310.0,
+                     "material_status" => "pass"
+                   },
+                   "polymer" => %{
+                     "stress_amplitude" => 160.0,
+                     "material_status" => "pass"
+                   }
+                 }
+               },
+               %{
+                 "fatigue_strength" => 120.0,
+                 "reference_cycles" => 1.0e6,
+                 "slope_exponent" => 4.0,
+                 "target_cycles" => 8.0e5
+               }
+             )
+
+    assessments = fatigue["material_fatigue_assessments"]
+
+    assert fatigue["material_fatigue_candidate_count"] == 2
+    assert fatigue["material_fatigue_pass_count"] == 1
+    assert fatigue["material_fatigue_best_candidate_id"] == "aluminum"
+    assert hd(assessments)["fatigue_status"] == "pass"
+    assert hd(assessments)["fatigue_correction"]["kind"] == "goodman"
+    assert List.last(assessments)["candidate_id"] == "polymer"
+    assert List.last(assessments)["fatigue_status"] == "fail"
+  end
+
+  test "evaluates material thermal shock risk for temperature cycle candidates" do
+    assert {:ok, shock} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.evaluate_material_thermal_shock",
+               %{
+                 "candidates" => %{
+                   "alloy" => %{
+                     "temperature_delta" => 160.0,
+                     "thermal_expansion" => 1.2e-5,
+                     "youngs_modulus" => 70.0e9,
+                     "poisson_ratio" => 0.33,
+                     "yield_strength" => 320.0e6,
+                     "material_status" => "pass"
+                   },
+                   "ceramic" => %{
+                     "temperature_delta" => 160.0,
+                     "thermal_expansion" => 8.0e-6,
+                     "youngs_modulus" => 300.0e9,
+                     "poisson_ratio" => 0.22,
+                     "tensile_strength" => 180.0e6,
+                     "fracture_toughness" => 3.0e6,
+                     "flaw_size" => 0.001,
+                     "material_status" => "pass"
+                   }
+                 }
+               },
+               %{"constraint_factor" => 0.7}
+             )
+
+    assessments = shock["material_thermal_shock_assessments"]
+
+    assert shock["material_thermal_shock_candidate_count"] == 2
+    assert shock["material_thermal_shock_pass_count"] == 1
+    assert shock["material_thermal_shock_best_candidate_id"] == "alloy"
+    assert hd(assessments)["thermal_shock_status"] == "pass"
+    assert List.last(assessments)["candidate_id"] == "ceramic"
+    assert List.last(assessments)["thermal_shock_status"] == "fail"
+    assert List.last(assessments)["thermal_shock_fracture_index"] > 0.0
+  end
+
   test "scores material candidates with weighted optimization criteria" do
     assert {:ok, scored} =
              WorkflowOperatorRuntime.run_transform_operator(

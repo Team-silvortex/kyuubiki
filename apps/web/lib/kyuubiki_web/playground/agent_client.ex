@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   TCP client for the Rust FEM agent RPC process.
   """
 
+  alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
 
@@ -149,6 +150,17 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   @spec cancel_job(String.t()) :: {:ok, map()} | {:error, term()}
   def cancel_job(job_id) when is_binary(job_id) do
     request("cancel_job", %{job_id: job_id})
+  end
+
+  @spec run_operator_task_ir(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def run_operator_task_ir(task_ir, on_progress \\ fn _progress -> :ok end)
+      when is_map(task_ir) and is_function(on_progress, 1) do
+    request(
+      OperatorTaskIR.agent_rpc_method(),
+      OperatorTaskIR.agent_rpc_params(task_ir),
+      on_progress,
+      OperatorTaskIR.agent_routing_opts(task_ir)
+    )
   end
 
   @spec ping(AgentPool.endpoint() | nil) :: {:ok, map()} | {:error, term()}

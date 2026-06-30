@@ -7,7 +7,16 @@ Path.wildcard(Path.join(__DIR__, "support/**/*.exs"))
 defmodule KyuubikiWeb.TestSupport.FakePlaygroundAgent do
   @moduledoc false
 
+  def start_link({:capture, capture_pid, frames})
+      when is_pid(capture_pid) and is_list(frames) do
+    start_link(frames, capture_pid)
+  end
+
   def start_link(frames) when is_list(frames) do
+    start_link(frames, nil)
+  end
+
+  defp start_link(frames, capture_pid) when is_list(frames) do
     parent = self()
 
     Task.start_link(fn ->
@@ -26,6 +35,10 @@ defmodule KyuubikiWeb.TestSupport.FakePlaygroundAgent do
       {:ok, socket} = :gen_tcp.accept(listen_socket)
       {:ok, request_payload} = :gen_tcp.recv(socket, 0, 1_000)
       request = Jason.decode!(request_payload)
+
+      if is_pid(capture_pid) do
+        send(capture_pid, {:fake_agent_request, request})
+      end
 
       Enum.each(frames, fn frame ->
         response_payload =

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/material-card.schema.json",
+  "title": "Kyuubiki Material Card",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "material_id",
+    "display_name",
+    "unit_system",
+    "provenance",
+    "confidence",
+    "parameters"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "kyuubiki.material-card/v1"
+    },
+    "material_id": { "type": "string", "minLength": 1 },
+    "display_name": { "type": "string", "minLength": 1 },
+    "family": { "type": "string" },
+    "unit_system": {
+      "type": "string",
+      "enum": ["si", "engineering", "mixed"]
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source_id", "source_label"],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "source_label": { "type": "string", "minLength": 1 },
+        "source_url": { "type": "string" },
+        "revision": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["unknown", "screening", "datasheet", "measured", "certified"]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "applicability": {
+      "type": "object",
+      "properties": {
+        "temperature_range_c": {
+          "type": "array",
+          "prefixItems": [{ "type": "number" }, { "type": "number" }],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "processing_notes": { "type": "string" },
+        "environment": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/parameter"
+      }
+    }
+  },
+  "$defs": {
+    "parameter": {
+      "type": "object",
+      "required": ["kind", "unit"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["scalar", "tensor_diagonal", "table"]
+        },
+        "value": { "type": ["number", "array", "object"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "string" },
+        "source_field": { "type": "string" },
+        "temperature_range_c": {
+          "type": "array",
+          "prefixItems": [{ "type": "number" }, { "type": "number" }],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -5,6 +5,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   use GenServer
 
+  alias KyuubikiWeb.Playground.AgentPoolRouter
+
   @default_host "127.0.0.1"
   @default_port 5001
   @default_discovery :static
@@ -91,8 +93,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     ordered =
       endpoints
       |> rotate(cursor)
-      |> route_endpoints(method)
-      |> filter_endpoints(method, opts)
+      |> AgentPoolRouter.route(method, opts)
       |> deprioritize_cooling_endpoints(health)
 
     next_cursor = if endpoints == [], do: 0, else: rem(cursor + 1, length(endpoints))
@@ -120,31 +121,6 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     Enum.drop(endpoints, offset) ++ Enum.take(endpoints, offset)
   end
 
-  defp route_endpoints(endpoints, nil), do: endpoints
-
-  defp route_endpoints(endpoints, method) when is_binary(method) do
-    tags = preferred_tags(method)
-
-    {capable, remaining} =
-      Enum.split_with(endpoints, fn endpoint ->
-        supports_method?(endpoint, method)
-      end)
-
-    case capable do
-      [] ->
-        {preferred_by_tags, fallback} =
-          Enum.split_with(remaining, fn endpoint ->
-            endpoint_tags(endpoint)
-            |> Enum.any?(&(&1 in tags))
-          end)
-
-        sort_by_health_capacity(preferred_by_tags) ++ fallback
-
-      _ ->
-        sort_by_health_capacity(capable) ++ remaining
-    end
-  end
-
   defp deprioritize_cooling_endpoints(endpoints, health) do
     {available, cooling} =
       Enum.split_with(endpoints, fn endpoint ->
@@ -156,303 +132,6 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       _ -> available ++ cooling
     end
   end
-
-  defp filter_endpoints(endpoints, method, opts) do
-    required_capabilities =
-      opts
-      |> Keyword.get(:required_capabilities, [])
-      |> normalize_constraint_values()
-
-    placement_tags =
-      opts
-      |> Keyword.get(:placement_tags, [])
-      |> normalize_constraint_values()
-
-    orchestration_context =
-      opts
-      |> Keyword.get(:orchestration, %{})
-      |> normalize_orchestration_context()
-
-    execution_lease =
-      opts
-      |> Keyword.get(:execution_lease, %{})
-      |> normalize_execution_lease()
-
-    if required_capabilities == [] and placement_tags == [] and orchestration_context == %{} and
-         execution_lease == %{} do
-      endpoints
-    else
-      {typed_matches, legacy_fallbacks} =
-        Enum.reduce(endpoints, {[], []}, fn endpoint, {typed, legacy} ->
-          case classify_endpoint(
-                 endpoint,
-                 method,
-                 required_capabilities,
-                 placement_tags,
-                 orchestration_context,
-                 execution_lease
-               ) do
-            {:typed_match, score} -> {[{endpoint, score} | typed], legacy}
-            :legacy_fallback -> {typed, [endpoint | legacy]}
-            :explicit_mismatch -> {typed, legacy}
-          end
-        end)
-
-      typed_matches =
-        typed_matches
-        |> Enum.sort_by(fn {_endpoint, score} -> -score end)
-        |> Enum.map(&elem(&1, 0))
-
-      typed_matches ++ Enum.reverse(legacy_fallbacks)
-    end
-  end
-
-  defp classify_endpoint(
-         endpoint,
-         method,
-         required_capabilities,
-         placement_tags,
-         orchestration_context,
-         execution_lease
-       ) do
-    capability_status = capability_match_status(endpoint, method, required_capabilities)
-    tag_status = tag_match_status(endpoint, placement_tags)
-    orchestration_status = orchestration_match_status(endpoint, orchestration_context)
-    lease_status = execution_lease_status(endpoint, execution_lease)
-
-    cond do
-      capability_status == :mismatch or tag_status == :mismatch or
-        orchestration_status == :mismatch or lease_status == :mismatch ->
-        :explicit_mismatch
-
-      capability_status == :unknown or tag_status == :unknown or orchestration_status == :unknown or
-          lease_status == :unknown ->
-        :legacy_fallback
-
-      true ->
-        {:typed_match,
-         endpoint_match_score(
-           endpoint,
-           required_capabilities,
-           placement_tags,
-           orchestration_context
-         )}
-    end
-  end
-
-  defp capability_match_status(_endpoint, _method, []), do: :match
-
-  defp capability_match_status(endpoint, method, required_capabilities) do
-    capability_ids =
-      endpoint
-      |> Map.get(:capabilities, [])
-      |> Enum.map(& &1.id)
-
-    has_capability_metadata? =
-      capability_ids != [] or
-        Map.get(endpoint, :methods, []) != [] or
-        is_binary(Map.get(endpoint, :role)) or
-        Enum.any?(Map.get(endpoint, :capabilities, []), &is_binary(&1.role))
-
-    cond do
-      not has_capability_metadata? ->
-        :unknown
-
-      Enum.all?(
-        required_capabilities,
-        &endpoint_supports_capability?(endpoint, method, &1, capability_ids)
-      ) ->
-        :match
-
-      true ->
-        :mismatch
-    end
-  end
-
-  defp endpoint_supports_capability?(endpoint, method, "solver_rpc", capability_ids) do
-    "solver_rpc" in capability_ids or
-      Map.get(endpoint, :role) == "solver" or
-      supports_method?(endpoint, method || "") or
-      Enum.any?(Map.get(endpoint, :capabilities, []), &(&1.role == "solver"))
-  end
-
-  defp endpoint_supports_capability?(endpoint, _method, capability_id, capability_ids) do
-    capability_id in capability_ids or Map.get(endpoint, :role) == capability_id
-  end
-
-  defp tag_match_status(_endpoint, []), do: :match
-
-  defp tag_match_status(endpoint, placement_tags) do
-    tags = endpoint_tags(endpoint)
-
-    cond do
-      tags == [] -> :unknown
-      Enum.any?(placement_tags, &(&1 in tags)) -> :match
-      true -> :mismatch
-    end
-  end
-
-  defp orchestration_match_status(_endpoint, %{} = orchestration_context)
-       when orchestration_context == %{},
-       do: :match
-
-  defp orchestration_match_status(endpoint, orchestration_context) do
-    endpoint_control_mode = Map.get(endpoint, :control_mode)
-    endpoint_orch_id = Map.get(endpoint, :orch_id)
-    endpoint_orch_session_id = Map.get(endpoint, :orch_session_id)
-    endpoint_cluster_id = Map.get(endpoint, :cluster_id)
-
-    has_authority_metadata? =
-      is_binary(endpoint_control_mode) or is_binary(endpoint_orch_id) or
-        is_binary(endpoint_cluster_id) or
-        is_binary(endpoint_orch_session_id)
-
-    if not has_authority_metadata? do
-      :unknown
-    else
-      expected_control_mode = Map.get(orchestration_context, :control_mode)
-      expected_orch_id = Map.get(orchestration_context, :orch_id)
-      expected_orch_session_id = Map.get(orchestration_context, :orch_session_id)
-      expected_cluster_id = Map.get(orchestration_context, :cluster_id)
-
-      cond do
-        expected_control_mode == "offline_mesh" ->
-          cluster_matches? =
-            is_nil(expected_cluster_id) or expected_cluster_id == endpoint_cluster_id
-
-          if endpoint_control_mode == "offline_mesh" and cluster_matches? do
-            :match
-          else
-            :mismatch
-          end
-
-        expected_control_mode == "orch_managed" ->
-          orch_id_matches? =
-            is_nil(expected_orch_id) or expected_orch_id == endpoint_orch_id
-
-          session_matches? =
-            is_nil(expected_orch_session_id) or
-              expected_orch_session_id == endpoint_orch_session_id
-
-          if endpoint_control_mode == "orch_managed" and orch_id_matches? and session_matches? do
-            :match
-          else
-            :mismatch
-          end
-
-        true ->
-          :match
-      end
-    end
-  end
-
-  defp execution_lease_status(endpoint, %{} = execution_lease) when execution_lease == %{} do
-    if Map.get(endpoint, :active_lease), do: :mismatch, else: :match
-  end
-
-  defp execution_lease_status(endpoint, execution_lease) do
-    case Map.get(endpoint, :active_lease) do
-      nil ->
-        :match
-
-      %{"lease_id" => lease_id} ->
-        if lease_id == Map.get(execution_lease, :lease_id), do: :match, else: :mismatch
-
-      %{lease_id: lease_id} ->
-        if lease_id == Map.get(execution_lease, :lease_id), do: :match, else: :mismatch
-
-      _ ->
-        :unknown
-    end
-  end
-
-  defp endpoint_match_score(
-         endpoint,
-         required_capabilities,
-         placement_tags,
-         orchestration_context
-       ) do
-    capability_ids =
-      endpoint
-      |> Map.get(:capabilities, [])
-      |> Enum.map(& &1.id)
-
-    tags = endpoint_tags(endpoint)
-
-    capability_score =
-      Enum.count(required_capabilities, fn capability_id ->
-        capability_id in capability_ids or Map.get(endpoint, :role) == capability_id
-      end)
-
-    tag_score = Enum.count(placement_tags, &(&1 in tags))
-
-    orchestration_score =
-      case Map.get(orchestration_context, :control_mode) do
-        "orch_managed" ->
-          if Map.get(endpoint, :control_mode) == "orch_managed", do: 100, else: 0
-
-        "offline_mesh" ->
-          base_score = if Map.get(endpoint, :control_mode) == "offline_mesh", do: 100, else: 0
-          expected_cluster_id = Map.get(orchestration_context, :cluster_id)
-
-          if is_binary(expected_cluster_id) and expected_cluster_id != "" and
-               Map.get(endpoint, :cluster_id) == expected_cluster_id do
-            base_score + 20
-          else
-            base_score
-          end
-
-        _ ->
-          0
-      end
-
-    orchestration_score + capability_score * 10 + tag_score
-  end
-
-  defp normalize_constraint_values(values) when is_list(values) do
-    values
-    |> Enum.filter(&is_binary/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.uniq()
-  end
-
-  defp normalize_constraint_values(_values), do: []
-
-  defp normalize_orchestration_context(%{} = context) do
-    %{}
-    |> put_orchestration_value(
-      :control_mode,
-      Map.get(context, :control_mode) || Map.get(context, "control_mode")
-    )
-    |> put_orchestration_value(
-      :orch_id,
-      Map.get(context, :orch_id) || Map.get(context, "orch_id")
-    )
-    |> put_orchestration_value(
-      :orch_session_id,
-      Map.get(context, :orch_session_id) || Map.get(context, "orch_session_id")
-    )
-    |> put_orchestration_value(
-      :cluster_id,
-      Map.get(context, :cluster_id) || Map.get(context, "cluster_id")
-    )
-  end
-
-  defp normalize_orchestration_context(_context), do: %{}
-
-  defp normalize_execution_lease(%{} = lease) do
-    %{}
-    |> put_orchestration_value(:lease_id, Map.get(lease, :lease_id) || Map.get(lease, "lease_id"))
-  end
-
-  defp normalize_execution_lease(_lease), do: %{}
-
-  defp put_orchestration_value(context, _key, nil), do: context
-
-  defp put_orchestration_value(context, key, value) when is_binary(value),
-    do: Map.put(context, key, value)
-
-  defp put_orchestration_value(context, _key, _value), do: context
 
   defp configured_endpoints do
     config = Application.get_env(:kyuubiki_web, __MODULE__, [])
@@ -747,73 +426,18 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     %{id: "#{@default_host}:#{@default_port}", host: @default_host, port: @default_port}
   end
 
-  defp endpoint_tags(endpoint) do
-    direct =
-      endpoint
-      |> Map.get(:tags, [])
-      |> List.wrap()
-      |> Enum.filter(&is_binary/1)
-
-    capability_tags =
-      endpoint
-      |> Map.get(:capabilities, [])
-      |> List.wrap()
-      |> Enum.flat_map(fn capability ->
-        capability
-        |> Map.get(:tags, [])
-        |> List.wrap()
-        |> Enum.filter(&is_binary/1)
-      end)
-
-    Enum.uniq(direct ++ capability_tags)
-  end
-
-  defp sort_by_health_capacity(endpoints) do
-    endpoints
-    |> Enum.with_index()
-    |> Enum.sort_by(fn {endpoint, index} ->
-      {
-        -(Map.get(endpoint, :health_score) || 100),
-        -Map.get(endpoint, :capacity, 1),
-        index
-      }
-    end)
-    |> Enum.map(&elem(&1, 0))
-  end
-
-  defp supports_method?(endpoint, method) when is_binary(method) do
-    direct_methods =
-      endpoint
-      |> Map.get(:methods, [])
-      |> List.wrap()
-      |> Enum.filter(&is_binary/1)
-
-    capability_methods =
-      endpoint
-      |> Map.get(:capabilities, [])
-      |> List.wrap()
-      |> Enum.flat_map(fn capability ->
-        capability
-        |> Map.get(:methods, [])
-        |> List.wrap()
-        |> Enum.filter(&is_binary/1)
-      end)
-
-    method in Enum.uniq(direct_methods ++ capability_methods)
-  end
-
   defp normalize_methods(values) when is_list(values),
     do: values |> Enum.filter(&is_binary/1) |> Enum.uniq()
 
   defp normalize_methods(_values), do: []
 
-  defp normalize_capabilities(values) when is_list(values) do
-    values
-    |> Enum.map(&normalize_capability/1)
-    |> Enum.reject(&is_nil/1)
-  end
+  defp normalize_capabilities(values) when is_list(values),
+    do: values |> Enum.map(&normalize_capability/1) |> Enum.reject(&is_nil/1)
 
   defp normalize_capabilities(_values), do: []
+
+  defp normalize_capability(capability) when is_binary(capability) and capability != "",
+    do: %{id: capability, role: capability, methods: [], tags: []}
 
   defp normalize_capability(%{} = capability) do
     id = capability["id"] || capability[:id]
@@ -845,42 +469,4 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     do: value
 
   defp normalize_health_score(_value), do: nil
-
-  defp preferred_tags("solve_bar_1d"), do: ["bar"]
-  defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
-  defp preferred_tags("solve_heat_bar_1d"), do: ["heat", "bar", "line"]
-
-  defp preferred_tags("solve_electrostatic_bar_1d"),
-    do: ["electromagnetic", "electrostatic", "bar", "line"]
-
-  defp preferred_tags("solve_electrostatic_plane_triangle_2d"),
-    do: ["electromagnetic", "electrostatic", "plane", "triangle", "mesh"]
-
-  defp preferred_tags("solve_electrostatic_plane_quad_2d"),
-    do: ["electromagnetic", "electrostatic", "plane", "quad", "mesh"]
-
-  defp preferred_tags("solve_heat_plane_triangle_2d"), do: ["heat", "plane", "mesh"]
-  defp preferred_tags("solve_heat_plane_quad_2d"), do: ["heat", "plane", "mesh", "quad"]
-  defp preferred_tags("solve_thermal_truss_2d"), do: ["truss", "thermal", "plane"]
-  defp preferred_tags("solve_thermal_truss_3d"), do: ["truss", "thermal", "space"]
-  defp preferred_tags("solve_spring_1d"), do: ["spring", "line", "support"]
-  defp preferred_tags("solve_spring_2d"), do: ["spring", "plane", "support"]
-  defp preferred_tags("solve_spring_3d"), do: ["spring", "space", "support"]
-  defp preferred_tags("solve_beam_1d"), do: ["beam", "bending", "line"]
-  defp preferred_tags("solve_thermal_beam_1d"), do: ["beam", "thermal", "bending", "line"]
-  defp preferred_tags("solve_thermal_frame_2d"), do: ["frame", "thermal", "beam", "bending"]
-
-  defp preferred_tags("solve_thermal_frame_3d"),
-    do: ["frame", "thermal", "space", "beam", "bending"]
-
-  defp preferred_tags("solve_torsion_1d"), do: ["torsion", "shaft", "line"]
-  defp preferred_tags("solve_truss_2d"), do: ["truss"]
-  defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]
-  defp preferred_tags("solve_plane_triangle_2d"), do: ["plane", "mesh"]
-  defp preferred_tags("solve_thermal_plane_triangle_2d"), do: ["plane", "thermal", "mesh"]
-  defp preferred_tags("solve_plane_quad_2d"), do: ["plane", "mesh", "quad"]
-  defp preferred_tags("solve_thermal_plane_quad_2d"), do: ["plane", "thermal", "mesh", "quad"]
-  defp preferred_tags("solve_frame_2d"), do: ["frame", "beam", "bending"]
-  defp preferred_tags("solve_frame_3d"), do: ["frame", "space", "beam", "bending"]
-  defp preferred_tags(_method), do: ["general", "cpu"]
 end

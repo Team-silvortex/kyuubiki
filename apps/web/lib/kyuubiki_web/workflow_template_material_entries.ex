@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialEntries do
     [
       material_margin_entry(),
       material_rank_entry(),
+      material_fatigue_entry(),
       material_score_entry(),
       material_experiment_plan_entry(),
       material_pareto_entry()
@@ -44,6 +45,18 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialEntries do
       "Scores material candidates with normalized weighted min/max criteria and exports explainable optimization rankings.",
       ["material", "optimization", "score", "weighted_objective", "candidate_selection"],
       material_score_graph(),
+      [%{"node_id" => "candidates_input", "artifact_type" => "report/summary_collection"}],
+      [%{"node_id" => "json_output", "artifact_type" => "export/json"}]
+    )
+  end
+
+  defp material_fatigue_entry do
+    entry(
+      "workflow.material-fatigue-life-json",
+      "Material fatigue life JSON",
+      "Estimates fatigue life and fatigue safety factors for material candidates, then exports the assessment as JSON.",
+      ["material", "optimization", "fatigue", "life_estimation", "safety_factor"],
+      material_fatigue_graph(),
       [%{"node_id" => "candidates_input", "artifact_type" => "report/summary_collection"}],
       [%{"node_id" => "json_output", "artifact_type" => "export/json"}]
     )
@@ -299,6 +312,61 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialEntries do
     )
   end
 
+  defp material_fatigue_graph do
+    graph(
+      "workflow.material-fatigue-life-json",
+      "Material fatigue life JSON",
+      [
+        input_node(
+          "candidates_input",
+          "candidates",
+          "report/summary_collection",
+          "candidate_summaries"
+        ),
+        transform_node(
+          "estimate_fatigue",
+          "transform.estimate_material_fatigue_life",
+          %{
+            "fatigue_strength" => 120.0,
+            "reference_cycles" => 1.0e6,
+            "slope_exponent" => 4.0,
+            "target_cycles" => 8.0e5
+          },
+          "candidates",
+          "report/summary_collection",
+          "candidate_summaries",
+          "fatigue",
+          "report/summary",
+          "material_fatigue"
+        ),
+        export_node("material_fatigue"),
+        output_node()
+      ],
+      [
+        edge(
+          "e0",
+          "candidates_input",
+          "candidates",
+          "estimate_fatigue",
+          "candidates",
+          "report/summary_collection",
+          "candidate_summaries"
+        ),
+        edge(
+          "e1",
+          "estimate_fatigue",
+          "fatigue",
+          "export_json",
+          "summary",
+          "report/summary",
+          "material_fatigue"
+        ),
+        edge("e2", "export_json", "json", "json_output", "json", "export/json", "summary_json")
+      ],
+      "material_fatigue_life"
+    )
+  end
+
   defp material_pareto_graph do
     graph(
       "workflow.material-pareto-frontier-json",
@@ -370,6 +438,7 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialEntries do
             value("material_ranking", "result", "report/summary"),
             value("material_score", "result", "report/summary"),
             value("material_experiment_plan", "result", "report/summary"),
+            value("material_fatigue", "result", "report/summary"),
             value("material_pareto", "result", "report/summary"),
             value("summary_json", "export", "export/json", "utf8_text")
           ],

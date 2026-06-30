@@ -28,6 +28,62 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"transform.rank_material_candidates", "material_candidate_rank",
      "Rank material candidates from margin summaries and emit the best feasible design with failure reason counts.",
      ["transform", "material", "ranking", "candidate_selection", "optimization", "headless_safe"]},
+    {"transform.validate_material_card", "material_card_preflight",
+     "Validate a versioned material card for provenance, unit expectations, confidence level, and study-specific required parameters.",
+     [
+       "transform",
+       "material",
+       "material_card",
+       "preflight",
+       "provenance",
+       "unit_check",
+       "headless_safe"
+     ]},
+    {"transform.validate_material_card_batch", "material_card_batch_preflight",
+     "Validate a batch of material cards and summarize usable, blocked, trust-level, and issue-count signals for material screening.",
+     [
+       "transform",
+       "material",
+       "material_card",
+       "batch_preflight",
+       "provenance",
+       "unit_check",
+       "candidate_selection",
+       "headless_safe"
+     ]},
+    {"transform.build_material_card_candidate_summaries", "material_card_candidate_summaries",
+     "Convert material-card batch preflight reports into candidate summaries that downstream material scoring operators can consume.",
+     [
+       "transform",
+       "material",
+       "material_card",
+       "candidate_summary",
+       "optimization",
+       "headless_safe"
+     ]},
+    {"transform.estimate_material_fatigue_life", "material_fatigue_life",
+     "Estimate material fatigue life and fatigue safety factors from stress amplitudes using Basquin and optional Goodman correction.",
+     [
+       "transform",
+       "material",
+       "fatigue",
+       "life_estimation",
+       "safety_factor",
+       "optimization",
+       "headless_safe"
+     ]},
+    {"transform.evaluate_material_thermal_shock", "material_thermal_shock",
+     "Estimate thermal shock stress, fracture risk, and safety factors from temperature-cycle material properties.",
+     [
+       "transform",
+       "material",
+       "thermal_shock",
+       "temperature_cycle",
+       "fracture_risk",
+       "safety_factor",
+       "optimization",
+       "headless_safe"
+     ]},
     {"transform.score_material_candidates", "material_candidate_score",
      "Score material candidates with normalized weighted min/max criteria for optimization-driven material exploration.",
      [
@@ -37,6 +93,17 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
        "weighted_objective",
        "candidate_selection",
        "optimization",
+       "headless_safe"
+     ]},
+    {"transform.explain_material_card_screening", "material_card_screening_report",
+     "Convert scored material-card rankings into an explainable screening report for headless material research workflows.",
+     [
+       "transform",
+       "material",
+       "material_card",
+       "screening_report",
+       "explainability",
+       "candidate_selection",
        "headless_safe"
      ]},
     {"transform.plan_material_experiments", "material_experiment_plan",

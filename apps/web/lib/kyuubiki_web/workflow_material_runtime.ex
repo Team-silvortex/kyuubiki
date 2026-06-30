@@ -1,8 +1,14 @@
 defmodule KyuubikiWeb.WorkflowMaterialRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowMaterialFatigueRuntime
+  alias KyuubikiWeb.WorkflowMaterialCardRuntime
+  alias KyuubikiWeb.WorkflowMaterialCardBatchRuntime
+  alias KyuubikiWeb.WorkflowMaterialCardCandidateRuntime
+  alias KyuubikiWeb.WorkflowMaterialCardScreeningRuntime
   alias KyuubikiWeb.WorkflowMaterialScoringRuntime
   alias KyuubikiWeb.WorkflowMaterialStateRuntime
+  alias KyuubikiWeb.WorkflowMaterialThermalShockRuntime
 
   def evaluate_material_margins(payload, config) when is_map(payload) and is_map(config) do
     limits = Map.get(config, "limits")
@@ -66,6 +72,20 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntime do
   end
 
   def rank_material_candidates(_payload, _config), do: {:error, :invalid_material_candidates}
+
+  defdelegate validate_material_card(payload, config), to: WorkflowMaterialCardRuntime
+  defdelegate validate_material_card_batch(payload, config), to: WorkflowMaterialCardBatchRuntime
+
+  defdelegate build_material_card_candidate_summaries(payload, config),
+    to: WorkflowMaterialCardCandidateRuntime
+
+  defdelegate explain_material_card_screening(payload, config),
+    to: WorkflowMaterialCardScreeningRuntime
+
+  defdelegate estimate_material_fatigue_life(payload, config), to: WorkflowMaterialFatigueRuntime
+
+  defdelegate evaluate_material_thermal_shock(payload, config),
+    to: WorkflowMaterialThermalShockRuntime
 
   defdelegate score_material_candidates(payload, config), to: WorkflowMaterialScoringRuntime
   defdelegate plan_material_experiments(payload, config), to: WorkflowMaterialScoringRuntime

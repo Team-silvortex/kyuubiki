@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.Playground.AgentClientTest do
   use ExUnit.Case, async: false
 
+  alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.TestSupport.{FakePlaygroundAgent, FakeStallingAgent}
@@ -292,6 +293,86 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert "describe_agent" in descriptor["protocol"]["methods"]
     assert descriptor["authority"]["control_mode"] == "standalone"
     assert descriptor["authority"]["authority_mode"] == "self_directed"
+  end
+
+  test "sends operator task IR using the dedicated agent rpc method" do
+    assert {:ok, task_ir} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(),
+         [
+           %{
+             "ok" => true,
+             "result" => %{
+               "material_candidate_count" => 0,
+               "operator_task_ir_status" => "accepted"
+             }
+           }
+         ]}
+      )
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "task-ir-agent",
+          host: "127.0.0.1",
+          port: port,
+          methods: ["run_operator_task_ir"],
+          capabilities: ["workflow_transform_runtime"],
+          tags: ["transform"]
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:ok, result} = AgentClient.run_operator_task_ir(task_ir)
+
+    assert_receive {:fake_agent_request, request}
+    assert request["method"] == "run_operator_task_ir"
+    assert request["params"] == %{"task_ir" => task_ir}
+    assert result["operator_task_ir_status"] == "accepted"
+  end
+
+  test "routes operator task IR through runtime hint constraints" do
+    assert {:ok, task_ir} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{},
+               placement_tags: ["materials"]
+             )
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "solver-only",
+          host: "127.0.0.1",
+          port: 59_998,
+          methods: ["run_operator_task_ir"],
+          capabilities: ["solver_rpc"],
+          tags: ["structural"]
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:error,
+            {:no_matching_agent,
+             %{
+               method: "run_operator_task_ir",
+               required_capabilities: ["workflow_transform_runtime"],
+               placement_tags: ["materials"]
+             }}} = AgentClient.run_operator_task_ir(task_ir)
   end
 
   defp await_fake_agent_port do
