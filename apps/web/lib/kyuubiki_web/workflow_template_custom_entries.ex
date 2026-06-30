@@ -9,6 +9,9 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries
   alias KyuubikiWeb.WorkflowTemplateFocusEntries
+  alias KyuubikiWeb.WorkflowTemplateMaterialAnalysisEntries
+  alias KyuubikiWeb.WorkflowTemplateMaterialEntries
+  alias KyuubikiWeb.WorkflowTemplateMaterialLoopEntries
   alias KyuubikiWeb.WorkflowTemplateMagnetostaticEntries
   alias KyuubikiWeb.WorkflowTemplateSolverContractGraphs
   alias KyuubikiWeb.WorkflowTemplateThermalEntries
@@ -21,6 +24,9 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
       WorkflowTemplateElectromagneticGuardThermoEntries.list() ++
       WorkflowTemplateMagnetostaticEntries.list() ++
       WorkflowTemplateCfdEntries.list() ++
+      WorkflowTemplateMaterialEntries.list() ++
+      WorkflowTemplateMaterialAnalysisEntries.list() ++
+      WorkflowTemplateMaterialLoopEntries.list() ++
       WorkflowTemplateBridgeEntries.list() ++
       WorkflowTemplateThermalEntries.list() ++
       [

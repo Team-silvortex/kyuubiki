@@ -4,7 +4,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
 
   def run(graph, input_artifacts, opts \\ [])
-
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
@@ -135,7 +134,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
-
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
@@ -168,7 +166,9 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
               "transform.compose_diagnostics_bundle",
               "transform.compose_diagnostics_report_payload",
               "transform.resolve_focus_bridge_execution",
-              "transform.benchmark_coupled_heat_pair"
+              "transform.benchmark_coupled_heat_pair",
+              "transform.validate_electrostatic_heat_bridge",
+              "transform.validate_heat_thermo_bridge"
             ],
        do: true
 

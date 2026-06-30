@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowBundleRuntime
   alias KyuubikiWeb.WorkflowCfdRuntime
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
+  alias KyuubikiWeb.WorkflowMaterialRuntime
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
   alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
   alias KyuubikiWeb.WorkflowReportingRuntime
@@ -154,6 +155,33 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.select_best_summary" when is_map(config) ->
         WorkflowReportingRuntime.select_best_summary(payload, config)
+
+      "transform.evaluate_material_margins" when is_map(config) ->
+        WorkflowMaterialRuntime.evaluate_material_margins(payload, config)
+
+      "transform.rank_material_candidates" when is_map(config) ->
+        WorkflowMaterialRuntime.rank_material_candidates(payload, config)
+
+      "transform.score_material_candidates" when is_map(config) ->
+        WorkflowMaterialRuntime.score_material_candidates(payload, config)
+
+      "transform.plan_material_experiments" when is_map(config) ->
+        WorkflowMaterialRuntime.plan_material_experiments(payload, config)
+
+      "transform.analyze_material_experiment_results" when is_map(config) ->
+        WorkflowMaterialRuntime.analyze_material_experiment_results(payload, config)
+
+      "transform.decide_material_iteration" when is_map(config) ->
+        WorkflowMaterialRuntime.decide_material_iteration(payload, config)
+
+      "transform.prepare_material_next_round_request" when is_map(config) ->
+        WorkflowMaterialRuntime.prepare_material_next_round_request(payload, config)
+
+      "transform.build_material_exploration_snapshot" when is_map(config) ->
+        WorkflowMaterialRuntime.build_material_exploration_snapshot(payload, config)
+
+      "transform.extract_material_pareto_frontier" when is_map(config) ->
+        WorkflowMaterialRuntime.extract_material_pareto_frontier(payload, config)
 
       "transform.compose_diagnostics_bundle" when is_map(config) ->
         WorkflowSummaryRuntime.compose_diagnostics_bundle(payload, config)
