@@ -1,0 +1,172 @@
+{
+  "version": "1.13.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-30",
+  "git_commit": "7c0b482c1ba032135994561cdb7ba1525c47bea5",
+  "summary": "Current-line functional snapshot for tamamono 1.13.0, aligning desktop shells, release contracts, generated docs, language-pack targets, workflow defaults, and the Rust workspace while continuing operator capability work for material screening and headless execution.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.13.0",
+      "notes": [
+        "Workbench-visible docs, app rail branding, workflow defaults, language-pack targets, and workflow package fixtures now align to 1.13.0.",
+        "Workflow local graph defaults remain explicit so imported and duplicated graphs carry the current line clearly."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.13.0",
+      "notes": [
+        "Hub package metadata, Tauri bundle version, visible brand assets, and mirrored documentation now align to 1.13.0.",
+        "Generated update-catalog and installation-integrity pages are rebuilt from the 1.13.0 release contracts."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.13.0",
+      "notes": [
+        "Workbench desktop-shell package metadata, bundle version, visible brand text, and package locks now match the 1.13.0 line."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.13.0",
+      "notes": [
+        "Installer package metadata, bundle version, update UI defaults, integrity UI defaults, and visible shell branding now align to 1.13.0.",
+        "Installation integrity component versions now match the active shipping contract."
+      ]
+    },
+    "web_api": {
+      "version": "1.13.0",
+      "notes": [
+        "Release-facing docs and catalog metadata now publish 1.13.0 as the current update target.",
+        "Operator catalog mirrors include the current material margin and candidate-ranking transform surfaces."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "workflow graph defaults aligned to tamamono 1.13.0",
+      "workflow package fixtures and import/export tests track the current line",
+      "material screening flows can combine margin evaluation with candidate ranking"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "transform.evaluate_material_margins",
+      "transform.rank_material_candidates",
+      "headless-safe Rust operator execution path remains registered through the workflow executor"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.13.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.13.0_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.13.0_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        " M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/public/brand.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
+        " M apps/frontend/test/support/workflow-package-fixtures.ts",
+        " M apps/frontend/test/support/workflow-template-chain-fixtures.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-import.test.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-validation.test.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/test/hub-copy-registry.test.mjs",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/installer-gui/ui/index.html",
+        " M apps/installer-gui/ui/integrity-panel.js",
+        " M apps/installer-gui/ui/update-panel.js",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/ui/index.html",
+        " M assets/brand/brand.json",
+        " M docs/browser-storage-security-audit.html",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installer-remote-control.md",
+        " M docs/language-packs.md",
+        " M docs/material-research-roadmap.md",
+        " M docs/navigation-matrix.html",
+        " M docs/rendering-roadmap.html",
+        " M docs/ui-automation-contract.json",
+        " M docs/version-line.md",
+        " M tests/integration/desktop-shell-regression.shared.mjs",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/crates/installer/src/tests.rs"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.13.0",
+      "workbench": "1.13.0",
+      "installer": "1.13.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [
+      "mix test test/kyuubiki_web/workflow_material_margin_operator_catalog_test.exs"
+    ],
+    "rust_checks": [
+      "cargo test -q -p kyuubiki-engine"
+    ],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

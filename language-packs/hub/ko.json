@@ -1,0 +1,44 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "hub-ko-core-1.13",
+  "language": "ko",
+  "targetSurface": "hub",
+  "name": "Korean Hub Core",
+  "version": "1.13.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.13.0",
+  "source": "downloaded",
+  "updatedAt": "2026-06-30T00:00:00.000Z",
+  "description": "Core Korean UI overrides for Hub navigation, shell, and primary route labels.",
+  "overrides": {
+    "nav": {
+      "projects": "홈",
+      "runtimes": "런타임",
+      "deploy": "배포",
+      "observe": "관찰",
+      "tools": "도구"
+    },
+    "sections": {
+      "projects": {
+        "title": "홈",
+        "copy": "명확한 경로로 시작합니다: 가져오기, 한 번 점검하기, 그리고 Workbench로 이동하기."
+      },
+      "runtimes": {
+        "title": "런타임",
+        "copy": "필요한 루프를 시작하고 상태를 확인하며 로그를 가까이에 둡니다."
+      },
+      "deploy": {
+        "title": "배포",
+        "copy": "대상 방식을 고르고 워크스테이션을 검증한 뒤 릴리스 경로를 준비합니다."
+      }
+    },
+    "shell": {
+      "language": "언어",
+      "actionStatus": "동작 상태",
+      "idle": "대기",
+      "openWorkbench": "Workbench 열기",
+      "startLocal": "로컬 스택 시작",
+      "validateEnv": "환경 검증"
+    }
+  }
+}

@@ -7,6 +7,7 @@ import {
 } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset.ts";
 import { listBuiltInWorkflowTemplateChains } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-library.ts";
 import { isWorkflowOperatorSupportedInRuntime } from "../../src/components/workbench/workflow/workbench-workflow-runtime-support.ts";
+import { scoreWorkflowTemplateChainSearch } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-search.ts";
 
 test("built-in template chains only use runtime-supported operators", () => {
   const unsupported = listBuiltInWorkflowTemplateChains()
@@ -95,4 +96,26 @@ test("peak diagnostics chain stays registered with expected operators and guard 
       "export.diagnostics_bundle_markdown",
     ],
   );
+});
+
+test("material decision chain exposes ranking and Pareto operators", () => {
+  const chain = listBuiltInWorkflowTemplateChains().find(
+    (entry) => entry.id === "material_candidate_rank_pareto_decision",
+  );
+  assert.ok(chain);
+  assert.deepEqual(
+    chain.templates.map((template) => template.operatorId ?? template.kind),
+    [
+      "input",
+      "transform.rank_material_candidates",
+      "transform.extract_material_pareto_frontier",
+      "export.summary_json",
+    ],
+  );
+  assert.deepEqual(chain.connections?.map((connection) => [connection.from, connection.to]), [
+    [0, 1],
+    [0, 2],
+    [2, 3],
+  ]);
+  assert.ok(scoreWorkflowTemplateChainSearch(chain, "material pareto"));
 });

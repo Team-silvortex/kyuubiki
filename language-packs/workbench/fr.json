@@ -1,0 +1,51 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "workbench-fr-core-1.13",
+  "language": "fr",
+  "targetSurface": "workbench",
+  "name": "French Workbench Core",
+  "version": "1.13.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.13.0",
+  "source": "downloaded",
+  "updatedAt": "2026-06-30T00:00:00.000Z",
+  "description": "Core French UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "overrides": {
+    "title": "Workbench Kyuubiki",
+    "subtitle": "Espace de travail pour la simulation, les workflows et les agents.",
+    "rail": {
+      "study": "Etude",
+      "model": "Espace",
+      "workflow": "Workflow",
+      "store": "Store",
+      "library": "Historique",
+      "system": "Systeme"
+    },
+    "sections": {
+      "study": "Configuration d'etude",
+      "model": "Espace de travail",
+      "workflow": "Studio de workflow",
+      "store": "Store du projet",
+      "library": "Historique des taches",
+      "system": "Systeme"
+    },
+    "workflowBuilderPage": "Constructeur",
+    "workflowRunsPage": "Executions",
+    "workflowCatalogTitle": "Catalogue de workflows",
+    "workflowTemplateChainLibraryLabel": "Bibliotheque de chaines",
+    "languagePacksTitle": "Packs de langue installes",
+    "languagePacksHint": "Importez des packs JSON locaux maintenant, avec la meme surface prete pour une distribution distante.",
+    "languagePacksEmptyLabel": "Aucun pack de langue personnalise n'est encore installe.",
+    "languagePackName": "Nom",
+    "languagePackVersion": "Version",
+    "languagePackSourceImported": "Importe",
+    "languagePackSourceDownloaded": "Telecharge",
+    "languagePackDownloadTemplate": "Telecharger le modele",
+    "languagePackExportInstalled": "Exporter le pack installe",
+    "languagePackImport": "Importer un pack",
+    "languagePackRemove": "Retirer",
+    "languagePackCatalogTitle": "Catalogue futur",
+    "languagePackCatalogHint": "Ces emplacements restent visibles pour brancher plus tard le telechargement de packs distants.",
+    "languagePackCatalogAction": "Bientot"
+  }
+}

@@ -3,7 +3,7 @@ export function buildImportedWorkflowGraph() {
     schema_version: "kyuubiki.workflow-graph/v1",
     id: "workflow.test",
     name: "workflow test",
-    version: "1.12.0",
+    version: "1.13.0",
     nodes: [
       { id: "bundle", kind: "transform", operator_id: "transform.compose_diagnostics_bundle" },
       { id: "guard", kind: "transform", operator_id: "transform.evaluate_diagnostics_bundle_guard" },

@@ -21,6 +21,9 @@ pub use crate::integrity::{
 pub(crate) use crate::integrity_contract::{
     IntegrityContract, contract_path, load_integrity_contract,
 };
+pub use crate::linux_desktop_dependencies::{
+    LinuxDesktopDependencyPlan, linux_desktop_dependency_plan,
+};
 pub(crate) use crate::release::{
     build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
     build_release_manifest, build_release_readme, expected_release_script_contents,

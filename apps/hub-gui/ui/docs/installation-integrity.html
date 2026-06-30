@@ -19,15 +19,12 @@
           This is the Hub mirror for the trust-and-safety chapter's installation integrity material.
         </p>
         <div class="docs-meta">
-          <span class="docs-chip">Shipping version: 1.12.0</span>
+          <span class="docs-chip">Shipping version: 1.13.0</span>
           <span class="docs-chip">Schema: kyuubiki.installation-contract/v1</span>
-          <span class="docs-chip">Component protocol: kyuubiki.component-integrity/v1</span>
-          <span class="docs-chip">Required path coverage: 15/15</span>
         </div>
         <div class="docs-links">
           <a class="docs-link" href="./index.html">Back to book entry</a>
           <a class="docs-link" href="../../../../docs/book-ch07-trust-and-safety.html">Open central chapter</a>
-          <a class="docs-link" href="../../../../docs/component-integrity-protocol.html">Open component protocol</a>
           <a class="docs-link" href="../../../../docs/installation-integrity-contract.html">Open source page</a>
           <a class="docs-link" href="../../../../deploy/installation-integrity-contract.json">Open JSON source</a>
         </div>
@@ -80,7 +77,7 @@
     <div class="docs-kicker">version</div>
     <h3>required shipping version</h3>
     <p class="docs-copy">Desktop shells, workspace packages, and local release descriptors are expected to align to this working version.</p>
-    <p class="docs-copy"><strong>Value:</strong> <code>1.12.0</code></p>
+    <p class="docs-copy"><strong>Value:</strong> <code>1.13.0</code></p>
     <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
   </article>
 <article class="docs-card">
@@ -111,23 +108,6 @@
 <li><strong>desktop hub brand metadata</strong>: <code>apps/hub-gui/ui/assets/brand.json</code> (required)</li>
 <li><strong>desktop workbench shell</strong>: <code>apps/workbench-gui</code> (required)</li>
 <li><strong>desktop workbench brand metadata</strong>: <code>apps/workbench-gui/ui/assets/brand.json</code> (required)</li>
-          </ul>
-        </article>
-
-        <article class="docs-card">
-          <h2>Component protocol coverage</h2>
-          <p class="docs-copy">
-            The Installer now treats component integrity as a protocol. The
-            healthy current report shows <code>component_count: 8</code> and
-            <code>required_path_coverage: 15/15</code>.
-          </p>
-          <ul class="docs-list">
-            <li><code>workspace.root</code>: root sentinel for required-layout coverage</li>
-            <li><code>brand.shared</code>: shared brand metadata and <code>releaseVersion</code></li>
-            <li><code>installer.core</code>: installer contract, staging, and runtime payload roots</li>
-            <li><code>desktop.installer</code>, <code>desktop.hub</code>, <code>desktop.workbench</code>: fixed UI shells and brand metadata</li>
-            <li><code>release.snapshots</code>: protected version history</li>
-            <li><code>runtime.state</code>: runtime state roots and allowlisted stale runtime cleanup</li>
           </ul>
         </article>
 

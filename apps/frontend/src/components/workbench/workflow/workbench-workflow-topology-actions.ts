@@ -95,7 +95,7 @@ function ensureTemplateDatasetValues(
     graph.dataset_contract = {
       schema_version: "kyuubiki.workflow-dataset/v1",
       id: `${graph.id}.dataset`,
-      version: graph.version ?? "1.12.0",
+      version: graph.version ?? "1.13.0",
       name: `${graph.name ?? graph.id} dataset contract`,
       values: datasetValues,
       metadata: {},

@@ -97,6 +97,7 @@ type WorkbenchSystemConfigCardProps = {
   onExportInstalledLanguagePack: () => void;
   onImportLanguagePack: (file: File) => void;
   onRemoveLanguagePack: (packId: string) => void;
+  onInstallCatalogLanguagePack: (packId: string) => void;
   onFrontendRuntimeModeChange: (value: FrontendRuntimeMode) => void;
   onBackendApiBaseUrlChange: (value: string) => void;
   onDirectMeshSelectionModeChange: (value: DirectMeshSelectionMode) => void;
@@ -186,6 +187,7 @@ export function WorkbenchSystemConfigCard({
   onExportInstalledLanguagePack,
   onImportLanguagePack,
   onRemoveLanguagePack,
+  onInstallCatalogLanguagePack,
   onFrontendRuntimeModeChange,
   onBackendApiBaseUrlChange,
   onDirectMeshSelectionModeChange,
@@ -403,7 +405,7 @@ export function WorkbenchSystemConfigCard({
                   <p className="history-meta">{pack.status}</p>
                 </div>
                 <div className="history-actions">
-                  <button className="ghost-button ghost-button--compact" disabled type="button">
+                  <button className="ghost-button ghost-button--compact" onClick={() => onInstallCatalogLanguagePack(pack.id)} type="button">
                     {languagePackCatalogActionLabel}
                   </button>
                 </div>

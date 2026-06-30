@@ -7,9 +7,10 @@ use kyuubiki_installer::{
     default_remote_deployment_journal, default_remote_deployment_plan,
     default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
     default_remote_ssh_fixture_report, embedded_runtime_report, exit_on_err, export_launch_config,
-    init_env, installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
-    print_help, remote_deployment_roadmap, repair_installation, run_doctor, stage_release,
-    unified_update_plan, unified_update_preview, validate_env_file,
+    init_env, installation_integrity_report, linux_desktop_dependency_plan, parse_platform,
+    prepare_layout, prepare_staged_update, print_help, remote_deployment_roadmap,
+    repair_installation, run_doctor, stage_release, unified_update_plan, unified_update_preview,
+    validate_env_file,
 };
 
 fn main() {
@@ -22,6 +23,7 @@ fn main() {
         "installation-integrity" => println!("{}", installation_integrity_report().render()),
         "credential-storage" => println!("{}", credential_storage_contract().render()),
         "cross-platform-audit" => println!("{}", cross_platform_audit_report().render()),
+        "linux-desktop-deps" => println!("{}", linux_desktop_dependency_plan().render()),
         "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
         "update-plan" => {
             let channel = args.next();

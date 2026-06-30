@@ -79,6 +79,7 @@ export type WorkbenchSystemSidebarMountProps = {
   handleExportInstalledLanguagePack: () => void;
   handleImportLanguagePack: (file: File) => Promise<void>;
   handleRemoveLanguagePack: (packId: string) => void;
+  handleInstallCatalogLanguagePack: (packId: string) => void;
   setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
   setDirectMeshSelectionMode: (value: "healthiest" | "first_reachable") => void;
   setDirectMeshEndpointsText: (value: string) => void;

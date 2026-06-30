@@ -8,8 +8,9 @@ use crate::{
     default_remote_deployment_journal, default_remote_deployment_plan,
     default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
     default_remote_ssh_fixture_report, embedded_runtime_report, expected_release_script_contents,
-    installation_integrity_report, parse_agent_endpoints, parse_agent_manifest, parse_platform,
-    remote_deployment_roadmap, unified_update_plan, unified_update_preview, workspace_root,
+    installation_integrity_report, linux_desktop_dependency_plan, parse_agent_endpoints,
+    parse_agent_manifest, parse_platform, remote_deployment_roadmap, unified_update_plan,
+    unified_update_preview, workspace_root,
 };
 
 #[test]
@@ -103,6 +104,41 @@ fn embedded_runtime_report_renders_contract_summary() {
 }
 
 #[test]
+fn linux_desktop_dependency_plan_declares_tauri_ubuntu_prerequisites() {
+    let plan = linux_desktop_dependency_plan();
+    assert_eq!(
+        plan.schema_version,
+        "kyuubiki.linux-desktop-dependencies/v1"
+    );
+    assert!(plan.node_runtime.contains("node-v20.19.2-linux-x64"));
+    assert!(
+        plan.apt_packages
+            .iter()
+            .any(|package| package == "libwebkit2gtk-4.1-dev")
+    );
+    assert!(
+        plan.apt_packages
+            .iter()
+            .any(|package| package == "libgtk-3-dev")
+    );
+    assert!(
+        plan.apt_packages
+            .iter()
+            .any(|package| package == "librsvg2-dev")
+    );
+    assert!(
+        plan.apt_packages
+            .iter()
+            .any(|package| package == "patchelf")
+    );
+    assert_eq!(
+        plan.preflight_command,
+        "make desktop-linux-remote-preflight"
+    );
+    assert!(plan.render().contains("installer-managed remote execution"));
+}
+
+#[test]
 fn parses_agent_endpoint_list() {
     let parsed = parse_agent_endpoints("127.0.0.1:5001,solver.local:5002").unwrap();
     assert_eq!(parsed.len(), 2);
@@ -149,14 +185,14 @@ fn parses_manifest_agents() {
 fn unified_update_plan_uses_default_channel() {
     let plan = unified_update_plan(None).unwrap();
     assert_eq!(plan.target_channel, "stable");
-    assert_eq!(plan.target_version, "1.12.0");
+    assert_eq!(plan.target_version, "1.13.0");
 }
 
 #[test]
 fn unified_update_preview_reports_noop_for_current_channel() {
     let preview = unified_update_preview(None).unwrap();
     assert_eq!(preview.channel, "stable");
-    assert_eq!(preview.target_version, "1.12.0");
+    assert_eq!(preview.target_version, "1.13.0");
     assert_eq!(preview.overall_status, "noop");
 }
 

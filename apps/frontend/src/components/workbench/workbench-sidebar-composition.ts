@@ -157,6 +157,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     handleExportInstalledLanguagePack: topLevelActions.handleExportInstalledLanguagePack,
     handleImportLanguagePack: topLevelActions.handleImportLanguagePack,
     handleRemoveLanguagePack: topLevelActions.handleRemoveLanguagePack,
+    handleInstallCatalogLanguagePack: topLevelActions.handleInstallCatalogLanguagePack,
     setFrontendRuntimeMode: shellState.setFrontendRuntimeMode,
     setDirectMeshSelectionMode: shellState.setDirectMeshSelectionMode,
     setDirectMeshEndpointsText: shellState.setDirectMeshEndpointsText,

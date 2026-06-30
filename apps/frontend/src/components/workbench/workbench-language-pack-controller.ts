@@ -9,6 +9,7 @@ import {
   WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
   getWorkbenchLanguagePackCompatibility,
 } from "@/lib/workbench/helpers";
+import { getBuiltinWorkbenchLanguagePack } from "@/components/workbench/workbench-language-pack-catalog";
 
 function triggerWorkbenchJsonDownload(filename: string, payload: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -33,7 +34,7 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     language,
     targetSurface: "workbench",
     name: `${t.languages[language as keyof typeof t.languages] ?? language.toUpperCase()} custom pack`,
-    version: "1.12.0",
+    version: "1.13.0",
     versionLine: WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
     targetAppVersion: WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION,
     source: "imported",
@@ -95,55 +96,7 @@ export async function importWorkbenchLanguagePack(params: {
     const raw = JSON.parse(await file.text()) as Partial<WorkbenchLanguagePack> & {
       overrides?: Record<string, unknown>;
     };
-    if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
-      throw new Error("invalid-pack");
-    }
-    if (raw.targetSurface !== undefined && raw.targetSurface !== "workbench") {
-      throw new Error("wrong-surface");
-    }
-
-    const nextPack: WorkbenchLanguagePack = {
-      schema_version:
-        typeof raw.schema_version === "string" && raw.schema_version.trim()
-          ? raw.schema_version.trim()
-          : WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
-      id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
-      language: raw.language,
-      targetSurface: "workbench",
-      name: raw.name,
-      version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.12.0",
-      versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,
-      targetAppVersion:
-        typeof raw.targetAppVersion === "string" && raw.targetAppVersion.trim() ? raw.targetAppVersion.trim() : undefined,
-      source: raw.source === "downloaded" ? "downloaded" : "imported",
-      updatedAt: new Date().toISOString(),
-      description: typeof raw.description === "string" ? raw.description : undefined,
-      overrides:
-        raw.overrides && typeof raw.overrides === "object" && !Array.isArray(raw.overrides) ? raw.overrides : {},
-    };
-
-    const compatibility = getWorkbenchLanguagePackCompatibility(nextPack);
-
-    setLanguagePacks((current) => {
-      const next = current.filter(
-        (pack) => !(pack.id === nextPack.id || (pack.language === nextPack.language && pack.name === nextPack.name)),
-      );
-      return [nextPack, ...next];
-    });
-
-    setMessage(
-      language === "zh"
-        ? compatibility === "mismatch"
-          ? "语言包已导入，但它的目标版本与当前 Workbench 不完全对齐。"
-          : "语言包已导入。"
-        : language === "ja"
-          ? compatibility === "mismatch"
-            ? "言語パックを取り込みましたが、対象バージョンが現在の Workbench と完全には一致していません。"
-            : "言語パックを取り込みました。"
-          : compatibility === "mismatch"
-            ? "Language pack imported, but its target version does not fully match the current Workbench."
-            : "Language pack imported.",
-    );
+    installWorkbenchLanguagePackPayload({ raw, language, setLanguagePacks, setMessage });
   } catch {
     setMessage(
       language === "zh"
@@ -153,6 +106,86 @@ export async function importWorkbenchLanguagePack(params: {
           : "Invalid language pack JSON.",
     );
   }
+}
+
+export function installWorkbenchLanguagePackPayload(params: {
+  raw: Partial<WorkbenchLanguagePack> & { overrides?: Record<string, unknown> };
+  language: WorkbenchLanguage;
+  setLanguagePacks: Dispatch<SetStateAction<WorkbenchLanguagePack[]>>;
+  setMessage: (value: string) => void;
+}) {
+  const { raw, language, setLanguagePacks, setMessage } = params;
+  if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
+    throw new Error("invalid-pack");
+  }
+  if (raw.targetSurface !== undefined && raw.targetSurface !== "workbench") {
+    throw new Error("wrong-surface");
+  }
+
+  const nextPack: WorkbenchLanguagePack = {
+    schema_version:
+      typeof raw.schema_version === "string" && raw.schema_version.trim()
+        ? raw.schema_version.trim()
+        : WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
+    id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
+    language: raw.language,
+    targetSurface: "workbench",
+    name: raw.name,
+    version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.13.0",
+    versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,
+    targetAppVersion:
+      typeof raw.targetAppVersion === "string" && raw.targetAppVersion.trim() ? raw.targetAppVersion.trim() : undefined,
+    source: raw.source === "downloaded" ? "downloaded" : "imported",
+    updatedAt: typeof raw.updatedAt === "string" && raw.updatedAt.trim() ? raw.updatedAt.trim() : new Date().toISOString(),
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    overrides:
+      raw.overrides && typeof raw.overrides === "object" && !Array.isArray(raw.overrides) ? raw.overrides : {},
+  };
+
+  const compatibility = getWorkbenchLanguagePackCompatibility(nextPack);
+
+  setLanguagePacks((current) => {
+    const next = current.filter(
+      (pack) => !(pack.id === nextPack.id || (pack.language === nextPack.language && pack.name === nextPack.name)),
+    );
+    return [nextPack, ...next];
+  });
+
+  setMessage(
+    language === "zh"
+      ? compatibility === "mismatch"
+        ? "语言包已导入，但它的目标版本与当前 Workbench 不完全对齐。"
+        : "语言包已导入。"
+      : language === "ja"
+        ? compatibility === "mismatch"
+          ? "言語パックを取り込みましたが、対象バージョンが現在の Workbench と完全には一致していません。"
+          : "言語パックを取り込みました。"
+        : compatibility === "mismatch"
+          ? "Language pack imported, but its target version does not fully match the current Workbench."
+          : "Language pack imported.",
+  );
+}
+
+export function installBuiltinWorkbenchLanguagePack(params: {
+  packId: string;
+  language: WorkbenchLanguage;
+  setLanguagePacks: Dispatch<SetStateAction<WorkbenchLanguagePack[]>>;
+  setMessage: (value: string) => void;
+}) {
+  const { packId, language, setLanguagePacks, setMessage } = params;
+  const pack = getBuiltinWorkbenchLanguagePack(packId);
+  if (!pack) {
+    setMessage(
+      language === "zh"
+        ? "没有找到这个语言包。"
+        : language === "ja"
+          ? "この言語パックは見つかりません。"
+          : "Language pack not found.",
+    );
+    return;
+  }
+
+  installWorkbenchLanguagePackPayload({ raw: pack, language, setLanguagePacks, setMessage });
 }
 
 export function removeWorkbenchLanguagePack(params: {

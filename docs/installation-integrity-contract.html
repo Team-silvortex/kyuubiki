@@ -17,14 +17,11 @@
         </p>
         
         <div class="docs-meta">
-          <span class="docs-chip">Shipping version: 1.12.0</span>
+          <span class="docs-chip">Shipping version: 1.13.0</span>
           <span class="docs-chip">Schema: kyuubiki.installation-contract/v1</span>
-          <span class="docs-chip">Component protocol: kyuubiki.component-integrity/v1</span>
-          <span class="docs-chip">Required path coverage: 15/15</span>
         </div>
         <div class="docs-links">
           <a class="docs-link" href="./README.md">Back to docs readme</a>
-          <a class="docs-link" href="./component-integrity-protocol.html">Open component protocol</a>
           <a class="docs-link" href="../deploy/installation-integrity-contract.json">Open JSON source</a>
         </div>
       </section>
@@ -76,7 +73,7 @@
     <div class="docs-kicker">version</div>
     <h3>required shipping version</h3>
     <p class="docs-copy">Desktop shells, workspace packages, and local release descriptors are expected to align to this working version.</p>
-    <p class="docs-copy"><strong>Value:</strong> <code>1.12.0</code></p>
+    <p class="docs-copy"><strong>Value:</strong> <code>1.13.0</code></p>
     <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
   </article>
 <article class="docs-card">
@@ -107,25 +104,6 @@
 <li><strong>desktop hub brand metadata</strong>: <code>apps/hub-gui/ui/assets/brand.json</code> (required)</li>
 <li><strong>desktop workbench shell</strong>: <code>apps/workbench-gui</code> (required)</li>
 <li><strong>desktop workbench brand metadata</strong>: <code>apps/workbench-gui/ui/assets/brand.json</code> (required)</li>
-          </ul>
-        </article>
-
-        <article class="docs-card">
-          <h2>Component protocol coverage</h2>
-          <p class="docs-copy">
-            The install contract now embeds <code>kyuubiki.component-integrity/v1</code>.
-            Every required layout path must be owned by a component before the
-            Installer report is considered healthy.
-          </p>
-          <ul class="docs-list">
-            <li><strong>Current component count</strong>: <code>8</code></li>
-            <li><strong>Required path coverage</strong>: <code>15/15</code></li>
-            <li><code>workspace.root</code>: workspace root sentinel</li>
-            <li><code>brand.shared</code>: shared brand metadata and release version</li>
-            <li><code>installer.core</code>: installer contract, staging, and runtime payload roots</li>
-            <li><code>desktop.installer</code>, <code>desktop.hub</code>, <code>desktop.workbench</code>: fixed UI shell components plus brand metadata</li>
-            <li><code>release.snapshots</code>: protected lightweight version history</li>
-            <li><code>runtime.state</code>: runtime state roots and stale process-file cleanup</li>
           </ul>
         </article>
 

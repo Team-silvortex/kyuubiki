@@ -80,6 +80,7 @@ export function WorkbenchSystemSidebarMount({
   handleExportInstalledLanguagePack,
   handleImportLanguagePack,
   handleRemoveLanguagePack,
+  handleInstallCatalogLanguagePack,
   setFrontendRuntimeMode,
   setDirectMeshSelectionMode,
   setDirectMeshEndpointsText,
@@ -282,6 +283,7 @@ export function WorkbenchSystemSidebarMount({
             onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
             onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
             onRemoveLanguagePack={handleRemoveLanguagePack}
+            onInstallCatalogLanguagePack={handleInstallCatalogLanguagePack}
             onFrontendRuntimeModeChange={(value) => setFrontendRuntimeMode(applyWorkbenchGovernancePatch({ currentFrontendRuntimeMode: frontendRuntimeMode, currentDirectMeshEndpointsText: directMeshEndpointsText, nextFrontendRuntimeMode: value }).frontendRuntimeMode)}
             onBackendApiBaseUrlChange={handleBackendApiBaseUrlChange}
             onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}

@@ -8,6 +8,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset";
 import { ELECTROMAGNETIC_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-electromagnetic-presets";
 import { HOTSPOT_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-hotspot-presets";
+import { MATERIAL_DECISION_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-material-presets";
 import { STATISTICS_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-statistics-presets";
 
 const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
@@ -233,6 +234,7 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     ],
   },
   ...ELECTROMAGNETIC_TEMPLATE_CHAINS,
+  ...MATERIAL_DECISION_TEMPLATE_CHAINS,
   ...HOTSPOT_TEMPLATE_CHAINS,
   DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
   PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,

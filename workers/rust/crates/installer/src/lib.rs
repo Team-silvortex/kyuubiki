@@ -14,6 +14,7 @@ mod exports;
 mod integrity;
 mod integrity_contract;
 mod integrity_versions;
+mod linux_desktop_dependencies;
 mod release;
 mod remote_deployment;
 mod remote_deployment_artifacts;

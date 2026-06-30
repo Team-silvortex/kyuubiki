@@ -3,6 +3,7 @@
 import {
   downloadWorkbenchLanguagePackTemplate,
   exportWorkbenchInstalledLanguagePack,
+  installBuiltinWorkbenchLanguagePack,
   importWorkbenchLanguagePack,
   removeWorkbenchLanguagePack,
 } from "@/components/workbench/workbench-language-pack-controller";
@@ -283,6 +284,15 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
     });
   };
 
+  const handleInstallCatalogLanguagePack = (packId: string) => {
+    installBuiltinWorkbenchLanguagePack({
+      packId,
+      language: args.language,
+      setLanguagePacks: args.setLanguagePacks,
+      setMessage: args.setMessage,
+    });
+  };
+
   const downloadSecurityEventExport = async () => {
     await downloadWorkbenchSecurityEventExport({
       language: args.language,
@@ -321,6 +331,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
     handleExportInstalledLanguagePack,
     handleImportLanguagePack,
     handleRemoveLanguagePack,
+    handleInstallCatalogLanguagePack,
     downloadSecurityEventExport,
     downloadSecurityEventCsvExport,
   };

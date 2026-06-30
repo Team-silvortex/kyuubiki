@@ -150,3 +150,72 @@ fn ranks_material_candidates_with_partial_summaries() {
             .is_some_and(f64::is_finite)
     );
 }
+
+#[test]
+fn extracts_material_pareto_frontier_for_multi_objective_candidates() {
+    let frontier = run_transform_operator(
+        "transform.extract_material_pareto_frontier",
+        serde_json::json!({
+            "rows": [
+                {
+                    "candidate_id": "light_hot",
+                    "mass": 1.0,
+                    "max_temperature": 130.0,
+                    "material_status": "pass"
+                },
+                {
+                    "candidate_id": "balanced",
+                    "mass": 1.4,
+                    "max_temperature": 95.0,
+                    "material_status": "pass"
+                },
+                {
+                    "candidate_id": "dominated",
+                    "mass": 1.8,
+                    "max_temperature": 120.0,
+                    "material_status": "pass"
+                },
+                {
+                    "candidate_id": "unsafe",
+                    "mass": 0.8,
+                    "max_temperature": 90.0,
+                    "material_status": "fail"
+                }
+            ]
+        }),
+        serde_json::json!({
+            "objectives": [
+                { "field": "mass", "goal": "min", "weight": 1.0 },
+                { "field": "max_temperature", "goal": "min", "weight": 0.01 }
+            ]
+        }),
+    )
+    .expect("pareto frontier operator should run");
+
+    assert_eq!(
+        frontier["material_pareto_candidate_count"].as_u64(),
+        Some(4)
+    );
+    assert_eq!(frontier["material_pareto_feasible_count"].as_u64(), Some(3));
+    assert_eq!(frontier["material_pareto_frontier_count"].as_u64(), Some(2));
+    let ids = frontier["material_pareto_frontier"]
+        .as_array()
+        .expect("frontier should be an array")
+        .iter()
+        .filter_map(|entry| entry["candidate_id"].as_str())
+        .collect::<Vec<_>>();
+    assert!(ids.contains(&"light_hot"));
+    assert!(ids.contains(&"balanced"));
+    assert_eq!(
+        frontier["material_pareto_dominated"][0]["candidate_id"].as_str(),
+        Some("dominated")
+    );
+    assert!(
+        frontier["material_pareto_dominated"]
+            .as_array()
+            .expect("dominated should be an array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("unsafe")
+                && entry["dominated_by"].as_str() == Some("infeasible"))
+    );
+}

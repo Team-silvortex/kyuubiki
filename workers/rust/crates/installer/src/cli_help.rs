@@ -7,6 +7,7 @@ pub fn print_help() {
         "  installation-integrity  Validate install layout, versions, and residue\n",
         "  credential-storage  Show sandbox credential storage contract\n",
         "  cross-platform-audit  Validate dist/ parity across macOS, Linux, and Windows\n",
+        "  linux-desktop-deps  Show Ubuntu/Tauri dependency plan for remote Linux desktop builds\n",
         "  embedded-runtimes  Show installer-managed runtime payload contract\n",
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",

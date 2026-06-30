@@ -27,6 +27,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.score_parameter_sweep",
     "transform.evaluate_material_margins",
     "transform.rank_material_candidates",
+    "transform.extract_material_pareto_frontier",
     "transform.evaluate_thermal_guard",
     "transform.benchmark_coupled_heat_pair",
     "transform.evaluate_magnetostatic_guard",
@@ -267,6 +268,7 @@ pub fn run_transform_operator(
         | "transform.score_parameter_sweep"
         | "transform.evaluate_material_margins"
         | "transform.rank_material_candidates"
+        | "transform.extract_material_pareto_frontier"
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
         | "transform.evaluate_magnetostatic_guard"

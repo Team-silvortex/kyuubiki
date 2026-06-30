@@ -25,4 +25,14 @@ defmodule KyuubikiWeb.WorkflowMaterialMarginOperatorCatalogTest do
     assert "ranking" in operator["capability_tags"]
     assert "candidate_selection" in operator["capability_tags"]
   end
+
+  test "catalog exposes material Pareto frontier transform" do
+    assert {:ok, %{"operator" => operator}} =
+             WorkflowOperatorCatalog.fetch("transform.extract_material_pareto_frontier")
+
+    assert operator["kind"] == "transform"
+    assert operator["family"] == "material_pareto_frontier"
+    assert "pareto" in operator["capability_tags"]
+    assert "multi_objective" in operator["capability_tags"]
+  end
 end

@@ -83,6 +83,27 @@ Use these commands when building deployable layouts:
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
   Verifies staged manifests and required icon inputs for each desktop app
+- `make desktop-linux-remote`
+  Syncs the checkout to the Ubuntu lab host and runs the Linux desktop package
+  build there, keeping large Linux artifacts off the Mac by default.
+- `make desktop-linux-remote-install-deps`
+  Runs the installer-declared apt dependency install on the lab host with
+  `sudo -n`; it fails rather than prompting or storing a password.
+- `make desktop-linux-remote-preflight`
+  Checks the Ubuntu lab host for Node 20.19.x, npm, Cargo/Rust, Make, and the
+  Linux Tauri system packages before running the heavier remote bundle build.
+
+The Linux remote preflight currently expects these Ubuntu packages to be
+installer-managed on `kyuubiki-lab`:
+
+- `libwebkit2gtk-4.1-dev`
+- `libgtk-3-dev`
+- `librsvg2-dev`
+- `patchelf`
+
+Use `cargo run -p kyuubiki-installer -- linux-desktop-deps` to print the
+installer-owned dependency plan, including the user-scoped Node runtime path,
+the apt package set, and the preflight command.
 - `./scripts/kyuubiki package-desktop macos|linux|windows`
 - `./scripts/kyuubiki package-desktop all`
 - `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
@@ -91,6 +112,9 @@ Use these commands when building deployable layouts:
 - `./scripts/kyuubiki desktop-build-host`
 - `./scripts/kyuubiki desktop-release macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
+- `./scripts/kyuubiki desktop-linux-remote`
+- `./scripts/kyuubiki desktop-linux-remote install-deps`
+- `./scripts/kyuubiki desktop-linux-remote preflight`
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.

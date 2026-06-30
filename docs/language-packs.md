@@ -14,6 +14,29 @@ This is intentionally a local-first workflow today:
 The same surface is also the planned home for future remote language-pack
 delivery.
 
+## Shipped support packs
+
+The repo now keeps distributable support packs under
+[`language-packs`](../language-packs/):
+
+- catalog: [`language-packs/catalog.json`](../language-packs/catalog.json)
+- Workbench packs: `fr`, `ko`
+- Hub packs: `fr`, `ko`
+
+These files are release-line assets rather than built-in copy branches. Import
+them from the existing local language-pack panels today; future download-source
+flows can consume the same catalog and pack envelopes.
+
+Workbench also mirrors the catalog metadata in its System page so operators can
+install the shipped support packs from the built-in catalog even before remote
+download sources are wired.
+
+Validate the shipped pack set with:
+
+```sh
+node ./scripts/validate-language-packs.mjs
+```
+
 ## Hub alignment
 
 Hub is now wired to the same local-first copy philosophy through a lightweight
@@ -73,7 +96,7 @@ to replace the keys it cares about.
   "name": "French custom pack",
   "version": "1.6.0",
   "versionLine": "tamamono 1.x",
-  "targetAppVersion": "1.12.0",
+  "targetAppVersion": "1.13.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
   "description": "Overrides a few high-traffic labels first.",
@@ -117,6 +140,6 @@ in.
 - keep `versionLine` aligned with the active line such as `tamamono 1.x`
 - set `targetSurface` to `workbench` or `hub` for every newly generated pack
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
-  build such as `1.12.0`
+  build such as `1.13.0`
 - treat packs without either field as generic overrides, not as audited release
   assets

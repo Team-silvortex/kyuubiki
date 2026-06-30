@@ -22,6 +22,7 @@ import type {
   Theme,
 } from "@/components/workbench/workbench-types";
 import type { DirectMeshExecutionState } from "@/components/workbench/workbench-defaults";
+import { buildWorkbenchLanguagePackCatalogRows } from "@/components/workbench/workbench-language-pack-catalog";
 
 type UseWorkbenchShellStateArgs = {
   setLoadedModelName: (value: string | ((current: string) => string)) => void;
@@ -85,30 +86,7 @@ export function useWorkbenchShellState({
     [activeLanguagePack?.overrides, language],
   );
   const languagePackCatalogRows = useMemo(
-    () => [
-      {
-        id: "fr-preview",
-        language: "fr",
-        name: "French preview",
-        status:
-          language === "zh"
-            ? "预留远程下载入口"
-            : language === "ja"
-              ? "将来のリモート配布枠"
-              : "Reserved for future remote delivery",
-      },
-      {
-        id: "de-preview",
-        language: "de",
-        name: "German preview",
-        status:
-          language === "zh"
-            ? "预留远程下载入口"
-            : language === "ja"
-              ? "将来のリモート配布枠"
-              : "Reserved for future remote delivery",
-      },
-    ],
+    () => buildWorkbenchLanguagePackCatalogRows(language),
     [language],
   );
 

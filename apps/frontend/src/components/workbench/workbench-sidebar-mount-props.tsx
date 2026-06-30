@@ -260,6 +260,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         handleExportInstalledLanguagePack={props.handleExportInstalledLanguagePack}
         handleImportLanguagePack={props.handleImportLanguagePack}
         handleRemoveLanguagePack={props.handleRemoveLanguagePack}
+        handleInstallCatalogLanguagePack={props.handleInstallCatalogLanguagePack}
         setFrontendRuntimeMode={props.setFrontendRuntimeMode}
         setDirectMeshSelectionMode={props.setDirectMeshSelectionMode}
         setDirectMeshEndpointsText={props.setDirectMeshEndpointsText}

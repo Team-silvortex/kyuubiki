@@ -35,6 +35,9 @@ This directory contains host-native operational entry points.
 - `check-elixir-self-host.mjs`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
+- `validate-language-packs.mjs`
+  Validate the shipped Workbench/Hub language support pack catalog and JSON
+  envelopes for the current `tamamono 1.x` line.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -268,6 +271,14 @@ Examples now include:
 - `desktop-build-host`
 - `desktop-release`
 - `desktop-verify`
+- `desktop-linux-remote`
+  Sync and run the Linux desktop packaging lane on `kyuubiki-lab`; use
+  `desktop-linux-remote preflight` before the full build to check Node and
+  Linux Tauri system dependencies.
+- `desktop-linux-remote install-deps`
+  Installer-aligned privileged dependency lane for the lab host. It uses
+  `sudo -n`, so it fails cleanly instead of prompting for or storing a
+  password.
 - `sync-desktop-shared`
 - `test-hub-gui`
 - `test-installer-gui`

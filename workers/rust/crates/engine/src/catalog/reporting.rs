@@ -238,5 +238,19 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
                 "headless_safe",
             ],
         ),
+        built_in_transform_descriptor(
+            "transform.extract_material_pareto_frontier",
+            "multi_domain",
+            "material_pareto_frontier",
+            "Extract the Pareto frontier from material candidates using configured min/max objectives and feasibility flags.",
+            &[
+                "transform",
+                "material",
+                "pareto",
+                "multi_objective",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
     ]
 }

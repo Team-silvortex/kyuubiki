@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 mod benchmark_profile_remote;
+mod desktop;
+mod desktop_linux_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
 mod standard_benchmark_remote;
@@ -13,19 +15,11 @@ mod workflow_mesh_remote;
 
 type RunnerResult<T> = Result<T, String>;
 
-#[derive(Clone, Copy)]
-enum DesktopApp {
-    Hub,
-    Installer,
-    Workbench,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Platform {
-    Linux,
-    Macos,
-    Windows,
-}
+use desktop::{
+    DesktopApp, host_platform, run_desktop_build, run_desktop_build_host, run_desktop_dev,
+    run_desktop_release, run_desktop_stage, run_desktop_status, run_desktop_verify,
+    run_package_desktop,
+};
 
 struct RepoPaths {
     root: PathBuf,
@@ -125,6 +119,16 @@ fn run() -> RunnerResult<u8> {
                 .map(OsString::from)
                 .chain(rest),
         ),
+        "build-hub-gui" => run_desktop_build(&paths, DesktopApp::Hub, rest),
+        "build-installer-gui" => run_desktop_build(&paths, DesktopApp::Installer, rest),
+        "build-workbench-gui" => run_desktop_build(&paths, DesktopApp::Workbench, rest),
+        "package-desktop" => run_package_desktop(&paths, rest),
+        "desktop-status" => run_desktop_status(&paths, rest),
+        "desktop-stage" => run_desktop_stage(&paths, rest),
+        "desktop-build-host" => run_desktop_build_host(&paths),
+        "desktop-release" => run_desktop_release(&paths, rest),
+        "desktop-verify" => run_desktop_verify(&paths, rest),
+        "desktop-linux-remote" => desktop_linux_remote::run_desktop_linux_remote(&paths.root, rest),
         "web-test" => run_command(&paths.web, "mix", prepend("test", rest)),
         "rust-test" => {
             let status = run_command(&paths.rust, "cargo", prepend("test", rest.clone()))?;
@@ -269,14 +273,6 @@ fn run_installer(paths: &RepoPaths, subcommand: &str, rest: Vec<OsString>) -> Ru
     )
 }
 
-fn run_desktop_dev(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
-    run_command(
-        desktop_app_dir(paths, app),
-        "npm",
-        ["run", "tauri:dev"].map(OsString::from),
-    )
-}
-
 fn run_node_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {
     run_command(
         root,
@@ -316,34 +312,6 @@ fn cargo_run(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsStrin
 
 fn prepend(value: &str, rest: Vec<OsString>) -> Vec<OsString> {
     std::iter::once(OsString::from(value)).chain(rest).collect()
-}
-
-fn desktop_app_dir(paths: &RepoPaths, app: DesktopApp) -> &Path {
-    match app {
-        DesktopApp::Hub => &paths.hub_gui,
-        DesktopApp::Installer => &paths.installer_gui,
-        DesktopApp::Workbench => &paths.workbench_gui,
-    }
-}
-
-fn host_platform() -> Platform {
-    if cfg!(target_os = "macos") {
-        Platform::Macos
-    } else if cfg!(target_os = "windows") {
-        Platform::Windows
-    } else {
-        Platform::Linux
-    }
-}
-
-impl Platform {
-    fn as_str(self) -> &'static str {
-        match self {
-            Platform::Linux => "linux",
-            Platform::Macos => "macos",
-            Platform::Windows => "windows",
-        }
-    }
 }
 
 fn print_native_script_audit(paths: &RepoPaths) -> RunnerResult<u8> {
@@ -405,6 +373,10 @@ Native commands:\n  \
 status/start/stop/restart/export-db/hot-status\n  \
 doctor validate-env install package cross-platform-audit\n  \
 project macro build-frontend build-orchestrator build-agent\n  \
+build-hub-gui build-installer-gui build-workbench-gui\n  \
+package-desktop desktop-status desktop-stage desktop-build-host\n  \
+desktop-release desktop-verify\n  \
+desktop-linux-remote\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test workflow-preflight\n  \
   benchmark-profile-remote\n  \

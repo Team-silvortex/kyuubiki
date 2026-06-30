@@ -1,0 +1,40 @@
+{
+  "schema_version": "kyuubiki.language-pack-catalog/v1",
+  "line": "tamamono 1.x",
+  "shipping_version": "1.13.0",
+  "updatedAt": "2026-06-30T00:00:00.000Z",
+  "packs": [
+    {
+      "id": "workbench-fr-core-1.13",
+      "surface": "workbench",
+      "language": "fr",
+      "name": "French Workbench Core",
+      "path": "workbench/fr.json",
+      "status": "preview"
+    },
+    {
+      "id": "workbench-ko-core-1.13",
+      "surface": "workbench",
+      "language": "ko",
+      "name": "Korean Workbench Core",
+      "path": "workbench/ko.json",
+      "status": "preview"
+    },
+    {
+      "id": "hub-fr-core-1.13",
+      "surface": "hub",
+      "language": "fr",
+      "name": "French Hub Core",
+      "path": "hub/fr.json",
+      "status": "preview"
+    },
+    {
+      "id": "hub-ko-core-1.13",
+      "surface": "hub",
+      "language": "ko",
+      "name": "Korean Hub Core",
+      "path": "hub/ko.json",
+      "status": "preview"
+    }
+  ]
+}

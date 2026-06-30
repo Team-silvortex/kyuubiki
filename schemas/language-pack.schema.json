@@ -47,7 +47,7 @@
     },
     "targetAppVersion": {
       "type": "string",
-      "description": "Optional shipped desktop/workbench version target such as 1.12.0."
+      "description": "Optional shipped desktop/workbench version target such as 1.13.0."
     },
     "source": {
       "type": "string",
