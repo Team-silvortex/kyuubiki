@@ -177,6 +177,7 @@ impl Options {
 }
 
 fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
+    ensure_remote_sync_dirs(root, options)?;
     for status in [
         rsync(
             root,
@@ -195,17 +196,9 @@ fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
         )?,
         rsync(
             root,
-            &[root.join("workers/rust/crates/benchmark/src/")],
+            &[root.join("workers/rust/")],
             &format!(
-                "{}:{}/workers/rust/crates/benchmark/src/",
-                options.remote_host, options.remote_dir
-            ),
-        )?,
-        rsync(
-            root,
-            &[root.join("workers/rust/benchmarks/")],
-            &format!(
-                "{}:{}/workers/rust/benchmarks/",
+                "{}:{}/workers/rust/",
                 options.remote_host, options.remote_dir
             ),
         )?,
@@ -217,10 +210,29 @@ fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
     Ok(())
 }
 
+fn ensure_remote_sync_dirs(root: &Path, options: &Options) -> RunnerResult<()> {
+    let status = run_status(
+        "ssh",
+        [
+            OsString::from(&options.remote_host),
+            OsString::from(format!(
+                "mkdir -p {} {}",
+                shell_escape(&format!("{}/scripts", options.remote_dir)),
+                shell_escape(&format!("{}/workers", options.remote_dir))
+            )),
+        ],
+        root,
+    )?;
+    if status != 0 {
+        return Err(format!("remote mkdir failed with status {status}"));
+    }
+    Ok(())
+}
+
 fn rsync(root: &Path, sources: &[PathBuf], destination: &str) -> RunnerResult<u8> {
     run_status(
         "rsync",
-        [OsString::from("-az")]
+        [OsString::from("-az"), OsString::from("--exclude=target/")]
             .into_iter()
             .chain(sources.iter().map(|path| path.clone().into_os_string()))
             .chain([OsString::from(destination)]),

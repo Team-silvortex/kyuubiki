@@ -89,12 +89,12 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
-	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=200k MATRIX=thermal-core REPEAT=3)"
-	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k supported)"
-	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k)"
-	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k)"
-	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k|200k>"
-	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k|200k>"
+	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=300k MATRIX=thermal-core CASE=heat-plane-quad-300k REPEAT=1)"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k/300k supported)"
+	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k)"
+	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k)"
+	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k|200k|300k>"
+	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k|200k|300k>"
 	@echo "  make benchmark-standard-report Write per-matrix reports plus a merged standard comparison report"
 	@echo "  make benchmark-standard-nightly Run the remote kyuubiki-lab standard benchmark regression flow and pull reports back"
 	@echo "  make regression-gate-report Rebuild the normalized regression catalog and compact gate report under tmp/"
@@ -262,6 +262,9 @@ check-language-packs:
 audit-rust-lines:
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
 
+audit-project-organization:
+	@node ./scripts/audit-project-organization.mjs
+
 hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev
 
@@ -376,6 +379,7 @@ verify:
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
+	@node ./scripts/audit-project-organization.mjs
 	@$(ENTRYPOINT) sdk-smoke
 	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}
 	@node --test apps/web/playground/test/fem.test.mjs

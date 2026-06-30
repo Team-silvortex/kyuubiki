@@ -28,6 +28,10 @@ The repository now keeps validation split by responsibility.
 - `make audit-rust-lines`
   Rust source organization guard; fails when any `workers/rust/crates/**/*.rs`
   file exceeds the current `600` line ceiling
+- `make audit-project-organization`
+  Repository-wide organization guard; scans tracked source/docs files, keeps
+  new files under the shared line ceiling, and prevents known historical debt
+  files from growing further
 - `./scripts/kyuubiki rust-line-audit`
   Same guard through the unified launcher, useful on remote hosts and CI jobs
   that do not enter through Make
@@ -178,11 +182,14 @@ Use these entrypoints:
 - `make benchmark-standard-report PROFILE=10k REPEAT=1`
   Emit per-matrix reports plus one merged local standard comparison report.
 - `make benchmark-standard-nightly`
-  Sync benchmark-only source to `kyuubiki-lab`, run the standard regression
+  Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
-- `make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1`
-  Run a remote exploratory 200k profile smoke without requiring a checked
+- `make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1`
+  Run a remote exploratory 300k profile smoke without requiring a checked
   baseline yet.
+- `make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1`
+  Run a narrow 300k mechanical probe before attempting a full mechanical
+  matrix.
 
 Baseline and report surfaces:
 
@@ -207,12 +214,12 @@ Current behavior notes:
   timing should prefer `kyuubiki-lab`
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
-- `200k` is remote-first: CI checks the catalog shape, while timing evidence
+- `200k` and `300k` are remote-first: CI checks the catalog shape, while timing evidence
   should be collected from `kyuubiki-lab` before adding checked baselines
 - cases under `5.0 ms` baseline median remain visible in reports but are not
   treated as hard failures by default
-- the remote wrapper syncs benchmark-only source and does not rely on checked-in
-  server-specific runtime configuration files
+- the remote wrapper syncs the Rust workspace without `target/` and does not
+  rely on checked-in server-specific runtime configuration files
 - local retained run folders are now indexed and pruned by retention count so
   nightly artifact history does not sprawl indefinitely on the runner workspace
 

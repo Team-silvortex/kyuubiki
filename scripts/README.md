@@ -29,6 +29,10 @@ This directory contains host-native operational entry points.
 - `audit-rust-line-counts.mjs`
   Enforce the Rust source line-count ceiling, currently `600` lines per file,
   so crate and test modules stay split before they become hard to review.
+- `audit-project-organization.mjs`
+  Enforce the repository-wide source organization guard. New source and docs
+  files stay under the shared line ceiling, while explicitly tracked historical
+  debt files are allowed only up to their current debt limit.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
   broken local links, required chapter markers, and old legacy wording.
@@ -194,14 +198,14 @@ Useful smoke wrappers:
 - `make test-integration-workflow-catalog-nightly`
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
-- `PROFILE=200k MATRIX=thermal-core REPEAT=3 ./scripts/run-benchmark-profile-remote.sh`
+- `PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   Compatibility shim for `./scripts/kyuubiki benchmark-profile-remote`. It runs
   one remote Rust benchmark profile/matrix smoke without requiring a checked
   baseline. Use this for new scale tiers before promoting them into the
   standard regression gate. Outputs land under `tmp/benchmark-profile/`.
 - `./scripts/run-standard-benchmark-regression.sh`
   Compatibility shim for `./scripts/kyuubiki standard-benchmark-regression`.
-  It syncs benchmark-only source to `kyuubiki-lab`, runs the standard Rust
+  It syncs the Rust workspace without `target/` to `kyuubiki-lab`, runs the standard Rust
   benchmark regression trio there, and pulls the merged/per-matrix comparison
   reports back into `tmp/standard-benchmark/`. The native command also
   refreshes `tmp/standard-benchmark/index.json` plus `README.md` and prunes old

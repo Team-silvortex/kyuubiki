@@ -241,6 +241,20 @@ pub(crate) fn bridge_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_transform_descriptor(
+            "transform.score_cfd_quality",
+            "fluid",
+            "score_cfd_quality",
+            "Score CFD diagnostics into a single optimization objective with visible penalties for divergence, Reynolds number, dissipation, and field spans.",
+            &[
+                "transform",
+                "fluid",
+                "cfd",
+                "objective",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
             "transform.compose_diagnostics_bundle",
             "multi_domain",
             "compose_diagnostics_bundle",

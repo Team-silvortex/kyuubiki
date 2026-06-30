@@ -26,6 +26,10 @@ This page tracks the first standardized performance-baseline ladder for the
   Remote-first exploratory tier. Functional coverage is enforced through
   catalog shape tests; timing baselines should be produced on `kyuubiki-lab`
   before they are treated as release evidence.
+- `300k`
+  Remote-first exploratory tier for the next scale probe. Functional coverage
+  is enforced through catalog shape tests; timing evidence should start as
+  profile smoke output under `tmp/benchmark-profile/`.
 
 ## Naming rules
 
@@ -40,7 +44,7 @@ cd <repo>
 make benchmark-standard-baselines PROFILE=10k REPEAT=3
 make benchmark-standard-baselines PROFILE=15k REPEAT=3
 make benchmark-standard-baselines PROFILE=20k REPEAT=3
-make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1
+make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1
 ```
 
 ## Current checked baseline set
@@ -72,6 +76,23 @@ make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1
 | `20k` | `compound-core-20k-baseline.json` | 4 | `compound-surface-panel-20k` `20707.0795 ms` | `140672 KiB` |
 | `100k` | `compound-core-100k-baseline.json` | 4 | `compound-surface-panel-100k` `288360.2755 ms` | `523184 KiB` |
 
+## Remote 300k smoke evidence
+
+These are exploratory `REPEAT=1` runs from `kyuubiki-lab`, not checked
+regression baselines. They prove the 300k catalog tier can generate and solve
+representative thermal, mechanical, and compound cases before any 300k matrix
+is promoted into a hard gate.
+
+| Matrix | Case | Nodes | Elements | Median | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `thermal-core` | `heat-plane-quad-300k` | 301401 | 300304 | `4402.230 ms` | `356.0 MiB` |
+| `mechanical-core` | `axial-bar-300k` | 300001 | 300000 | `11.838 ms` | `446.4 MiB` |
+| `mechanical-core` | `truss-roof-300k` | 301401 | 1202312 | `49694.653 ms` | `1162.5 MiB` |
+| `mechanical-core` | `space-frame-300k` | 301088 | 1351792 | `841.217 ms` | `1173.0 MiB` |
+| `mechanical-core` | `plane-panel-300k` | 301401 | 600608 | `56755.378 ms` | `1383.0 MiB` |
+| `mechanical-core` | `plane-quad-panel-300k` | 301401 | 300304 | `57773.634 ms` | `1328.0 MiB` |
+| `compound-core` | `compound-surface-panel-300k` | 301401 | 300304 | `56686.075 ms` | `1298.3 MiB` |
+
 ## Notes
 
 - `10k` is the practical default for local regression gating.
@@ -81,7 +102,7 @@ make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1
   runs validated on `kyuubiki-lab`.
 - Selected `100k` pushes should continue to target the most representative
   standard matrices instead of trying to expand every path at once.
-- `200k` coverage currently means the standard matrix catalog must still
-  generate 200k-scale cases, and selected remote smoke runs should be captured
+- `200k`/`300k` coverage currently means the standard matrix catalog must still
+  generate high-scale cases, and selected remote smoke runs should be captured
   under `tmp/benchmark-profile/` or promoted to checked baselines only after the
   lab result is stable.

@@ -18,6 +18,8 @@ descriptors:
 - the installer uses the same descriptors when bootstrapping layouts or remote
   targets
 - Hub library workflows can import workload catalogs from the example shape
+- each agent descriptor may declare its embedded engine lifecycle, task source,
+  and bound-orchestra operator fetch policy
 
 These files are safe to version because they describe topology and catalog
 shape rather than live runtime state.

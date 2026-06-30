@@ -46,6 +46,16 @@ pub struct RuntimeAuthorityDescriptor {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RuntimeEngineDescriptor {
+    pub engine_id: String,
+    pub engine_name: String,
+    pub lifecycle: String,
+    pub task_source: String,
+    pub operator_source: String,
+    pub operator_cache_policy: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RpcProtocolDescriptor {
     pub name: String,
     pub rpc_version: u8,
@@ -62,6 +72,7 @@ pub struct AgentDescriptor {
     pub deployment_modes: Vec<String>,
     pub runtime: AgentClusterDescriptor,
     pub authority: RuntimeAuthorityDescriptor,
+    pub engine: RuntimeEngineDescriptor,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -565,6 +576,14 @@ impl AgentDescriptor {
                 orchestrator_session_id: None,
                 accepts_multi_orchestrator_binding: false,
                 agent_library_replication: "central_fetch".to_string(),
+            },
+            engine: RuntimeEngineDescriptor {
+                engine_id: "kyuubiki-engine/local".to_string(),
+                engine_name: "kyuubiki-rust-engine".to_string(),
+                lifecycle: "agent_embedded".to_string(),
+                task_source: "manual_or_sdk".to_string(),
+                operator_source: "bound_orchestra_fetch".to_string(),
+                operator_cache_policy: "temporary_execution_cache".to_string(),
             },
         }
     }

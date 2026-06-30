@@ -2,6 +2,7 @@ use crate::catalog::describe_built_in_operator;
 use crate::operator_sdk_bridges::register_bridge_transform_operators;
 use crate::operator_sdk_material_margins::register_material_margin_operator;
 use crate::operator_sdk_material_pareto::register_material_pareto_operator;
+use crate::operator_sdk_parameter_sweep::register_parameter_sweep_operators;
 use crate::operator_sdk_workflow_extensions::{
     register_workflow_export_extensions, register_workflow_extract_extensions,
     register_workflow_transform_extensions,
@@ -80,18 +81,6 @@ struct NormalizeSummaryFieldsOperator {
 }
 
 struct SelectBestSummaryOperator {
-    descriptor: OperatorDescriptor,
-}
-
-struct ExpandParameterSweepOperator {
-    descriptor: OperatorDescriptor,
-}
-
-struct SummarizeParameterSweepOperator {
-    descriptor: OperatorDescriptor,
-}
-
-struct ScoreParameterSweepOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -317,63 +306,6 @@ impl JsonOperator for SelectBestSummaryOperator {
     }
 }
 
-impl JsonOperator for ExpandParameterSweepOperator {
-    type Input = WorkflowOperatorEnvelope;
-
-    fn descriptor(&self) -> &OperatorDescriptor {
-        &self.descriptor
-    }
-
-    fn run_typed(
-        &self,
-        input: Self::Input,
-        _context: &OperatorRunContext,
-    ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(
-            &self.descriptor.id,
-            crate::workflow_parameter_sweep::expand_parameter_sweep(input.payload, input.config),
-        )
-    }
-}
-
-impl JsonOperator for SummarizeParameterSweepOperator {
-    type Input = WorkflowOperatorEnvelope;
-
-    fn descriptor(&self) -> &OperatorDescriptor {
-        &self.descriptor
-    }
-
-    fn run_typed(
-        &self,
-        input: Self::Input,
-        _context: &OperatorRunContext,
-    ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(
-            &self.descriptor.id,
-            crate::workflow_parameter_sweep::summarize_parameter_sweep(input.payload, input.config),
-        )
-    }
-}
-
-impl JsonOperator for ScoreParameterSweepOperator {
-    type Input = WorkflowOperatorEnvelope;
-
-    fn descriptor(&self) -> &OperatorDescriptor {
-        &self.descriptor
-    }
-
-    fn run_typed(
-        &self,
-        input: Self::Input,
-        _context: &OperatorRunContext,
-    ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(
-            &self.descriptor.id,
-            crate::workflow_parameter_sweep::score_parameter_sweep(input.payload, input.config),
-        )
-    }
-}
-
 pub fn run_registered_extract_operator(
     operator_id: &str,
     payload: Value,
@@ -503,21 +435,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("transform.select_best_summary"),
                 })
                 .expect("transform.select_best_summary should register");
-            registry
-                .register_json(ExpandParameterSweepOperator {
-                    descriptor: descriptor("transform.expand_parameter_sweep"),
-                })
-                .expect("transform.expand_parameter_sweep should register");
-            registry
-                .register_json(SummarizeParameterSweepOperator {
-                    descriptor: descriptor("transform.summarize_parameter_sweep"),
-                })
-                .expect("transform.summarize_parameter_sweep should register");
-            registry
-                .register_json(ScoreParameterSweepOperator {
-                    descriptor: descriptor("transform.score_parameter_sweep"),
-                })
-                .expect("transform.score_parameter_sweep should register");
+            register_parameter_sweep_operators(&mut registry, descriptor);
             register_material_margin_operator(&mut registry, descriptor);
             register_material_pareto_operator(&mut registry, descriptor);
             register_workflow_transform_extensions(&mut registry);

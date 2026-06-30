@@ -12,7 +12,7 @@ import {
   type WorkbenchRuntimeStatusRequest,
   type WorkbenchRuntimeStatusSnapshot,
   type WorkbenchRuntimeStatusTransport,
-} from "@/lib/workbench/runtime-status-backend-service-core";
+} from "@/lib/runtime-gateway/runtime-status-gateway";
 
 export {
   createRuntimeStatusBackendService,

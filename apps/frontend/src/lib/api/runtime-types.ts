@@ -261,6 +261,14 @@ export type ProtocolAgentDescriptor = {
         last_seen_unix_s?: number | null;
       }>;
     };
+    engine?: {
+      engine_id: string;
+      engine_name: string;
+      lifecycle: "agent_embedded" | string;
+      task_source: string;
+      operator_source: string;
+      operator_cache_policy: string;
+    };
     protocol: {
       name: string;
       rpc_version: number;

@@ -136,6 +136,97 @@ fn summarizes_parameter_sweep_case_results_through_sdk_registry() {
 }
 
 #[test]
+fn joins_distributed_parameter_sweep_results_before_summary() {
+    let joined = run_transform_operator(
+        "transform.join_parameter_sweep_results",
+        serde_json::json!({
+            "cases": [
+                {
+                    "id": "case_a",
+                    "parameters": { "viscosity": 0.8 },
+                    "model": { "tag": "a" }
+                },
+                {
+                    "id": "case_b",
+                    "parameters": { "viscosity": 1.2 },
+                    "model": { "tag": "b" }
+                }
+            ],
+            "results": [
+                {
+                    "case_id": "case_b",
+                    "status": "ok",
+                    "quality": {
+                        "cfd_quality_score": 4.8,
+                        "cfd_quality_ready": true
+                    }
+                },
+                {
+                    "case_id": "case_a",
+                    "status": "ok",
+                    "quality": {
+                        "cfd_quality_score": 3.1,
+                        "cfd_quality_ready": true
+                    }
+                }
+            ]
+        }),
+        serde_json::json!({
+            "summary_field": "quality"
+        }),
+    )
+    .expect("distributed sweep results should join back to cases");
+
+    assert_eq!(joined["case_count"].as_u64(), Some(2));
+    assert_eq!(joined["joined_summary_count"].as_u64(), Some(2));
+    assert_eq!(joined["missing_summary_count"].as_u64(), Some(0));
+    assert_eq!(
+        joined["cases"][0]["summary"]["cfd_quality_score"].as_f64(),
+        Some(3.1)
+    );
+    assert_eq!(joined["cases"][1]["result_status"].as_str(), Some("ok"));
+
+    let summarized = run_transform_operator(
+        "transform.summarize_parameter_sweep",
+        joined,
+        serde_json::json!({
+            "fields": ["cfd_quality_score"]
+        }),
+    )
+    .expect("joined cases should summarize");
+    assert_eq!(summarized["row_count"].as_u64(), Some(2));
+    assert_eq!(
+        summarized["numeric_columns"]["cfd_quality_score"]["min"].as_f64(),
+        Some(3.1)
+    );
+}
+
+#[test]
+fn strict_join_reports_missing_parameter_sweep_results() {
+    let error = run_transform_operator(
+        "transform.join_parameter_sweep_results",
+        serde_json::json!({
+            "cases": [
+                { "id": "case_a" },
+                { "id": "case_b" }
+            ],
+            "results": [
+                {
+                    "case_id": "case_a",
+                    "summary": { "objective": 1.0 }
+                }
+            ]
+        }),
+        serde_json::json!({
+            "strict": true
+        }),
+    )
+    .expect_err("strict join should reject missing results");
+
+    assert!(error.contains("missing summaries for 1 case"));
+}
+
+#[test]
 fn scores_parameter_sweep_rows_with_objective_limits() {
     let scored = run_transform_operator(
         "transform.score_parameter_sweep",

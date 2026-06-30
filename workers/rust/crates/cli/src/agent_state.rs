@@ -3,7 +3,7 @@ use std::sync::{Mutex, OnceLock};
 
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, ClusterPeerDescriptor, JobStatus, ProgressEvent,
-    RpcProgress, RuntimeAuthorityDescriptor,
+    RpcProgress, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
 };
 
 use crate::agent_watchdog;
@@ -49,6 +49,7 @@ pub(crate) fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
             .collect(),
     };
     descriptor.authority = build_runtime_authority_descriptor(config, runtime_mode);
+    descriptor.engine = build_runtime_engine_descriptor(runtime_mode);
     descriptor
 }
 
@@ -81,6 +82,23 @@ fn build_runtime_authority_descriptor(
             accepts_multi_orchestrator_binding: false,
             agent_library_replication: "central_fetch".to_string(),
         },
+    }
+}
+
+fn build_runtime_engine_descriptor(runtime_mode: &str) -> RuntimeEngineDescriptor {
+    let task_source = match runtime_mode {
+        "orchestrated" => "bound_orchestra_dispatch",
+        "peer_mesh" => "manual_or_mesh_dispatch",
+        _ => "manual_or_sdk",
+    };
+
+    RuntimeEngineDescriptor {
+        engine_id: "kyuubiki-engine/embedded".to_string(),
+        engine_name: "kyuubiki-rust-engine".to_string(),
+        lifecycle: "agent_embedded".to_string(),
+        task_source: task_source.to_string(),
+        operator_source: "bound_orchestra_fetch".to_string(),
+        operator_cache_policy: "temporary_execution_cache".to_string(),
     }
 }
 

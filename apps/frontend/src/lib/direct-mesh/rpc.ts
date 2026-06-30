@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
 import net from "node:net";
 
-type RpcMethod =
+export type DirectMeshRpcMethod =
   | "ping"
   | "describe_agent"
   | "solve_bar_1d"
   | "solve_thermal_bar_1d"
   | "solve_heat_bar_1d"
+  | "solve_electrostatic_plane_triangle_2d"
+  | "solve_electrostatic_plane_quad_2d"
   | "solve_heat_plane_triangle_2d"
   | "solve_heat_plane_quad_2d"
   | "solve_thermal_truss_2d"
@@ -143,7 +145,7 @@ function descriptorHealthScore(agent: DirectMeshAgentSummary) {
 
 async function requestRpcFrameSequence(
   endpoint: string,
-  method: RpcMethod,
+  method: DirectMeshRpcMethod,
   params: Record<string, unknown>,
 ): Promise<{ response: Extract<RpcFrame, { ok: boolean }>; progressFrames: Array<Record<string, unknown>> }> {
   const { host, port } = parseDirectMeshEndpoint(endpoint);
@@ -276,7 +278,7 @@ function sortAgentsForSelection(
 }
 
 export async function solveViaDirectMesh(
-  method: Exclude<RpcMethod, "ping" | "describe_agent">,
+  method: Exclude<DirectMeshRpcMethod, "ping" | "describe_agent">,
   params: Record<string, unknown>,
   input?: string[],
   selectionMode: DirectMeshSelectionMode = "healthiest",

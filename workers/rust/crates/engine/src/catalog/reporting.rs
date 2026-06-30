@@ -198,6 +198,19 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_transform_descriptor(
+            "transform.join_parameter_sweep_results",
+            "multi_domain",
+            "parameter_sweep_join_results",
+            "Join distributed or headless case summaries back onto parameter sweep cases before summarizing and scoring.",
+            &[
+                "transform",
+                "parameter_sweep",
+                "distributed_results",
+                "material_exploration",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
             "transform.score_parameter_sweep",
             "multi_domain",
             "parameter_sweep_score",

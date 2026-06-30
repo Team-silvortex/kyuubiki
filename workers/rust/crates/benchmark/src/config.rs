@@ -32,6 +32,7 @@ pub(crate) enum BenchmarkProfile {
     TwentyK,
     HundredK,
     TwoHundredK,
+    ThreeHundredK,
 }
 
 impl BenchmarkProfile {
@@ -45,6 +46,7 @@ impl BenchmarkProfile {
             Self::TwentyK => "20k",
             Self::HundredK => "100k",
             Self::TwoHundredK => "200k",
+            Self::ThreeHundredK => "300k",
         }
     }
 }
@@ -104,6 +106,7 @@ impl BenchmarkConfig {
                             "20k" => BenchmarkProfile::TwentyK,
                             "100k" => BenchmarkProfile::HundredK,
                             "200k" => BenchmarkProfile::TwoHundredK,
+                            "300k" => BenchmarkProfile::ThreeHundredK,
                             _ => BenchmarkProfile::TenK,
                         };
                     }

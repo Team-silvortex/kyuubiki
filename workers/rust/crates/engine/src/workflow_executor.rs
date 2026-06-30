@@ -24,6 +24,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.select_best_summary",
     "transform.expand_parameter_sweep",
     "transform.summarize_parameter_sweep",
+    "transform.join_parameter_sweep_results",
     "transform.score_parameter_sweep",
     "transform.evaluate_material_margins",
     "transform.rank_material_candidates",
@@ -34,6 +35,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.benchmark_magnetostatic_pair",
     "transform.evaluate_cfd_guard",
     "transform.benchmark_cfd_pair",
+    "transform.score_cfd_quality",
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
@@ -265,6 +267,7 @@ pub fn run_transform_operator(
         | "transform.select_best_summary"
         | "transform.expand_parameter_sweep"
         | "transform.summarize_parameter_sweep"
+        | "transform.join_parameter_sweep_results"
         | "transform.score_parameter_sweep"
         | "transform.evaluate_material_margins"
         | "transform.rank_material_candidates"
@@ -275,6 +278,7 @@ pub fn run_transform_operator(
         | "transform.benchmark_magnetostatic_pair"
         | "transform.evaluate_cfd_guard"
         | "transform.benchmark_cfd_pair"
+        | "transform.score_cfd_quality"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

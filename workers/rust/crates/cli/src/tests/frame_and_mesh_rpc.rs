@@ -466,6 +466,9 @@ fn handles_describe_agent_rpc_requests() {
     assert_eq!(descriptor.runtime.runtime_mode, "standalone");
     assert_eq!(descriptor.authority.control_mode, "standalone");
     assert_eq!(descriptor.authority.authority_mode, "self_directed");
+    assert_eq!(descriptor.engine.lifecycle, "agent_embedded");
+    assert_eq!(descriptor.engine.task_source, "manual_or_sdk");
+    assert_eq!(descriptor.engine.operator_source, "bound_orchestra_fetch");
 }
 
 #[test]
@@ -496,6 +499,42 @@ fn builds_peer_mesh_runtime_descriptor() {
     assert_eq!(descriptor.runtime.peers[0].status, "seed");
     assert_eq!(descriptor.authority.control_mode, "offline_mesh");
     assert_eq!(descriptor.authority.authority_mode, "offline_mesh");
+    assert_eq!(descriptor.engine.lifecycle, "agent_embedded");
+    assert_eq!(descriptor.engine.task_source, "manual_or_mesh_dispatch");
+    assert_eq!(
+        descriptor.engine.operator_cache_policy,
+        "temporary_execution_cache"
+    );
+}
+
+#[test]
+fn builds_orchestrated_runtime_engine_descriptor() {
+    let descriptor = build_agent_descriptor(&AgentConfig {
+        host: "127.0.0.1".to_string(),
+        port: 5001,
+        agent_id: Some("solver-orch-a".to_string()),
+        advertise_host: None,
+        orchestrator_url: Some("https://orchestra.example.com".to_string()),
+        cluster_api_token: None,
+        agent_fingerprint: None,
+        certificate_id: None,
+        cert_path: None,
+        key_path: None,
+        ca_cert_path: None,
+        register_interval_ms: 5_000,
+        cluster_id: Some("cluster-a".to_string()),
+        peers: vec![],
+    });
+
+    assert_eq!(descriptor.runtime.runtime_mode, "orchestrated");
+    assert_eq!(descriptor.authority.control_mode, "orch_managed");
+    assert_eq!(
+        descriptor.authority.orchestrator_id.as_deref(),
+        Some("https://orchestra.example.com")
+    );
+    assert_eq!(descriptor.engine.lifecycle, "agent_embedded");
+    assert_eq!(descriptor.engine.task_source, "bound_orchestra_dispatch");
+    assert_eq!(descriptor.engine.operator_source, "bound_orchestra_fetch");
 }
 
 #[test]

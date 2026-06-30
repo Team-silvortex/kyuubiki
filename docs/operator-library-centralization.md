@@ -45,6 +45,22 @@ In practice that means:
 
 Agents may keep temporary fetched packages, but that cache is not the library.
 
+## Agent engine boundary
+
+Every agent process starts with an embedded execution engine.
+
+That engine is allowed to run assigned operator tasks. It is not allowed to
+become a local authoritative operator library. The durable ownership stays with
+the bound `orchestra`; the agent-local engine only receives a task, fetches the
+needed package, verifies it, executes it, and reports results.
+
+This is the key separation:
+
+- scheduler decides which task runs where
+- bound `orchestra` resolves operator packages
+- agent-embedded engine executes the resolved package
+- temporary cache helps performance but is not a library replica
+
 ## Authority model
 
 The authority chain should be:

@@ -1,5 +1,5 @@
 use crate::catalog::describe_built_in_operator;
-use crate::cfd_diagnostics::extract_stokes_flow_result_diagnostics;
+use crate::cfd_diagnostics::{extract_stokes_flow_result_diagnostics, score_cfd_quality};
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_guard_transforms::{benchmark_cfd_pair, evaluate_cfd_guard};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
@@ -14,6 +14,10 @@ struct EvaluateCfdGuardOperator {
 }
 
 struct BenchmarkCfdPairOperator {
+    descriptor: OperatorDescriptor,
+}
+
+struct ScoreCfdQualityOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -74,6 +78,25 @@ impl JsonOperator for BenchmarkCfdPairOperator {
     }
 }
 
+impl JsonOperator for ScoreCfdQualityOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            score_cfd_quality(input.payload, input.config),
+        )
+    }
+}
+
 pub(super) fn register_cfd_extract_extensions(registry: &mut OperatorRegistry) {
     registry
         .register_json(StokesFlowResultDiagnosticsOperator {
@@ -93,6 +116,11 @@ pub(super) fn register_cfd_transform_extensions(registry: &mut OperatorRegistry)
             descriptor: descriptor("transform.benchmark_cfd_pair"),
         })
         .expect("transform.benchmark_cfd_pair should register");
+    registry
+        .register_json(ScoreCfdQualityOperator {
+            descriptor: descriptor("transform.score_cfd_quality"),
+        })
+        .expect("transform.score_cfd_quality should register");
 }
 
 fn descriptor(operator_id: &str) -> OperatorDescriptor {

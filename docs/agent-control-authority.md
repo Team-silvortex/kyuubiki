@@ -102,6 +102,8 @@ That ambiguity is especially dangerous now that:
 - operator libraries are centralized
 - agents fetch operator packages on demand
 - workflow dispatch may span multiple machines
+- every started agent carries an embedded engine instance that can execute
+  assigned work
 
 The agent has to know who its authority is, or that it has no authority at all.
 
@@ -115,6 +117,8 @@ This contract complements the central operator-library model:
 
 - operator-library truth belongs to `orchestra`
 - agents may fetch execution packages from that authority
+- the embedded agent engine executes fetched packages, but does not define the
+  authoritative library
 - a single agent must not accept competing fetch authority from multiple
   orchestras
 

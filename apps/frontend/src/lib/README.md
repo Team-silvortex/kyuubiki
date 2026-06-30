@@ -10,6 +10,11 @@ Browser-side support code is organized by domain:
   Model import/export, parametric generation, and sample-library helpers.
 - `projects/`
   Portable project-bundle import/export helpers.
+- `runtime-gateway/`
+  UI-independent runtime gateway contracts that adapt browser/Next-facing
+  requests to backend, agent, direct-mesh, or future mobile-safe runtime
+  surfaces. API routes should stay thin and delegate runtime-specific mapping
+  here instead of embedding solver dispatch logic.
 - `workbench/`
   Workbench-facing pure helpers for settings, serialization, export, and other
   non-JSX logic shared by heavy frontend surfaces.

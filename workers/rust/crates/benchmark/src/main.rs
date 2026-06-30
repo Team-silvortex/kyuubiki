@@ -151,7 +151,7 @@ mod tests {
 
         assert_eq!(spec.templates.len(), 6);
         assert!(spec.matrices.len() >= 8);
-        assert_eq!(spec.profiles.len(), 8);
+        assert_eq!(spec.profiles.len(), 9);
         assert!(
             spec.profiles
                 .iter()
@@ -161,6 +161,11 @@ mod tests {
             spec.profiles
                 .iter()
                 .any(|profile| profile.profile == BenchmarkProfile::TwoHundredK)
+        );
+        assert!(
+            spec.profiles
+                .iter()
+                .any(|profile| profile.profile == BenchmarkProfile::ThreeHundredK)
         );
     }
 
@@ -241,6 +246,31 @@ mod tests {
             assert!(
                 cases.iter().all(|case| case.id.ends_with("-200k")),
                 "{matrix} should keep the 200k case suffix"
+            );
+        }
+    }
+
+    #[test]
+    fn three_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
+        let matrix_cases = [
+            ("mechanical-core", 5, 300_000),
+            ("thermal-core", 1, 300_000),
+            ("compound-core", 4, 300_000),
+        ];
+
+        for (matrix, expected_count, minimum_nodes) in matrix_cases {
+            let cases = benchmark_cases(BenchmarkProfile::ThreeHundredK, matrix);
+
+            assert_eq!(cases.len(), expected_count, "{matrix} case count changed");
+            assert!(
+                cases
+                    .iter()
+                    .any(|case| benchmark_shape(case).0 >= minimum_nodes),
+                "{matrix} no longer includes a 300k-scale case"
+            );
+            assert!(
+                cases.iter().all(|case| case.id.ends_with("-300k")),
+                "{matrix} should keep the 300k case suffix"
             );
         }
     }

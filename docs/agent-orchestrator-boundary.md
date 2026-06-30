@@ -27,6 +27,27 @@ The Rust agent is the execution peer.
 The Elixir orchestrator is the management and coordination peer.
 Neither one should quietly absorb the other.
 
+## Agent-Embedded Engine Rule
+
+Every started agent owns one local engine instance.
+
+That engine is part of the agent runtime, not a task object and not an
+orchestrator-owned process. The distinction is:
+
+- `agent`
+  long-lived compute peer and RPC surface
+- `engine`
+  agent-embedded execution instance used to run assigned operator work
+- `task`
+  scheduled unit of work submitted manually, by SDK, by direct mesh, or by the
+  bound orchestra
+- `operator package`
+  execution payload fetched from the bound orchestra library when required
+
+The engine should be visible through runtime descriptors so operators can
+inspect what is capable of executing a task. It should not make the agent a
+second control plane.
+
 ## What The Agent Is
 
 `agent` means the solver-side execution runtime.
@@ -38,7 +59,9 @@ It should own:
 - job-local progress emission
 - heartbeat and self-description
 - peer-mesh participation
+- one embedded engine instance per agent process
 - operator execution on the compute side
+- temporary operator package cache materialized for assigned work
 - compute-local benchmarking support
 
 It should be implementable and runnable without:
@@ -79,10 +102,28 @@ It should own:
 - cluster-aware coordination
 - control-plane security policy
 - workflow/operator catalog delivery
+- authoritative operator package resolution for its bound agents
 
 It may talk to many agents.
 It may be local or remote.
 It is not the same thing as the Hub.
+
+## Task And Operator Fetch Boundary
+
+Tasks and execution engines are deliberately separate.
+
+- a task may be assigned manually, by a headless SDK, through direct mesh, or by
+  an orchestra scheduler
+- an agent executes the task with its embedded engine
+- in `orch_managed` mode, the agent fetches required operator packages from the
+  operator library owned by its bound orchestra
+- in `offline_mesh` mode, the task source may be manual or mesh-driven, but the
+  agent still must not pretend to own a full authoritative operator library
+- fetched packages may be cached only as visible, cleanable execution cache
+
+This means a workflow run can move between scheduling modes without changing the
+core engine model: the scheduling authority changes, but the agent-local engine
+remains the execution boundary.
 
 ## What The Orchestrator Is Not
 

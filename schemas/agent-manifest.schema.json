@@ -34,6 +34,38 @@
           "region": { "type": "string" },
           "zone": { "type": "string" },
           "capacity": { "type": "integer", "minimum": 1 },
+          "control_mode": {
+            "type": "string",
+            "enum": ["orch_managed", "offline_mesh", "standalone"]
+          },
+          "orch_id": { "type": "string" },
+          "orch_session_id": { "type": "string" },
+          "engine": {
+            "type": "object",
+            "properties": {
+              "lifecycle": {
+                "type": "string",
+                "enum": ["agent_embedded"]
+              },
+              "task_source": {
+                "type": "string",
+                "enum": [
+                  "bound_orchestra_dispatch",
+                  "manual_or_mesh_dispatch",
+                  "manual_or_sdk"
+                ]
+              },
+              "operator_source": {
+                "type": "string",
+                "enum": ["bound_orchestra_fetch"]
+              },
+              "operator_cache_policy": {
+                "type": "string",
+                "enum": ["temporary_execution_cache"]
+              }
+            },
+            "additionalProperties": false
+          },
           "tags": {
             "type": "array",
             "items": { "type": "string" }

@@ -9,6 +9,7 @@ use std::process::Command;
 type RunnerResult<T> = Result<T, String>;
 
 struct Options {
+    case_filter: Option<String>,
     local_json_path: PathBuf,
     local_md_path: PathBuf,
     local_output_dir: PathBuf,
@@ -83,6 +84,11 @@ impl Options {
     fn from_env(root: &Path) -> Self {
         let profile = env::var("PROFILE").unwrap_or_else(|_| "200k".to_string());
         let matrix = env::var("MATRIX").unwrap_or_else(|_| "thermal-core".to_string());
+        let case_filter = env::var("CASE")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let output_name = output_name(&matrix, &profile, case_filter.as_deref());
         let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
             format!(
                 "benchmark-profile-{}",
@@ -94,16 +100,17 @@ impl Options {
         let remote_output_dir = env::var("REMOTE_OUTPUT_DIR")
             .unwrap_or_else(|_| format!("/tmp/kyuubiki-benchmark-profile/{output_slug}"));
         let remote_json_path = if remote_output_dir.starts_with('/') {
-            format!("{remote_output_dir}/{matrix}-{profile}.json")
+            format!("{remote_output_dir}/{output_name}.json")
         } else {
-            format!("{remote_dir}/{remote_output_dir}/{matrix}-{profile}.json")
+            format!("{remote_dir}/{remote_output_dir}/{output_name}.json")
         };
         let local_output_dir = env_path_or(
             "LOCAL_OUTPUT_DIR",
             root.join("tmp/benchmark-profile").join(&output_slug),
         );
         Self {
-            local_json_path: local_output_dir.join(format!("{matrix}-{profile}.json")),
+            case_filter,
+            local_json_path: local_output_dir.join(format!("{output_name}.json")),
             local_md_path: local_output_dir.join("README.md"),
             local_output_dir,
             matrix,
@@ -120,40 +127,54 @@ impl Options {
 }
 
 fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
-    for status in [
-        rsync(
-            root,
-            &[root.join("workers/rust/crates/benchmark/src/")],
-            &format!(
-                "{}:{}/workers/rust/crates/benchmark/src/",
-                options.remote_host, options.remote_dir
-            ),
-        )?,
-        rsync(
-            root,
-            &[root.join("workers/rust/benchmarks/")],
-            &format!(
-                "{}:{}/workers/rust/benchmarks/",
-                options.remote_host, options.remote_dir
-            ),
-        )?,
-    ] {
-        if status != 0 {
-            return Err(format!("rsync failed with status {status}"));
-        }
+    ensure_remote_sync_dirs(root, options)?;
+    let status = rsync(
+        root,
+        &[root.join("workers/rust/")],
+        &format!(
+            "{}:{}/workers/rust/",
+            options.remote_host, options.remote_dir
+        ),
+    )?;
+    if status != 0 {
+        return Err(format!("rsync failed with status {status}"));
+    }
+    Ok(())
+}
+
+fn ensure_remote_sync_dirs(root: &Path, options: &Options) -> RunnerResult<()> {
+    let status = run_status(
+        "ssh",
+        [
+            OsString::from(&options.remote_host),
+            OsString::from(format!(
+                "mkdir -p {}",
+                shell_escape(&format!("{}/workers", options.remote_dir))
+            )),
+        ],
+        root,
+    )?;
+    if status != 0 {
+        return Err(format!("remote mkdir failed with status {status}"));
     }
     Ok(())
 }
 
 fn remote_command(options: &Options) -> String {
+    let case_arg = options
+        .case_filter
+        .as_deref()
+        .map(|case| format!(" --case {}", shell_escape(case)))
+        .unwrap_or_default();
     format!(
-        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json > {}",
+        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json{} > {}",
         shell_escape(&dirname(&options.remote_json_path)),
         shell_escape(&options.remote_dir),
         shell_escape(&options.rustup_toolchain),
         shell_escape(&options.profile),
         shell_escape(&options.matrix),
         shell_escape(&options.repeat),
+        case_arg,
         shell_escape(&options.remote_json_path)
     )
 }
@@ -210,7 +231,7 @@ fn write_markdown_summary(json_path: &Path, md_path: &Path) -> RunnerResult<()> 
 fn rsync(root: &Path, sources: &[PathBuf], destination: &str) -> RunnerResult<u8> {
     run_status(
         "rsync",
-        [OsString::from("-az")]
+        [OsString::from("-az"), OsString::from("--exclude=target/")]
             .into_iter()
             .chain(sources.iter().map(|path| path.clone().into_os_string()))
             .chain([OsString::from(destination)]),
@@ -232,6 +253,26 @@ where
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
     env::var_os(name).map(PathBuf::from).unwrap_or(fallback)
+}
+
+fn output_name(matrix: &str, profile: &str, case_filter: Option<&str>) -> String {
+    match case_filter {
+        Some(case) => format!("{matrix}-{profile}-{}", sanitize_file_stem(case)),
+        None => format!("{matrix}-{profile}"),
+    }
+}
+
+fn sanitize_file_stem(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn dirname(path: &str) -> String {
@@ -273,6 +314,6 @@ fn print_usage() {
         "Usage:\n  ./scripts/kyuubiki benchmark-profile-remote\n\n\
 Runs one Rust benchmark profile/matrix on the shared lab machine without a\n\
 checked baseline, then copies JSON back and writes a Markdown summary.\n\n\
-Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n"
+Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  CASE\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n"
     );
 }

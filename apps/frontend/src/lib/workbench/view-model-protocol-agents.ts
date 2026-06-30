@@ -22,6 +22,9 @@ export function buildProtocolAgentCards({
     no: string;
     capabilities: string;
     methods: string;
+    engine: string;
+    taskSource: string;
+    operatorSource: string;
     peerState: string;
     meshRoleChip: string;
     relayChip: string;
@@ -60,6 +63,9 @@ export function buildProtocolAgentCards({
       { label: labels.headless, value: agent.descriptor?.runtime?.headless ? labels.yes : labels.no },
       { label: labels.capabilities, value: agent.descriptor?.capabilities?.length ?? 0 },
       { label: labels.methods, value: agent.descriptor?.protocol?.methods?.length ?? 0 },
+      { label: labels.engine, value: agent.descriptor?.engine?.lifecycle ?? "--" },
+      { label: labels.taskSource, value: agent.descriptor?.engine?.task_source ?? "--" },
+      { label: labels.operatorSource, value: agent.descriptor?.engine?.operator_source ?? "--" },
       {
         label: labels.execution,
         value: formatExecutionState(agent, labels),

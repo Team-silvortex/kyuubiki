@@ -8,6 +8,13 @@
       "port": 5001,
       "role": "solver",
       "region": "local",
+      "control_mode": "standalone",
+      "engine": {
+        "lifecycle": "agent_embedded",
+        "task_source": "manual_or_sdk",
+        "operator_source": "bound_orchestra_fetch",
+        "operator_cache_policy": "temporary_execution_cache"
+      },
       "tags": ["interactive", "default"]
     },
     {
@@ -16,6 +23,13 @@
       "port": 5002,
       "role": "solver",
       "region": "local",
+      "control_mode": "standalone",
+      "engine": {
+        "lifecycle": "agent_embedded",
+        "task_source": "manual_or_sdk",
+        "operator_source": "bound_orchestra_fetch",
+        "operator_cache_policy": "temporary_execution_cache"
+      },
       "tags": ["interactive", "default"]
     }
   ]
