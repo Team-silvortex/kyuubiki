@@ -5,9 +5,15 @@ mod catalog_defaults;
 mod compare;
 mod config;
 mod generators;
+mod generators_extended;
+mod generators_structural;
+mod generators_thermal_structural;
 mod headless_cases;
 mod models;
 mod runner;
+mod runner_shape;
+mod runner_structural;
+mod runner_util;
 
 use catalog::benchmark_cases;
 use compare::{
@@ -27,7 +33,13 @@ fn main() {
         benchmark_cases(config.profile, &config.matrix)
     };
     let selected = select_cases(&cases, config.case_filter.as_deref());
-    let report = build_report(&selected, config.repeat, config.profile, &config.matrix);
+    let report = build_report(
+        &selected,
+        config.repeat,
+        config.profile,
+        &config.matrix,
+        &config.solver_preconditioner,
+    );
 
     if let Some(path) = &config.baseline_out {
         let payload = serde_json::to_string_pretty(&report).expect("report should serialize");
@@ -96,6 +108,7 @@ mod tests {
             baseline_out: None,
             baseline_compare: None,
             compare_report_out: None,
+            solver_preconditioner: "jacobi".to_string(),
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -149,8 +162,8 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 6);
-        assert!(spec.matrices.len() >= 8);
+        assert_eq!(spec.templates.len(), 35);
+        assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 9);
         assert!(
             spec.profiles
@@ -205,10 +218,36 @@ mod tests {
     fn report_captures_matrix_identity() {
         let cases = benchmark_cases(BenchmarkProfile::TenK, "thermal");
         let selected = cases.iter().collect::<Vec<_>>();
-        let report = crate::runner::build_report(&selected, 1, BenchmarkProfile::TenK, "thermal");
+        let report =
+            crate::runner::build_report(&selected, 1, BenchmarkProfile::TenK, "thermal", "jacobi");
 
         assert_eq!(report.matrix, "thermal");
         assert_eq!(report.profile, BenchmarkProfile::TenK);
+    }
+
+    #[test]
+    fn solver_preconditioner_all_expands_truss_cases() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "mechanical-core");
+        let selected = cases
+            .iter()
+            .filter(|case| case.id == "truss-roof-medium")
+            .collect::<Vec<_>>();
+        let report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "mechanical-core",
+            "all",
+        );
+
+        assert_eq!(report.cases.len(), 2);
+        assert!(report.cases.iter().any(|case| case.id.ends_with("#jacobi")));
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.id.ends_with("#symmetric-gauss-seidel"))
+        );
     }
 
     #[test]
@@ -223,6 +262,88 @@ mod tests {
         assert!(names.contains(&"mechanical-core"));
         assert!(names.contains(&"thermal-core"));
         assert!(names.contains(&"compound-core"));
+        assert!(names.contains(&"extended-physics"));
+        assert!(names.contains(&"structural-extended"));
+        assert!(names.contains(&"thermal-structural"));
+    }
+
+    #[test]
+    fn extended_physics_matrix_runs_uncovered_solver_families() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "extended-physics");
+        let selected = cases.iter().collect::<Vec<_>>();
+        let report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "extended-physics",
+            "jacobi",
+        );
+
+        assert_eq!(report.cases.len(), 11);
+        assert!(report.cases.iter().all(|case| case.ok));
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.family == "stokes_flow_plane_quad_2d")
+        );
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.family == "magnetostatic_plane_quad_2d")
+        );
+    }
+
+    #[test]
+    fn structural_extended_matrix_runs_structural_solver_families() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "structural-extended");
+        let selected = cases.iter().collect::<Vec<_>>();
+        let report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "structural-extended",
+            "jacobi",
+        );
+
+        assert_eq!(report.cases.len(), 9);
+        assert!(report.cases.iter().all(|case| case.ok));
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.family == "modal_frame_3d")
+        );
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.family == "contact_gap_1d")
+        );
+    }
+
+    #[test]
+    fn thermal_structural_matrix_runs_coupled_solver_families() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
+        let selected = cases.iter().collect::<Vec<_>>();
+        let report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "thermal-structural",
+            "jacobi",
+        );
+
+        assert_eq!(report.cases.len(), 9);
+        assert!(report.cases.iter().all(|case| case.ok));
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.family == "thermal_frame_3d")
+        );
+        assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
     }
 
     #[test]
@@ -279,8 +400,13 @@ mod tests {
     fn headless_sdk_matrix_runs_manifest_benchmarks() {
         let cases = headless_sdk_cases();
         let selected = cases.iter().collect::<Vec<_>>();
-        let report =
-            crate::runner::build_report(&selected, 2, BenchmarkProfile::Medium, "headless-sdk");
+        let report = crate::runner::build_report(
+            &selected,
+            2,
+            BenchmarkProfile::Medium,
+            "headless-sdk",
+            "jacobi",
+        );
 
         assert_eq!(report.matrix, "headless-sdk");
         assert_eq!(report.cases.len(), 2);
@@ -300,38 +426,6 @@ mod tests {
     }
 
     fn benchmark_shape(case: &BenchmarkCase) -> (usize, usize, usize) {
-        match &case.workload {
-            BenchmarkWorkload::AxialBar(request) => {
-                (request.elements + 1, request.elements, request.elements)
-            }
-            BenchmarkWorkload::Truss2d(request) => (
-                request.nodes.len(),
-                request.elements.len(),
-                request.nodes.len() * 2,
-            ),
-            BenchmarkWorkload::Truss3d(request) => (
-                request.nodes.len(),
-                request.elements.len(),
-                request.nodes.len() * 3,
-            ),
-            BenchmarkWorkload::PlaneTriangle2d(request) => (
-                request.nodes.len(),
-                request.elements.len(),
-                request.nodes.len() * 2,
-            ),
-            BenchmarkWorkload::PlaneQuad2d(request) => (
-                request.nodes.len(),
-                request.elements.len(),
-                request.nodes.len() * 2,
-            ),
-            BenchmarkWorkload::HeatPlaneQuad2d(request) => (
-                request.nodes.len(),
-                request.elements.len(),
-                request.nodes.len(),
-            ),
-            BenchmarkWorkload::HeadlessActionManifest | BenchmarkWorkload::DirectFemManifest => {
-                (0, 0, 0)
-            }
-        }
+        crate::runner_shape::workload_shape(&case.workload)
     }
 }

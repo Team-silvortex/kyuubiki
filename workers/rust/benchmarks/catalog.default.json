@@ -1,11 +1,40 @@
 {
   "templates": [
     { "stem": "axial-bar", "family": "axial_bar" },
+    { "stem": "thermal-bar", "family": "thermal_bar1d" },
+    { "stem": "acoustic-bar", "family": "acoustic_bar1d" },
+    { "stem": "heat-bar", "family": "heat_bar1d" },
+    { "stem": "electrostatic-bar", "family": "electrostatic_bar1d" },
+    { "stem": "magnetostatic-bar", "family": "magnetostatic_bar1d" },
+    { "stem": "torsion-shaft", "family": "torsion1d" },
+    { "stem": "spring-chain", "family": "spring1d" },
+    { "stem": "spring-grid", "family": "spring2d" },
+    { "stem": "spring-cage", "family": "spring3d" },
+    { "stem": "nonlinear-spring-chain", "family": "nonlinear_spring1d" },
+    { "stem": "contact-gap-chain", "family": "contact_gap1d" },
+    { "stem": "beam-line", "family": "beam1d" },
+    { "stem": "thermal-beam-line", "family": "thermal_beam1d" },
+    { "stem": "frame-2d", "family": "frame2d" },
+    { "stem": "frame-3d", "family": "frame3d" },
+    { "stem": "thermal-frame-2d", "family": "thermal_frame2d" },
+    { "stem": "thermal-frame-3d", "family": "thermal_frame3d" },
+    { "stem": "modal-frame-2d", "family": "modal_frame2d" },
+    { "stem": "modal-frame-3d", "family": "modal_frame3d" },
     { "stem": "truss-roof", "family": "truss2d" },
     { "stem": "space-frame", "family": "truss_frame3d" },
+    { "stem": "thermal-truss-2d", "family": "thermal_truss2d" },
+    { "stem": "thermal-truss-3d", "family": "thermal_truss3d" },
     { "stem": "plane-panel", "family": "plane_triangle2d" },
     { "stem": "plane-quad-panel", "family": "plane_quad2d" },
-    { "stem": "heat-plane-quad", "family": "heat_plane_quad2d" }
+    { "stem": "thermal-plane-triangle", "family": "thermal_plane_triangle2d" },
+    { "stem": "thermal-plane-quad", "family": "thermal_plane_quad2d" },
+    { "stem": "heat-plane-triangle", "family": "heat_plane_triangle2d" },
+    { "stem": "heat-plane-quad", "family": "heat_plane_quad2d" },
+    { "stem": "electrostatic-plane-triangle", "family": "electrostatic_plane_triangle2d" },
+    { "stem": "electrostatic-plane-quad", "family": "electrostatic_plane_quad2d" },
+    { "stem": "magnetostatic-plane-triangle", "family": "magnetostatic_plane_triangle2d" },
+    { "stem": "magnetostatic-plane-quad", "family": "magnetostatic_plane_quad2d" },
+    { "stem": "stokes-plane-quad", "family": "stokes_flow_plane_quad2d" }
   ],
   "matrices": [
     {
@@ -51,6 +80,53 @@
       "owned_templates": [
         { "stem": "compound-surface-panel", "family": "plane_quad2d" }
       ]
+    },
+    {
+      "name": "extended-physics",
+      "template_stems": [
+        "heat-bar",
+        "electrostatic-bar",
+        "magnetostatic-bar",
+        "acoustic-bar",
+        "torsion-shaft",
+        "heat-plane-triangle",
+        "electrostatic-plane-triangle",
+        "electrostatic-plane-quad",
+        "magnetostatic-plane-triangle",
+        "magnetostatic-plane-quad",
+        "stokes-plane-quad"
+      ],
+      "owned_templates": []
+    },
+    {
+      "name": "structural-extended",
+      "template_stems": [
+        "spring-chain",
+        "spring-grid",
+        "spring-cage",
+        "nonlinear-spring-chain",
+        "contact-gap-chain",
+        "beam-line",
+        "thermal-beam-line",
+        "modal-frame-2d",
+        "modal-frame-3d"
+      ],
+      "owned_templates": []
+    },
+    {
+      "name": "thermal-structural",
+      "template_stems": [
+        "thermal-bar",
+        "thermal-truss-2d",
+        "thermal-truss-3d",
+        "thermal-plane-triangle",
+        "thermal-plane-quad",
+        "frame-2d",
+        "frame-3d",
+        "thermal-frame-2d",
+        "thermal-frame-3d"
+      ],
+      "owned_templates": []
     }
   ],
   "profiles": [

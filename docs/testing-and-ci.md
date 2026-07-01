@@ -185,6 +185,15 @@ Use these entrypoints:
   baselines.
 - `make benchmark-standard-report PROFILE=10k REPEAT=1`
   Emit per-matrix reports plus one merged local standard comparison report.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1`
+  Run the broad physics smoke matrix for solver families that are not yet part
+  of the standard 10k regression trio.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1`
+  Run the broad structural smoke matrix for spring, nonlinear/contact, beam,
+  thermal beam, and modal frame families.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1`
+  Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
+  static frame, and thermal frame families.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
@@ -194,6 +203,10 @@ Use these entrypoints:
 - `make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1`
   Run a narrow 300k mechanical probe before attempting a full mechanical
   matrix.
+- `make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roof-300k REPEAT=1 SOLVER_PRECONDITIONER=all`
+  Run the truss solver strategy probe with both Jacobi and symmetric
+  Gauss-Seidel preconditioners. Use `jacobi` or `symmetric-gauss-seidel` to
+  force one strategy.
 
 Baseline and report surfaces:
 
@@ -207,7 +220,8 @@ Baseline and report surfaces:
   `tmp/standard-benchmark/<slug>/*-core-<profile>-compare.md`
 - exploratory profile smoke output:
   `tmp/benchmark-profile/<slug>/<matrix>-<profile>.json` plus a generated
-  `README.md`
+  `README.md`; truss cases include solver preconditioner, iteration count, and
+  residual norm when available
 - local run index:
   `tmp/standard-benchmark/index.json`, `tmp/standard-benchmark/README.md`, and
   `tmp/standard-benchmark/index.html`

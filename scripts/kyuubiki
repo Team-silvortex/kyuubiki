@@ -3,8 +3,9 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 RUNNER="$ROOT_DIR/workers/rust/target/debug/kyuubiki-script-runner"
+RUNNER_SRC="$ROOT_DIR/workers/rust/crates/script-runner/src"
 
-if [ -x "$RUNNER" ]; then
+if [ -x "$RUNNER" ] && ! find "$RUNNER_SRC" -type f -newer "$RUNNER" | grep -q .; then
   exec "$RUNNER" "$@"
 fi
 

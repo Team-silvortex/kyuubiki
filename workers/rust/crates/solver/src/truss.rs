@@ -1,15 +1,58 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use std::time::{Duration, Instant};
+
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
+    solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult,
     Truss3dElementResult, Truss3dNodeResult, TrussElementResult, TrussNodeResult,
 };
 
 pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResult, String> {
+    solve_truss_2d_internal(request, false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
+}
+
+#[derive(Debug, Clone)]
+pub struct Truss2dProfileStage {
+    pub label: &'static str,
+    pub rss_kib: u64,
+    pub elapsed_ms: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Truss2dProfile {
+    pub result: SolveTruss2dResult,
+    pub stages: Vec<Truss2dProfileStage>,
+    pub solver_iterations: usize,
+    pub solver_residual_norm: f64,
+}
+
+pub fn profile_truss_2d(request: &SolveTruss2dRequest) -> Result<Truss2dProfile, String> {
+    profile_truss_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn profile_truss_2d_with_options(
+    request: &SolveTruss2dRequest,
+    options: SpdSolveOptions,
+) -> Result<Truss2dProfile, String> {
+    solve_truss_2d_internal(request, true, options)
+}
+
+fn solve_truss_2d_internal(
+    request: &SolveTruss2dRequest,
+    collect_stages: bool,
+    solve_options: SpdSolveOptions,
+) -> Result<Truss2dProfile, String> {
     validate_truss_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
+    let mut stages = Vec::new();
+    let mut stage_started = Instant::now();
 
     for (index, node) in request.nodes.iter().enumerate() {
         force_vector[index * 2] = node.load_x;
@@ -51,7 +94,14 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
             }
         }
     }
+    push_truss_2d_stage(
+        &mut stages,
+        collect_stages,
+        "assemble_global",
+        stage_started.elapsed(),
+    );
 
+    stage_started = Instant::now();
     let constrained = request
         .nodes
         .iter()
@@ -70,8 +120,27 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    push_truss_2d_stage(
+        &mut stages,
+        collect_stages,
+        "reduce_system",
+        stage_started.elapsed(),
+    );
 
+    stage_started = Instant::now();
+    let solve_profile =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, solve_options)?;
+    let solver_iterations = solve_profile.iterations;
+    let solver_residual_norm = solve_profile.residual_norm;
+    let reduced_displacements = solve_profile.solution;
+    push_truss_2d_stage(
+        &mut stages,
+        collect_stages,
+        "solve_system",
+        stage_started.elapsed(),
+    );
+
+    stage_started = Instant::now();
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
@@ -135,14 +204,70 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
         .fold(0.0_f64, f64::max);
 
     validate_small_displacement_truss(request, max_displacement)?;
+    push_truss_2d_stage(
+        &mut stages,
+        collect_stages,
+        "assemble_result",
+        stage_started.elapsed(),
+    );
 
-    Ok(SolveTruss2dResult {
-        input: request.clone(),
-        nodes,
-        elements,
-        max_displacement,
-        max_stress,
+    Ok(Truss2dProfile {
+        result: SolveTruss2dResult {
+            input: request.clone(),
+            nodes,
+            elements,
+            max_displacement,
+            max_stress,
+        },
+        stages,
+        solver_iterations,
+        solver_residual_norm,
     })
+}
+
+fn push_truss_2d_stage(
+    stages: &mut Vec<Truss2dProfileStage>,
+    enabled: bool,
+    label: &'static str,
+    elapsed: Duration,
+) {
+    if !enabled {
+        return;
+    }
+
+    stages.push(Truss2dProfileStage {
+        label,
+        rss_kib: current_rss_kib(),
+        elapsed_ms: elapsed.as_secs_f64() * 1000.0,
+    });
+}
+
+fn current_rss_kib() -> u64 {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
+            if let Some(resident_pages) = statm.split_whitespace().nth(1) {
+                if let Ok(resident_pages) = resident_pages.parse::<u64>() {
+                    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+                    if page_size > 0 {
+                        return resident_pages * page_size as u64 / 1024;
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
+        if status == 0 {
+            let usage = unsafe { usage.assume_init() };
+            return (usage.ru_maxrss as u64) / 1024;
+        }
+    }
+
+    0
 }
 
 pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResult, String> {

@@ -37,6 +37,9 @@ make benchmark-report PROFILE=10k REPEAT=1
 make benchmark-baseline PROFILE=100k REPEAT=3
 cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix thermal --repeat 3
 cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix compound --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1
 make benchmark-baseline PROFILE=10k MATRIX=thermal REPEAT=3
 make benchmark-baseline PROFILE=10k MATRIX=mechanical-core REPEAT=3
 make benchmark-baseline PROFILE=10k MATRIX=compound-core REPEAT=1
@@ -45,10 +48,26 @@ make benchmark-standard-compare PROFILE=10k REPEAT=1
 make benchmark-standard-report PROFILE=10k REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1
+make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roof-300k REPEAT=1 SOLVER_PRECONDITIONER=all
 ```
 
 These Make targets run the benchmark crate in `--release` mode so checked-in
 baselines and current comparisons stay on the same performance footing.
+
+The `extended-physics` matrix is the first broad-coverage smoke lane for
+modules that were previously only covered by unit or workflow tests. It covers
+1D heat, electrostatic, magnetostatic, acoustic, and torsion cases plus 2D heat
+triangle, electrostatic triangle/quad, magnetostatic triangle/quad, and Stokes
+quad cases.
+
+The `structural-extended` matrix covers structural modules outside the standard
+mechanical trio: spring 1D/2D/3D, nonlinear spring, contact gap, beam, thermal
+beam, and modal frame 2D/3D cases.
+
+The `thermal-structural` matrix covers coupled thermal deformation and static
+frame families that need continuous performance visibility: thermal bar,
+thermal truss 2D/3D, thermal plane triangle/quad, static frame 2D/3D, and
+thermal frame 2D/3D cases.
 
 For the `100k`, `200k`, and `300k` profiles, prefer running on a dedicated remote/Linux
 host instead of a laptop-class development machine. A full `repeat=3` baseline
@@ -56,6 +75,12 @@ can take significantly longer than the default `10k` tier and may peak above
 `500 MiB` RSS depending on the case mix. Use `make benchmark-profile-remote`
 for 200k/300k smoke coverage before promoting a matrix into the checked regression
 baseline set.
+
+Truss profiles can compare SPD solver preconditioners by setting
+`SOLVER_PRECONDITIONER=all`. The benchmark emits separate
+`#jacobi` and `#symmetric-gauss-seidel` result rows, including iteration count
+and residual norm. Use `SOLVER_PRECONDITIONER=jacobi` or
+`SOLVER_PRECONDITIONER=symmetric-gauss-seidel` for a single-strategy smoke.
 
 Current regression-gate default:
 

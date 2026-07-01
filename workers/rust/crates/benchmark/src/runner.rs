@@ -1,23 +1,40 @@
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
-use kyuubiki_solver::{profile_heat_plane_quad_2d, profile_plane_quad_2d};
+use kyuubiki_solver::{
+    SpdPreconditioner, SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
+    profile_truss_2d_with_options,
+};
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
 };
+use crate::runner_shape::workload_shape;
+use crate::runner_structural::{WorkloadMetrics, run_thermal_structural_workload};
+use crate::runner_util::{current_peak_rss_kib, percentile, unix_timestamp};
 
 pub(crate) fn build_report(
     selected: &[&BenchmarkCase],
     repeat: usize,
     profile: crate::config::BenchmarkProfile,
     matrix: &str,
+    solver_preconditioner: &str,
 ) -> BenchmarkReport {
+    let preconditioners = solver_preconditioners(solver_preconditioner);
+    let tag_results = preconditioners.len() > 1;
     let cases = selected
         .iter()
-        .map(|case| run_case(case, repeat))
+        .flat_map(|case| {
+            preconditioners.iter().map(move |preconditioner| {
+                let mut result = run_case_with_preconditioner(case, repeat, preconditioner);
+                if tag_results && result.solver_preconditioner.is_some() {
+                    result.id = format!("{}#{}", result.id, preconditioner);
+                }
+                result
+            })
+        })
         .collect::<Vec<_>>();
 
     BenchmarkReport {
@@ -29,136 +46,432 @@ pub(crate) fn build_report(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
+    run_case_with_preconditioner(case, repeat, "jacobi")
+}
+
+pub(crate) fn run_case_with_preconditioner(
+    case: &BenchmarkCase,
+    repeat: usize,
+    solver_preconditioner: &str,
+) -> BenchmarkResult {
     let mut durations = Vec::with_capacity(repeat);
     let (mut node_count, mut element_count, mut dof_count) = workload_shape(&case.workload);
     let mut max_displacement = 0.0;
     let mut max_stress = 0.0;
     let mut peak_rss_kib = current_peak_rss_kib();
     let mut memory_stages = Vec::new();
+    let mut solver_iterations = None;
+    let mut solver_residual_norm = None;
+    let mut solver_preconditioner_name = None;
     let mut error = None;
 
     for _ in 0..repeat {
         let started = Instant::now();
-        let outcome = match &case.workload {
-            BenchmarkWorkload::AxialBar(request) => {
-                solve(EngineSolveRequest::Bar1d(request.clone())).map(|result| {
-                    let AnalysisResult::Bar1d(result) = result else {
-                        unreachable!("bar solve should return bar result")
+        let outcome = if let Some(outcome) = run_thermal_structural_workload(&case.workload) {
+            outcome.map(|metrics| {
+                apply_metrics(
+                    metrics,
+                    &mut node_count,
+                    &mut element_count,
+                    &mut dof_count,
+                    &mut max_displacement,
+                    &mut max_stress,
+                );
+            })
+        } else {
+            match &case.workload {
+                BenchmarkWorkload::AxialBar(request) => {
+                    solve(EngineSolveRequest::Bar1d(request.clone())).map(|result| {
+                        let AnalysisResult::Bar1d(result) = result else {
+                            unreachable!("bar solve should return bar result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len().saturating_sub(1);
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::AcousticBar1d(request) => {
+                    solve(EngineSolveRequest::AcousticBar1d(request.clone())).map(|result| {
+                        let AnalysisResult::AcousticBar1d(result) = result else {
+                            unreachable!("acoustic solve should return acoustic result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_pressure;
+                        max_stress = result.max_acoustic_intensity;
+                    })
+                }
+                BenchmarkWorkload::HeatBar1d(request) => {
+                    solve(EngineSolveRequest::HeatBar1d(request.clone())).map(|result| {
+                        let AnalysisResult::HeatBar1d(result) = result else {
+                            unreachable!("heat bar solve should return heat result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_temperature;
+                        max_stress = result.max_heat_flux;
+                    })
+                }
+                BenchmarkWorkload::ElectrostaticBar1d(request) => {
+                    solve(EngineSolveRequest::ElectrostaticBar1d(request.clone())).map(|result| {
+                        let AnalysisResult::ElectrostaticBar1d(result) = result else {
+                            unreachable!(
+                                "electrostatic bar solve should return electrostatic result"
+                            )
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_potential;
+                        max_stress = result.max_electric_field;
+                    })
+                }
+                BenchmarkWorkload::MagnetostaticBar1d(request) => {
+                    solve(EngineSolveRequest::MagnetostaticBar1d(request.clone())).map(|result| {
+                        let AnalysisResult::MagnetostaticBar1d(result) = result else {
+                            unreachable!(
+                                "magnetostatic bar solve should return magnetostatic result"
+                            )
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_magnetic_potential;
+                        max_stress = result.max_magnetic_field_strength;
+                    })
+                }
+                BenchmarkWorkload::Torsion1d(request) => {
+                    solve(EngineSolveRequest::Torsion1d(request.clone())).map(|result| {
+                        let AnalysisResult::Torsion1d(result) = result else {
+                            unreachable!("torsion solve should return torsion result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_rotation;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::Spring1d(request) => {
+                    solve(EngineSolveRequest::Spring1d(request.clone())).map(|result| {
+                        let AnalysisResult::Spring1d(result) = result else {
+                            unreachable!("spring 1d solve should return spring result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_force;
+                    })
+                }
+                BenchmarkWorkload::Spring2d(request) => {
+                    solve(EngineSolveRequest::Spring2d(request.clone())).map(|result| {
+                        let AnalysisResult::Spring2d(result) = result else {
+                            unreachable!("spring 2d solve should return spring result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_force;
+                    })
+                }
+                BenchmarkWorkload::Spring3d(request) => {
+                    solve(EngineSolveRequest::Spring3d(request.clone())).map(|result| {
+                        let AnalysisResult::Spring3d(result) = result else {
+                            unreachable!("spring 3d solve should return spring result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 3;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_force;
+                    })
+                }
+                BenchmarkWorkload::NonlinearSpring1d(request) => {
+                    solve(EngineSolveRequest::NonlinearSpring1d(request.clone())).map(|result| {
+                        let AnalysisResult::NonlinearSpring1d(result) = result else {
+                            unreachable!("nonlinear spring solve should return nonlinear result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_force;
+                    })
+                }
+                BenchmarkWorkload::ContactGap1d(request) => {
+                    solve(EngineSolveRequest::ContactGap1d(request.clone())).map(|result| {
+                        let AnalysisResult::ContactGap1d(result) = result else {
+                            unreachable!("contact gap solve should return contact result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_contact_force;
+                    })
+                }
+                BenchmarkWorkload::Beam1d(request) => {
+                    solve(EngineSolveRequest::Beam1d(request.clone())).map(|result| {
+                        let AnalysisResult::Beam1d(result) = result else {
+                            unreachable!("beam solve should return beam result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::ThermalBeam1d(request) => {
+                    solve(EngineSolveRequest::ThermalBeam1d(request.clone())).map(|result| {
+                        let AnalysisResult::ThermalBeam1d(result) = result else {
+                            unreachable!("thermal beam solve should return thermal beam result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::ModalFrame2d(request) => {
+                    solve(EngineSolveRequest::ModalFrame2d(request.clone())).map(|result| {
+                        let AnalysisResult::ModalFrame2d(result) = result else {
+                            unreachable!("modal frame 2d solve should return modal result")
+                        };
+                        node_count = result.input.nodes.len();
+                        element_count = result.input.elements.len();
+                        dof_count = result.free_dofs.len();
+                        max_displacement = result.min_frequency_hz;
+                        max_stress = result.max_frequency_hz;
+                    })
+                }
+                BenchmarkWorkload::ModalFrame3d(request) => {
+                    solve(EngineSolveRequest::ModalFrame3d(request.clone())).map(|result| {
+                        let AnalysisResult::ModalFrame3d(result) = result else {
+                            unreachable!("modal frame 3d solve should return modal result")
+                        };
+                        node_count = result.input.nodes.len();
+                        element_count = result.input.elements.len();
+                        dof_count = result.free_dofs.len();
+                        max_displacement = result.min_frequency_hz;
+                        max_stress = result.max_frequency_hz;
+                    })
+                }
+                BenchmarkWorkload::Truss2d(request) => {
+                    let options = SpdSolveOptions {
+                        preconditioner: parse_preconditioner(solver_preconditioner),
                     };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len().saturating_sub(1);
-                    max_displacement = result.max_displacement;
-                    max_stress = result.max_stress;
-                })
-            }
-            BenchmarkWorkload::Truss2d(request) => {
-                solve(EngineSolveRequest::Truss2d(request.clone())).map(|result| {
-                    let AnalysisResult::Truss2d(result) = result else {
-                        unreachable!("truss solve should return truss result")
+                    profile_truss_2d_with_options(request, options).map(|profile| {
+                        let result = profile.result;
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                        solver_iterations = Some(profile.solver_iterations);
+                        solver_residual_norm = Some(profile.solver_residual_norm);
+                        solver_preconditioner_name = Some(solver_preconditioner.to_string());
+                        memory_stages = profile
+                            .stages
+                            .into_iter()
+                            .map(|stage| BenchmarkMemoryStage {
+                                label: stage.label.to_string(),
+                                rss_kib: stage.rss_kib,
+                                elapsed_ms: Some(stage.elapsed_ms),
+                            })
+                            .collect();
+                    })
+                }
+                BenchmarkWorkload::PlaneTriangle2d(request) => {
+                    solve(EngineSolveRequest::PlaneTriangle2d(request.clone())).map(|result| {
+                        let AnalysisResult::PlaneTriangle2d(result) = result else {
+                            unreachable!("plane solve should return plane result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::PlaneQuad2d(request) => {
+                    profile_plane_quad_2d(request).map(|profile| {
+                        let result = profile.result;
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 2;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                        memory_stages = profile
+                            .stages
+                            .into_iter()
+                            .map(|stage| BenchmarkMemoryStage {
+                                label: stage.label.to_string(),
+                                rss_kib: stage.rss_kib,
+                                elapsed_ms: Some(stage.elapsed_ms),
+                            })
+                            .collect();
+                    })
+                }
+                BenchmarkWorkload::HeatPlaneQuad2d(request) => profile_heat_plane_quad_2d(request)
+                    .map(|profile| {
+                        let result = profile.result;
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_temperature;
+                        max_stress = result.max_heat_flux;
+                        memory_stages = profile
+                            .memory_stages
+                            .into_iter()
+                            .map(|stage| BenchmarkMemoryStage {
+                                label: stage.label.to_string(),
+                                rss_kib: stage.rss_kib,
+                                elapsed_ms: None,
+                            })
+                            .collect();
+                    }),
+                BenchmarkWorkload::HeatPlaneTriangle2d(request) => {
+                    solve(EngineSolveRequest::HeatPlaneTriangle2d(request.clone())).map(|result| {
+                        let AnalysisResult::HeatPlaneTriangle2d(result) = result else {
+                            unreachable!("heat triangle solve should return heat result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len();
+                        max_displacement = result.max_temperature;
+                        max_stress = result.max_heat_flux;
+                    })
+                }
+                BenchmarkWorkload::ElectrostaticPlaneTriangle2d(request) => solve(
+                    EngineSolveRequest::ElectrostaticPlaneTriangle2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::ElectrostaticPlaneTriangle2d(result) = result else {
+                        unreachable!(
+                            "electrostatic triangle solve should return electrostatic result"
+                        )
                     };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len() * 2;
-                    max_displacement = result.max_displacement;
-                    max_stress = result.max_stress;
-                })
-            }
-            BenchmarkWorkload::PlaneTriangle2d(request) => {
-                solve(EngineSolveRequest::PlaneTriangle2d(request.clone())).map(|result| {
-                    let AnalysisResult::PlaneTriangle2d(result) = result else {
-                        unreachable!("plane solve should return plane result")
-                    };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len() * 2;
-                    max_displacement = result.max_displacement;
-                    max_stress = result.max_stress;
-                })
-            }
-            BenchmarkWorkload::PlaneQuad2d(request) => {
-                profile_plane_quad_2d(request).map(|profile| {
-                    let result = profile.result;
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len() * 2;
-                    max_displacement = result.max_displacement;
-                    max_stress = result.max_stress;
-                    memory_stages = profile
-                        .stages
-                        .into_iter()
-                        .map(|stage| BenchmarkMemoryStage {
-                            label: stage.label.to_string(),
-                            rss_kib: stage.rss_kib,
-                            elapsed_ms: Some(stage.elapsed_ms),
-                        })
-                        .collect();
-                })
-            }
-            BenchmarkWorkload::HeatPlaneQuad2d(request) => {
-                profile_heat_plane_quad_2d(request).map(|profile| {
-                    let result = profile.result;
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len();
-                    max_displacement = result.max_temperature;
-                    max_stress = result.max_heat_flux;
-                    memory_stages = profile
-                        .memory_stages
-                        .into_iter()
-                        .map(|stage| BenchmarkMemoryStage {
-                            label: stage.label.to_string(),
-                            rss_kib: stage.rss_kib,
-                            elapsed_ms: None,
-                        })
-                        .collect();
-                })
-            }
-            BenchmarkWorkload::Truss3d(request) => {
-                solve(EngineSolveRequest::Truss3d(request.clone())).map(|result| {
-                    let AnalysisResult::Truss3d(result) = result else {
-                        unreachable!("3d truss solve should return 3d truss result")
+                    max_displacement = result.max_potential;
+                    max_stress = result.max_electric_field;
+                }),
+                BenchmarkWorkload::ElectrostaticPlaneQuad2d(request) => solve(
+                    EngineSolveRequest::ElectrostaticPlaneQuad2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::ElectrostaticPlaneQuad2d(result) = result else {
+                        unreachable!("electrostatic quad solve should return electrostatic result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len();
+                    max_displacement = result.max_potential;
+                    max_stress = result.max_electric_field;
+                }),
+                BenchmarkWorkload::MagnetostaticPlaneTriangle2d(request) => solve(
+                    EngineSolveRequest::MagnetostaticPlaneTriangle2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::MagnetostaticPlaneTriangle2d(result) = result else {
+                        unreachable!(
+                            "magnetostatic triangle solve should return magnetostatic result"
+                        )
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len();
+                    max_displacement = result.max_vector_potential;
+                    max_stress = result.max_magnetic_field_strength;
+                }),
+                BenchmarkWorkload::MagnetostaticPlaneQuad2d(request) => solve(
+                    EngineSolveRequest::MagnetostaticPlaneQuad2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::MagnetostaticPlaneQuad2d(result) = result else {
+                        unreachable!("magnetostatic quad solve should return magnetostatic result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len();
+                    max_displacement = result.max_vector_potential;
+                    max_stress = result.max_magnetic_field_strength;
+                }),
+                BenchmarkWorkload::StokesFlowPlaneQuad2d(request) => solve(
+                    EngineSolveRequest::StokesFlowPlaneQuad2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::StokesFlowPlaneQuad2d(result) = result else {
+                        unreachable!("stokes solve should return stokes result")
                     };
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len() * 3;
-                    max_displacement = result.max_displacement;
-                    max_stress = result.max_stress;
-                })
-            }
-            BenchmarkWorkload::HeadlessActionManifest => {
-                let manifest = action_capability_manifest();
-                let payload = serde_json::to_vec(&manifest)
-                    .map_err(|error| format!("manifest serialization failed: {error}"));
-                payload.map(|payload| {
-                    node_count = manifest.len();
-                    element_count = manifest
-                        .iter()
-                        .filter(|entry| entry.direct_fem_route.is_some())
-                        .count();
-                    dof_count = manifest
-                        .iter()
-                        .map(|entry| entry.required_payload_keys.len() + entry.output_keys.len())
-                        .sum();
-                    max_displacement = element_count as f64;
-                    max_stress = payload.len() as f64;
-                })
-            }
-            BenchmarkWorkload::DirectFemManifest => {
-                let manifest = direct_fem_capability_manifest();
-                let payload = serde_json::to_vec(&manifest)
-                    .map_err(|error| format!("direct FEM manifest serialization failed: {error}"));
-                payload.map(|payload| {
-                    node_count = manifest.len();
-                    element_count = manifest.len();
-                    dof_count = manifest
-                        .iter()
-                        .map(|entry| entry.required_payload_keys.len() + entry.output_keys.len())
-                        .sum();
-                    max_displacement = manifest.len() as f64;
-                    max_stress = payload.len() as f64;
-                })
+                    max_displacement = result.max_velocity;
+                    max_stress = result.max_pressure;
+                }),
+                BenchmarkWorkload::Truss3d(request) => {
+                    solve(EngineSolveRequest::Truss3d(request.clone())).map(|result| {
+                        let AnalysisResult::Truss3d(result) = result else {
+                            unreachable!("3d truss solve should return 3d truss result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 3;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_stress;
+                    })
+                }
+                BenchmarkWorkload::HeadlessActionManifest => {
+                    let manifest = action_capability_manifest();
+                    let payload = serde_json::to_vec(&manifest)
+                        .map_err(|error| format!("manifest serialization failed: {error}"));
+                    payload.map(|payload| {
+                        node_count = manifest.len();
+                        element_count = manifest
+                            .iter()
+                            .filter(|entry| entry.direct_fem_route.is_some())
+                            .count();
+                        dof_count = manifest
+                            .iter()
+                            .map(|entry| {
+                                entry.required_payload_keys.len() + entry.output_keys.len()
+                            })
+                            .sum();
+                        max_displacement = element_count as f64;
+                        max_stress = payload.len() as f64;
+                    })
+                }
+                BenchmarkWorkload::DirectFemManifest => {
+                    let manifest = direct_fem_capability_manifest();
+                    let payload = serde_json::to_vec(&manifest).map_err(|error| {
+                        format!("direct FEM manifest serialization failed: {error}")
+                    });
+                    payload.map(|payload| {
+                        node_count = manifest.len();
+                        element_count = manifest.len();
+                        dof_count = manifest
+                            .iter()
+                            .map(|entry| {
+                                entry.required_payload_keys.len() + entry.output_keys.len()
+                            })
+                            .sum();
+                        max_displacement = manifest.len() as f64;
+                        max_stress = payload.len() as f64;
+                    })
+                }
+                _ => unreachable!("thermal structural workloads are handled before main dispatch"),
             }
         };
 
@@ -198,79 +511,40 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
         element_count,
         peak_rss_kib,
         memory_stages,
+        solver_iterations,
+        solver_residual_norm,
+        solver_preconditioner: solver_preconditioner_name,
         max_displacement,
         max_stress,
     }
 }
 
-fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usize) {
-    match workload {
-        BenchmarkWorkload::AxialBar(request) => {
-            (request.elements + 1, request.elements, request.elements)
-        }
-        BenchmarkWorkload::Truss2d(request) => (
-            request.nodes.len(),
-            request.elements.len(),
-            request.nodes.len() * 2,
-        ),
-        BenchmarkWorkload::Truss3d(request) => (
-            request.nodes.len(),
-            request.elements.len(),
-            request.nodes.len() * 3,
-        ),
-        BenchmarkWorkload::PlaneTriangle2d(request) => (
-            request.nodes.len(),
-            request.elements.len(),
-            request.nodes.len() * 2,
-        ),
-        BenchmarkWorkload::PlaneQuad2d(request) => (
-            request.nodes.len(),
-            request.elements.len(),
-            request.nodes.len() * 2,
-        ),
-        BenchmarkWorkload::HeatPlaneQuad2d(request) => (
-            request.nodes.len(),
-            request.elements.len(),
-            request.nodes.len(),
-        ),
-        BenchmarkWorkload::HeadlessActionManifest => (0, 0, 0),
-        BenchmarkWorkload::DirectFemManifest => (0, 0, 0),
+fn parse_preconditioner(value: &str) -> SpdPreconditioner {
+    match value {
+        "sgs" | "symmetric-gauss-seidel" => SpdPreconditioner::SymmetricGaussSeidel,
+        _ => SpdPreconditioner::Jacobi,
     }
 }
 
-fn current_peak_rss_kib() -> u64 {
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
-    {
-        let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
-        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
-        if status == 0 {
-            let usage = unsafe { usage.assume_init() };
-            #[cfg(target_os = "macos")]
-            {
-                return (usage.ru_maxrss as u64) / 1024;
-            }
-            #[cfg(target_os = "linux")]
-            {
-                return usage.ru_maxrss as u64;
-            }
-        }
+fn solver_preconditioners(value: &str) -> Vec<&'static str> {
+    match value {
+        "all" | "compare" => vec!["jacobi", "symmetric-gauss-seidel"],
+        "sgs" | "symmetric-gauss-seidel" => vec!["symmetric-gauss-seidel"],
+        _ => vec!["jacobi"],
     }
-
-    0
 }
 
-fn percentile(sorted: &[f64], fraction: f64) -> f64 {
-    if sorted.is_empty() {
-        return 0.0;
-    }
-
-    let index = ((sorted.len() - 1) as f64 * fraction).round() as usize;
-    sorted[index.min(sorted.len() - 1)]
-}
-
-fn unix_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs())
-        .unwrap_or(0)
+fn apply_metrics(
+    metrics: WorkloadMetrics,
+    node_count: &mut usize,
+    element_count: &mut usize,
+    dof_count: &mut usize,
+    max_displacement: &mut f64,
+    max_stress: &mut f64,
+) {
+    *node_count = metrics.node_count;
+    *element_count = metrics.element_count;
+    *dof_count = metrics.dof_count;
+    *max_displacement = metrics.max_displacement;
+    *max_stress = metrics.max_stress;
 }

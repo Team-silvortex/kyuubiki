@@ -12,6 +12,8 @@ mod frame_3d_math;
 mod heat_plane_2d;
 mod heat_plane_2d_validation;
 mod linear_algebra;
+mod linear_dense;
+mod linear_solver_profile;
 mod magnetostatic_bar_1d;
 mod magnetostatic_plane_2d;
 mod modal_frame_2d;
@@ -43,6 +45,7 @@ pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
 };
+pub use linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 pub use magnetostatic_bar_1d::solve_magnetostatic_bar_1d;
 pub use magnetostatic_plane_2d::{
     solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d,
@@ -60,7 +63,10 @@ pub use thermal_frame_3d::solve_thermal_frame_3d;
 pub use thermal_plane_2d::{solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d};
 pub use thermal_truss::{solve_thermal_truss_2d, solve_thermal_truss_3d};
 pub use torsion_1d::solve_torsion_1d;
-pub use truss::{solve_truss_2d, solve_truss_3d};
+pub use truss::{
+    Truss2dProfile, Truss2dProfileStage, profile_truss_2d, profile_truss_2d_with_options,
+    solve_truss_2d, solve_truss_3d,
+};
 
 pub struct MockSolver {
     step_count: u64,

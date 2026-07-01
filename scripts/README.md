@@ -207,6 +207,8 @@ Useful smoke wrappers:
   one remote Rust benchmark profile/matrix smoke without requiring a checked
   baseline. Use this for new scale tiers before promoting them into the
   standard regression gate. Outputs land under `tmp/benchmark-profile/`.
+  Set `SOLVER_PRECONDITIONER=all` on truss cases to emit Jacobi and symmetric
+  Gauss-Seidel rows in the same smoke report.
 - `./scripts/run-standard-benchmark-regression.sh`
   Compatibility shim for `./scripts/kyuubiki standard-benchmark-regression`.
   It syncs the Rust workspace without `target/` to `kyuubiki-lab`, runs the standard Rust

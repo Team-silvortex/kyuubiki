@@ -191,6 +191,14 @@ pub(crate) fn print_table(
         if !result.memory_stages.is_empty() {
             println!("  stage rss: {}", format_memory_stages(result));
         }
+        if let Some(iterations) = result.solver_iterations {
+            println!(
+                "  solver: preconditioner={} iterations={} residual={:.3e}",
+                result.solver_preconditioner.as_deref().unwrap_or("default"),
+                iterations,
+                result.solver_residual_norm.unwrap_or(0.0)
+            );
+        }
         if let Some(delta) = comparison
             .and_then(|comparison| comparison.cases.iter().find(|case| case.id == result.id))
         {

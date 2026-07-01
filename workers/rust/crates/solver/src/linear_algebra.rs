@@ -1,3 +1,6 @@
+use crate::linear_dense::{solve_linear_system, zero_matrix};
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
+
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
     rows: Vec<Vec<(usize, f64)>>,
@@ -156,6 +159,48 @@ impl CompressedSparseMatrix {
             result[row] = sum;
         }
     }
+
+    fn apply_preconditioner_into(
+        &self,
+        kind: SpdPreconditioner,
+        residual: &[f64],
+        result: &mut [f64],
+    ) {
+        match kind {
+            SpdPreconditioner::Jacobi => {
+                for index in 0..self.size() {
+                    result[index] = residual[index] / safe_diagonal(self.diagonal(index));
+                }
+            }
+            SpdPreconditioner::SymmetricGaussSeidel => self.apply_sgs_into(residual, result),
+        }
+    }
+
+    fn apply_sgs_into(&self, residual: &[f64], result: &mut [f64]) {
+        let size = self.size();
+        let mut forward = vec![0.0; size];
+        for row in 0..size {
+            let mut sum = residual[row];
+            for index in self.row_offsets[row]..self.row_offsets[row + 1] {
+                let column = self.columns[index];
+                if column < row {
+                    sum -= self.values[index] * forward[column];
+                }
+            }
+            forward[row] = sum / safe_diagonal(self.diagonal(row));
+        }
+
+        for row in (0..size).rev() {
+            let mut sum = self.diagonal(row) * forward[row];
+            for index in self.row_offsets[row]..self.row_offsets[row + 1] {
+                let column = self.columns[index];
+                if column > row {
+                    sum -= self.values[index] * result[column];
+                }
+            }
+            result[row] = sum / safe_diagonal(self.diagonal(row));
+        }
+    }
 }
 
 pub(crate) trait MatrixAssembler {
@@ -271,15 +316,40 @@ pub(crate) fn reduce_sparse_system_with_prescribed(
 }
 
 pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
+    solve_spd_system_profile(matrix, rhs).map(|profile| profile.solution)
+}
+
+pub(crate) fn solve_spd_system_profile(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+) -> Result<SpdSolveProfile, String> {
+    solve_spd_system_profile_with_options(matrix, rhs, SpdSolveOptions::default())
+}
+
+pub(crate) fn solve_spd_system_profile_with_options(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    options: SpdSolveOptions,
+) -> Result<SpdSolveProfile, String> {
     let size = rhs.len();
     if matrix.size() != size {
         return Err("matrix dimensions do not match vector".to_string());
     }
     if size == 0 {
-        return Ok(Vec::new());
+        return Ok(SpdSolveProfile {
+            solution: Vec::new(),
+            iterations: 0,
+            residual_norm: 0.0,
+        });
     }
     if size <= 1024 {
-        return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
+        return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| {
+            SpdSolveProfile {
+                solution,
+                iterations: 0,
+                residual_norm: 0.0,
+            }
+        });
     }
     let scaling = diagonal_sparse_scaling(matrix);
     let scaled_rhs = scale_sparse_rhs(rhs, &scaling);
@@ -288,8 +358,8 @@ pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec
     let compressed = scaled_matrix.compress();
     drop(scaled_matrix);
 
-    match solve_spd_compressed(&compressed, &scaled_rhs, matrix) {
-        Ok(solution) => Ok(solution),
+    match solve_spd_compressed(&compressed, &scaled_rhs, matrix, options.preconditioner) {
+        Ok(profile) => Ok(profile),
         Err(error) => {
             let scaled_matrix = scale_sparse_matrix(matrix, &scaling);
 
@@ -298,24 +368,28 @@ pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec
                     regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
                 let compressed_regularized = regularized.compress();
 
-                if let Ok(solution) =
-                    solve_spd_compressed(&compressed_regularized, &scaled_rhs, &regularized)
-                {
-                    return Ok(unscale_solution(&solution, &scaling));
+                if let Ok(profile) = solve_spd_compressed(
+                    &compressed_regularized,
+                    &scaled_rhs,
+                    &regularized,
+                    options.preconditioner,
+                ) {
+                    return Ok(unscale_profile(profile, &scaling));
                 }
             }
 
             Err(error)
         }
     }
-    .map(|solution| unscale_solution(&solution, &scaling))
+    .map(|profile| unscale_profile(profile, &scaling))
 }
 
 fn solve_spd_compressed(
     matrix: &CompressedSparseMatrix,
     rhs: &[f64],
     fallback_source: &SparseMatrix,
-) -> Result<Vec<f64>, String> {
+    preconditioner: SpdPreconditioner,
+) -> Result<SpdSolveProfile, String> {
     let size = rhs.len();
 
     let mut x = vec![0.0; size];
@@ -324,21 +398,18 @@ fn solve_spd_compressed(
     let mut p = vec![0.0; size];
     let mut ap = vec![0.0; size];
     let mut ax = vec![0.0; size];
-    let mut diagonal = vec![0.0; size];
-
-    for index in 0..size {
-        let diag = matrix.diagonal(index);
-        let safe_diag = if diag.abs() < 1.0e-12 { 1.0e-12 } else { diag };
-        diagonal[index] = safe_diag;
-        z[index] = r[index] / safe_diag;
-        p[index] = z[index];
-    }
+    matrix.apply_preconditioner_into(preconditioner, &r, &mut z);
+    p.clone_from(&z);
 
     let rhs_norm = dot(rhs, rhs).sqrt().max(1.0);
     let tolerance = 1.0e-9 * rhs_norm;
     let mut rz_old = dot(&r, &z);
     if !rz_old.is_finite() || rz_old.abs() < 1.0e-20 {
-        return Ok(x);
+        return Ok(SpdSolveProfile {
+            solution: x,
+            iterations: 0,
+            residual_norm: dot(&r, &r).sqrt(),
+        });
     }
 
     let max_iter = (size.saturating_mul(8)).clamp(256, 40_000);
@@ -370,12 +441,14 @@ fn solve_spd_compressed(
 
         let residual_norm = dot(&r, &r).sqrt();
         if residual_norm <= tolerance {
-            return Ok(x);
+            return Ok(SpdSolveProfile {
+                solution: x,
+                iterations: iteration + 1,
+                residual_norm,
+            });
         }
 
-        for index in 0..size {
-            z[index] = r[index] / diagonal[index];
-        }
+        matrix.apply_preconditioner_into(preconditioner, &r, &mut z);
 
         let rz_new = dot(&r, &z);
         if !rz_new.is_finite() {
@@ -399,13 +472,25 @@ fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
     lhs.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
 }
 
+fn safe_diagonal(value: f64) -> f64 {
+    if value.abs() < 1.0e-12 {
+        1.0e-12
+    } else {
+        value
+    }
+}
+
 fn solve_spd_fallback(
     matrix: &SparseMatrix,
     rhs: &[f64],
     reason: &str,
-) -> Result<Vec<f64>, String> {
+) -> Result<SpdSolveProfile, String> {
     if rhs.len() <= 1024 {
-        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
+        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| SpdSolveProfile {
+            solution,
+            iterations: 0,
+            residual_norm: 0.0,
+        })
     } else {
         Err(reason.to_string())
     }
@@ -470,6 +555,14 @@ fn unscale_solution(solution: &[f64], scaling: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+fn unscale_profile(profile: SpdSolveProfile, scaling: &[f64]) -> SpdSolveProfile {
+    SpdSolveProfile {
+        solution: unscale_solution(&profile.solution, scaling),
+        iterations: profile.iterations,
+        residual_norm: profile.residual_norm,
+    }
+}
+
 fn average_diagonal_magnitude(matrix: &SparseMatrix) -> f64 {
     let size = matrix.size().max(1);
     let diagonal_sum = matrix
@@ -497,60 +590,4 @@ fn regularize_sparse_diagonal(matrix: &SparseMatrix, epsilon: f64) -> SparseMatr
     }
 
     regularized
-}
-
-fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f64>, String> {
-    let size = vector.len();
-
-    if matrix.len() != size || matrix.iter().any(|row| row.len() != size) {
-        return Err("matrix dimensions do not match vector".to_string());
-    }
-
-    let mut augmented = matrix
-        .into_iter()
-        .zip(vector)
-        .map(|(mut row, value)| {
-            row.push(value);
-            row
-        })
-        .collect::<Vec<_>>();
-
-    for pivot in 0..size {
-        let max_row = (pivot..size)
-            .max_by(|&left, &right| {
-                augmented[left][pivot]
-                    .abs()
-                    .partial_cmp(&augmented[right][pivot].abs())
-                    .expect("finite pivot comparisons")
-            })
-            .expect("pivot range should not be empty");
-
-        augmented.swap(pivot, max_row);
-
-        let pivot_value = augmented[pivot][pivot];
-        if pivot_value.abs() < 1.0e-12 {
-            return Err("system is singular".to_string());
-        }
-
-        for column in pivot..=size {
-            augmented[pivot][column] /= pivot_value;
-        }
-
-        for row in 0..size {
-            if row == pivot {
-                continue;
-            }
-
-            let factor = augmented[row][pivot];
-            for column in pivot..=size {
-                augmented[row][column] -= factor * augmented[pivot][column];
-            }
-        }
-    }
-
-    Ok(augmented.into_iter().map(|row| row[size]).collect())
-}
-
-fn zero_matrix(size: usize) -> Vec<Vec<f64>> {
-    vec![vec![0.0; size]; size]
 }

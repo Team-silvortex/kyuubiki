@@ -11,6 +11,24 @@ use crate::{
         generate_panel_mesh, generate_pratt_truss, generate_quad_panel_mesh,
         generate_space_frame_grid,
     },
+    generators_extended::{
+        generate_acoustic_bar_case, generate_electrostatic_bar_case,
+        generate_electrostatic_quad_panel, generate_electrostatic_triangle_panel,
+        generate_heat_bar_case, generate_heat_triangle_panel, generate_magnetostatic_bar_case,
+        generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
+        generate_stokes_quad_panel, generate_torsion_case,
+    },
+    generators_structural::{
+        generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_case,
+        generate_modal_frame_3d_case, generate_nonlinear_spring_1d_case, generate_spring_1d_case,
+        generate_spring_2d_case, generate_spring_3d_case, generate_thermal_beam_1d_case,
+    },
+    generators_thermal_structural::{
+        generate_frame_2d_case, generate_frame_3d_case, generate_thermal_bar_case,
+        generate_thermal_frame_2d_case, generate_thermal_frame_3d_case,
+        generate_thermal_quad_panel, generate_thermal_triangle_panel,
+        generate_thermal_truss_2d_case, generate_thermal_truss_3d_case,
+    },
     models::{BenchmarkCase, BenchmarkWorkload},
 };
 
@@ -52,11 +70,40 @@ pub(crate) struct ProfileScaleSpec {
 #[serde(rename_all = "snake_case")]
 pub(crate) enum BenchmarkFamily {
     AxialBar,
+    ThermalBar1d,
+    AcousticBar1d,
+    HeatBar1d,
+    ElectrostaticBar1d,
+    MagnetostaticBar1d,
+    Torsion1d,
+    Spring1d,
+    Spring2d,
+    Spring3d,
+    NonlinearSpring1d,
+    ContactGap1d,
+    Beam1d,
+    ThermalBeam1d,
+    Frame2d,
+    Frame3d,
+    ThermalFrame2d,
+    ThermalFrame3d,
+    ModalFrame2d,
+    ModalFrame3d,
     Truss2d,
     TrussFrame3d,
+    ThermalTruss2d,
+    ThermalTruss3d,
     PlaneTriangle2d,
     PlaneQuad2d,
+    ThermalPlaneTriangle2d,
+    ThermalPlaneQuad2d,
+    HeatPlaneTriangle2d,
     HeatPlaneQuad2d,
+    ElectrostaticPlaneTriangle2d,
+    ElectrostaticPlaneQuad2d,
+    MagnetostaticPlaneTriangle2d,
+    MagnetostaticPlaneQuad2d,
+    StokesFlowPlaneQuad2d,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -154,6 +201,115 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "axial_bar_1d",
             workload: BenchmarkWorkload::AxialBar(generate_bar_case(profile.axial_elements)),
         },
+        BenchmarkFamily::ThermalBar1d => BenchmarkCase {
+            id,
+            family: "thermal_bar_1d",
+            workload: BenchmarkWorkload::ThermalBar1d(generate_thermal_bar_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::AcousticBar1d => BenchmarkCase {
+            id,
+            family: "acoustic_bar_1d",
+            workload: BenchmarkWorkload::AcousticBar1d(generate_acoustic_bar_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::HeatBar1d => BenchmarkCase {
+            id,
+            family: "heat_bar_1d",
+            workload: BenchmarkWorkload::HeatBar1d(generate_heat_bar_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::ElectrostaticBar1d => BenchmarkCase {
+            id,
+            family: "electrostatic_bar_1d",
+            workload: BenchmarkWorkload::ElectrostaticBar1d(generate_electrostatic_bar_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::MagnetostaticBar1d => BenchmarkCase {
+            id,
+            family: "magnetostatic_bar_1d",
+            workload: BenchmarkWorkload::MagnetostaticBar1d(generate_magnetostatic_bar_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::Torsion1d => BenchmarkCase {
+            id,
+            family: "torsion_1d",
+            workload: BenchmarkWorkload::Torsion1d(generate_torsion_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::Spring1d => BenchmarkCase {
+            id,
+            family: "spring_1d",
+            workload: BenchmarkWorkload::Spring1d(generate_spring_1d_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::Spring2d => BenchmarkCase {
+            id,
+            family: "spring_2d",
+            workload: BenchmarkWorkload::Spring2d(generate_spring_2d_case()),
+        },
+        BenchmarkFamily::Spring3d => BenchmarkCase {
+            id,
+            family: "spring_3d",
+            workload: BenchmarkWorkload::Spring3d(generate_spring_3d_case()),
+        },
+        BenchmarkFamily::NonlinearSpring1d => BenchmarkCase {
+            id,
+            family: "nonlinear_spring_1d",
+            workload: BenchmarkWorkload::NonlinearSpring1d(generate_nonlinear_spring_1d_case(
+                profile.axial_elements.min(120),
+            )),
+        },
+        BenchmarkFamily::ContactGap1d => BenchmarkCase {
+            id,
+            family: "contact_gap_1d",
+            workload: BenchmarkWorkload::ContactGap1d(generate_contact_gap_1d_case(
+                profile.axial_elements.min(120),
+            )),
+        },
+        BenchmarkFamily::Beam1d => BenchmarkCase {
+            id,
+            family: "beam_1d",
+            workload: BenchmarkWorkload::Beam1d(generate_beam_1d_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::ThermalBeam1d => BenchmarkCase {
+            id,
+            family: "thermal_beam_1d",
+            workload: BenchmarkWorkload::ThermalBeam1d(generate_thermal_beam_1d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::Frame2d => BenchmarkCase {
+            id,
+            family: "frame_2d",
+            workload: BenchmarkWorkload::Frame2d(generate_frame_2d_case()),
+        },
+        BenchmarkFamily::Frame3d => BenchmarkCase {
+            id,
+            family: "frame_3d",
+            workload: BenchmarkWorkload::Frame3d(generate_frame_3d_case()),
+        },
+        BenchmarkFamily::ThermalFrame2d => BenchmarkCase {
+            id,
+            family: "thermal_frame_2d",
+            workload: BenchmarkWorkload::ThermalFrame2d(generate_thermal_frame_2d_case()),
+        },
+        BenchmarkFamily::ThermalFrame3d => BenchmarkCase {
+            id,
+            family: "thermal_frame_3d",
+            workload: BenchmarkWorkload::ThermalFrame3d(generate_thermal_frame_3d_case()),
+        },
+        BenchmarkFamily::ModalFrame2d => BenchmarkCase {
+            id,
+            family: "modal_frame_2d",
+            workload: BenchmarkWorkload::ModalFrame2d(generate_modal_frame_2d_case()),
+        },
+        BenchmarkFamily::ModalFrame3d => BenchmarkCase {
+            id,
+            family: "modal_frame_3d",
+            workload: BenchmarkWorkload::ModalFrame3d(generate_modal_frame_3d_case()),
+        },
         BenchmarkFamily::Truss2d => build_truss_case(id, &profile.truss),
         BenchmarkFamily::TrussFrame3d => BenchmarkCase {
             id,
@@ -165,6 +321,16 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
                 profile.space_frame.depth,
                 profile.space_frame.height,
             )),
+        },
+        BenchmarkFamily::ThermalTruss2d => BenchmarkCase {
+            id,
+            family: "thermal_truss_2d",
+            workload: BenchmarkWorkload::ThermalTruss2d(generate_thermal_truss_2d_case()),
+        },
+        BenchmarkFamily::ThermalTruss3d => BenchmarkCase {
+            id,
+            family: "thermal_truss_3d",
+            workload: BenchmarkWorkload::ThermalTruss3d(generate_thermal_truss_3d_case()),
         },
         BenchmarkFamily::PlaneTriangle2d => BenchmarkCase {
             id,
@@ -186,6 +352,26 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
                 profile.plane_quad.height,
             )),
         },
+        BenchmarkFamily::ThermalPlaneTriangle2d => BenchmarkCase {
+            id,
+            family: "thermal_plane_triangle_2d",
+            workload: BenchmarkWorkload::ThermalPlaneTriangle2d(generate_thermal_triangle_panel(
+                profile.plane_triangle.nx,
+                profile.plane_triangle.ny,
+                profile.plane_triangle.width,
+                profile.plane_triangle.height,
+            )),
+        },
+        BenchmarkFamily::ThermalPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "thermal_plane_quad_2d",
+            workload: BenchmarkWorkload::ThermalPlaneQuad2d(generate_thermal_quad_panel(
+                profile.plane_quad.nx,
+                profile.plane_quad.ny,
+                profile.plane_quad.width,
+                profile.plane_quad.height,
+            )),
+        },
         BenchmarkFamily::HeatPlaneQuad2d => BenchmarkCase {
             id,
             family: "heat_plane_quad_2d",
@@ -194,6 +380,74 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
                 profile.heat_plane_quad.ny,
                 profile.heat_plane_quad.width,
                 profile.heat_plane_quad.height,
+            )),
+        },
+        BenchmarkFamily::HeatPlaneTriangle2d => BenchmarkCase {
+            id,
+            family: "heat_plane_triangle_2d",
+            workload: BenchmarkWorkload::HeatPlaneTriangle2d(generate_heat_triangle_panel(
+                profile.plane_triangle.nx,
+                profile.plane_triangle.ny,
+                profile.plane_triangle.width,
+                profile.plane_triangle.height,
+            )),
+        },
+        BenchmarkFamily::ElectrostaticPlaneTriangle2d => BenchmarkCase {
+            id,
+            family: "electrostatic_plane_triangle_2d",
+            workload: BenchmarkWorkload::ElectrostaticPlaneTriangle2d(
+                generate_electrostatic_triangle_panel(
+                    profile.plane_triangle.nx,
+                    profile.plane_triangle.ny,
+                    profile.plane_triangle.width,
+                    profile.plane_triangle.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::ElectrostaticPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "electrostatic_plane_quad_2d",
+            workload: BenchmarkWorkload::ElectrostaticPlaneQuad2d(
+                generate_electrostatic_quad_panel(
+                    profile.plane_quad.nx,
+                    profile.plane_quad.ny,
+                    profile.plane_quad.width,
+                    profile.plane_quad.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::MagnetostaticPlaneTriangle2d => BenchmarkCase {
+            id,
+            family: "magnetostatic_plane_triangle_2d",
+            workload: BenchmarkWorkload::MagnetostaticPlaneTriangle2d(
+                generate_magnetostatic_triangle_panel(
+                    profile.plane_triangle.nx,
+                    profile.plane_triangle.ny,
+                    profile.plane_triangle.width,
+                    profile.plane_triangle.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::MagnetostaticPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "magnetostatic_plane_quad_2d",
+            workload: BenchmarkWorkload::MagnetostaticPlaneQuad2d(
+                generate_magnetostatic_quad_panel(
+                    profile.plane_quad.nx,
+                    profile.plane_quad.ny,
+                    profile.plane_quad.width,
+                    profile.plane_quad.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::StokesFlowPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "stokes_flow_plane_quad_2d",
+            workload: BenchmarkWorkload::StokesFlowPlaneQuad2d(generate_stokes_quad_panel(
+                profile.plane_quad.nx,
+                profile.plane_quad.ny,
+                profile.plane_quad.width,
+                profile.plane_quad.height,
             )),
         },
     }

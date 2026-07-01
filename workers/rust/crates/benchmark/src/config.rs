@@ -10,6 +10,7 @@ pub(crate) struct BenchmarkConfig {
     pub(crate) baseline_out: Option<String>,
     pub(crate) baseline_compare: Option<String>,
     pub(crate) compare_report_out: Option<String>,
+    pub(crate) solver_preconditioner: String,
     pub(crate) fail_on_median_regression_pct: Option<f64>,
     pub(crate) fail_on_rss_regression_pct: Option<f64>,
     pub(crate) min_baseline_median_ms: f64,
@@ -62,6 +63,7 @@ impl BenchmarkConfig {
             baseline_out: None,
             baseline_compare: None,
             compare_report_out: None,
+            solver_preconditioner: "jacobi".to_string(),
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -124,6 +126,11 @@ impl BenchmarkConfig {
                 "--compare-report-out" => {
                     if let Some(value) = args.next() {
                         config.compare_report_out = Some(value.clone());
+                    }
+                }
+                "--solver-preconditioner" => {
+                    if let Some(value) = args.next() {
+                        config.solver_preconditioner = value.clone();
                     }
                 }
                 "--fail-on-median-regression-pct" => {
