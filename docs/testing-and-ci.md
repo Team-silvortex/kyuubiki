@@ -32,6 +32,10 @@ The repository now keeps validation split by responsibility.
   Repository-wide organization guard; scans tracked source/docs files, keeps
   new files under the shared line ceiling, and prevents known historical debt
   files from growing further
+- `make architecture-check`
+  Lightweight new-architecture guard for the `1.13.x` line. It runs the
+  repository organization audit, validates the docs book manifest JSON, and
+  exercises the focused Operator TaskIR control-plane plus Rust live path.
 - `./scripts/kyuubiki rust-line-audit`
   Same guard through the unified launcher, useful on remote hosts and CI jobs
   that do not enter through Make

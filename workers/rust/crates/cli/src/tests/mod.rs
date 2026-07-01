@@ -38,4 +38,5 @@ mod core_field_rpc;
 mod electrostatic_and_truss_rpc;
 mod frame_and_mesh_rpc;
 mod mechanics_rpc;
+mod operator_task_ir_rpc;
 mod plane_rpc;

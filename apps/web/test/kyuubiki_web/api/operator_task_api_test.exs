@@ -17,6 +17,17 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert payload["status"] == "verified"
     assert payload["operator_id"] == "transform.api_fixture"
     assert payload["program_id"] == "transform.api_fixture"
+    assert payload["program_kind"] == "transform"
+    assert payload["runtime_protocol"] == "kyuubiki.operator-execution/v1"
+    assert payload["abi_kind"] == "operator_task"
+    assert payload["entrypoint_kind"] == "operator_id"
+    assert payload["entrypoint_name"] == "transform.api_fixture"
+    assert payload["package_ref"] == "orchestra://operator-package/transform.api_fixture"
+    assert payload["package_version"] == "library-managed"
+    assert payload["authority_mode"] == "central_operator_library"
+    assert payload["execution_mode"] == "orchestra_fetch"
+    assert payload["cache_scope"] == "job"
+    assert payload["agent_fetchable"] == true
     assert payload["task_digest"] == get_in(task, ["integrity", "task_digest"])
   end
 
@@ -31,6 +42,22 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
 
     assert conn.status == 422
     assert Jason.decode!(conn.resp_body)["error"] =~ "operator_task_digest_mismatch"
+  end
+
+  test "rejects operator task IR envelopes with mismatched execution ABI" do
+    task =
+      fixture_task!()
+      |> put_in(["execution_program", "abi", "kind"], "solver_rpc")
+      |> refresh_task_digest()
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/prepare", Jason.encode!(%{"task" => task}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 422
+    assert Jason.decode!(conn.resp_body)["error"] =~ "operator_task_execution_abi_mismatch"
   end
 
   test "executes an operator task IR envelope through the service API" do
@@ -83,5 +110,9 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
       )
 
     task
+  end
+
+  defp refresh_task_digest(task) do
+    put_in(task, ["integrity", "task_digest"], OperatorTaskIR.compute_task_digest(task))
   end
 end

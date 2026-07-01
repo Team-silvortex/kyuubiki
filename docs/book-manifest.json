@@ -34,6 +34,7 @@
       "chapter_page": "docs/book-ch03-architecture-boundaries.html",
       "summary": "Role split and authority boundaries across desktop shells, orchestrator, and agents.",
       "sources": [
+        "docs/project-architecture-organization.md",
         "docs/app-runtime-boundaries.md",
         "docs/agent-orchestrator-boundary.md",
         "docs/headless-agent-contract.md",
@@ -121,12 +122,14 @@
     ],
     "runtime_engineer": [
       "docs/system-overview.md",
+      "docs/project-architecture-organization.md",
       "docs/agent-orchestrator-boundary.md",
       "docs/headless-agent-contract.md",
       "docs/protocols.md",
       "docs/operations.md"
     ],
     "sdk_engineer": [
+      "docs/project-architecture-organization.md",
       "docs/operator-sdk.md",
       "docs/headless-sdks.md",
       "docs/workflow-graph.md",
@@ -160,6 +163,7 @@
       "docs/book.html",
       "docs/book-manifest.json",
       "docs/system-overview.md",
+      "docs/project-architecture-organization.md",
       "docs/app-runtime-boundaries.md",
       "docs/protocols.md",
       "docs/headless-sdks.md",

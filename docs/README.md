@@ -22,11 +22,12 @@ Read these first, in order:
 3. `navigation-matrix.html`
 4. `current-line.md`
 5. `system-overview.md`
-6. `protocols.md`
-7. `repository-structure.md`
-8. `testing-and-ci.md`
-9. `maintenance.md`
-10. `installer-remote-control.md`
+6. `project-architecture-organization.md`
+7. `protocols.md`
+8. `repository-structure.md`
+9. `testing-and-ci.md`
+10. `maintenance.md`
+11. `installer-remote-control.md`
 
 For the current `1.13.x` hardening path, keep four threads mentally linked:
 
@@ -144,6 +145,10 @@ Then branch by intent:
   Hub-specific entrypoint and operator-shell rationale.
 - `repository-structure.md`
   Directory ownership, generated-path boundaries, and source-of-truth rules.
+- `project-architecture-organization.md`
+  Current `1.13.x` architecture organization map for Hub, Workbench,
+  Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and 600-line cleanup
+  boundaries.
 
 ### Build against stable boundaries
 
@@ -287,11 +292,11 @@ Then branch by intent:
 - Installer remote/runtime-control work:
   `system-overview.md` -> `app-runtime-boundaries.md` -> `installer-remote-control.md` -> `security.md` -> `testing-and-ci.md`
 - Desktop product boundary work:
-  `system-overview.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
+  `system-overview.md` -> `project-architecture-organization.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
 - Orchestrator/control-plane work:
-  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `operations.md`
+  `philosophy.md` -> `system-overview.md` -> `project-architecture-organization.md` -> `agent-orchestrator-boundary.md` -> `operations.md`
 - Rust solver/agent work:
-  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
+  `philosophy.md` -> `system-overview.md` -> `project-architecture-organization.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
 - Material research work:
   `material-research-roadmap.md` -> `headless-sdks.md` -> `accuracy-plan.md` -> `workflow-dataset.md` -> `operator-sdk.md`
 - Packaging/release work:

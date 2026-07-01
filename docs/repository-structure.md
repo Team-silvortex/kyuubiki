@@ -39,6 +39,7 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 
 See also:
 
+- [project-architecture-organization.md](project-architecture-organization.md)
 - [scripts/README.md](../scripts/README.md)
 - [tmp/README.md](../tmp/README.md)
 - [releases/README.md](../releases/README.md)

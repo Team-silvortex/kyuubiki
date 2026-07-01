@@ -82,6 +82,9 @@ Start here if you need orientation:
   Short current-line posture for `tamamono 1.x`.
 - [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
+- [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
+  Current `1.13.x` organization map for product shells, Orchestra, Agent,
+  SDKs, schemas, TaskIR, and cleanup boundaries.
 - [docs/installer-remote-control.md](docs/installer-remote-control.md)
   Installer remote deployment and runtime-control source note for the new
   operator-facing remote surface.
@@ -93,6 +96,7 @@ Start here if you need orientation:
 - new to the project:
   [docs/README.md](docs/README.md),
   [docs/system-overview.md](docs/system-overview.md),
+  [docs/project-architecture-organization.md](docs/project-architecture-organization.md),
   [docs/repository-structure.md](docs/repository-structure.md)
 - changing protocols or automation surfaces:
   [docs/philosophy.md](docs/philosophy.md),
@@ -252,3 +256,4 @@ Current security notes, project format details, installer flows, benchmark usage
 - [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
 - [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
 - [docs/repository-structure.md](docs/repository-structure.md)
+- [docs/project-architecture-organization.md](docs/project-architecture-organization.md)

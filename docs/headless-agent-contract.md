@@ -178,6 +178,11 @@ Use these paths intentionally.
 - SDK -> control plane HTTP `POST /api/v1/operator-tasks/prepare`
   Best when a headless client needs the control plane to verify TaskIR
   integrity and expose the language-neutral execution summary before dispatch.
+- SDK or Orchestra -> solver RPC `run_operator_task_ir`
+  Best when a trusted caller wants the Rust agent to validate TaskIR natively.
+  Current agent behavior is preflight only: it verifies digest and execution
+  summary, then returns `verified_pending_engine_execution` until the operator
+  package runtime is attached.
 - SDK -> solver RPC
   Best when a trusted environment wants the shortest path to a specific solver
   node or LAN mesh.

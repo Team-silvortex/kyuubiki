@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -54,6 +54,8 @@ help:
 	@echo "  make check-elixir-self-host Verify Elixir/Mix/OTP and self-host orchestrator env contracts"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language support packs"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
+	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
+	@echo "  make architecture-check Run the lightweight new-architecture organization and TaskIR contract check"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
 	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
@@ -264,6 +266,13 @@ audit-rust-lines:
 
 audit-project-organization:
 	@node ./scripts/audit-project-organization.mjs
+
+architecture-check:
+	@node ./scripts/audit-project-organization.mjs
+	@jq empty docs/book-manifest.json
+	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
+	@cd workers/rust && cargo test -p kyuubiki-cli operator_task_ir_rpc
+	@cd workers/rust && cargo test -p kyuubiki-cli --test operator_task_live
 
 hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev

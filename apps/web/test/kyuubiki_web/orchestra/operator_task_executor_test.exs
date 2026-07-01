@@ -112,21 +112,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
       put_in(task, ["execution_program", "program_id"], "transform.other_operator")
       |> refresh_task_digest()
 
-    assert {:error, :invalid_operator_execution_program} =
+    assert {:error, :operator_task_program_mismatch} =
              OperatorTaskExecutor.execute(mismatched_id)
 
     mismatched_protocol =
       put_in(task, ["execution_program", "runtime_protocol"], "kyuubiki.solver-rpc/v1")
       |> refresh_task_digest()
 
-    assert {:error, {:invalid_operator_execution_protocol, "kyuubiki.solver-rpc/v1"}} =
+    assert {:error, :operator_task_execution_abi_mismatch} =
              OperatorTaskExecutor.execute(mismatched_protocol)
 
     mismatched_entrypoint =
       put_in(task, ["execution_program", "entrypoint", "name"], "transform.other_operator")
       |> refresh_task_digest()
 
-    assert {:error, {:invalid_operator_entrypoint, _entrypoint}} =
+    assert {:error, :operator_task_entrypoint_mismatch} =
              OperatorTaskExecutor.execute(mismatched_entrypoint)
   end
 

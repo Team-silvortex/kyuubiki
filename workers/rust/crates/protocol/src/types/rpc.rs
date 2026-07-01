@@ -82,6 +82,8 @@ pub enum RpcMethod {
     Ping,
     #[serde(rename = "describe_agent")]
     DescribeAgent,
+    #[serde(rename = "run_operator_task_ir")]
+    RunOperatorTaskIr,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
     #[serde(rename = "solve_acoustic_bar_1d")]
@@ -276,6 +278,7 @@ impl RpcProtocolDescriptor {
             methods: vec![
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
+                RpcMethod::RunOperatorTaskIr,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveAcousticBar1d,
                 RpcMethod::SolveThermalBar1d,
@@ -448,14 +451,7 @@ impl AgentDescriptor {
                     id: "thermal-frame-3d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalFrame3d],
-                    tags: vec![
-                        "frame".to_string(),
-                        "space".to_string(),
-                        "thermal".to_string(),
-                        "beam".to_string(),
-                        "bending".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["frame", "space", "thermal", "beam", "bending", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "torsion-1d".to_string(),
@@ -479,13 +475,7 @@ impl AgentDescriptor {
                     id: "frame-3d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveFrame3d],
-                    tags: vec![
-                        "frame".to_string(),
-                        "space".to_string(),
-                        "beam".to_string(),
-                        "bending".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["frame", "space", "beam", "bending", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "modal-frame-3d".to_string(),
@@ -509,35 +499,19 @@ impl AgentDescriptor {
                     id: "plane-quad-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolvePlaneQuad2d],
-                    tags: vec![
-                        "plane".to_string(),
-                        "mesh".to_string(),
-                        "quad".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["plane", "mesh", "quad", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-plane-quad-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalPlaneQuad2d],
-                    tags: vec![
-                        "plane".to_string(),
-                        "thermal".to_string(),
-                        "mesh".to_string(),
-                        "quad".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["plane", "thermal", "mesh", "quad", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "frame-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveFrame2d],
-                    tags: vec![
-                        "frame".to_string(),
-                        "beam".to_string(),
-                        "bending".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["frame", "beam", "bending", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "modal-frame-2d".to_string(),
@@ -551,6 +525,7 @@ impl AgentDescriptor {
                     methods: vec![
                         RpcMethod::Ping,
                         RpcMethod::DescribeAgent,
+                        RpcMethod::RunOperatorTaskIr,
                         RpcMethod::CancelJob,
                     ],
                     tags: vec!["control".to_string(), "general".to_string()],

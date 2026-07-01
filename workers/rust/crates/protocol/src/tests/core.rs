@@ -48,6 +48,22 @@ fn serializes_rpc_round_trip() {
 }
 
 #[test]
+fn serializes_operator_task_ir_rpc_method() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-task-ir".to_string(),
+        method: RpcMethod::RunOperatorTaskIr,
+        params: serde_json::json!({ "task_ir": {} }),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    assert!(json.contains(r#""method":"run_operator_task_ir""#));
+
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+    assert_eq!(decoded.method, RpcMethod::RunOperatorTaskIr);
+}
+
+#[test]
 fn serializes_operator_descriptor_round_trip() {
     let descriptor = OperatorDescriptor {
         id: "solve.frame_3d".to_string(),

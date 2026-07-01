@@ -33,6 +33,10 @@ This directory contains host-native operational entry points.
   Enforce the repository-wide source organization guard. New source and docs
   files stay under the shared line ceiling, while explicitly tracked historical
   debt files are allowed only up to their current debt limit.
+- `make architecture-check`
+  Lightweight guard for the current architecture organization line. It combines
+  the repository organization audit, docs manifest JSON validation, focused
+  Operator TaskIR API tests, and the Rust headless live operator task test.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
   broken local links, required chapter markers, and old legacy wording.
