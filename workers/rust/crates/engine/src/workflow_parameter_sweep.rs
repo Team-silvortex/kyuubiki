@@ -12,6 +12,7 @@ struct SweepAxis {
 }
 
 pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
+    let (payload, config) = normalize_expand_input(payload, config)?;
     let base = payload
         .get("base")
         .or_else(|| payload.get("model"))
@@ -48,6 +49,38 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
         "case_count": case_count,
         "axis_count": axes.len(),
     }))
+}
+
+fn normalize_expand_input(payload: Value, config: Value) -> Result<(Value, Value), String> {
+    if payload.get("quality_sweep_expansion_contract").is_none() {
+        return Ok((payload, config));
+    }
+    if payload.get("expansion_enabled").and_then(Value::as_bool) == Some(false) {
+        return Err(
+            "transform.expand_parameter_sweep received a disabled quality expansion".into(),
+        );
+    }
+
+    let nested_payload = payload
+        .get("payload")
+        .cloned()
+        .ok_or_else(|| "quality sweep expansion requires payload".to_string())?;
+    let nested_config = payload
+        .get("config")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    Ok((nested_payload, merge_config(nested_config, config)))
+}
+
+fn merge_config(base: Value, overrides: Value) -> Value {
+    let mut merged = base.as_object().cloned().unwrap_or_default();
+    if let Some(object) = overrides.as_object() {
+        for (key, value) in object {
+            merged.insert(key.clone(), value.clone());
+        }
+    }
+    Value::Object(merged)
 }
 
 pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {

@@ -5,10 +5,14 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowBridgeIntegrityRuntime
   alias KyuubikiWeb.WorkflowBundleRuntime
   alias KyuubikiWeb.WorkflowCfdRuntime
+  alias KyuubikiWeb.WorkflowDomainDecisionRuntime
+  alias KyuubikiWeb.WorkflowDomainQualityRuntime
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowMaterialRuntime
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
   alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
+  alias KyuubikiWeb.WorkflowParameterSweepRuntime
+  alias KyuubikiWeb.WorkflowQualityObjectiveRuntime
   alias KyuubikiWeb.WorkflowReportingRuntime
   alias KyuubikiWeb.WorkflowSolverRegistry
   alias KyuubikiWeb.WorkflowSummaryRuntime
@@ -156,6 +160,33 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.select_best_summary" when is_map(config) ->
         WorkflowReportingRuntime.select_best_summary(payload, config)
 
+      "transform.compose_quality_objective" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.compose_quality_objective(payload, config)
+
+      "transform.rank_quality_candidates" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.rank_quality_candidates(payload, config)
+
+      "transform.prepare_quality_next_round_request" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.prepare_quality_next_round_request(payload, config)
+
+      "transform.build_quality_parameter_sweep_plan" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.build_quality_parameter_sweep_plan(payload, config)
+
+      "transform.materialize_quality_sweep_expansion" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.materialize_quality_sweep_expansion(payload, config)
+
+      "transform.expand_parameter_sweep" when is_map(config) ->
+        WorkflowParameterSweepRuntime.expand_parameter_sweep(payload, config)
+
+      "transform.join_parameter_sweep_results" when is_map(config) ->
+        WorkflowParameterSweepRuntime.join_parameter_sweep_results(payload, config)
+
+      "transform.summarize_parameter_sweep" when is_map(config) ->
+        WorkflowParameterSweepRuntime.summarize_parameter_sweep(payload, config)
+
+      "transform.score_parameter_sweep" when is_map(config) ->
+        WorkflowParameterSweepRuntime.score_parameter_sweep(payload, config)
+
       "transform.evaluate_material_margins" when is_map(config) ->
         WorkflowMaterialRuntime.evaluate_material_margins(payload, config)
 
@@ -256,11 +287,30 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         WorkflowBridgeIntegrityRuntime.validate_heat_thermo_bridge(payload, config)
 
       _ ->
-        {:error, {:unsupported_workflow_transform_operator, operator_id}}
+        maybe_run_domain_runtime(operator_id, payload, config)
     end
   end
 
   def run_transform_operator(operator_id, _payload, _config),
+    do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
+
+  defp maybe_run_domain_runtime(operator_id, payload, config) when is_map(config) do
+    cond do
+      operator_id in WorkflowDomainQualityRuntime.supported_operator_ids() ->
+        WorkflowDomainQualityRuntime.score(operator_id, payload, config)
+
+      operator_id in WorkflowDomainDecisionRuntime.supported_guard_operator_ids() ->
+        WorkflowDomainDecisionRuntime.evaluate_guard(operator_id, payload, config)
+
+      operator_id in WorkflowDomainDecisionRuntime.supported_benchmark_operator_ids() ->
+        WorkflowDomainDecisionRuntime.benchmark_pair(operator_id, payload, config)
+
+      true ->
+        {:error, {:unsupported_workflow_transform_operator, operator_id}}
+    end
+  end
+
+  defp maybe_run_domain_runtime(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
 
   defp execute_focus_bridge_execution(payload, config) do

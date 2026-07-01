@@ -5,10 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=kyuubiki-dev
-WorkingDirectory=/home/kyuubiki-dev/kyuubiki
-EnvironmentFile=-/home/kyuubiki-dev/kyuubiki/deploy/kyuubiki-agent.env
-ExecStart=/bin/sh -lc 'exec /home/kyuubiki-dev/kyuubiki/workers/rust/target/debug/kyuubiki-cli agent --host 0.0.0.0 --port "${KYUUBIKI_AGENT_PORT:-5001}" --agent-id "${KYUUBIKI_AGENT_ID:-kyuubiki-lab-solver}" --advertise-host "${KYUUBIKI_AGENT_ADVERTISE_HOST:-kyuubiki-lab.local}" ${KYUUBIKI_ORCHESTRATOR_URL:+--orchestrator-url "$KYUUBIKI_ORCHESTRATOR_URL"} ${KYUUBIKI_CLUSTER_API_TOKEN:+--cluster-api-token "$KYUUBIKI_CLUSTER_API_TOKEN"} ${KYUUBIKI_AGENT_FINGERPRINT:+--agent-fingerprint "$KYUUBIKI_AGENT_FINGERPRINT"}'
+User={{KYUUBIKI_SERVICE_USER}}
+Environment=KYUUBIKI_HOME={{KYUUBIKI_INSTALL_ROOT}}
+ExecStart=/bin/sh -lc '. "$KYUUBIKI_HOME/deploy/kyuubiki-agent.env" 2>/dev/null || true; cd "$KYUUBIKI_HOME"; exec ./workers/rust/target/debug/kyuubiki-cli agent --host 0.0.0.0 --port "${KYUUBIKI_AGENT_PORT:-5001}" --agent-id "${KYUUBIKI_AGENT_ID:-kyuubiki-lab-solver}" --advertise-host "${KYUUBIKI_AGENT_ADVERTISE_HOST:-kyuubiki-lab.local}" ${KYUUBIKI_ORCHESTRATOR_URL:+--orchestrator-url "$KYUUBIKI_ORCHESTRATOR_URL"} ${KYUUBIKI_CLUSTER_API_TOKEN:+--cluster-api-token "$KYUUBIKI_CLUSTER_API_TOKEN"} ${KYUUBIKI_AGENT_FINGERPRINT:+--agent-fingerprint "$KYUUBIKI_AGENT_FINGERPRINT"}'
 Restart=always
 RestartSec=2
 Environment=RUST_LOG=info

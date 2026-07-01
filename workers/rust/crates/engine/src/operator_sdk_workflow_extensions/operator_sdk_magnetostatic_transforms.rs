@@ -1,4 +1,5 @@
 use crate::catalog::describe_built_in_operator;
+use crate::magnetostatic_quality::score_magnetostatic_quality;
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_guard_transforms::{
     benchmark_magnetostatic_pair, evaluate_magnetostatic_guard,
@@ -11,6 +12,10 @@ struct EvaluateMagnetostaticGuardOperator {
 }
 
 struct BenchmarkMagnetostaticPairOperator {
+    descriptor: OperatorDescriptor,
+}
+
+struct ScoreMagnetostaticQualityOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -52,6 +57,25 @@ impl JsonOperator for BenchmarkMagnetostaticPairOperator {
     }
 }
 
+impl JsonOperator for ScoreMagnetostaticQualityOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            score_magnetostatic_quality(input.payload, input.config),
+        )
+    }
+}
+
 pub(super) fn register_magnetostatic_transform_extensions(registry: &mut OperatorRegistry) {
     registry
         .register_json(EvaluateMagnetostaticGuardOperator {
@@ -63,6 +87,11 @@ pub(super) fn register_magnetostatic_transform_extensions(registry: &mut Operato
             descriptor: descriptor("transform.benchmark_magnetostatic_pair"),
         })
         .expect("transform.benchmark_magnetostatic_pair should register");
+    registry
+        .register_json(ScoreMagnetostaticQualityOperator {
+            descriptor: descriptor("transform.score_magnetostatic_quality"),
+        })
+        .expect("transform.score_magnetostatic_quality should register");
 }
 
 fn descriptor(operator_id: &str) -> OperatorDescriptor {

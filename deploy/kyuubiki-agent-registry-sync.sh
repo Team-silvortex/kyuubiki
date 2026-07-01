@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ORCH_ENV_FILE="${KYUUBIKI_ORCHESTRATOR_ENV_FILE:-/home/kyuubiki-dev/kyuubiki/deploy/kyuubiki-orchestrator.env}"
-AGENT_ENV_FILE="${KYUUBIKI_AGENT_ENV_FILE:-/home/kyuubiki-dev/kyuubiki/deploy/kyuubiki-agent.env}"
+KYUUBIKI_HOME="${KYUUBIKI_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ORCH_ENV_FILE="${KYUUBIKI_ORCHESTRATOR_ENV_FILE:-${KYUUBIKI_HOME}/deploy/kyuubiki-orchestrator.env}"
+AGENT_ENV_FILE="${KYUUBIKI_AGENT_ENV_FILE:-${KYUUBIKI_HOME}/deploy/kyuubiki-agent.env}"
 ORCH_BASE_URL="${KYUUBIKI_AGENT_REGISTRY_URL:-http://127.0.0.1:4000}"
 HEARTBEAT_INTERVAL_MS="${KYUUBIKI_AGENT_REGISTRY_INTERVAL_MS:-5000}"
 AGENT_HOST_FALLBACK="${KYUUBIKI_AGENT_ADVERTISE_HOST_FALLBACK:-kyuubiki-lab.local}"

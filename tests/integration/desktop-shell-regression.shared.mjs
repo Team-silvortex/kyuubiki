@@ -238,7 +238,7 @@ function installerMockSource() {
   const regressionGateReport = ${JSON.stringify(INSTALLER_REGRESSION_GATE, null, 2)};
   const doctorReport = {
     platform: "macos",
-    workspace: "/Users/Shared/chroot/dev/kyuubiki",
+    workspace: ".",
     checks: [
       { label: "Rust toolchain", ok: true },
       { label: "Node runtime", ok: true },
@@ -261,7 +261,7 @@ function installerMockSource() {
             return {
               schema_version: "kyuubiki.installation-integrity/v1",
               platform: "macos",
-              workspace: "/Users/Shared/chroot/dev/kyuubiki",
+              workspace: ".",
               current_version: "1.13.0",
               contract_rules: [],
               layout: [],
@@ -273,7 +273,7 @@ function installerMockSource() {
           case "unified_update_plan":
             return {
               schema_version: "kyuubiki.unified-update-plan/v1",
-              workspace: "/Users/Shared/chroot/dev/kyuubiki",
+              workspace: ".",
               current_version: "1.13.0",
               target_channel: "stable",
               target_tag: "tamamono",
@@ -461,6 +461,11 @@ export async function assertInstallerRegression(page, viewport) {
   await page.goto(page.url(), { waitUntil: "networkidle", timeout: 60_000 });
 
   await page.waitForSelector("#completion-banner:not([hidden])");
+  await page.waitForFunction(() =>
+    /Unified regression gate is warn/.test(
+      document.querySelector("#completion-message")?.textContent || "",
+    ),
+  );
   assert.match(
     await page.locator("#completion-message").textContent(),
     /Unified regression gate is warn/,

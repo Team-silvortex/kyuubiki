@@ -1,4 +1,5 @@
 use crate::{
+    electrostatic_quality::score_electrostatic_quality,
     workflow_executor::run_transform_operator,
     workflow_guard_transforms::{benchmark_electrostatic_pair, evaluate_electrostatic_guard},
 };
@@ -106,4 +107,89 @@ fn runs_electrostatic_guard_and_benchmark_through_transform_executor() {
     approx_eq(benchmark["left_score"].as_f64(), 2.0);
     approx_eq(benchmark["right_score"].as_f64(), 0.0);
     assert_eq!(benchmark["benchmark_winner"].as_str(), Some("left"));
+}
+
+#[test]
+fn scores_electrostatic_quality_with_field_energy_and_potential_terms() {
+    let quality = score_electrostatic_quality(
+        serde_json::json!({
+            "electrostatic_field_peak_magnitude": 8.0,
+            "electrostatic_peak_energy_density": 0.4,
+            "electrostatic_potential_span": 5.0
+        }),
+        serde_json::json!({
+            "targets": {
+                "electrostatic_field_peak_magnitude": 10.0,
+                "electrostatic_peak_energy_density": 0.8,
+                "electrostatic_potential_span": 4.0
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("electrostatic quality should score");
+
+    assert_eq!(
+        quality["electrostatic_quality_contract"].as_str(),
+        Some("kyuubiki.electrostatic_quality_score/v1")
+    );
+    assert_eq!(quality["electrostatic_quality_ready"].as_bool(), Some(true));
+    assert_eq!(
+        quality["electrostatic_quality_grade"].as_str(),
+        Some("good")
+    );
+    assert_eq!(
+        quality["electrostatic_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    approx_eq(quality["electrostatic_quality_score"].as_f64(), 5.0);
+}
+
+#[test]
+fn blocks_electrostatic_quality_when_required_metrics_are_missing() {
+    let quality = score_electrostatic_quality(
+        serde_json::json!({
+            "electrostatic_field_peak_magnitude": 8.0
+        }),
+        serde_json::json!({}),
+    )
+    .expect("electrostatic quality should report missing metrics");
+
+    assert_eq!(
+        quality["electrostatic_quality_ready"].as_bool(),
+        Some(false)
+    );
+    assert_eq!(
+        quality["electrostatic_quality_grade"].as_str(),
+        Some("block")
+    );
+    assert_eq!(
+        quality["electrostatic_quality_missing_metric_count"].as_u64(),
+        Some(2)
+    );
+}
+
+#[test]
+fn runs_electrostatic_quality_through_transform_executor() {
+    let quality = run_transform_operator(
+        "transform.score_electrostatic_quality",
+        serde_json::json!({
+            "electrostatic_field_peak_magnitude": 2.0,
+            "electrostatic_peak_energy_density": 0.08,
+            "electrostatic_potential_span": 10.0
+        }),
+        serde_json::json!({
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("electrostatic quality should run through executor");
+
+    assert_eq!(quality["electrostatic_quality_ready"].as_bool(), Some(true));
+    assert_eq!(
+        quality["electrostatic_quality_grade"].as_str(),
+        Some("excellent")
+    );
+    assert_eq!(
+        quality["electrostatic_quality_term_count"].as_u64(),
+        Some(3)
+    );
 }

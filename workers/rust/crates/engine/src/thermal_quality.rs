@@ -1,0 +1,149 @@
+use serde_json::{Map, Value};
+
+pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, String> {
+    let object = payload
+        .as_object()
+        .ok_or_else(|| "transform.score_thermal_quality expects an object payload".to_string())?;
+    let terms = default_quality_terms();
+    let score_terms = terms
+        .iter()
+        .map(|term| score_quality_term(object, &config, term))
+        .collect::<Vec<_>>();
+    let missing_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
+        .count();
+    let score = score_terms
+        .iter()
+        .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
+        .sum::<f64>();
+    let max_ready_score = config_number(&config, "max_ready_score", 8.0);
+    let grade = quality_grade(score, missing_count, max_ready_score);
+
+    Ok(serde_json::json!({
+        "thermal_quality_contract": "kyuubiki.thermal_quality_score/v1",
+        "thermal_quality_score": score,
+        "thermal_quality_grade": grade,
+        "thermal_quality_ready": grade != "block",
+        "thermal_quality_missing_metric_count": missing_count,
+        "thermal_quality_term_count": score_terms.len(),
+        "thermal_quality_max_ready_score": max_ready_score,
+        "thermal_quality_terms": score_terms,
+        "thermal_quality_summary": format!(
+            "Thermal quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+        ),
+    }))
+}
+
+struct QualityTerm {
+    field: &'static str,
+    label: &'static str,
+    target: f64,
+    weight: f64,
+    goal: QualityGoal,
+}
+
+#[derive(Clone, Copy)]
+enum QualityGoal {
+    Min,
+}
+
+fn default_quality_terms() -> [QualityTerm; 4] {
+    [
+        QualityTerm {
+            field: "thermal_temperature_max",
+            label: "Peak thermal temperature",
+            target: 120.0,
+            weight: 3.0,
+            goal: QualityGoal::Min,
+        },
+        QualityTerm {
+            field: "thermo_temperature_delta_max",
+            label: "Peak thermo-mechanical temperature delta",
+            target: 80.0,
+            weight: 2.0,
+            goal: QualityGoal::Min,
+        },
+        QualityTerm {
+            field: "thermal_flux_peak_magnitude",
+            label: "Peak heat flux magnitude",
+            target: 20.0,
+            weight: 2.0,
+            goal: QualityGoal::Min,
+        },
+        QualityTerm {
+            field: "thermo_stress_peak",
+            label: "Peak thermo-mechanical stress",
+            target: 250.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        },
+    ]
+}
+
+fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
+    let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
+    let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
+    let value = object.get(term.field).and_then(Value::as_f64);
+
+    match value {
+        Some(value) if value.is_finite() => {
+            let ratio = value.abs() / target;
+            let penalty = ratio * weight;
+            serde_json::json!({
+                "field": term.field,
+                "label": term.label,
+                "value": value,
+                "target": target,
+                "weight": weight,
+                "goal": "min",
+                "penalty": penalty,
+                "status": if meets_target(value, target, term.goal) { "ok" } else { "watch" },
+            })
+        }
+        _ => serde_json::json!({
+            "field": term.field,
+            "label": term.label,
+            "target": target,
+            "weight": weight,
+            "penalty": 0.0,
+            "status": "missing",
+        }),
+    }
+}
+
+fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {
+    match goal {
+        QualityGoal::Min => value.abs() <= target,
+    }
+}
+
+fn configured_term_number(config: &Value, group: &str, field: &str, default_value: f64) -> f64 {
+    config
+        .get(group)
+        .and_then(Value::as_object)
+        .and_then(|values| values.get(field))
+        .and_then(Value::as_f64)
+        .filter(|value| value.is_finite())
+        .unwrap_or(default_value)
+}
+
+fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
+    config
+        .get(field)
+        .and_then(Value::as_f64)
+        .filter(|value| value.is_finite() && *value >= 0.0)
+        .unwrap_or(default_value)
+}
+
+fn quality_grade(score: f64, missing_count: usize, max_ready_score: f64) -> &'static str {
+    if missing_count > 0 || score > max_ready_score {
+        "block"
+    } else if score > max_ready_score * 0.7 {
+        "review"
+    } else if score > max_ready_score * 0.35 {
+        "good"
+    } else {
+        "excellent"
+    }
+}

@@ -1,4 +1,5 @@
 use crate::{
+    transport_quality::score_transport_quality,
     workflow_executor::run_transform_operator,
     workflow_guard_transforms::{benchmark_transport_pair, evaluate_transport_guard},
 };
@@ -113,4 +114,81 @@ fn runs_transport_guard_and_benchmark_through_transform_executor() {
     approx_eq(benchmark["left_score"].as_f64(), 2.0);
     approx_eq(benchmark["right_score"].as_f64(), 0.0);
     assert_eq!(benchmark["benchmark_winner"].as_str(), Some("left"));
+}
+
+#[test]
+fn scores_transport_quality_with_flux_peclet_concentration_and_source_terms() {
+    let quality = score_transport_quality(
+        serde_json::json!({
+            "transport_total_flux_peak_magnitude": 1.0,
+            "transport_peclet_peak": 120.0,
+            "transport_concentration_span": 0.5,
+            "transport_source_sum": 1.0
+        }),
+        serde_json::json!({
+            "targets": {
+                "transport_total_flux_peak_magnitude": 1.5,
+                "transport_peclet_peak": 200.0,
+                "transport_concentration_span": 1.0,
+                "transport_source_sum": 2.0
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("transport quality should score");
+
+    assert_eq!(
+        quality["transport_quality_contract"].as_str(),
+        Some("kyuubiki.transport_quality_score/v1")
+    );
+    assert_eq!(quality["transport_quality_ready"].as_bool(), Some(true));
+    assert_eq!(quality["transport_quality_grade"].as_str(), Some("good"));
+    assert_eq!(
+        quality["transport_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    approx_eq(quality["transport_quality_score"].as_f64(), 4.7);
+}
+
+#[test]
+fn blocks_transport_quality_when_required_metrics_are_missing() {
+    let quality = score_transport_quality(
+        serde_json::json!({
+            "transport_total_flux_peak_magnitude": 1.0
+        }),
+        serde_json::json!({}),
+    )
+    .expect("transport quality should report missing metrics");
+
+    assert_eq!(quality["transport_quality_ready"].as_bool(), Some(false));
+    assert_eq!(quality["transport_quality_grade"].as_str(), Some("block"));
+    assert_eq!(
+        quality["transport_quality_missing_metric_count"].as_u64(),
+        Some(3)
+    );
+}
+
+#[test]
+fn runs_transport_quality_through_transform_executor() {
+    let quality = run_transform_operator(
+        "transform.score_transport_quality",
+        serde_json::json!({
+            "transport_total_flux_peak_magnitude": 0.25,
+            "transport_peclet_peak": 20.0,
+            "transport_concentration_span": 0.1,
+            "transport_source_sum": 0.2
+        }),
+        serde_json::json!({
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("transport quality should run through executor");
+
+    assert_eq!(quality["transport_quality_ready"].as_bool(), Some(true));
+    assert_eq!(
+        quality["transport_quality_grade"].as_str(),
+        Some("excellent")
+    );
+    assert_eq!(quality["transport_quality_term_count"].as_u64(), Some(4));
+    approx_eq(quality["transport_quality_score"].as_f64(), 1.0);
 }

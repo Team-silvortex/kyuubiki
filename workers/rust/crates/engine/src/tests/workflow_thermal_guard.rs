@@ -1,6 +1,15 @@
 use crate::{
-    workflow_executor::run_transform_operator, workflow_guard_transforms::evaluate_thermal_guard,
+    thermal_quality::score_thermal_quality, workflow_executor::run_transform_operator,
+    workflow_guard_transforms::evaluate_thermal_guard,
 };
+
+fn approx_eq(left: Option<f64>, right: f64) {
+    let value = left.expect("expected numeric quality value");
+    assert!(
+        (value - right).abs() < 1.0e-9,
+        "left={value}, right={right}"
+    );
+}
 
 #[test]
 fn evaluates_thermal_guard_as_pass() {
@@ -84,4 +93,77 @@ fn runs_thermal_guard_through_transform_executor() {
         guard["guard_recommendation"].as_str(),
         Some("review_before_continue")
     );
+}
+
+#[test]
+fn scores_thermal_quality_with_temperature_flux_and_stress_terms() {
+    let quality = score_thermal_quality(
+        serde_json::json!({
+            "thermal_temperature_max": 80.0,
+            "thermo_temperature_delta_max": 60.0,
+            "thermal_flux_peak_magnitude": 10.0,
+            "thermo_stress_peak": 150.0
+        }),
+        serde_json::json!({
+            "targets": {
+                "thermal_temperature_max": 120.0,
+                "thermo_temperature_delta_max": 80.0,
+                "thermal_flux_peak_magnitude": 20.0,
+                "thermo_stress_peak": 250.0
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("thermal quality should score");
+
+    assert_eq!(
+        quality["thermal_quality_contract"].as_str(),
+        Some("kyuubiki.thermal_quality_score/v1")
+    );
+    assert_eq!(quality["thermal_quality_ready"].as_bool(), Some(true));
+    assert_eq!(quality["thermal_quality_grade"].as_str(), Some("good"));
+    assert_eq!(
+        quality["thermal_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    approx_eq(quality["thermal_quality_score"].as_f64(), 5.1);
+}
+
+#[test]
+fn blocks_thermal_quality_when_required_metrics_are_missing() {
+    let quality = score_thermal_quality(
+        serde_json::json!({
+            "thermal_temperature_max": 80.0
+        }),
+        serde_json::json!({}),
+    )
+    .expect("thermal quality should report missing metrics");
+
+    assert_eq!(quality["thermal_quality_ready"].as_bool(), Some(false));
+    assert_eq!(quality["thermal_quality_grade"].as_str(), Some("block"));
+    assert_eq!(
+        quality["thermal_quality_missing_metric_count"].as_u64(),
+        Some(3)
+    );
+}
+
+#[test]
+fn runs_thermal_quality_through_transform_executor() {
+    let quality = run_transform_operator(
+        "transform.score_thermal_quality",
+        serde_json::json!({
+            "thermal_temperature_max": 30.0,
+            "thermo_temperature_delta_max": 10.0,
+            "thermal_flux_peak_magnitude": 2.0,
+            "thermo_stress_peak": 25.0
+        }),
+        serde_json::json!({
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("thermal quality should run through executor");
+
+    assert_eq!(quality["thermal_quality_ready"].as_bool(), Some(true));
+    assert_eq!(quality["thermal_quality_grade"].as_str(), Some("excellent"));
+    assert_eq!(quality["thermal_quality_term_count"].as_u64(), Some(4));
 }

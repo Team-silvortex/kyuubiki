@@ -97,15 +97,6 @@ export async function runInstallerStartup({
         applyPreset("local", defaultPreset);
         setModeCard("local");
       }
-      if (remotePolicy) {
-        hydrateRemotePolicy(remotePolicy);
-      }
-      if (certificateAuthority) {
-        hydrateCertificateAuthority(certificateAuthority);
-      }
-      if (remoteNodes) {
-        hydrateRemoteNodeRegistry(remoteNodes);
-      }
       if (releasePlatformSelect) {
         populateDesktopPlatformSelect(releasePlatformSelect, {
           fallback: normalizeDesktopPlatform(doctor?.platform),

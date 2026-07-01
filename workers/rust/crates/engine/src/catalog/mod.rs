@@ -2,6 +2,10 @@ mod bridges;
 mod builtins;
 mod descriptors;
 mod reporting;
+mod workflow_transform_diagnostics;
+mod workflow_transform_physics;
+mod workflow_transform_summary;
+mod workflow_transforms;
 
 use kyuubiki_protocol::OperatorDescriptor;
 

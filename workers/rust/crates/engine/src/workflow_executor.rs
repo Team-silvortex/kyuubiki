@@ -22,6 +22,11 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.aggregate_summary_collection",
     "transform.normalize_summary_fields",
     "transform.select_best_summary",
+    "transform.compose_quality_objective",
+    "transform.rank_quality_candidates",
+    "transform.prepare_quality_next_round_request",
+    "transform.build_quality_parameter_sweep_plan",
+    "transform.materialize_quality_sweep_expansion",
     "transform.expand_parameter_sweep",
     "transform.summarize_parameter_sweep",
     "transform.join_parameter_sweep_results",
@@ -37,17 +42,22 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.score_modal_quality",
     "transform.evaluate_structural_guard",
     "transform.benchmark_structural_pair",
+    "transform.score_structural_quality",
     "transform.evaluate_thermal_guard",
     "transform.benchmark_coupled_heat_pair",
+    "transform.score_thermal_quality",
     "transform.evaluate_electrostatic_guard",
     "transform.benchmark_electrostatic_pair",
+    "transform.score_electrostatic_quality",
     "transform.evaluate_magnetostatic_guard",
     "transform.benchmark_magnetostatic_pair",
+    "transform.score_magnetostatic_quality",
     "transform.evaluate_cfd_guard",
     "transform.benchmark_cfd_pair",
     "transform.score_cfd_quality",
     "transform.evaluate_transport_guard",
     "transform.benchmark_transport_pair",
+    "transform.score_transport_quality",
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
@@ -147,6 +157,7 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.compare_summary_pair"
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
+        || operator_id == "transform.compose_quality_objective"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
@@ -281,6 +292,11 @@ pub fn run_transform_operator(
         | "transform.aggregate_summary_collection"
         | "transform.normalize_summary_fields"
         | "transform.select_best_summary"
+        | "transform.compose_quality_objective"
+        | "transform.rank_quality_candidates"
+        | "transform.prepare_quality_next_round_request"
+        | "transform.build_quality_parameter_sweep_plan"
+        | "transform.materialize_quality_sweep_expansion"
         | "transform.expand_parameter_sweep"
         | "transform.summarize_parameter_sweep"
         | "transform.join_parameter_sweep_results"
@@ -296,17 +312,22 @@ pub fn run_transform_operator(
         | "transform.score_modal_quality"
         | "transform.evaluate_structural_guard"
         | "transform.benchmark_structural_pair"
+        | "transform.score_structural_quality"
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
+        | "transform.score_thermal_quality"
         | "transform.evaluate_electrostatic_guard"
         | "transform.benchmark_electrostatic_pair"
+        | "transform.score_electrostatic_quality"
         | "transform.evaluate_magnetostatic_guard"
         | "transform.benchmark_magnetostatic_pair"
+        | "transform.score_magnetostatic_quality"
         | "transform.evaluate_cfd_guard"
         | "transform.benchmark_cfd_pair"
         | "transform.score_cfd_quality"
         | "transform.evaluate_transport_guard"
         | "transform.benchmark_transport_pair"
+        | "transform.score_transport_quality"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

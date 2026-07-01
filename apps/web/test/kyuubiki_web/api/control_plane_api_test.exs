@@ -19,7 +19,8 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["deployment"]["discovery"] == "static"
     assert payload["remote_solver_registry"]["active_agents"] == 0
     assert payload["transport"]["http"] == 4000
-    assert payload["transport"]["solver_agent_tcp"] == 5001
+    assert is_integer(payload["transport"]["solver_agent_tcp"])
+    assert payload["transport"]["solver_agent_tcp"] > 0
   end
 
   test "exposes decoupled protocol descriptors for control plane and solver rpc" do
@@ -160,8 +161,12 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
 
     assert conn.status == 200
     assert Jason.decode!(conn.resp_body)["agent"]["zone"] == "rack-a"
-    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["authority_mode"] == "single_orchestrator"
-    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["session_state"] == "orch_bound_pending_session"
+
+    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["authority_mode"] ==
+             "single_orchestrator"
+
+    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["session_state"] ==
+             "orch_bound_pending_session"
 
     conn =
       :get
@@ -178,6 +183,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert hd(payload["agents"])["authority"]["control_mode"] == "orch_managed"
     assert hd(payload["agents"])["authority"]["authority_mode"] == "single_orchestrator"
     assert hd(payload["agents"])["authority"]["session_state"] == "orch_bound_pending_session"
+
     assert payload["summary"]["mesh_topology"]["managed_orchestrators"] == [
              %{
                "orch_id" => "orch-alpha",

@@ -78,6 +78,9 @@ path:
   warn/block threshold rules
 - `transform.benchmark_transport_pair` compares two transport candidates with
   weighted min/max criteria for optimization-oriented workflows
+- `transform.score_transport_quality` scores one candidate across peak flux,
+  Peclet number, concentration span, and source balance, giving headless SDK
+  studies a stable optimization objective
 
 The electromagnetic line has the same decision posture for electrostatics and
 magnetostatics: diagnostics can be checked by field/energy threshold guards and
@@ -87,8 +90,30 @@ or bridge step.
 The structural line now has a matching headless decision path too:
 `transform.evaluate_structural_guard` checks displacement, stress, force,
 contact, or stiffness metrics against visible rules, while
-`transform.benchmark_structural_pair` compares structural candidates before a
-material-study workflow promotes one design.
+`transform.benchmark_structural_pair` compares structural candidates and
+`transform.score_structural_quality` turns a single displacement/stress/mass
+response into an optimization-ready quality score before a material-study
+workflow promotes one design.
+
+The thermal line has guard, pairwise benchmark, and single-candidate quality
+coverage through `transform.evaluate_thermal_guard`,
+`transform.benchmark_coupled_heat_pair`, and
+`transform.score_thermal_quality`, so heat and thermo-mechanical branches can
+gate, compare, or rank designs by temperature, flux, temperature-delta, and
+stress objectives.
+
+The electrostatic line now mirrors that optimization shape:
+`transform.evaluate_electrostatic_guard`,
+`transform.benchmark_electrostatic_pair`, and
+`transform.score_electrostatic_quality` cover peak field, energy-density, and
+potential-span objectives before downstream heat or material branches consume
+the result.
+
+The magnetostatic line follows the same contract through
+`transform.evaluate_magnetostatic_guard`,
+`transform.benchmark_magnetostatic_pair`, and
+`transform.score_magnetostatic_quality`, covering peak magnetic field, flux,
+energy-density, and current-density objectives.
 
 The acoustic line can now do the same for frequency-domain duct studies:
 `transform.evaluate_acoustic_guard` checks SPL, pressure, velocity, intensity,
@@ -101,6 +126,14 @@ The modal line is covered by `transform.evaluate_modal_guard`,
 vibration studies can gate, compare, or rank candidate designs by
 natural-frequency band, mass, period, and participation metrics before a design
 is promoted.
+
+Across domains, `transform.compose_quality_objective` combines these
+single-domain quality scores into one weighted multiphysics objective. That
+gives material exploration flows a stable loss-like scalar while preserving
+per-domain ready state, missing metrics, and contribution breakdowns.
+The Rust engine and Web/Elixir workflow runtime both expose these domain
+quality score transforms, so GUI-driven workflows and headless SDK paths can
+share the same optimization contract instead of depending on UI-only logic.
 
 That variety is what prevents `1.15.x` operator SDK work from hard-coding a
 single physics family, and it prevents `1.16.x` executable task files from

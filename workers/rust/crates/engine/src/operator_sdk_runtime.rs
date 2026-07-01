@@ -3,6 +3,7 @@ use crate::operator_sdk_bridges::register_bridge_transform_operators;
 use crate::operator_sdk_material_margins::register_material_margin_operator;
 use crate::operator_sdk_material_pareto::register_material_pareto_operator;
 use crate::operator_sdk_parameter_sweep::register_parameter_sweep_operators;
+use crate::operator_sdk_quality_objective::register_quality_objective_operators;
 use crate::operator_sdk_workflow_extensions::{
     register_workflow_export_extensions, register_workflow_extract_extensions,
     register_workflow_transform_extensions,
@@ -435,6 +436,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("transform.select_best_summary"),
                 })
                 .expect("transform.select_best_summary should register");
+            register_quality_objective_operators(&mut registry, descriptor);
             register_parameter_sweep_operators(&mut registry, descriptor);
             register_material_margin_operator(&mut registry, descriptor);
             register_material_pareto_operator(&mut registry, descriptor);

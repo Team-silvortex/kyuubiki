@@ -7,7 +7,7 @@
     "image_tag": "kyuubiki/direct-mesh-benchmark:local",
     "repeat": 3,
     "docker_run_network": "host",
-    "artifact_path": "/home/kyuubiki-dev/kyuubiki-bench-709b8c9/tmp/direct-mesh-benchmark-container/remote-repeat3/summary.json"
+    "artifact_path": "tmp/direct-mesh-benchmark-container/remote-repeat3/summary.json"
   },
   "aggregate": {
     "elapsed_s": {

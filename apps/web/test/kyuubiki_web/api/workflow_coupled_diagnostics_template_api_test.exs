@@ -11,10 +11,34 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
             "ok" => true,
             "result" => %{
               "nodes" => [
-                %{"id" => "e0", "x" => 0.0, "y" => 0.0, "potential" => 10.0, "charge_density" => 0.0},
-                %{"id" => "e1", "x" => 1.0, "y" => 0.0, "potential" => 0.0, "charge_density" => 0.0},
-                %{"id" => "e2", "x" => 1.0, "y" => 1.0, "potential" => 0.0, "charge_density" => 0.0},
-                %{"id" => "e3", "x" => 0.0, "y" => 1.0, "potential" => 0.0, "charge_density" => 0.0}
+                %{
+                  "id" => "e0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "potential" => 10.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "id" => "e1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "potential" => 0.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "id" => "e2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "potential" => 0.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "id" => "e3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "potential" => 0.0,
+                  "charge_density" => 0.0
+                }
               ],
               "elements" => [
                 %{
@@ -41,10 +65,34 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
               "max_temperature" => 125.0,
               "max_heat_flux" => 900.0,
               "nodes" => [
-                %{"id" => "h0", "x" => 0.0, "y" => 0.0, "temperature" => 125.0, "heat_load" => 500.0},
-                %{"id" => "h1", "x" => 1.0, "y" => 0.0, "temperature" => 80.0, "heat_load" => 500.0},
-                %{"id" => "h2", "x" => 1.0, "y" => 1.0, "temperature" => 35.0, "heat_load" => 500.0},
-                %{"id" => "h3", "x" => 0.0, "y" => 1.0, "temperature" => 20.0, "heat_load" => 500.0}
+                %{
+                  "id" => "h0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "temperature" => 125.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "h1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "temperature" => 80.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "h2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "temperature" => 35.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "h3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "temperature" => 20.0,
+                  "heat_load" => 500.0
+                }
               ],
               "elements" => [
                 %{
@@ -79,10 +127,34 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
               "max_stress" => 220.0,
               "max_temperature_delta" => 125.0,
               "nodes" => [
-                %{"id" => "t0", "ux" => 0.0, "uy" => 1.0, "displacement_magnitude" => 1.0, "temperature_delta" => 125.0},
-                %{"id" => "t1", "ux" => 0.0, "uy" => 2.5, "displacement_magnitude" => 2.5, "temperature_delta" => 80.0},
-                %{"id" => "t2", "ux" => 0.0, "uy" => 1.5, "displacement_magnitude" => 1.5, "temperature_delta" => 35.0},
-                %{"id" => "t3", "ux" => 0.0, "uy" => 1.0, "displacement_magnitude" => 1.0, "temperature_delta" => 20.0}
+                %{
+                  "id" => "t0",
+                  "ux" => 0.0,
+                  "uy" => 1.0,
+                  "displacement_magnitude" => 1.0,
+                  "temperature_delta" => 125.0
+                },
+                %{
+                  "id" => "t1",
+                  "ux" => 0.0,
+                  "uy" => 2.5,
+                  "displacement_magnitude" => 2.5,
+                  "temperature_delta" => 80.0
+                },
+                %{
+                  "id" => "t2",
+                  "ux" => 0.0,
+                  "uy" => 1.5,
+                  "displacement_magnitude" => 1.5,
+                  "temperature_delta" => 35.0
+                },
+                %{
+                  "id" => "t3",
+                  "ux" => 0.0,
+                  "uy" => 1.0,
+                  "displacement_magnitude" => 1.0,
+                  "temperature_delta" => 20.0
+                }
               ],
               "elements" => [
                 %{
@@ -109,6 +181,7 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
       )
 
     assert result_payload["job"]["status"] == "completed"
+
     assert result_payload["result"]["workflow_id"] ==
              "workflow.electrostatic-heat-thermo-diagnostics-markdown"
 
@@ -156,12 +229,15 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
     assert report["report_focus_metrics"]["thermo.temperature_delta_max"] == 125.0
     assert report["report_focus_metrics"]["thermo.stress_peak"] == 220.0
     assert report["report_focus_metrics"]["thermo.thermal_strain_peak"] == 4.8e-4
+
     assert Enum.any?(report["report_highlights"], fn item ->
              item["id"] == "thermal.temperature_max" and item["attention"] == true
            end)
+
     assert Enum.any?(report["report_highlights"], fn item ->
              item["id"] == "thermo.stress_peak" and item["value"] == 220.0
            end)
+
     assert exported["format"] == "markdown"
     assert String.contains?(exported["content"], "# Electrostatic Heat Thermo Diagnostics")
     assert String.contains?(exported["content"], "## Diagnostics Sources")
@@ -170,7 +246,8 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
 
     assert Enum.any?(artifact_lineage, fn entry ->
              entry["artifact_key"] == "report.result" and
-               entry["source_artifacts"] == ["bundle.result", "guard.result"]
+               Enum.sort(entry["source_artifacts"]) ==
+                 Enum.sort(["bundle.result", "guard.result"])
            end)
 
     assert Enum.any?(artifact_lineage, fn entry ->

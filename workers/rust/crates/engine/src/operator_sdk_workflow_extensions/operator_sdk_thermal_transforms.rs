@@ -3,6 +3,7 @@ use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
     thermal_peak_summary, thermo_peak_summary,
 };
+use crate::thermal_quality::score_thermal_quality;
 use crate::workflow_diagnostics::{
     extract_thermal_result_diagnostics, extract_thermo_result_diagnostics,
 };
@@ -35,6 +36,10 @@ struct EvaluateThermalGuardOperator {
 }
 
 struct BenchmarkCoupledHeatPairOperator {
+    descriptor: OperatorDescriptor,
+}
+
+struct ScoreThermalQualityOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -234,6 +239,25 @@ impl JsonOperator for BenchmarkCoupledHeatPairOperator {
     }
 }
 
+impl JsonOperator for ScoreThermalQualityOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            score_thermal_quality(input.payload, input.config),
+        )
+    }
+}
+
 pub(super) fn register_thermal_extract_extensions(registry: &mut OperatorRegistry) {
     registry
         .register_json(ThermalResultDiagnosticsOperator {
@@ -268,6 +292,11 @@ pub(super) fn register_thermal_transform_extensions(registry: &mut OperatorRegis
             descriptor: descriptor("transform.benchmark_coupled_heat_pair"),
         })
         .expect("transform.benchmark_coupled_heat_pair should register");
+    registry
+        .register_json(ScoreThermalQualityOperator {
+            descriptor: descriptor("transform.score_thermal_quality"),
+        })
+        .expect("transform.score_thermal_quality should register");
 }
 
 fn descriptor(operator_id: &str) -> OperatorDescriptor {

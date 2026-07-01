@@ -2,8 +2,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
-
   def run(graph, input_artifacts, opts \\ [])
+
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
@@ -134,6 +134,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
+
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
@@ -153,7 +154,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
        do: true
 
   defp transform_operator_accepts_partial_inputs?(_node), do: false
-
   defp transform_operator_requires_port_map?(%{
          "kind" => "transform",
          "operator_id" => operator_id
@@ -163,6 +163,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
               "transform.compare_summary_pair",
               "transform.aggregate_summary_collection",
               "transform.select_best_summary",
+              "transform.compose_quality_objective",
               "transform.compose_diagnostics_bundle",
               "transform.compose_diagnostics_report_payload",
               "transform.resolve_focus_bridge_execution",
@@ -173,7 +174,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
        do: true
 
   defp transform_operator_requires_port_map?(_node), do: false
-
   defp unresolved_missing_inputs?(incoming, artifacts, completed, skipped) do
     Enum.any?(incoming, fn edge ->
       key = edge_from_key(edge)

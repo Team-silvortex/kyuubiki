@@ -6,7 +6,7 @@
     "environment": "kyuubiki-lab",
     "repeat": 3,
     "default_case_count": 8,
-    "artifact_path": "/home/kyuubiki-dev/kyuubiki/tmp/workflow-catalog-benchmark.remote.json"
+    "artifact_path": "tmp/workflow-catalog-benchmark.remote.json"
   },
   "summary": {
     "case_count": 8,
