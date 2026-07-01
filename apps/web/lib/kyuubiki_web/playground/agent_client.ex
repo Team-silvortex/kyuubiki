@@ -152,14 +152,21 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("cancel_job", %{job_id: job_id})
   end
 
-  @spec run_operator_task_ir(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
-  def run_operator_task_ir(task_ir, on_progress \\ fn _progress -> :ok end)
-      when is_map(task_ir) and is_function(on_progress, 1) do
+  @spec run_operator_task_ir(map(), keyword() | (map() -> any()), (map() -> any())) ::
+          {:ok, map()} | {:error, term()}
+  def run_operator_task_ir(
+        task_ir,
+        opts_or_progress \\ [],
+        on_progress \\ fn _progress -> :ok end
+      )
+      when is_map(task_ir) do
+    {opts, progress_handler} = normalize_operator_task_rpc_opts(opts_or_progress, on_progress)
+
     request(
       OperatorTaskIR.agent_rpc_method(),
-      OperatorTaskIR.agent_rpc_params(task_ir),
-      on_progress,
-      OperatorTaskIR.agent_routing_opts(task_ir)
+      OperatorTaskIR.agent_rpc_params(task_ir, opts),
+      progress_handler,
+      operator_task_routing_opts(task_ir, opts)
     )
   end
 
@@ -188,6 +195,27 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       {:ok, result}
     end
   end
+
+  defp normalize_operator_task_rpc_opts(on_progress, _default_progress)
+       when is_function(on_progress, 1),
+       do: {[], on_progress}
+
+  defp normalize_operator_task_rpc_opts(opts, on_progress)
+       when is_list(opts) and is_function(on_progress, 1),
+       do: {opts, on_progress}
+
+  defp operator_task_routing_opts(task_ir, opts) do
+    task_ir
+    |> OperatorTaskIR.agent_routing_opts()
+    |> maybe_require_operator_package_runtime(Keyword.get(opts, :mode))
+  end
+
+  defp maybe_require_operator_package_runtime(routing_opts, mode)
+       when mode in [:execute, "execute"] do
+    Keyword.put(routing_opts, :requires_operator_package_runtime, true)
+  end
+
+  defp maybe_require_operator_package_runtime(routing_opts, _mode), do: routing_opts
 
   @spec request_with_agent(String.t(), map(), (map() -> any()), keyword()) ::
           {:ok, map(), AgentPool.endpoint()} | {:error, term()}
@@ -273,12 +301,23 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp no_matching_agent_error(method, opts) do
     {:no_matching_agent,
-     %{
-       method: method,
-       required_capabilities:
-         opts |> Keyword.get(:required_capabilities, []) |> Enum.filter(&is_binary/1),
-       placement_tags: opts |> Keyword.get(:placement_tags, []) |> Enum.filter(&is_binary/1)
-     }}
+     %{}
+     |> Map.put(:method, method)
+     |> Map.put(
+       :required_capabilities,
+       opts |> Keyword.get(:required_capabilities, []) |> Enum.filter(&is_binary/1)
+     )
+     |> Map.put(
+       :placement_tags,
+       opts |> Keyword.get(:placement_tags, []) |> Enum.filter(&is_binary/1)
+     )
+     |> maybe_put_required_package_runtime(opts)}
+  end
+
+  defp maybe_put_required_package_runtime(error, opts) do
+    if Keyword.get(opts, :requires_operator_package_runtime, false),
+      do: Map.put(error, :required_operator_package_runtime, true),
+      else: error
   end
 
   defp with_claimed_endpoint(endpoint, opts, fun)

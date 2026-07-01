@@ -61,7 +61,16 @@ The current TaskIR path is:
 7. Headless SDKs can prepare or execute TaskIR without frontend coupling.
 8. Rust agents can now receive `run_operator_task_ir` over the solver RPC
    transport and return an agent-native execution summary.
-9. Full agent-side execution still needs the operator package runtime to attach
+9. Agent-side TaskIR verification lives behind a Rust runtime module, so RPC
+   handlers stay transport-shaped instead of becoming execution engines.
+10. Agent preflight returns an explicit execution plan with digest verification,
+   execution-program summary, package fetch, integrity, dispatch, and result
+   serialization stages.
+11. Agent RPC params now carry an optional `mode` field: `preflight` is the
+   default and `execute` is the reserved path for package dispatch.
+12. Agent preflight exposes an `operator_package_runtime` contract that points
+   at `kyuubiki-engine.operator-sdk-host/v1` and its default trust boundary.
+13. Full agent-side execution still needs the operator package runtime to attach
    package fetch, package integrity, dispatch, and result serialization.
 
 The implementation anchors are:
@@ -73,6 +82,7 @@ The implementation anchors are:
 - `apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex`
 - `workers/rust/crates/protocol/src/operator_task_ir.rs`
 - `workers/rust/crates/protocol/src/types/rpc.rs`
+- `workers/rust/crates/cli/src/operator_task_runtime.rs`
 - `workers/rust/crates/cli/src/rpc.rs`
 - `workers/rust/crates/headless-sdk/src/operator_task.rs`
 - `schemas/operator-task-ir.schema.json`

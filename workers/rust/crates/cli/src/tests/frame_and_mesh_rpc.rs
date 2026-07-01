@@ -451,6 +451,14 @@ fn handles_describe_agent_rpc_requests() {
     let descriptor_payload = final_response.result.expect("descriptor result");
     assert!(descriptor_payload["watchdog"]["state"].is_string());
     assert!(descriptor_payload["watchdog"]["active_execution_count"].is_number());
+    assert_eq!(
+        descriptor_payload["operator_package_runtime"]["ready"],
+        false
+    );
+    assert_eq!(
+        descriptor_payload["operator_package_runtime"]["status"],
+        "not_attached"
+    );
 
     let descriptor: AgentDescriptor =
         serde_json::from_value(descriptor_payload).expect("agent descriptor");
@@ -488,6 +496,9 @@ fn builds_peer_mesh_runtime_descriptor() {
         register_interval_ms: 5_000,
         cluster_id: Some("lan-a".to_string()),
         peers: vec!["10.0.0.11:5001".to_string(), "10.0.0.12:5001".to_string()],
+        operator_package_host_id: None,
+        operator_packages_root: None,
+        operator_activated_package_count: 0,
     });
 
     assert_eq!(descriptor.runtime.runtime_mode, "peer_mesh");
@@ -524,6 +535,9 @@ fn builds_orchestrated_runtime_engine_descriptor() {
         register_interval_ms: 5_000,
         cluster_id: Some("cluster-a".to_string()),
         peers: vec![],
+        operator_package_host_id: None,
+        operator_packages_root: None,
+        operator_activated_package_count: 0,
     });
 
     assert_eq!(descriptor.runtime.runtime_mode, "orchestrated");

@@ -22,6 +22,9 @@ pub(crate) struct AgentConfig {
     pub(crate) register_interval_ms: u64,
     pub(crate) cluster_id: Option<String>,
     pub(crate) peers: Vec<String>,
+    pub(crate) operator_package_host_id: Option<String>,
+    pub(crate) operator_packages_root: Option<String>,
+    pub(crate) operator_activated_package_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,6 +90,9 @@ impl AgentConfig {
             register_interval_ms: 5_000,
             cluster_id: None,
             peers: vec![],
+            operator_package_host_id: None,
+            operator_packages_root: None,
+            operator_activated_package_count: 0,
         };
 
         config.apply_args(args);
@@ -128,6 +134,19 @@ impl AgentConfig {
                         self.peers.push(value.clone());
                     }
                 }
+                "--operator-package-host-id" => {
+                    assign_next_option(&mut self.operator_package_host_id, &mut args);
+                }
+                "--operator-packages-root" => {
+                    assign_next_option(&mut self.operator_packages_root, &mut args);
+                }
+                "--operator-activated-package-count" => {
+                    if let Some(value) = args.next() {
+                        self.operator_activated_package_count = value
+                            .parse()
+                            .unwrap_or(self.operator_activated_package_count);
+                    }
+                }
                 _ => {}
             }
         }
@@ -144,6 +163,22 @@ impl AgentConfig {
         fill_from_env(&mut self.cert_path, "KYUUBIKI_AGENT_CERT_PATH");
         fill_from_env(&mut self.key_path, "KYUUBIKI_AGENT_KEY_PATH");
         fill_from_env(&mut self.ca_cert_path, "KYUUBIKI_AGENT_CA_CERT_PATH");
+        fill_from_env(
+            &mut self.operator_package_host_id,
+            "KYUUBIKI_OPERATOR_PACKAGE_HOST_ID",
+        );
+        fill_from_env(
+            &mut self.operator_packages_root,
+            "KYUUBIKI_OPERATOR_PACKAGES_ROOT",
+        );
+
+        if self.operator_activated_package_count == 0 {
+            self.operator_activated_package_count =
+                std::env::var("KYUUBIKI_OPERATOR_ACTIVATED_PACKAGE_COUNT")
+                    .ok()
+                    .and_then(|value| value.parse().ok())
+                    .unwrap_or(0);
+        }
 
         if self.peers.is_empty() {
             self.peers = std::env::var("KYUUBIKI_AGENT_PEERS")

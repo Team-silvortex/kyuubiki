@@ -239,7 +239,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       :region,
       :zone,
       :capacity,
-      :tags
+      :tags,
+      :operator_package_runtime
     ])
     |> Map.merge(%{
       id: Map.get(endpoint, :id, "#{host}:#{port}"),
@@ -269,6 +270,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       zone: Map.get(endpoint, "zone"),
       capacity: Map.get(endpoint, "capacity"),
       tags: Map.get(endpoint, "tags"),
+      operator_package_runtime: Map.get(endpoint, "operator_package_runtime"),
       methods: normalize_methods(Map.get(endpoint, "methods")),
       capabilities: normalize_capabilities(Map.get(endpoint, "capabilities")),
       health_score: normalize_health_score(Map.get(endpoint, "health_score"))

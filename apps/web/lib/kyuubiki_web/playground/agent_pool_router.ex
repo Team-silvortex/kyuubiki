@@ -36,9 +36,10 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
     placement_tags = opts |> Keyword.get(:placement_tags, []) |> normalize_values()
     orchestration = opts |> Keyword.get(:orchestration, %{}) |> normalize_orchestration()
     lease = opts |> Keyword.get(:execution_lease, %{}) |> normalize_lease()
+    package_runtime = Keyword.get(opts, :requires_operator_package_runtime, false)
 
     if required_capabilities == [] and placement_tags == [] and orchestration == %{} and
-         lease == %{} do
+         lease == %{} and not package_runtime do
       endpoints
     else
       endpoints
@@ -49,7 +50,8 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
                required_capabilities,
                placement_tags,
                orchestration,
-               lease
+               lease,
+               package_runtime
              ) do
           {:typed_match, score} -> {[{endpoint, score} | typed], legacy}
           :legacy_fallback -> {typed, [endpoint | legacy]}
@@ -60,17 +62,38 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
     end
   end
 
-  defp classify(endpoint, method, required_capabilities, placement_tags, orchestration, lease) do
+  defp classify(
+         endpoint,
+         method,
+         required_capabilities,
+         placement_tags,
+         orchestration,
+         lease,
+         package_runtime
+       ) do
     capability_status = capability_match_status(endpoint, method, required_capabilities)
     tag_status = tag_match_status(endpoint, placement_tags)
     orchestration_status = orchestration_match_status(endpoint, orchestration)
     lease_status = execution_lease_status(endpoint, lease)
+    package_runtime_status = package_runtime_status(endpoint, package_runtime)
 
     cond do
-      :mismatch in [capability_status, tag_status, orchestration_status, lease_status] ->
+      :mismatch in [
+        capability_status,
+        tag_status,
+        orchestration_status,
+        lease_status,
+        package_runtime_status
+      ] ->
         :explicit_mismatch
 
-      :unknown in [capability_status, tag_status, orchestration_status, lease_status] ->
+      :unknown in [
+        capability_status,
+        tag_status,
+        orchestration_status,
+        lease_status,
+        package_runtime_status
+      ] ->
         :legacy_fallback
 
       true ->
@@ -185,6 +208,17 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
       %{"lease_id" => lease_id} -> if lease_id == lease[:lease_id], do: :match, else: :mismatch
       %{lease_id: lease_id} -> if lease_id == lease[:lease_id], do: :match, else: :mismatch
       _ -> :unknown
+    end
+  end
+
+  defp package_runtime_status(_endpoint, false), do: :match
+
+  defp package_runtime_status(endpoint, true) do
+    case Map.get(endpoint, :operator_package_runtime) do
+      %{ready: true} -> :match
+      %{"ready" => true} -> :match
+      nil -> :unknown
+      _runtime -> :mismatch
     end
   end
 

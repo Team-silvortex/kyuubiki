@@ -351,6 +351,46 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ) == ["offline-alpha-a"]
   end
 
+  test "filters package-backed operator tasks to package-runtime-ready agents" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "task-preflight-only",
+          host: "127.0.0.1",
+          port: 5101,
+          methods: ["run_operator_task_ir"],
+          capabilities: ["workflow_transform_runtime"],
+          operator_package_runtime: %{"ready" => false, "status" => "not_attached"}
+        },
+        %{
+          id: "task-package-ready",
+          host: "127.0.0.1",
+          port: 5102,
+          methods: ["run_operator_task_ir"],
+          capabilities: ["workflow_transform_runtime"],
+          operator_package_runtime: %{"ready" => true, "status" => "attached"}
+        },
+        %{
+          id: "legacy-task-agent",
+          host: "127.0.0.1",
+          port: 5103,
+          methods: ["run_operator_task_ir"]
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "run_operator_task_ir",
+               required_capabilities: ["workflow_transform_runtime"],
+               requires_operator_package_runtime: true
+             ),
+             & &1.id
+           ) == ["task-package-ready"]
+  end
+
   test "skips endpoints that already hold an active execution lease" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

@@ -8,6 +8,9 @@ use kyuubiki_protocol::{
 
 use crate::agent_watchdog;
 use crate::config::AgentConfig;
+use crate::operator_task_runtime::{
+    operator_package_runtime_snapshot, operator_package_runtime_snapshot_for_config,
+};
 
 pub(crate) fn agent_descriptor() -> AgentDescriptor {
     runtime_descriptor()
@@ -114,6 +117,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "tags": registration_tags(config),
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
+        "operator_package_runtime": operator_package_runtime_snapshot_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot()
     })
@@ -128,6 +132,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             "watchdog".to_string(),
             serde_json::to_value(agent_watchdog::snapshot())
                 .expect("agent watchdog snapshot should serialize"),
+        );
+        object.insert(
+            "operator_package_runtime".to_string(),
+            operator_package_runtime_snapshot(),
         );
     }
 

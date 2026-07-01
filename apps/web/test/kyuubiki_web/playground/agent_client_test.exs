@@ -327,7 +327,8 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
           port: port,
           methods: ["run_operator_task_ir"],
           capabilities: ["workflow_transform_runtime"],
-          tags: ["transform"]
+          tags: ["transform"],
+          operator_package_runtime: %{"ready" => true, "status" => "attached"}
         }
       ]
     )
@@ -340,6 +341,54 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert request["method"] == "run_operator_task_ir"
     assert request["params"] == %{"task_ir" => task_ir}
     assert result["operator_task_ir_status"] == "accepted"
+  end
+
+  test "passes operator task IR execution mode to the agent" do
+    assert {:ok, task_ir} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(),
+         [
+           %{
+             "ok" => true,
+             "result" => %{
+               "operator_task_ir_status" => "verified_pending_engine_execution",
+               "requested_mode" => "execute"
+             }
+           }
+         ]}
+      )
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "task-ir-agent",
+          host: "127.0.0.1",
+          port: port,
+          methods: ["run_operator_task_ir"],
+          capabilities: ["workflow_transform_runtime"],
+          tags: ["transform"],
+          operator_package_runtime: %{"ready" => true, "status" => "attached"}
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:ok, result} = AgentClient.run_operator_task_ir(task_ir, mode: :execute)
+
+    assert_receive {:fake_agent_request, request}
+    assert request["method"] == "run_operator_task_ir"
+    assert request["params"] == %{"task_ir" => task_ir, "mode" => "execute"}
+    assert result["requested_mode"] == "execute"
   end
 
   test "routes operator task IR through runtime hint constraints" do
@@ -373,6 +422,9 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
                required_capabilities: ["workflow_transform_runtime"],
                placement_tags: ["materials"]
              }}} = AgentClient.run_operator_task_ir(task_ir)
+
+    assert {:error, {:no_matching_agent, %{required_operator_package_runtime: true}}} =
+             AgentClient.run_operator_task_ir(task_ir, mode: :execute)
   end
 
   defp await_fake_agent_port do

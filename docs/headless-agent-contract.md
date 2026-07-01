@@ -96,6 +96,12 @@ The matching schema lives at
 This is the LSP-like layer: product and catalog code can be implemented in one
 language, while the agent engine runs a stable protocol object.
 
+Rust agents expose packaged operator submissions through
+`run_operator_task_ir`. The RPC handler is only the transport wrapper; native
+TaskIR validation, digest checking, and summary construction belong to
+`workers/rust/crates/cli/src/operator_task_runtime.rs` so package fetching and
+dispatch can attach without reshaping the solver RPC surface.
+
 Task description is dual-mode:
 
 - Elixir control-plane authoring is the default and remains the fastest path for
@@ -180,9 +186,40 @@ Use these paths intentionally.
   integrity and expose the language-neutral execution summary before dispatch.
 - SDK or Orchestra -> solver RPC `run_operator_task_ir`
   Best when a trusted caller wants the Rust agent to validate TaskIR natively.
-  Current agent behavior is preflight only: it verifies digest and execution
-  summary, then returns `verified_pending_engine_execution` until the operator
-  package runtime is attached.
+  Current agent behavior is staged preflight: it verifies digest and execution
+  summary, returns an `execution_plan`, and reports `fetch_package` as blocked
+  only while the operator package runtime is detached.
+  Request params accept `mode: "preflight"` by default and `mode: "execute"`
+  for future dispatch. Attached package runtimes now move `fetch_package` to
+  pending and expose `next_stage: "fetch_package"` while engine dispatch wiring
+  is still being completed. The Elixir control-plane client forwards this mode through
+  `AgentClient.run_operator_task_ir(task_ir, mode: :execute)`.
+
+The preflight result also exposes an `operator_package_runtime` contract. Until
+the runtime is attached it reports `status: "not_attached"` and names the
+expected host as `kyuubiki-engine.operator-sdk-host/v1`. That contract mirrors
+the Rust operator SDK host policy: packages are fetched on demand, activated
+through the operator registry, restricted to `rust_crate` runtimes by default,
+and must keep entrypoints inside the package root.
+The same result includes `package_fetch_request`, a language-neutral request
+envelope with schema `kyuubiki.operator-package-fetch-request/v1`. Detached
+agents report `request_status: "blocked_runtime_not_attached"`; attached agents
+report `request_status: "ready_to_resolve"` and include the target host id plus
+packages root. This is the handoff object for future orchestra package catalog,
+mesh cache, or installer-managed package host integrations.
+Callers should use `operator_package_runtime_ready` as the coarse readiness bit
+and read `operator_package_runtime.status` for the detailed reason. The agent
+runtime already models both `not_attached` and `attached` host bindings; an
+attached host reports its host id, package root, and activated package count,
+but execution still waits for package fetch and dispatch wiring. `blocked_stage`
+is `null` in this attached state so callers can distinguish "missing runtime"
+from "runtime ready, next stage pending".
+Attachment is local-agent controlled, not request controlled: the agent process
+can be started with `--operator-package-host-id`, `--operator-packages-root`,
+and `--operator-activated-package-count`, or the matching
+`KYUUBIKI_OPERATOR_*` environment variables.
+The same snapshot is exposed through `describe_agent` and registration payloads
+so the control plane can route package-backed operator tasks intentionally.
 - SDK -> solver RPC
   Best when a trusted environment wants the shortest path to a specific solver
   node or LAN mesh.

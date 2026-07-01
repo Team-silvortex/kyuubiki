@@ -48,6 +48,9 @@ fn parses_agent_command_defaults() {
             register_interval_ms: 5_000,
             cluster_id: None,
             peers: vec![],
+            operator_package_host_id: None,
+            operator_packages_root: None,
+            operator_activated_package_count: 0,
         })
     );
 }
@@ -65,6 +68,64 @@ fn parses_peer_mesh_agent_args() {
 
     assert_eq!(config.cluster_id.as_deref(), Some("lan-lab-a"));
     assert_eq!(config.peers.len(), 2);
+}
+
+#[test]
+fn parses_operator_package_runtime_agent_args() {
+    let config = AgentConfig::from_args(&[
+        "--operator-package-host-id".to_string(),
+        "agent-a/operator-host".to_string(),
+        "--operator-packages-root".to_string(),
+        "/var/lib/kyuubiki/operator-packages".to_string(),
+        "--operator-activated-package-count".to_string(),
+        "3".to_string(),
+    ]);
+
+    assert_eq!(
+        config.operator_package_host_id.as_deref(),
+        Some("agent-a/operator-host")
+    );
+    assert_eq!(
+        config.operator_packages_root.as_deref(),
+        Some("/var/lib/kyuubiki/operator-packages")
+    );
+    assert_eq!(config.operator_activated_package_count, 3);
+}
+
+#[test]
+fn registration_payload_reports_operator_package_runtime_snapshot() {
+    let config = AgentConfig {
+        host: "127.0.0.1".to_string(),
+        port: 5001,
+        agent_id: Some("solver-with-package-host".to_string()),
+        advertise_host: None,
+        orchestrator_url: None,
+        cluster_api_token: None,
+        agent_fingerprint: None,
+        certificate_id: None,
+        cert_path: None,
+        key_path: None,
+        ca_cert_path: None,
+        register_interval_ms: 5_000,
+        cluster_id: None,
+        peers: vec![],
+        operator_package_host_id: Some("solver-with-package-host/operator-host".to_string()),
+        operator_packages_root: Some("/var/lib/kyuubiki/operator-packages".to_string()),
+        operator_activated_package_count: 4,
+    };
+
+    let payload = registration_payload(&config);
+
+    assert_eq!(payload["operator_package_runtime"]["ready"], true);
+    assert_eq!(payload["operator_package_runtime"]["status"], "attached");
+    assert_eq!(
+        payload["operator_package_runtime"]["attachment"]["host_id"],
+        "solver-with-package-host/operator-host"
+    );
+    assert_eq!(
+        payload["operator_package_runtime"]["attachment"]["activated_package_count"],
+        4
+    );
 }
 
 #[test]

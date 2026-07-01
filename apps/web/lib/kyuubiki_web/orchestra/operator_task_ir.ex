@@ -57,11 +57,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   @spec agent_rpc_method() :: String.t()
   def agent_rpc_method, do: @agent_rpc_method
 
-  @spec agent_rpc_params(map()) :: map()
-  def agent_rpc_params(%{"schema_version" => @schema_version} = task_ir),
-    do: %{"task_ir" => task_ir}
+  @spec agent_rpc_params(map(), keyword()) :: map()
+  def agent_rpc_params(task_ir, opts \\ [])
 
-  def agent_rpc_params(_task_ir), do: %{"task_ir" => nil}
+  def agent_rpc_params(%{"schema_version" => @schema_version} = task_ir, opts)
+      when is_list(opts) do
+    %{"task_ir" => task_ir}
+    |> maybe_put_rpc_mode(Keyword.get(opts, :mode))
+  end
+
+  def agent_rpc_params(_task_ir, _opts), do: %{"task_ir" => nil}
 
   @spec agent_routing_opts(map()) :: keyword()
   def agent_routing_opts(%{"schema_version" => @schema_version} = task_ir) do
@@ -260,6 +265,19 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   defp maybe_put_routing_opt(opts, _key, %{} = value) when map_size(value) == 0, do: opts
   defp maybe_put_routing_opt(opts, _key, nil), do: opts
   defp maybe_put_routing_opt(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp maybe_put_rpc_mode(params, nil), do: params
+
+  defp maybe_put_rpc_mode(params, mode) when mode in [:preflight, :execute] do
+    Map.put(params, "mode", Atom.to_string(mode))
+  end
+
+  defp maybe_put_rpc_mode(params, mode) when mode in ["preflight", "execute"] do
+    Map.put(params, "mode", mode)
+  end
+
+  defp maybe_put_rpc_mode(params, mode) when is_binary(mode), do: Map.put(params, "mode", mode)
+  defp maybe_put_rpc_mode(params, _mode), do: params
 
   defp normalize_string_list(values) when is_list(values) do
     values

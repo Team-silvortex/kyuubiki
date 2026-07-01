@@ -17,8 +17,7 @@ use kyuubiki_protocol::{
     SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
     SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
     SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest, summarize_operator_task_execution,
-    verify_operator_task_digest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_bar_1d, solve_beam_1d, solve_contact_gap_1d,
@@ -38,6 +37,7 @@ use crate::agent_state::{
     take_cancelled,
 };
 use crate::agent_watchdog;
+use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
 
 pub(crate) fn handle_request(
@@ -377,48 +377,15 @@ fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
         "run_operator_task_ir".to_string(),
     );
 
-    let task_ir = match request.params.get("task_ir") {
-        Some(task_ir) => task_ir,
-        None => {
-            let report = agent_watchdog::fail_execution(guard, "invalid_params", "missing task_ir");
-            return AgentReply::Stream(
-                Vec::new(),
-                RpcResponse::error_with_details(
-                    request_id,
-                    "invalid_params",
-                    report.message.clone(),
-                    serde_json::to_value(report).expect("failure report should serialize"),
-                ),
-            );
-        }
-    };
-
-    if let Err(error) = verify_operator_task_digest(task_ir) {
-        let report = agent_watchdog::fail_execution(
-            guard,
-            "operator_task_digest_invalid",
-            format!("{error:?}"),
-        );
-        return AgentReply::Stream(
-            Vec::new(),
-            RpcResponse::error_with_details(
-                request_id,
-                "operator_task_digest_invalid",
-                report.message.clone(),
-                serde_json::to_value(report).expect("failure report should serialize"),
-            ),
-        );
-    }
-
-    let summary = match summarize_operator_task_execution(task_ir) {
-        Ok(summary) => summary,
+    let result = match run_operator_task_ir(&request.params) {
+        Ok(result) => result,
         Err(error) => {
-            let report = agent_watchdog::fail_execution(guard, "operator_task_invalid", error);
+            let report = agent_watchdog::fail_execution(guard, error.code, error.message);
             return AgentReply::Stream(
                 Vec::new(),
                 RpcResponse::error_with_details(
                     request_id,
-                    "operator_task_invalid",
+                    error.code,
                     report.message.clone(),
                     serde_json::to_value(report).expect("failure report should serialize"),
                 ),
@@ -427,32 +394,7 @@ fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
     };
 
     agent_watchdog::complete_execution(guard);
-    AgentReply::Stream(
-        Vec::new(),
-        RpcResponse::success(
-            request_id,
-            serde_json::json!({
-                "operator_task_ir_status": "verified_pending_engine_execution",
-                "execution_runtime_status": "operator_package_runtime_not_yet_attached",
-                "task_digest": summary.task_digest,
-                "task_id": summary.task_id,
-                "operator_id": summary.operator_id,
-                "operator_kind": summary.operator_kind,
-                "program_id": summary.program_id,
-                "program_kind": summary.program_kind,
-                "runtime_protocol": summary.runtime_protocol,
-                "abi_kind": summary.abi_kind,
-                "entrypoint_kind": summary.entrypoint_kind,
-                "entrypoint_name": summary.entrypoint_name,
-                "package_ref": summary.package_ref,
-                "package_version": summary.package_version,
-                "authority_mode": summary.authority_mode,
-                "execution_mode": summary.execution_mode,
-                "cache_scope": summary.cache_scope,
-                "agent_fetchable": summary.agent_fetchable
-            }),
-        ),
-    )
+    AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
 
 fn handle_cancel_job(request: RpcRequest) -> AgentReply {
