@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-ir.schema.json",
+  "title": "Kyuubiki operator task IR",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "task_id",
+    "operator",
+    "descriptor_authoring",
+    "input_artifact",
+    "config",
+    "execution_program",
+    "runtime_hints",
+    "integrity"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-task-ir/v1" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "operator": {
+      "type": "object",
+      "required": ["id", "family", "kind", "execution"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string" },
+        "domain": { "type": "string" },
+        "family": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["solver", "transform", "extract", "export", "workflow_bridge"]
+        },
+        "operator_category_id": { "type": ["string", "null"] },
+        "capability_tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "execution": {
+          "type": "object",
+          "required": ["package_ref"],
+          "properties": {
+            "package_ref": {
+              "type": "string",
+              "pattern": "^orchestra://operator-package/.+"
+            },
+            "package_version": { "type": "string" },
+            "integrity": { "type": ["object", "null"] },
+            "required_capabilities": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "placement_tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "agent_fetchable": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "descriptor_authoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "mode",
+        "runtime",
+        "source",
+        "hot_reloadable",
+        "execution_language"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.operator-descriptor-authoring/v1" },
+        "mode": {
+          "type": "string",
+          "enum": ["elixir_control_plane", "rust_native", "external_sdk"]
+        },
+        "runtime": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "hot_reloadable": { "type": "boolean" },
+        "execution_language": { "const": "language_neutral" }
+      }
+    },
+    "node": { "type": "object" },
+    "input_artifact": { "type": "object" },
+    "config": { "type": "object" },
+    "execution_program": {
+      "$ref": "operator-execution-program.schema.json"
+    },
+    "dataset_contract": { "type": "object" },
+    "orchestration_context": { "type": "object" },
+    "runtime_hints": { "type": "object" },
+    "integrity": {
+      "type": "object",
+      "required": ["descriptor_digest", "task_digest", "task_digest_fields", "digest_algorithm"],
+      "properties": {
+        "operator_integrity": { "type": ["object", "null"] },
+        "descriptor_digest": { "type": "string", "minLength": 1 },
+        "task_digest": { "type": "string", "minLength": 1 },
+        "task_digest_fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "execution_program" }
+        },
+        "digest_algorithm": { "const": "sha256" }
+      }
+    }
+  }
+}

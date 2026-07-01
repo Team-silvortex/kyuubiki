@@ -21,6 +21,10 @@ README.
 - `workflow-dataset.schema.json` is for ONNX-like cross-operator data
   contracts, including named values, shape semantics, encoding, and stable
   schema references shared across workflow nodes
+- `operator-task-ir.schema.json` is for dual-mode operator task descriptions
+  authored by Elixir, Rust-native SDKs, or external SDKs
+- `operator-execution-program.schema.json` is for the language-neutral program
+  contract carried inside operator task IR and consumed by agent engines
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench

@@ -77,6 +77,37 @@ That mediation is allowed to add:
 But it must not redefine solver payload semantics behind a private backend-only
  shape.
 
+### Layer 2.5: operator execution program
+
+Operators may be described and indexed by the Elixir control plane, but the
+agent-facing executable structure is language-neutral.
+
+The task IR carries:
+
+- `execution_program.schema_version = kyuubiki.operator-execution-program/v1`
+- `runtime_protocol = kyuubiki.solver-rpc/v1` for direct solver methods
+- `runtime_protocol = kyuubiki.operator-execution/v1` for packaged operators
+- JSON ABI bindings for input artifact, config, and output artifact
+- a protocol-visible entrypoint, never an Elixir module/function name
+
+The matching schema lives at
+[`schemas/operator-execution-program.schema.json`](../schemas/operator-execution-program.schema.json).
+
+This is the LSP-like layer: product and catalog code can be implemented in one
+language, while the agent engine runs a stable protocol object.
+
+Task description is dual-mode:
+
+- Elixir control-plane authoring is the default and remains the fastest path for
+  catalog iteration and hot-reload-friendly workflow logic.
+- Rust-native SDK authoring is valid when runtime-side packages need to emit
+  task IR directly.
+- Other SDKs may author task IR if they preserve the same schema and execution
+  program contract.
+
+Agents should treat `descriptor_authoring` as audit metadata. They execute the
+language-neutral `execution_program`, not the authoring runtime.
+
 ### Layer 3: GUI gateway and handoff payloads
 
 These are useful product layers, but they are not the runtime source of truth.

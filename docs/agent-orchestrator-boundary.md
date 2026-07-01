@@ -125,6 +125,79 @@ This means a workflow run can move between scheduling modes without changing the
 core engine model: the scheduling authority changes, but the agent-local engine
 remains the execution boundary.
 
+## Operator Description Vs Execution Program
+
+Operator descriptions may be authored, indexed, or served by the Elixir control
+plane. That does not make Elixir part of the compute-side execution ABI.
+
+The boundary is:
+
+- `operator descriptor`
+  catalog metadata used for search, UI grouping, validation, package fetch, and
+  workflow graph assembly
+- `operator task IR`
+  the orchestration envelope that binds one operator, one input artifact, config,
+  dataset context, routing hints, and integrity metadata
+- `operator execution program`
+  the language-neutral program contract inside the task IR that an agent engine
+  can execute
+
+The execution program is the part analogous to LSP in the VS Code ecosystem:
+the editor extension can be written in TypeScript, but the language server
+interaction is protocol-shaped. In Kyuubiki, the control plane can be Elixir,
+but the agent-facing execution structure is:
+
+- schema: `kyuubiki.operator-execution-program/v1`
+- runtime protocol: `kyuubiki.operator-execution/v1` or `kyuubiki.solver-rpc/v1`
+- package reference: `orchestra://operator-package/<operator-id>`
+- ABI: JSON input/config/output bindings
+- entrypoint: protocol-visible operator id or solver method
+
+Agent engines should treat this as the execution contract. They should not
+depend on Phoenix routes, Elixir modules, or control-plane private function
+names to run operator work.
+
+## Dual-Mode Task Description
+
+Task descriptions are allowed to be authored through more than one runtime.
+
+The preferred product path is:
+
+- Elixir control-plane descriptor authoring
+- fast catalog iteration
+- hot-reload-friendly pure-function transforms
+- workflow graph assembly and validation close to the orchestrator
+
+But this is not exclusive. Rust-native operator SDKs and external SDK clients
+may also author task descriptors directly, as long as they emit the same
+language-neutral task IR and execution program.
+
+Directly authored descriptors must still carry the minimum executable identity:
+`id`, `family`, `kind`, and an `execution.package_ref` bound to the same
+operator id. Bypassing catalog lookup must not mean bypassing package identity.
+
+Task IR integrity includes both a descriptor digest and a task digest. The
+descriptor digest covers the operator snapshot; the task digest covers the
+actual execution envelope fields, including descriptor authoring, input,
+config, dataset context, runtime hints, and execution program. Agents and
+orchestrators can use this to audit whether a task changed after construction.
+
+Task IR therefore carries `descriptor_authoring` metadata:
+
+- `mode`
+  examples: `elixir_control_plane`, `rust_native`, `external_sdk`
+- `runtime`
+  examples: `elixir`, `rust`, `python`, `elixir_sdk`
+- `source`
+  examples: `workflow_operator_catalog`, `rust_operator_sdk`
+- `hot_reloadable`
+  a description-layer property, not an agent execution requirement
+- `execution_language = language_neutral`
+  the important invariant for agents
+
+This keeps Elixir as the rapid authoring and orchestration layer without making
+Elixir the only way to describe valid work.
+
 ## What The Orchestrator Is Not
 
 The orchestrator is not:

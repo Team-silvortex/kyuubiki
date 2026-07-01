@@ -4,12 +4,18 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
   alias KyuubikiWeb.WorkflowCatalogSupport
   alias KyuubikiWeb.WorkflowBuiltinOperatorRegistry
   alias KyuubikiWeb.WorkflowCatalogQuery
+  alias KyuubikiWeb.WorkflowOperatorCategoryTaxonomy
   alias KyuubikiWeb.WorkflowOperatorModules
   alias KyuubikiWeb.WorkflowSolverRegistry
 
   def catalog(filters \\ %{}) do
     operators = list(filters)
-    %{"operators" => operators, "modules" => WorkflowOperatorModules.summarize(operators)}
+
+    %{
+      "operators" => operators,
+      "modules" => WorkflowOperatorModules.summarize(operators),
+      "operator_categories" => summarize_categories(operators)
+    }
   end
 
   def list(filters \\ %{}) do
@@ -26,6 +32,25 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
       nil -> {:error, {:operator_not_found, operator_id}}
       operator -> {:ok, %{"operator" => operator}}
     end
+  end
+
+  defp summarize_categories(operators) do
+    categories_by_id = Map.new(WorkflowOperatorCategoryTaxonomy.list(), &{&1["id"], &1})
+
+    operators
+    |> Enum.group_by(& &1["operator_category_id"])
+    |> Enum.reject(fn {category_id, _operators} -> is_nil(category_id) end)
+    |> Enum.map(fn {category_id, grouped_operators} ->
+      category = Map.fetch!(categories_by_id, category_id)
+
+      category
+      |> Map.take(["id", "label", "lane", "summary"])
+      |> Map.merge(%{
+        "operator_count" => length(grouped_operators),
+        "operator_ids" => Enum.map(grouped_operators, & &1["id"]) |> Enum.sort()
+      })
+    end)
+    |> Enum.sort_by(&{&1["lane"], &1["label"]})
   end
 
   defp built_in_descriptor(

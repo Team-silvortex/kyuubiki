@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowOperatorModules
+  alias KyuubikiWeb.WorkflowOperatorCategoryTaxonomy
 
   def workflow_dataset_contract(id, values, metadata \\ %{}) when is_list(values) do
     %{
@@ -28,6 +29,7 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
   def enrich_operator_descriptor(%{"id" => operator_id} = descriptor)
       when is_binary(operator_id) do
     descriptor
+    |> WorkflowOperatorCategoryTaxonomy.assign()
     |> WorkflowOperatorModules.assign()
     |> Map.put_new(
       "execution",

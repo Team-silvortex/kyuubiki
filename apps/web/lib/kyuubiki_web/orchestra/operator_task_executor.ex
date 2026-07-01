@@ -9,12 +9,15 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   alias KyuubikiWeb.WorkflowOperatorRuntime
 
   @schema_version "kyuubiki.operator-task-ir/v1"
+  @program_schema_version "kyuubiki.operator-execution-program/v1"
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
   def execute(%{"schema_version" => @schema_version} = task_ir) do
     with {:ok, operator} <- operator(task_ir),
          {:ok, operator_id} <- operator_id(operator),
          {:ok, kind} <- operator_kind(operator),
+         {:ok, program} <- execution_program(task_ir),
+         :ok <- validate_execution_program(program, operator_id, kind),
          {:ok, input} <- input_artifact(task_ir),
          config <- config(task_ir),
          node <- execution_node(task_ir, operator_id) do
@@ -52,6 +55,57 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   defp operator_kind(%{"kind" => kind}) when is_binary(kind) and kind != "", do: {:ok, kind}
   defp operator_kind(_operator), do: {:error, :missing_operator_task_kind}
+
+  defp execution_program(%{"execution_program" => program}) when is_map(program),
+    do: {:ok, program}
+
+  defp execution_program(_task_ir), do: {:error, :missing_operator_execution_program}
+
+  defp validate_execution_program(
+         %{
+           "schema_version" => @program_schema_version,
+           "program_id" => operator_id,
+           "program_kind" => kind,
+           "runtime_protocol" => runtime_protocol,
+           "entrypoint" => entrypoint
+         },
+         operator_id,
+         kind
+       ) do
+    with :ok <- validate_runtime_protocol(kind, runtime_protocol),
+         :ok <- validate_entrypoint(operator_id, kind, entrypoint) do
+      :ok
+    end
+  end
+
+  defp validate_execution_program(_program, _operator_id, _kind),
+    do: {:error, :invalid_operator_execution_program}
+
+  defp validate_runtime_protocol("solver", "kyuubiki.solver-rpc/v1"), do: :ok
+
+  defp validate_runtime_protocol(kind, "kyuubiki.operator-execution/v1")
+       when kind in ["transform", "workflow_bridge", "extract", "export"],
+       do: :ok
+
+  defp validate_runtime_protocol(_kind, protocol),
+    do: {:error, {:invalid_operator_execution_protocol, protocol}}
+
+  defp validate_entrypoint(operator_id, "solver", %{"kind" => "solver_method", "name" => name}) do
+    expected =
+      operator_id |> String.replace_prefix("solve.", "solve_") |> String.replace(".", "_")
+
+    if name == expected, do: :ok, else: {:error, {:invalid_operator_entrypoint, name}}
+  end
+
+  defp validate_entrypoint(operator_id, kind, %{
+         "kind" => "operator_id",
+         "name" => operator_id,
+         "operator_kind" => kind
+       }),
+       do: :ok
+
+  defp validate_entrypoint(_operator_id, _kind, entrypoint),
+    do: {:error, {:invalid_operator_entrypoint, entrypoint}}
 
   defp input_artifact(%{"input_artifact" => input}) when is_map(input), do: {:ok, input}
   defp input_artifact(_task_ir), do: {:error, :missing_operator_task_input}

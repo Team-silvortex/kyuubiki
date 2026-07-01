@@ -11,8 +11,11 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     payload = Jason.decode!(list_conn.resp_body)
     operators = payload["operators"]
     modules = payload["modules"]
+    operator_categories = payload["operator_categories"]
     assert length(operators) >= 8
     assert Enum.any?(modules, &(&1["id"] == "mechanical.solver"))
+    assert Enum.any?(operator_categories, &(&1["id"] == "physics_solver"))
+    assert Enum.any?(operator_categories, &(&1["id"] == "multiphysics_bridge"))
 
     frame_operator =
       Enum.find(operators, fn operator -> operator["id"] == "solve.frame_3d" end)
@@ -39,6 +42,8 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
       end)
 
     assert frame_operator["kind"] == "solver"
+    assert frame_operator["operator_category_id"] == "physics_solver"
+    assert frame_operator["operator_category"]["label"] == "Physics Solvers"
     assert frame_operator["origin"] == "built_in"
     assert frame_operator["input_schema"]["schema"] == "kyuubiki.operator.frame_3d.input"
     assert frame_operator["execution"]["authority_mode"] == "central_operator_library"
@@ -107,6 +112,7 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert "wave" in acoustic_operator["capability_tags"]
 
     assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+    assert electrostatic_heat_bridge_operator["operator_category_id"] == "multiphysics_bridge"
     assert electrostatic_heat_bridge_operator["module"]["id"] == "electromagnetic.workflow_bridge"
     assert electrostatic_heat_bridge_operator["module"]["lane"] == "coupling"
 
@@ -300,6 +306,23 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert Enum.all?(operators, &(&1["kind"] == "solver"))
     assert Enum.all?(operators, &(&1["validation"]["baseline_status"] == "verified"))
     assert Enum.all?(operators, &("heat" in (&1["capability_tags"] || [])))
+  end
+
+  test "filters built-in operators by operator category" do
+    conn =
+      :get
+      |> conn("/api/v1/operators?category=material_research")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    operators = payload["operators"]
+    categories = payload["operator_categories"]
+
+    assert Enum.any?(operators, &(&1["id"] == "transform.validate_material_card"))
+    assert Enum.all?(operators, &(&1["operator_category_id"] == "material_research"))
+    assert [%{"id" => "material_research"} = category] = categories
+    assert category["operator_count"] == length(operators)
   end
 
   test "filters built-in operators by managed module" do

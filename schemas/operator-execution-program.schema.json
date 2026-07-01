@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-execution-program.schema.json",
+  "title": "Kyuubiki operator execution program",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "program_id",
+    "program_family",
+    "program_kind",
+    "runtime_protocol",
+    "abi",
+    "entrypoint",
+    "bindings",
+    "node_binding"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-execution-program/v1"
+    },
+    "program_id": { "type": "string", "minLength": 1 },
+    "program_family": { "type": "string", "minLength": 1 },
+    "program_kind": {
+      "type": "string",
+      "enum": ["solver", "transform", "extract", "export", "workflow_bridge"]
+    },
+    "operator_category_id": { "type": ["string", "null"] },
+    "package_ref": { "type": ["string", "null"] },
+    "package_version": { "type": ["string", "null"] },
+    "package_integrity": { "type": ["object", "null"] },
+    "runtime_protocol": {
+      "type": "string",
+      "enum": ["kyuubiki.solver-rpc/v1", "kyuubiki.operator-execution/v1"]
+    },
+    "abi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "input_encoding", "output_encoding"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["solver_rpc", "operator_task"] },
+        "input_encoding": { "const": "json" },
+        "output_encoding": { "const": "json" }
+      }
+    },
+    "entrypoint": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["solver_method", "operator_id"] },
+        "name": { "type": "string", "minLength": 1 },
+        "operator_kind": { "type": "string" }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_artifact", "config", "output_artifact"],
+      "properties": {
+        "input_artifact": { "const": "task.input_artifact" },
+        "config": { "const": "task.config" },
+        "output_artifact": { "const": "task.output_artifact" }
+      }
+    },
+    "node_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "input_ports", "output_ports"],
+      "properties": {
+        "node_id": { "type": ["string", "null"] },
+        "input_ports": { "type": "array" },
+        "output_ports": { "type": "array" }
+      }
+    }
+  }
+}

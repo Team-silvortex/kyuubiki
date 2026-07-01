@@ -43,13 +43,57 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
   test "rejects malformed task IR envelopes" do
     assert {:error, :invalid_operator_task_ir} = OperatorTaskExecutor.execute(%{})
 
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
     assert {:error, :missing_operator_task_input} =
-             OperatorTaskExecutor.execute(%{
-               "schema_version" => "kyuubiki.operator-task-ir/v1",
-               "operator" => %{
-                 "id" => "transform.rank_material_candidates",
-                 "kind" => "transform"
-               }
-             })
+             task
+             |> Map.delete("input_artifact")
+             |> OperatorTaskExecutor.execute()
+  end
+
+  test "rejects task IR without an execution program" do
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    assert {:error, :missing_operator_execution_program} =
+             task
+             |> Map.delete("execution_program")
+             |> OperatorTaskExecutor.execute()
+  end
+
+  test "rejects execution programs that do not match the operator snapshot" do
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    mismatched_id =
+      put_in(task, ["execution_program", "program_id"], "transform.other_operator")
+
+    assert {:error, :invalid_operator_execution_program} =
+             OperatorTaskExecutor.execute(mismatched_id)
+
+    mismatched_protocol =
+      put_in(task, ["execution_program", "runtime_protocol"], "kyuubiki.solver-rpc/v1")
+
+    assert {:error, {:invalid_operator_execution_protocol, "kyuubiki.solver-rpc/v1"}} =
+             OperatorTaskExecutor.execute(mismatched_protocol)
+
+    mismatched_entrypoint =
+      put_in(task, ["execution_program", "entrypoint", "name"], "transform.other_operator")
+
+    assert {:error, {:invalid_operator_entrypoint, _entrypoint}} =
+             OperatorTaskExecutor.execute(mismatched_entrypoint)
   end
 end

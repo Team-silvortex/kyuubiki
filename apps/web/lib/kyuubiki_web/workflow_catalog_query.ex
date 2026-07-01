@@ -14,6 +14,7 @@ defmodule KyuubikiWeb.WorkflowCatalogQuery do
     matches_query?(operator_haystack(descriptor), Map.get(filters, "q", "")) and
       matches_value?(descriptor["domain"], Map.get(filters, "domain", "")) and
       matches_value?(descriptor["kind"], Map.get(filters, "kind", "")) and
+      matches_value?(descriptor["operator_category_id"], Map.get(filters, "category", "")) and
       matches_value?(
         get_in(descriptor, ["validation", "baseline_status"]),
         Map.get(filters, "validation", "")
@@ -72,6 +73,8 @@ defmodule KyuubikiWeb.WorkflowCatalogQuery do
       descriptor["family"],
       descriptor["domain"],
       descriptor["kind"],
+      descriptor["operator_category_id"],
+      get_in(descriptor, ["operator_category", "label"]),
       get_in(descriptor, ["module", "id"]),
       get_in(descriptor, ["module", "label"]),
       get_in(descriptor, ["module", "lane"]),

@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   Converts catalog operator descriptions into an engine-facing task IR.
   """
 
+  alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
   alias KyuubikiWeb.WorkflowOperatorCatalog
 
   @schema_version "kyuubiki.operator-task-ir/v1"
@@ -20,6 +21,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   def build(_operator_id, _input_artifact, _config, _opts),
     do: {:error, :invalid_operator_task_ir_request}
+
+  @spec build_from_descriptor(map(), map(), map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def build_from_descriptor(operator, input_artifact, config \\ %{}, opts \\ [])
+
+  def build_from_descriptor(operator, input_artifact, config, opts)
+      when is_map(operator) and is_map(input_artifact) and is_map(config) and is_list(opts) do
+    with {:ok, _operator_id} <- operator_id(operator),
+         {:ok, _kind} <- operator_kind(operator),
+         :ok <- validate_external_descriptor(operator) do
+      {:ok, envelope(operator, input_artifact, config, opts)}
+    end
+  end
+
+  def build_from_descriptor(_operator, _input_artifact, _config, _opts),
+    do: {:error, :invalid_operator_task_ir_descriptor_request}
 
   @spec from_node(map(), map(), keyword()) :: {:ok, map()} | {:error, term()}
   def from_node(node, input_artifact, opts \\ [])
@@ -75,18 +91,22 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
     orchestration_context = Keyword.get(opts, :orchestration_context, %{})
     dataset_contract = Keyword.get(opts, :dataset_contract, %{})
 
-    %{
-      "schema_version" => @schema_version,
-      "task_id" => task_id,
-      "operator" => operator_snapshot(operator),
-      "node" => node_snapshot(node),
-      "input_artifact" => input_artifact,
-      "config" => config,
-      "dataset_contract" => dataset_contract,
-      "orchestration_context" => orchestration_context,
-      "runtime_hints" => runtime_hints(operator, execution, opts),
-      "integrity" => integrity_snapshot(operator, execution)
-    }
+    task =
+      %{
+        "schema_version" => @schema_version,
+        "task_id" => task_id,
+        "operator" => operator_snapshot(operator),
+        "descriptor_authoring" => descriptor_authoring(opts),
+        "node" => node_snapshot(node),
+        "input_artifact" => input_artifact,
+        "config" => config,
+        "execution_program" => OperatorExecutionProgram.build(operator, execution, node),
+        "dataset_contract" => dataset_contract,
+        "orchestration_context" => orchestration_context,
+        "runtime_hints" => runtime_hints(operator, execution, opts)
+      }
+
+    Map.put(task, "integrity", integrity_snapshot(operator, execution, task))
   end
 
   defp operator_snapshot(operator) do
@@ -98,6 +118,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       "kind",
       "origin",
       "summary",
+      "operator_category_id",
+      "operator_category",
       "capability_tags",
       "input_schema",
       "output_schema",
@@ -107,6 +129,99 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       "module",
       "execution"
     ])
+  end
+
+  defp task_digest_fields do
+    [
+      "schema_version",
+      "task_id",
+      "operator",
+      "descriptor_authoring",
+      "node",
+      "input_artifact",
+      "config",
+      "execution_program",
+      "dataset_contract",
+      "orchestration_context",
+      "runtime_hints"
+    ]
+  end
+
+  defp operator_id(%{"id" => operator_id}) when is_binary(operator_id) and operator_id != "",
+    do: {:ok, operator_id}
+
+  defp operator_id(_operator), do: {:error, :missing_operator_task_operator_id}
+
+  defp operator_kind(%{"kind" => kind}) when is_binary(kind) and kind != "", do: {:ok, kind}
+  defp operator_kind(_operator), do: {:error, :missing_operator_task_kind}
+
+  defp validate_external_descriptor(operator) do
+    with :ok <- require_string(operator, "family", :missing_operator_task_family),
+         :ok <- validate_external_kind(Map.get(operator, "kind")),
+         :ok <- validate_external_execution(operator) do
+      :ok
+    end
+  end
+
+  defp validate_external_kind(kind)
+       when kind in ["solver", "transform", "extract", "export", "workflow_bridge"],
+       do: :ok
+
+  defp validate_external_kind(kind), do: {:error, {:unsupported_operator_task_kind, kind}}
+
+  defp validate_external_execution(%{"id" => operator_id, "execution" => execution})
+       when is_map(execution) do
+    with :ok <- require_string(execution, "package_ref", :missing_operator_task_package_ref),
+         :ok <- package_ref_matches?(operator_id, Map.get(execution, "package_ref")) do
+      :ok
+    end
+  end
+
+  defp validate_external_execution(_operator), do: {:error, :missing_operator_task_execution}
+
+  defp package_ref_matches?(operator_id, "orchestra://operator-package/" <> operator_id), do: :ok
+
+  defp package_ref_matches?(_operator_id, package_ref),
+    do: {:error, {:invalid_operator_task_package_ref, package_ref}}
+
+  defp require_string(map, key, reason) do
+    case Map.get(map, key) do
+      value when is_binary(value) and value != "" -> :ok
+      _ -> {:error, reason}
+    end
+  end
+
+  defp descriptor_authoring(opts) do
+    opts
+    |> Keyword.get(:descriptor_authoring, %{})
+    |> normalize_descriptor_authoring()
+  end
+
+  defp normalize_descriptor_authoring(%{} = authoring) do
+    %{
+      "schema_version" => "kyuubiki.operator-descriptor-authoring/v1",
+      "mode" => string_field(authoring, "mode", "elixir_control_plane"),
+      "runtime" => string_field(authoring, "runtime", "elixir"),
+      "source" => string_field(authoring, "source", "workflow_operator_catalog"),
+      "hot_reloadable" => boolean_field(authoring, "hot_reloadable", true),
+      "execution_language" => "language_neutral"
+    }
+  end
+
+  defp normalize_descriptor_authoring(_authoring), do: normalize_descriptor_authoring(%{})
+
+  defp string_field(map, key, default) do
+    case Map.get(map, key, Map.get(map, String.to_atom(key), default)) do
+      value when is_binary(value) and value != "" -> value
+      _ -> default
+    end
+  end
+
+  defp boolean_field(map, key, default) do
+    case Map.get(map, key, Map.get(map, String.to_atom(key), default)) do
+      value when is_boolean(value) -> value
+      _ -> default
+    end
   end
 
   defp node_snapshot(%{"id" => _id} = node) do
@@ -148,16 +263,24 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   defp normalize_context(%{} = context), do: context
   defp normalize_context(_context), do: %{}
 
-  defp integrity_snapshot(operator, execution) do
+  defp integrity_snapshot(operator, execution, task) do
     %{
       "operator_integrity" => Map.get(execution, "integrity"),
       "descriptor_digest" => descriptor_digest(operator),
+      "task_digest" => task_digest(task),
+      "task_digest_fields" => task_digest_fields(),
       "digest_algorithm" => "sha256"
     }
   end
 
   defp descriptor_digest(operator) do
     json = Jason.encode!(operator_snapshot(operator))
+    :crypto.hash(:sha256, json) |> Base.encode16(case: :lower)
+  end
+
+  defp task_digest(task) do
+    task_for_digest = Map.take(task, task_digest_fields())
+    json = Jason.encode!(task_for_digest)
     :crypto.hash(:sha256, json) |> Base.encode16(case: :lower)
   end
 
