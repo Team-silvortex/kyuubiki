@@ -68,6 +68,40 @@ from:
 - transport and concentration-field solves
 - material-study and optimization workflows
 
+The transport line now also includes a headless-safe diagnostics and decision
+path:
+
+- `extract.transport_result_diagnostics` turns advection-diffusion results into
+  summary metrics for concentration span, source totals, peak flux, and
+  Peclet-number review
+- `transform.evaluate_transport_guard` evaluates those metrics against visible
+  warn/block threshold rules
+- `transform.benchmark_transport_pair` compares two transport candidates with
+  weighted min/max criteria for optimization-oriented workflows
+
+The electromagnetic line has the same decision posture for electrostatics and
+magnetostatics: diagnostics can be checked by field/energy threshold guards and
+paired candidates can be compared before a workflow commits to the next solve
+or bridge step.
+
+The structural line now has a matching headless decision path too:
+`transform.evaluate_structural_guard` checks displacement, stress, force,
+contact, or stiffness metrics against visible rules, while
+`transform.benchmark_structural_pair` compares structural candidates before a
+material-study workflow promotes one design.
+
+The acoustic line can now do the same for frequency-domain duct studies:
+`transform.evaluate_acoustic_guard` checks SPL, pressure, velocity, intensity,
+or damping limits, `transform.benchmark_acoustic_pair` compares candidate
+acoustic responses, and `transform.score_acoustic_quality` turns one response
+into an optimization-ready acoustic quality score.
+
+The modal line is covered by `transform.evaluate_modal_guard`,
+`transform.benchmark_modal_pair`, and `transform.score_modal_quality`, so
+vibration studies can gate, compare, or rank candidate designs by
+natural-frequency band, mass, period, and participation metrics before a design
+is promoted.
+
 That variety is what prevents `1.15.x` operator SDK work from hard-coding a
 single physics family, and it prevents `1.16.x` executable task files from
 becoming too narrow.

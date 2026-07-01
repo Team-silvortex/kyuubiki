@@ -93,6 +93,20 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_extract_descriptor(
+            "extract.transport_result_diagnostics",
+            "transport",
+            "transport_result_diagnostics",
+            "Extract transport diagnostics such as concentration span, source totals, peak total flux, and Peclet number from an advection-diffusion result.",
+            &[
+                "extract",
+                "transport",
+                "advection",
+                "diffusion",
+                "diagnostics",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
             "extract.thermal_result_diagnostics",
             "multi_domain",
             "thermal_result_diagnostics",

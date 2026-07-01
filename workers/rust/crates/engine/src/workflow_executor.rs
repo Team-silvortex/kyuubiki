@@ -29,13 +29,25 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.evaluate_material_margins",
     "transform.rank_material_candidates",
     "transform.extract_material_pareto_frontier",
+    "transform.evaluate_acoustic_guard",
+    "transform.benchmark_acoustic_pair",
+    "transform.score_acoustic_quality",
+    "transform.evaluate_modal_guard",
+    "transform.benchmark_modal_pair",
+    "transform.score_modal_quality",
+    "transform.evaluate_structural_guard",
+    "transform.benchmark_structural_pair",
     "transform.evaluate_thermal_guard",
     "transform.benchmark_coupled_heat_pair",
+    "transform.evaluate_electrostatic_guard",
+    "transform.benchmark_electrostatic_pair",
     "transform.evaluate_magnetostatic_guard",
     "transform.benchmark_magnetostatic_pair",
     "transform.evaluate_cfd_guard",
     "transform.benchmark_cfd_pair",
     "transform.score_cfd_quality",
+    "transform.evaluate_transport_guard",
+    "transform.benchmark_transport_pair",
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
@@ -54,6 +66,7 @@ const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
     "extract.electrostatic_peak_field",
     "extract.magnetostatic_result_diagnostics",
     "extract.magnetostatic_peak_field",
+    "extract.transport_result_diagnostics",
     "extract.stokes_flow_result_diagnostics",
     "extract.thermal_result_diagnostics",
     "extract.heat_peak_flux",
@@ -253,13 +266,16 @@ pub fn run_transform_operator(
     payload: Value,
     config: Value,
 ) -> Result<Value, String> {
+    if operator_id == "transform.first_available" {
+        return Ok(payload);
+    }
+
     match operator_id {
         "bridge.temperature_field_to_thermo_quad_2d"
         | "bridge.temperature_field_to_thermo_triangle_2d"
         | "bridge.electrostatic_field_to_heat_quad_2d"
         | "bridge.electrostatic_field_to_heat_triangle_2d"
         | "bridge.magnetostatic_field_to_heat_quad_2d"
-        | "transform.first_available"
         | "transform.merge_summary_pair"
         | "transform.compare_summary_pair"
         | "transform.aggregate_summary_collection"
@@ -272,13 +288,25 @@ pub fn run_transform_operator(
         | "transform.evaluate_material_margins"
         | "transform.rank_material_candidates"
         | "transform.extract_material_pareto_frontier"
+        | "transform.evaluate_acoustic_guard"
+        | "transform.benchmark_acoustic_pair"
+        | "transform.score_acoustic_quality"
+        | "transform.evaluate_modal_guard"
+        | "transform.benchmark_modal_pair"
+        | "transform.score_modal_quality"
+        | "transform.evaluate_structural_guard"
+        | "transform.benchmark_structural_pair"
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
+        | "transform.evaluate_electrostatic_guard"
+        | "transform.benchmark_electrostatic_pair"
         | "transform.evaluate_magnetostatic_guard"
         | "transform.benchmark_magnetostatic_pair"
         | "transform.evaluate_cfd_guard"
         | "transform.benchmark_cfd_pair"
         | "transform.score_cfd_quality"
+        | "transform.evaluate_transport_guard"
+        | "transform.benchmark_transport_pair"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

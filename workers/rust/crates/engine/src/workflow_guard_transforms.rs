@@ -9,6 +9,37 @@ pub fn evaluate_thermal_guard(payload: Value, config: Value) -> Result<Value, St
     )
 }
 
+pub fn evaluate_structural_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_structural_guard",
+        "structural",
+    )
+}
+
+pub fn evaluate_acoustic_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_acoustic_guard",
+        "acoustic",
+    )
+}
+
+pub fn evaluate_modal_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(payload, config, "transform.evaluate_modal_guard", "modal")
+}
+
+pub fn evaluate_electrostatic_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_electrostatic_guard",
+        "electrostatic",
+    )
+}
+
 pub fn evaluate_magnetostatic_guard(payload: Value, config: Value) -> Result<Value, String> {
     evaluate_threshold_guard(
         payload,
@@ -22,6 +53,15 @@ pub fn evaluate_cfd_guard(payload: Value, config: Value) -> Result<Value, String
     evaluate_threshold_guard(payload, config, "transform.evaluate_cfd_guard", "fluid")
 }
 
+pub fn evaluate_transport_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_transport_guard",
+        "transport",
+    )
+}
+
 pub fn benchmark_magnetostatic_pair(payload: Value, config: Value) -> Result<Value, String> {
     benchmark_pair(
         payload,
@@ -31,8 +71,48 @@ pub fn benchmark_magnetostatic_pair(payload: Value, config: Value) -> Result<Val
     )
 }
 
+pub fn benchmark_structural_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_structural_pair",
+        "structural",
+    )
+}
+
+pub fn benchmark_acoustic_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_acoustic_pair",
+        "acoustic",
+    )
+}
+
+pub fn benchmark_modal_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(payload, config, "transform.benchmark_modal_pair", "modal")
+}
+
+pub fn benchmark_electrostatic_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_electrostatic_pair",
+        "electrostatic",
+    )
+}
+
 pub fn benchmark_cfd_pair(payload: Value, config: Value) -> Result<Value, String> {
     benchmark_pair(payload, config, "transform.benchmark_cfd_pair", "fluid")
+}
+
+pub fn benchmark_transport_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_transport_pair",
+        "transport",
+    )
 }
 
 fn evaluate_threshold_guard(

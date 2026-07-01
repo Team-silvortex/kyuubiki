@@ -95,7 +95,7 @@ pub(super) fn magnetostatic_peak_summary(
     })
 }
 
-pub(super) fn thermal_peak_summary(
+pub(crate) fn thermal_peak_summary(
     result: &SolveHeatPlaneQuad2dResult,
     peak_element: &HeatPlaneQuadElementResult,
 ) -> Value {
@@ -130,7 +130,7 @@ pub(super) fn thermal_peak_summary(
     })
 }
 
-pub(super) fn thermo_peak_summary(
+pub(crate) fn thermo_peak_summary(
     result: &SolveThermalPlaneQuad2dResult,
     peak_node: &ThermalPlaneNodeResult,
     peak_element: &ThermalPlaneQuadElementResult,

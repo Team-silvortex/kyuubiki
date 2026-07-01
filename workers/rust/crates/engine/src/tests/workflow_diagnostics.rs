@@ -1,5 +1,6 @@
 use crate::{
     magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics,
+    transport_diagnostics::extract_transport_result_diagnostics,
     workflow_diagnostics::{
         extract_electrostatic_result_diagnostics, extract_thermal_result_diagnostics,
         extract_thermo_result_diagnostics,
@@ -13,6 +14,55 @@ fn approx_eq(left: Option<f64>, right: f64) {
         (value - right).abs() < 1.0e-9,
         "left={value}, right={right}"
     );
+}
+
+#[test]
+fn extracts_transport_result_diagnostics() {
+    let diagnostics = extract_transport_result_diagnostics(
+        serde_json::json!({
+            "nodes": [
+                { "id": "c0", "concentration": 1.0, "source": 0.0 },
+                { "id": "c1", "concentration": 0.5, "source": 2.0 },
+                { "id": "c2", "concentration": 0.2, "source": -0.5 }
+            ],
+            "elements": [
+                { "id": "cd0", "total_flux": -0.8, "diffusive_flux": -0.2, "advective_flux": -0.6, "peclet_number": 120.0 },
+                { "id": "cd1", "total_flux": 1.4, "diffusive_flux": -0.1, "advective_flux": 1.5, "peclet_number": 220.0 }
+            ]
+        }),
+        serde_json::json!({}),
+    )
+    .expect("transport diagnostics should succeed");
+
+    assert_eq!(diagnostics["diagnostic_domain"].as_str(), Some("transport"));
+    assert_eq!(
+        diagnostics["diagnostic_subject"].as_str(),
+        Some("advection_diffusion_result")
+    );
+    assert_eq!(
+        diagnostics["transport_concentration_min"].as_f64(),
+        Some(0.2)
+    );
+    assert_eq!(
+        diagnostics["transport_concentration_max"].as_f64(),
+        Some(1.0)
+    );
+    assert_eq!(
+        diagnostics["transport_concentration_span"].as_f64(),
+        Some(0.8)
+    );
+    assert_eq!(diagnostics["transport_source_sum"].as_f64(), Some(1.5));
+    assert_eq!(diagnostics["transport_source_count"].as_u64(), Some(3));
+    assert_eq!(diagnostics["transport_total_flux_peak"].as_f64(), Some(1.4));
+    assert_eq!(
+        diagnostics["transport_total_flux_peak_magnitude"].as_f64(),
+        Some(1.4)
+    );
+    assert_eq!(
+        diagnostics["transport_total_flux_peak_id"].as_str(),
+        Some("cd1")
+    );
+    assert_eq!(diagnostics["transport_peclet_peak"].as_f64(), Some(220.0));
 }
 
 #[test]
@@ -347,4 +397,36 @@ fn runs_magnetostatic_diagnostics_extract_operator_through_workflow_executor() {
     approx_eq(diagnostics["mag_vector_potential_span"].as_f64(), 3.0);
     approx_eq(diagnostics["mag_energy_density_peak"].as_f64(), 3.5);
     approx_eq(diagnostics["mag_flux_peak_magnitude"].as_f64(), 11.0);
+}
+
+#[test]
+fn runs_transport_diagnostics_extract_operator_through_workflow_executor() {
+    let diagnostics = run_extract_operator(
+        "extract.transport_result_diagnostics",
+        serde_json::json!({
+            "nodes": [
+                { "id": "c0", "concentration": 0.9, "source": 0.5 },
+                { "id": "c1", "concentration": 0.4, "source": 1.5 }
+            ],
+            "elements": [
+                { "id": "cd0", "total_flux": -2.5, "peclet_number": 75.0 }
+            ]
+        }),
+        serde_json::json!({
+            "output_prefix": "species"
+        }),
+    )
+    .expect("workflow extract operator should succeed");
+
+    assert_eq!(diagnostics["diagnostic_prefix"].as_str(), Some("species"));
+    approx_eq(diagnostics["species_concentration_span"].as_f64(), 0.5);
+    approx_eq(diagnostics["species_source_sum"].as_f64(), 2.0);
+    approx_eq(
+        diagnostics["species_total_flux_peak_magnitude"].as_f64(),
+        2.5,
+    );
+    assert_eq!(
+        diagnostics["species_total_flux_peak_id"].as_str(),
+        Some("cd0")
+    );
 }
