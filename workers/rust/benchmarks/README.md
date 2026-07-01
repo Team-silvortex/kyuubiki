@@ -47,6 +47,7 @@ make benchmark-standard-baselines PROFILE=10k REPEAT=3
 make benchmark-standard-compare PROFILE=10k REPEAT=1
 make benchmark-standard-report PROFILE=10k REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1
+make benchmark-profile-remote PROFILE=300k MATRIX=thermal-structural REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roof-300k REPEAT=1 SOLVER_PRECONDITIONER=all
 ```

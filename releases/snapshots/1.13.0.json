@@ -2,7 +2,7 @@
   "version": "1.13.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-06-30",
   "git_commit": "7c0b482c1ba032135994561cdb7ba1525c47bea5",
   "summary": "Current-line functional snapshot for tamamono 1.13.0, aligning desktop shells, release contracts, generated docs, language-pack targets, workflow defaults, and the Rust workspace while continuing operator capability work for material screening and headless execution.",

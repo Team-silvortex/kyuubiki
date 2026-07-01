@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `tamamono`
 - active line: `1.x`
-- current shipping version: `tamamono 1.13.0`
-- current documentation target: `tamamono 1.13.x` active line
+- current shipping version: `tamamono 1.14.0`
+- current documentation target: `tamamono 1.14.x` active line
 - major-version policy:
   unless there is a deliberate structural reset later, the major version is
   expected to remain `1`

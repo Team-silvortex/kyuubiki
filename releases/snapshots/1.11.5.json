@@ -2,7 +2,7 @@
   "version": "1.11.5",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-06-24",
   "git_commit": "908b8cb9fa930c4244f07e0798fa183f4ab0a456",
   "summary": "Current-line reinstall snapshot for tamamono 1.11.5, aligning desktop packages, installer contracts, update channels, language-pack driven localization, and generated documentation before the 1.12.0 shell refresh.",

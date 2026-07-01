@@ -142,19 +142,40 @@ pub(crate) fn print_table(
     matrix: &str,
     comparison: Option<&BenchmarkComparison>,
 ) {
-    println!("kyuubiki benchmark suite");
-    println!("profile: {}", profile.as_str());
-    println!("matrix: {matrix}");
-    println!("repeat count: {repeat}");
+    println!(
+        "{}",
+        render_table(results, repeat, profile, matrix, comparison)
+    );
+}
+
+pub(crate) fn render_table(
+    results: &[BenchmarkResult],
+    repeat: usize,
+    profile: BenchmarkProfile,
+    matrix: &str,
+    comparison: Option<&BenchmarkComparison>,
+) -> String {
+    let mut lines = vec![
+        "kyuubiki benchmark suite".to_string(),
+        format!("profile: {}", profile.as_str()),
+        format!("matrix: {matrix}"),
+        format!("repeat count: {repeat}"),
+    ];
     if let Some(comparison) = comparison {
-        println!(
+        lines.push(format!(
             "baseline compare: {}",
             comparison.baseline_generated_at_unix_s
-        );
+        ));
     }
-    println!();
-    println!(
-        "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
+    lines.push(String::new());
+
+    let case_width = text_column_width("case", results.iter().map(|result| result.id.as_str()));
+    let family_width = text_column_width(
+        "family",
+        results.iter().map(|result| result.family.as_str()),
+    );
+    lines.push(format!(
+        "{:<case_width$} {:<family_width$} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
         "case",
         "family",
         "status",
@@ -167,11 +188,11 @@ pub(crate) fn print_table(
         "p95 ms",
         "max ms",
         "peak rss"
-    );
+    ));
 
     for result in results {
-        println!(
-            "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>8} MiB",
+        lines.push(format!(
+            "{:<case_width$} {:<family_width$} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>8} MiB",
             result.id,
             result.family,
             if result.ok { "ok" } else { "fail" },
@@ -184,30 +205,36 @@ pub(crate) fn print_table(
             result.p95_ms,
             result.max_ms,
             kib_to_mib(result.peak_rss_kib)
-        );
+        ));
         if let Some(error) = &result.error {
-            println!("  error: {error}");
+            lines.push(format!("  error: {error}"));
         }
         if !result.memory_stages.is_empty() {
-            println!("  stage rss: {}", format_memory_stages(result));
+            lines.push(format!("  stage rss: {}", format_memory_stages(result)));
         }
         if let Some(iterations) = result.solver_iterations {
-            println!(
+            lines.push(format!(
                 "  solver: preconditioner={} iterations={} residual={:.3e}",
                 result.solver_preconditioner.as_deref().unwrap_or("default"),
                 iterations,
                 result.solver_residual_norm.unwrap_or(0.0)
-            );
+            ));
         }
         if let Some(delta) = comparison
             .and_then(|comparison| comparison.cases.iter().find(|case| case.id == result.id))
         {
-            println!(
+            lines.push(format!(
                 "  vs baseline: median {:+.2}% | peak rss {:+.2}%",
                 delta.median_delta_pct, delta.peak_rss_delta_pct
-            );
+            ));
         }
     }
+
+    lines.join("\n")
+}
+
+fn text_column_width<'a>(header: &str, values: impl Iterator<Item = &'a str>) -> usize {
+    values.map(str::len).fold(header.len(), usize::max).max(20)
 }
 
 pub(crate) fn kib_to_mib(kib: u64) -> u64 {
@@ -240,4 +267,64 @@ fn format_memory_stages(result: &BenchmarkResult) -> String {
         })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BenchmarkProfile, render_table};
+    use crate::models::BenchmarkResult;
+
+    #[test]
+    fn table_renderer_keeps_status_column_aligned_for_long_case_names() {
+        let rendered = render_table(
+            &[
+                result("short", "frame_2d"),
+                result("thermal-plane-triangle-medium", "thermal_plane_triangle_2d"),
+            ],
+            1,
+            BenchmarkProfile::Medium,
+            "thermal-structural",
+            None,
+        );
+        let lines = rendered.lines().collect::<Vec<_>>();
+        let header = lines
+            .iter()
+            .find(|line| line.starts_with("case "))
+            .expect("table header should render");
+        let long_row = lines
+            .iter()
+            .find(|line| line.starts_with("thermal-plane-triangle-medium"))
+            .expect("long case row should render");
+
+        assert_eq!(
+            header.find("status"),
+            long_row.find("ok"),
+            "status column should stay aligned for long case ids"
+        );
+    }
+
+    fn result(id: &str, family: &str) -> BenchmarkResult {
+        BenchmarkResult {
+            id: id.to_string(),
+            family: family.to_string(),
+            ok: true,
+            error: None,
+            repeat: 1,
+            min_ms: 1.0,
+            median_ms: 1.0,
+            mean_ms: 1.0,
+            p95_ms: 1.0,
+            max_ms: 1.0,
+            dof_count: 1,
+            node_count: 1,
+            element_count: 1,
+            peak_rss_kib: 1024,
+            memory_stages: Vec::new(),
+            solver_iterations: None,
+            solver_residual_norm: None,
+            solver_preconditioner: None,
+            max_displacement: 0.0,
+            max_stress: 0.0,
+        }
+    }
 }

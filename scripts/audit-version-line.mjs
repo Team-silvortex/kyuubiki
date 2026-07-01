@@ -243,6 +243,29 @@ function exactChecks(expectedVersion) {
     actual: readJson("releases/update-catalog.json").shipping_version ?? null,
   });
 
+  const currentSnapshots = (releaseIndex.snapshots ?? [])
+    .filter((snapshot) => snapshot.status === "current")
+    .map((snapshot) => snapshot.version);
+  checks.push({
+    kind: "release_current_snapshot",
+    file: "releases/index.json",
+    field: "snapshots[status=current]",
+    expected: expectedVersion,
+    actual: currentSnapshots.length === 1 ? currentSnapshots[0] : currentSnapshots.join(","),
+  });
+
+  const catalog = readJson("releases/update-catalog.json");
+  const currentCatalogVersions = (catalog.versions ?? [])
+    .filter((version) => version.status === "current")
+    .map((version) => version.version);
+  checks.push({
+    kind: "catalog_current_version",
+    file: "releases/update-catalog.json",
+    field: "versions[status=current]",
+    expected: expectedVersion,
+    actual: currentCatalogVersions.length === 1 ? currentCatalogVersions[0] : currentCatalogVersions.join(","),
+  });
+
   return checks.map((check) => ({
     ...check,
     ok: check.actual === check.expected,

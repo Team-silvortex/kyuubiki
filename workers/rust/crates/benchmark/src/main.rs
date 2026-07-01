@@ -268,6 +268,30 @@ mod tests {
     }
 
     #[test]
+    fn benchmark_cases_follow_matrix_template_order() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
+        let ids = cases
+            .iter()
+            .map(|case| case.id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            ids,
+            vec![
+                "thermal-bar-medium",
+                "thermal-truss-2d-medium",
+                "thermal-truss-3d-medium",
+                "thermal-plane-triangle-medium",
+                "thermal-plane-quad-medium",
+                "frame-2d-medium",
+                "frame-3d-medium",
+                "thermal-frame-2d-medium",
+                "thermal-frame-3d-medium",
+            ]
+        );
+    }
+
+    #[test]
     fn extended_physics_matrix_runs_uncovered_solver_families() {
         let cases = benchmark_cases(BenchmarkProfile::Medium, "extended-physics");
         let selected = cases.iter().collect::<Vec<_>>();
@@ -352,6 +376,7 @@ mod tests {
             ("mechanical-core", 5, 200_000),
             ("thermal-core", 1, 200_000),
             ("compound-core", 4, 200_000),
+            ("thermal-structural", 9, 200_000),
         ];
 
         for (matrix, expected_count, minimum_nodes) in matrix_cases {
@@ -377,6 +402,7 @@ mod tests {
             ("mechanical-core", 5, 300_000),
             ("thermal-core", 1, 300_000),
             ("compound-core", 4, 300_000),
+            ("thermal-structural", 9, 300_000),
         ];
 
         for (matrix, expected_count, minimum_nodes) in matrix_cases {

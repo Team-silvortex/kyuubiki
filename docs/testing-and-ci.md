@@ -33,7 +33,7 @@ The repository now keeps validation split by responsibility.
   new files under the shared line ceiling, and prevents known historical debt
   files from growing further
 - `make architecture-check`
-  Lightweight new-architecture guard for the `1.13.x` line. It runs the
+  Lightweight new-architecture guard for the `1.14.x` line. It runs the
   repository organization audit, validates the docs book manifest JSON, and
   exercises the focused Operator TaskIR control-plane plus Rust live path.
 - `./scripts/kyuubiki rust-line-audit`
@@ -200,6 +200,9 @@ Use these entrypoints:
 - `make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1`
   Run a remote exploratory 300k profile smoke without requiring a checked
   baseline yet.
+- `make benchmark-profile-remote PROFILE=300k MATRIX=thermal-structural REPEAT=1`
+  Run a remote 300k coupled thermal-structural smoke once the medium lane is
+  stable.
 - `make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1`
   Run a narrow 300k mechanical probe before attempting a full mechanical
   matrix.

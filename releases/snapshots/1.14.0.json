@@ -1,11 +1,11 @@
 {
-  "version": "1.12.0",
+  "version": "1.14.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "archived",
-  "date": "2026-06-28",
-  "git_commit": "d0991d22c28520be30d635c03824ae33d1054cc3",
-  "summary": "Current-line baseline snapshot for tamamono 1.12.0, aligning desktop shells, release contracts, language-pack targets, workflow graph defaults, documentation mirrors, and the Rust workspace version for the next 1.12.x functional line.",
+  "status": "current",
+  "date": "2026-07-01",
+  "git_commit": "8fc22bf44056888ffc372263fb94bca51f7d85a5",
+  "summary": "Current-line preparation snapshot for tamamono 1.14.0, aligning product versions, release contracts, language-pack targets, installation integrity docs, and benchmark coverage for the next industrialization pass.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -17,66 +17,67 @@
   },
   "product_surfaces": {
     "frontend_workbench": {
-      "version": "1.12.0",
+      "version": "1.14.0",
       "notes": [
-        "Workbench-visible docs, app rail branding, workflow graph defaults, language-pack targets, and test fixtures now align to the 1.12.0 shipping baseline.",
-        "The 1.12.x line keeps workflow串联、算子能力、无头 SDK and localization surfaces tied to one visible version contract."
+        "Workbench-visible docs, app rail branding, workflow defaults, language-pack targets, and workflow package fixtures now align to 1.14.0.",
+        "Language-pack catalog IDs advance to the 1.14 line while preserving the same import/export compatibility model."
       ]
     },
     "hub_gui": {
-      "version": "1.12.0",
+      "version": "1.14.0",
       "notes": [
-        "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to 1.12.0.",
-        "Generated update-catalog and installation-integrity pages are rebuilt from the 1.12.0 release contracts."
+        "Hub package metadata, Tauri bundle version, visible brand assets, and mirrored documentation now align to 1.14.0.",
+        "Generated update-catalog and installation-integrity pages are rebuilt from the 1.14.0 release contracts."
       ]
     },
     "workbench_gui": {
-      "version": "1.12.0",
+      "version": "1.14.0",
       "notes": [
-        "Workbench desktop-shell package metadata, bundle version, visible brand text, and package locks now match the 1.12.0 baseline."
+        "Workbench desktop-shell package metadata, bundle version, visible brand text, and brand assets now match the 1.14.0 line."
       ]
     },
     "installer_gui": {
-      "version": "1.12.0",
+      "version": "1.14.0",
       "notes": [
-        "Installer package metadata, bundle version, update UI defaults, integrity UI defaults, and visible shell branding now align to 1.12.0."
+        "Installer package metadata, bundle version, update UI defaults, integrity UI defaults, and visible shell branding now align to 1.14.0.",
+        "Installation integrity component versions now match the active 1.14.0 shipping contract."
       ]
     },
     "web_api": {
-      "version": "1.12.0",
+      "version": "1.14.0",
       "notes": [
-        "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.12.0 as the current public shipping version."
+        "Release-facing docs and catalog metadata now publish 1.14.0 as the current update target.",
+        "Benchmark coverage now includes the thermal-structural matrix and shape guards for remote-scale profile preparation."
       ]
     }
   },
   "workflow_builder": {
-    "status": "aligned",
+    "status": "active",
     "capabilities": [
-      "Local workflow snapshots and duplicated graph metadata use the 1.12.0 local line.",
-      "Workflow package fixtures and import/export tests now use 1.12.0 graph versions.",
-      "Benchmark graph examples keep 1.11.0-bench identifiers as historical benchmark fixtures."
+      "workflow graph defaults aligned to tamamono 1.14.0",
+      "thermal-structural benchmark matrix available for current-line smoke coverage"
     ]
   },
   "operator_sdk": {
     "status": "active",
     "capabilities": [
-      "Rust workspace package version is aligned to 1.12.0 for solver, engine, installer, benchmark, agent, and SDK crates.",
-      "The current version contract leaves 1.11.* snapshots intact while moving active development surfaces to the 1.12.x line."
+      "Rust workspace version aligned to 1.14.0",
+      "benchmark CLI preserves matrix order and renders long case names with stable table columns"
     ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.12.0_aarch64.dmg",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.14.0_aarch64.dmg",
     "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
     "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
     "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
     "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.12.0_aarch64.dmg",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.14.0_aarch64.dmg",
     "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
     "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
     "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
     "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.12.0_aarch64.dmg",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.14.0_aarch64.dmg",
     "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
     "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
     "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
@@ -88,12 +89,14 @@
         "M README.md",
         " M apps/frontend/package-lock.json",
         " M apps/frontend/package.json",
+        " M apps/frontend/public/brand.json",
         " M apps/frontend/src/app/docs/page.tsx",
         " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
         " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
         " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
         " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
         " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-catalog.ts",
         " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
         " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
         " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
@@ -101,6 +104,7 @@
         " M apps/frontend/src/lib/workbench/helpers.ts",
         " M apps/frontend/test/support/workflow-package-fixtures.ts",
         " M apps/frontend/test/support/workflow-template-chain-fixtures.ts",
+        " M apps/frontend/test/workflow/workbench-language-pack-catalog.test.ts",
         " M apps/frontend/test/workflow/workbench-workflow-builder-import.test.ts",
         " M apps/frontend/test/workflow/workbench-workflow-builder-validation.test.ts",
         " M apps/hub-gui/package-lock.json",
@@ -108,14 +112,18 @@
         " M apps/hub-gui/src-tauri/Cargo.toml",
         " M apps/hub-gui/src-tauri/tauri.conf.json",
         " M apps/hub-gui/test/hub-copy-registry.test.mjs",
+        " M apps/hub-gui/ui/assets/brand.json",
         " M apps/hub-gui/ui/docs/current-line.html",
         " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
         " M apps/hub-gui/ui/index.html",
         " M apps/installer-gui/README.md",
         " M apps/installer-gui/package-lock.json",
         " M apps/installer-gui/package.json",
         " M apps/installer-gui/src-tauri/Cargo.toml",
         " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
         " M apps/installer-gui/ui/index.html",
         " M apps/installer-gui/ui/integrity-panel.js",
         " M apps/installer-gui/ui/update-panel.js",
@@ -123,33 +131,53 @@
         " M apps/workbench-gui/package.json",
         " M apps/workbench-gui/src-tauri/Cargo.toml",
         " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
         " M apps/workbench-gui/ui/index.html",
+        " M deploy/installation-integrity-contract.json",
+        " M deploy/update-channels.json",
         " M docs/README.md",
         " M docs/book-manifest.json",
         " M docs/book.html",
+        " M docs/browser-storage-security-audit.html",
+        " M docs/component-integrity-protocol.html",
         " M docs/current-line.md",
         " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
         " M docs/installer-remote-control.md",
         " M docs/language-packs.md",
+        " M docs/material-research-roadmap.md",
         " M docs/navigation-matrix.html",
+        " M docs/project-architecture-organization.md",
+        " M docs/release-prep-1.9-to-1.20.md",
         " M docs/rendering-roadmap.html",
+        " M docs/testing-and-ci.md",
+        " M docs/ui-architecture-migration.md",
         " M docs/ui-automation-contract.json",
+        " M docs/update-catalog.html",
         " M docs/version-line.md",
-        " M schemas/language-pack.schema.json",
-        " M workers/rust/Cargo.toml"
+        " M language-packs/catalog.json",
+        " M language-packs/hub/fr.json",
+        " M language-packs/hub/ko.json",
+        " M language-packs/workbench/fr.json",
+        " M language-packs/workbench/ko.json",
+        " M releases/index.json",
+        " M releases/update-catalog.json",
+        " M scripts/validate-language-packs.mjs",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/benchmarks/README.md",
+        " M workers/rust/crates/benchmark/src/catalog.rs",
+        " M workers/rust/crates/benchmark/src/compare.rs",
+        " M workers/rust/crates/benchmark/src/main.rs",
+        " M workers/rust/crates/installer/src/tests.rs"
       ]
     },
     "desktop_bundle_versions": {
-      "hub": "1.12.0",
-      "workbench": "1.12.0",
-      "installer": "1.12.0"
+      "hub": "1.14.0",
+      "workbench": "1.14.0",
+      "installer": "1.14.0"
     },
     "collected_desktop_bundle_versions": {
-      "hub": {
-        "short_version": "1.11.5",
-        "build_version": "1.11.5",
-        "source": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app/Contents/Info.plist"
-      },
+      "hub": null,
       "workbench": null,
       "installer": null
     },
@@ -159,8 +187,15 @@
       "npm run check:workflow-preflight"
     ],
     "web_checks": [],
-    "rust_checks": [],
+    "rust_checks": [
+      "cargo test -p kyuubiki-benchmark",
+      "cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1"
+    ],
     "repo_checks": [
+      "node ./scripts/audit-version-line.mjs --expected 1.14.0",
+      "node ./scripts/validate-language-packs.mjs",
+      "node ./scripts/check-doc-book.mjs",
+      "node ./scripts/audit-project-organization.mjs",
       "git diff --check"
     ]
   }

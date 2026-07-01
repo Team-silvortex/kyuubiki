@@ -9,9 +9,9 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 
 `tamamono 1.x` is the active repository-wide version line.
 
-The latest broadly documented shipping snapshot is `tamamono 1.13.0`, while
-the current documentation posture is being aligned for the `1.13.x`
-preparation window inside the wider `1.13.x` to `1.20.x` industrialization
+The latest broadly documented shipping snapshot is `tamamono 1.14.0`, while
+the current documentation posture is being aligned for the `1.14.x`
+preparation window inside the wider `1.14.x` to `1.20.x` industrialization
 range.
 
 It also now has an explicit deployment split:
@@ -83,7 +83,7 @@ Start here if you need orientation:
 - [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
 - [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
-  Current `1.13.x` organization map for product shells, Orchestra, Agent,
+  Current `1.14.x` organization map for product shells, Orchestra, Agent,
   SDKs, schemas, TaskIR, and cleanup boundaries.
 - [docs/installer-remote-control.md](docs/installer-remote-control.md)
   Installer remote deployment and runtime-control source note for the new
