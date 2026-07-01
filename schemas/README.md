@@ -22,9 +22,12 @@ README.
   contracts, including named values, shape semantics, encoding, and stable
   schema references shared across workflow nodes
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
-  authored by Elixir, Rust-native SDKs, or external SDKs
+  authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
+  hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
+  rules are in [operator-task-ir-digest.md](../docs/operator-task-ir-digest.md)
 - `operator-execution-program.schema.json` is for the language-neutral program
-  contract carried inside operator task IR and consumed by agent engines
+  contract carried inside operator task IR and consumed by agent engines,
+  including solver RPC vs generic operator-task ABI consistency rules
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
@@ -38,6 +41,8 @@ README.
   `heat -> thermo_mechanical` graph wiring
 - `examples.workflow-dataset.json` is the matching reference dataset contract
   for that workflow's cross-operator payloads
+- `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
+  shared by schema readers, SDK smoke tests, and agent engine bring-up
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

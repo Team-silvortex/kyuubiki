@@ -46,6 +46,12 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             "service_health" => {
                 execute_service_health(&self.base_url, self.api_token.as_deref(), payload)
             }
+            "operator_task_prepare" => {
+                execute_operator_task_prepare(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "operator_task_execute" => {
+                execute_operator_task_execute(&self.base_url, self.api_token.as_deref(), payload)
+            }
             "solve_bar_1d"
             | "solve_acoustic_bar_1d"
             | "solve_thermal_bar_1d"
@@ -102,6 +108,42 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             }),
         }
     }
+}
+
+fn execute_operator_task_prepare(
+    base_url: &str,
+    api_token: Option<&str>,
+    payload: &Value,
+) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let result = request_json(
+        base_url,
+        api_token,
+        "POST",
+        "/api/v1/operator-tasks/prepare",
+        Some(payload.clone()),
+    )?;
+    Ok(HeadlessExecutorOutcome {
+        status: "executed".to_string(),
+        result,
+    })
+}
+
+fn execute_operator_task_execute(
+    base_url: &str,
+    api_token: Option<&str>,
+    payload: &Value,
+) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let result = request_json(
+        base_url,
+        api_token,
+        "POST",
+        "/api/v1/operator-tasks/execute",
+        Some(payload.clone()),
+    )?;
+    Ok(HeadlessExecutorOutcome {
+        status: "executed".to_string(),
+        result,
+    })
 }
 
 fn execute_service_health(
@@ -408,7 +450,7 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
     };
     if !(200..300).contains(&status_code) {
         return Err(HeadlessExecutorError {
-            message: format!("service request failed {status_code}: {path}"),
+            message: format!("service request failed {status_code}: {path}: {payload}"),
         });
     }
     Ok(payload)

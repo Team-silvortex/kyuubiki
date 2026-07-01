@@ -15,6 +15,7 @@ mod material_research;
 mod material_research_tests;
 mod material_structural;
 mod material_thermo;
+mod operator_task;
 mod plan;
 mod run;
 mod service_executor;
@@ -83,6 +84,11 @@ pub use material_thermo::{
     ThermoMaterialCandidate, ThermoMaterialCandidateReport, ThermoMaterialReport,
     build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
     build_thermo_shield_screening_steps, thermo_shield_screening_candidates,
+};
+pub use operator_task::{
+    OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
+    is_operator_task_prepare_action, prepare_operator_task_payload,
+    preview_operator_task_execute_payload,
 };
 pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,

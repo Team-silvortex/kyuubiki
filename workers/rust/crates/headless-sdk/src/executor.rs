@@ -1,7 +1,8 @@
 use crate::{
     HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
     HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport, find_action_contract,
-    validate_batch,
+    is_operator_task_execute_action, is_operator_task_prepare_action,
+    prepare_operator_task_payload, preview_operator_task_execute_payload, validate_batch,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -42,6 +43,23 @@ impl HeadlessExecutor for MockHeadlessExecutor {
         step_index: usize,
         payload: &Value,
     ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+        if is_operator_task_prepare_action(action) {
+            return prepare_operator_task_payload(payload)
+                .map(|result| HeadlessExecutorOutcome {
+                    status: "executed".to_string(),
+                    result,
+                })
+                .map_err(|message| HeadlessExecutorError { message });
+        }
+        if is_operator_task_execute_action(action) {
+            return preview_operator_task_execute_payload(payload)
+                .map(|result| HeadlessExecutorOutcome {
+                    status: "executed".to_string(),
+                    result,
+                })
+                .map_err(|message| HeadlessExecutorError { message });
+        }
+
         Ok(HeadlessExecutorOutcome {
             status: "executed".to_string(),
             result: build_result_preview(action, step_index, payload),
@@ -117,6 +135,41 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                 result_preview: build_result_preview(&step.action, step.index, &step.payload),
                 requires_confirmation,
             });
+            continue;
+        }
+
+        if is_operator_task_prepare_action(&step.action) {
+            match prepare_operator_task_payload(&payload) {
+                Ok(preview) => {
+                    executed_step_count += 1;
+                    results.insert(step.index, preview.clone());
+                    steps.push(HeadlessExecutionStepReport {
+                        index: step.index,
+                        action: step.action.clone(),
+                        risk: step.risk,
+                        status: "executed".to_string(),
+                        payload,
+                        result_preview: preview,
+                        requires_confirmation,
+                    });
+                }
+                Err(message) => {
+                    status = "failed".to_string();
+                    steps.push(HeadlessExecutionStepReport {
+                        index: step.index,
+                        action: step.action.clone(),
+                        risk: step.risk,
+                        status: "failed".to_string(),
+                        payload,
+                        result_preview: Value::Object(Map::from_iter([(
+                            "error".to_string(),
+                            Value::from(message),
+                        )])),
+                        requires_confirmation,
+                    });
+                    break;
+                }
+            }
             continue;
         }
 
@@ -228,6 +281,22 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
                     Value::from("simulated_result"),
                 )])),
             );
+        }
+        "operator_task_prepare" => {
+            return prepare_operator_task_payload(payload).unwrap_or_else(|message| {
+                Value::Object(Map::from_iter([(
+                    "error".to_string(),
+                    Value::from(message),
+                )]))
+            });
+        }
+        "operator_task_execute" => {
+            return preview_operator_task_execute_payload(payload).unwrap_or_else(|message| {
+                Value::Object(Map::from_iter([(
+                    "error".to_string(),
+                    Value::from(message),
+                )]))
+            });
         }
         "job_wait" | "job_fetch" => {
             map.insert(

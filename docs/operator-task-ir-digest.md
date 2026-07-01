@@ -1,0 +1,121 @@
+# Operator task IR digest rules
+
+Operator task IR uses SHA-256 digests so orchestrators, SDKs, and Rust agents
+can detect descriptor or task-envelope changes before execution.
+
+The reference implementations currently live in:
+
+- Elixir control plane: `KyuubikiWeb.CanonicalJson` and
+  `KyuubikiWeb.Orchestra.OperatorTaskIR`
+- Rust data plane: `kyuubiki_protocol::canonical_json` and
+  `kyuubiki_protocol::compute_operator_task_digest`
+
+Both sides must keep the golden fixture below passing before changing TaskIR
+field coverage.
+
+## Digest algorithm
+
+Both `descriptor_digest` and `task_digest` use:
+
+1. Select the digest input fields.
+2. Encode the selected JSON value using Kyuubiki canonical JSON.
+3. Hash the UTF-8 bytes with SHA-256.
+4. Encode the digest as lowercase hexadecimal.
+
+## Canonical JSON
+
+Canonical JSON is intentionally small and JSON-first:
+
+- object keys are sorted lexicographically by their string form
+- arrays keep their original order
+- strings, numbers, booleans, and null use standard JSON encoding
+- no whitespace is inserted
+- finite floating-point numbers use fixed decimal notation with up to 15
+  fractional digits, compacted by trimming trailing zeroes while preserving at
+  least one fractional digit
+
+Example:
+
+```json
+{"z":1,"a":{"b":true,"a":null},"list":[{"y":2,"x":1}]}
+```
+
+canonicalizes to:
+
+```json
+{"a":{"a":null,"b":true},"list":[{"x":1,"y":2}],"z":1}
+```
+
+Float examples:
+
+- `160.0` -> `160.0`
+- `1.2e-5` -> `0.000012`
+- `7.0e10` -> `70000000000.0`
+
+## Descriptor digest
+
+`descriptor_digest` covers the operator snapshot carried in task IR.
+
+It is intentionally narrower than the full task envelope and answers:
+
+> Which operator descriptor did this task use?
+
+## Task digest
+
+`task_digest` covers the execution envelope fields listed in
+`integrity.task_digest_fields`.
+
+Current fields:
+
+- `schema_version`
+- `task_id`
+- `operator`
+- `descriptor_authoring`
+- `node`
+- `input_artifact`
+- `config`
+- `execution_program`
+- `dataset_contract`
+- `orchestration_context`
+- `runtime_hints`
+
+`integrity` itself is not included, avoiding self-referential digests.
+
+## Golden fixtures
+
+The basic cross-language fixture used by tests is:
+
+- operator id: `transform.fixture`
+- family: `fixture`
+- kind: `transform`
+- package ref: `orchestra://operator-package/transform.fixture`
+- input: `{"x":1}`
+- config: `{"alpha":true}`
+- task id: `fixture-task`
+- authoring mode: `rust_native`
+
+Expected digests:
+
+- descriptor digest:
+  `b397ef3b203a0500a29aabe507868b4104ddf22faee5015df69cc0486ac35cd2`
+- task digest:
+  `86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f`
+
+The float-heavy fixture protects fixed-decimal canonicalization:
+
+- operator id: `transform.float_fixture`
+- family: `fixture`
+- kind: `transform`
+- package ref: `orchestra://operator-package/transform.float_fixture`
+- input:
+  `{"temperature_delta":160.0,"thermal_expansion":0.000012,"youngs_modulus":70000000000.0,"poisson_ratio":0.33}`
+- config: `{"constraint_factor":0.7}`
+- task id: `float-fixture-task`
+- authoring mode: `rust_native`
+
+Expected digests:
+
+- descriptor digest:
+  `083dfdfa3a8e7115d6966df8d64b457205db07811a4658d6bd319b60778aa612`
+- task digest:
+  `d87818ffb27cc8f01e6a360f973ebf1d40025362b28cda0909078b99cd6139b7`

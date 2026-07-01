@@ -4,6 +4,36 @@
   "title": "Kyuubiki operator execution program",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "program_kind": { "const": "solver" } },
+        "required": ["program_kind"]
+      },
+      "then": {
+        "properties": {
+          "runtime_protocol": { "const": "kyuubiki.solver-rpc/v1" },
+          "abi": {
+            "properties": { "kind": { "const": "solver_rpc" } }
+          },
+          "entrypoint": {
+            "properties": { "kind": { "const": "solver_method" } }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "runtime_protocol": { "const": "kyuubiki.operator-execution/v1" },
+          "abi": {
+            "properties": { "kind": { "const": "operator_task" } }
+          },
+          "entrypoint": {
+            "properties": { "kind": { "const": "operator_id" } }
+          }
+        }
+      }
+    }
+  ],
   "required": [
     "schema_version",
     "program_id",

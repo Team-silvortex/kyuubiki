@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   Converts catalog operator descriptions into an engine-facing task IR.
   """
 
+  alias KyuubikiWeb.CanonicalJson
   alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
   alias KyuubikiWeb.WorkflowOperatorCatalog
 
@@ -84,6 +85,30 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   def agent_routing_opts(_task_ir), do: []
 
+  @spec task_digest_fields() :: [String.t()]
+  def task_digest_fields do
+    [
+      "schema_version",
+      "task_id",
+      "operator",
+      "descriptor_authoring",
+      "node",
+      "input_artifact",
+      "config",
+      "execution_program",
+      "dataset_contract",
+      "orchestration_context",
+      "runtime_hints"
+    ]
+  end
+
+  @spec compute_task_digest(map()) :: String.t()
+  def compute_task_digest(task) when is_map(task) do
+    task
+    |> Map.take(task_digest_fields())
+    |> digest_map()
+  end
+
   defp envelope(operator, input_artifact, config, opts) do
     execution = Map.get(operator, "execution", %{})
     node = Keyword.get(opts, :node, %{})
@@ -129,22 +154,6 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       "module",
       "execution"
     ])
-  end
-
-  defp task_digest_fields do
-    [
-      "schema_version",
-      "task_id",
-      "operator",
-      "descriptor_authoring",
-      "node",
-      "input_artifact",
-      "config",
-      "execution_program",
-      "dataset_contract",
-      "orchestration_context",
-      "runtime_hints"
-    ]
   end
 
   defp operator_id(%{"id" => operator_id}) when is_binary(operator_id) and operator_id != "",
@@ -274,13 +283,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   end
 
   defp descriptor_digest(operator) do
-    json = Jason.encode!(operator_snapshot(operator))
-    :crypto.hash(:sha256, json) |> Base.encode16(case: :lower)
+    operator |> operator_snapshot() |> digest_map()
   end
 
-  defp task_digest(task) do
-    task_for_digest = Map.take(task, task_digest_fields())
-    json = Jason.encode!(task_for_digest)
+  defp task_digest(task), do: compute_task_digest(task)
+
+  defp digest_map(map) do
+    json = CanonicalJson.encode!(map)
     :crypto.hash(:sha256, json) |> Base.encode16(case: :lower)
   end
 

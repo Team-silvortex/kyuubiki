@@ -2,6 +2,7 @@ mod advanced_rpc;
 mod core;
 mod field_rpc;
 mod frame_beam_rpc;
+mod operator_task_ir;
 mod spring_control_rpc;
 mod thermal_plane_rpc;
 mod workflows;
@@ -18,12 +19,12 @@ mod prelude {
         HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult,
         HeatToThermoPlaneTriangle2dWorkflowRequest, HeatToThermoPlaneTriangle2dWorkflowResult, Job,
         JobStatus, MagnetostaticBar1dElementInput, MagnetostaticBar1dNodeInput,
-        OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin,
-        OperatorPortDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
-        OperatorSchemaRef, OperatorValidationProfile, OperatorValidationStatus,
-        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
-        RpcResponse, SolveAcousticBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
-        SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+        OPERATOR_TASK_IR_SCHEMA, OperatorArtifactRef, OperatorDescriptor, OperatorKind,
+        OperatorOrigin, OperatorPortDescriptor, OperatorRunContext, OperatorRunRequest,
+        OperatorRunResult, OperatorSchemaRef, OperatorTaskDigestError, OperatorValidationProfile,
+        OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
+        RpcProgress, RpcRequest, RpcResponse, SolveAcousticBar1dRequest, SolveBarRequest,
+        SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
         SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
         SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
@@ -44,6 +45,7 @@ mod prelude {
         WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
         WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
         WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
-        WorkflowNodePortRef, WorkflowPort,
+        WorkflowNodePortRef, WorkflowPort, canonical_json, compute_operator_task_digest,
+        summarize_operator_task_execution, verify_operator_task_digest,
     };
 }

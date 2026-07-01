@@ -5,7 +5,8 @@
 It currently contains:
 
 - `crates/protocol`
-  Shared RPC messages, job/result payloads, and agent-wire contracts.
+  Shared RPC messages, job/result payloads, agent-wire contracts, and
+  language-neutral operator TaskIR digest helpers.
 - `crates/operator-sdk`
   Author-facing Rust traits and registry helpers for building workflow
   operators against the shared protocol contract, including external-local

@@ -1,6 +1,7 @@
 mod analysis;
 mod job;
 mod operator;
+mod operator_task_ir;
 mod workflow;
 
 mod types {
@@ -25,6 +26,11 @@ pub use operator::{
     OperatorValidationProfile, OperatorValidationStatus, WorkflowDatasetAxis,
     WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
     WorkflowDatasetValueInfo,
+};
+pub use operator_task_ir::{
+    OPERATOR_TASK_DIGEST_FIELDS, OPERATOR_TASK_IR_SCHEMA, OperatorTaskDigestError,
+    OperatorTaskExecutionSummary, canonical_json, compute_operator_task_digest,
+    operator_task_digest_fields, summarize_operator_task_execution, verify_operator_task_digest,
 };
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;

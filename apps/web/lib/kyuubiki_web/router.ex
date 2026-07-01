@@ -203,6 +203,8 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  forward("/api/v1/operator-tasks", to: KyuubikiWeb.OperatorTaskRouter)
+
   get "/api/v1/operators" do
     with_auth(conn, :read, fn conn ->
       conn = fetch_query_params(conn)

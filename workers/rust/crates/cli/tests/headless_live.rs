@@ -244,6 +244,80 @@ fn electrostatic_inline_graph() -> Value {
     })
 }
 
+fn golden_operator_task_ir() -> Value {
+    json!({
+        "schema_version": "kyuubiki.operator-task-ir/v1",
+        "task_id": "fixture-task",
+        "operator": {
+            "id": "transform.fixture",
+            "family": "fixture",
+            "kind": "transform",
+            "execution": {
+                "package_ref": "orchestra://operator-package/transform.fixture"
+            }
+        },
+        "descriptor_authoring": {
+            "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+            "mode": "rust_native",
+            "runtime": "rust",
+            "source": "fixture",
+            "hot_reloadable": false,
+            "execution_language": "language_neutral"
+        },
+        "node": {},
+        "input_artifact": { "x": 1 },
+        "config": { "alpha": true },
+        "execution_program": {
+            "schema_version": "kyuubiki.operator-execution-program/v1",
+            "program_id": "transform.fixture",
+            "program_family": "fixture",
+            "program_kind": "transform",
+            "operator_category_id": null,
+            "package_ref": "orchestra://operator-package/transform.fixture",
+            "package_version": "library-managed",
+            "package_integrity": null,
+            "runtime_protocol": "kyuubiki.operator-execution/v1",
+            "abi": {
+                "kind": "operator_task",
+                "input_encoding": "json",
+                "output_encoding": "json"
+            },
+            "entrypoint": {
+                "kind": "operator_id",
+                "name": "transform.fixture",
+                "operator_kind": "transform"
+            },
+            "bindings": {
+                "input_artifact": "task.input_artifact",
+                "config": "task.config",
+                "output_artifact": "task.output_artifact"
+            },
+            "node_binding": {
+                "node_id": null,
+                "input_ports": [],
+                "output_ports": []
+            }
+        },
+        "dataset_contract": {},
+        "orchestration_context": {},
+        "runtime_hints": {
+            "authority_mode": "central_operator_library",
+            "execution_mode": "orchestra_fetch",
+            "source_ref": null,
+            "package_ref": "orchestra://operator-package/transform.fixture",
+            "package_version": "library-managed",
+            "placement_tags": [],
+            "required_capabilities": [],
+            "cache_scope": "job",
+            "agent_fetchable": true,
+            "operator_kind": "transform"
+        },
+        "integrity": {
+            "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
+        }
+    })
+}
+
 #[test]
 fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
     let server = start_live_server().expect("start live server");
@@ -343,6 +417,59 @@ fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
     );
 
     let _ = fs::remove_file(health_path);
+    let _ = fs::remove_file(workflow_path);
+}
+
+#[test]
+fn rust_headless_cli_prepares_operator_task_through_control_plane() {
+    let server = start_live_server().expect("start live server");
+    let base_url = format!("http://127.0.0.1:{}", server.port);
+
+    let workflow_path = write_temp_json(
+        "operator-task-prepare",
+        &json!({
+            "schema_version": "kyuubiki.headless-workflow/v1",
+            "exported_at": "2026-07-01T00:00:00Z",
+            "language": "en",
+            "workflow": {
+                "id": "workflow.live.operator-task-prepare",
+                "steps": [
+                    {
+                        "action": "operator_task_prepare",
+                        "payload": {
+                            "task": golden_operator_task_ir()
+                        }
+                    }
+                ]
+            }
+        }),
+    );
+
+    let output = run_headless_command(&[
+        "run",
+        workflow_path.to_str().expect("workflow path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        &base_url,
+    ]);
+    assert_command_ok(&output, &server.logs());
+    let payload = parse_json_output(&output);
+
+    assert_eq!(payload["status"], "ok");
+    assert_eq!(payload["executed_step_count"], 1);
+    assert_eq!(payload["steps"][0]["result_preview"]["status"], "verified");
+    assert_eq!(
+        payload["steps"][0]["result_preview"]["operator_id"],
+        "transform.fixture"
+    );
+    assert_eq!(
+        payload["steps"][0]["result_preview"]["task_digest"],
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
+    );
+
     let _ = fs::remove_file(workflow_path);
 }
 

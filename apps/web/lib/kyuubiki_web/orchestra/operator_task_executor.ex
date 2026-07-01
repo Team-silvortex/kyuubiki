@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   `run_operator_task_ir`; this module keeps Elixir-side tests executable.
   """
 
+  alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.WorkflowOperatorRuntime
 
   @schema_version "kyuubiki.operator-task-ir/v1"
@@ -13,7 +14,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
   def execute(%{"schema_version" => @schema_version} = task_ir) do
-    with {:ok, operator} <- operator(task_ir),
+    with :ok <- validate_task_digest(task_ir),
+         {:ok, operator} <- operator(task_ir),
          {:ok, operator_id} <- operator_id(operator),
          {:ok, kind} <- operator_kind(operator),
          {:ok, program} <- execution_program(task_ir),
@@ -44,6 +46,19 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   defp dispatch(kind, _operator_id, _input, _config, _node),
     do: {:error, {:unsupported_operator_task_kind, kind}}
+
+  defp validate_task_digest(%{"integrity" => %{"task_digest" => task_digest}} = task_ir)
+       when is_binary(task_digest) and task_digest != "" do
+    computed = OperatorTaskIR.compute_task_digest(task_ir)
+
+    if computed == task_digest do
+      :ok
+    else
+      {:error, {:operator_task_digest_mismatch, %{expected: task_digest, actual: computed}}}
+    end
+  end
+
+  defp validate_task_digest(_task_ir), do: {:error, :missing_operator_task_digest}
 
   defp operator(%{"operator" => operator}) when is_map(operator), do: {:ok, operator}
   defp operator(_task_ir), do: {:error, :missing_operator_task_operator}

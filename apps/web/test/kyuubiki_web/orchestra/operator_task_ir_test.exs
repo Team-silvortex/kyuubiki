@@ -170,6 +170,73 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
     refute task_a["integrity"]["task_digest"] == task_c["integrity"]["task_digest"]
   end
 
+  test "keeps a golden canonical task digest for cross-language implementations" do
+    operator = %{
+      "id" => "transform.fixture",
+      "family" => "fixture",
+      "kind" => "transform",
+      "execution" => %{
+        "package_ref" => "orchestra://operator-package/transform.fixture"
+      }
+    }
+
+    assert {:ok, task} =
+             OperatorTaskIR.build_from_descriptor(
+               operator,
+               %{"x" => 1},
+               %{"alpha" => true},
+               task_id: "fixture-task",
+               descriptor_authoring: %{
+                 "mode" => "rust_native",
+                 "runtime" => "rust",
+                 "source" => "fixture",
+                 "hot_reloadable" => false
+               }
+             )
+
+    assert task["integrity"]["descriptor_digest"] ==
+             "b397ef3b203a0500a29aabe507868b4104ddf22faee5015df69cc0486ac35cd2"
+
+    assert task["integrity"]["task_digest"] ==
+             "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
+  end
+
+  test "keeps a golden canonical task digest for float-heavy cross-language payloads" do
+    operator = %{
+      "id" => "transform.float_fixture",
+      "family" => "fixture",
+      "kind" => "transform",
+      "execution" => %{
+        "package_ref" => "orchestra://operator-package/transform.float_fixture"
+      }
+    }
+
+    assert {:ok, task} =
+             OperatorTaskIR.build_from_descriptor(
+               operator,
+               %{
+                 "temperature_delta" => 160.0,
+                 "thermal_expansion" => 1.2e-5,
+                 "youngs_modulus" => 70.0e9,
+                 "poisson_ratio" => 0.33
+               },
+               %{"constraint_factor" => 0.7},
+               task_id: "float-fixture-task",
+               descriptor_authoring: %{
+                 "mode" => "rust_native",
+                 "runtime" => "rust",
+                 "source" => "float_fixture",
+                 "hot_reloadable" => false
+               }
+             )
+
+    assert task["integrity"]["descriptor_digest"] ==
+             "083dfdfa3a8e7115d6966df8d64b457205db07811a4658d6bd319b60778aa612"
+
+    assert task["integrity"]["task_digest"] ==
+             "d87818ffb27cc8f01e6a360f973ebf1d40025362b28cda0909078b99cd6139b7"
+  end
+
   test "rejects incomplete Rust-authored descriptors before task IR construction" do
     base_operator = %{
       "id" => "transform.rust_material_screen",

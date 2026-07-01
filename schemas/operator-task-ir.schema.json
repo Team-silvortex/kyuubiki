@@ -4,6 +4,16 @@
   "title": "Kyuubiki operator task IR",
   "type": "object",
   "additionalProperties": true,
+  "$defs": {
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
   "required": [
     "schema_version",
     "task_id",
@@ -45,14 +55,8 @@
             },
             "package_version": { "type": "string" },
             "integrity": { "type": ["object", "null"] },
-            "required_capabilities": {
-              "type": "array",
-              "items": { "type": "string" }
-            },
-            "placement_tags": {
-              "type": "array",
-              "items": { "type": "string" }
-            },
+            "required_capabilities": { "$ref": "#/$defs/stringArray" },
+            "placement_tags": { "$ref": "#/$defs/stringArray" },
             "agent_fetchable": { "type": "boolean" }
           }
         }
@@ -89,14 +93,55 @@
     },
     "dataset_contract": { "type": "object" },
     "orchestration_context": { "type": "object" },
-    "runtime_hints": { "type": "object" },
+    "runtime_hints": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "authority_mode",
+        "execution_mode",
+        "package_ref",
+        "package_version",
+        "placement_tags",
+        "required_capabilities",
+        "cache_scope",
+        "agent_fetchable",
+        "operator_kind"
+      ],
+      "properties": {
+        "authority_mode": {
+          "type": "string",
+          "enum": ["central_operator_library", "single_orchestrator", "offline_mesh", "self_directed"]
+        },
+        "execution_mode": {
+          "type": "string",
+          "enum": ["orchestra_fetch", "agent_local", "offline_mesh_fetch"]
+        },
+        "source_ref": { "type": ["string", "null"] },
+        "package_ref": {
+          "type": ["string", "null"],
+          "pattern": "^orchestra://operator-package/.+"
+        },
+        "package_version": { "type": "string", "minLength": 1 },
+        "placement_tags": { "$ref": "#/$defs/stringArray" },
+        "required_capabilities": { "$ref": "#/$defs/stringArray" },
+        "cache_scope": {
+          "type": "string",
+          "enum": ["job", "session", "agent", "none"]
+        },
+        "agent_fetchable": { "type": "boolean" },
+        "operator_kind": {
+          "type": "string",
+          "enum": ["solver", "transform", "extract", "export", "workflow_bridge"]
+        }
+      }
+    },
     "integrity": {
       "type": "object",
       "required": ["descriptor_digest", "task_digest", "task_digest_fields", "digest_algorithm"],
       "properties": {
         "operator_integrity": { "type": ["object", "null"] },
-        "descriptor_digest": { "type": "string", "minLength": 1 },
-        "task_digest": { "type": "string", "minLength": 1 },
+        "descriptor_digest": { "$ref": "#/$defs/sha256Hex" },
+        "task_digest": { "$ref": "#/$defs/sha256Hex" },
         "task_digest_fields": {
           "type": "array",
           "items": { "type": "string" },

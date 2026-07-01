@@ -175,6 +175,9 @@ Use these paths intentionally.
 - SDK -> control plane HTTP
   Best when persistence, governance, catalog selection, or distributed routing
   matters.
+- SDK -> control plane HTTP `POST /api/v1/operator-tasks/prepare`
+  Best when a headless client needs the control plane to verify TaskIR
+  integrity and expose the language-neutral execution summary before dispatch.
 - SDK -> solver RPC
   Best when a trusted environment wants the shortest path to a specific solver
   node or LAN mesh.
