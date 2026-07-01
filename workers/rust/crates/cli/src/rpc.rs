@@ -6,22 +6,22 @@ use serde::de::DeserializeOwned;
 
 use kyuubiki_protocol::{
     CancelJobRequest, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse, SolveAcousticBar1dRequest,
-    SolveBarRequest, SolveBeam1dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
-    SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
-    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
-    SolveSpring2dRequest, SolveSpring3dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
-    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
+    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+    SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
+    SolveMagnetostaticPlaneTriangle2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_acoustic_bar_1d, solve_bar_1d, solve_beam_1d, solve_contact_gap_1d,
-    solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
+    solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
     solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
     solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d,
@@ -116,6 +116,16 @@ pub(crate) fn handle_request(
                 "magnetostatic bar result",
                 |params| params.nodes.len(),
                 solve_magnetostatic_bar_1d,
+            )
+        }
+        RpcMethod::SolveAdvectionDiffusionBar1d => {
+            run_solver::<SolveAdvectionDiffusionBar1dRequest, _, _, _>(
+                request,
+                writer,
+                "1d advection-diffusion bar",
+                "advection-diffusion bar result",
+                |params| params.nodes.len(),
+                solve_advection_diffusion_bar_1d,
             )
         }
         RpcMethod::SolveThermalTruss2d => run_solver::<SolveThermalTruss2dRequest, _, _, _>(

@@ -9,6 +9,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.heat_bar_1d",
     "solve.electrostatic_bar_1d",
     "solve.magnetostatic_bar_1d",
+    "solve.advection_diffusion_bar_1d",
     "solve.magnetostatic_plane_triangle_2d",
     "solve.magnetostatic_plane_quad_2d",
     "solve.electrostatic_plane_triangle_2d",
@@ -86,6 +87,16 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::MagnetostaticBar1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::MagnetostaticBar1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.advection_diffusion_bar_1d" => encode_solve_result(
+            solve(EngineSolveRequest::AdvectionDiffusionBar1d(decode(
+                payload,
+            )?))?,
+            |result| match result {
+                AnalysisResult::AdvectionDiffusionBar1d(result) => Some(result),
                 _ => None,
             },
             operator_id,

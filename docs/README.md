@@ -96,6 +96,9 @@ Then branch by intent:
 - `material-research-roadmap.md`
   Reliability roadmap for moving material studies from runnable prototypes to
   reproducible screening, review, and eventual qualification workflows.
+- `physics-coverage-map.md`
+  `1.14.x` coverage map for broad solver-family smoke coverage before the
+  `1.15.x` and `1.16.x` engine/task-format contract freeze.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`

@@ -317,3 +317,53 @@ fn handles_magnetostatic_bar_1d_rpc_requests() {
     assert!((result.max_magnetic_field_strength - 10.0).abs() < 1.0e-6);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);
 }
+
+#[test]
+fn handles_advection_diffusion_bar_1d_rpc_requests() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-advection-diffusion-bar".to_string(),
+        method: RpcMethod::SolveAdvectionDiffusionBar1d,
+        params: serde_json::to_value(SolveAdvectionDiffusionBar1dRequest {
+            nodes: vec![
+                AdvectionDiffusionBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_concentration: true,
+                    concentration: 1.0,
+                    source: 0.0,
+                },
+                AdvectionDiffusionBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_concentration: true,
+                    concentration: 0.2,
+                    source: 0.0,
+                },
+            ],
+            elements: vec![AdvectionDiffusionBar1dElementInput {
+                id: "cd0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                diffusivity: 0.05,
+                velocity: 0.1,
+            }],
+        })
+        .expect("params"),
+    };
+
+    let response =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    let AgentReply::Stream(progress_frames, final_response) = response;
+
+    assert_eq!(progress_frames.len(), 4);
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveAdvectionDiffusionBar1dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("advection-diffusion bar result");
+    assert_eq!(result.max_concentration, 1.0);
+    assert!(result.max_total_flux > 0.0);
+    assert!((result.max_peclet_number - 1.0).abs() < 1.0e-9);
+}

@@ -210,6 +210,48 @@ fn serializes_magnetostatic_bar_1d_rpc_round_trip() {
 }
 
 #[test]
+fn serializes_advection_diffusion_bar_1d_rpc_round_trip() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-advection-diffusion-bar".to_string(),
+        method: RpcMethod::SolveAdvectionDiffusionBar1d,
+        params: serde_json::to_value(SolveAdvectionDiffusionBar1dRequest {
+            nodes: vec![
+                AdvectionDiffusionBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_concentration: true,
+                    concentration: 1.0,
+                    source: 0.0,
+                },
+                AdvectionDiffusionBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_concentration: true,
+                    concentration: 0.1,
+                    source: 0.0,
+                },
+            ],
+            elements: vec![AdvectionDiffusionBar1dElementInput {
+                id: "cd0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                diffusivity: 0.05,
+                velocity: 0.1,
+            }],
+        })
+        .expect("request params should serialize"),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveAdvectionDiffusionBar1d);
+    assert_eq!(decoded.id, "rpc-advection-diffusion-bar");
+}
+
+#[test]
 fn serializes_electrostatic_plane_triangle_2d_rpc_round_trip() {
     let request = RpcRequest {
         rpc_version: RPC_VERSION,

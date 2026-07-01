@@ -12,9 +12,10 @@ use crate::{
         generate_space_frame_grid,
     },
     generators_extended::{
-        generate_acoustic_bar_case, generate_electrostatic_bar_case,
-        generate_electrostatic_quad_panel, generate_electrostatic_triangle_panel,
-        generate_heat_bar_case, generate_heat_triangle_panel, generate_magnetostatic_bar_case,
+        generate_acoustic_bar_case, generate_advection_diffusion_bar_case,
+        generate_electrostatic_bar_case, generate_electrostatic_quad_panel,
+        generate_electrostatic_triangle_panel, generate_heat_bar_case,
+        generate_heat_triangle_panel, generate_magnetostatic_bar_case,
         generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
         generate_stokes_quad_panel, generate_torsion_case,
     },
@@ -75,6 +76,7 @@ pub(crate) enum BenchmarkFamily {
     HeatBar1d,
     ElectrostaticBar1d,
     MagnetostaticBar1d,
+    AdvectionDiffusionBar1d,
     Torsion1d,
     Spring1d,
     Spring2d,
@@ -238,6 +240,13 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             workload: BenchmarkWorkload::MagnetostaticBar1d(generate_magnetostatic_bar_case(
                 profile.axial_elements,
             )),
+        },
+        BenchmarkFamily::AdvectionDiffusionBar1d => BenchmarkCase {
+            id,
+            family: "advection_diffusion_bar_1d",
+            workload: BenchmarkWorkload::AdvectionDiffusionBar1d(
+                generate_advection_diffusion_bar_case(profile.axial_elements),
+            ),
         },
         BenchmarkFamily::Torsion1d => BenchmarkCase {
             id,

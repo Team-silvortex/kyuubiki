@@ -90,6 +90,9 @@ Start here if you need orientation:
   operator-facing remote surface.
 - [docs/fem-blender-roadmap.md](docs/fem-blender-roadmap.md)
   Product north star for becoming the Blender of FEM.
+- [docs/physics-coverage-map.md](docs/physics-coverage-map.md)
+  `1.14.x` physics coverage map for broad solver-family smoke coverage before
+  `1.15.x` and `1.16.x` engine/task-format contracts harden.
 
 ## Read By Intent
 
@@ -122,6 +125,12 @@ Start here if you need orientation:
   heat-bar and heat-plane studies with temperature and flux review
 - `Thermo-mechanical`
   thermal bar, beam, frame, truss, and plane response paths
+- `Electromagnetic fields`
+  electrostatic and magnetostatic bar/plane smoke paths
+- `Transport and flow`
+  1D advection-diffusion concentration transport and simplified Stokes plane flow
+- `Acoustic and modal`
+  acoustic bar and modal frame smoke paths
 
 ### Supported study families
 
@@ -138,6 +147,12 @@ The strongest currently verified families are:
 
 Lighter but supported operator families:
 
+- `advection_diffusion_bar_1d`
+- `acoustic_bar_1d`
+- `electrostatic_bar_1d`, `electrostatic_plane_triangle_2d`, `electrostatic_plane_quad_2d`
+- `magnetostatic_bar_1d`, `magnetostatic_plane_triangle_2d`, `magnetostatic_plane_quad_2d`
+- `stokes_flow_plane_quad_2d`
+- `modal_frame_2d`, `modal_frame_3d`
 - `spring_2d`
 - `spring_3d`
 

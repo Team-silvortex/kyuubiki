@@ -1,13 +1,14 @@
 use kyuubiki_protocol::{
-    AcousticBar1dElementInput, AcousticBar1dNodeInput, ElectrostaticBar1dElementInput,
-    ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
+    AcousticBar1dElementInput, AcousticBar1dNodeInput, AdvectionDiffusionBar1dElementInput,
+    AdvectionDiffusionBar1dNodeInput, ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput,
+    ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
     ElectrostaticPlaneTriangleElementInput, HeatBar1dElementInput, HeatBar1dNodeInput,
     HeatPlaneNodeInput, HeatPlaneTriangleElementInput, MagnetostaticBar1dElementInput,
     MagnetostaticBar1dNodeInput, MagnetostaticPlaneNodeInput, MagnetostaticPlaneQuadElementInput,
     MagnetostaticPlaneTriangleElementInput, SolveAcousticBar1dRequest,
-    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveHeatBar1dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveAdvectionDiffusionBar1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveHeatBar1dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveTorsion1dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, Torsion1dElementInput, Torsion1dNodeInput,
@@ -65,6 +66,27 @@ pub(crate) fn generate_magnetostatic_bar_case(elements: usize) -> SolveMagnetost
         permeability: 4.0 * std::f64::consts::PI * 1.0e-7,
     });
     SolveMagnetostaticBar1dRequest { nodes, elements }
+}
+
+pub(crate) fn generate_advection_diffusion_bar_case(
+    elements: usize,
+) -> SolveAdvectionDiffusionBar1dRequest {
+    let nodes = line_nodes(elements, |index, x, end| AdvectionDiffusionBar1dNodeInput {
+        id: format!("c{index}"),
+        x,
+        fix_concentration: index == 0 || index == end,
+        concentration: if index == 0 { 1.0 } else { 0.1 },
+        source: if index == end / 2 { 0.02 } else { 0.0 },
+    });
+    let elements = line_elements(elements, |index| AdvectionDiffusionBar1dElementInput {
+        id: format!("ce{index}"),
+        node_i: index,
+        node_j: index + 1,
+        area: 0.015,
+        diffusivity: 1.2e-5,
+        velocity: 0.08,
+    });
+    SolveAdvectionDiffusionBar1dRequest { nodes, elements }
 }
 
 pub(crate) fn generate_acoustic_bar_case(elements: usize) -> SolveAcousticBar1dRequest {

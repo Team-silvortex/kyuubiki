@@ -2,18 +2,18 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    SolveAcousticBar1dResult, SolveBarResult, SolveBeam1dResult, SolveContactGap1dResult,
-    SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dResult,
-    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dResult, SolveFrame3dResult,
-    SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult,
-    SolveMagnetostaticBar1dResult, SolveMagnetostaticPlaneQuad2dResult,
-    SolveMagnetostaticPlaneTriangle2dResult, SolveModalFrame2dResult, SolveModalFrame3dResult,
-    SolveNonlinearSpring1dResult, SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult,
-    SolveSpring1dResult, SolveSpring2dResult, SolveSpring3dResult,
-    SolveStokesFlowPlaneQuad2dResult, SolveThermalBar1dResult, SolveThermalBeam1dResult,
-    SolveThermalFrame2dResult, SolveThermalFrame3dResult, SolveThermalPlaneQuad2dResult,
-    SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dResult, SolveThermalTruss3dResult,
-    SolveTorsion1dResult, SolveTruss2dResult, SolveTruss3dResult,
+    SolveAcousticBar1dResult, SolveAdvectionDiffusionBar1dResult, SolveBarResult,
+    SolveBeam1dResult, SolveContactGap1dResult, SolveElectrostaticBar1dResult,
+    SolveElectrostaticPlaneQuad2dResult, SolveElectrostaticPlaneTriangle2dResult,
+    SolveFrame2dResult, SolveFrame3dResult, SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult,
+    SolveHeatPlaneTriangle2dResult, SolveMagnetostaticBar1dResult,
+    SolveMagnetostaticPlaneQuad2dResult, SolveMagnetostaticPlaneTriangle2dResult,
+    SolveModalFrame2dResult, SolveModalFrame3dResult, SolveNonlinearSpring1dResult,
+    SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult, SolveSpring1dResult, SolveSpring2dResult,
+    SolveSpring3dResult, SolveStokesFlowPlaneQuad2dResult, SolveThermalBar1dResult,
+    SolveThermalBeam1dResult, SolveThermalFrame2dResult, SolveThermalFrame3dResult,
+    SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dResult,
+    SolveThermalTruss3dResult, SolveTorsion1dResult, SolveTruss2dResult, SolveTruss3dResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,6 +25,7 @@ pub enum AnalysisResult {
     HeatBar1d(SolveHeatBar1dResult),
     ElectrostaticBar1d(SolveElectrostaticBar1dResult),
     MagnetostaticBar1d(SolveMagnetostaticBar1dResult),
+    AdvectionDiffusionBar1d(SolveAdvectionDiffusionBar1dResult),
     ElectrostaticPlaneTriangle2d(SolveElectrostaticPlaneTriangle2dResult),
     ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dResult),
     MagnetostaticPlaneTriangle2d(SolveMagnetostaticPlaneTriangle2dResult),

@@ -76,6 +76,13 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             &["verified", "electromagnetic", "magnetostatic", "bar", "1d"],
         ),
         built_in_solver_descriptor(
+            "solve.advection_diffusion_bar_1d",
+            "transport",
+            "advection_diffusion_bar_1d",
+            "Solve a 1D steady advection-diffusion transport model and expose concentration, flux, and Peclet diagnostics.",
+            &["smoke", "transport", "advection", "diffusion", "bar", "1d"],
+        ),
+        built_in_solver_descriptor(
             "solve.magnetostatic_plane_triangle_2d",
             "electromagnetic",
             "magnetostatic_plane_triangle_2d",

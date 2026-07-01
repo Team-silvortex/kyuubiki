@@ -171,54 +171,47 @@ What not to optimize for here:
 ### 1.14.x
 
 Primary theme:
-headless symmetry
+physics coverage before engine-format freeze
 
 Focus:
 
-- make headless SDK usage a first-class product path
-- keep submit, validate, inspect, fetch, and replay surfaces coherent across
-  Rust, Python, and Elixir SDKs
-- keep frontend wasm Python and headless SDK responsibilities clearly split
+- cover the major structural, thermal, electric, magnetic, acoustic, modal,
+  nonlinear, contact, CFD-like, and coupled thermo-structural families at
+  least at smoke level
+- make the `physics-coverage` benchmark matrix the broad lane for proving that
+  built-in solver families still have real execution paths
+- keep headless SDK usage and frontend wasm Python responsibilities clearly
+  split while ensuring solver paths do not depend on hidden frontend behavior
+- collect enough varied physics examples to design `1.15.x` operator SDK
+  contracts and `1.16.x` executable task files without overfitting to one
+  solver family
 
 What should be true before moving on:
 
-- mainline tasks can be executed without relying on hidden frontend-only
-  behavior
-- SDK usage follows the same workflow mental model as the workbench
-- automation does not depend on private gateway semantics
+- all built-in benchmark templates are reachable through `physics-coverage`
+- coverage labels distinguish smoke, baseline, review, and qualification
+- TaskIR and executable task design have examples from scalar fields, vector
+  fields, coupled flows, modal outputs, nonlinear/contact solves, and
+  fluid-like fields
+- SDK, workbench, and agent paths agree on the same solver-family names
 
 What not to optimize for here:
 
-- treating headless flows as test-only shims
-
-### 1.14.x
-
-Primary theme:
-agent and mesh boundary hardening
-
-Focus:
-
-- make single-orchestrator authority rules fully explicit and enforced
-- keep offline direct mesh and orchestrated modes cleanly separated
-- harden operator pull, execution, cache, and cleanup behavior on agents
-
-What should be true before moving on:
-
-- one agent is not ambiguously controlled by multiple orchestrators
-- mesh topology, authentication, and failure behavior are explainable
-- agent-side behavior is configuration-visible instead of implicit
-
-What not to optimize for here:
-
-- convenience shortcuts that blur orchestrated and direct-mesh authority
+- calling broad smoke coverage “industrial validation”
+- freezing executable task fields before enough physics families have gone
+  through the same path
+- treating headless flows as test-only shims or frontend automation as runtime
+  semantics
 
 ### 1.15.x
 
 Primary theme:
-operator-SDK industrialization
+engine and operator-SDK industrialization
 
 Focus:
 
+- turn the `1.14.x` coverage set into a smaller engine-facing execution
+  contract
 - mature the Rust operator SDK and its descriptor model
 - standardize operator capability declaration, validation posture, and error
   surfaces
@@ -237,10 +230,12 @@ What not to optimize for here:
 ### 1.16.x
 
 Primary theme:
-front-end and post-processing depth
+executable task files and post-processing depth
 
 Focus:
 
+- define the portable executable task file shape for solver-agent execution
+  using the `1.14.x` physics coverage set as examples
 - deepen result review, comparison, export, and analysis ergonomics
 - strengthen the path from model intent to study setup to result inspection
 - improve the rendering and interaction layer only where it supports real FEM

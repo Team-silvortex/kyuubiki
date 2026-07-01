@@ -16,6 +16,7 @@ mod types {
     pub mod plane_frame;
     pub mod rpc;
     pub mod space_structural;
+    pub mod transport_results;
 }
 
 pub use analysis::{AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse};
@@ -43,6 +44,7 @@ pub use types::nonlinear_structural::*;
 pub use types::plane_frame::*;
 pub use types::rpc::*;
 pub use types::space_structural::*;
+pub use types::transport_results::*;
 pub use workflow::{
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowRequest,
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowResult,

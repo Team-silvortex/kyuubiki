@@ -29,6 +29,7 @@ mod thermal_plane_2d;
 mod thermal_plane_2d_validation;
 mod thermal_truss;
 mod torsion_1d;
+mod transport_bar_1d;
 mod truss;
 
 pub use acoustic_bar_1d::solve_acoustic_bar_1d;
@@ -63,6 +64,7 @@ pub use thermal_frame_3d::solve_thermal_frame_3d;
 pub use thermal_plane_2d::{solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d};
 pub use thermal_truss::{solve_thermal_truss_2d, solve_thermal_truss_3d};
 pub use torsion_1d::solve_torsion_1d;
+pub use transport_bar_1d::solve_advection_diffusion_bar_1d;
 pub use truss::{
     Truss2dProfile, Truss2dProfileStage, profile_truss_2d, profile_truss_2d_with_options,
     solve_truss_2d, solve_truss_3d,

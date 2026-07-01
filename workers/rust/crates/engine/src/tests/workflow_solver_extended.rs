@@ -88,6 +88,28 @@ fn runs_acoustic_bar_1d_extract_export_graph() {
 }
 
 #[test]
+fn runs_advection_diffusion_bar_1d_extract_export_graph() {
+    assert_solver_summary(
+        "workflow.advection-diffusion-bar-1d-summary-json",
+        "study_model/advection_diffusion_bar_1d",
+        "solve.advection_diffusion_bar_1d",
+        "result/advection_diffusion_bar_1d",
+        serde_json::json!({
+            "nodes": [
+                { "id": "c0", "x": 0.0, "fix_concentration": true, "concentration": 1.0, "source": 0.0 },
+                { "id": "c1", "x": 0.5, "fix_concentration": false, "concentration": 0.0, "source": 0.01 },
+                { "id": "c2", "x": 1.0, "fix_concentration": true, "concentration": 0.2, "source": 0.0 }
+            ],
+            "elements": [
+                { "id": "cd0", "node_i": 0, "node_j": 1, "area": 0.02, "diffusivity": 0.000012, "velocity": 0.08 },
+                { "id": "cd1", "node_i": 1, "node_j": 2, "area": 0.02, "diffusivity": 0.000012, "velocity": 0.08 }
+            ]
+        }),
+        &["max_concentration", "max_total_flux", "max_peclet_number"],
+    );
+}
+
+#[test]
 fn runs_heat_plane_triangle_extract_export_graph() {
     assert_solver_summary(
         "workflow.heat-plane-triangle-summary-json",

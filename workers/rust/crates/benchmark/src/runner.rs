@@ -146,6 +146,19 @@ pub(crate) fn run_case_with_preconditioner(
                         max_stress = result.max_magnetic_field_strength;
                     })
                 }
+                BenchmarkWorkload::AdvectionDiffusionBar1d(request) => solve(
+                    EngineSolveRequest::AdvectionDiffusionBar1d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::AdvectionDiffusionBar1d(result) = result else {
+                        unreachable!("advection-diffusion solve should return transport result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len();
+                    max_displacement = result.max_concentration;
+                    max_stress = result.max_total_flux;
+                }),
                 BenchmarkWorkload::Torsion1d(request) => {
                     solve(EngineSolveRequest::Torsion1d(request.clone())).map(|result| {
                         let AnalysisResult::Torsion1d(result) = result else {

@@ -51,25 +51,28 @@ pub use operator_sdk_host::{
 };
 pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 pub use workflow::run_workflow_graph;
-pub use workflow_executor::{is_supported_workflow_operator, supported_workflow_operator_ids};
+pub use workflow_executor::{
+    is_supported_workflow_operator, run_solve_operator, supported_workflow_operator_ids,
+};
 
 use kyuubiki_protocol::{
-    AnalysisResult, SolveAcousticBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
-    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
-    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
-    SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
-    SolveMagnetostaticPlaneTriangle2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
+    SolveBarRequest, SolveBeam1dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
+    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+    SolveSpring2dRequest, SolveSpring3dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_acoustic_bar_1d, solve_bar_1d, solve_beam_1d, solve_contact_gap_1d,
-    solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
+    solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
     solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
     solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d,
@@ -88,6 +91,7 @@ pub enum EngineSolveRequest {
     HeatBar1d(SolveHeatBar1dRequest),
     ElectrostaticBar1d(SolveElectrostaticBar1dRequest),
     MagnetostaticBar1d(SolveMagnetostaticBar1dRequest),
+    AdvectionDiffusionBar1d(SolveAdvectionDiffusionBar1dRequest),
     MagnetostaticPlaneTriangle2d(SolveMagnetostaticPlaneTriangle2dRequest),
     MagnetostaticPlaneQuad2d(SolveMagnetostaticPlaneQuad2dRequest),
     ElectrostaticPlaneTriangle2d(SolveElectrostaticPlaneTriangle2dRequest),
@@ -136,6 +140,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::MagnetostaticBar1d(request) => {
             solve_magnetostatic_bar_1d(&request).map(AnalysisResult::MagnetostaticBar1d)
+        }
+        EngineSolveRequest::AdvectionDiffusionBar1d(request) => {
+            solve_advection_diffusion_bar_1d(&request).map(AnalysisResult::AdvectionDiffusionBar1d)
         }
         EngineSolveRequest::MagnetostaticPlaneTriangle2d(request) => {
             solve_magnetostatic_plane_triangle_2d(&request)

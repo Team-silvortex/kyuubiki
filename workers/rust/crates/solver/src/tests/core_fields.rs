@@ -120,6 +120,44 @@ fn solves_a_small_heat_bar_1d_gradient() {
 }
 
 #[test]
+fn solves_a_small_advection_diffusion_bar_1d_transport_case() {
+    let result = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        nodes: vec![
+            AdvectionDiffusionBar1dNodeInput {
+                id: "c0".to_string(),
+                x: 0.0,
+                fix_concentration: true,
+                concentration: 1.0,
+                source: 0.0,
+            },
+            AdvectionDiffusionBar1dNodeInput {
+                id: "c1".to_string(),
+                x: 1.0,
+                fix_concentration: true,
+                concentration: 0.2,
+                source: 0.0,
+            },
+        ],
+        elements: vec![AdvectionDiffusionBar1dElementInput {
+            id: "cd0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            diffusivity: 0.05,
+            velocity: 0.1,
+        }],
+    })
+    .expect("advection diffusion bar should solve");
+
+    assert_eq!(result.nodes[0].concentration, 1.0);
+    assert_eq!(result.nodes[1].concentration, 0.2);
+    assert!((result.elements[0].concentration_gradient + 0.8).abs() < 1.0e-9);
+    assert!(result.elements[0].advective_flux > 0.0);
+    assert!(result.max_total_flux > result.elements[0].diffusive_flux.abs());
+    assert!((result.max_peclet_number - 1.0).abs() < 1.0e-9);
+}
+
+#[test]
 fn solves_a_small_acoustic_bar_1d_frequency_response() {
     let result = solve_acoustic_bar_1d(&SolveAcousticBar1dRequest {
         frequency_hz: 100.0,

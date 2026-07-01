@@ -38,6 +38,12 @@ pub fn chunk_result(
         (AnalysisResult::MagnetostaticBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::AdvectionDiffusionBar1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::AdvectionDiffusionBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::MagnetostaticPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }

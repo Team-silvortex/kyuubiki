@@ -38,6 +38,8 @@ count.
 The immediate hardening focus is:
 
 - benchmark-backed accuracy claims instead of anecdotal confidence
+- broad `1.14.x` physics smoke coverage before task-file and engine contracts
+  harden in `1.15.x` and `1.16.x`
 - clearer task, failure, and recovery semantics across runtime surfaces
 - stronger workflow and asset contracts instead of ad hoc payload growth
 - more explicit Installer-side remote deployment and runtime-control behavior
@@ -80,24 +82,27 @@ agent surfaces.
 5. [material-research-roadmap.md](material-research-roadmap.md)
    Reliability roadmap for turning material studies from runnable prototypes
    into reproducible screening, review, and qualification-oriented workflows.
-6. [accuracy-baselines.md](accuracy-baselines.md)
+6. [physics-coverage-map.md](physics-coverage-map.md)
+   `1.14.x` solver-family coverage map and the benchmark lane used to keep
+   broad physics support visible.
+7. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
-7. [operator-sdk.md](operator-sdk.md)
+8. [operator-sdk.md](operator-sdk.md)
    Current extension-contract direction for growing operator capabilities
    without turning every family into a one-off vertical slice.
-8. [workflow-graph.md](workflow-graph.md)
+9. [workflow-graph.md](workflow-graph.md)
    Multi-operator composition direction for shader-like workflow growth.
    The first headless reference runner now exists for
    `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
    exposes a first built-in workflow catalog entry for
    `workflow.heat-to-thermo-quad-2d`.
-9. [workflow-dataset.md](workflow-dataset.md)
+10. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.
-10. [installer-remote-control.md](installer-remote-control.md)
+11. [installer-remote-control.md](installer-remote-control.md)
    Installer-owned remote deployment and runtime-control surface, including
    workflow snapshots, certificate alignment, and mesh-oriented operator
    guidance.
-11. [language-packs.md](language-packs.md)
+12. [language-packs.md](language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

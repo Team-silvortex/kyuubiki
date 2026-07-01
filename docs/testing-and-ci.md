@@ -194,6 +194,11 @@ Use these entrypoints:
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1`
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
+- `make benchmark-physics-coverage`
+  Run the `1.14.x` broad physics smoke matrix across every built-in benchmark
+  template. This is the quickest product-level check that the main physics
+  families still have real solver execution paths before `1.15.x` and `1.16.x`
+  contract work hardens engine/task formats.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.

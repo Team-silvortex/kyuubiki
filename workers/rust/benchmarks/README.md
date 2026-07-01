@@ -40,6 +40,7 @@ cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix compound 
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix physics-coverage --repeat 1
 make benchmark-baseline PROFILE=10k MATRIX=thermal REPEAT=3
 make benchmark-baseline PROFILE=10k MATRIX=mechanical-core REPEAT=3
 make benchmark-baseline PROFILE=10k MATRIX=compound-core REPEAT=1
@@ -59,7 +60,8 @@ The `extended-physics` matrix is the first broad-coverage smoke lane for
 modules that were previously only covered by unit or workflow tests. It covers
 1D heat, electrostatic, magnetostatic, acoustic, and torsion cases plus 2D heat
 triangle, electrostatic triangle/quad, magnetostatic triangle/quad, and Stokes
-quad cases.
+quad cases. It also includes a 1D advection-diffusion transport case for
+concentration-field smoke coverage.
 
 The `structural-extended` matrix covers structural modules outside the standard
 mechanical trio: spring 1D/2D/3D, nonlinear spring, contact gap, beam, thermal
@@ -69,6 +71,12 @@ The `thermal-structural` matrix covers coupled thermal deformation and static
 frame families that need continuous performance visibility: thermal bar,
 thermal truss 2D/3D, thermal plane triangle/quad, static frame 2D/3D, and
 thermal frame 2D/3D cases.
+
+The `physics-coverage` matrix is the `1.14.x` broad smoke lane. It intentionally
+pulls every built-in benchmark template into one medium-scale run so the
+project can prepare the `1.15.x` engine/operator SDK contracts and the `1.16.x`
+executable task file format against real examples from the major physics
+families.
 
 For the `100k`, `200k`, and `300k` profiles, prefer running on a dedicated remote/Linux
 host instead of a laptop-class development machine. A full `repeat=3` baseline

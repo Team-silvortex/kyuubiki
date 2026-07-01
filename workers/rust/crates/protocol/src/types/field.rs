@@ -114,6 +114,33 @@ pub struct SolveMagnetostaticBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AdvectionDiffusionBar1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_concentration: bool,
+    #[serde(default)]
+    pub concentration: f64,
+    #[serde(default)]
+    pub source: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AdvectionDiffusionBar1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub diffusivity: f64,
+    pub velocity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveAdvectionDiffusionBar1dRequest {
+    pub nodes: Vec<AdvectionDiffusionBar1dNodeInput>,
+    pub elements: Vec<AdvectionDiffusionBar1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneNodeInput {
     pub id: String,
     pub x: f64,
