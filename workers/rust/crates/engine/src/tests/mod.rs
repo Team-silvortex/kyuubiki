@@ -35,6 +35,8 @@ mod workflow_magnetostatic_guard;
 mod workflow_modal_guard;
 mod workflow_parameter_sweep;
 mod workflow_parameter_sweep_graph;
+mod workflow_parameter_sweep_graph_fixtures;
+mod workflow_parameter_sweep_scoring;
 mod workflow_quality_objective;
 mod workflow_quality_ranking;
 mod workflow_quality_sweep_plan;

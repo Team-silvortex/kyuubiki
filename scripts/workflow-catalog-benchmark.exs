@@ -5,6 +5,7 @@ Mix.env(:test)
 
 Code.require_file(Path.expand("../apps/web/test/support/workflow_api_fixtures.exs", __DIR__))
 Code.require_file(Path.expand("../apps/web/test/support/workflow_api_test_support.exs", __DIR__))
+Code.require_file(Path.expand("../apps/web/test/support/workflow_catalog_00_benchmark_fixtures.exs", __DIR__))
 Code.require_file(Path.expand("../apps/web/test/support/workflow_catalog_benchmark.exs", __DIR__))
 
 config_path = Path.expand("../apps/web/config/config.exs", __DIR__)

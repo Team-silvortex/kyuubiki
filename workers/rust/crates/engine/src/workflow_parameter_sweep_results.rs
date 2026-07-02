@@ -154,6 +154,10 @@ pub fn map_parameter_sweep_scores_to_quality_candidates(
     let score_field = format!("{domain}_quality_score");
     let missing_field = format!("{domain}_quality_missing_metric_count");
     let contract_field = format!("{domain}_quality_contract");
+    let include_source_row = config
+        .get("include_source_row")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
     let mut candidates = Map::new();
 
     for (index, row) in rows.iter().enumerate() {
@@ -184,26 +188,40 @@ pub fn map_parameter_sweep_scores_to_quality_candidates(
         let quality_score = -objective_score;
         let grade = if ready { "candidate" } else { "blocked" };
 
-        candidates.insert(
-            candidate_id.clone(),
+        let mut candidate = Map::new();
+        candidate.insert(
+            "label".to_string(),
+            Value::String(
+                object
+                    .get("label")
+                    .and_then(Value::as_str)
+                    .unwrap_or(&candidate_id)
+                    .to_string(),
+            ),
+        );
+        candidate.insert(
+            "parameters".to_string(),
+            object.get("parameters").cloned().unwrap_or(Value::Null),
+        );
+        if include_source_row {
+            candidate.insert("source_row".to_string(), row.clone());
+        }
+        candidate.insert(
+            "qualities".to_string(),
             serde_json::json!({
-                "label": object.get("label").and_then(Value::as_str).unwrap_or(&candidate_id),
-                "parameters": object.get("parameters").cloned().unwrap_or(Value::Null),
-                "source_row": row,
-                "qualities": {
-                    domain: {
-                        (contract_field.clone()): format!("kyuubiki.{domain}_quality_score/v1"),
-                        (score_field.clone()): quality_score,
-                        (ready_field.clone()): ready,
-                        (missing_field.clone()): 0,
-                        (format!("{domain}_quality_grade")): grade,
-                        (format!("{domain}_quality_summary")): format!(
-                            "Parameter sweep candidate {candidate_id}: quality_score={quality_score:.4}, feasible={ready}."
-                        )
-                    }
+                domain: {
+                    (contract_field.clone()): format!("kyuubiki.{domain}_quality_score/v1"),
+                    (score_field.clone()): quality_score,
+                    (ready_field.clone()): ready,
+                    (missing_field.clone()): 0,
+                    (format!("{domain}_quality_grade")): grade,
+                    (format!("{domain}_quality_summary")): format!(
+                        "Parameter sweep candidate {candidate_id}: quality_score={quality_score:.4}, feasible={ready}."
+                    )
                 }
             }),
         );
+        candidates.insert(candidate_id.clone(), Value::Object(candidate));
     }
 
     Ok(serde_json::json!({

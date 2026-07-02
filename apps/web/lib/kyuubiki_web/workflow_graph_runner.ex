@@ -1,9 +1,8 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
-
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
+  alias KyuubikiWeb.WorkflowGraphScheduler
   def run(graph, input_artifacts, opts \\ [])
-
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
@@ -14,122 +13,43 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          execute_extract when is_function(execute_extract, 3) <-
            Keyword.get(opts, :execute_extract),
          execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export) do
-      state = %{
-        completed: MapSet.new(),
-        skipped: MapSet.new(),
-        ordered_completed: [],
-        ordered_skipped: [],
-        branch_decisions: [],
-        node_runs: [],
-        artifact_lineage: [],
-        artifacts: %{},
-        loop_passes: 0,
-        started_at_us: System.monotonic_time(:microsecond)
-      }
-
-      do_run_workflow_graph(
-        nodes,
-        edges,
-        incoming_edges_by_node(edges),
-        length(nodes),
+      run_ordered_workflow_graph(
+        WorkflowGraphScheduler.indexes(nodes, edges),
         input_artifacts,
-        state,
+        WorkflowGraphScheduler.initial_state(),
         opts
       )
     else
       _ -> {:error, :invalid_workflow_graph}
     end
   end
-
   def run(_graph, _input_artifacts, _opts), do: {:error, :invalid_workflow_graph}
-
-  defp do_run_workflow_graph(
-         nodes,
-         edges,
-         incoming_edges_by_node,
-         node_count,
-         input_artifacts,
-         state,
-         opts
-       ) do
+  defp run_ordered_workflow_graph(indexes, input_artifacts, state, opts) do
     state = %{state | loop_passes: state.loop_passes + 1}
 
     {next_state, progressed?} =
-      Enum.reduce(nodes, {state, false}, fn node, {acc, moved?} ->
-        node_id = Map.get(node, "id")
-
-        cond do
-          MapSet.member?(acc.completed, node_id) or MapSet.member?(acc.skipped, node_id) ->
-            {acc, moved?}
-
-          true ->
-            incoming = Map.get(incoming_edges_by_node, node_id, [])
-            kind = Map.get(node, "kind")
-            ready? = kind == "input" or workflow_node_ready?(node, incoming, acc.artifacts)
-
-            cond do
-              ready? ->
-                started_at_us = System.monotonic_time(:microsecond)
-
-                case execute_workflow_node(node, incoming, input_artifacts, acc, opts) do
-                  {:ok, next_acc} ->
-                    updated =
-                      mark_completed(
-                        next_acc,
-                        node_id,
-                        node,
-                        incoming,
-                        (System.monotonic_time(:microsecond) - started_at_us) / 1000.0
-                      )
-
-                    maybe_emit_progress(updated, node_count, opts)
-                    {updated, true}
-
-                  {:error, reason} ->
-                    throw({:workflow_node_error, node_id, reason})
-                end
-
-              unresolved_missing_inputs?(incoming, acc.artifacts, acc.completed, acc.skipped) ->
-                {mark_skipped(acc, node_id, node, incoming), true}
-
-              true ->
-                {acc, moved?}
-            end
+      Enum.reduce(indexes.nodes, {state, false}, fn node, {acc, progressed?} ->
+        case process_workflow_node(Map.get(node, "id"), indexes, input_artifacts, acc, opts) do
+          {:ok, updated, true} -> {updated, true}
+          {:ok, updated, false} -> {updated, progressed?}
         end
       end)
 
     cond do
-      MapSet.size(next_state.completed) + MapSet.size(next_state.skipped) == node_count ->
-        graph = %{
-          "nodes" => nodes,
-          "edges" => edges,
-          "dataset_contract" => Keyword.get(opts, :dataset_contract)
-        }
-
-        artifact_lineage = next_state.artifact_lineage
-
-        {:ok, WorkflowGraphRunnerMetrics.finalize_result(next_state, graph, artifact_lineage)}
+      WorkflowGraphScheduler.complete?(indexes, next_state) ->
+        finalize_workflow_result(indexes, next_state, opts)
 
       progressed? ->
         do_run_workflow_graph(
-          nodes,
-          edges,
-          incoming_edges_by_node,
-          node_count,
+          indexes,
+          WorkflowGraphScheduler.pending_node_ids(indexes, next_state),
           input_artifacts,
           next_state,
           opts
         )
 
       true ->
-        pending =
-          nodes
-          |> Enum.map(&Map.get(&1, "id"))
-          |> Enum.reject(
-            &(MapSet.member?(next_state.completed, &1) or MapSet.member?(next_state.skipped, &1))
-          )
-
-        {:error, {:workflow_stalled, pending}}
+        stalled_workflow(indexes, next_state)
     end
   catch
     {:workflow_node_error, node_id, reason} ->
@@ -138,6 +58,93 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
+  defp do_run_workflow_graph(indexes, [], _input_artifacts, state, opts) do
+    if WorkflowGraphScheduler.complete?(indexes, state),
+      do: finalize_workflow_result(indexes, state, opts),
+      else: stalled_workflow(indexes, state)
+  end
+
+  defp do_run_workflow_graph(
+         indexes,
+         [node_id | rest],
+         input_artifacts,
+         state,
+         opts
+       ) do
+    state = %{state | loop_passes: state.loop_passes + 1}
+
+    case process_workflow_node(node_id, indexes, input_artifacts, state, opts) do
+      {:ok, updated, true} ->
+        do_run_workflow_graph(
+          indexes,
+          WorkflowGraphScheduler.enqueue_downstream(rest, indexes, node_id),
+          input_artifacts,
+          updated,
+          opts
+        )
+
+      {:ok, updated, false} ->
+        do_run_workflow_graph(indexes, rest, input_artifacts, updated, opts)
+    end
+  catch
+    {:workflow_node_error, node_id, reason} ->
+      {:error, {:workflow_node_error, node_id, reason}}
+
+    {:workflow_cancelled, node_id} ->
+      {:error, {:workflow_cancelled, node_id}}
+  end
+
+  defp process_workflow_node(node_id, indexes, input_artifacts, state, opts) do
+    node = Map.fetch!(indexes.nodes_by_id, node_id)
+    incoming = Map.get(indexes.incoming_edges_by_node, node_id, [])
+    kind = Map.get(node, "kind")
+
+    cond do
+      WorkflowGraphScheduler.resolved?(state, node_id) ->
+        {:ok, state, false}
+
+      kind == "input" or workflow_node_ready?(node, incoming, state.artifacts) ->
+        started_at_us = System.monotonic_time(:microsecond)
+
+        case execute_workflow_node(node, incoming, input_artifacts, state, opts) do
+          {:ok, next_state} ->
+            updated =
+              mark_completed(
+                next_state,
+                node_id,
+                node,
+                incoming,
+                (System.monotonic_time(:microsecond) - started_at_us) / 1000.0
+              )
+
+            maybe_emit_progress(updated, indexes.node_count, opts)
+            {:ok, updated, true}
+
+          {:error, reason} ->
+            throw({:workflow_node_error, node_id, reason})
+        end
+
+      unresolved_missing_inputs?(incoming, state.artifacts, state.completed, state.skipped) ->
+        updated = mark_skipped(state, node_id, node, incoming)
+        {:ok, updated, true}
+
+      true ->
+        {:ok, state, false}
+    end
+  end
+
+  defp finalize_workflow_result(indexes, state, opts) do
+    graph = %{
+      "nodes" => indexes.nodes,
+      "edges" => indexes.edges,
+      "dataset_contract" => Keyword.get(opts, :dataset_contract)
+    }
+
+    {:ok, WorkflowGraphRunnerMetrics.finalize_result(state, graph, state.artifact_lineage)}
+  end
+
+  defp stalled_workflow(indexes, state),
+    do: {:error, {:workflow_stalled, WorkflowGraphScheduler.pending_node_ids(indexes, state)}}
 
   defp workflow_node_ready?(node, incoming, artifacts) do
     if transform_operator_accepts_partial_inputs?(node) do
@@ -589,9 +596,4 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp artifact_key(node_id, port_id), do: "#{node_id}.#{port_id}"
 
-  defp incoming_edges_by_node(edges) do
-    Enum.reduce(edges, %{}, fn edge, acc ->
-      Map.update(acc, get_in(edge, ["to", "node"]), [edge], &[edge | &1])
-    end)
-  end
 end
