@@ -84,6 +84,44 @@ pub struct SolveSpring1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransientSpring1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_x: bool,
+    pub load_x: f64,
+    pub mass: f64,
+    #[serde(default)]
+    pub initial_displacement: f64,
+    #[serde(default)]
+    pub initial_velocity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransientSpring1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub stiffness: f64,
+    #[serde(default)]
+    pub damping: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTransientSpring1dRequest {
+    pub nodes: Vec<TransientSpring1dNodeInput>,
+    pub elements: Vec<TransientSpring1dElementInput>,
+    pub time_step: f64,
+    pub steps: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHarmonicSpring1dRequest {
+    pub nodes: Vec<TransientSpring1dNodeInput>,
+    pub elements: Vec<TransientSpring1dElementInput>,
+    pub frequencies_hz: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spring2dNodeInput {
     pub id: String,
     pub x: f64,

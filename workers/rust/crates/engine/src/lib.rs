@@ -4,6 +4,7 @@ mod catalog;
 mod cfd_diagnostics;
 mod chunking;
 mod coupled_workflows;
+mod dynamic_quality;
 mod electrostatic_quality;
 mod heat_bridge;
 mod magnetostatic_bridge;
@@ -35,6 +36,7 @@ mod workflow_parameter_sweep;
 mod workflow_parameter_sweep_results;
 mod workflow_quality_objective;
 mod workflow_quality_sweep_plan;
+mod workflow_quality_sweep_request;
 mod workflow_reporting;
 mod workflow_solve_executor;
 mod workflow_summary_transforms;
@@ -70,28 +72,31 @@ use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
     SolveBarRequest, SolveBeam1dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
-    SolveSpring2dRequest, SolveSpring3dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
-    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTransientHeatBar1dRequest, SolveTransientSpring1dRequest,
     SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
     solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
-    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
-    solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d,
-    solve_modal_frame_3d, solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d,
+    solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
+    solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
+    solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
+    solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_solid_tetra_3d,
     solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d,
     solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
-    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_transient_heat_bar_1d,
+    solve_transient_spring_1d, solve_truss_2d, solve_truss_3d,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -100,6 +105,7 @@ pub enum EngineSolveRequest {
     AcousticBar1d(SolveAcousticBar1dRequest),
     ThermalBar1d(SolveThermalBar1dRequest),
     HeatBar1d(SolveHeatBar1dRequest),
+    TransientHeatBar1d(SolveTransientHeatBar1dRequest),
     ElectrostaticBar1d(SolveElectrostaticBar1dRequest),
     MagnetostaticBar1d(SolveMagnetostaticBar1dRequest),
     AdvectionDiffusionBar1d(SolveAdvectionDiffusionBar1dRequest),
@@ -113,6 +119,8 @@ pub enum EngineSolveRequest {
     ThermalTruss2d(SolveThermalTruss2dRequest),
     ThermalTruss3d(SolveThermalTruss3dRequest),
     Spring1d(SolveSpring1dRequest),
+    TransientSpring1d(SolveTransientSpring1dRequest),
+    HarmonicSpring1d(SolveHarmonicSpring1dRequest),
     NonlinearSpring1d(SolveNonlinearSpring1dRequest),
     ContactGap1d(SolveContactGap1dRequest),
     Spring2d(SolveSpring2dRequest),
@@ -125,6 +133,7 @@ pub enum EngineSolveRequest {
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
     Frame3d(SolveFrame3dRequest),
+    SolidTetra3d(SolveSolidTetra3dRequest),
     ModalFrame2d(SolveModalFrame2dRequest),
     ModalFrame3d(SolveModalFrame3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
@@ -145,6 +154,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::HeatBar1d(request) => {
             solve_heat_bar_1d(&request).map(AnalysisResult::HeatBar1d)
+        }
+        EngineSolveRequest::TransientHeatBar1d(request) => {
+            solve_transient_heat_bar_1d(&request).map(AnalysisResult::TransientHeatBar1d)
         }
         EngineSolveRequest::ElectrostaticBar1d(request) => {
             solve_electrostatic_bar_1d(&request).map(AnalysisResult::ElectrostaticBar1d)
@@ -189,6 +201,12 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         EngineSolveRequest::Spring1d(request) => {
             solve_spring_1d(&request).map(AnalysisResult::Spring1d)
         }
+        EngineSolveRequest::TransientSpring1d(request) => {
+            solve_transient_spring_1d(&request).map(AnalysisResult::TransientSpring1d)
+        }
+        EngineSolveRequest::HarmonicSpring1d(request) => {
+            solve_harmonic_spring_1d(&request).map(AnalysisResult::HarmonicSpring1d)
+        }
         EngineSolveRequest::NonlinearSpring1d(request) => {
             solve_nonlinear_spring_1d(&request).map(AnalysisResult::NonlinearSpring1d)
         }
@@ -222,6 +240,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::Frame3d(request) => {
             solve_frame_3d(&request).map(AnalysisResult::Frame3d)
+        }
+        EngineSolveRequest::SolidTetra3d(request) => {
+            solve_solid_tetra_3d(&request).map(AnalysisResult::SolidTetra3d)
         }
         EngineSolveRequest::ModalFrame2d(request) => {
             solve_modal_frame_2d(&request).map(AnalysisResult::ModalFrame2d)

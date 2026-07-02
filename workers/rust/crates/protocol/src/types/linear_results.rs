@@ -5,6 +5,7 @@ use crate::{
     SolveMagnetostaticBar1dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
     SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
     SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveTransientHeatBar1dRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -99,6 +100,27 @@ pub struct SolveHeatBar1dResult {
     pub elements: Vec<HeatBar1dElementResult>,
     pub max_temperature: f64,
     pub max_heat_flux: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransientHeatBar1dStepResult {
+    pub step: usize,
+    pub time: f64,
+    pub max_temperature: f64,
+    pub total_thermal_energy: f64,
+    pub nodal_temperatures: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTransientHeatBar1dResult {
+    pub input: SolveTransientHeatBar1dRequest,
+    pub nodes: Vec<HeatBar1dNodeResult>,
+    pub elements: Vec<HeatBar1dElementResult>,
+    pub history: Vec<TransientHeatBar1dStepResult>,
+    pub final_time: f64,
+    pub max_temperature: f64,
+    pub max_heat_flux: f64,
+    pub total_thermal_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

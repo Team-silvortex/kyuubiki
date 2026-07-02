@@ -213,6 +213,84 @@ pub struct SolveFrame3dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dElementInput {
+    pub id: String,
+    pub node_a: usize,
+    pub node_b: usize,
+    pub node_c: usize,
+    pub node_d: usize,
+    pub youngs_modulus: f64,
+    pub poisson_ratio: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSolidTetra3dRequest {
+    pub nodes: Vec<SolidTetra3dNodeInput>,
+    pub elements: Vec<SolidTetra3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+    pub displacement_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_a: usize,
+    pub node_b: usize,
+    pub node_c: usize,
+    pub node_d: usize,
+    pub volume: f64,
+    pub strain_x: f64,
+    pub strain_y: f64,
+    pub strain_z: f64,
+    pub gamma_xy: f64,
+    pub gamma_yz: f64,
+    pub gamma_zx: f64,
+    pub stress_x: f64,
+    pub stress_y: f64,
+    pub stress_z: f64,
+    pub shear_xy: f64,
+    pub shear_yz: f64,
+    pub shear_zx: f64,
+    pub von_mises_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSolidTetra3dResult {
+    pub input: SolveSolidTetra3dRequest,
+    pub nodes: Vec<SolidTetra3dNodeResult>,
+    pub elements: Vec<SolidTetra3dElementResult>,
+    pub total_volume: f64,
+    pub max_displacement: f64,
+    pub max_von_mises_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModalFrame3dElementInput {
     pub id: String,
     pub node_i: usize,

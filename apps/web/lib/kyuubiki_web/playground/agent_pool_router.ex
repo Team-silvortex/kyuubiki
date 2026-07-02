@@ -320,6 +320,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
   defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
   defp preferred_tags("solve_heat_bar_1d"), do: ["heat", "bar", "line"]
+  defp preferred_tags("solve_transient_heat_bar_1d"), do: ["heat", "transient", "bar", "time"]
 
   defp preferred_tags("solve_electrostatic_bar_1d"),
     do: ["electromagnetic", "electrostatic", "bar", "line"]
@@ -335,6 +336,11 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
   defp preferred_tags("solve_thermal_truss_2d"), do: ["truss", "thermal", "plane"]
   defp preferred_tags("solve_thermal_truss_3d"), do: ["truss", "thermal", "space"]
   defp preferred_tags("solve_spring_1d"), do: ["spring", "line", "support"]
+  defp preferred_tags("solve_transient_spring_1d"), do: ["spring", "transient", "dynamics"]
+
+  defp preferred_tags("solve_harmonic_spring_1d"),
+    do: ["spring", "harmonic", "frequency-response"]
+
   defp preferred_tags("solve_spring_2d"), do: ["spring", "plane", "support"]
   defp preferred_tags("solve_spring_3d"), do: ["spring", "space", "support"]
   defp preferred_tags("solve_beam_1d"), do: ["beam", "bending", "line"]
@@ -353,5 +359,6 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
   defp preferred_tags("solve_thermal_plane_quad_2d"), do: ["plane", "thermal", "mesh", "quad"]
   defp preferred_tags("solve_frame_2d"), do: ["frame", "beam", "bending"]
   defp preferred_tags("solve_frame_3d"), do: ["frame", "space", "beam", "bending"]
+  defp preferred_tags("solve_solid_tetra_3d"), do: ["solid", "tetra", "space", "mesh"]
   defp preferred_tags(_method), do: ["general", "cpu"]
 end

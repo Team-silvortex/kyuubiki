@@ -9,27 +9,31 @@ use kyuubiki_protocol::{
     SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
     SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
-    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
-    SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
-    SolveMagnetostaticPlaneTriangle2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
+    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
     SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveTorsion1dRequest, SolveTransientHeatBar1dRequest, SolveTransientSpring1dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
     solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
-    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
-    solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d,
-    solve_modal_frame_3d, solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d,
+    solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
+    solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
+    solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
+    solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_solid_tetra_3d,
     solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d,
     solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
-    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_transient_heat_bar_1d,
+    solve_transient_spring_1d, solve_truss_2d, solve_truss_3d,
 };
 
 use crate::agent_state::{
@@ -98,6 +102,16 @@ pub(crate) fn handle_request(
             |params| params.nodes.len(),
             solve_heat_bar_1d,
         ),
+        RpcMethod::SolveTransientHeatBar1d => {
+            run_solver::<SolveTransientHeatBar1dRequest, _, _, _>(
+                request,
+                writer,
+                "1d transient heat bar",
+                "transient heat bar result",
+                |params| params.nodes.len(),
+                solve_transient_heat_bar_1d,
+            )
+        }
         RpcMethod::SolveElectrostaticBar1d => {
             run_solver::<SolveElectrostaticBar1dRequest, _, _, _>(
                 request,
@@ -151,6 +165,22 @@ pub(crate) fn handle_request(
             "spring result",
             |params| params.nodes.len(),
             solve_spring_1d,
+        ),
+        RpcMethod::SolveTransientSpring1d => run_solver::<SolveTransientSpring1dRequest, _, _, _>(
+            request,
+            writer,
+            "1d transient spring",
+            "transient spring result",
+            |params| params.nodes.len(),
+            solve_transient_spring_1d,
+        ),
+        RpcMethod::SolveHarmonicSpring1d => run_solver::<SolveHarmonicSpring1dRequest, _, _, _>(
+            request,
+            writer,
+            "1d harmonic spring",
+            "harmonic spring result",
+            |params| params.nodes.len(),
+            solve_harmonic_spring_1d,
         ),
         RpcMethod::SolveNonlinearSpring1d => run_solver::<SolveNonlinearSpring1dRequest, _, _, _>(
             request,
@@ -359,6 +389,14 @@ pub(crate) fn handle_request(
             "frame 3d result",
             |params| params.nodes.len(),
             solve_frame_3d,
+        ),
+        RpcMethod::SolveSolidTetra3d => run_solver::<SolveSolidTetra3dRequest, _, _, _>(
+            request,
+            writer,
+            "3d solid tetra",
+            "solid tetra 3d result",
+            |params| params.nodes.len(),
+            solve_solid_tetra_3d,
         ),
         RpcMethod::SolveModalFrame3d => run_solver::<SolveModalFrame3dRequest, _, _, _>(
             request,

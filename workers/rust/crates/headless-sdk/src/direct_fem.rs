@@ -35,6 +35,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/heat-bar-1d/jobs",
     },
     DirectFemRoute {
+        action: "solve_transient_heat_bar_1d",
+        route: "/api/v1/fem/transient-heat-bar-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_electrostatic_bar_1d",
         route: "/api/v1/fem/electrostatic-bar-1d/jobs",
     },
@@ -111,6 +115,14 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/spring-1d/jobs",
     },
     DirectFemRoute {
+        action: "solve_transient_spring_1d",
+        route: "/api/v1/fem/transient-spring-1d/jobs",
+    },
+    DirectFemRoute {
+        action: "solve_harmonic_spring_1d",
+        route: "/api/v1/fem/harmonic-spring-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_nonlinear_spring_1d",
         route: "/api/v1/fem/nonlinear-spring-1d/jobs",
     },
@@ -153,6 +165,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
     DirectFemRoute {
         action: "solve_frame_3d",
         route: "/api/v1/fem/frame-3d/jobs",
+    },
+    DirectFemRoute {
+        action: "solve_solid_tetra_3d",
+        route: "/api/v1/fem/solid-tetra-3d/jobs",
     },
     DirectFemRoute {
         action: "solve_modal_frame_3d",
@@ -273,7 +289,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 35);
+        assert_eq!(routes.len(), 39);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 

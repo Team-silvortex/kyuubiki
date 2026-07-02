@@ -4,7 +4,7 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.score_thermal_quality expects an object payload".to_string())?;
-    let terms = default_quality_terms();
+    let terms = quality_terms(&config);
     let score_terms = terms
         .iter()
         .map(|term| score_quality_term(object, &config, term))
@@ -28,6 +28,9 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
         "thermal_quality_missing_metric_count": missing_count,
         "thermal_quality_term_count": score_terms.len(),
         "thermal_quality_max_ready_score": max_ready_score,
+        "thermal_quality_max_temperature": numeric_field(object, "thermal_temperature_max"),
+        "thermal_quality_peak_flux_magnitude": numeric_field(object, "thermal_flux_peak_magnitude"),
+        "thermal_quality_total_energy": numeric_field(object, "thermal_total_energy"),
         "thermal_quality_terms": score_terms,
         "thermal_quality_summary": format!(
             "Thermal quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
@@ -35,6 +38,7 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
     }))
 }
 
+#[derive(Clone, Copy)]
 struct QualityTerm {
     field: &'static str,
     label: &'static str,
@@ -81,10 +85,44 @@ fn default_quality_terms() -> [QualityTerm; 4] {
     ]
 }
 
+fn quality_terms(config: &Value) -> Vec<QualityTerm> {
+    config
+        .get("enabled_terms")
+        .and_then(Value::as_array)
+        .map(|terms| {
+            terms
+                .iter()
+                .filter_map(Value::as_str)
+                .filter_map(quality_term_for)
+                .collect::<Vec<_>>()
+        })
+        .filter(|terms| !terms.is_empty())
+        .unwrap_or_else(|| default_quality_terms().to_vec())
+}
+
+fn quality_term_for(field: &str) -> Option<QualityTerm> {
+    if let Some(term) = default_quality_terms()
+        .into_iter()
+        .find(|term| term.field == field)
+    {
+        return Some(term);
+    }
+    match field {
+        "thermal_total_energy" => Some(QualityTerm {
+            field: "thermal_total_energy",
+            label: "Total thermal energy",
+            target: 5000.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        }),
+        _ => None,
+    }
+}
+
 fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
     let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
     let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = object.get(term.field).and_then(Value::as_f64);
+    let value = numeric_field(object, term.field);
 
     match value {
         Some(value) if value.is_finite() => {
@@ -110,6 +148,26 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "status": "missing",
         }),
     }
+}
+
+fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(Value::as_f64)
+        .or_else(|| thermal_alias_field(object, field))
+        .filter(|value| value.is_finite())
+}
+
+fn thermal_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    let alias = match field {
+        "thermal_temperature_max" => "max_temperature",
+        "thermal_flux_peak_magnitude" => "max_heat_flux",
+        "thermo_temperature_delta_max" => "max_temperature_delta",
+        "thermo_stress_peak" => "max_stress",
+        "thermal_total_energy" => "total_thermal_energy",
+        _ => return None,
+    };
+    object.get(alias).and_then(Value::as_f64)
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

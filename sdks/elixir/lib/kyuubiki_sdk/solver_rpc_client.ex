@@ -7,6 +7,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "bar_1d" => "solve_bar_1d",
     "thermal_bar_1d" => "solve_thermal_bar_1d",
     "heat_bar_1d" => "solve_heat_bar_1d",
+    "transient_heat_bar_1d" => "solve_transient_heat_bar_1d",
     "electrostatic_bar_1d" => "solve_electrostatic_bar_1d",
     "magnetostatic_bar_1d" => "solve_magnetostatic_bar_1d",
     "magnetostatic_plane_triangle_2d" => "solve_magnetostatic_plane_triangle_2d",
@@ -16,6 +17,8 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "thermal_beam_1d" => "solve_thermal_beam_1d",
     "torsion_1d" => "solve_torsion_1d",
     "spring_1d" => "solve_spring_1d",
+    "transient_spring_1d" => "solve_transient_spring_1d",
+    "harmonic_spring_1d" => "solve_harmonic_spring_1d",
     "nonlinear_spring_1d" => "solve_nonlinear_spring_1d",
     "contact_gap_1d" => "solve_contact_gap_1d",
     "spring_2d" => "solve_spring_2d",
@@ -37,6 +40,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "truss_3d" => "solve_truss_3d",
     "thermal_truss_3d" => "solve_thermal_truss_3d",
     "frame_3d" => "solve_frame_3d",
+    "solid_tetra_3d" => "solve_solid_tetra_3d",
     "modal_frame_3d" => "solve_modal_frame_3d",
     "thermal_frame_3d" => "solve_thermal_frame_3d"
   }
@@ -58,11 +62,15 @@ defmodule KyuubikiSdk.SolverRpcClient do
   def solve_truss_3d(client, payload), do: solve_study(client, "truss_3d", payload)
   def solve_modal_frame_2d(client, payload), do: solve_study(client, "modal_frame_2d", payload)
   def solve_modal_frame_3d(client, payload), do: solve_study(client, "modal_frame_3d", payload)
+  def solve_solid_tetra_3d(client, payload), do: solve_study(client, "solid_tetra_3d", payload)
 
   def solve_nonlinear_spring_1d(client, payload),
     do: solve_study(client, "nonlinear_spring_1d", payload)
 
   def solve_contact_gap_1d(client, payload), do: solve_study(client, "contact_gap_1d", payload)
+
+  def solve_harmonic_spring_1d(client, payload),
+    do: solve_study(client, "harmonic_spring_1d", payload)
 
   def solve_acoustic_bar_1d(client, payload), do: solve_study(client, "acoustic_bar_1d", payload)
 

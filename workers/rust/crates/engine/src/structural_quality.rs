@@ -4,7 +4,7 @@ pub fn score_structural_quality(payload: Value, config: Value) -> Result<Value, 
     let object = payload.as_object().ok_or_else(|| {
         "transform.score_structural_quality expects an object payload".to_string()
     })?;
-    let terms = default_quality_terms();
+    let terms = quality_terms(&config);
     let score_terms = terms
         .iter()
         .map(|term| score_quality_term(object, &config, term))
@@ -28,6 +28,10 @@ pub fn score_structural_quality(payload: Value, config: Value) -> Result<Value, 
         "structural_quality_missing_metric_count": missing_count,
         "structural_quality_term_count": score_terms.len(),
         "structural_quality_max_ready_score": max_ready_score,
+        "structural_quality_max_displacement": numeric_field(object, "max_displacement"),
+        "structural_quality_max_stress": numeric_field(object, "max_stress"),
+        "structural_quality_mass": numeric_field(object, "mass"),
+        "structural_quality_stiffness_margin": numeric_field(object, "stiffness_margin"),
         "structural_quality_terms": score_terms,
         "structural_quality_summary": format!(
             "Structural quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
@@ -35,6 +39,7 @@ pub fn score_structural_quality(payload: Value, config: Value) -> Result<Value, 
     }))
 }
 
+#[derive(Clone, Copy)]
 struct QualityTerm {
     field: &'static str,
     label: &'static str,
@@ -82,10 +87,31 @@ fn default_quality_terms() -> [QualityTerm; 4] {
     ]
 }
 
+fn quality_terms(config: &Value) -> Vec<QualityTerm> {
+    config
+        .get("enabled_terms")
+        .and_then(Value::as_array)
+        .map(|terms| {
+            terms
+                .iter()
+                .filter_map(Value::as_str)
+                .filter_map(quality_term_for)
+                .collect::<Vec<_>>()
+        })
+        .filter(|terms| !terms.is_empty())
+        .unwrap_or_else(|| default_quality_terms().to_vec())
+}
+
+fn quality_term_for(field: &str) -> Option<QualityTerm> {
+    default_quality_terms()
+        .into_iter()
+        .find(|term| term.field == field)
+}
+
 fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
     let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
     let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = object.get(term.field).and_then(Value::as_f64);
+    let value = numeric_field(object, term.field);
 
     match value {
         Some(value) if value.is_finite() => {
@@ -117,6 +143,13 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "status": "missing",
         }),
     }
+}
+
+fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(Value::as_f64)
+        .filter(|value| value.is_finite())
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

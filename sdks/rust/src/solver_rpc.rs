@@ -8,6 +8,7 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("bar_1d", "solve_bar_1d"),
     ("thermal_bar_1d", "solve_thermal_bar_1d"),
     ("heat_bar_1d", "solve_heat_bar_1d"),
+    ("transient_heat_bar_1d", "solve_transient_heat_bar_1d"),
     ("electrostatic_bar_1d", "solve_electrostatic_bar_1d"),
     ("magnetostatic_bar_1d", "solve_magnetostatic_bar_1d"),
     (
@@ -23,6 +24,8 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("thermal_beam_1d", "solve_thermal_beam_1d"),
     ("torsion_1d", "solve_torsion_1d"),
     ("spring_1d", "solve_spring_1d"),
+    ("transient_spring_1d", "solve_transient_spring_1d"),
+    ("harmonic_spring_1d", "solve_harmonic_spring_1d"),
     ("nonlinear_spring_1d", "solve_nonlinear_spring_1d"),
     ("contact_gap_1d", "solve_contact_gap_1d"),
     ("spring_2d", "solve_spring_2d"),
@@ -57,6 +60,7 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("truss_3d", "solve_truss_3d"),
     ("thermal_truss_3d", "solve_thermal_truss_3d"),
     ("frame_3d", "solve_frame_3d"),
+    ("solid_tetra_3d", "solve_solid_tetra_3d"),
     ("modal_frame_3d", "solve_modal_frame_3d"),
     ("thermal_frame_3d", "solve_thermal_frame_3d"),
 ];
@@ -109,12 +113,20 @@ impl SolverRpcClient {
         self.solve_study("modal_frame_3d", payload)
     }
 
+    pub fn solve_solid_tetra_3d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("solid_tetra_3d", payload)
+    }
+
     pub fn solve_nonlinear_spring_1d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
         self.solve_study("nonlinear_spring_1d", payload)
     }
 
     pub fn solve_contact_gap_1d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
         self.solve_study("contact_gap_1d", payload)
+    }
+
+    pub fn solve_harmonic_spring_1d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("harmonic_spring_1d", payload)
     }
 
     pub fn solve_magnetostatic_plane_triangle_2d(

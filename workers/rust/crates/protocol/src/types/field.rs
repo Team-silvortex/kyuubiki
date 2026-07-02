@@ -62,6 +62,25 @@ pub struct SolveHeatBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransientHeatBar1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub conductivity: f64,
+    pub density: f64,
+    pub specific_heat: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTransientHeatBar1dRequest {
+    pub nodes: Vec<HeatBar1dNodeInput>,
+    pub elements: Vec<TransientHeatBar1dElementInput>,
+    pub time_step: f64,
+    pub steps: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticBar1dNodeInput {
     pub id: String,
     pub x: f64,

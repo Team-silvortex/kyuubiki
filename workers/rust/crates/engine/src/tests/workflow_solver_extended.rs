@@ -63,6 +63,61 @@ fn runs_heat_bar_1d_extract_export_graph() {
 }
 
 #[test]
+fn runs_transient_spring_1d_extract_export_graph() {
+    assert_solver_summary(
+        "workflow.transient-spring-1d-summary-json",
+        "study_model/transient_spring_1d",
+        "solve.transient_spring_1d",
+        "result/transient_spring_1d",
+        serde_json::json!({
+            "nodes": [
+                {
+                    "id": "fixed",
+                    "x": 0.0,
+                    "fix_x": true,
+                    "load_x": 0.0,
+                    "mass": 1.0
+                },
+                {
+                    "id": "tip",
+                    "x": 1.0,
+                    "fix_x": false,
+                    "load_x": 10.0,
+                    "mass": 2.0
+                }
+            ],
+            "elements": [
+                { "id": "s0", "node_i": 0, "node_j": 1, "stiffness": 100.0, "damping": 0.5 }
+            ],
+            "time_step": 0.01,
+            "steps": 10
+        }),
+        &["final_time", "max_velocity", "max_force"],
+    );
+}
+
+#[test]
+fn runs_harmonic_spring_1d_extract_export_graph() {
+    assert_solver_summary(
+        "workflow.harmonic-spring-1d-summary-json",
+        "study_model/harmonic_spring_1d",
+        "solve.harmonic_spring_1d",
+        "result/harmonic_spring_1d",
+        serde_json::json!({
+            "nodes": [
+                { "id": "fixed", "x": 0.0, "fix_x": true, "load_x": 0.0, "mass": 1.0 },
+                { "id": "tip", "x": 1.0, "fix_x": false, "load_x": 10.0, "mass": 2.0 }
+            ],
+            "elements": [
+                { "id": "s0", "node_i": 0, "node_j": 1, "stiffness": 100.0, "damping": 1.0 }
+            ],
+            "frequencies_hz": [0.0, 0.5, 1.0]
+        }),
+        &["peak_frequency_hz", "max_displacement", "max_force"],
+    );
+}
+
+#[test]
 fn runs_acoustic_bar_1d_extract_export_graph() {
     assert_solver_summary(
         "workflow.acoustic-bar-1d-summary-json",

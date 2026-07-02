@@ -18,6 +18,10 @@ struct ScoreParameterSweepOperator {
     descriptor: OperatorDescriptor,
 }
 
+struct MapParameterSweepScoresToQualityCandidatesOperator {
+    descriptor: OperatorDescriptor,
+}
+
 impl JsonOperator for ExpandParameterSweepOperator {
     type Input = WorkflowOperatorEnvelope;
 
@@ -97,6 +101,28 @@ impl JsonOperator for ScoreParameterSweepOperator {
     }
 }
 
+impl JsonOperator for MapParameterSweepScoresToQualityCandidatesOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            crate::workflow_parameter_sweep::map_parameter_sweep_scores_to_quality_candidates(
+                input.payload,
+                input.config,
+            ),
+        )
+    }
+}
+
 pub(crate) fn register_parameter_sweep_operators(
     registry: &mut OperatorRegistry,
     descriptor: fn(&str) -> OperatorDescriptor,
@@ -121,4 +147,9 @@ pub(crate) fn register_parameter_sweep_operators(
             descriptor: descriptor("transform.score_parameter_sweep"),
         })
         .expect("transform.score_parameter_sweep should register");
+    registry
+        .register_json(MapParameterSweepScoresToQualityCandidatesOperator {
+            descriptor: descriptor("transform.map_parameter_sweep_scores_to_quality_candidates"),
+        })
+        .expect("transform.map_parameter_sweep_scores_to_quality_candidates should register");
 }

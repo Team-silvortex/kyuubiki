@@ -7,6 +7,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.acoustic_bar_1d",
     "solve.thermal_bar_1d",
     "solve.heat_bar_1d",
+    "solve.transient_heat_bar_1d",
     "solve.electrostatic_bar_1d",
     "solve.magnetostatic_bar_1d",
     "solve.advection_diffusion_bar_1d",
@@ -19,6 +20,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.stokes_flow_quad_2d",
     "solve.thermal_truss_2d",
     "solve.frame_3d",
+    "solve.solid_tetra_3d",
     "solve.plane_triangle_2d",
     "solve.thermal_plane_triangle_2d",
     "solve.plane_quad_2d",
@@ -27,6 +29,8 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.thermal_truss_3d",
     "solve.torsion_1d",
     "solve.spring_1d",
+    "solve.transient_spring_1d",
+    "solve.harmonic_spring_1d",
     "solve.nonlinear_spring_1d",
     "solve.contact_gap_1d",
     "solve.spring_2d",
@@ -71,6 +75,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::HeatBar1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::HeatBar1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.transient_heat_bar_1d" => encode_solve_result(
+            solve(EngineSolveRequest::TransientHeatBar1d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::TransientHeatBar1d(result) => Some(result),
                 _ => None,
             },
             operator_id,
@@ -181,6 +193,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             },
             operator_id,
         ),
+        "solve.solid_tetra_3d" => encode_solve_result(
+            solve(EngineSolveRequest::SolidTetra3d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::SolidTetra3d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
         "solve.thermal_frame_3d" => encode_solve_result(
             solve(EngineSolveRequest::ThermalFrame3d(decode(payload)?))?,
             |result| match result {
@@ -241,6 +261,22 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::Spring1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::Spring1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.transient_spring_1d" => encode_solve_result(
+            solve(EngineSolveRequest::TransientSpring1d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::TransientSpring1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.harmonic_spring_1d" => encode_solve_result(
+            solve(EngineSolveRequest::HarmonicSpring1d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::HarmonicSpring1d(result) => Some(result),
                 _ => None,
             },
             operator_id,

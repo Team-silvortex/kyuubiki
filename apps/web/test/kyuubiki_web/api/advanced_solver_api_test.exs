@@ -1,13 +1,90 @@
 defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
+  @solid_tetra_request %{
+    "nodes" => [
+      %{"id" => "n0", "x" => 0.0, "y" => 0.0, "z" => 0.0},
+      %{"id" => "n1", "x" => 1.0, "y" => 0.0, "z" => 0.0},
+      %{"id" => "n2", "x" => 0.0, "y" => 1.0, "z" => 0.0},
+      %{"id" => "n3", "x" => 0.0, "y" => 0.0, "z" => 1.0}
+    ],
+    "elements" => [
+      %{
+        "id" => "t0",
+        "node_a" => 0,
+        "node_b" => 1,
+        "node_c" => 2,
+        "node_d" => 3,
+        "youngs_modulus" => 70.0e9,
+        "poisson_ratio" => 0.33
+      }
+    ]
+  }
+
+  @transient_heat_request %{
+    "nodes" => [
+      %{"id" => "hot", "x" => 0.0, "fix_temperature" => true, "temperature" => 100.0},
+      %{"id" => "mid", "x" => 0.5, "temperature" => 20.0},
+      %{"id" => "cold", "x" => 1.0, "fix_temperature" => true, "temperature" => 0.0}
+    ],
+    "elements" => [
+      %{
+        "id" => "h0",
+        "node_i" => 0,
+        "node_j" => 1,
+        "area" => 0.01,
+        "conductivity" => 45.0,
+        "density" => 7800.0,
+        "specific_heat" => 500.0
+      },
+      %{
+        "id" => "h1",
+        "node_i" => 1,
+        "node_j" => 2,
+        "area" => 0.01,
+        "conductivity" => 45.0,
+        "density" => 7800.0,
+        "specific_heat" => 500.0
+      }
+    ],
+    "time_step" => 0.1,
+    "steps" => 4
+  }
+
+  @transient_spring_request %{
+    "nodes" => [
+      %{"id" => "fixed", "x" => 0.0, "fix_x" => true, "mass" => 1.0},
+      %{"id" => "tip", "x" => 1.0, "load_x" => 10.0, "mass" => 2.0}
+    ],
+    "elements" => [
+      %{"id" => "s0", "node_i" => 0, "node_j" => 1, "stiffness" => 100.0, "damping" => 0.5}
+    ],
+    "time_step" => 0.01,
+    "steps" => 10
+  }
+
+  @harmonic_spring_request %{
+    "nodes" => [
+      %{"id" => "fixed", "x" => 0.0, "fix_x" => true, "mass" => 1.0},
+      %{"id" => "tip", "x" => 1.0, "load_x" => 10.0, "mass" => 2.0}
+    ],
+    "elements" => [
+      %{"id" => "s0", "node_i" => 0, "node_j" => 1, "stiffness" => 100.0, "damping" => 1.0}
+    ],
+    "frequencies_hz" => [0.0, 0.5, 1.0]
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
     {"/api/v1/fem/nonlinear-spring-1d/jobs", "converged", %{}},
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
-    {"/api/v1/fem/modal-frame-3d/jobs", "natural_frequencies_hz", %{}}
+    {"/api/v1/fem/modal-frame-3d/jobs", "natural_frequencies_hz", %{}},
+    {"/api/v1/fem/solid-tetra-3d/jobs", "max_von_mises_stress", @solid_tetra_request},
+    {"/api/v1/fem/transient-heat-bar-1d/jobs", "final_time", @transient_heat_request},
+    {"/api/v1/fem/transient-spring-1d/jobs", "max_velocity", @transient_spring_request},
+    {"/api/v1/fem/harmonic-spring-1d/jobs", "peak_frequency_hz", @harmonic_spring_request}
   ]
 
   for {path, expected_key, extra_request} <- @cases do

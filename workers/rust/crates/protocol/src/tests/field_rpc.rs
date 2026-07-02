@@ -84,6 +84,51 @@ fn serializes_heat_bar_1d_rpc_round_trip() {
 }
 
 #[test]
+fn serializes_transient_heat_bar_1d_rpc_round_trip() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-transient-heat-bar".to_string(),
+        method: RpcMethod::SolveTransientHeatBar1d,
+        params: serde_json::to_value(SolveTransientHeatBar1dRequest {
+            nodes: vec![
+                HeatBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_temperature: true,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                },
+                HeatBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_temperature: false,
+                    temperature: 20.0,
+                    heat_load: 0.0,
+                },
+            ],
+            elements: vec![TransientHeatBar1dElementInput {
+                id: "h0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                conductivity: 45.0,
+                density: 7800.0,
+                specific_heat: 500.0,
+            }],
+            time_step: 0.1,
+            steps: 2,
+        })
+        .expect("request params should serialize"),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveTransientHeatBar1d);
+    assert_eq!(decoded.id, "rpc-transient-heat-bar");
+}
+
+#[test]
 fn serializes_acoustic_bar_1d_rpc_round_trip() {
     let request = RpcRequest {
         rpc_version: RPC_VERSION,

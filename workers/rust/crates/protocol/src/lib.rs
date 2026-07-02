@@ -7,6 +7,7 @@ mod workflow;
 mod types {
     pub mod acoustic;
     pub mod acoustic_results;
+    pub mod dynamic_results;
     pub mod field;
     pub mod field_results;
     pub mod fluid_results;
@@ -15,6 +16,7 @@ mod types {
     pub mod nonlinear_structural;
     pub mod plane_frame;
     pub mod rpc;
+    pub mod rpc_descriptor;
     pub mod space_structural;
     pub mod transport_results;
 }
@@ -35,6 +37,7 @@ pub use operator_task_ir::{
 };
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;
+pub use types::dynamic_results::*;
 pub use types::field::*;
 pub use types::field_results::*;
 pub use types::fluid_results::*;

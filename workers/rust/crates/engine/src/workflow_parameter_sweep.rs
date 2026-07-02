@@ -1,7 +1,8 @@
 use serde_json::{Map, Value};
 
 pub use crate::workflow_parameter_sweep_results::{
-    join_parameter_sweep_results, score_parameter_sweep,
+    join_parameter_sweep_results, map_parameter_sweep_scores_to_quality_candidates,
+    score_parameter_sweep,
 };
 
 #[derive(Debug, Clone)]
@@ -12,6 +13,12 @@ struct SweepAxis {
 }
 
 pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
+    if payload.get("quality_sweep_expansion_contract").is_some()
+        && payload.get("expansion_enabled").and_then(Value::as_bool) == Some(false)
+    {
+        return Ok(disabled_quality_sweep_result(&payload));
+    }
+
     let (payload, config) = normalize_expand_input(payload, config)?;
     let base = payload
         .get("base")
@@ -27,6 +34,11 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
         .get("id_prefix")
         .and_then(Value::as_str)
         .unwrap_or("case");
+    let case_metadata = payload
+        .get("case_metadata")
+        .or_else(|| config.get("case_metadata"))
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
 
     let case_count = axes
         .iter()
@@ -42,7 +54,15 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
     }
 
     let mut cases = Vec::with_capacity(case_count);
-    expand_axis_cases(&base, &axes, 0, &mut Map::new(), &mut cases, id_prefix)?;
+    expand_axis_cases(
+        &base,
+        &axes,
+        0,
+        &mut Map::new(),
+        &mut cases,
+        id_prefix,
+        &case_metadata,
+    )?;
 
     Ok(serde_json::json!({
         "cases": cases,
@@ -51,14 +71,21 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
     }))
 }
 
+fn disabled_quality_sweep_result(payload: &Value) -> Value {
+    serde_json::json!({
+        "cases": [],
+        "case_count": 0,
+        "axis_count": 0,
+        "sweep_enabled": false,
+        "expansion_enabled": false,
+        "sweep_action": payload.get("reason").and_then(Value::as_str).unwrap_or("stopped"),
+        "sweep_summary": "Quality parameter sweep was skipped because exploration has stopped.",
+    })
+}
+
 fn normalize_expand_input(payload: Value, config: Value) -> Result<(Value, Value), String> {
     if payload.get("quality_sweep_expansion_contract").is_none() {
         return Ok((payload, config));
-    }
-    if payload.get("expansion_enabled").and_then(Value::as_bool) == Some(false) {
-        return Err(
-            "transform.expand_parameter_sweep received a disabled quality expansion".into(),
-        );
     }
 
     let nested_payload = payload
@@ -100,6 +127,10 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
         .get("include_parameters")
         .and_then(Value::as_bool)
         .unwrap_or(true);
+    let include_metadata = config
+        .get("include_metadata")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
 
     let mut rows = Vec::with_capacity(cases.len());
     let mut numeric_columns: Map<String, Value> = Map::new();
@@ -122,6 +153,12 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
             row.insert(
                 "parameters".to_string(),
                 case.get("parameters").cloned().unwrap_or(Value::Null),
+            );
+        }
+        if include_metadata {
+            row.insert(
+                "metadata".to_string(),
+                case.get("metadata").cloned().unwrap_or(Value::Null),
             );
         }
 
@@ -203,6 +240,7 @@ fn expand_axis_cases(
     parameters: &mut Map<String, Value>,
     cases: &mut Vec<Value>,
     id_prefix: &str,
+    case_metadata: &Value,
 ) -> Result<(), String> {
     if axis_index == axes.len() {
         let mut model = base.clone();
@@ -217,6 +255,7 @@ fn expand_axis_cases(
             "id": format!("{id_prefix}_{index}"),
             "label": format_case_label(parameters),
             "parameters": parameters.clone(),
+            "metadata": case_metadata,
             "model": model,
         }));
         return Ok(());
@@ -225,7 +264,15 @@ fn expand_axis_cases(
     let axis = &axes[axis_index];
     for value in &axis.values {
         parameters.insert(axis.label.clone(), value.clone());
-        expand_axis_cases(base, axes, axis_index + 1, parameters, cases, id_prefix)?;
+        expand_axis_cases(
+            base,
+            axes,
+            axis_index + 1,
+            parameters,
+            cases,
+            id_prefix,
+            case_metadata,
+        )?;
     }
     parameters.remove(&axis.label);
     Ok(())

@@ -26,6 +26,12 @@ pub fn chunk_result(
         (AnalysisResult::HeatBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::TransientHeatBar1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::TransientHeatBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::ElectrostaticBar1d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }
@@ -102,6 +108,16 @@ pub fn chunk_result(
         (AnalysisResult::Spring1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::TransientSpring1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::TransientSpring1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::HarmonicSpring1d(result), ResultChunkKind::Nodes)
+        | (AnalysisResult::HarmonicSpring1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.frequencies)?
+        }
         (AnalysisResult::NonlinearSpring1d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }
@@ -158,6 +174,12 @@ pub fn chunk_result(
         }
         (AnalysisResult::Frame3d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Frame3d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::SolidTetra3d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::SolidTetra3d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::PlaneTriangle2d(result), ResultChunkKind::Nodes) => {

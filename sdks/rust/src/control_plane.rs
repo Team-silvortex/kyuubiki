@@ -9,6 +9,10 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("thermal_bar_1d", "/api/v1/fem/thermal-bar-1d/jobs"),
     ("heat_bar_1d", "/api/v1/fem/heat-bar-1d/jobs"),
     (
+        "transient_heat_bar_1d",
+        "/api/v1/fem/transient-heat-bar-1d/jobs",
+    ),
+    (
         "electrostatic_bar_1d",
         "/api/v1/fem/electrostatic-bar-1d/jobs",
     ),
@@ -29,6 +33,11 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("thermal_beam_1d", "/api/v1/fem/thermal-beam-1d/jobs"),
     ("torsion_1d", "/api/v1/fem/torsion-1d/jobs"),
     ("spring_1d", "/api/v1/fem/spring-1d/jobs"),
+    (
+        "transient_spring_1d",
+        "/api/v1/fem/transient-spring-1d/jobs",
+    ),
+    ("harmonic_spring_1d", "/api/v1/fem/harmonic-spring-1d/jobs"),
     (
         "nonlinear_spring_1d",
         "/api/v1/fem/nonlinear-spring-1d/jobs",
@@ -67,6 +76,7 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("truss_3d", "/api/v1/fem/truss-3d/jobs"),
     ("thermal_truss_3d", "/api/v1/fem/thermal-truss-3d/jobs"),
     ("frame_3d", "/api/v1/fem/frame-3d/jobs"),
+    ("solid_tetra_3d", "/api/v1/fem/solid-tetra-3d/jobs"),
     ("modal_frame_3d", "/api/v1/fem/modal-frame-3d/jobs"),
     ("thermal_frame_3d", "/api/v1/fem/thermal-frame-3d/jobs"),
     (

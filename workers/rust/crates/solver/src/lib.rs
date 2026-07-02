@@ -9,6 +9,7 @@ mod frame_2d;
 mod frame_2d_math;
 mod frame_3d;
 mod frame_3d_math;
+mod harmonic_spring_1d;
 mod heat_plane_2d;
 mod heat_plane_2d_validation;
 mod linear_algebra;
@@ -22,6 +23,7 @@ mod modal_math;
 mod nonlinear_spring_1d;
 mod plane_2d;
 mod plane_2d_math;
+mod solid_tetra_3d;
 mod spring;
 mod stokes_flow_plane_2d;
 mod thermal_frame_3d;
@@ -29,6 +31,8 @@ mod thermal_plane_2d;
 mod thermal_plane_2d_validation;
 mod thermal_truss;
 mod torsion_1d;
+mod transient_heat_bar_1d;
+mod transient_spring_1d;
 mod transport_bar_1d;
 mod truss;
 
@@ -42,6 +46,7 @@ pub use electrostatic_plane_2d::{
 };
 pub use frame_2d::{solve_frame_2d, solve_thermal_frame_2d};
 pub use frame_3d::solve_frame_3d;
+pub use harmonic_spring_1d::solve_harmonic_spring_1d;
 pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
@@ -58,12 +63,15 @@ pub use plane_2d::{
     PlaneQuadProfile, PlaneQuadProfileStage, profile_plane_quad_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d,
 };
+pub use solid_tetra_3d::solve_solid_tetra_3d;
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
 pub use stokes_flow_plane_2d::solve_stokes_flow_plane_quad_2d;
 pub use thermal_frame_3d::solve_thermal_frame_3d;
 pub use thermal_plane_2d::{solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d};
 pub use thermal_truss::{solve_thermal_truss_2d, solve_thermal_truss_3d};
 pub use torsion_1d::solve_torsion_1d;
+pub use transient_heat_bar_1d::solve_transient_heat_bar_1d;
+pub use transient_spring_1d::solve_transient_spring_1d;
 pub use transport_bar_1d::solve_advection_diffusion_bar_1d;
 pub use truss::{
     Truss2dProfile, Truss2dProfileStage, profile_truss_2d, profile_truss_2d_with_options,

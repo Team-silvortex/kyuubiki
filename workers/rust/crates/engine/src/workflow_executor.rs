@@ -31,6 +31,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.summarize_parameter_sweep",
     "transform.join_parameter_sweep_results",
     "transform.score_parameter_sweep",
+    "transform.map_parameter_sweep_scores_to_quality_candidates",
     "transform.evaluate_material_margins",
     "transform.rank_material_candidates",
     "transform.extract_material_pareto_frontier",
@@ -40,6 +41,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.evaluate_modal_guard",
     "transform.benchmark_modal_pair",
     "transform.score_modal_quality",
+    "transform.score_dynamic_quality",
     "transform.evaluate_structural_guard",
     "transform.benchmark_structural_pair",
     "transform.score_structural_quality",
@@ -158,6 +160,7 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
         || operator_id == "transform.compose_quality_objective"
+        || operator_id == "transform.join_parameter_sweep_results"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
@@ -301,6 +304,7 @@ pub fn run_transform_operator(
         | "transform.summarize_parameter_sweep"
         | "transform.join_parameter_sweep_results"
         | "transform.score_parameter_sweep"
+        | "transform.map_parameter_sweep_scores_to_quality_candidates"
         | "transform.evaluate_material_margins"
         | "transform.rank_material_candidates"
         | "transform.extract_material_pareto_frontier"
@@ -310,6 +314,7 @@ pub fn run_transform_operator(
         | "transform.evaluate_modal_guard"
         | "transform.benchmark_modal_pair"
         | "transform.score_modal_quality"
+        | "transform.score_dynamic_quality"
         | "transform.evaluate_structural_guard"
         | "transform.benchmark_structural_pair"
         | "transform.score_structural_quality"

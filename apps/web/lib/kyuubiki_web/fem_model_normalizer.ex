@@ -53,6 +53,9 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_heat_bar_1d(params), do: normalize_graph_model(params, :invalid_heat_bar_model)
 
+  def normalize_transient_heat_bar_1d(params),
+    do: normalize_graph_model(params, :invalid_transient_heat_bar_model)
+
   def normalize_electrostatic_bar_1d(params),
     do: normalize_graph_model(params, :invalid_electrostatic_bar_model)
 
@@ -61,6 +64,12 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_torsion_1d(params), do: normalize_graph_model(params, :invalid_torsion_model)
   def normalize_spring_1d(params), do: normalize_graph_model(params, :invalid_spring_model)
+
+  def normalize_transient_spring_1d(params),
+    do: normalize_graph_model(params, :invalid_transient_spring_model)
+
+  def normalize_harmonic_spring_1d(params),
+    do: normalize_graph_model(params, :invalid_harmonic_spring_model)
 
   def normalize_nonlinear_spring_1d(params),
     do: normalize_graph_model(params, :invalid_nonlinear_spring_model)
@@ -83,6 +92,9 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_spring_3d(params), do: normalize_graph_model(params, :invalid_spring_3d_model)
   def normalize_frame_2d(params), do: normalize_graph_model(params, :invalid_frame_model)
   def normalize_frame_3d(params), do: normalize_graph_model(params, :invalid_frame_3d_model)
+
+  def normalize_solid_tetra_3d(params),
+    do: normalize_graph_model(params, :invalid_solid_tetra_3d_model)
 
   def normalize_modal_frame_2d(params),
     do: normalize_graph_model(params, :invalid_modal_frame_model)
@@ -172,14 +184,19 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_stokes_flow_plane_quad_2d(_params),
     do: {:error, :invalid_stokes_flow_plane_quad_model}
 
-  defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements}, _error)
+  defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements} = params, _error)
        when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
+    {:ok, params}
   end
 
-  defp normalize_graph_model(%{nodes: nodes, elements: elements}, _error)
+  defp normalize_graph_model(%{nodes: nodes, elements: elements} = params, _error)
        when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
+    {:ok,
+     params
+     |> Map.delete(:nodes)
+     |> Map.delete(:elements)
+     |> Map.put("nodes", nodes)
+     |> Map.put("elements", elements)}
   end
 
   defp normalize_graph_model(_params, error), do: {:error, error}

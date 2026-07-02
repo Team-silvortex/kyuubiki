@@ -58,6 +58,7 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             | "solve_heat_bar_1d"
             | "solve_electrostatic_bar_1d"
             | "solve_magnetostatic_bar_1d"
+            | "solve_transient_heat_bar_1d"
             | "solve_magnetostatic_plane_triangle_2d"
             | "solve_magnetostatic_plane_quad_2d"
             | "solve_electrostatic_plane_triangle_2d"
@@ -75,6 +76,8 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             | "solve_thermal_frame_3d"
             | "solve_torsion_1d"
             | "solve_spring_1d"
+            | "solve_transient_spring_1d"
+            | "solve_harmonic_spring_1d"
             | "solve_nonlinear_spring_1d"
             | "solve_contact_gap_1d"
             | "solve_spring_2d"
@@ -86,6 +89,7 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             | "solve_frame_2d"
             | "solve_modal_frame_2d"
             | "solve_modal_frame_3d"
+            | "solve_solid_tetra_3d"
             | "solve_frame_3d" => execute_direct_fem_submit(
                 &self.base_url,
                 self.api_token.as_deref(),

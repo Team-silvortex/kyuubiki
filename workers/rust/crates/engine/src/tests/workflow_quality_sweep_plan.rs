@@ -1,8 +1,13 @@
 use crate::{
-    workflow_executor::run_transform_operator,
-    workflow_quality_objective::build_quality_parameter_sweep_plan,
+    run_workflow_graph, workflow_executor::run_transform_operator,
     workflow_quality_sweep_plan::materialize_quality_sweep_expansion,
+    workflow_quality_sweep_request::build_quality_parameter_sweep_plan,
 };
+use kyuubiki_protocol::{
+    WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode,
+    WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
+};
+use std::collections::BTreeMap;
 
 fn approx_eq(left: Option<f64>, right: f64) {
     let value = left.expect("expected numeric value");
@@ -162,4 +167,193 @@ fn expands_materialized_quality_sweep_through_parameter_sweep_operator() {
         expanded["cases"][3]["model"]["material"]["density"].as_f64(),
         Some(7800.0)
     );
+}
+
+#[test]
+fn runs_quality_next_round_to_parameter_sweep_workflow_graph() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: quality_sweep_graph(),
+        input_artifacts: BTreeMap::from([(
+            "next_round".to_string(),
+            serde_json::json!({
+                "quality_next_round_contract": "kyuubiki.quality_next_round_request/v1",
+                "action": "continue",
+                "selected_candidate_id": "candidate_b",
+                "target_score": 2.0,
+                "request_payload": {
+                    "max_candidates": 4,
+                    "search_space": {
+                        "elements.0.thickness": [0.01, 0.02],
+                        "material.density": [2700.0, 7800.0]
+                    }
+                }
+            }),
+        )]),
+    })
+    .expect("quality sweep workflow should run");
+
+    let plan = run
+        .artifacts
+        .get("build_plan.plan")
+        .expect("sweep plan should exist");
+    assert_eq!(
+        plan["quality_parameter_sweep_plan_contract"].as_str(),
+        Some("kyuubiki.quality_parameter_sweep_plan/v1")
+    );
+    assert_eq!(plan["case_count_estimate"].as_u64(), Some(4));
+
+    let expanded = run
+        .artifacts
+        .get("expand_cases.cases")
+        .expect("expanded cases should exist");
+    assert_eq!(expanded["case_count"].as_u64(), Some(4));
+    assert_eq!(
+        expanded["cases"][0]["id"].as_str(),
+        Some("quality_candidate_0")
+    );
+    assert_eq!(
+        expanded["cases"][3]["model"]["material"]["density"].as_f64(),
+        Some(7800.0)
+    );
+}
+
+fn quality_sweep_graph() -> WorkflowGraph {
+    WorkflowGraph {
+        schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+        id: "workflow.quality-next-round-to-sweep".to_string(),
+        name: "Quality next round to sweep".to_string(),
+        version: "1.0.0".to_string(),
+        description: None,
+        dataset_contract: None,
+        entry_nodes: vec!["next_round".to_string()],
+        output_nodes: vec!["sweep_output".to_string()],
+        defaults: WorkflowDefaults::default(),
+        nodes: vec![
+            node(
+                "next_round",
+                WorkflowNodeKind::Input,
+                None,
+                vec![],
+                vec![port("request", "artifact/result_summary")],
+                None,
+            ),
+            node(
+                "build_plan",
+                WorkflowNodeKind::Transform,
+                Some("transform.build_quality_parameter_sweep_plan"),
+                vec![port("request", "artifact/result_summary")],
+                vec![port("plan", "artifact/result_summary")],
+                Some(serde_json::json!({
+                    "samples_per_axis": 2,
+                    "id_prefix": "quality_candidate",
+                    "base": {
+                        "elements": [{"thickness": 0.01}],
+                        "material": {"density": 2700.0}
+                    }
+                })),
+            ),
+            node(
+                "materialize",
+                WorkflowNodeKind::Transform,
+                Some("transform.materialize_quality_sweep_expansion"),
+                vec![port("plan", "artifact/result_summary")],
+                vec![port("expansion", "artifact/result_summary")],
+                None,
+            ),
+            node(
+                "expand_cases",
+                WorkflowNodeKind::Transform,
+                Some("transform.expand_parameter_sweep"),
+                vec![port("expansion", "artifact/result_summary")],
+                vec![port("cases", "artifact/result_summary")],
+                None,
+            ),
+            node(
+                "sweep_output",
+                WorkflowNodeKind::Output,
+                None,
+                vec![port("cases", "artifact/result_summary")],
+                vec![],
+                None,
+            ),
+        ],
+        edges: vec![
+            edge(
+                "edge-request-plan",
+                "next_round",
+                "request",
+                "build_plan",
+                "request",
+            ),
+            edge(
+                "edge-plan-materialize",
+                "build_plan",
+                "plan",
+                "materialize",
+                "plan",
+            ),
+            edge(
+                "edge-materialize-expand",
+                "materialize",
+                "expansion",
+                "expand_cases",
+                "expansion",
+            ),
+            edge(
+                "edge-expand-output",
+                "expand_cases",
+                "cases",
+                "sweep_output",
+                "cases",
+            ),
+        ],
+    }
+}
+
+fn node(
+    id: &str,
+    kind: WorkflowNodeKind,
+    operator_id: Option<&str>,
+    inputs: Vec<WorkflowPort>,
+    outputs: Vec<WorkflowPort>,
+    config: Option<serde_json::Value>,
+) -> WorkflowNode {
+    WorkflowNode {
+        id: id.to_string(),
+        kind,
+        operator_id: operator_id.map(str::to_string),
+        name: None,
+        description: None,
+        config,
+        cache_policy: None,
+        inputs,
+        outputs,
+    }
+}
+
+fn port(id: &str, artifact_type: &str) -> WorkflowPort {
+    WorkflowPort {
+        id: id.to_string(),
+        artifact_type: artifact_type.to_string(),
+        name: None,
+        required: None,
+        cardinality: None,
+        dataset_value: Some("quality_sweep".to_string()),
+    }
+}
+
+fn edge(id: &str, from_node: &str, from_port: &str, to_node: &str, to_port: &str) -> WorkflowEdge {
+    WorkflowEdge {
+        id: id.to_string(),
+        from: WorkflowNodePortRef {
+            node: from_node.to_string(),
+            port: from_port.to_string(),
+        },
+        to: WorkflowNodePortRef {
+            node: to_node.to_string(),
+            port: to_port.to_string(),
+        },
+        artifact_type: "artifact/result_summary".to_string(),
+        dataset_value: Some("quality_sweep".to_string()),
+    }
 }

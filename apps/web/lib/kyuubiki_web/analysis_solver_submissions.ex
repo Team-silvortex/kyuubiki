@@ -30,6 +30,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     do:
       submit_solver_job(params, &FemModelNormalizer.normalize_heat_bar_1d/1, "solve_heat_bar_1d")
 
+  def submit_transient_heat_bar_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_transient_heat_bar_1d/1,
+        "solve_transient_heat_bar_1d"
+      )
+
   def submit_electrostatic_bar_1d(params),
     do:
       submit_solver_job(
@@ -135,6 +143,22 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   def submit_spring_1d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_spring_1d/1, "solve_spring_1d")
 
+  def submit_transient_spring_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_transient_spring_1d/1,
+        "solve_transient_spring_1d"
+      )
+
+  def submit_harmonic_spring_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_harmonic_spring_1d/1,
+        "solve_harmonic_spring_1d"
+      )
+
   def submit_nonlinear_spring_1d(params),
     do:
       submit_solver_job(
@@ -208,6 +232,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   def submit_frame_3d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
+
+  def submit_solid_tetra_3d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_solid_tetra_3d/1,
+        "solve_solid_tetra_3d"
+      )
 
   def submit_modal_frame_3d(params),
     do:

@@ -223,6 +223,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         output_keys: &["job_id", "status", "progress", "job"],
     },
     HeadlessActionContract {
+        id: "solve_transient_heat_bar_1d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
         id: "solve_electrostatic_bar_1d",
         engine: HeadlessEngine::Service,
         category: "solve",
@@ -375,6 +383,22 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         output_keys: &["job_id", "status", "progress", "job"],
     },
     HeadlessActionContract {
+        id: "solve_transient_spring_1d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
+        id: "solve_harmonic_spring_1d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
         id: "solve_nonlinear_spring_1d",
         engine: HeadlessEngine::Service,
         category: "solve",
@@ -432,6 +456,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
     },
     HeadlessActionContract {
         id: "solve_frame_3d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
+        id: "solve_solid_tetra_3d",
         engine: HeadlessEngine::Service,
         category: "solve",
         risk: HeadlessRisk::Normal,

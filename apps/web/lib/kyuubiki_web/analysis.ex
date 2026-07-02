@@ -15,6 +15,7 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_acoustic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_bar_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_transient_heat_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_magnetostatic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_electrostatic_plane_triangle_2d(params), to: AnalysisSolverSubmissions
@@ -30,6 +31,8 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_thermal_beam_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_torsion_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_transient_spring_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_harmonic_spring_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_nonlinear_spring_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_contact_gap_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_2d(params), to: AnalysisSolverSubmissions
@@ -43,6 +46,7 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_modal_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_frame_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_solid_tetra_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_modal_frame_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_frame_3d(params), to: AnalysisSolverSubmissions

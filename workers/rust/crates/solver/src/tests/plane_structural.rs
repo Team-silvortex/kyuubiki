@@ -497,3 +497,55 @@ fn solves_a_small_three_dimensional_truss() {
     assert!(result.max_displacement > 0.0);
     assert!(result.max_stress > 0.0);
 }
+
+#[test]
+fn solves_a_small_three_dimensional_solid_tetra() {
+    let request = SolveSolidTetra3dRequest {
+        nodes: vec![
+            solid_node("n0", 0.0, 0.0, 0.0, true, [0.0, 0.0, 0.0]),
+            solid_node("n1", 1.0, 0.0, 0.0, true, [0.0, 0.0, 0.0]),
+            solid_node("n2", 0.0, 1.0, 0.0, true, [0.0, 0.0, 0.0]),
+            solid_node("n3", 0.0, 0.0, 1.0, false, [0.0, 0.0, -1000.0]),
+        ],
+        elements: vec![SolidTetra3dElementInput {
+            id: "t0".to_string(),
+            node_a: 0,
+            node_b: 1,
+            node_c: 2,
+            node_d: 3,
+            youngs_modulus: 70.0e9,
+            poisson_ratio: 0.33,
+        }],
+    };
+
+    let result = solve_solid_tetra_3d(&request).expect("3d solid tetra should solve");
+
+    assert_eq!(result.nodes.len(), 4);
+    assert_eq!(result.elements.len(), 1);
+    assert!((result.total_volume - (1.0 / 6.0)).abs() < 1.0e-12);
+    assert!(result.max_displacement > 0.0);
+    assert!(result.max_von_mises_stress > 0.0);
+    assert!(result.nodes[3].uz < 0.0);
+}
+
+fn solid_node(
+    id: &str,
+    x: f64,
+    y: f64,
+    z: f64,
+    fixed: bool,
+    load: [f64; 3],
+) -> SolidTetra3dNodeInput {
+    SolidTetra3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x: fixed,
+        fix_y: fixed,
+        fix_z: fixed,
+        load_x: load[0],
+        load_y: load[1],
+        load_z: load[2],
+    }
+}

@@ -79,6 +79,99 @@ fn serializes_spring_1d_rpc_round_trip() {
 }
 
 #[test]
+fn serializes_transient_spring_1d_rpc_round_trip() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-transient-spring-1d".to_string(),
+        method: RpcMethod::SolveTransientSpring1d,
+        params: serde_json::to_value(SolveTransientSpring1dRequest {
+            nodes: vec![
+                TransientSpring1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_x: true,
+                    load_x: 0.0,
+                    mass: 1.0,
+                    initial_displacement: 0.0,
+                    initial_velocity: 0.0,
+                },
+                TransientSpring1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_x: false,
+                    load_x: 10.0,
+                    mass: 2.0,
+                    initial_displacement: 0.0,
+                    initial_velocity: 0.0,
+                },
+            ],
+            elements: vec![TransientSpring1dElementInput {
+                id: "s0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 100.0,
+                damping: 0.5,
+            }],
+            time_step: 0.01,
+            steps: 10,
+        })
+        .expect("request params should serialize"),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveTransientSpring1d);
+    assert_eq!(decoded.id, "rpc-transient-spring-1d");
+}
+
+#[test]
+fn serializes_harmonic_spring_1d_rpc_round_trip() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-harmonic-spring-1d".to_string(),
+        method: RpcMethod::SolveHarmonicSpring1d,
+        params: serde_json::to_value(SolveHarmonicSpring1dRequest {
+            nodes: vec![
+                TransientSpring1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_x: true,
+                    load_x: 0.0,
+                    mass: 1.0,
+                    initial_displacement: 0.0,
+                    initial_velocity: 0.0,
+                },
+                TransientSpring1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_x: false,
+                    load_x: 10.0,
+                    mass: 2.0,
+                    initial_displacement: 0.0,
+                    initial_velocity: 0.0,
+                },
+            ],
+            elements: vec![TransientSpring1dElementInput {
+                id: "s0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 100.0,
+                damping: 1.0,
+            }],
+            frequencies_hz: vec![0.0, 0.5, 1.0],
+        })
+        .expect("request params should serialize"),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveHarmonicSpring1d);
+    assert_eq!(decoded.id, "rpc-harmonic-spring-1d");
+}
+
+#[test]
 fn serializes_spring_2d_rpc_round_trip() {
     let request = RpcRequest {
         rpc_version: RPC_VERSION,

@@ -129,6 +129,95 @@ pub fn score_parameter_sweep(payload: Value, config: Value) -> Result<Value, Str
     }))
 }
 
+pub fn map_parameter_sweep_scores_to_quality_candidates(
+    payload: Value,
+    config: Value,
+) -> Result<Value, String> {
+    let rows = payload
+        .get("scored_rows")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            "transform.map_parameter_sweep_scores_to_quality_candidates requires payload.scored_rows"
+                .to_string()
+        })?;
+    if rows.is_empty() {
+        return Err(
+            "transform.map_parameter_sweep_scores_to_quality_candidates scored_rows must not be empty"
+                .to_string(),
+        );
+    }
+    let domain = config
+        .get("quality_domain")
+        .and_then(Value::as_str)
+        .unwrap_or("parameter_sweep");
+    let ready_field = format!("{domain}_quality_ready");
+    let score_field = format!("{domain}_quality_score");
+    let missing_field = format!("{domain}_quality_missing_metric_count");
+    let contract_field = format!("{domain}_quality_contract");
+    let mut candidates = Map::new();
+
+    for (index, row) in rows.iter().enumerate() {
+        let object = row.as_object().ok_or_else(|| {
+            format!(
+                "transform.map_parameter_sweep_scores_to_quality_candidates row {index} must be an object"
+            )
+        })?;
+        let candidate_id = object
+            .get("case_id")
+            .or_else(|| object.get("id"))
+            .and_then(Value::as_str)
+            .map(ToString::to_string)
+            .unwrap_or_else(|| format!("candidate_{}", index + 1));
+        let objective_score = object
+            .get("objective_score")
+            .and_then(Value::as_f64)
+            .filter(|value| value.is_finite())
+            .ok_or_else(|| {
+                format!(
+                    "transform.map_parameter_sweep_scores_to_quality_candidates missing objective_score for {candidate_id}"
+                )
+            })?;
+        let ready = object
+            .get("objective_feasible")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let quality_score = -objective_score;
+        let grade = if ready { "candidate" } else { "blocked" };
+
+        candidates.insert(
+            candidate_id.clone(),
+            serde_json::json!({
+                "label": object.get("label").and_then(Value::as_str).unwrap_or(&candidate_id),
+                "parameters": object.get("parameters").cloned().unwrap_or(Value::Null),
+                "source_row": row,
+                "qualities": {
+                    domain: {
+                        (contract_field.clone()): format!("kyuubiki.{domain}_quality_score/v1"),
+                        (score_field.clone()): quality_score,
+                        (ready_field.clone()): ready,
+                        (missing_field.clone()): 0,
+                        (format!("{domain}_quality_grade")): grade,
+                        (format!("{domain}_quality_summary")): format!(
+                            "Parameter sweep candidate {candidate_id}: quality_score={quality_score:.4}, feasible={ready}."
+                        )
+                    }
+                }
+            }),
+        );
+    }
+
+    Ok(serde_json::json!({
+        "quality_candidates_contract": "kyuubiki.parameter_sweep_quality_candidates/v1",
+        "candidate_count": candidates.len(),
+        "source_best_case_id": payload
+            .get("best")
+            .and_then(|best| best.get("case_id").or_else(|| best.get("id")))
+            .cloned()
+            .unwrap_or(Value::Null),
+        "candidates": candidates,
+    }))
+}
+
 fn find_case_result<'a>(results: &'a [Value], case_id: &str, index: usize) -> Option<&'a Value> {
     results
         .iter()

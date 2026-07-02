@@ -29,6 +29,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_heat_bar_1d", params, on_progress)
   end
 
+  @spec solve_transient_heat_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_transient_heat_bar_1d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_transient_heat_bar_1d", params, on_progress)
+  end
+
   @spec solve_electrostatic_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_electrostatic_bar_1d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_electrostatic_bar_1d", params, on_progress)
@@ -96,6 +101,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_spring_1d", params, on_progress)
   end
 
+  @spec solve_transient_spring_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_transient_spring_1d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_transient_spring_1d", params, on_progress)
+  end
+
+  @spec solve_harmonic_spring_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_harmonic_spring_1d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_harmonic_spring_1d", params, on_progress)
+  end
+
   @spec solve_spring_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_spring_2d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_spring_2d", params, on_progress)
@@ -145,6 +160,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   @spec solve_frame_3d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_frame_3d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_frame_3d", params, on_progress)
+  end
+
+  @spec solve_solid_tetra_3d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_solid_tetra_3d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_solid_tetra_3d", params, on_progress)
   end
 
   @spec cancel_job(String.t()) :: {:ok, map()} | {:error, term()}

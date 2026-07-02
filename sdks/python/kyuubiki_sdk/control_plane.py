@@ -13,12 +13,15 @@ _FEM_JOB_PATHS: dict[str, str] = {
     "bar_1d": "/api/v1/fem/axial-bar/jobs",
     "thermal_bar_1d": "/api/v1/fem/thermal-bar-1d/jobs",
     "heat_bar_1d": "/api/v1/fem/heat-bar-1d/jobs",
+    "transient_heat_bar_1d": "/api/v1/fem/transient-heat-bar-1d/jobs",
     "electrostatic_bar_1d": "/api/v1/fem/electrostatic-bar-1d/jobs",
     "magnetostatic_bar_1d": "/api/v1/fem/magnetostatic-bar-1d/jobs",
     "beam_1d": "/api/v1/fem/beam-1d/jobs",
     "thermal_beam_1d": "/api/v1/fem/thermal-beam-1d/jobs",
     "torsion_1d": "/api/v1/fem/torsion-1d/jobs",
     "spring_1d": "/api/v1/fem/spring-1d/jobs",
+    "transient_spring_1d": "/api/v1/fem/transient-spring-1d/jobs",
+    "harmonic_spring_1d": "/api/v1/fem/harmonic-spring-1d/jobs",
     "spring_2d": "/api/v1/fem/spring-2d/jobs",
     "spring_3d": "/api/v1/fem/spring-3d/jobs",
     "truss_2d": "/api/v1/fem/truss-2d/jobs",
@@ -36,6 +39,7 @@ _FEM_JOB_PATHS: dict[str, str] = {
     "truss_3d": "/api/v1/fem/truss-3d/jobs",
     "thermal_truss_3d": "/api/v1/fem/thermal-truss-3d/jobs",
     "frame_3d": "/api/v1/fem/frame-3d/jobs",
+    "solid_tetra_3d": "/api/v1/fem/solid-tetra-3d/jobs",
     "thermal_frame_3d": "/api/v1/fem/thermal-frame-3d/jobs",
 }
 

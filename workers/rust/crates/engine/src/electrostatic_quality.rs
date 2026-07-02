@@ -4,7 +4,7 @@ pub fn score_electrostatic_quality(payload: Value, config: Value) -> Result<Valu
     let object = payload.as_object().ok_or_else(|| {
         "transform.score_electrostatic_quality expects an object payload".to_string()
     })?;
-    let terms = default_quality_terms();
+    let terms = quality_terms(&config);
     let score_terms = terms
         .iter()
         .map(|term| score_quality_term(object, &config, term))
@@ -28,6 +28,8 @@ pub fn score_electrostatic_quality(payload: Value, config: Value) -> Result<Valu
         "electrostatic_quality_missing_metric_count": missing_count,
         "electrostatic_quality_term_count": score_terms.len(),
         "electrostatic_quality_max_ready_score": max_ready_score,
+        "electrostatic_quality_peak_field": numeric_field(object, "electrostatic_field_peak_magnitude"),
+        "electrostatic_quality_total_energy": numeric_field(object, "electrostatic_total_stored_energy"),
         "electrostatic_quality_terms": score_terms,
         "electrostatic_quality_summary": format!(
             "Electrostatic quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
@@ -35,6 +37,7 @@ pub fn score_electrostatic_quality(payload: Value, config: Value) -> Result<Valu
     }))
 }
 
+#[derive(Clone, Copy)]
 struct QualityTerm {
     field: &'static str,
     label: &'static str,
@@ -75,10 +78,44 @@ fn default_quality_terms() -> [QualityTerm; 3] {
     ]
 }
 
+fn quality_terms(config: &Value) -> Vec<QualityTerm> {
+    config
+        .get("enabled_terms")
+        .and_then(Value::as_array)
+        .map(|terms| {
+            terms
+                .iter()
+                .filter_map(Value::as_str)
+                .filter_map(quality_term_for)
+                .collect::<Vec<_>>()
+        })
+        .filter(|terms| !terms.is_empty())
+        .unwrap_or_else(|| default_quality_terms().to_vec())
+}
+
+fn quality_term_for(field: &str) -> Option<QualityTerm> {
+    if let Some(term) = default_quality_terms()
+        .into_iter()
+        .find(|term| term.field == field)
+    {
+        return Some(term);
+    }
+    match field {
+        "electrostatic_total_stored_energy" => Some(QualityTerm {
+            field: "electrostatic_total_stored_energy",
+            label: "Total electrostatic stored energy",
+            target: 10.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        }),
+        _ => None,
+    }
+}
+
 fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
     let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
     let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = object.get(term.field).and_then(Value::as_f64);
+    let value = numeric_field(object, term.field);
 
     match value {
         Some(value) if value.is_finite() => {
@@ -110,6 +147,25 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "status": "missing",
         }),
     }
+}
+
+fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(Value::as_f64)
+        .or_else(|| electrostatic_alias_field(object, field))
+        .filter(|value| value.is_finite())
+}
+
+fn electrostatic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    let alias = match field {
+        "electrostatic_field_peak_magnitude" => "max_electric_field",
+        "electrostatic_flux_peak_magnitude" => "max_flux_density",
+        "electrostatic_total_stored_energy" => "total_stored_energy",
+        "electrostatic_potential_span" => "max_potential",
+        _ => return None,
+    };
+    object.get(alias).and_then(Value::as_f64)
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

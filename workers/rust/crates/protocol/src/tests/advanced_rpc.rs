@@ -1,8 +1,9 @@
 use crate::{
     ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
     ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    RPC_VERSION, RpcMethod, RpcRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
-    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    RPC_VERSION, RpcMethod, RpcRequest, SolidTetra3dElementInput, SolidTetra3dNodeInput,
+    SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest, SolveStokesFlowPlaneQuad2dRequest,
     StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput,
 };
 
@@ -30,6 +31,13 @@ fn serializes_modal_frame_rpc_round_trips() {
 
     assert_eq!(modal_2d.method, RpcMethod::SolveModalFrame2d);
     assert_eq!(modal_3d.method, RpcMethod::SolveModalFrame3d);
+}
+
+#[test]
+fn serializes_solid_tetra_rpc_round_trip() {
+    let decoded = round_trip(RpcMethod::SolveSolidTetra3d, solid_tetra_request());
+
+    assert_eq!(decoded.method, RpcMethod::SolveSolidTetra3d);
 }
 
 fn round_trip(method: RpcMethod, params: impl serde::Serialize) -> RpcRequest {
@@ -207,5 +215,47 @@ fn frame_3d_node(id: &str, x: f64, fixed: bool) -> Frame3dNodeInput {
         moment_x: 0.0,
         moment_y: 0.0,
         moment_z: 0.0,
+    }
+}
+
+fn solid_tetra_request() -> SolveSolidTetra3dRequest {
+    SolveSolidTetra3dRequest {
+        nodes: vec![
+            solid_tetra_node("n0", 0.0, 0.0, 0.0, true, 0.0),
+            solid_tetra_node("n1", 1.0, 0.0, 0.0, true, 0.0),
+            solid_tetra_node("n2", 0.0, 1.0, 0.0, true, 0.0),
+            solid_tetra_node("n3", 0.0, 0.0, 1.0, false, -1000.0),
+        ],
+        elements: vec![SolidTetra3dElementInput {
+            id: "t0".to_string(),
+            node_a: 0,
+            node_b: 1,
+            node_c: 2,
+            node_d: 3,
+            youngs_modulus: 70.0e9,
+            poisson_ratio: 0.33,
+        }],
+    }
+}
+
+fn solid_tetra_node(
+    id: &str,
+    x: f64,
+    y: f64,
+    z: f64,
+    fixed: bool,
+    load_z: f64,
+) -> SolidTetra3dNodeInput {
+    SolidTetra3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x: fixed,
+        fix_y: fixed,
+        fix_z: fixed,
+        load_x: 0.0,
+        load_y: 0.0,
+        load_z,
     }
 }

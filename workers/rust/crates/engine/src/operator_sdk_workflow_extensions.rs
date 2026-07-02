@@ -1,5 +1,6 @@
 mod operator_sdk_acoustic_transforms;
 mod operator_sdk_cfd_transforms;
+mod operator_sdk_dynamic_transforms;
 mod operator_sdk_electrostatic_transforms;
 mod operator_sdk_focus_chain_operators;
 mod operator_sdk_magnetostatic_transforms;
@@ -16,6 +17,7 @@ use crate::operator_sdk_workflow_extensions::operator_sdk_acoustic_transforms::r
 use crate::operator_sdk_workflow_extensions::operator_sdk_cfd_transforms::{
     register_cfd_extract_extensions, register_cfd_transform_extensions,
 };
+use crate::operator_sdk_workflow_extensions::operator_sdk_dynamic_transforms::register_dynamic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_electrostatic_transforms::register_electrostatic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_focus_chain_operators::register_focus_chain_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_magnetostatic_transforms::register_magnetostatic_transform_extensions;
@@ -326,6 +328,7 @@ pub fn register_workflow_extract_extensions(registry: &mut OperatorRegistry) {
 pub fn register_workflow_transform_extensions(registry: &mut OperatorRegistry) {
     register_acoustic_transform_extensions(registry);
     register_modal_transform_extensions(registry);
+    register_dynamic_transform_extensions(registry);
     register_thermal_transform_extensions(registry);
     register_structural_transform_extensions(registry);
     register_electrostatic_transform_extensions(registry);

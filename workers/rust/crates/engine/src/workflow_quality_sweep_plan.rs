@@ -42,6 +42,11 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
         "payload": {
             "base": base,
             "axes": axes,
+            "case_metadata": {
+                "source_candidate_id": payload.get("source_candidate_id").cloned().unwrap_or(Value::Null),
+                "source_plan_contract": payload.get("quality_parameter_sweep_plan_contract").cloned().unwrap_or(Value::Null),
+                "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
+            },
         },
         "config": {
             "id_prefix": id_prefix,

@@ -1,9 +1,6 @@
 use crate::{
-    run_workflow_graph,
-    workflow_executor::run_transform_operator,
-    workflow_quality_objective::{
-        compose_quality_objective, prepare_quality_next_round_request, rank_quality_candidates,
-    },
+    run_workflow_graph, workflow_executor::run_transform_operator,
+    workflow_quality_objective::compose_quality_objective,
 };
 use kyuubiki_protocol::{
     WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode,
@@ -130,151 +127,87 @@ fn runs_quality_objective_through_transform_executor() {
 }
 
 #[test]
-fn ranks_quality_candidates_by_readiness_and_score() {
-    let ranking = rank_quality_candidates(
+fn composes_solver_backed_physics_quality_families() {
+    let objective = compose_quality_objective(
         serde_json::json!({
-            "candidates": {
-                "candidate_a": {
-                    "qualities": {
-                        "thermal": {
-                            "thermal_quality_score": 2.0,
-                            "thermal_quality_ready": true,
-                            "thermal_quality_missing_metric_count": 0
-                        },
-                        "cfd": {
-                            "cfd_quality_score": 5.0,
-                            "cfd_quality_ready": true,
-                            "cfd_quality_missing_metric_count": 0
-                        }
-                    }
+            "qualities": {
+                "structural": {
+                    "structural_quality_contract": "kyuubiki.structural_quality_score/v1",
+                    "structural_quality_score": 1.0,
+                    "structural_quality_grade": "excellent",
+                    "structural_quality_ready": true,
+                    "structural_quality_missing_metric_count": 0
                 },
-                "candidate_b": {
-                    "qualities": {
-                        "thermal": {
-                            "thermal_quality_score": 1.0,
-                            "thermal_quality_ready": true,
-                            "thermal_quality_missing_metric_count": 0
-                        },
-                        "cfd": {
-                            "cfd_quality_score": 1.5,
-                            "cfd_quality_ready": true,
-                            "cfd_quality_missing_metric_count": 0
-                        }
-                    }
+                "modal": {
+                    "modal_quality_contract": "kyuubiki.modal_quality_score/v1",
+                    "modal_quality_score": 1.5,
+                    "modal_quality_grade": "excellent",
+                    "modal_quality_ready": true,
+                    "modal_quality_missing_metric_count": 0
                 },
-                "candidate_blocked": {
-                    "qualities": {
-                        "thermal": {
-                            "thermal_quality_score": 0.5,
-                            "thermal_quality_ready": false,
-                            "thermal_quality_missing_metric_count": 1
-                        }
-                    }
+                "dynamic": {
+                    "dynamic_quality_contract": "kyuubiki.dynamic_quality_score/v1",
+                    "dynamic_quality_score": 2.0,
+                    "dynamic_quality_grade": "good",
+                    "dynamic_quality_ready": true,
+                    "dynamic_quality_missing_metric_count": 0
+                },
+                "acoustic": {
+                    "acoustic_quality_contract": "kyuubiki.acoustic_quality_score/v1",
+                    "acoustic_quality_score": 2.5,
+                    "acoustic_quality_grade": "good",
+                    "acoustic_quality_ready": true,
+                    "acoustic_quality_missing_metric_count": 0
+                },
+                "electrostatic": {
+                    "electrostatic_quality_contract": "kyuubiki.electrostatic_quality_score/v1",
+                    "electrostatic_quality_score": 3.0,
+                    "electrostatic_quality_grade": "good",
+                    "electrostatic_quality_ready": true,
+                    "electrostatic_quality_missing_metric_count": 0
+                },
+                "magnetostatic": {
+                    "magnetostatic_quality_contract": "kyuubiki.magnetostatic_quality_score/v1",
+                    "magnetostatic_quality_score": 3.5,
+                    "magnetostatic_quality_grade": "review",
+                    "magnetostatic_quality_ready": true,
+                    "magnetostatic_quality_missing_metric_count": 0
                 }
             }
         }),
         serde_json::json!({
-            "objective": {
-                "weights": {"cfd": 2.0},
-                "not_ready_penalty": 20.0
-            }
-        }),
-    )
-    .expect("quality candidates should rank");
-
-    assert_eq!(
-        ranking["quality_candidate_ranking_contract"].as_str(),
-        Some("kyuubiki.quality_candidate_ranking/v1")
-    );
-    assert_eq!(ranking["candidate_count"].as_u64(), Some(3));
-    assert_eq!(ranking["ready_candidate_count"].as_u64(), Some(2));
-    assert_eq!(ranking["best_candidate_id"].as_str(), Some("candidate_b"));
-    assert_eq!(ranking["best_candidate_ready"].as_bool(), Some(true));
-    assert_eq!(ranking["ranking"][0]["rank"].as_u64(), Some(1));
-}
-
-#[test]
-fn runs_quality_candidate_ranking_through_transform_executor() {
-    let ranking = run_transform_operator(
-        "transform.rank_quality_candidates",
-        serde_json::json!({
-            "candidate_a": {
-                "thermal": {
-                    "thermal_quality_score": 4.0,
-                    "thermal_quality_ready": true,
-                    "thermal_quality_missing_metric_count": 0
-                }
+            "weights": {
+                "structural": 2.0,
+                "modal": 1.0,
+                "dynamic": 1.0,
+                "acoustic": 0.5,
+                "electrostatic": 0.5,
+                "magnetostatic": 0.5
             },
-            "candidate_b": {
-                "thermal": {
-                    "thermal_quality_score": 2.0,
-                    "thermal_quality_ready": true,
-                    "thermal_quality_missing_metric_count": 0
-                }
-            }
-        }),
-        serde_json::json!({}),
-    )
-    .expect("quality candidate ranking should run through executor");
-
-    assert_eq!(ranking["best_candidate_id"].as_str(), Some("candidate_b"));
-    approx_eq(ranking["best_candidate_score"].as_f64(), 2.0);
-}
-
-#[test]
-fn prepares_quality_next_round_request_from_ranking() {
-    let request = prepare_quality_next_round_request(
-        serde_json::json!({
-            "quality_candidate_ranking_contract": "kyuubiki.quality_candidate_ranking/v1",
-            "ranking": [{
-                "rank": 1,
-                "candidate_id": "candidate_b",
-                "score": 2.5,
-                "ready": true,
-                "objective": {"composite_quality_score": 2.5}
-            }]
-        }),
-        serde_json::json!({
-            "target_score": 2.0,
-            "max_candidates": 12,
-            "search_space": {"thickness_mm": [1.0, 4.0]}
+            "max_ready_score": 12.0
         }),
     )
-    .expect("quality next round request should build");
+    .expect("solver-backed quality families should compose");
 
+    assert_eq!(objective["composite_quality_ready"].as_bool(), Some(true));
     assert_eq!(
-        request["quality_next_round_contract"].as_str(),
-        Some("kyuubiki.quality_next_round_request/v1")
+        objective["composite_quality_grade"].as_str(),
+        Some("review")
     );
-    assert_eq!(request["action"].as_str(), Some("continue"));
-    assert_eq!(
-        request["selected_candidate_id"].as_str(),
-        Some("candidate_b")
-    );
-    approx_eq(request["request_payload"]["max_candidates"].as_f64(), 12.0);
-}
-
-#[test]
-fn runs_quality_next_round_request_through_transform_executor() {
-    let request = run_transform_operator(
-        "transform.prepare_quality_next_round_request",
-        serde_json::json!({
-            "ranking": [{
-                "rank": 1,
-                "candidate_id": "candidate_ready",
-                "score": 1.5,
-                "ready": true
-            }]
-        }),
-        serde_json::json!({"target_score": 2.0}),
-    )
-    .expect("quality next round request should run through executor");
-
-    assert_eq!(request["action"].as_str(), Some("stop"));
-    assert_eq!(
-        request["selected_candidate_id"].as_str(),
-        Some("candidate_ready")
-    );
+    assert_eq!(objective["composite_quality_term_count"].as_u64(), Some(6));
+    approx_eq(objective["composite_quality_score"].as_f64(), 10.0);
+    let domains = objective["composite_quality_terms"]
+        .as_array()
+        .expect("terms should be an array")
+        .iter()
+        .filter_map(|term| term["domain"].as_str())
+        .collect::<Vec<_>>();
+    assert!(domains.contains(&"structural"));
+    assert!(domains.contains(&"modal"));
+    assert!(domains.contains(&"dynamic"));
+    assert!(domains.contains(&"acoustic"));
+    assert!(domains.contains(&"electrostatic"));
+    assert!(domains.contains(&"magnetostatic"));
 }
 
 #[test]
