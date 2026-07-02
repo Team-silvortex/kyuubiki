@@ -112,14 +112,16 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
         %{
           "node_id" => "electrostatic_triangle_model",
           "artifact_type" => "study_model/electrostatic_plane_triangle_2d",
-          "description" => "Electrostatic plane triangle study model used as the right entry artifact."
+          "description" =>
+            "Electrostatic plane triangle study model used as the right entry artifact."
         }
       ],
       [
         %{
           "node_id" => "json_output",
           "artifact_type" => "export/json",
-          "description" => "JSON-encoded benchmark delta across quad and triangle electrostatic solves."
+          "description" =>
+            "JSON-encoded benchmark delta across quad and triangle electrostatic solves."
         }
       ]
     )
@@ -222,8 +224,22 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
           "summary",
           "report/summary"
         ),
-        edge("e6", "normalize_quad_summary", "result", "compare_summaries", "left", "report/summary"),
-        edge("e7", "normalize_triangle_summary", "result", "compare_summaries", "right", "report/summary"),
+        edge(
+          "e6",
+          "normalize_quad_summary",
+          "result",
+          "compare_summaries",
+          "left",
+          "report/summary"
+        ),
+        edge(
+          "e7",
+          "normalize_triangle_summary",
+          "result",
+          "compare_summaries",
+          "right",
+          "report/summary"
+        ),
         edge("e8", "compare_summaries", "result", "export_json", "summary", "report/summary"),
         edge("e9", "export_json", "json", "json_output", "json", "export/json")
       ]
@@ -255,7 +271,13 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
     }
   end
 
-  defp extract_node(id, input_artifact_type, fields, input_dataset_value \\ nil, output_dataset_value \\ nil) do
+  defp extract_node(
+         id,
+         input_artifact_type,
+         fields,
+         input_dataset_value \\ nil,
+         output_dataset_value \\ nil
+       ) do
     %{
       "id" => id,
       "kind" => "extract",
@@ -401,9 +423,20 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
   end
 
   defp maybe_put_dataset_value(map, nil), do: map
-  defp maybe_put_dataset_value(map, dataset_value), do: Map.put(map, "dataset_value", dataset_value)
 
-  defp custom_entry(id, name, summary, domains, capability_tags, graph, entry_inputs, output_artifacts) do
+  defp maybe_put_dataset_value(map, dataset_value),
+    do: Map.put(map, "dataset_value", dataset_value)
+
+  defp custom_entry(
+         id,
+         name,
+         summary,
+         domains,
+         capability_tags,
+         graph,
+         entry_inputs,
+         output_artifacts
+       ) do
     %{
       "id" => id,
       "name" => name,
@@ -416,5 +449,4 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
       "output_artifacts" => output_artifacts
     }
   end
-
 end

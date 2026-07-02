@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.Benchmark.WorkflowLargeGraphReportTest do
   test "writes a large-graph benchmark report when requested" do
     output_path = default_output_path()
     counts = parse_counts(System.get_env("WORKFLOW_LARGE_GRAPH_COUNTS"))
+
     report =
       WorkflowLargeGraphBenchmark.benchmark_report(
         KyuubikiWeb.Router.init([]),

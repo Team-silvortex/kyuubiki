@@ -25,6 +25,18 @@ README.
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
   rules are in [operator-task-ir-digest.md](../docs/operator-task-ir-digest.md)
+- `operator-task-batch.schema.json` is for `quality_execution_batch` payloads
+  that group language-neutral Operator TaskIR envelopes for control-plane,
+  SDK, orchestra, or agent execution.
+- `operator-task-batch-preparation.schema.json` is for non-executing
+  `prepare-batch` responses that validate batch manifests and expose per-task
+  dispatch summaries before agent placement or execution.
+- `operator-task-batch-checkpoint.schema.json` is for resumable batch-run
+  manifests that bind a batch digest to preparation/execution summaries and a
+  visible resume policy.
+- `operator-task-batch-resume-plan.schema.json` is for agent/control-plane
+  recovery plans derived from verified checkpoints, including target and
+  blocked case lists for the next action.
 - `operator-execution-program.schema.json` is for the language-neutral program
   contract carried inside operator task IR and consumed by agent engines,
   including solver RPC vs generic operator-task ABI consistency rules
@@ -43,6 +55,15 @@ README.
   for that workflow's cross-operator payloads
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
+- `examples.operator-task-batch.json` is the matching batch wrapper sample for
+  `POST /api/v1/operator-tasks/execute-batch` and SDK batch execution examples
+- `examples.operator-task-batch-preparation.json` is the matching
+  `POST /api/v1/operator-tasks/prepare-batch` response sample for SDK and
+  agent preflight tooling
+- `examples.operator-task-batch-checkpoint.json` is the matching resumable
+  checkpoint sample for preserving batch-run state between distributed attempts
+- `examples.operator-task-batch-resume-plan.json` is the matching recovery
+  plan sample for turning a checkpoint resume policy into explicit next work
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

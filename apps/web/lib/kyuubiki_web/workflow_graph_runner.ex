@@ -79,7 +79,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
                         node_id,
                         node,
                         incoming,
-                        elapsed_ms(started_at_us)
+                        (System.monotonic_time(:microsecond) - started_at_us) / 1000.0
                       )
 
                     maybe_emit_progress(updated, node_count, opts)
@@ -154,6 +154,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
        do: true
 
   defp transform_operator_accepts_partial_inputs?(_node), do: false
+
   defp transform_operator_requires_port_map?(%{
          "kind" => "transform",
          "operator_id" => operator_id
@@ -174,6 +175,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
        do: true
 
   defp transform_operator_requires_port_map?(_node), do: false
+
   defp unresolved_missing_inputs?(incoming, artifacts, completed, skipped) do
     Enum.any?(incoming, fn edge ->
       key = edge_from_key(edge)
@@ -591,9 +593,5 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     Enum.reduce(edges, %{}, fn edge, acc ->
       Map.update(acc, get_in(edge, ["to", "node"]), [edge], &[edge | &1])
     end)
-  end
-
-  defp elapsed_ms(started_at_us) do
-    (System.monotonic_time(:microsecond) - started_at_us) / 1000.0
   end
 end

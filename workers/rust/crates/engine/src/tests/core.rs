@@ -224,10 +224,7 @@ fn supported_headless_workflow_operators_have_built_in_descriptors() {
 
 #[test]
 fn diagnostics_template_matches_rust_workflow_report_chain() {
-    let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex");
-    let template_source =
-        fs::read_to_string(&template_path).expect("diagnostics template source should be readable");
+    let template_source = diagnostics_template_sources();
 
     for required in [
         "\"id\" => \"workflow.diagnostics-bundle-guard-report-markdown\"",
@@ -249,10 +246,7 @@ fn diagnostics_template_matches_rust_workflow_report_chain() {
 
 #[test]
 fn peak_diagnostics_template_matches_rust_workflow_report_chain() {
-    let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex");
-    let template_source =
-        fs::read_to_string(&template_path).expect("diagnostics template source should be readable");
+    let template_source = diagnostics_template_sources();
 
     for required in [
         "\"id\" => \"workflow.peak-diagnostics-bundle-report-markdown\"",
@@ -277,18 +271,15 @@ fn peak_diagnostics_template_matches_rust_workflow_report_chain() {
 
 #[test]
 fn coupled_diagnostics_template_matches_rust_workflow_report_chain() {
-    let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex");
-    let template_source =
-        fs::read_to_string(&template_path).expect("diagnostics template source should be readable");
+    let template_source = diagnostics_template_sources();
 
     for required in [
         "\"id\" => \"workflow.electrostatic-heat-thermo-diagnostics-markdown\"",
-        "\"operator_id\" => \"solve.electrostatic_plane_quad_2d\"",
-        "\"operator_id\" => \"bridge.electrostatic_field_to_heat_quad_2d\"",
-        "\"operator_id\" => \"solve.heat_plane_quad_2d\"",
-        "\"operator_id\" => \"bridge.temperature_field_to_thermo_quad_2d\"",
-        "\"operator_id\" => \"solve.thermal_plane_quad_2d\"",
+        "\"solve.electrostatic_plane_quad_2d\"",
+        "\"bridge.electrostatic_field_to_heat_quad_2d\"",
+        "\"solve.heat_plane_quad_2d\"",
+        "\"bridge.temperature_field_to_thermo_quad_2d\"",
+        "\"solve.thermal_plane_quad_2d\"",
         "\"extract.electrostatic_result_diagnostics\"",
         "\"extract.thermal_result_diagnostics\"",
         "\"extract.thermo_result_diagnostics\"",
@@ -310,6 +301,26 @@ fn coupled_diagnostics_template_matches_rust_workflow_report_chain() {
             "coupled diagnostics template drifted, missing required fragment: {required}"
         );
     }
+}
+
+fn diagnostics_template_sources() -> String {
+    [
+        "workflow_template_diagnostics_entries.ex",
+        "workflow_template_diagnostics_graphs.ex",
+        "workflow_template_diagnostics_graph_nodes.ex",
+    ]
+    .iter()
+    .map(|file_name| {
+        let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../../apps/web/lib/kyuubiki_web")
+            .join(file_name);
+
+        fs::read_to_string(&template_path).unwrap_or_else(|error| {
+            panic!("diagnostics template source should be readable: {error}")
+        })
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
 }
 
 fn stokes_node(

@@ -110,18 +110,20 @@ defmodule KyuubikiWeb.WorkflowParameterSweepRuntime do
   def score_parameter_sweep(payload, config) when is_map(payload) and is_map(config) do
     with rows when is_list(rows) and rows != [] <- Map.get(payload, "rows"),
          objectives when is_list(objectives) and objectives != [] <- Map.get(config, "objectives") do
-      scored =
-        rows
-        |> Enum.with_index()
-        |> Enum.map(fn {row, index} -> score_sweep_row(row, objectives, index) end)
-        |> Enum.sort_by(&Map.get(&1, "objective_score", -1.0e18), :desc)
+      case score_sweep_rows(rows, objectives) do
+        {:ok, scored} ->
+          scored = Enum.sort_by(scored, &Map.get(&1, "objective_score", -1.0e18), :desc)
 
-      {:ok,
-       %{
-         "best" => hd(scored),
-         "scored_rows" => scored,
-         "scored_count" => length(scored)
-       }}
+          {:ok,
+           %{
+             "best" => hd(scored),
+             "scored_rows" => scored,
+             "scored_count" => length(scored)
+           }}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       _ -> {:error, :invalid_parameter_sweep_score_payload}
     end
@@ -325,43 +327,90 @@ defmodule KyuubikiWeb.WorkflowParameterSweepRuntime do
     })
   end
 
-  defp score_sweep_row(row, objectives, index) when is_map(row) do
-    {score, feasible, breakdown} =
-      Enum.reduce(objectives, {0.0, true, []}, fn objective, {total, feasible, breakdown} ->
-        field = Map.get(objective, "field")
-        value = Map.get(row, field)
-        goal = Map.get(objective, "goal", "min")
-        weight = Map.get(objective, "weight", 1.0)
-        term_score = objective_score(goal, value, objective) * weight
-
-        {total + term_score, feasible and objective_limit_allows?(objective, value),
-         [
-           %{
-             "field" => field,
-             "goal" => goal,
-             "weight" => weight,
-             "value" => value,
-             "score" => term_score
-           }
-           | breakdown
-         ]}
-      end)
-
-    row
-    |> Map.put("case_id", Map.get(row, "case_id", "case_#{index}"))
-    |> Map.put("objective_score", if(feasible, do: score, else: score - 1.0e12))
-    |> Map.put("objective_feasible", feasible)
-    |> Map.put("objective_breakdown", Enum.reverse(breakdown))
+  defp score_sweep_rows(rows, objectives) do
+    rows
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {row, index}, {:ok, acc} ->
+      case score_sweep_row(row, objectives, index) do
+        {:ok, scored} -> {:cont, {:ok, [scored | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, scored} -> {:ok, Enum.reverse(scored)}
+      error -> error
+    end
   end
 
-  defp objective_score("max", value, _objective) when is_number(value), do: value
+  defp score_sweep_row(row, objectives, index) when is_map(row) do
+    objectives
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, 0.0, true, []}, fn {objective, objective_index},
+                                                  {:ok, total, feasible, breakdown} ->
+      case score_objective(row, objective, objective_index) do
+        {:ok, term} ->
+          term_feasible = term["feasible"]
+          breakdown_entry = Map.delete(term, "feasible")
 
-  defp objective_score("target", value, %{"target" => target})
-       when is_number(value) and is_number(target),
-       do: -abs(value - target)
+          {:cont,
+           {:ok, total + term["score"], feasible and term_feasible, [breakdown_entry | breakdown]}}
 
-  defp objective_score(_goal, value, _objective) when is_number(value), do: -value
-  defp objective_score(_goal, _value, _objective), do: -1.0e12
+        {:error, reason} ->
+          {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, score, feasible, breakdown} ->
+        {:ok,
+         row
+         |> Map.put("case_id", Map.get(row, "case_id", "case_#{index}"))
+         |> Map.put("objective_score", if(feasible, do: score, else: score - 1.0e12))
+         |> Map.put("objective_feasible", feasible)
+         |> Map.put("objective_breakdown", Enum.reverse(breakdown))}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp score_sweep_row(_row, _objectives, index),
+    do: {:error, {:invalid_parameter_sweep_score_row, index}}
+
+  defp score_objective(row, objective, objective_index) when is_map(objective) do
+    with field when is_binary(field) <- Map.get(objective, "field"),
+         value when is_number(value) <- Map.get(row, field),
+         weight when is_number(weight) <- Map.get(objective, "weight", 1.0),
+         goal when is_binary(goal) <- Map.get(objective, "goal", "min"),
+         {:ok, score} <- objective_score(goal, value, objective, weight) do
+      {:ok,
+       %{
+         "field" => field,
+         "goal" => goal,
+         "weight" => weight,
+         "value" => value,
+         "score" => score,
+         "feasible" => objective_limit_allows?(objective, value)
+       }}
+    else
+      nil -> {:error, {:missing_parameter_sweep_score_field, objective_index}}
+      _ -> {:error, {:invalid_parameter_sweep_objective, objective_index}}
+    end
+  end
+
+  defp score_objective(_row, _objective, objective_index),
+    do: {:error, {:invalid_parameter_sweep_objective, objective_index}}
+
+  defp objective_score("min", value, _objective, weight), do: {:ok, -value * weight}
+  defp objective_score("max", value, _objective, weight), do: {:ok, value * weight}
+
+  defp objective_score("target", value, %{"target" => target}, weight) when is_number(target),
+    do: {:ok, -abs(value - target) * weight}
+
+  defp objective_score("target", _value, _objective, _weight),
+    do: {:error, :missing_parameter_sweep_target}
+
+  defp objective_score(_goal, _value, _objective, _weight),
+    do: {:error, :unsupported_parameter_sweep_goal}
 
   defp objective_limit_allows?(objective, value) when is_number(value) do
     minimum_ok = !is_number(objective["min_allowed"]) or value >= objective["min_allowed"]

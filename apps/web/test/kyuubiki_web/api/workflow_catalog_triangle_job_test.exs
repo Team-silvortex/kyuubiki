@@ -86,9 +86,27 @@ defmodule KyuubikiWeb.WorkflowCatalogTriangleJobTest do
               "max_temperature" => 75.0,
               "max_heat_flux" => 900.0,
               "nodes" => [
-                %{"id" => "t0", "x" => 0.0, "y" => 0.0, "temperature" => 75.0, "heat_load" => 500.0},
-                %{"id" => "t1", "x" => 1.0, "y" => 0.0, "temperature" => 55.0, "heat_load" => 500.0},
-                %{"id" => "t2", "x" => 0.0, "y" => 1.0, "temperature" => 35.0, "heat_load" => 500.0}
+                %{
+                  "id" => "t0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "temperature" => 75.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "t1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "temperature" => 55.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "t2",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "temperature" => 35.0,
+                  "heat_load" => 500.0
+                }
               ],
               "elements" => [
                 %{
@@ -155,7 +173,9 @@ defmodule KyuubikiWeb.WorkflowCatalogTriangleJobTest do
       :post
       |> conn(
         "/api/v1/workflows/catalog/workflow.electrostatic-heat-thermo-triangle-summary-json/jobs",
-        Jason.encode!(%{"input_artifacts" => WorkflowApi.electrostatic_plane_triangle_input_artifacts()})
+        Jason.encode!(%{
+          "input_artifacts" => WorkflowApi.electrostatic_plane_triangle_input_artifacts()
+        })
       )
       |> put_req_header("content-type", "application/json")
       |> Router.call(@opts)
@@ -165,6 +185,7 @@ defmodule KyuubikiWeb.WorkflowCatalogTriangleJobTest do
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
 
     assert result_payload["job"]["status"] == "completed"
+
     assert result_payload["result"]["workflow_id"] ==
              "workflow.electrostatic-heat-thermo-triangle-summary-json"
 
@@ -185,6 +206,10 @@ defmodule KyuubikiWeb.WorkflowCatalogTriangleJobTest do
     bridged_thermo_model =
       result_payload["result"]["artifacts"]["bridge_temperature.thermo_model"]
 
-    assert Enum.map(bridged_thermo_model["nodes"], & &1["temperature_delta"]) == [75.0, 55.0, 35.0]
+    assert Enum.map(bridged_thermo_model["nodes"], & &1["temperature_delta"]) == [
+             75.0,
+             55.0,
+             35.0
+           ]
   end
 end

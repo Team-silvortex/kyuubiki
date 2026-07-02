@@ -213,7 +213,12 @@ defmodule KyuubikiWeb.Jobs.Job do
   defp failure_class(_status, _message), do: nil
 
   defp recoverable_failure_class?(failure_class) do
-    failure_class in ["watchdog_stalled", "watchdog_timeout", "execution_timeout", "operator_cancelled"]
+    failure_class in [
+      "watchdog_stalled",
+      "watchdog_timeout",
+      "execution_timeout",
+      "operator_cancelled"
+    ]
   end
 
   defp fetch_progress(attrs, key, default) do

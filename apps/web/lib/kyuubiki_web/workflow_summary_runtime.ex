@@ -293,7 +293,8 @@ defmodule KyuubikiWeb.WorkflowSummaryRuntime do
     end
   end
 
-  def evaluate_diagnostics_bundle_guard(payload, config) when is_map(payload) and is_map(config) do
+  def evaluate_diagnostics_bundle_guard(payload, config)
+      when is_map(payload) and is_map(config) do
     rules =
       case Map.get(config, "rules") do
         entries when is_list(entries) -> Enum.filter(entries, &is_map/1)
@@ -501,13 +502,15 @@ defmodule KyuubikiWeb.WorkflowSummaryRuntime do
         "#{trigger["source"]}.#{trigger["label"]}=#{trigger["value"]}"
       end)
 
-    "#{String.upcase(status)}: #{length(triggers)} trigger(s)" <> if(lead == "", do: ".", else: " (#{lead}).")
+    "#{String.upcase(status)}: #{length(triggers)} trigger(s)" <>
+      if(lead == "", do: ".", else: " (#{lead}).")
   end
 
   defp diagnostic_entry?(entry, config) do
     include_non_diagnostics = Map.get(config, "include_non_diagnostics", false)
 
-    include_non_diagnostics or Map.get(entry, "diagnostic_contract") == "kyuubiki.workflow_diagnostics/v1"
+    include_non_diagnostics or
+      Map.get(entry, "diagnostic_contract") == "kyuubiki.workflow_diagnostics/v1"
   end
 
   defp fetch_numeric_field(map, field) when is_map(map) and is_binary(field) do

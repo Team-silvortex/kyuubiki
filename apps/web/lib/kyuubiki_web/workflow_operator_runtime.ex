@@ -175,6 +175,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.materialize_quality_sweep_expansion" when is_map(config) ->
         WorkflowQualityObjectiveRuntime.materialize_quality_sweep_expansion(payload, config)
 
+      "transform.compose_quality_execution_batch" when is_map(config) ->
+        WorkflowQualityObjectiveRuntime.compose_quality_execution_batch(payload, config)
+
       "transform.expand_parameter_sweep" when is_map(config) ->
         WorkflowParameterSweepRuntime.expand_parameter_sweep(payload, config)
 

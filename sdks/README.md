@@ -26,6 +26,15 @@ Minimal runnable examples now live at:
 - [sdks/python/examples/run_study.py](python/examples/run_study.py)
 - [sdks/elixir/examples/run_study.exs](elixir/examples/run_study.exs)
 - [sdks/rust/examples/run_study.rs](rust/examples/run_study.rs)
+- [sdks/python/examples/execute_operator_task_batch.py](python/examples/execute_operator_task_batch.py)
+- [sdks/elixir/examples/execute_operator_task_batch.exs](elixir/examples/execute_operator_task_batch.exs)
+- [sdks/rust/examples/execute_operator_task_batch.rs](rust/examples/execute_operator_task_batch.rs)
+
+The batch examples accept JSON shaped like
+[schemas/examples.operator-task-batch.json](../schemas/examples.operator-task-batch.json).
+In production, these files are usually emitted by
+`transform.compose_quality_execution_batch` after a quality/parameter-sweep
+workflow has materialized candidate cases.
 
 Smoke tests now live at:
 
@@ -75,6 +84,11 @@ Recent additions:
 - Rust, Python, and Elixir SDK callers can now use one material-report dispatch surface to extract
   successful `result_fetch` payloads from a headless run and build the matching
   heat-spreader, dielectric, thermo-shield, or structural-panel report
+- Rust, Python, and Elixir control-plane clients can prepare, execute,
+  prepare batches, batch-execute, checkpoint, and verify checkpoint manifests
+  for language-neutral Operator TaskIR payloads, then derive resume plans through
+  `/api/v1/operator-tasks/*`, including `quality_execution_batch` files emitted
+  by optimization workflows
 
 The same report path is also exposed as a Rust CLI:
 
@@ -112,6 +126,7 @@ thin workflow layer:
 - reachable agent discovery
 - jobs/results/export CRUD through the control plane
 - workflow catalog discovery, operator discovery, and workflow job submission
+- operator TaskIR prepare/execute/prepare-batch/batch-execute/checkpoint/verify-checkpoint/resume-plan through the control plane
 - headless workflow plan/preflight reports for CI and agent policy checks
 - workflow graph and workflow dataset contract validation helpers
 - distributed workflow execution hints through dispatch policy, operator fetch

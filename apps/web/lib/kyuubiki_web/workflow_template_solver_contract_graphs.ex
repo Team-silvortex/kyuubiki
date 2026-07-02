@@ -118,9 +118,33 @@ defmodule KyuubikiWeb.WorkflowTemplateSolverContractGraphs do
         }
       ],
       "edges" => [
-        edge("e0", "electrostatic_model", "model", "solve_electrostatic", "model", "study_model/electrostatic_plane_quad_2d", "electrostatic_model"),
-        edge("e1", "solve_electrostatic", "result", "extract_summary", "result", "result/electrostatic_plane_quad_2d", "electrostatic_result"),
-        edge("e2", "extract_summary", "summary", "export_json", "summary", "report/summary", "electrostatic_summary"),
+        edge(
+          "e0",
+          "electrostatic_model",
+          "model",
+          "solve_electrostatic",
+          "model",
+          "study_model/electrostatic_plane_quad_2d",
+          "electrostatic_model"
+        ),
+        edge(
+          "e1",
+          "solve_electrostatic",
+          "result",
+          "extract_summary",
+          "result",
+          "result/electrostatic_plane_quad_2d",
+          "electrostatic_result"
+        ),
+        edge(
+          "e2",
+          "extract_summary",
+          "summary",
+          "export_json",
+          "summary",
+          "report/summary",
+          "electrostatic_summary"
+        ),
         edge("e3", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -226,7 +250,8 @@ defmodule KyuubikiWeb.WorkflowTemplateSolverContractGraphs do
           "config" => %{
             "title" => "Electrostatic Quad Hotspot Alert",
             "severity" => "warning",
-            "summary" => "The electrostatic quad solve produced high electric-field hotspot regions.",
+            "summary" =>
+              "The electrostatic quad solve produced high electric-field hotspot regions.",
             "sample_field" => "electric_field_magnitude_hotspot_samples",
             "sample_value_key" => "electric_field_magnitude"
           },
@@ -259,10 +284,42 @@ defmodule KyuubikiWeb.WorkflowTemplateSolverContractGraphs do
         }
       ],
       "edges" => [
-        edge("e0", "electrostatic_model", "model", "solve_electrostatic", "model", "study_model/electrostatic_plane_quad_2d", "electrostatic_model"),
-        edge("e1", "solve_electrostatic", "result", "extract_hotspots", "result", "result/electrostatic_plane_quad_2d", "electrostatic_result"),
-        edge("e2", "extract_hotspots", "summary", "export_alert", "summary", "report/summary", "hotspot_summary"),
-        edge("e3", "export_alert", "markdown", "markdown_output", "markdown", "export/markdown", "alert_markdown")
+        edge(
+          "e0",
+          "electrostatic_model",
+          "model",
+          "solve_electrostatic",
+          "model",
+          "study_model/electrostatic_plane_quad_2d",
+          "electrostatic_model"
+        ),
+        edge(
+          "e1",
+          "solve_electrostatic",
+          "result",
+          "extract_hotspots",
+          "result",
+          "result/electrostatic_plane_quad_2d",
+          "electrostatic_result"
+        ),
+        edge(
+          "e2",
+          "extract_hotspots",
+          "summary",
+          "export_alert",
+          "summary",
+          "report/summary",
+          "hotspot_summary"
+        ),
+        edge(
+          "e3",
+          "export_alert",
+          "markdown",
+          "markdown_output",
+          "markdown",
+          "export/markdown",
+          "alert_markdown"
+        )
       ]
     }
   end

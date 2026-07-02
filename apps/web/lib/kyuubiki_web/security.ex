@@ -160,7 +160,8 @@ defmodule KyuubikiWeb.Security do
   defp authorize_post_token(_conn, _scope), do: :ok
 
   defp valid_token?(token, configured)
-       when is_binary(token) and is_binary(configured) and byte_size(token) == byte_size(configured) do
+       when is_binary(token) and is_binary(configured) and
+              byte_size(token) == byte_size(configured) do
     Plug.Crypto.secure_compare(token, configured)
   end
 
@@ -270,7 +271,8 @@ defmodule KyuubikiWeb.Security do
     abs(System.system_time(:millisecond) - timestamp_ms) <= cluster_timestamp_window_ms()
   end
 
-  defp validate_cluster_nonce_format(nonce) when byte_size(nonce) > 0 and byte_size(nonce) <= 160 do
+  defp validate_cluster_nonce_format(nonce)
+       when byte_size(nonce) > 0 and byte_size(nonce) <= 160 do
     if String.match?(nonce, ~r/^[A-Za-z0-9._:-]+$/u) do
       :ok
     else

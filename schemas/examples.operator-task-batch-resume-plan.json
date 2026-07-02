@@ -1,0 +1,15 @@
+{
+  "$schema": "operator-task-batch-resume-plan.schema.json",
+  "operator_task_batch_resume_plan_contract": "kyuubiki.operator_task_batch_resume_plan/v1",
+  "plan_id": "operator-task-batch-resume:execute:a6c0eca82cf20f2d",
+  "status": "prepared",
+  "next_action": "execute",
+  "batch_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+  "checkpoint_digest": "a6c0eca82cf20f2d9a0fa967116ec3dfc1be9cb069ee17caa1597b4928c1deab",
+  "target_case_ids": ["quality_case_a"],
+  "blocked_case_ids": [],
+  "resume_policy": {
+    "status": "prepared",
+    "next_action": "execute"
+  }
+}

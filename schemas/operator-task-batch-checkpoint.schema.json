@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-batch-checkpoint.schema.json",
+  "title": "Kyuubiki operator task batch checkpoint",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "operator_task_batch_checkpoint_contract",
+    "checkpoint_id",
+    "checkpoint_digest",
+    "batch_digest",
+    "digest_algorithm",
+    "created_at",
+    "quality_execution_batch_contract",
+    "task_count",
+    "case_index",
+    "resume_policy"
+  ],
+  "properties": {
+    "operator_task_batch_checkpoint_contract": {
+      "const": "kyuubiki.operator_task_batch_checkpoint/v1"
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checkpoint_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "batch_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "digest_algorithm": {
+      "const": "sha256"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quality_execution_batch_contract": {
+      "const": "kyuubiki.quality_execution_batch/v1"
+    },
+    "task_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "case_index": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "task_id", "task_digest"],
+        "properties": {
+          "case_id": { "type": "string", "minLength": 1 },
+          "task_id": { "type": "string", "minLength": 1 },
+          "task_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "preparation": {
+      "type": ["object", "null"]
+    },
+    "execution": {
+      "type": ["object", "null"]
+    },
+    "resume_policy": {
+      "type": "object",
+      "required": ["status", "next_action"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["draft", "prepared", "complete", "partial", "blocked"]
+        },
+        "next_action": {
+          "type": "string",
+          "enum": ["prepare", "execute", "archive", "retry_failed_cases", "fix_invalid_cases"]
+        }
+      }
+    }
+  }
+}

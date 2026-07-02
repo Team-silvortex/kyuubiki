@@ -364,12 +364,8 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert conn.status == 200
     payload = Jason.decode!(conn.resp_body)
 
-    assert payload["completed_nodes"] == [
-             "baseline_input",
-             "candidate_input",
-             "compare",
-             "compared_output"
-           ]
+    assert Enum.join(payload["completed_nodes"], ",") ==
+             "baseline_input,candidate_input,compare,compared_output"
 
     assert payload["skipped_nodes"] == []
     assert get_in(payload, ["artifacts", "compare.result", "delta_max_stress"]) == 5.0
@@ -450,10 +446,18 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
           },
           "input_artifacts" => %{
             "baseline_input" => %{
-              "summary" => %{"thermal_temperature_max" => 80.0, "thermal_peak_flux_magnitude" => 10.0, "thermo_peak_stress" => 160.0}
+              "summary" => %{
+                "thermal_temperature_max" => 80.0,
+                "thermal_peak_flux_magnitude" => 10.0,
+                "thermo_peak_stress" => 160.0
+              }
             },
             "candidate_input" => %{
-              "summary" => %{"thermal_temperature_max" => 75.0, "thermal_peak_flux_magnitude" => 14.0, "thermo_peak_stress" => 140.0}
+              "summary" => %{
+                "thermal_temperature_max" => 75.0,
+                "thermal_peak_flux_magnitude" => 14.0,
+                "thermo_peak_stress" => 140.0
+              }
             }
           }
         })
@@ -464,12 +468,8 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert conn.status == 200
     payload = Jason.decode!(conn.resp_body)
 
-    assert payload["completed_nodes"] == [
-             "baseline_input",
-             "candidate_input",
-             "benchmark",
-             "benchmarked_output"
-           ]
+    assert Enum.join(payload["completed_nodes"], ",") ==
+             "baseline_input,candidate_input,benchmark,benchmarked_output"
 
     assert get_in(payload, ["artifacts", "benchmark.result", "baseline_score"]) == 1.0
     assert get_in(payload, ["artifacts", "benchmark.result", "candidate_score"]) == 5.0
@@ -573,12 +573,8 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert conn.status == 200
     payload = Jason.decode!(conn.resp_body)
 
-    assert payload["completed_nodes"] == [
-             "electrostatic_input",
-             "thermal_input",
-             "bundle",
-             "bundle_output"
-           ]
+    assert Enum.join(payload["completed_nodes"], ",") ==
+             "electrostatic_input,thermal_input,bundle,bundle_output"
 
     assert get_in(payload, ["artifacts", "bundle.result", "bundle_contract"]) ==
              "kyuubiki.workflow_diagnostics_bundle/v1"

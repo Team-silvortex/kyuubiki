@@ -103,6 +103,53 @@ class ControlPlaneClient:
         quoted_id = urllib.parse.quote(operator_id, safe="")
         return self._request(f"/api/v1/operators/{quoted_id}")
 
+    def prepare_operator_task(self, task_ir: dict[str, Any]) -> dict[str, Any]:
+        return self._request("/api/v1/operator-tasks/prepare", "POST", {"task": task_ir})
+
+    def execute_operator_task(self, task_ir: dict[str, Any]) -> dict[str, Any]:
+        return self._request("/api/v1/operator-tasks/execute", "POST", {"task": task_ir})
+
+    def prepare_operator_task_batch(self, batch: dict[str, Any]) -> dict[str, Any]:
+        return self._request("/api/v1/operator-tasks/prepare-batch", "POST", {"batch": batch})
+
+    def execute_operator_task_batch(self, batch: dict[str, Any]) -> dict[str, Any]:
+        return self._request("/api/v1/operator-tasks/execute-batch", "POST", {"batch": batch})
+
+    def checkpoint_operator_task_batch(
+        self,
+        batch: dict[str, Any],
+        preparation: dict[str, Any] | None = None,
+        execution: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"batch": batch}
+        if preparation is not None:
+            payload["preparation"] = preparation
+        if execution is not None:
+            payload["execution"] = execution
+        return self._request("/api/v1/operator-tasks/checkpoint-batch", "POST", payload)
+
+    def verify_operator_task_batch_checkpoint(
+        self,
+        batch: dict[str, Any],
+        checkpoint: dict[str, Any],
+    ) -> dict[str, Any]:
+        return self._request(
+            "/api/v1/operator-tasks/verify-checkpoint-batch",
+            "POST",
+            {"batch": batch, "checkpoint": checkpoint},
+        )
+
+    def plan_operator_task_batch_resume(
+        self,
+        batch: dict[str, Any],
+        checkpoint: dict[str, Any],
+    ) -> dict[str, Any]:
+        return self._request(
+            "/api/v1/operator-tasks/resume-plan-batch",
+            "POST",
+            {"batch": batch, "checkpoint": checkpoint},
+        )
+
     def submit_fem_job(self, solve_kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         normalized = normalize_solve_kind(solve_kind)
         path = _FEM_JOB_PATHS.get(normalized)

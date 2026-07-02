@@ -453,6 +453,35 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
     assert AgentPool.deployment_info().ready_endpoint_count == 2
   end
 
+  test "does not carry cooldown state across a reused id on a new endpoint address" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "agent-a", host: "127.0.0.1", port: 5101},
+        %{id: "agent-b", host: "127.0.0.1", port: 5102}
+      ],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert :ok =
+             AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+
+    assert Enum.map(AgentPool.checkout_endpoints(), & &1.id) == ["agent-b", "agent-a"]
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "agent-a", host: "127.0.0.1", port: 6101},
+        %{id: "agent-b", host: "127.0.0.1", port: 6102}
+      ],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    assert Enum.map(AgentPool.checkout_endpoints(), & &1.id) == ["agent-a", "agent-b"]
+    assert AgentPool.deployment_info().cooling_down_count == 0
+  end
+
   test "clears cooldown state after a reported success" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

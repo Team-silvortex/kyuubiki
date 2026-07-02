@@ -7,8 +7,20 @@ defmodule KyuubikiWeb.WorkflowThermalRuntimeTest do
     payload = %{
       "max_stress" => 220.0,
       "nodes" => [
-        %{"id" => "n0", "ux" => 3.0, "uy" => 4.0, "displacement_magnitude" => 5.0, "temperature_delta" => 25.0},
-        %{"id" => "n1", "ux" => 5.0, "uy" => 12.0, "displacement_magnitude" => 13.0, "temperature_delta" => 45.0}
+        %{
+          "id" => "n0",
+          "ux" => 3.0,
+          "uy" => 4.0,
+          "displacement_magnitude" => 5.0,
+          "temperature_delta" => 25.0
+        },
+        %{
+          "id" => "n1",
+          "ux" => 5.0,
+          "uy" => 12.0,
+          "displacement_magnitude" => 13.0,
+          "temperature_delta" => 45.0
+        }
       ],
       "elements" => [
         %{"id" => "e0", "stress_x" => 110.0},
@@ -38,7 +50,12 @@ defmodule KyuubikiWeb.WorkflowThermalRuntimeTest do
         %{"id" => "n1", "temperature" => 30.0, "heat_load" => 4.0}
       ],
       "elements" => [
-        %{"id" => "e0", "heat_flux_x" => 100.0, "heat_flux_y" => 0.0, "heat_flux_magnitude" => 5.0},
+        %{
+          "id" => "e0",
+          "heat_flux_x" => 100.0,
+          "heat_flux_y" => 0.0,
+          "heat_flux_magnitude" => 5.0
+        },
         %{"id" => "e1", "heat_flux_x" => 1.0, "heat_flux_y" => 1.0, "heat_flux_magnitude" => 9.0}
       ]
     }
@@ -69,8 +86,18 @@ defmodule KyuubikiWeb.WorkflowThermalRuntimeTest do
     payload = %{
       "nodes" => [%{"id" => "n0", "temperature_delta" => 10.0}],
       "elements" => [
-        %{"id" => "e0", "thermal_strain_x" => 2.0e-4, "mechanical_strain_x" => -1.0e-4, "total_strain_x" => 1.0e-4},
-        %{"id" => "e1", "thermal_strain_x" => 4.5e-4, "mechanical_strain_x" => -3.0e-4, "total_strain_x" => 2.0e-4}
+        %{
+          "id" => "e0",
+          "thermal_strain_x" => 2.0e-4,
+          "mechanical_strain_x" => -1.0e-4,
+          "total_strain_x" => 1.0e-4
+        },
+        %{
+          "id" => "e1",
+          "thermal_strain_x" => 4.5e-4,
+          "mechanical_strain_x" => -3.0e-4,
+          "total_strain_x" => 2.0e-4
+        }
       ]
     }
 

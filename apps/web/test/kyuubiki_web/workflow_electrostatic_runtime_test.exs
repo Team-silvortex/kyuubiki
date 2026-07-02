@@ -49,12 +49,14 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntimeTest do
     assert diagnostics["diagnostic_prefix"] == "electrostatic"
     assert diagnostics["diagnostic_node_count"] == 3
     assert diagnostics["diagnostic_element_count"] == 2
+
     assert diagnostics["diagnostic_metric_groups"] == [
              "potential",
              "charge_density",
              "energy_density",
              "field"
            ]
+
     assert diagnostics["electrostatic_potential_min"] == 0.0
     assert diagnostics["electrostatic_potential_max"] == 5.0
     assert diagnostics["electrostatic_potential_mean"] == 8.0 / 3.0

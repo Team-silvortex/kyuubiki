@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-batch-resume-plan.schema.json",
+  "title": "Kyuubiki operator task batch resume plan",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "operator_task_batch_resume_plan_contract",
+    "plan_id",
+    "status",
+    "next_action",
+    "batch_digest",
+    "checkpoint_digest",
+    "target_case_ids",
+    "blocked_case_ids",
+    "resume_policy"
+  ],
+  "properties": {
+    "operator_task_batch_resume_plan_contract": {
+      "const": "kyuubiki.operator_task_batch_resume_plan/v1"
+    },
+    "plan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "prepared", "complete", "partial", "blocked"]
+    },
+    "next_action": {
+      "type": "string",
+      "enum": ["prepare", "execute", "archive", "retry_failed_cases", "fix_invalid_cases"]
+    },
+    "batch_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "checkpoint_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "target_case_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "blocked_case_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "resume_policy": {
+      "type": "object",
+      "required": ["status", "next_action"]
+    }
+  }
+}

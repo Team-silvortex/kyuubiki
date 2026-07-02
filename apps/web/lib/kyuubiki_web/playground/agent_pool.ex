@@ -322,7 +322,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp enrich_endpoints(endpoints, health) do
     Enum.map(endpoints, fn endpoint ->
-      health_state = Map.get(health, endpoint.id, %{})
+      health_state = Map.get(health, endpoint_health_key(endpoint), %{})
       remaining_ms = cooldown_remaining_ms(health, endpoint)
 
       endpoint
@@ -340,23 +340,26 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     do: Map.put(endpoint, key, DateTime.to_iso8601(value))
 
   defp prune_health(health, endpoints) do
-    valid_ids = MapSet.new(Enum.map(endpoints, & &1.id))
+    valid_ids = MapSet.new(Enum.map(endpoints, &endpoint_health_key/1))
 
     health
     |> Enum.filter(fn {id, _state} -> MapSet.member?(valid_ids, id) end)
     |> Enum.into(%{})
   end
 
-  defp clear_health(health, %{id: id}) when is_binary(id), do: Map.delete(health, id)
+  defp clear_health(health, %{id: id} = endpoint) when is_binary(id),
+    do: Map.delete(health, endpoint_health_key(endpoint))
+
   defp clear_health(health, _endpoint), do: health
 
-  defp mark_failure(health, %{id: id}, reason) when is_binary(id) do
-    current = Map.get(health, id, %{})
+  defp mark_failure(health, %{id: id} = endpoint, reason) when is_binary(id) do
+    key = endpoint_health_key(endpoint)
+    current = Map.get(health, key, %{})
     failures = Map.get(current, :consecutive_failures, 0) + 1
     cooldown_ms = failure_cooldown_ms(failures)
     now = DateTime.utc_now()
 
-    Map.put(health, id, %{
+    Map.put(health, key, %{
       consecutive_failures: failures,
       cooldown_until: DateTime.add(now, cooldown_ms, :millisecond),
       last_failure_at: now,
@@ -366,8 +369,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp mark_failure(health, _endpoint, _reason), do: health
 
-  defp cooldown_remaining_ms(health, %{id: id}) when is_binary(id) do
-    case Map.get(health, id) do
+  defp cooldown_remaining_ms(health, %{id: id} = endpoint) when is_binary(id) do
+    case Map.get(health, endpoint_health_key(endpoint)) do
       %{cooldown_until: %DateTime{} = cooldown_until} ->
         DateTime.diff(cooldown_until, DateTime.utc_now(), :millisecond)
 
@@ -377,6 +380,13 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp cooldown_remaining_ms(_health, _endpoint), do: 0
+
+  defp endpoint_health_key(%{id: id, host: host, port: port})
+       when is_binary(id) and is_binary(host) and is_integer(port),
+       do: "#{id}@#{host}:#{port}"
+
+  defp endpoint_health_key(%{id: id}) when is_binary(id), do: id
+  defp endpoint_health_key(_endpoint), do: nil
 
   defp failure_cooldown_ms(consecutive_failures) do
     base_ms =

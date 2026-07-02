@@ -97,7 +97,8 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticContractGraphs do
           "operator_id" => "bridge.electrostatic_field_to_heat_quad_2d",
           "config" => %{
             "seed_model" => heat_quad_seed_model_example(),
-            "contract" => WorkflowCatalogSupport.electrostatic_to_heat_bridge_contract_example(50.0)
+            "contract" =>
+              WorkflowCatalogSupport.electrostatic_to_heat_bridge_contract_example(50.0)
           },
           "inputs" => [
             %{
@@ -220,13 +221,69 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticContractGraphs do
         }
       ],
       "edges" => [
-        edge("e0", "electrostatic_model", "model", "solve_electrostatic", "model", "study_model/electrostatic_plane_quad_2d", "electrostatic_model"),
-        edge("e1", "solve_electrostatic", "result", "bridge_field_to_heat", "electrostatic_result", "result/electrostatic_plane_quad_2d", "electrostatic_result"),
-        edge("e2", "bridge_field_to_heat", "heat_model", "solve_heat", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        edge("e3", "solve_heat", "result", "bridge_temperature", "heat_result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e4", "bridge_temperature", "thermo_model", "solve_thermo", "model", "study_model/thermal_plane_quad_2d", "thermo_model"),
-        edge("e5", "solve_thermo", "result", "extract_summary", "result", "result/thermal_plane_quad_2d", "thermo_result"),
-        edge("e6", "extract_summary", "summary", "export_json", "summary", "report/summary", "thermo_summary"),
+        edge(
+          "e0",
+          "electrostatic_model",
+          "model",
+          "solve_electrostatic",
+          "model",
+          "study_model/electrostatic_plane_quad_2d",
+          "electrostatic_model"
+        ),
+        edge(
+          "e1",
+          "solve_electrostatic",
+          "result",
+          "bridge_field_to_heat",
+          "electrostatic_result",
+          "result/electrostatic_plane_quad_2d",
+          "electrostatic_result"
+        ),
+        edge(
+          "e2",
+          "bridge_field_to_heat",
+          "heat_model",
+          "solve_heat",
+          "model",
+          "study_model/heat_plane_quad_2d",
+          "heat_model"
+        ),
+        edge(
+          "e3",
+          "solve_heat",
+          "result",
+          "bridge_temperature",
+          "heat_result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e4",
+          "bridge_temperature",
+          "thermo_model",
+          "solve_thermo",
+          "model",
+          "study_model/thermal_plane_quad_2d",
+          "thermo_model"
+        ),
+        edge(
+          "e5",
+          "solve_thermo",
+          "result",
+          "extract_summary",
+          "result",
+          "result/thermal_plane_quad_2d",
+          "thermo_result"
+        ),
+        edge(
+          "e6",
+          "extract_summary",
+          "summary",
+          "export_json",
+          "summary",
+          "report/summary",
+          "thermo_summary"
+        ),
         edge("e7", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -245,15 +302,50 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticContractGraphs do
   defp heat_quad_seed_model_example do
     %{
       "nodes" => [
-        %{"id" => "n0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "n1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "n2", "x" => 1.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "n3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
+        %{
+          "id" => "n0",
+          "x" => 0.0,
+          "y" => 0.0,
+          "fix_temperature" => true,
+          "temperature" => 20.0,
+          "heat_load" => 0.0
+        },
+        %{
+          "id" => "n1",
+          "x" => 1.0,
+          "y" => 0.0,
+          "fix_temperature" => false,
+          "temperature" => 0.0,
+          "heat_load" => 0.0
+        },
+        %{
+          "id" => "n2",
+          "x" => 1.0,
+          "y" => 1.0,
+          "fix_temperature" => false,
+          "temperature" => 0.0,
+          "heat_load" => 0.0
+        },
+        %{
+          "id" => "n3",
+          "x" => 0.0,
+          "y" => 1.0,
+          "fix_temperature" => true,
+          "temperature" => 20.0,
+          "heat_load" => 0.0
+        }
       ],
       "elements" => [
-        %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
+        %{
+          "id" => "hq0",
+          "node_i" => 0,
+          "node_j" => 1,
+          "node_k" => 2,
+          "node_l" => 3,
+          "thickness" => 0.02,
+          "conductivity" => 45.0
+        }
       ]
     }
   end
-
 end

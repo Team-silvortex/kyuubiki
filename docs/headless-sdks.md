@@ -41,6 +41,15 @@ Minimal end-to-end examples:
 - [sdks/python/examples/run_study.py](../sdks/python/examples/run_study.py)
 - [sdks/elixir/examples/run_study.exs](../sdks/elixir/examples/run_study.exs)
 - [sdks/rust/examples/run_study.rs](../sdks/rust/examples/run_study.rs)
+- [sdks/python/examples/execute_operator_task_batch.py](../sdks/python/examples/execute_operator_task_batch.py)
+- [sdks/elixir/examples/execute_operator_task_batch.exs](../sdks/elixir/examples/execute_operator_task_batch.exs)
+- [sdks/rust/examples/execute_operator_task_batch.rs](../sdks/rust/examples/execute_operator_task_batch.rs)
+
+The operator task batch examples read files shaped like
+[schemas/examples.operator-task-batch.json](../schemas/examples.operator-task-batch.json).
+The intended producer is the workflow transform
+`transform.compose_quality_execution_batch`, which turns expanded optimization
+cases into language-neutral TaskIR envelopes.
 
 SDK-local smoke coverage:
 
@@ -75,6 +84,9 @@ All three SDKs expose the same conceptual split:
 - `GET /api/v1/protocol/agents`
 - `GET /api/v1/workflows/catalog`
 - `GET /api/v1/operators`
+- `POST /api/v1/operator-tasks/prepare`
+- `POST /api/v1/operator-tasks/execute`
+- `POST /api/v1/operator-tasks/execute-batch`
 - `GET /api/v1/jobs`
 - `PATCH /api/v1/jobs/:job_id`
 - `DELETE /api/v1/jobs/:job_id`
@@ -139,6 +151,8 @@ They now also expose a small workflow layer:
 - browse large result windows in chunked pages
 - retry transient failures without retrying auth or logic errors
 - classify failures into machine-usable buckets for agent policy layers
+- execute language-neutral Operator TaskIR envelopes and
+  `quality_execution_batch` files without using the Workbench
 
 Rust material reports can be generated headlessly:
 

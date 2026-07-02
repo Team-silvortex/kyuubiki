@@ -165,6 +165,82 @@ impl ControlPlaneClient {
         )
     }
 
+    pub fn prepare_operator_task(&self, task_ir: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/prepare",
+            Some(&serde_json::json!({ "task": task_ir })),
+        )
+    }
+
+    pub fn execute_operator_task(&self, task_ir: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/execute",
+            Some(&serde_json::json!({ "task": task_ir })),
+        )
+    }
+
+    pub fn prepare_operator_task_batch(&self, batch: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/prepare-batch",
+            Some(&serde_json::json!({ "batch": batch })),
+        )
+    }
+
+    pub fn execute_operator_task_batch(&self, batch: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/execute-batch",
+            Some(&serde_json::json!({ "batch": batch })),
+        )
+    }
+
+    pub fn checkpoint_operator_task_batch(
+        &self,
+        batch: &Value,
+        preparation: Option<&Value>,
+        execution: Option<&Value>,
+    ) -> SdkResult<Value> {
+        let mut payload = serde_json::json!({ "batch": batch });
+        if let Some(preparation) = preparation {
+            payload["preparation"] = preparation.clone();
+        }
+        if let Some(execution) = execution {
+            payload["execution"] = execution.clone();
+        }
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/checkpoint-batch",
+            Some(&payload),
+        )
+    }
+
+    pub fn verify_operator_task_batch_checkpoint(
+        &self,
+        batch: &Value,
+        checkpoint: &Value,
+    ) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/verify-checkpoint-batch",
+            Some(&serde_json::json!({ "batch": batch, "checkpoint": checkpoint })),
+        )
+    }
+
+    pub fn plan_operator_task_batch_resume(
+        &self,
+        batch: &Value,
+        checkpoint: &Value,
+    ) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/operator-tasks/resume-plan-batch",
+            Some(&serde_json::json!({ "batch": batch, "checkpoint": checkpoint })),
+        )
+    }
+
     pub fn list_jobs(&self) -> SdkResult<Value> {
         self.request_json("GET", "/api/v1/jobs", None)
     }

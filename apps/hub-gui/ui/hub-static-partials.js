@@ -1,0 +1,595 @@
+(() => {
+  const partials = [
+    [
+      "hub-projects-panel-slot",
+      String.raw`
+        <section class="hub-panel hub-panel--projects" id="projects-panel">
+          <div class="hub-panel-tabs" aria-label="Home pages">
+            <button class="hub-panel-tab hub-panel-tab--active" data-projects-page="start" type="button" id="projects-tab-start">Start here</button>
+            <button class="hub-panel-tab" data-projects-page="library" type="button" id="projects-tab-library">Library</button>
+            <button class="hub-panel-tab" data-projects-page="bundles" type="button" id="projects-tab-bundles">Bundle tools</button>
+            <button class="hub-panel-tab" data-projects-page="guides" type="button" id="projects-tab-guides">Guides</button>
+          </div>
+
+          <div class="hub-projects-pane" data-projects-pane="start">
+            <div class="hub-overview-strip">
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="home-step1-label">Step 1</div>
+                <h2 id="home-step1-title">Bring work in</h2>
+                <p class="desktop-shell-note" id="home-step1-copy">Register the current bundle, sync the local control plane, or pull a remote catalog into one shelf.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="home-step2-label">Step 2</div>
+                <h2 id="home-step2-title">Inspect once</h2>
+                <p class="desktop-shell-note" id="home-step2-copy">Validate the bundle shape and analysis intent before you go deeper.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="home-step3-label">Step 3</div>
+                <h2 id="home-step3-title">Open Workbench</h2>
+                <p class="desktop-shell-note" id="home-step3-copy">Move into analysis only after the active bundle and runtime path look safe.</p>
+              </article>
+            </div>
+
+            <div class="hub-start-layout">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="home-path-label">Recommended path</div>
+                    <h2 id="home-path-title">Use Hub as a short runway</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="home-path-copy">If this is a fresh session, follow one short path instead of bouncing across all sections.</p>
+                </div>
+                <ol class="hub-flow-list">
+                  <li class="hub-flow-step">
+                    <strong id="home-flow1-title">Start the local stack if needed</strong>
+                    <span class="desktop-shell-note" id="home-flow1-copy">Bring the local runtime online before you inspect or open anything that depends on it.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong id="home-flow2-title">Sync or register work</strong>
+                    <span class="desktop-shell-note" id="home-flow2-copy">Pull from the local control plane, a remote catalog, or the current bundle path.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong id="home-flow3-title">Inspect once, then open</strong>
+                    <span class="desktop-shell-note" id="home-flow3-copy">Run one quick bundle check, then move into Workbench with fewer surprises.</span>
+                  </li>
+                </ol>
+                <div class="hub-primary-actions">
+                  <button class="desktop-shell-button-primary" data-action="start-local" id="home-action-start">Start local stack</button>
+                  <button class="desktop-shell-button-primary" data-action="workload-sync-local" id="home-action-sync">Sync local control plane</button>
+                  <button class="desktop-shell-button-primary" data-action="open-workbench" id="home-action-open">Open workbench</button>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="home-quick-label">Quick orientation</div>
+                    <h2 id="home-quick-title">Choose the right next move</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="home-quick-copy">Open the deeper pages only when you know which job you are doing.</p>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-projects-target="library" type="button">
+                    <strong id="home-cluster-library-title">Open Library</strong>
+                    <span class="desktop-shell-note" id="home-cluster-library-copy">Curate workloads, sync catalogs, and filter by domain or family.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-projects-target="bundles" type="button">
+                    <strong id="home-cluster-bundles-title">Open Bundle tools</strong>
+                    <span class="desktop-shell-note" id="home-cluster-bundles-copy">Inspect, validate, normalize, pack, unpack, and diff project bundles.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-projects-target="guides" type="button">
+                    <strong id="home-cluster-guides-title">Open docs &amp; guides</strong>
+                    <span class="desktop-shell-note" id="home-cluster-guides-copy">Go to one clear documentation shelf for current-line, operations, troubleshooting, and accuracy notes.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-installer" type="button">
+                    <strong id="home-cluster-installer-title">Open Installer</strong>
+                    <span class="desktop-shell-note" id="home-cluster-installer-copy">Bootstrap release layouts, desktop packaging, and workstation setup from one shell.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-target-section="runtimes" type="button">
+                    <strong id="home-cluster-runtimes-title">Open Runtimes</strong>
+                    <span class="desktop-shell-note" id="home-cluster-runtimes-copy">Check stack health, hot-reload status, and runtime tails.</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="hub-projects-pane hidden" data-projects-pane="library">
+              <article class="hub-card desktop-shell-surface-card hub-card--library">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="library-intro-label">Managed intake</div>
+                    <h2 id="library-intro-title">Workload library</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="library-intro-copy">
+                    Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.
+                  </p>
+                </div>
+              <div class="hub-control-grid">
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                  <label class="hub-field hub-field--stacked">
+                    <span id="library-catalog-url-label">Catalog URL</span>
+                    <input id="workload-catalog-url" placeholder="https://hub.example.com/catalog/workloads.json" type="text" />
+                  </label>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                  <label class="hub-field hub-field--stacked">
+                    <span id="library-label-note-label">Label or note</span>
+                    <input id="workload-label" placeholder="Bridge starter pack / downloaded from release note" type="text" />
+                  </label>
+                </div>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-action="workload-register-local" id="library-action-register">Register current bundle</button>
+                <button data-action="workload-sync-local" id="library-action-sync-local">Sync local control plane</button>
+                <button data-action="workload-sync-remote" id="library-action-sync-remote">Sync remote catalog</button>
+                <button data-action="workload-export-library" id="library-action-export">Export library JSON</button>
+                <button data-action="workload-import-library" id="library-action-import">Import library JSON</button>
+                <button data-action="workload-clear-library" id="library-action-clear">Clear library</button>
+              </div>
+              <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
+              <div class="hub-history-section">
+                <div class="desktop-shell-note" id="library-managed-workloads-label">Managed workloads</div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <label class="hub-field hub-field--stacked hub-workflow-catalog-search">
+                    <span id="library-search-label">Search workloads</span>
+                    <input id="workload-library-search" placeholder="bridge frame axial thermal" type="text" />
+                  </label>
+                  <button id="library-search-clear" type="button">Clear search</button>
+                </div>
+                <div class="hub-filter-stack">
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-workload-filter="all" id="library-filter-all">All</button>
+                    <button data-workload-filter="mechanical" id="library-filter-mechanical">Mechanical</button>
+                    <button data-workload-filter="thermal" id="library-filter-thermal">Thermal</button>
+                    <button data-workload-filter="thermo_mechanical" id="library-filter-thermo">Thermo-mechanical</button>
+                  </div>
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-workload-family-filter="all" id="library-family-all">All families</button>
+                    <button data-workload-family-filter="axial_and_springs" id="library-family-axial">Axial &amp; Springs</button>
+                    <button data-workload-family-filter="beams_and_frames" id="library-family-beams">Beams &amp; Frames</button>
+                    <button data-workload-family-filter="trusses" id="library-family-trusses">Trusses</button>
+                    <button data-workload-family-filter="planes" id="library-family-planes">Planes</button>
+                  </div>
+                </div>
+                <div class="hub-history-list" id="workload-library-list"></div>
+              </div>
+              <div class="hub-history-section">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="workflow-catalog-label">Workflow catalog</div>
+                    <h2 id="workflow-catalog-title">Named workflow runs</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="workflow-catalog-copy">
+                    Discover built-in multi-operator workflows and run a reference sample without pasting a raw graph.
+                  </p>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <label class="hub-field hub-field--stacked hub-workflow-catalog-search">
+                    <span id="workflow-catalog-search-label">Search workflows</span>
+                    <input id="workflow-catalog-search" placeholder="bridge thermal export" type="text" />
+                  </label>
+                  <button id="workflow-catalog-search-clear" type="button">Clear search</button>
+                  <button data-action="workflow-catalog-refresh" id="workflow-catalog-refresh">Refresh workflow catalog</button>
+                </div>
+                <div class="hub-history-list" id="workflow-catalog-list"></div>
+              </div>
+              <pre class="hub-log hub-log--compact" id="workflow-catalog-output">Workflow catalog is ready.</pre>
+              <pre class="hub-log hub-log--compact" id="workload-library-output">Workload library is ready.</pre>
+            </article>
+          </div>
+
+          <div class="hub-projects-pane hidden" data-projects-pane="bundles">
+            <div class="hub-projects-side">
+              <article class="hub-card desktop-shell-surface-card hub-card--bundle">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="bundles-intro-label">Bundle operations</div>
+                    <h2 id="bundles-intro-title">Project bundle tools</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="bundles-intro-copy">Keep the repetitive archive work in one place, then move straight into analysis.</p>
+                </div>
+                <div class="hub-control-grid hub-control-grid--stacked">
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span id="bundles-bundle-path-label">Bundle path</span>
+                      <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
+                    </label>
+                  </div>
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span id="bundles-compare-path-label">Compare path</span>
+                      <input id="project-bundle-compare-path" placeholder="/path/to/other-project.kyuubiki" type="text" />
+                    </label>
+                  </div>
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span id="bundles-output-path-label">Output path</span>
+                      <input id="project-bundle-out-path" placeholder="/path/to/output.kyuubiki or /path/to/project-dir" type="text" />
+                    </label>
+                  </div>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="project-inspect" id="bundles-action-inspect">Inspect .kyuubiki</button>
+                  <button data-action="project-validate" id="bundles-action-validate">Validate .kyuubiki</button>
+                  <button data-action="project-normalize" id="bundles-action-normalize">Normalize bundle</button>
+                  <button data-action="project-unpack" id="bundles-action-unpack">Unpack bundle</button>
+                  <button data-action="project-pack" id="bundles-action-pack">Pack project</button>
+                  <button data-action="project-diff" id="bundles-action-diff">Diff bundles</button>
+                  <button data-action="open-workbench" id="bundles-action-open-workbench">Open workbench</button>
+                  <button data-target-section="tools" id="bundles-action-desktop-tools">Desktop tools</button>
+                </div>
+                <div class="hub-recent-grid">
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note" id="bundles-recent-bundles-label">Recent bundles</div>
+                    <div class="hub-recent-list" id="recent-bundle-list"></div>
+                  </section>
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note" id="bundles-recent-compare-label">Recent compare paths</div>
+                    <div class="hub-recent-list" id="recent-compare-list"></div>
+                  </section>
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note" id="bundles-recent-outputs-label">Recent outputs</div>
+                    <div class="hub-recent-list" id="recent-output-list"></div>
+                  </section>
+                </div>
+                <section class="hub-recent-panel hub-recent-panel--wide">
+                  <div class="desktop-shell-note" id="bundles-recent-actions-label">Recent bundle actions</div>
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-history-filter="all" id="bundles-history-all">All</button>
+                    <button data-history-filter="failed" id="bundles-history-failed">Failed</button>
+                    <button data-history-filter="inspect" id="bundles-history-inspect">Inspect</button>
+                    <button data-history-filter="normalize" id="bundles-history-normalize">Normalize</button>
+                    <button data-history-filter="diff" id="bundles-history-diff">Diff</button>
+                    <button data-history-manage="keep-failed" id="bundles-history-keep-failed">Keep failed only</button>
+                    <button data-history-manage="import-json" id="bundles-history-import">Import JSON</button>
+                    <button data-history-manage="export-json" id="bundles-history-export">Export JSON</button>
+                    <button data-history-manage="clear" id="bundles-history-clear">Clear history</button>
+                  </div>
+                  <input accept="application/json" class="hidden" id="history-import-input" type="file" />
+                  <section class="hub-history-section">
+                    <div class="desktop-shell-note" id="bundles-favorites-label">Favorites</div>
+                    <div class="hub-history-list" id="favorite-action-list"></div>
+                  </section>
+                  <section class="hub-history-section">
+                    <div class="desktop-shell-note" id="bundles-recent-label">Recent</div>
+                    <div class="hub-history-list" id="recent-action-list"></div>
+                  </section>
+                </section>
+                <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
+              </article>
+            </div>
+          </div>
+
+          <div class="hub-projects-pane hidden" data-projects-pane="guides">
+            <div class="hub-overview-strip">
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="guides-overview-docs-label">Docs hub</div>
+                <h2 id="guides-overview-docs-title">One readable shelf</h2>
+                <p class="desktop-shell-note" id="guides-overview-docs-copy">Use one place for orientation first, then branch into operations, accuracy, or troubleshooting only when needed.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="guides-overview-current-label">Current line</div>
+                <h2 id="guides-overview-current-title">tamamono 1.x</h2>
+                <p class="desktop-shell-note" id="guides-overview-current-copy">Read the current product posture, version line, and what this generation is trying to harden.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow" id="guides-overview-troubleshooting-label">Troubleshooting</div>
+                <h2 id="guides-overview-troubleshooting-title">Find the shortest path</h2>
+                <p class="desktop-shell-note" id="guides-overview-troubleshooting-copy">Use the first-line support notes before you dive into deeper runtime or packaging details.</p>
+              </article>
+            </div>
+
+            <div class="hub-start-layout">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="guides-primary-label">Primary docs</div>
+                    <h2 id="guides-primary-title">Open the right guide</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="guides-primary-copy">Start with the docs index, then branch into only the guide that matches the job you are doing now.</p>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-action="open-docs-index" type="button">
+                    <strong id="guides-docs-title">Docs index</strong>
+                    <span class="desktop-shell-note" id="guides-docs-copy">The single entry to current-line, operations, testing, accuracy, and archived release notes.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
+                    <strong id="guides-current-title">Current line</strong>
+                    <span class="desktop-shell-note" id="guides-current-copy">Read what tamamono 1.x is optimizing for before you make deeper product decisions.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
+                    <strong id="guides-operations-title">Operations</strong>
+                    <span class="desktop-shell-note" id="guides-operations-copy">Use this when you need the runtime, stack, or operator path explained as a coherent workflow.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
+                    <strong id="guides-troubleshooting-title">Troubleshooting</strong>
+                    <span class="desktop-shell-note" id="guides-troubleshooting-copy">Use the shortest failure path before you dig into full logs or packaging output.</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="guides-accuracy-label">Accuracy and confidence</div>
+                    <h2 id="guides-accuracy-title">Read the trust story</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="guides-accuracy-copy">These are the documents that explain what the current line is trying to verify and why that matters before moxi.</p>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-action="open-accuracy-plan-doc" type="button">
+                    <strong id="guides-accuracy-plan-title">Accuracy plan</strong>
+                    <span class="desktop-shell-note" id="guides-accuracy-plan-copy">See the long-line plan for verified baselines, benchmark expansion, and solver trust.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-accuracy-baselines-doc" type="button">
+                    <strong id="guides-accuracy-baselines-title">Accuracy baselines</strong>
+                    <span class="desktop-shell-note" id="guides-accuracy-baselines-copy">Read which benchmark families are already locked into regression and which are still next.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-testing-and-ci-doc" type="button">
+                    <strong id="guides-direct-mesh-title">Direct-mesh regression</strong>
+                    <span class="desktop-shell-note" id="guides-direct-mesh-copy">Open the nightly Docker regression lane, baseline, and verification flow we now use to keep LAN mesh performance honest.</span>
+                  </button>
+                </div>
+              </article>
+
+              <div class="hub-projects-side">
+                <article class="hub-card desktop-shell-surface-card">
+                  <div class="hub-card__intro">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-regression-label">Regression lane</div>
+                      <h2 id="guides-regression-title">Direct-mesh baseline wall</h2>
+                    </div>
+                    <p class="desktop-shell-note" id="guides-regression-copy">Keep the current LAN mesh baseline visible in Hub so nightly regression stays easy to audit before we build a live status plane.</p>
+                  </div>
+                  <div class="hub-metrics">
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-elapsed-label">Baseline mean</span><strong id="guides-regression-elapsed-value">53.457 s</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-rss-label">Baseline RSS</span><strong id="guides-regression-rss-value">84,725 KiB</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-repeat-label">Repeat</span><strong id="guides-regression-repeat-value">3 runs</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-network-label">Docker network</span><strong id="guides-regression-network-value">host</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-latest-label">Latest mean</span><strong id="guides-regression-latest-value">--</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-regression-status-label">Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="guides-regression-status-value">baseline only</strong></div>
+                  </div>
+                  <p class="desktop-shell-note" id="guides-regression-note">No local latest summary is loaded yet.</p>
+                  <div class="hub-stack">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-regression-baseline-path-label">Baseline file</div>
+                      <div class="desktop-shell-note" id="guides-regression-baseline-path">tests/integration/benchmarks/direct-mesh-docker-baseline.json</div>
+                    </div>
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-regression-output-path-label">Latest output root</div>
+                      <div class="desktop-shell-note" id="guides-regression-output-path">tmp/direct-mesh-benchmark-container/latest</div>
+                    </div>
+                  </div>
+                  <div class="hub-action-clusters">
+                    <button class="hub-cluster-card" data-action="open-direct-mesh-baseline" type="button">
+                      <strong id="guides-regression-baseline-title">Open baseline</strong>
+                      <span class="desktop-shell-note" id="guides-regression-baseline-copy">Open the checked-in JSON snapshot that anchors the current direct-mesh regression lane.</span>
+                    </button>
+                    <button class="hub-cluster-card" data-action="open-direct-mesh-output-dir" type="button">
+                      <strong id="guides-regression-output-title">Open output root</strong>
+                      <span class="desktop-shell-note" id="guides-regression-output-copy">Open the local benchmark output directory where the latest summary and compare report should land.</span>
+                    </button>
+                    <button class="hub-cluster-card" data-action="open-testing-and-ci-doc" type="button">
+                      <strong id="guides-regression-lane-title">Open regression guide</strong>
+                      <span class="desktop-shell-note" id="guides-regression-lane-copy">Jump to the testing and CI guide for the nightly wrapper, compare flow, and threshold policy.</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="hub-card desktop-shell-surface-card">
+                  <div class="hub-card__intro">
+                    <div>
+                      <div class="hub-card__eyebrow">Unified gate</div>
+                      <h2 id="guides-gate-title">All lanes at a glance</h2>
+                    </div>
+                    <p class="desktop-shell-note" id="guides-gate-copy">Keep benchmark, workflow, and catalog regression signals visible together before you package, roll out, or bless a baseline shift.</p>
+                  </div>
+                  <div class="hub-metrics">
+                    <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="guides-gate-status-value">loading</strong></div>
+                    <div class="desktop-shell-metric-row"><span>Warnings</span><strong id="guides-gate-warning-count">0</strong></div>
+                    <div class="desktop-shell-metric-row"><span>Failures</span><strong id="guides-gate-failing-count">0</strong></div>
+                    <div class="desktop-shell-metric-row"><span>Lanes</span><strong id="guides-gate-lane-count">0</strong></div>
+                  </div>
+                  <div class="hub-stack">
+                    <div>
+                      <div class="hub-card__eyebrow">Catalog path</div>
+                      <div class="desktop-shell-note" id="guides-gate-catalog-path">tmp/regression-lane-catalog.json</div>
+                    </div>
+                    <div>
+                      <div class="hub-card__eyebrow">Summary</div>
+                      <div class="desktop-shell-note" id="guides-gate-note">Waiting for unified regression gate report.</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="hub-card__eyebrow">Top reasons</div>
+                    <div class="desktop-shell-note" id="guides-gate-reasons">No gate reasons loaded yet.</div>
+                  </div>
+                </article>
+
+                <article class="hub-card desktop-shell-surface-card">
+                  <div class="hub-card__intro">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-localization-label">Localization overrides</div>
+                      <h2 id="guides-localization-title">Manage Hub copy overrides</h2>
+                    </div>
+                    <p class="desktop-shell-note" id="guides-localization-copy">
+                      Keep future Hub language growth visible. Import, export, or clear the local override registry without forking the built-in UI copy.
+                    </p>
+                  </div>
+                  <div class="hub-metrics">
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-active-language-label">Current language</span><strong id="guides-localization-active-language-value">English · built-in only</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-installed-languages-label">Override languages</span><strong id="guides-localization-installed-languages-value">none</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-default-layer-label">Default layer</span><strong id="guides-localization-default-layer-value">disabled</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-import-mode-label">Import shape</span><strong id="guides-localization-import-mode-value">none yet</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-latest-asset-label">Latest asset</span><strong id="guides-localization-latest-asset-value">none</strong></div>
+                  </div>
+                  <div class="hub-stack">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-localization-storage-key-label">Storage key</div>
+                      <div class="desktop-shell-note" id="guides-localization-storage-key-value">hub.copy-overrides.v1</div>
+                    </div>
+                  </div>
+                  <div class="hub-stack desktop-shell-action-row">
+                    <button id="guides-localization-import" type="button">Import JSON</button>
+                    <button id="guides-localization-export" type="button">Export registry</button>
+                    <button id="guides-localization-clear" type="button">Clear overrides</button>
+                  </div>
+                  <input accept="application/json" class="hidden" id="guides-localization-import-input" type="file" />
+                  <pre class="hub-log hub-log--compact" id="guides-localization-output">No Hub copy overrides are installed yet.</pre>
+                  <p class="desktop-shell-note" id="guides-localization-hint">Accepts either a single language-pack envelope or a full Hub registry JSON.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+`,
+    ],
+    [
+      "hub-assistant-slot",
+      String.raw`
+      <button aria-controls="hub-assistant-panel" aria-expanded="false" class="hub-assistant-fab" id="hub-assistant-fab" type="button">
+        <img alt="Assistant mark" class="hub-assistant-fab__mark" src="./assets/kyuubiki-app.png" />
+      </button>
+
+      <section aria-hidden="true" class="hub-assistant-overlay hidden" id="hub-assistant-panel">
+        <article class="hub-assistant-sheet hub-card desktop-shell-surface-card">
+          <div class="hub-card__intro">
+            <div>
+              <div class="hub-card__eyebrow" id="assistant-intro-label">Need help?</div>
+              <h2 id="assistant-intro-title">Pick the next safe step</h2>
+            </div>
+            <button class="hub-assistant-close" id="hub-assistant-close" type="button">Close</button>
+          </div>
+          <p class="desktop-shell-note" id="assistant-intro-copy">Start with the local guide. Reach for a model only when the built-in path is not enough.</p>
+          <div class="desktop-shell-section-header">
+            <div class="hub-inline-heading">
+              <span class="desktop-shell-note" id="assistant-engine-label">Engine</span>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="assistant-engine-state">local</strong>
+            </div>
+          </div>
+          <div class="hub-stack desktop-shell-action-row">
+            <button class="desktop-shell-button-primary" data-assistant-mode="local" id="assistant-mode-local">Local guide</button>
+            <button data-assistant-mode="llm" id="assistant-mode-llm">Model assist</button>
+          </div>
+          <div class="hub-metrics">
+            <div class="desktop-shell-metric-row"><span id="assistant-context-section-label">Section</span><strong id="assistant-context-section">projects</strong></div>
+            <div class="desktop-shell-metric-row"><span id="assistant-context-runtime-label">Runtime</span><strong id="assistant-context-runtime">ready</strong></div>
+            <div class="desktop-shell-metric-row"><span id="assistant-context-bundle-label">Bundle</span><strong id="assistant-context-bundle">--</strong></div>
+          </div>
+
+          <section id="assistant-local-panel">
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow" id="assistant-local-actions-label">Quick actions</div>
+              <div class="hub-side-shortcuts desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-action="start-local" id="assistant-local-action-start">Start local stack</button>
+                <button data-projects-target="library" type="button" id="assistant-local-action-library">Open library</button>
+                <button data-projects-target="bundles" type="button" id="assistant-local-action-bundles">Inspect bundle</button>
+                <button data-projects-target="guides" type="button" id="assistant-local-action-guides">Open guides</button>
+              </div>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow" id="assistant-local-ask-label">Ask</div>
+              <div class="hub-assistant-form hub-assistant-form--local">
+                <label class="hub-field hub-field--stacked">
+                  <span id="assistant-local-prompt-label">Ask the local guide</span>
+                  <textarea id="assistant-local-prompt" placeholder="Example: what should I do first, or how do I inspect a bundle safely?" rows="3"></textarea>
+                </label>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" id="assistant-local-ask">Ask local guide</button>
+              </div>
+              <pre class="hub-log hub-log--compact" id="assistant-local-output">Ask about the next step, bundle inspection, runtime health, documentation, or packaging.</pre>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow" id="assistant-docs-label">Docs &amp; guides</div>
+              <div class="hub-assistant-doc-grid">
+                <button class="hub-cluster-card" data-action="open-docs-index" type="button">
+                  <strong id="assistant-docs-index-title">Docs index</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-index-copy">Open the full documentation entry point.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
+                  <strong id="assistant-docs-current-title">Current line</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-current-copy">Read the current tamamono 1.x posture.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
+                  <strong id="assistant-docs-operations-title">Operations</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-operations-copy">Read the runtime and operator workflow.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
+                  <strong id="assistant-docs-troubleshooting-title">Troubleshooting</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-troubleshooting-copy">Jump to the first-line support notes.</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow" id="assistant-suggested-label">Suggested next steps</div>
+              <div class="hub-list" id="assistant-local-cards"></div>
+            </section>
+          </section>
+
+          <section class="hidden" id="assistant-llm-panel">
+            <p class="desktop-shell-note" id="assistant-llm-intro-copy">Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.</p>
+            <div class="hub-assistant-form">
+              <label class="hub-field hub-field--stacked">
+                <span id="assistant-base-url-label">Base URL</span>
+                <input id="assistant-base-url" placeholder="https://api.openai.com/v1" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span id="assistant-api-key-label">API key</span>
+                <input id="assistant-api-key" placeholder="sk-..." type="password" />
+              </label>
+              <label class="hub-field">
+                <span id="assistant-preset-label">Preset</span>
+                <select id="assistant-model-preset">
+                  <option value="gpt-5">gpt-5</option>
+                  <option value="gpt-5-mini">gpt-5-mini</option>
+                  <option value="gpt-4.1">gpt-4.1</option>
+                  <option value="custom">custom</option>
+                </select>
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span id="assistant-model-label">Model</span>
+                <input id="assistant-model-name" placeholder="gpt-5" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span id="assistant-request-label">Request</span>
+                <textarea id="assistant-prompt" placeholder="Example: help me get from a fresh Hub session to a safe first project inspection." rows="4"></textarea>
+              </label>
+            </div>
+            <p class="desktop-shell-note" id="assistant-endpoint-policy">
+              Use <code>https://</code> for remote providers, or <code>http://localhost</code> / <code>127.0.0.1</code> for local gateways. The API key is sent directly to the configured base URL.
+            </p>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" id="assistant-request-plan">Generate plan</button>
+              <label class="hub-inline-check">
+                <input id="assistant-approve-plan" type="checkbox" />
+                <span id="assistant-approve-label">I reviewed this plan and allow execution.</span>
+              </label>
+              <button id="assistant-execute-plan">Execute plan</button>
+            </div>
+            <div class="hub-list" id="assistant-plan-actions"></div>
+            <pre class="hub-log hub-log--compact" id="assistant-output">Assistant is ready.</pre>
+            <section class="hub-recent-panel hub-recent-panel--wide">
+              <div class="desktop-shell-note" id="assistant-audit-label">Assistant audit</div>
+              <div class="hub-list" id="assistant-audit-list"></div>
+            </section>
+          </section>
+        </article>
+      </section>
+`,
+    ],
+  ];
+
+  for (const [slotId, markup] of partials) {
+    const slot = document.getElementById(slotId);
+    if (!slot) continue;
+
+    const template = document.createElement("template");
+    template.innerHTML = markup.trim();
+    slot.replaceWith(template.content);
+  }
+})();

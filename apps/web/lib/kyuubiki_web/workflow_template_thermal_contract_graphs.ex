@@ -13,47 +13,22 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
         WorkflowCatalogSupport.workflow_dataset_contract(
           "kyuubiki.dataset.electrostatic_heat_thermo_triangle/v1",
           [
-            WorkflowCatalogSupport.workflow_dataset_value_info(
+            dataset_value(
               "electrostatic_model",
               "model",
               "study_model/electrostatic_plane_triangle_2d"
             ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
+            dataset_value(
               "electrostatic_result",
               "result",
               "result/electrostatic_plane_triangle_2d"
             ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "heat_model",
-              "model",
-              "study_model/heat_plane_triangle_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "heat_result",
-              "result",
-              "result/heat_plane_triangle_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_model",
-              "model",
-              "study_model/thermal_plane_triangle_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_result",
-              "result",
-              "result/thermal_plane_triangle_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_summary",
-              "result",
-              "report/summary"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "summary_json",
-              "export",
-              "export/json",
-              "utf8_text"
-            )
+            dataset_value("heat_model", "model", "study_model/heat_plane_triangle_2d"),
+            dataset_value("heat_result", "result", "result/heat_plane_triangle_2d"),
+            dataset_value("thermo_model", "model", "study_model/thermal_plane_triangle_2d"),
+            dataset_value("thermo_result", "result", "result/thermal_plane_triangle_2d"),
+            dataset_value("thermo_summary", "result", "report/summary"),
+            dataset_value("summary_json", "export", "export/json", "utf8_text")
           ],
           %{"workflow_family" => "electrostatic_heat_thermo_triangle"}
         ),
@@ -224,13 +199,69 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
         }
       ],
       "edges" => [
-        edge("e0", "electrostatic_plane_triangle_model", "model", "solve_electrostatic", "model", "study_model/electrostatic_plane_triangle_2d", "electrostatic_model"),
-        edge("e1", "solve_electrostatic", "result", "bridge_field_to_heat", "electrostatic_result", "result/electrostatic_plane_triangle_2d", "electrostatic_result"),
-        edge("e2", "bridge_field_to_heat", "heat_model", "solve_heat", "model", "study_model/heat_plane_triangle_2d", "heat_model"),
-        edge("e3", "solve_heat", "result", "bridge_temperature", "heat_result", "result/heat_plane_triangle_2d", "heat_result"),
-        edge("e4", "bridge_temperature", "thermo_model", "solve_thermo", "model", "study_model/thermal_plane_triangle_2d", "thermo_model"),
-        edge("e5", "solve_thermo", "result", "extract_summary", "result", "result/thermal_plane_triangle_2d", "thermo_result"),
-        edge("e6", "extract_summary", "summary", "export_json", "summary", "report/summary", "thermo_summary"),
+        edge(
+          "e0",
+          "electrostatic_plane_triangle_model",
+          "model",
+          "solve_electrostatic",
+          "model",
+          "study_model/electrostatic_plane_triangle_2d",
+          "electrostatic_model"
+        ),
+        edge(
+          "e1",
+          "solve_electrostatic",
+          "result",
+          "bridge_field_to_heat",
+          "electrostatic_result",
+          "result/electrostatic_plane_triangle_2d",
+          "electrostatic_result"
+        ),
+        edge(
+          "e2",
+          "bridge_field_to_heat",
+          "heat_model",
+          "solve_heat",
+          "model",
+          "study_model/heat_plane_triangle_2d",
+          "heat_model"
+        ),
+        edge(
+          "e3",
+          "solve_heat",
+          "result",
+          "bridge_temperature",
+          "heat_result",
+          "result/heat_plane_triangle_2d",
+          "heat_result"
+        ),
+        edge(
+          "e4",
+          "bridge_temperature",
+          "thermo_model",
+          "solve_thermo",
+          "model",
+          "study_model/thermal_plane_triangle_2d",
+          "thermo_model"
+        ),
+        edge(
+          "e5",
+          "solve_thermo",
+          "result",
+          "extract_summary",
+          "result",
+          "result/thermal_plane_triangle_2d",
+          "thermo_result"
+        ),
+        edge(
+          "e6",
+          "extract_summary",
+          "summary",
+          "export_json",
+          "summary",
+          "report/summary",
+          "thermo_summary"
+        ),
         edge("e7", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -246,47 +277,14 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
         WorkflowCatalogSupport.workflow_dataset_contract(
           "kyuubiki.dataset.heat_to_thermo_quad_comparison/v1",
           [
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "heat_model",
-              "model",
-              "study_model/heat_plane_quad_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "heat_result",
-              "result",
-              "result/heat_plane_quad_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "heat_summary",
-              "result",
-              "report/summary"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_model",
-              "model",
-              "study_model/thermal_plane_quad_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_result",
-              "result",
-              "result/thermal_plane_quad_2d"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "thermo_summary",
-              "result",
-              "report/summary"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "comparison_summary",
-              "result",
-              "report/summary"
-            ),
-            WorkflowCatalogSupport.workflow_dataset_value_info(
-              "summary_json",
-              "export",
-              "export/json",
-              "utf8_text"
-            )
+            dataset_value("heat_model", "model", "study_model/heat_plane_quad_2d"),
+            dataset_value("heat_result", "result", "result/heat_plane_quad_2d"),
+            dataset_value("heat_summary", "result", "report/summary"),
+            dataset_value("thermo_model", "model", "study_model/thermal_plane_quad_2d"),
+            dataset_value("thermo_result", "result", "result/thermal_plane_quad_2d"),
+            dataset_value("thermo_summary", "result", "report/summary"),
+            dataset_value("comparison_summary", "result", "report/summary"),
+            dataset_value("summary_json", "export", "export/json", "utf8_text")
           ],
           %{"workflow_family" => "heat_to_thermo_quad_comparison"}
         ),
@@ -417,8 +415,16 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
             "include_percent_change" => false
           },
           "inputs" => [
-            %{"id" => "left", "artifact_type" => "report/summary", "dataset_value" => "heat_summary"},
-            %{"id" => "right", "artifact_type" => "report/summary", "dataset_value" => "thermo_summary"}
+            %{
+              "id" => "left",
+              "artifact_type" => "report/summary",
+              "dataset_value" => "heat_summary"
+            },
+            %{
+              "id" => "right",
+              "artifact_type" => "report/summary",
+              "dataset_value" => "thermo_summary"
+            }
           ],
           "outputs" => [
             %{
@@ -453,14 +459,78 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
         }
       ],
       "edges" => [
-        edge("e0", "heat_model", "model", "solve_heat", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        edge("e1", "solve_heat", "result", "extract_heat_summary", "result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e2", "solve_heat", "result", "bridge_temperature", "heat_result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e3", "bridge_temperature", "thermo_model", "solve_thermo", "model", "study_model/thermal_plane_quad_2d", "thermo_model"),
-        edge("e4", "solve_thermo", "result", "extract_thermo_summary", "result", "result/thermal_plane_quad_2d", "thermo_result"),
-        edge("e5", "extract_heat_summary", "summary", "compare_summaries", "left", "report/summary", "heat_summary"),
-        edge("e6", "extract_thermo_summary", "summary", "compare_summaries", "right", "report/summary", "thermo_summary"),
-        edge("e7", "compare_summaries", "result", "export_json", "summary", "report/summary", "comparison_summary"),
+        edge(
+          "e0",
+          "heat_model",
+          "model",
+          "solve_heat",
+          "model",
+          "study_model/heat_plane_quad_2d",
+          "heat_model"
+        ),
+        edge(
+          "e1",
+          "solve_heat",
+          "result",
+          "extract_heat_summary",
+          "result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e2",
+          "solve_heat",
+          "result",
+          "bridge_temperature",
+          "heat_result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e3",
+          "bridge_temperature",
+          "thermo_model",
+          "solve_thermo",
+          "model",
+          "study_model/thermal_plane_quad_2d",
+          "thermo_model"
+        ),
+        edge(
+          "e4",
+          "solve_thermo",
+          "result",
+          "extract_thermo_summary",
+          "result",
+          "result/thermal_plane_quad_2d",
+          "thermo_result"
+        ),
+        edge(
+          "e5",
+          "extract_heat_summary",
+          "summary",
+          "compare_summaries",
+          "left",
+          "report/summary",
+          "heat_summary"
+        ),
+        edge(
+          "e6",
+          "extract_thermo_summary",
+          "summary",
+          "compare_summaries",
+          "right",
+          "report/summary",
+          "thermo_summary"
+        ),
+        edge(
+          "e7",
+          "compare_summaries",
+          "result",
+          "export_json",
+          "summary",
+          "report/summary",
+          "comparison_summary"
+        ),
         edge("e8", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -476,15 +546,52 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalContractGraphs do
     }
   end
 
+  defp dataset_value(id, data_class, semantic_type, element_type \\ "json_object"),
+    do:
+      WorkflowCatalogSupport.workflow_dataset_value_info(
+        id,
+        data_class,
+        semantic_type,
+        element_type
+      )
+
   defp heat_triangle_seed_model_example do
     %{
       "nodes" => [
-        %{"id" => "t0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "t1", "x" => 1.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "t2", "x" => 0.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0}
+        %{
+          "id" => "t0",
+          "x" => 0.0,
+          "y" => 0.0,
+          "fix_temperature" => true,
+          "temperature" => 20.0,
+          "heat_load" => 0.0
+        },
+        %{
+          "id" => "t1",
+          "x" => 1.0,
+          "y" => 0.0,
+          "fix_temperature" => true,
+          "temperature" => 20.0,
+          "heat_load" => 0.0
+        },
+        %{
+          "id" => "t2",
+          "x" => 0.0,
+          "y" => 1.0,
+          "fix_temperature" => false,
+          "temperature" => 0.0,
+          "heat_load" => 0.0
+        }
       ],
       "elements" => [
-        %{"id" => "ht0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "thickness" => 0.02, "conductivity" => 45.0}
+        %{
+          "id" => "ht0",
+          "node_i" => 0,
+          "node_j" => 1,
+          "node_k" => 2,
+          "thickness" => 0.02,
+          "conductivity" => 45.0
+        }
       ]
     }
   end

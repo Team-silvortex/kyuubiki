@@ -31,8 +31,8 @@ test("hub shell defines a least-privilege main-window capability", () => {
 });
 
 test("hub shell exposes the desktop information architecture", () => {
-  const html = read("ui/index.html");
-  assertMatches(html, HUB_INFORMATION_ARCHITECTURE_PATTERNS);
+  const shellSource = [read("ui/index.html"), read("ui/hub-static-partials.js")].join("\n");
+  assertMatches(shellSource, HUB_INFORMATION_ARCHITECTURE_PATTERNS);
 });
 
 test("hub shell normalizes host platform through shared desktop helpers", () => {

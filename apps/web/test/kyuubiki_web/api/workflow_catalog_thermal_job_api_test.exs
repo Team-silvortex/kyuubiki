@@ -15,7 +15,10 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
 
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.heat-plane-quad-guard-json"
-    assert result_payload["result"]["dataset_contract"]["id"] == "kyuubiki.dataset.heat_plane_quad_guard/v1"
+
+    assert result_payload["result"]["dataset_contract"]["id"] ==
+             "kyuubiki.dataset.heat_plane_quad_guard/v1"
+
     assert length(result_payload["result"]["completed_nodes"]) == 6
 
     exported = result_payload["result"]["artifacts"]["json_output.json"]
@@ -54,6 +57,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
 
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.heat-thermo-quad-benchmark-json"
+
     assert result_payload["result"]["dataset_contract"]["id"] ==
              "kyuubiki.dataset.heat_thermo_quad_benchmark/v1"
 
@@ -160,10 +164,30 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
         "max_stress" => 1200.0,
         "max_temperature_delta" => 70.0,
         "nodes" => [
-          %{"id" => "h0", "temperature_delta" => 70.0, "displacement_x" => 0.0, "displacement_y" => 0.0},
-          %{"id" => "h1", "temperature_delta" => 45.0, "displacement_x" => 0.001, "displacement_y" => 0.0},
-          %{"id" => "h2", "temperature_delta" => 20.0, "displacement_x" => 0.0015, "displacement_y" => 0.0},
-          %{"id" => "h3", "temperature_delta" => 20.0, "displacement_x" => 0.0012, "displacement_y" => 0.0}
+          %{
+            "id" => "h0",
+            "temperature_delta" => 70.0,
+            "displacement_x" => 0.0,
+            "displacement_y" => 0.0
+          },
+          %{
+            "id" => "h1",
+            "temperature_delta" => 45.0,
+            "displacement_x" => 0.001,
+            "displacement_y" => 0.0
+          },
+          %{
+            "id" => "h2",
+            "temperature_delta" => 20.0,
+            "displacement_x" => 0.0015,
+            "displacement_y" => 0.0
+          },
+          %{
+            "id" => "h3",
+            "temperature_delta" => 20.0,
+            "displacement_x" => 0.0012,
+            "displacement_y" => 0.0
+          }
         ],
         "elements" => [
           %{

@@ -15,8 +15,11 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalog do
 
   def fetch(workflow_id) when is_binary(workflow_id) do
     case WorkflowTemplateRegistry.fetch(workflow_id) do
-      nil -> {:error, {:workflow_not_found, workflow_id}}
-      workflow -> {:ok, %{"workflow" => WorkflowCatalogSupport.enrich_workflow_descriptor(workflow)}}
+      nil ->
+        {:error, {:workflow_not_found, workflow_id}}
+
+      workflow ->
+        {:ok, %{"workflow" => WorkflowCatalogSupport.enrich_workflow_descriptor(workflow)}}
     end
   end
 

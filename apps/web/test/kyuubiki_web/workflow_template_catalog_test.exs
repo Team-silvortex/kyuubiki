@@ -591,8 +591,7 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
              &(&1["operator_id"] == "solve.thermal_plane_triangle_2d")
            )
 
-    merge_node =
-      Enum.find(triangle_guard_heat_thermo_graph["nodes"], &(&1["id"] == "merge_summary"))
+    merge_node = Enum.find(triangle_guard_heat_thermo_graph["nodes"], &(&1["id"] == "merge_summary"))
 
     assert Enum.map(merge_node["inputs"], & &1["dataset_value"]) ==
              ["hotspot_summary", "thermo_summary"]

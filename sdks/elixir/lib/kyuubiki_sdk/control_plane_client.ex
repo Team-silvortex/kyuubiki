@@ -64,6 +64,41 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def fetch_workflow_operator(client, operator_id),
     do: request(client, :get, "/api/v1/operators/#{URI.encode(operator_id)}")
 
+  def prepare_operator_task(client, task_ir),
+    do: request(client, :post, "/api/v1/operator-tasks/prepare", %{"task" => task_ir})
+
+  def execute_operator_task(client, task_ir),
+    do: request(client, :post, "/api/v1/operator-tasks/execute", %{"task" => task_ir})
+
+  def prepare_operator_task_batch(client, batch),
+    do: request(client, :post, "/api/v1/operator-tasks/prepare-batch", %{"batch" => batch})
+
+  def execute_operator_task_batch(client, batch),
+    do: request(client, :post, "/api/v1/operator-tasks/execute-batch", %{"batch" => batch})
+
+  def checkpoint_operator_task_batch(client, batch, opts \\ []) do
+    payload =
+      %{"batch" => batch}
+      |> maybe_put_payload("preparation", Keyword.get(opts, :preparation))
+      |> maybe_put_payload("execution", Keyword.get(opts, :execution))
+
+    request(client, :post, "/api/v1/operator-tasks/checkpoint-batch", payload)
+  end
+
+  def verify_operator_task_batch_checkpoint(client, batch, checkpoint) do
+    request(client, :post, "/api/v1/operator-tasks/verify-checkpoint-batch", %{
+      "batch" => batch,
+      "checkpoint" => checkpoint
+    })
+  end
+
+  def plan_operator_task_batch_resume(client, batch, checkpoint) do
+    request(client, :post, "/api/v1/operator-tasks/resume-plan-batch", %{
+      "batch" => batch,
+      "checkpoint" => checkpoint
+    })
+  end
+
   def list_jobs(client), do: request(client, :get, "/api/v1/jobs")
   def fetch_job(client, job_id), do: request(client, :get, "/api/v1/jobs/#{job_id}")
 
@@ -196,6 +231,9 @@ defmodule KyuubikiSdk.ControlPlaneClient do
 
     path <> if(query == [], do: "", else: "?" <> URI.encode_query(query))
   end
+
+  defp maybe_put_payload(payload, _key, nil), do: payload
+  defp maybe_put_payload(payload, key, value), do: Map.put(payload, key, value)
 
   defp normalize_solve_kind(kind) when is_atom(kind),
     do: normalize_solve_kind(Atom.to_string(kind))

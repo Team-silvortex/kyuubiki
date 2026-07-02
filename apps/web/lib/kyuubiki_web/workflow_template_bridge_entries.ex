@@ -148,5 +148,4 @@ defmodule KyuubikiWeb.WorkflowTemplateBridgeEntries do
       "output_artifacts" => output_artifacts
     }
   end
-
 end

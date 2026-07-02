@@ -89,4 +89,22 @@ defmodule KyuubikiWeb.WorkflowParameterSweepRuntimeTest do
     assert scored["best"]["objective_feasible"] == true
     assert List.last(scored["scored_rows"])["objective_feasible"] == false
   end
+
+  test "score parameter sweep reports missing numeric objective fields" do
+    assert {:error, {:missing_parameter_sweep_score_field, 0}} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_parameter_sweep",
+               %{"rows" => [%{"case_id" => "candidate_without_mass"}]},
+               %{"objectives" => [%{"field" => "mass", "goal" => "min"}]}
+             )
+  end
+
+  test "score parameter sweep rejects unsupported objective goals" do
+    assert {:error, {:invalid_parameter_sweep_objective, 0}} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_parameter_sweep",
+               %{"rows" => [%{"case_id" => "candidate", "mass" => 1.0}]},
+               %{"objectives" => [%{"field" => "mass", "goal" => "median"}]}
+             )
+  end
 end

@@ -128,30 +128,23 @@ Source files should stay below 600 lines unless they are generated, binary,
 lockfiles, or app-framework generated schemas. When a source file crosses the
 line, split by responsibility rather than by arbitrary chunks.
 
-Current source-side split queue:
+Current source-side posture:
 
-- `apps/web/lib/kyuubiki_web/workflow_template_bridge_contract_graphs.ex`
-  should split template data from graph assembly helpers.
-- `apps/web/lib/kyuubiki_web/playground/agent_pool.ex`
-  should split pool selection, manifest loading, and registry fallback.
-- `apps/web/lib/kyuubiki_web/playground/agent_registry.ex`
-  should split registry state, lease/authority handling, and serialization.
-- `apps/web/lib/kyuubiki_web/workflow_template_electromagnetic_guard_thermo_entries.ex`
-  should split electromagnetic entries from thermo guard entries.
-- `apps/web/test/kyuubiki_web/workflow_operator_runtime_test.exs`
-  should split by operator family.
-- `apps/web/test/kyuubiki_web/api/workflow_catalog_api_test.exs`
-  should split catalog listing, job submission, and template-detail assertions.
-- `apps/web/test/support/workflow_api_fixtures.exs`
-  should split catalog fixtures, runtime fixtures, and assertion helpers.
-- `apps/web/test/kyuubiki_web/workflow_template_catalog_test.exs`
-  should split template-family coverage.
-- `apps/hub-gui/ui/index.html`
-  should continue moving app logic into typed modules before adding new Hub
-  sections.
-- `scripts/kyuubiki-legacy.zsh`
-  should keep shrinking as native Rust script-runner commands replace shell
-  behavior.
+- `node ./scripts/audit-project-organization.mjs` is the repository-wide guard
+  for this rule and should report `tracked debt 0`.
+- Hub keeps the shell document small by loading large static markup from
+  `apps/hub-gui/ui/hub-static-partials.js` before `app.js` starts. Any new
+  static Hub section should follow that boundary instead of growing
+  `apps/hub-gui/ui/index.html`.
+- Legacy shell behavior is split across `scripts/kyuubiki-legacy-*.zsh`
+  modules. Keep new shell-only behavior in the narrow module that owns it, and
+  prefer native Rust or Node utilities for new long-lived commands.
+- Workflow templates should split entry metadata, graph assembly, graph nodes,
+  and runtime helpers into separate modules once a file starts mixing those
+  responsibilities.
+- Tests should split by operator family, runtime surface, or fixture domain.
+  Shared fixtures should remain narrow enough that a new domain can be moved
+  out without changing public fixture APIs.
 
 Allowed large-file categories:
 
@@ -193,9 +186,9 @@ matters; do not move source boundaries just to reduce generated output.
   new architecture or workflow files.
 - Run `make architecture-check` after changing TaskIR, orchestration boundary
   code, architecture docs, or project organization docs.
-- Split `agent_registry.ex` before adding more mesh authority behavior.
-- Split `workflow_template_bridge_contract_graphs.ex` before adding more bridge
-  templates.
+- Keep Hub static partial smoke coverage aligned with every new shell partial.
+- Keep legacy shell modules below the shared line ceiling until native commands
+  can retire them.
 - Move remaining operator TaskIR API examples into schema examples.
 - Keep the Rust protocol TaskIR summary as the basis for future agent-native
   execution.

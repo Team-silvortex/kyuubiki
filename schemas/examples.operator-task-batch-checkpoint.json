@@ -1,0 +1,31 @@
+{
+  "$schema": "operator-task-batch-checkpoint.schema.json",
+  "operator_task_batch_checkpoint_contract": "kyuubiki.operator_task_batch_checkpoint/v1",
+  "checkpoint_id": "operator-task-batch-checkpoint:86c14d1fb8d85ca3:20260101T000002Z",
+  "checkpoint_digest": "a6c0eca82cf20f2d9a0fa967116ec3dfc1be9cb069ee17caa1597b4928c1deab",
+  "batch_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+  "digest_algorithm": "sha256",
+  "created_at": "2026-01-01T00:00:02Z",
+  "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
+  "task_count": 1,
+  "case_index": [
+    {
+      "case_id": "quality_case_a",
+      "task_id": "quality-contract-quality_case_a",
+      "task_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628"
+    }
+  ],
+  "preparation": {
+    "run_id": "operator-task-batch:prepare:86c14d1fb8d85ca3",
+    "run_phase": "prepare",
+    "batch_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+    "task_count": 1,
+    "verified_count": 1,
+    "error_count": 0
+  },
+  "execution": null,
+  "resume_policy": {
+    "status": "prepared",
+    "next_action": "execute"
+  }
+}

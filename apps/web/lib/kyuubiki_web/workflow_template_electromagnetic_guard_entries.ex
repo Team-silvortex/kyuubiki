@@ -108,7 +108,8 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
         %{
           "node_id" => "final_output",
           "artifact_type" => "export/markdown",
-          "description" => "Markdown readiness or hold report based on hotspot threshold evaluation."
+          "description" =>
+            "Markdown readiness or hold report based on hotspot threshold evaluation."
         }
       ]
     )
@@ -133,7 +134,12 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
       "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
       "nodes" => [
         input_node(entry_node_id, "model", entry_artifact_type),
-        solve_node("solve_electrostatic", solve_operator_id, entry_artifact_type, solve_result_artifact_type),
+        solve_node(
+          "solve_electrostatic",
+          solve_operator_id,
+          entry_artifact_type,
+          solve_result_artifact_type
+        ),
         %{
           "id" => "field_hotspots",
           "kind" => "extract",
@@ -289,7 +295,12 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
       "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
       "nodes" => [
         input_node(entry_node_id, "model", entry_artifact_type),
-        solve_node("solve_electrostatic", solve_operator_id, entry_artifact_type, solve_result_artifact_type),
+        solve_node(
+          "solve_electrostatic",
+          solve_operator_id,
+          entry_artifact_type,
+          solve_result_artifact_type
+        ),
         %{
           "id" => "gate",
           "kind" => "condition",
@@ -329,10 +340,17 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
             "seed_model" => seed_model,
             "contract" => bridge_contract_for_operator(bridge_operator_id)
           },
-          "inputs" => [%{"id" => "electrostatic_result", "artifact_type" => solve_result_artifact_type}],
+          "inputs" => [
+            %{"id" => "electrostatic_result", "artifact_type" => solve_result_artifact_type}
+          ],
           "outputs" => [%{"id" => "heat_model", "artifact_type" => heat_model_artifact_type}]
         },
-        solve_node("solve_heat", heat_solve_operator_id, heat_model_artifact_type, heat_result_artifact_type),
+        solve_node(
+          "solve_heat",
+          heat_solve_operator_id,
+          heat_model_artifact_type,
+          heat_result_artifact_type
+        ),
         %{
           "id" => "extract_heat_summary",
           "kind" => "extract",
@@ -369,9 +387,30 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
         edge("e0", entry_node_id, "model", "solve_electrostatic", "model", entry_artifact_type),
         edge("e1", "solve_electrostatic", "result", "gate", "value", solve_result_artifact_type),
         edge("e2", "gate", "if_true", "field_hotspots", "result", solve_result_artifact_type),
-        edge("e3", "gate", "if_false", "bridge_field_to_heat", "electrostatic_result", solve_result_artifact_type),
-        edge("e4", "bridge_field_to_heat", "heat_model", "solve_heat", "model", heat_model_artifact_type),
-        edge("e5", "solve_heat", "result", "extract_heat_summary", "result", heat_result_artifact_type),
+        edge(
+          "e3",
+          "gate",
+          "if_false",
+          "bridge_field_to_heat",
+          "electrostatic_result",
+          solve_result_artifact_type
+        ),
+        edge(
+          "e4",
+          "bridge_field_to_heat",
+          "heat_model",
+          "solve_heat",
+          "model",
+          heat_model_artifact_type
+        ),
+        edge(
+          "e5",
+          "solve_heat",
+          "result",
+          "extract_heat_summary",
+          "result",
+          heat_result_artifact_type
+        ),
         edge("e6", "field_hotspots", "summary", "merge_summary", "left", "report/summary"),
         edge("e7", "extract_heat_summary", "summary", "merge_summary", "right", "report/summary"),
         edge("e8", "merge_summary", "result", "export_json", "summary", "report/summary"),
@@ -424,7 +463,16 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
     }
   end
 
-  defp custom_entry(id, name, summary, domains, capability_tags, graph, entry_inputs, output_artifacts) do
+  defp custom_entry(
+         id,
+         name,
+         summary,
+         domains,
+         capability_tags,
+         graph,
+         entry_inputs,
+         output_artifacts
+       ) do
     %{
       "id" => id,
       "name" => name,
@@ -467,13 +515,21 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
   defp heat_quad_seed_model do
     %{
       "nodes" => [
-        %{"id" => "h0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "h1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "h2", "x" => 1.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "h3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
+        heat_seed_node("h0", 0.0, 0.0, true, 20.0),
+        heat_seed_node("h1", 1.0, 0.0, false, 0.0),
+        heat_seed_node("h2", 1.0, 1.0, false, 0.0),
+        heat_seed_node("h3", 0.0, 1.0, true, 20.0)
       ],
       "elements" => [
-        %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
+        %{
+          "id" => "hq0",
+          "node_i" => 0,
+          "node_j" => 1,
+          "node_k" => 2,
+          "node_l" => 3,
+          "thickness" => 0.02,
+          "conductivity" => 45.0
+        }
       ]
     }
   end
@@ -481,13 +537,31 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
   defp heat_triangle_seed_model do
     %{
       "nodes" => [
-        %{"id" => "h0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "h1", "x" => 1.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "h2", "x" => 0.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0}
+        heat_seed_node("h0", 0.0, 0.0, true, 20.0),
+        heat_seed_node("h1", 1.0, 0.0, true, 20.0),
+        heat_seed_node("h2", 0.0, 1.0, false, 0.0)
       ],
       "elements" => [
-        %{"id" => "ht0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "thickness" => 0.02, "conductivity" => 45.0}
+        %{
+          "id" => "ht0",
+          "node_i" => 0,
+          "node_j" => 1,
+          "node_k" => 2,
+          "thickness" => 0.02,
+          "conductivity" => 45.0
+        }
       ]
+    }
+  end
+
+  defp heat_seed_node(id, x, y, fix_temperature, temperature) do
+    %{
+      "id" => id,
+      "x" => x,
+      "y" => y,
+      "fix_temperature" => fix_temperature,
+      "temperature" => temperature,
+      "heat_load" => 0.0
     }
   end
 end

@@ -144,6 +144,7 @@ defmodule KyuubikiWeb.Api.WorkflowDiagnosticsBundleApiTest do
     assert get_in(payload, ["artifacts", "guard.result", "guard_status"]) == "block"
     assert get_in(payload, ["artifacts", "guard.result", "guard_block_count"]) == 1
     assert get_in(payload, ["artifacts", "guard.result", "guard_warn_count"]) == 1
+
     assert get_in(payload, ["artifacts", "guard.result", "guard_recommendation"]) ==
              "hold_and_review"
   end

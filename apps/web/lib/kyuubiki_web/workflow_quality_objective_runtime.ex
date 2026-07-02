@@ -1,6 +1,9 @@
 defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.Orchestra.OperatorTaskIR
+  alias KyuubikiWeb.WorkflowParameterSweepRuntime
+
   def compose_quality_objective(payload, config) when is_map(payload) and is_map(config) do
     entries = quality_entries(payload)
 
@@ -201,6 +204,28 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntime do
   def materialize_quality_sweep_expansion(_payload, _config),
     do: {:error, :invalid_quality_sweep_expansion_payload}
 
+  def compose_quality_execution_batch(payload, config)
+      when is_map(payload) and is_map(config) do
+    with {:ok, operator_id} <- required_string(config, "operator_id"),
+         {:ok, cases} <- normalize_execution_cases(payload, config),
+         {:ok, tasks} <- build_execution_tasks(cases, operator_id, config) do
+      {:ok,
+       %{
+         "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+         "operator_id" => operator_id,
+         "task_count" => length(tasks),
+         "agent_rpc_method" => OperatorTaskIR.agent_rpc_method(),
+         "tasks" => tasks,
+         "case_index" => Enum.map(tasks, &Map.take(&1, ["case_id", "task_id", "task_digest"])),
+         "batch_summary" =>
+           "Prepared #{length(tasks)} quality execution task(s) for #{operator_id}."
+       }}
+    end
+  end
+
+  def compose_quality_execution_batch(_payload, _config),
+    do: {:error, :invalid_quality_execution_batch_payload}
+
   defp quality_entries(%{"qualities" => qualities}) when is_map(qualities),
     do: Enum.filter(qualities, fn {_id, value} -> is_map(value) end)
 
@@ -232,6 +257,123 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntime do
       "blocked_term_count" => objective["composite_quality_blocked_term_count"],
       "objective" => objective
     }
+  end
+
+  defp normalize_execution_cases(
+         %{"quality_sweep_expansion_contract" => _contract} = payload,
+         config
+       ) do
+    with {:ok, expanded} <- WorkflowParameterSweepRuntime.expand_parameter_sweep(payload, config),
+         cases when is_list(cases) and cases != [] <- Map.get(expanded, "cases") do
+      {:ok, cases}
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_quality_execution_batch_cases}
+    end
+  end
+
+  defp normalize_execution_cases(%{"cases" => cases}, _config)
+       when is_list(cases) and cases != [],
+       do: {:ok, Enum.filter(cases, &is_map/1)}
+
+  defp normalize_execution_cases(_payload, _config),
+    do: {:error, :invalid_quality_execution_batch_cases}
+
+  defp build_execution_tasks(cases, operator_id, config) do
+    cases
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {case_payload, index}, {:ok, acc} ->
+      case build_execution_task(case_payload, index, operator_id, config) do
+        {:ok, task} -> {:cont, {:ok, [task | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, tasks} -> {:ok, Enum.reverse(tasks)}
+      error -> error
+    end
+  end
+
+  defp build_execution_task(case_payload, index, operator_id, config) do
+    case_id = case_id(case_payload, index)
+
+    with {:ok, input_artifact} <- case_input_artifact(case_payload, config),
+         {:ok, task_ir} <-
+           OperatorTaskIR.build(
+             operator_id,
+             input_artifact,
+             operator_config(case_payload, config),
+             task_id: "#{Map.get(config, "task_id_prefix", "quality-task")}:#{case_id}",
+             orchestration_context: map_config(config, "orchestration_context"),
+             dataset_contract: map_config(config, "dataset_contract"),
+             placement_tags: list_config(config, "placement_tags"),
+             required_capabilities: list_config(config, "required_capabilities")
+           ) do
+      {:ok,
+       %{
+         "case_id" => case_id,
+         "parameters" => Map.get(case_payload, "parameters", %{}),
+         "operator_id" => operator_id,
+         "task_id" => task_ir["task_id"],
+         "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
+         "task_ir" => task_ir,
+         "agent_rpc" => %{
+           "method" => OperatorTaskIR.agent_rpc_method(),
+           "params" =>
+             OperatorTaskIR.agent_rpc_params(task_ir, mode: Map.get(config, "rpc_mode")),
+           "routing_opts" => OperatorTaskIR.agent_routing_opts(task_ir)
+         }
+       }}
+    end
+  end
+
+  defp case_input_artifact(case_payload, %{"payload_source" => "case"}), do: {:ok, case_payload}
+
+  defp case_input_artifact(case_payload, %{"payload_source" => source}) when is_binary(source) do
+    case Map.get(case_payload, source) do
+      value when is_map(value) -> {:ok, value}
+      _ -> {:error, {:missing_quality_execution_case_payload, source}}
+    end
+  end
+
+  defp case_input_artifact(case_payload, _config) do
+    case Map.get(case_payload, "model") do
+      value when is_map(value) -> {:ok, value}
+      _ -> {:error, {:missing_quality_execution_case_payload, "model"}}
+    end
+  end
+
+  defp operator_config(case_payload, config) do
+    base = map_config(config, "operator_config")
+
+    if Map.get(config, "merge_case_config", false) do
+      Map.merge(base, map_config(case_payload, "config"))
+    else
+      base
+    end
+  end
+
+  defp case_id(case_payload, index), do: Map.get(case_payload, "id", "case_#{index}")
+
+  defp required_string(config, key) do
+    case Map.get(config, key) do
+      value when is_binary(value) and value != "" -> {:ok, value}
+      _ -> {:error, {:missing_quality_execution_batch_config, key}}
+    end
+  end
+
+  defp map_config(config, key) do
+    case Map.get(config, key) do
+      value when is_map(value) -> value
+      _ -> %{}
+    end
+  end
+
+  defp list_config(config, key) do
+    case Map.get(config, key) do
+      values when is_list(values) -> Enum.filter(values, &is_binary/1)
+      _ -> []
+    end
   end
 
   defp selected_candidate(%{"ranking" => [first | _rest]}) when is_map(first), do: first

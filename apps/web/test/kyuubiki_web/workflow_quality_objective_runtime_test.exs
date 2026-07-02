@@ -39,6 +39,12 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntimeTest do
     assert materialize_operator["family"] == "materialize_quality_sweep_expansion"
     assert "materialize" in materialize_operator["capability_tags"]
 
+    assert {:ok, %{"operator" => batch_operator}} =
+             WorkflowOperatorCatalog.fetch("transform.compose_quality_execution_batch")
+
+    assert batch_operator["family"] == "compose_quality_execution_batch"
+    assert "task_ir" in batch_operator["capability_tags"]
+
     assert {:ok, %{"operator" => expand_operator}} =
              WorkflowOperatorCatalog.fetch("transform.expand_parameter_sweep")
 
@@ -265,6 +271,83 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntimeTest do
     assert expansion["config"]["max_cases"] == 12.0
   end
 
+  test "composes expanded quality sweep cases into executable TaskIR batch" do
+    expanded = %{
+      "cases" => [
+        %{
+          "id" => "quality_candidate_0",
+          "parameters" => %{"thermal_load" => 12.0},
+          "model" => heat_model(12.0)
+        },
+        %{
+          "id" => "quality_candidate_1",
+          "parameters" => %{"thermal_load" => 18.0},
+          "model" => heat_model(18.0)
+        }
+      ]
+    }
+
+    assert {:ok, batch} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_quality_execution_batch",
+               expanded,
+               %{
+                 "operator_id" => "solve.heat_plane_quad_2d",
+                 "task_id_prefix" => "quality-heat",
+                 "dataset_contract" => %{"id" => "kyuubiki.dataset.quality_heat/v1"},
+                 "orchestration_context" => %{"orch_id" => "orch-quality"},
+                 "placement_tags" => ["thermal"]
+               }
+             )
+
+    assert batch["quality_execution_batch_contract"] ==
+             "kyuubiki.quality_execution_batch/v1"
+
+    assert batch["task_count"] == 2
+    assert batch["agent_rpc_method"] == "run_operator_task_ir"
+    first = hd(batch["tasks"])
+    assert first["case_id"] == "quality_candidate_0"
+    assert first["task_id"] == "quality-heat:quality_candidate_0"
+    assert first["task_ir"]["schema_version"] == "kyuubiki.operator-task-ir/v1"
+    assert first["task_ir"]["operator"]["id"] == "solve.heat_plane_quad_2d"
+    assert first["task_ir"]["execution_program"]["runtime_protocol"] == "kyuubiki.solver-rpc/v1"
+    assert first["task_ir"]["dataset_contract"]["id"] == "kyuubiki.dataset.quality_heat/v1"
+    assert first["agent_rpc"]["params"]["task_ir"]["task_id"] == first["task_id"]
+    assert first["agent_rpc"]["routing_opts"][:job_id] == first["task_id"]
+  end
+
+  test "expands quality sweep payload before composing execution batch" do
+    expansion = %{
+      "quality_sweep_expansion_contract" => "kyuubiki.quality_sweep_expansion/v1",
+      "expansion_enabled" => true,
+      "payload" => %{
+        "base" => heat_model(10.0),
+        "axes" => [%{"path" => "nodes.0.heat_load", "values" => [10.0, 20.0]}]
+      },
+      "config" => %{"id_prefix" => "quality_case", "max_cases" => 4}
+    }
+
+    assert {:ok, batch} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_quality_execution_batch",
+               expansion,
+               %{
+                 "operator_id" => "solve.heat_plane_quad_2d",
+                 "required_capabilities" => ["solver:thermal"]
+               }
+             )
+
+    assert batch["task_count"] == 2
+    assert Enum.map(batch["tasks"], & &1["case_id"]) == ["quality_case_0", "quality_case_1"]
+
+    assert List.last(batch["tasks"])["task_ir"]["input_artifact"]["nodes"]
+           |> hd()
+           |> Map.get("heat_load") == 20.0
+
+    assert List.last(batch["tasks"])["agent_rpc"]["routing_opts"][:required_capabilities] ==
+             ["solver:thermal"]
+  end
+
   test "expands materialized quality sweep through graph runner" do
     graph = %{
       "schema_version" => "kyuubiki.workflow-graph/v1",
@@ -449,6 +532,20 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntimeTest do
       "to" => %{"node" => to_node, "port" => to_port},
       "artifact_type" => "report/summary",
       "dataset_value" => dataset_value
+    }
+  end
+
+  defp heat_model(load) do
+    %{
+      "nodes" => [
+        %{"id" => "n1", "x" => 0.0, "y" => 0.0, "temperature" => 293.15, "heat_load" => load},
+        %{"id" => "n2", "x" => 1.0, "y" => 0.0, "temperature" => 293.15, "heat_load" => 0.0},
+        %{"id" => "n3", "x" => 1.0, "y" => 1.0, "temperature" => 293.15, "heat_load" => 0.0},
+        %{"id" => "n4", "x" => 0.0, "y" => 1.0, "temperature" => 293.15, "heat_load" => 0.0}
+      ],
+      "elements" => [
+        %{"id" => "e1", "node_ids" => ["n1", "n2", "n3", "n4"], "conductivity" => 10.0}
+      ]
     }
   end
 end

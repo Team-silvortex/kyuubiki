@@ -38,7 +38,10 @@ defmodule KyuubikiWeb.Application do
     if Mix.env() == :test do
       []
     else
-      [{Plug.Cowboy, scheme: :http, plug: KyuubikiWeb.Router, options: [ip: bind_ip(), port: port()]}]
+      [
+        {Plug.Cowboy,
+         scheme: :http, plug: KyuubikiWeb.Router, options: [ip: bind_ip(), port: port()]}
+      ]
     end
   end
 

@@ -87,6 +87,212 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert payload["result"]["material_thermal_shock_status"] == "pass"
   end
 
+  test "prepares an operator task batch through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+    {:ok, task_b} = material_shock_task("batch-case-b", 160.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "operator_id" => "transform.evaluate_material_thermal_shock",
+      "task_count" => 2,
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a},
+        %{"case_id" => "batch-case-b", "task_ir" => task_b}
+      ]
+    }
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/prepare-batch", Jason.encode!(%{"batch" => batch}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["status"] == "verified"
+
+    assert payload["operator_task_batch_preparation_contract"] ==
+             "kyuubiki.operator_task_batch_preparation/v1"
+
+    assert payload["task_count"] == 2
+    assert payload["verified_count"] == 2
+    assert payload["error_count"] == 0
+    assert Enum.map(payload["summaries"], & &1["case_id"]) == ["batch-case-a", "batch-case-b"]
+    assert hd(payload["summaries"])["status"] == "verified"
+    assert hd(payload["summaries"])["operator_id"] == "transform.evaluate_material_thermal_shock"
+  end
+
+  test "executes an operator task batch through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+    {:ok, task_b} = material_shock_task("batch-case-b", 160.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a},
+        %{"case_id" => "batch-case-b", "task_ir" => task_b}
+      ]
+    }
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/execute-batch", Jason.encode!(%{"batch" => batch}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["status"] == "executed"
+
+    assert payload["operator_task_batch_execution_contract"] ==
+             "kyuubiki.operator_task_batch_execution/v1"
+
+    assert payload["task_count"] == 2
+    assert payload["ok_count"] == 2
+    assert payload["error_count"] == 0
+    assert Enum.map(payload["results"], & &1["case_id"]) == ["batch-case-a", "batch-case-b"]
+  end
+
+  test "builds an operator task batch checkpoint through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a}
+      ]
+    }
+
+    preparation =
+      batch
+      |> KyuubikiWeb.Orchestra.OperatorTaskExecutor.prepare_batch()
+      |> elem(1)
+
+    body = %{
+      "batch" => batch,
+      "preparation" => preparation,
+      "created_at" => "2026-01-01T00:00:02Z"
+    }
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/checkpoint-batch", Jason.encode!(body))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["operator_task_batch_checkpoint_contract"] ==
+             "kyuubiki.operator_task_batch_checkpoint/v1"
+
+    assert payload["batch_digest"] == preparation["batch_digest"]
+    assert payload["checkpoint_digest"] =~ ~r/^[a-f0-9]{64}$/
+    assert payload["resume_policy"] == %{"status" => "prepared", "next_action" => "execute"}
+    assert hd(payload["case_index"])["case_id"] == "batch-case-a"
+  end
+
+  test "verifies an operator task batch checkpoint through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a}
+      ]
+    }
+
+    checkpoint =
+      KyuubikiWeb.Orchestra.OperatorTaskBatchRun.checkpoint(batch,
+        created_at: "2026-01-01T00:00:02Z"
+      )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/operator-tasks/verify-checkpoint-batch",
+        Jason.encode!(%{"batch" => batch, "checkpoint" => checkpoint})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["operator_task_batch_checkpoint_verification_contract"] ==
+             "kyuubiki.operator_task_batch_checkpoint_verification/v1"
+
+    assert payload["status"] == "verified"
+    assert payload["batch_digest"] == checkpoint["batch_digest"]
+    assert payload["checkpoint_digest"] == checkpoint["checkpoint_digest"]
+  end
+
+  test "rejects tampered operator task batch checkpoints through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a}
+      ]
+    }
+
+    checkpoint =
+      batch
+      |> KyuubikiWeb.Orchestra.OperatorTaskBatchRun.checkpoint(created_at: "2026-01-01T00:00:02Z")
+      |> put_in(["task_count"], 2)
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/operator-tasks/verify-checkpoint-batch",
+        Jason.encode!(%{"batch" => batch, "checkpoint" => checkpoint})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 422
+    assert Jason.decode!(conn.resp_body)["error"] =~ "operator_task_batch_checkpoint_mismatch"
+  end
+
+  test "builds an operator task batch resume plan through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a}
+      ]
+    }
+
+    preparation =
+      batch
+      |> KyuubikiWeb.Orchestra.OperatorTaskExecutor.prepare_batch()
+      |> elem(1)
+
+    checkpoint =
+      KyuubikiWeb.Orchestra.OperatorTaskBatchRun.checkpoint(batch, preparation: preparation)
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/operator-tasks/resume-plan-batch",
+        Jason.encode!(%{"batch" => batch, "checkpoint" => checkpoint})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["operator_task_batch_resume_plan_contract"] ==
+             "kyuubiki.operator_task_batch_resume_plan/v1"
+
+    assert payload["next_action"] == "execute"
+    assert payload["target_case_ids"] == ["batch-case-a"]
+    assert payload["blocked_case_ids"] == []
+  end
+
   defp fixture_task! do
     descriptor = %{
       "id" => "transform.api_fixture",
@@ -114,5 +320,20 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
 
   defp refresh_task_digest(task) do
     put_in(task, ["integrity", "task_digest"], OperatorTaskIR.compute_task_digest(task))
+  end
+
+  defp material_shock_task(task_id, temperature_delta) do
+    OperatorTaskIR.build(
+      "transform.evaluate_material_thermal_shock",
+      %{
+        "temperature_delta" => temperature_delta,
+        "thermal_expansion" => 1.2e-5,
+        "youngs_modulus" => 70.0e9,
+        "poisson_ratio" => 0.33,
+        "yield_strength" => 320.0e6
+      },
+      %{"constraint_factor" => 0.7},
+      task_id: task_id
+    )
   end
 end

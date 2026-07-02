@@ -37,18 +37,7 @@ const IGNORED_PATH_PATTERNS = [
   /^workers\/rust\/benchmarks\/.*\.json$/,
 ];
 
-const TRACKED_DEBT_LIMITS = new Map([
-  ["scripts/kyuubiki-legacy.zsh", 1818],
-  ["apps/hub-gui/ui/index.html", 1057],
-  ["apps/web/lib/kyuubiki_web/workflow_template_bridge_contract_graphs.ex", 896],
-  ["apps/web/lib/kyuubiki_web/playground/agent_pool.ex", 887],
-  ["apps/web/lib/kyuubiki_web/playground/agent_registry.ex", 768],
-  ["apps/web/lib/kyuubiki_web/workflow_template_electromagnetic_guard_thermo_entries.ex", 727],
-  ["apps/web/test/kyuubiki_web/workflow_operator_runtime_test.exs", 722],
-  ["apps/web/test/kyuubiki_web/api/workflow_catalog_api_test.exs", 673],
-  ["apps/web/test/support/workflow_api_fixtures.exs", 656],
-  ["apps/web/test/kyuubiki_web/workflow_template_catalog_test.exs", 601],
-]);
+const TRACKED_DEBT_LIMITS = new Map([]);
 
 function gitFiles() {
   return execFileSync("git", ["ls-files"], {

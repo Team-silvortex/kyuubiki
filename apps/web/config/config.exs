@@ -4,6 +4,10 @@ config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:job_id, :stage]
 
+if Mix.env() == :test do
+  config :logger, level: :warning
+end
+
 storage_backend =
   case System.get_env("KYUUBIKI_STORAGE_BACKEND") do
     "postgres" -> :postgres

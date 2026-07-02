@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   use GenServer
 
   alias KyuubikiWeb.Playground.AgentMeshTopology
+  alias KyuubikiWeb.Playground.AgentRegistryPublic
   alias KyuubikiWeb.Playground.AgentSessionState
 
   @type execution_lease :: %{
@@ -67,8 +68,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   end
 
   @spec release_execution(String.t(), String.t()) :: :ok
-  def release_execution(agent_id, lease_id)
-      when is_binary(agent_id) and is_binary(lease_id) do
+  def release_execution(agent_id, lease_id) when is_binary(agent_id) and is_binary(lease_id) do
     GenServer.call(__MODULE__, {:release_execution, agent_id, lease_id})
   end
 
@@ -89,81 +89,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   @spec public_agent(agent() | map()) :: map()
   def public_agent(agent) when is_map(agent) do
-    public_agent(agent, agents())
-  end
-
-  defp public_agent(agent, all_agents) when is_map(agent) and is_list(all_agents) do
-    control_mode =
-      Map.get(agent, :control_mode) || Map.get(agent, "control_mode") || "orch_managed"
-
-    orch_id = Map.get(agent, :orch_id) || Map.get(agent, "orch_id")
-    orch_session_id = Map.get(agent, :orch_session_id) || Map.get(agent, "orch_session_id")
-    active_lease = Map.get(agent, :active_lease) || Map.get(agent, "active_lease")
-    public_lease = public_execution_lease(active_lease, agent)
-
-    authority =
-      case control_mode do
-        "offline_mesh" ->
-          %{
-            "control_mode" => "offline_mesh",
-            "authority_mode" => "offline_mesh",
-            "session_state" => "offline_mesh",
-            "orchestrator_id" => nil,
-            "orchestrator_session_id" => nil,
-            "accepts_multi_orchestrator_binding" => false,
-            "agent_library_replication" => "central_fetch"
-          }
-
-        "orch_managed" ->
-          %{
-            "control_mode" => "orch_managed",
-            "authority_mode" => "single_orchestrator",
-            "session_state" => AgentSessionState.state(agent),
-            "orchestrator_id" => orch_id,
-            "orchestrator_session_id" => orch_session_id,
-            "accepts_multi_orchestrator_binding" => false,
-            "agent_library_replication" => "central_fetch"
-          }
-
-        _ ->
-          %{
-            "control_mode" => "standalone",
-            "authority_mode" => "self_directed",
-            "orchestrator_id" => nil,
-            "orchestrator_session_id" => nil,
-            "accepts_multi_orchestrator_binding" => false,
-            "agent_library_replication" => "central_fetch"
-          }
-      end
-
-    %{
-      "id" => Map.get(agent, :id) || Map.get(agent, "id"),
-      "host" => Map.get(agent, :host) || Map.get(agent, "host"),
-      "port" => Map.get(agent, :port) || Map.get(agent, "port"),
-      "control_mode" => control_mode,
-      "session_state" => AgentSessionState.state(agent),
-      "orch_id" => orch_id,
-      "orch_session_id" => orch_session_id,
-      "cluster_id" => Map.get(agent, :cluster_id) || Map.get(agent, "cluster_id"),
-      "fingerprint" => Map.get(agent, :fingerprint) || Map.get(agent, "fingerprint"),
-      "role" => Map.get(agent, :role) || Map.get(agent, "role"),
-      "region" => Map.get(agent, :region) || Map.get(agent, "region"),
-      "zone" => Map.get(agent, :zone) || Map.get(agent, "zone"),
-      "capacity" => Map.get(agent, :capacity) || Map.get(agent, "capacity"),
-      "tags" => Map.get(agent, :tags) || Map.get(agent, "tags") || [],
-      "methods" => Map.get(agent, :methods) || Map.get(agent, "methods") || [],
-      "capabilities" => Map.get(agent, :capabilities) || Map.get(agent, "capabilities") || [],
-      "health_score" => Map.get(agent, :health_score) || Map.get(agent, "health_score"),
-      "watchdog" => Map.get(agent, :watchdog) || Map.get(agent, "watchdog"),
-      "execution_state" => execution_state_for(public_lease),
-      "active_lease" => public_lease,
-      "last_session_transition" =>
-        Map.get(agent, :last_session_transition) || Map.get(agent, "last_session_transition"),
-      "mesh" => AgentMeshTopology.public_mesh(agent, all_agents),
-      "last_seen_at" =>
-        format_last_seen(Map.get(agent, :last_seen_at) || Map.get(agent, "last_seen_at")),
-      "authority" => authority
-    }
+    AgentRegistryPublic.public_agent(agent, agents())
   end
 
   @spec status_snapshot() :: map()
@@ -249,34 +175,36 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       |> sort_agents()
       |> Enum.map(&attach_active_lease(&1, state.leases))
       |> then(fn agents ->
-        Enum.map(agents, &public_agent(&1, agents))
+        Enum.map(agents, &AgentRegistryPublic.public_agent(&1, agents))
       end)
 
     {:reply, public_agents, state}
   end
 
   def handle_call(:active_endpoints, _from, state) do
-    {:reply, active_agents(state.agents) |> Enum.map(&to_endpoint(&1, state.leases)), state}
+    {:reply,
+     active_agents(state.agents) |> Enum.map(&AgentRegistryPublic.endpoint(&1, state.leases)),
+     state}
   end
 
   def handle_call(:status_snapshot, _from, state) do
     total = map_size(state.agents)
     agents = state.agents |> Map.values() |> sort_agents()
     active_agents = active_agents(state.agents)
-    active = length(active_agents)
 
     {:reply,
      %{
        total_agents: total,
-       active_agents: active,
-       stale_agents: max(total - active, 0),
+       active_agents: length(active_agents),
+       stale_agents: max(total - length(active_agents), 0),
        stale_after_ms: stale_after_ms(),
        active_execution_lease_count: map_size(state.leases),
        stale_execution_lease_count:
-         summarize_stale_execution_lease_count(state.leases, state.agents),
+         AgentRegistryPublic.stale_execution_lease_count(state.leases, state.agents),
        control_modes: summarize_control_modes(agents),
        session_states: summarize_session_states(agents),
-       active_execution_leases: summarize_active_execution_leases(state.leases, state.agents),
+       active_execution_leases:
+         AgentRegistryPublic.active_execution_leases(state.leases, state.agents),
        recent_session_transitions: summarize_recent_session_transitions(agents),
        authority_groups: summarize_authority_groups(agents),
        mesh_topology: AgentMeshTopology.summarize_mesh_topology(agents)
@@ -367,8 +295,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
      {:agent_execution_conflict,
       %{
         agent_id: next_lease.agent_id,
-        current: public_execution_lease(current, nil),
-        attempted: public_execution_lease(next_lease, nil)
+        current: AgentRegistryPublic.public_execution_lease(current, nil),
+        attempted: AgentRegistryPublic.public_execution_lease(next_lease, nil)
       }}}
   end
 
@@ -651,106 +579,13 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   defp authority_group_key(agent), do: {agent.control_mode, agent.orch_id, agent.orch_session_id}
   defp sort_agents(agents), do: Enum.sort_by(agents, & &1.id)
 
-  defp to_endpoint(agent, leases) do
-    %{
-      id: agent.id,
-      host: agent.host,
-      port: agent.port,
-      control_mode: agent.control_mode,
-      session_state: AgentSessionState.state(agent),
-      orch_id: agent.orch_id,
-      orch_session_id: agent.orch_session_id,
-      cluster_id: agent.cluster_id,
-      fingerprint: agent.fingerprint,
-      role: agent.role,
-      region: agent.region,
-      zone: agent.zone,
-      capacity: agent.capacity,
-      tags: agent.tags,
-      methods: agent.methods,
-      capabilities: agent.capabilities,
-      health_score: agent.health_score,
-      active_lease: public_execution_lease(Map.get(leases, agent.id), agent),
-      last_session_transition: agent[:last_session_transition],
-      last_seen_at: DateTime.to_iso8601(agent.last_seen_at)
-    }
-  end
-
   defp attach_active_lease(agent, leases) do
     Map.put(agent, :active_lease, Map.get(leases, agent.id))
-  end
-
-  defp summarize_active_execution_leases(leases, agents) do
-    leases
-    |> Enum.map(fn {agent_id, lease} ->
-      public_execution_lease(lease, Map.get(agents, agent_id))
-    end)
-    |> Enum.sort_by(&Map.get(&1, "agent_id"))
-  end
-
-  defp summarize_stale_execution_lease_count(leases, agents) do
-    leases
-    |> Enum.count(fn {agent_id, lease} ->
-      public_execution_lease(lease, Map.get(agents, agent_id))
-      |> Map.get("is_stale", false)
-    end)
-  end
-
-  defp public_execution_lease(nil, _agent), do: nil
-
-  defp public_execution_lease(lease, agent) when is_map(lease) do
-    claimed_at = Map.get(lease, :claimed_at) || Map.get(lease, "claimed_at")
-    age_ms = execution_lease_age_ms(claimed_at)
-    stale? = execution_lease_stale?(age_ms, agent)
-
-    %{
-      "lease_id" => Map.get(lease, :lease_id) || Map.get(lease, "lease_id"),
-      "agent_id" => Map.get(lease, :agent_id) || Map.get(lease, "agent_id"),
-      "control_mode" => Map.get(lease, :control_mode) || Map.get(lease, "control_mode"),
-      "orch_id" => Map.get(lease, :orch_id) || Map.get(lease, "orch_id"),
-      "orch_session_id" => Map.get(lease, :orch_session_id) || Map.get(lease, "orch_session_id"),
-      "cluster_id" => Map.get(lease, :cluster_id) || Map.get(lease, "cluster_id"),
-      "job_id" => Map.get(lease, :job_id) || Map.get(lease, "job_id"),
-      "method" => Map.get(lease, :method) || Map.get(lease, "method"),
-      "claimed_at" => format_last_seen(claimed_at),
-      "age_ms" => age_ms,
-      "is_stale" => stale?
-    }
-  end
-
-  defp execution_state_for(nil), do: "idle"
-  defp execution_state_for(%{"is_stale" => true}), do: "lease_stale"
-  defp execution_state_for(_lease), do: "leased"
-
-  defp execution_lease_age_ms(%DateTime{} = claimed_at),
-    do: max(DateTime.diff(DateTime.utc_now(), claimed_at, :millisecond), 0)
-
-  defp execution_lease_age_ms(_claimed_at), do: nil
-
-  defp execution_lease_stale?(age_ms, agent) do
-    stale_by_age? =
-      is_integer(age_ms) and age_ms > execution_lease_stale_after_ms()
-
-    stale_by_agent? =
-      case agent do
-        %{last_seen_at: %DateTime{} = last_seen_at} ->
-          DateTime.diff(DateTime.utc_now(), last_seen_at, :millisecond) > stale_after_ms()
-
-        _ ->
-          false
-      end
-
-    stale_by_age? or stale_by_agent?
   end
 
   defp stale_after_ms do
     Application.get_env(:kyuubiki_web, __MODULE__, [])
     |> Keyword.get(:stale_after_ms, 15_000)
-  end
-
-  defp execution_lease_stale_after_ms do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get(:execution_lease_stale_after_ms, 60_000)
   end
 
   defp attach_session_transition(current, agent, source),
@@ -761,7 +596,4 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
         AgentSessionState.transition(current, agent, source) ||
           (current && (current[:last_session_transition] || current["last_session_transition"]))
       )
-
-  defp format_last_seen(%DateTime{} = last_seen_at), do: DateTime.to_iso8601(last_seen_at)
-  defp format_last_seen(last_seen_at), do: last_seen_at
 end

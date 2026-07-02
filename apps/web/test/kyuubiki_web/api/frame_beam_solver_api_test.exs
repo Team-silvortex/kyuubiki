@@ -529,5 +529,4 @@ defmodule KyuubikiWeb.Api.FrameBeamSolverApiTest do
     assert result_payload["result"]["max_temperature_gradient"] == 40.0
     assert length(result_payload["result"]["elements"]) == 1
   end
-
 end

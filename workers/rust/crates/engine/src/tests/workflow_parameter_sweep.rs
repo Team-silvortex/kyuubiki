@@ -279,3 +279,54 @@ fn scores_parameter_sweep_rows_with_objective_limits() {
     assert_eq!(scored_rows[2]["case_id"].as_str(), Some("thin_light"));
     assert_eq!(scored_rows[2]["objective_feasible"].as_bool(), Some(false));
 }
+
+#[test]
+fn score_parameter_sweep_reports_missing_numeric_objective_fields() {
+    let error = run_transform_operator(
+        "transform.score_parameter_sweep",
+        serde_json::json!({
+            "rows": [
+                {
+                    "case_id": "candidate_without_mass"
+                }
+            ]
+        }),
+        serde_json::json!({
+            "objectives": [
+                {
+                    "field": "mass",
+                    "goal": "min"
+                }
+            ]
+        }),
+    )
+    .expect_err("missing numeric objective field should fail");
+
+    assert!(error.contains("missing numeric field mass"));
+}
+
+#[test]
+fn score_parameter_sweep_rejects_unsupported_objective_goals() {
+    let error = run_transform_operator(
+        "transform.score_parameter_sweep",
+        serde_json::json!({
+            "rows": [
+                {
+                    "case_id": "candidate",
+                    "mass": 1.0
+                }
+            ]
+        }),
+        serde_json::json!({
+            "objectives": [
+                {
+                    "field": "mass",
+                    "goal": "median"
+                }
+            ]
+        }),
+    )
+    .expect_err("unsupported objective goal should fail");
+
+    assert!(error.contains("unsupported objective goal: median"));
+}

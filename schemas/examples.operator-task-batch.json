@@ -1,0 +1,216 @@
+{
+  "$schema": "operator-task-batch.schema.json",
+  "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
+  "operator_id": "transform.fixture",
+  "task_count": 1,
+  "agent_rpc_method": "run_operator_task_ir",
+  "batch_summary": "Prepared 1 quality execution task(s) for transform.fixture.",
+  "case_index": [
+    {
+      "case_id": "fixture-case",
+      "task_id": "fixture-task",
+      "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
+    }
+  ],
+  "tasks": [
+    {
+      "case_id": "fixture-case",
+      "parameters": {
+        "x": 1
+      },
+      "operator_id": "transform.fixture",
+      "task_id": "fixture-task",
+      "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+      "task_ir": {
+        "$schema": "operator-task-ir.schema.json",
+        "schema_version": "kyuubiki.operator-task-ir/v1",
+        "task_id": "fixture-task",
+        "operator": {
+          "id": "transform.fixture",
+          "family": "fixture",
+          "kind": "transform",
+          "execution": {
+            "package_ref": "orchestra://operator-package/transform.fixture"
+          }
+        },
+        "descriptor_authoring": {
+          "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+          "mode": "rust_native",
+          "runtime": "rust",
+          "source": "fixture",
+          "hot_reloadable": false,
+          "execution_language": "language_neutral"
+        },
+        "node": {},
+        "input_artifact": {
+          "x": 1
+        },
+        "config": {
+          "alpha": true
+        },
+        "execution_program": {
+          "schema_version": "kyuubiki.operator-execution-program/v1",
+          "program_id": "transform.fixture",
+          "program_family": "fixture",
+          "program_kind": "transform",
+          "operator_category_id": null,
+          "package_ref": "orchestra://operator-package/transform.fixture",
+          "package_version": "library-managed",
+          "package_integrity": null,
+          "runtime_protocol": "kyuubiki.operator-execution/v1",
+          "abi": {
+            "kind": "operator_task",
+            "input_encoding": "json",
+            "output_encoding": "json"
+          },
+          "entrypoint": {
+            "kind": "operator_id",
+            "name": "transform.fixture",
+            "operator_kind": "transform"
+          },
+          "bindings": {
+            "input_artifact": "task.input_artifact",
+            "config": "task.config",
+            "output_artifact": "task.output_artifact"
+          },
+          "node_binding": {
+            "node_id": null,
+            "input_ports": [],
+            "output_ports": []
+          }
+        },
+        "dataset_contract": {},
+        "orchestration_context": {},
+        "runtime_hints": {
+          "authority_mode": "central_operator_library",
+          "execution_mode": "orchestra_fetch",
+          "source_ref": null,
+          "package_ref": "orchestra://operator-package/transform.fixture",
+          "package_version": "library-managed",
+          "placement_tags": [],
+          "required_capabilities": [],
+          "cache_scope": "job",
+          "agent_fetchable": true,
+          "operator_kind": "transform"
+        },
+        "integrity": {
+          "operator_integrity": null,
+          "descriptor_digest": "b397ef3b203a0500a29aabe507868b4104ddf22faee5015df69cc0486ac35cd2",
+          "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+          "task_digest_fields": [
+            "schema_version",
+            "task_id",
+            "operator",
+            "descriptor_authoring",
+            "node",
+            "input_artifact",
+            "config",
+            "execution_program",
+            "dataset_contract",
+            "orchestration_context",
+            "runtime_hints"
+          ],
+          "digest_algorithm": "sha256"
+        }
+      },
+      "agent_rpc": {
+        "method": "run_operator_task_ir",
+        "params": {
+          "task_ir": {
+            "$schema": "operator-task-ir.schema.json",
+            "schema_version": "kyuubiki.operator-task-ir/v1",
+            "task_id": "fixture-task",
+            "operator": {
+              "id": "transform.fixture",
+              "family": "fixture",
+              "kind": "transform",
+              "execution": {
+                "package_ref": "orchestra://operator-package/transform.fixture"
+              }
+            },
+            "descriptor_authoring": {
+              "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+              "mode": "rust_native",
+              "runtime": "rust",
+              "source": "fixture",
+              "hot_reloadable": false,
+              "execution_language": "language_neutral"
+            },
+            "node": {},
+            "input_artifact": {
+              "x": 1
+            },
+            "config": {
+              "alpha": true
+            },
+            "execution_program": {
+              "schema_version": "kyuubiki.operator-execution-program/v1",
+              "program_id": "transform.fixture",
+              "program_family": "fixture",
+              "program_kind": "transform",
+              "operator_category_id": null,
+              "package_ref": "orchestra://operator-package/transform.fixture",
+              "package_version": "library-managed",
+              "package_integrity": null,
+              "runtime_protocol": "kyuubiki.operator-execution/v1",
+              "abi": {
+                "kind": "operator_task",
+                "input_encoding": "json",
+                "output_encoding": "json"
+              },
+              "entrypoint": {
+                "kind": "operator_id",
+                "name": "transform.fixture",
+                "operator_kind": "transform"
+              },
+              "bindings": {
+                "input_artifact": "task.input_artifact",
+                "config": "task.config",
+                "output_artifact": "task.output_artifact"
+              },
+              "node_binding": {
+                "node_id": null,
+                "input_ports": [],
+                "output_ports": []
+              }
+            },
+            "dataset_contract": {},
+            "orchestration_context": {},
+            "runtime_hints": {
+              "authority_mode": "central_operator_library",
+              "execution_mode": "orchestra_fetch",
+              "source_ref": null,
+              "package_ref": "orchestra://operator-package/transform.fixture",
+              "package_version": "library-managed",
+              "placement_tags": [],
+              "required_capabilities": [],
+              "cache_scope": "job",
+              "agent_fetchable": true,
+              "operator_kind": "transform"
+            },
+            "integrity": {
+              "operator_integrity": null,
+              "descriptor_digest": "b397ef3b203a0500a29aabe507868b4104ddf22faee5015df69cc0486ac35cd2",
+              "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+              "task_digest_fields": [
+                "schema_version",
+                "task_id",
+                "operator",
+                "descriptor_authoring",
+                "node",
+                "input_artifact",
+                "config",
+                "execution_program",
+                "dataset_contract",
+                "orchestration_context",
+                "runtime_hints"
+              ],
+              "digest_algorithm": "sha256"
+            }
+          }
+        },
+        "routing_opts": []
+      }
+    }
+  ]
+}

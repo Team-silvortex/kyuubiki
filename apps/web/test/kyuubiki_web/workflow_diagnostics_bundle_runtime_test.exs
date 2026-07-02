@@ -53,12 +53,14 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsBundleRuntimeTest do
     assert bundle["bundle_total_element_count"] == 5
     assert bundle["bundle_numeric_field_count"] == 4
     assert Map.has_key?(bundle["bundle_payloads"], "electrostatic")
+
     assert bundle["bundle_numeric_fields"] == [
              "diagnostic_element_count",
              "diagnostic_node_count",
              "electrostatic_potential_max",
              "thermal_temperature_max"
            ]
+
     assert Enum.any?(bundle["bundle_items"], &(&1["source"] == "thermal"))
   end
 

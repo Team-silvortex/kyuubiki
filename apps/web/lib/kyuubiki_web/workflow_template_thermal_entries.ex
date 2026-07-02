@@ -22,7 +22,8 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         %{
           "node_id" => "heat_model",
           "artifact_type" => "study_model/heat_plane_quad_2d",
-          "description" => "Heat plane quad study model used as the guarded workflow entry artifact."
+          "description" =>
+            "Heat plane quad study model used as the guarded workflow entry artifact."
         }
       ],
       [
@@ -47,7 +48,8 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         %{
           "node_id" => "heat_model",
           "artifact_type" => "study_model/heat_plane_quad_2d",
-          "description" => "Heat plane quad study model used as the coupled benchmark workflow entry artifact."
+          "description" =>
+            "Heat plane quad study model used as the coupled benchmark workflow entry artifact."
         }
       ],
       [
@@ -70,11 +72,32 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         WorkflowCatalogSupport.workflow_dataset_contract(
           "kyuubiki.dataset.heat_plane_quad_guard/v1",
           [
-            WorkflowCatalogSupport.workflow_dataset_value_info("heat_model", "model", "study_model/heat_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("heat_result", "result", "result/heat_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermal_diagnostics", "result", "report/summary"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermal_guard", "result", "report/summary"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("summary_json", "export", "export/json", "utf8_text")
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_model",
+              "model",
+              "study_model/heat_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_result",
+              "result",
+              "result/heat_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermal_diagnostics",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermal_guard",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "summary_json",
+              "export",
+              "export/json",
+              "utf8_text"
+            )
           ],
           %{"workflow_family" => "heat_plane_quad_guard"}
         ),
@@ -83,7 +106,14 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
       "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
       "nodes" => [
         input_node("heat_model", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        solve_node("solve_heat", "solve.heat_plane_quad_2d", "study_model/heat_plane_quad_2d", "result/heat_plane_quad_2d", "heat_model", "heat_result"),
+        solve_node(
+          "solve_heat",
+          "solve.heat_plane_quad_2d",
+          "study_model/heat_plane_quad_2d",
+          "result/heat_plane_quad_2d",
+          "heat_model",
+          "heat_result"
+        ),
         %{
           "id" => "extract_thermal_diagnostics",
           "kind" => "extract",
@@ -97,8 +127,20 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
           "operator_id" => "transform.evaluate_thermal_guard",
           "config" => %{
             "rules" => [
-              %{"field" => "thermal_temperature_max", "threshold" => 120.0, "comparison" => "gte", "severity" => "warn", "label" => "temperature ceiling"},
-              %{"field" => "thermal_peak_flux_magnitude", "threshold" => 2500.0, "comparison" => "gte", "severity" => "block", "label" => "flux ceiling"}
+              %{
+                "field" => "thermal_temperature_max",
+                "threshold" => 120.0,
+                "comparison" => "gte",
+                "severity" => "warn",
+                "label" => "temperature ceiling"
+              },
+              %{
+                "field" => "thermal_peak_flux_magnitude",
+                "threshold" => 2500.0,
+                "comparison" => "gte",
+                "severity" => "block",
+                "label" => "flux ceiling"
+              }
             ]
           },
           "inputs" => [port("value", "report/summary", "thermal_diagnostics")],
@@ -108,10 +150,42 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         output_node("json_output", "export/json", "summary_json")
       ],
       "edges" => [
-        edge("e0", "heat_model", "model", "solve_heat", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        edge("e1", "solve_heat", "result", "extract_thermal_diagnostics", "result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e2", "extract_thermal_diagnostics", "summary", "evaluate_guard", "value", "report/summary", "thermal_diagnostics"),
-        edge("e3", "evaluate_guard", "result", "export_json", "summary", "report/summary", "thermal_guard"),
+        edge(
+          "e0",
+          "heat_model",
+          "model",
+          "solve_heat",
+          "model",
+          "study_model/heat_plane_quad_2d",
+          "heat_model"
+        ),
+        edge(
+          "e1",
+          "solve_heat",
+          "result",
+          "extract_thermal_diagnostics",
+          "result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e2",
+          "extract_thermal_diagnostics",
+          "summary",
+          "evaluate_guard",
+          "value",
+          "report/summary",
+          "thermal_diagnostics"
+        ),
+        edge(
+          "e3",
+          "evaluate_guard",
+          "result",
+          "export_json",
+          "summary",
+          "report/summary",
+          "thermal_guard"
+        ),
         edge("e4", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -127,14 +201,47 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         WorkflowCatalogSupport.workflow_dataset_contract(
           "kyuubiki.dataset.heat_thermo_quad_benchmark/v1",
           [
-            WorkflowCatalogSupport.workflow_dataset_value_info("heat_model", "model", "study_model/heat_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("heat_result", "result", "result/heat_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermal_diagnostics", "result", "report/summary"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermo_model", "model", "study_model/thermal_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermo_result", "result", "result/thermal_plane_quad_2d"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("thermo_diagnostics", "result", "report/summary"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("benchmark_summary", "result", "report/summary"),
-            WorkflowCatalogSupport.workflow_dataset_value_info("summary_json", "export", "export/json", "utf8_text")
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_model",
+              "model",
+              "study_model/heat_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_result",
+              "result",
+              "result/heat_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermal_diagnostics",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_model",
+              "model",
+              "study_model/thermal_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_result",
+              "result",
+              "result/thermal_plane_quad_2d"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_diagnostics",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "benchmark_summary",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "summary_json",
+              "export",
+              "export/json",
+              "utf8_text"
+            )
           ],
           %{"workflow_family" => "heat_thermo_quad_benchmark"}
         ),
@@ -143,7 +250,14 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
       "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
       "nodes" => [
         input_node("heat_model", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        solve_node("solve_heat", "solve.heat_plane_quad_2d", "study_model/heat_plane_quad_2d", "result/heat_plane_quad_2d", "heat_model", "heat_result"),
+        solve_node(
+          "solve_heat",
+          "solve.heat_plane_quad_2d",
+          "study_model/heat_plane_quad_2d",
+          "result/heat_plane_quad_2d",
+          "heat_model",
+          "heat_result"
+        ),
         %{
           "id" => "extract_thermal_diagnostics",
           "kind" => "extract",
@@ -162,7 +276,14 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
           "inputs" => [port("heat_result", "result/heat_plane_quad_2d", "heat_result")],
           "outputs" => [port("thermo_model", "study_model/thermal_plane_quad_2d", "thermo_model")]
         },
-        solve_node("solve_thermo", "solve.thermal_plane_quad_2d", "study_model/thermal_plane_quad_2d", "result/thermal_plane_quad_2d", "thermo_model", "thermo_result"),
+        solve_node(
+          "solve_thermo",
+          "solve.thermal_plane_quad_2d",
+          "study_model/thermal_plane_quad_2d",
+          "result/thermal_plane_quad_2d",
+          "thermo_model",
+          "thermo_result"
+        ),
         %{
           "id" => "extract_thermo_diagnostics",
           "kind" => "extract",
@@ -211,14 +332,78 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
         output_node("json_output", "export/json", "summary_json")
       ],
       "edges" => [
-        edge("e0", "heat_model", "model", "solve_heat", "model", "study_model/heat_plane_quad_2d", "heat_model"),
-        edge("e1", "solve_heat", "result", "extract_thermal_diagnostics", "result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e2", "solve_heat", "result", "bridge_temperature", "heat_result", "result/heat_plane_quad_2d", "heat_result"),
-        edge("e3", "bridge_temperature", "thermo_model", "solve_thermo", "model", "study_model/thermal_plane_quad_2d", "thermo_model"),
-        edge("e4", "solve_thermo", "result", "extract_thermo_diagnostics", "result", "result/thermal_plane_quad_2d", "thermo_result"),
-        edge("e5", "extract_thermal_diagnostics", "summary", "benchmark_coupled", "left", "report/summary", "thermal_diagnostics"),
-        edge("e6", "extract_thermo_diagnostics", "summary", "benchmark_coupled", "right", "report/summary", "thermo_diagnostics"),
-        edge("e7", "benchmark_coupled", "result", "export_json", "summary", "report/summary", "benchmark_summary"),
+        edge(
+          "e0",
+          "heat_model",
+          "model",
+          "solve_heat",
+          "model",
+          "study_model/heat_plane_quad_2d",
+          "heat_model"
+        ),
+        edge(
+          "e1",
+          "solve_heat",
+          "result",
+          "extract_thermal_diagnostics",
+          "result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e2",
+          "solve_heat",
+          "result",
+          "bridge_temperature",
+          "heat_result",
+          "result/heat_plane_quad_2d",
+          "heat_result"
+        ),
+        edge(
+          "e3",
+          "bridge_temperature",
+          "thermo_model",
+          "solve_thermo",
+          "model",
+          "study_model/thermal_plane_quad_2d",
+          "thermo_model"
+        ),
+        edge(
+          "e4",
+          "solve_thermo",
+          "result",
+          "extract_thermo_diagnostics",
+          "result",
+          "result/thermal_plane_quad_2d",
+          "thermo_result"
+        ),
+        edge(
+          "e5",
+          "extract_thermal_diagnostics",
+          "summary",
+          "benchmark_coupled",
+          "left",
+          "report/summary",
+          "thermal_diagnostics"
+        ),
+        edge(
+          "e6",
+          "extract_thermo_diagnostics",
+          "summary",
+          "benchmark_coupled",
+          "right",
+          "report/summary",
+          "thermo_diagnostics"
+        ),
+        edge(
+          "e7",
+          "benchmark_coupled",
+          "result",
+          "export_json",
+          "summary",
+          "report/summary",
+          "benchmark_summary"
+        ),
         edge("e8", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
@@ -228,7 +413,14 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
     %{"id" => id, "kind" => "input", "outputs" => [port(port_id, artifact_type, dataset_value)]}
   end
 
-  defp solve_node(id, operator_id, input_artifact_type, output_artifact_type, input_dataset_value, output_dataset_value) do
+  defp solve_node(
+         id,
+         operator_id,
+         input_artifact_type,
+         output_artifact_type,
+         input_dataset_value,
+         output_dataset_value
+       ) do
     %{
       "id" => id,
       "kind" => "solve",
@@ -249,7 +441,12 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
   end
 
   defp output_node(id, input_artifact_type, input_dataset_value) do
-    %{"id" => id, "kind" => "output", "inputs" => [port("json", input_artifact_type, input_dataset_value)], "outputs" => []}
+    %{
+      "id" => id,
+      "kind" => "output",
+      "inputs" => [port("json", input_artifact_type, input_dataset_value)],
+      "outputs" => []
+    }
   end
 
   defp edge(id, from_node, from_port, to_node, to_port, artifact_type, dataset_value) do
@@ -266,7 +463,16 @@ defmodule KyuubikiWeb.WorkflowTemplateThermalEntries do
     %{"id" => id, "artifact_type" => artifact_type, "dataset_value" => dataset_value}
   end
 
-  defp custom_entry(id, name, summary, domains, capability_tags, graph, entry_inputs, output_artifacts) do
+  defp custom_entry(
+         id,
+         name,
+         summary,
+         domains,
+         capability_tags,
+         graph,
+         entry_inputs,
+         output_artifacts
+       ) do
     %{
       "id" => id,
       "name" => name,

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-batch.schema.json",
+  "title": "Kyuubiki operator task batch",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["quality_execution_batch_contract", "operator_id", "task_count", "tasks"],
+  "properties": {
+    "quality_execution_batch_contract": {
+      "const": "kyuubiki.quality_execution_batch/v1"
+    },
+    "operator_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "agent_rpc_method": {
+      "const": "run_operator_task_ir"
+    },
+    "batch_summary": {
+      "type": "string"
+    },
+    "case_index": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "task_id", "task_digest"],
+        "properties": {
+          "case_id": { "type": "string", "minLength": 1 },
+          "task_id": { "type": "string", "minLength": 1 },
+          "task_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "operator_id", "task_id", "task_digest", "task_ir"],
+        "properties": {
+          "case_id": { "type": "string", "minLength": 1 },
+          "parameters": { "type": "object" },
+          "operator_id": { "type": "string", "minLength": 1 },
+          "task_id": { "type": "string", "minLength": 1 },
+          "task_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "task_ir": {
+            "$ref": "operator-task-ir.schema.json"
+          },
+          "agent_rpc": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["method", "params", "routing_opts"],
+            "properties": {
+              "method": { "const": "run_operator_task_ir" },
+              "params": {
+                "type": "object",
+                "required": ["task_ir"],
+                "properties": {
+                  "task_ir": {
+                    "$ref": "operator-task-ir.schema.json"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["preflight", "execute"]
+                  }
+                }
+              },
+              "routing_opts": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -70,6 +70,18 @@ defmodule KyuubikiWeb.WorkflowSummaryOperatorSpecs do
          "optimization",
          "headless_safe"
        ]},
+      {"transform.compose_quality_execution_batch", "compose_quality_execution_batch",
+       "Convert expanded quality sweep cases into language-neutral operator TaskIR batches for orchestra or agent execution.",
+       [
+         "transform",
+         "summary",
+         "parameter_sweep",
+         "task_ir",
+         "orchestration",
+         "automation",
+         "optimization",
+         "headless_safe"
+       ]},
       {"transform.expand_parameter_sweep", "parameter_sweep",
        "Expand a base model into bounded parameterized workflow cases for batch solve, material exploration, and optimization flows.",
        [

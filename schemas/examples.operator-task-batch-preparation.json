@@ -1,0 +1,37 @@
+{
+  "$schema": "operator-task-batch-preparation.schema.json",
+  "status": "verified",
+  "operator_task_batch_preparation_contract": "kyuubiki.operator_task_batch_preparation/v1",
+  "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
+  "run_id": "operator-task-batch:prepare:86c14d1fb8d85ca3",
+  "run_phase": "prepare",
+  "batch_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+  "digest_algorithm": "sha256",
+  "started_at": "2026-01-01T00:00:00Z",
+  "finished_at": "2026-01-01T00:00:01Z",
+  "task_count": 1,
+  "verified_count": 1,
+  "error_count": 0,
+  "summaries": [
+    {
+      "case_id": "quality_case_a",
+      "status": "verified",
+      "task_id": "quality-contract-quality_case_a",
+      "task_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+      "operator_id": "transform.fixture",
+      "operator_kind": "transform",
+      "program_id": "transform.fixture",
+      "program_kind": "transform",
+      "runtime_protocol": "kyuubiki.operator-execution/v1",
+      "abi_kind": "operator_task",
+      "entrypoint_kind": "operator_id",
+      "entrypoint_name": "transform.fixture",
+      "package_ref": "orchestra://operator-package/transform.fixture",
+      "package_version": "library-managed",
+      "authority_mode": "central_operator_library",
+      "execution_mode": "orchestra_fetch",
+      "cache_scope": "job",
+      "agent_fetchable": true
+    }
+  ]
+}

@@ -7,8 +7,12 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   def bridge_heat_result_to_thermal_plane_triangle_model(heat_result, thermo_seed_model),
     do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, "temperature_delta")
 
-  def bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model, bridge_contract),
-    do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
+  def bridge_heat_result_to_thermal_plane_quad_model(
+        heat_result,
+        thermo_seed_model,
+        bridge_contract
+      ),
+      do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
 
   def bridge_heat_result_to_thermal_plane_triangle_model(
         heat_result,
@@ -150,7 +154,13 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
     validate_bridge_shapes(heat_nodes, heat_elements, thermo_nodes, thermo_elements, on_valid)
   end
 
-  defp bridge_heat_nodes(heat_nodes, heat_elements, thermo_nodes, thermo_seed_model, bridge_contract) do
+  defp bridge_heat_nodes(
+         heat_nodes,
+         heat_elements,
+         thermo_nodes,
+         thermo_seed_model,
+         bridge_contract
+       ) do
     with :ok <- ensure_node_alignment(heat_nodes, thermo_nodes),
          nodal_values <-
            derive_heat_nodal_target_field(
@@ -177,7 +187,12 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
          heat_nodes,
          _heat_elements,
          _node_count,
-         %{distribution: "node_to_node", source_field: source_field, scale: scale, default_value: default_value}
+         %{
+           distribution: "node_to_node",
+           source_field: source_field,
+           scale: scale,
+           default_value: default_value
+         }
        ) do
     Enum.map(heat_nodes, fn node ->
       node
@@ -213,30 +228,42 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
             |> Kernel.*(scale)
 
           weight = normalize_numeric_value(Map.get(element, "area", 1.0))
-          node_indexes = Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
-          Enum.reduce(node_indexes, {totals, counts, weighted_totals, weight_sums, minima, maxima}, fn node_index, {totals_acc, counts_acc, weighted_totals_acc, weight_sums_acc, minima_acc, maxima_acc} ->
-            next_min =
-              minima_acc |> Enum.at(node_index) |> case do
-                nil -> magnitude
-                current -> min(current, magnitude)
-              end
+          node_indexes =
+            Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
-            next_max =
-              maxima_acc |> Enum.at(node_index) |> case do
-                nil -> magnitude
-                current -> max(current, magnitude)
-              end
+          Enum.reduce(
+            node_indexes,
+            {totals, counts, weighted_totals, weight_sums, minima, maxima},
+            fn node_index,
+               {totals_acc, counts_acc, weighted_totals_acc, weight_sums_acc, minima_acc,
+                maxima_acc} ->
+              next_min =
+                minima_acc
+                |> Enum.at(node_index)
+                |> case do
+                  nil -> magnitude
+                  current -> min(current, magnitude)
+                end
 
-            {
-              List.update_at(totals_acc, node_index, &(&1 + magnitude)),
-              List.update_at(counts_acc, node_index, &(&1 + 1)),
-              List.update_at(weighted_totals_acc, node_index, &(&1 + magnitude * weight)),
-              List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
-              List.replace_at(minima_acc, node_index, next_min),
-              List.replace_at(maxima_acc, node_index, next_max)
-            }
-          end)
+              next_max =
+                maxima_acc
+                |> Enum.at(node_index)
+                |> case do
+                  nil -> magnitude
+                  current -> max(current, magnitude)
+                end
+
+              {
+                List.update_at(totals_acc, node_index, &(&1 + magnitude)),
+                List.update_at(counts_acc, node_index, &(&1 + 1)),
+                List.update_at(weighted_totals_acc, node_index, &(&1 + magnitude * weight)),
+                List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
+                List.replace_at(minima_acc, node_index, next_min),
+                List.replace_at(maxima_acc, node_index, next_max)
+              }
+            end
+          )
         end
       )
 
@@ -295,8 +322,11 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
        ) do
     Enum.zip([weighted_totals, weight_sums, counts])
     |> Enum.map(fn
-      {weighted_total, weight_sum, count} when count > 0 and weight_sum > 0 -> weighted_total / weight_sum
-      {_weighted_total, _weight_sum, _count} -> default_value
+      {weighted_total, weight_sum, count} when count > 0 and weight_sum > 0 ->
+        weighted_total / weight_sum
+
+      {_weighted_total, _weight_sum, _count} ->
+        default_value
     end)
   end
 
@@ -329,11 +359,12 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
     |> Enum.map(fn
       {_maximum, 0} -> default_value
       {maximum, _count} -> maximum || default_value
-       end)
+    end)
   end
 
-  defp resolve_heat_elements(%{"elements" => elements}, "element_to_nodes") when is_list(elements),
-    do: {:ok, elements}
+  defp resolve_heat_elements(%{"elements" => elements}, "element_to_nodes")
+       when is_list(elements),
+       do: {:ok, elements}
 
   defp resolve_heat_elements(%{"input" => %{"elements" => elements}}, distribution)
        when is_list(elements) and distribution in ["node_to_node", "element_to_nodes"],
@@ -341,7 +372,13 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
 
   defp resolve_heat_elements(_heat_result, _distribution), do: {:error, :invalid_bridge_payload}
 
-  defp validate_bridge_shapes(source_nodes, source_elements, target_nodes, target_elements, on_valid) do
+  defp validate_bridge_shapes(
+         source_nodes,
+         source_elements,
+         target_nodes,
+         target_elements,
+         on_valid
+       ) do
     cond do
       length(source_nodes) != length(target_nodes) -> {:error, :node_count_mismatch}
       length(source_elements) != length(target_elements) -> {:error, :element_count_mismatch}
@@ -366,19 +403,27 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   defp normalize_bridge_scale(scale) when is_number(scale), do: {:ok, scale}
   defp normalize_bridge_scale(_scale), do: {:error, :invalid_bridge_scale}
 
-  defp normalize_contract_string(value, _reason) when is_binary(value) and value != "", do: {:ok, value}
+  defp normalize_contract_string(value, _reason) when is_binary(value) and value != "",
+    do: {:ok, value}
+
   defp normalize_contract_string(_value, reason), do: {:error, reason}
 
   defp normalize_node_index_fields(fields) when is_list(fields) do
     normalized = fields |> Enum.filter(&(is_binary(&1) and &1 != "")) |> Enum.uniq()
-    if normalized == [], do: {:error, :invalid_bridge_contract_node_index_fields}, else: {:ok, normalized}
+
+    if normalized == [],
+      do: {:error, :invalid_bridge_contract_node_index_fields},
+      else: {:ok, normalized}
   end
 
-  defp normalize_node_index_fields(_fields), do: {:error, :invalid_bridge_contract_node_index_fields}
+  defp normalize_node_index_fields(_fields),
+    do: {:error, :invalid_bridge_contract_node_index_fields}
 
   defp validate_heat_bridge_distribution("node_to_node"), do: :ok
   defp validate_heat_bridge_distribution("element_to_nodes"), do: :ok
-  defp validate_heat_bridge_distribution(_distribution), do: {:error, :unsupported_bridge_distribution}
+
+  defp validate_heat_bridge_distribution(_distribution),
+    do: {:error, :unsupported_bridge_distribution}
 
   defp validate_heat_bridge_reduction("copy"), do: :ok
   defp validate_heat_bridge_reduction("mean"), do: :ok
@@ -395,15 +440,20 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   defp validate_heat_bridge_source_field("heat_flux_y", "element_to_nodes"), do: :ok
   defp validate_heat_bridge_source_field("heat_flux", "element_to_nodes"), do: :ok
   defp validate_heat_bridge_source_field("heat_flux_magnitude", "element_to_nodes"), do: :ok
-  defp validate_heat_bridge_source_field(_source_field, _distribution), do: {:error, :invalid_bridge_contract_source_field}
+
+  defp validate_heat_bridge_source_field(_source_field, _distribution),
+    do: {:error, :invalid_bridge_contract_source_field}
 
   defp validate_heat_bridge_target_field("temperature_delta"), do: :ok
+
   defp validate_heat_bridge_target_field(_target_field),
     do: {:error, :invalid_bridge_contract_target_field}
 
   defp normalize_numeric_value(value) when is_number(value), do: value
   defp normalize_numeric_value(_value), do: 0.0
 
-  defp close_enough?(left, right) when is_number(left) and is_number(right), do: abs(left - right) <= 1.0e-9
+  defp close_enough?(left, right) when is_number(left) and is_number(right),
+    do: abs(left - right) <= 1.0e-9
+
   defp close_enough?(_, _), do: false
 end
