@@ -64,7 +64,8 @@ defmodule KyuubikiWeb.TestSupport.WorkflowLargeGraphBenchmark do
       "skipped_nodes" => length(payload["skipped_nodes"]),
       "tail_artifact_key" => tail_artifact_key(pass_through_count),
       "performance" => Map.get(payload, "performance", %{}),
-      "response_options" => WorkflowGraphResponse.normalize_options(response_options),
+      "response_options" =>
+        WorkflowGraphResponse.resolve_options(build_graph(pass_through_count), response_options),
       "slowest_nodes" => get_in(payload, ["performance", "slowest_nodes"]) || [],
       "payload" => payload
     }
@@ -104,7 +105,7 @@ defmodule KyuubikiWeb.TestSupport.WorkflowLargeGraphBenchmark do
       when is_map(payload) and is_integer(pass_through_count) and is_map(response_options) do
     expected_completed_count = pass_through_count + 5
     tail_key = tail_artifact_key(pass_through_count)
-    options = WorkflowGraphResponse.normalize_options(response_options)
+    options = WorkflowGraphResponse.resolve_options(build_graph(pass_through_count), response_options)
 
     unless length(payload["completed_nodes"]) == expected_completed_count do
       raise "unexpected completed node count for #{pass_through_count}"

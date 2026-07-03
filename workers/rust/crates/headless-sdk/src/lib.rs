@@ -6,6 +6,7 @@ mod direct_fem;
 mod executor;
 mod hybrid_executor;
 mod material_dielectric;
+mod material_envelope_workflow;
 mod material_exploration;
 mod material_optimization;
 mod material_reliability;
@@ -15,6 +16,7 @@ mod material_research;
 mod material_research_tests;
 mod material_structural;
 mod material_thermo;
+mod material_workflows;
 mod operator_task;
 mod plan;
 mod run;
@@ -84,6 +86,10 @@ pub use material_thermo::{
     ThermoMaterialCandidate, ThermoMaterialCandidateReport, ThermoMaterialReport,
     build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
     build_thermo_shield_screening_steps, thermo_shield_screening_candidates,
+};
+pub use material_workflows::{
+    MaterialWorkflowCatalogEntry, MaterialWorkflowDescriptor, find_material_workflow,
+    material_workflow_catalog, material_workflow_descriptors, search_material_workflow_templates,
 };
 pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,

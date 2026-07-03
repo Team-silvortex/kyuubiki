@@ -110,6 +110,25 @@ fn search_templates_ranks_closest_query_first() {
 }
 
 #[test]
+fn search_templates_surfaces_material_envelope_workflow() {
+    let matches = search_templates(
+        Some(HeadlessRuntimeStyle::ServiceOnly),
+        Some("materials"),
+        None,
+        Some("material envelope pareto"),
+    );
+    let ids = matches
+        .iter()
+        .map(|template| template.id)
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        ids.first().copied(),
+        Some("material_study_envelope_ranking")
+    );
+}
+
+#[test]
 fn suggest_templates_returns_best_fuzzy_candidates() {
     let suggestions = suggest_templates("browser poll", 3);
     let ids = suggestions
@@ -175,7 +194,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
-        ("materials", 4),
+        ("materials", 5),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
@@ -308,6 +327,30 @@ fn structural_material_template_expands_candidate_solve_chains() {
     assert!(plan.ok);
     assert!(plan.compatibility.service_only_ok);
     assert_eq!(plan.steps.len(), 9);
+}
+
+#[test]
+fn material_envelope_template_submits_graph_with_default_candidates() {
+    let document = build_template_document("material_study_envelope_ranking", None)
+        .expect("material envelope template should build");
+    let steps = &document.workflow.steps;
+    assert_eq!(steps.len(), 3);
+    assert_eq!(steps[0].action, "workflow_submit_graph");
+    assert_eq!(steps[1].action, "job_wait");
+    assert_eq!(steps[2].action, "result_fetch");
+    assert_eq!(
+        steps[0].payload["graph"]["id"].as_str(),
+        Some("workflow.material-study-envelope")
+    );
+    assert_eq!(
+        steps[0].payload["input_artifacts"]["material_rows"]["rows"][0]["case_id"].as_str(),
+        Some("cool_stiff")
+    );
+
+    let batch = normalize_workflow_document(&document).unwrap();
+    let plan = build_execution_plan(&batch);
+    assert!(plan.ok);
+    assert!(plan.compatibility.service_only_ok);
 }
 
 #[test]

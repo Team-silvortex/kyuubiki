@@ -38,8 +38,9 @@ defmodule KyuubikiWeb.Benchmark.WorkflowLargeGraphReportTest do
   end
 
   defp parse_response_options("compact"),
-    do: KyuubikiWeb.WorkflowGraphResponse.compact_options()
+    do: %{"response_mode" => "compact"}
 
+  defp parse_response_options("full"), do: %{"response_mode" => "full"}
   defp parse_response_options(_mode), do: %{}
 
   defp default_output_path do

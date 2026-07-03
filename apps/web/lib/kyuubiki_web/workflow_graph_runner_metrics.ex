@@ -4,7 +4,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.WorkflowCatalogSupport
 
-  def finalize_result(state, graph, artifact_lineage) do
+  def finalize_result(state, graph, artifact_lineage, result_options \\ %{}) do
     artifact_lineage = Enum.reverse(artifact_lineage)
     node_runs = Enum.reverse(state.node_runs)
     total_elapsed_ms = elapsed_ms(state.started_at_us)
@@ -13,11 +13,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     %{
       "completed_nodes" => Enum.reverse(state.ordered_completed),
       "skipped_nodes" => Enum.reverse(state.ordered_skipped),
-      "branch_decisions" => Enum.reverse(state.branch_decisions),
-      "node_runs" => node_runs,
-      "artifact_lineage" => artifact_lineage,
-      "dataset_lineage" => WorkflowCatalogSupport.derive_dataset_lineage(graph, artifact_lineage),
-      "artifacts" => state.artifacts,
       "performance" => %{
         "total_elapsed_ms" => total_elapsed_ms,
         "node_execution_elapsed_ms" => node_execution_elapsed_ms,
@@ -30,7 +25,25 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         "slowest_nodes" => slowest_nodes(node_runs)
       }
     }
+    |> maybe_put("branch_decisions", Enum.reverse(state.branch_decisions), result_options)
+    |> maybe_put("node_runs", node_runs, result_options)
+    |> maybe_put("artifact_lineage", artifact_lineage, result_options)
+    |> maybe_put_lazy("dataset_lineage", fn -> dataset_lineage(graph, artifact_lineage) end, result_options)
+    |> maybe_put("artifacts", state.artifacts, result_options)
   end
+
+  defp maybe_put(payload, key, value, result_options) do
+    if Map.get(result_options, "include_#{key}", true), do: Map.put(payload, key, value), else: payload
+  end
+
+  defp maybe_put_lazy(payload, key, value_fun, result_options) do
+    if Map.get(result_options, "include_#{key}", true),
+      do: Map.put(payload, key, value_fun.()),
+      else: payload
+  end
+
+  defp dataset_lineage(graph, artifact_lineage),
+    do: WorkflowCatalogSupport.derive_dataset_lineage(graph, artifact_lineage)
 
   def mark_completed(
         state,
@@ -38,12 +51,54 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         node,
         incoming,
         duration_ms,
+        result_options,
         accepts_partial_inputs?,
         consumed_artifacts_for_node,
         incoming_artifact_keys,
         artifact_key
       ) do
+    run = completed_run(state, node_id, node, incoming, duration_ms, result_options, %{
+      accepts_partial_inputs?: accepts_partial_inputs?,
+      consumed_artifacts_for_node: consumed_artifacts_for_node,
+      incoming_artifact_keys: incoming_artifact_keys,
+      artifact_key: artifact_key
+    })
+
+    %{
+      state
+      | completed: MapSet.put(state.completed, node_id),
+        ordered_completed: [node_id | state.ordered_completed],
+        node_runs: [run | state.node_runs]
+    }
+  end
+
+  def mark_skipped(state, node_id, node, incoming, result_options, incoming_artifact_keys) do
     run =
+      if detailed_node_runs?(result_options) do
+        %{
+          "node_id" => node_id,
+          "kind" => Map.get(node, "kind"),
+          "operator_id" => Map.get(node, "operator_id"),
+          "status" => "skipped",
+          "consumed_artifacts" => incoming_artifact_keys.(incoming, state.artifacts),
+          "produced_artifacts" => [],
+          "duration_ms" => 0.0
+        }
+        |> maybe_put_task_ir_ref(node)
+      else
+        minimal_run(node_id, node, "skipped", 0.0)
+      end
+
+    %{
+      state
+      | skipped: MapSet.put(state.skipped, node_id),
+        ordered_skipped: [node_id | state.ordered_skipped],
+        node_runs: [run | state.node_runs]
+    }
+  end
+
+  defp completed_run(state, node_id, node, incoming, duration_ms, result_options, resolvers) do
+    if detailed_node_runs?(result_options) do
       %{
         "node_id" => node_id,
         "kind" => Map.get(node, "kind"),
@@ -54,43 +109,31 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
             node,
             incoming,
             state.artifacts,
-            accepts_partial_inputs?,
-            consumed_artifacts_for_node,
-            incoming_artifact_keys
+            resolvers.accepts_partial_inputs?,
+            resolvers.consumed_artifacts_for_node,
+            resolvers.incoming_artifact_keys
           ),
-        "produced_artifacts" => produced_artifacts_for_run(node, incoming, artifact_key),
+        "produced_artifacts" => produced_artifacts_for_run(node, incoming, resolvers.artifact_key),
         "duration_ms" => duration_ms
       }
-      |> maybe_put_task_ir_ref(node, state.artifacts, incoming, consumed_artifacts_for_node)
+      |> maybe_put_task_ir_ref(node)
+    else
+      minimal_run(node_id, node, "completed", duration_ms)
+    end
+  end
 
+  defp minimal_run(node_id, node, status, duration_ms) do
     %{
-      state
-      | completed: MapSet.put(state.completed, node_id),
-        ordered_completed: [node_id | state.ordered_completed],
-        node_runs: [run | state.node_runs]
+      "node_id" => node_id,
+      "kind" => Map.get(node, "kind"),
+      "operator_id" => Map.get(node, "operator_id"),
+      "status" => status,
+      "duration_ms" => duration_ms
     }
   end
 
-  def mark_skipped(state, node_id, node, incoming, incoming_artifact_keys) do
-    run =
-      %{
-        "node_id" => node_id,
-        "kind" => Map.get(node, "kind"),
-        "operator_id" => Map.get(node, "operator_id"),
-        "status" => "skipped",
-        "consumed_artifacts" => incoming_artifact_keys.(incoming, state.artifacts),
-        "produced_artifacts" => [],
-        "duration_ms" => 0.0
-      }
-      |> maybe_put_task_ir_ref(node, state.artifacts, incoming, incoming_artifact_keys)
-
-    %{
-      state
-      | skipped: MapSet.put(state.skipped, node_id),
-        ordered_skipped: [node_id | state.ordered_skipped],
-        node_runs: [run | state.node_runs]
-    }
-  end
+  defp detailed_node_runs?(result_options),
+    do: Map.get(result_options, "include_node_runs", true)
 
   defp consumed_artifacts_for_run(
          node,
@@ -120,60 +163,15 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     |> Enum.sort()
   end
 
-  defp maybe_put_task_ir_ref(
-         run,
-         %{"operator_id" => operator_id} = node,
-         artifacts,
-         incoming,
-         resolver
-       )
+  defp maybe_put_task_ir_ref(run, %{"operator_id" => operator_id} = node)
        when is_binary(operator_id) do
-    with {:ok, payload} <- representative_payload(node, artifacts, incoming, resolver),
-         {:ok, task_ir} <- OperatorTaskIR.from_node(node, payload) do
-      Map.put(run, "task_ir_ref", task_ir_ref(task_ir))
-    else
+    case OperatorTaskIR.ref_from_node(node) do
+      {:ok, task_ref} -> Map.put(run, "task_ir_ref", task_ref)
       _ -> run
     end
   end
 
-  defp maybe_put_task_ir_ref(run, _node, _artifacts, _incoming, _resolver), do: run
-
-  defp representative_payload(node, artifacts, incoming, resolver) do
-    consumed =
-      resolved_consumed_artifacts(node, artifacts, incoming, resolver)
-      |> Enum.filter(&Map.has_key?(artifacts, &1))
-
-    case consumed do
-      [single] ->
-        {:ok, Map.fetch!(artifacts, single)}
-
-      [_first | _rest] ->
-        {:ok, Map.new(consumed, &{&1, Map.fetch!(artifacts, &1)})}
-
-      [] ->
-        {:ok, %{}}
-    end
-  end
-
-  defp resolved_consumed_artifacts(node, artifacts, incoming, resolver)
-       when is_function(resolver, 3),
-       do: resolver.(node, incoming, artifacts)
-
-  defp resolved_consumed_artifacts(_node, artifacts, incoming, resolver)
-       when is_function(resolver, 2),
-       do: resolver.(incoming, artifacts)
-
-  defp task_ir_ref(task_ir) do
-    %{
-      "schema_version" => Map.get(task_ir, "schema_version"),
-      "task_id" => Map.get(task_ir, "task_id"),
-      "agent_rpc_method" => OperatorTaskIR.agent_rpc_method(),
-      "operator_id" => get_in(task_ir, ["operator", "id"]),
-      "operator_kind" => get_in(task_ir, ["operator", "kind"]),
-      "descriptor_digest" => get_in(task_ir, ["integrity", "descriptor_digest"]),
-      "required_capabilities" => get_in(task_ir, ["runtime_hints", "required_capabilities"]) || []
-    }
-  end
+  defp maybe_put_task_ir_ref(run, _node), do: run
 
   defp elapsed_ms(started_at_us) do
     (System.monotonic_time(:microsecond) - started_at_us) / 1000.0

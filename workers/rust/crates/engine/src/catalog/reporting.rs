@@ -266,6 +266,20 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_transform_descriptor(
+            "transform.compose_material_study_envelope",
+            "multi_domain",
+            "material_study_envelope",
+            "Compose thermal, structural, electromagnetic, CFD, or transport summaries into one material-study envelope with visible failure-index and safety-factor metrics.",
+            &[
+                "transform",
+                "material",
+                "multi_physics",
+                "failure_index",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
             "transform.evaluate_material_margins",
             "multi_domain",
             "material_margin",

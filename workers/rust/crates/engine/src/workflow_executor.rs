@@ -32,6 +32,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.join_parameter_sweep_results",
     "transform.score_parameter_sweep",
     "transform.map_parameter_sweep_scores_to_quality_candidates",
+    "transform.compose_material_study_envelope",
     "transform.evaluate_material_margins",
     "transform.rank_material_candidates",
     "transform.extract_material_pareto_frontier",
@@ -305,6 +306,7 @@ pub fn run_transform_operator(
         | "transform.join_parameter_sweep_results"
         | "transform.score_parameter_sweep"
         | "transform.map_parameter_sweep_scores_to_quality_candidates"
+        | "transform.compose_material_study_envelope"
         | "transform.evaluate_material_margins"
         | "transform.rank_material_candidates"
         | "transform.extract_material_pareto_frontier"

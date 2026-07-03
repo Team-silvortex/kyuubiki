@@ -20,7 +20,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     |> maybe_put_orchestration_value("cluster_id", Map.get(normalized, "cluster_id"))
   end
 
-  @spec initialize_runtime(String.t(), map(), map(), map()) :: :ok
+  @spec initialize_runtime(String.t(), map(), map(), map()) :: :ok | {:error, term()}
   def initialize_runtime(job_id, graph, orchestration_context, response_options)
       when is_binary(job_id) and is_map(graph) and is_map(orchestration_context) and
              is_map(response_options) do
@@ -55,7 +55,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
           orchestration_context,
           fn progress ->
             apply_progress(job_id, progress)
-          end
+          end,
+          response_options
         )
       end)
 
@@ -84,17 +85,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     unless cancelled?(job_id) do
       shaped_result = WorkflowGraphResponse.shape(graph, result, response_options)
 
-      :ok =
-        AnalysisResultStore.put(
-          job_id,
-          shaped_result
-          |> Map.put("workflow_id", Map.get(graph, "id"))
-          |> Map.put("current_node", nil)
-          |> Map.put("progress_events", progress_events(job_id))
-          |> Map.put("response_options", response_options)
-        )
+      case AnalysisResultStore.put(
+             job_id,
+             shaped_result
+             |> Map.put("workflow_id", Map.get(graph, "id"))
+             |> Map.put("current_node", nil)
+             |> Map.put("progress_events", progress_events(job_id))
+             |> Map.put("response_options", response_options)
+           ) do
+        :ok ->
+          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
 
-      _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
+        {:error, reason} ->
+          apply_terminal_progress(job_id, "failed", "failed to persist workflow result: #{inspect(reason)}")
+      end
     end
   end
 
@@ -113,25 +117,28 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
         progress = min(completed_nodes / total_nodes, 0.98)
         progress_event = progress_event(node_id, completed_nodes, total_nodes, progress)
 
-        :ok =
-          update_runtime(job_id, fn runtime ->
-            runtime
-            |> Map.put("current_node", node_id)
-            |> Map.update("progress_events", [progress_event], fn events ->
-              (events ++ [progress_event]) |> Enum.take(-25)
-            end)
-          end)
+        case update_runtime(job_id, fn runtime ->
+               runtime
+               |> Map.put("current_node", node_id)
+               |> Map.update("progress_events", [progress_event], fn events ->
+                 (events ++ [progress_event]) |> Enum.take(-25)
+               end)
+             end) do
+          :ok ->
+            _ =
+              Store.apply_progress(%{
+                job_id: job_id,
+                stage: "solving",
+                progress: progress,
+                iteration: completed_nodes,
+                message: "completed workflow node #{node_id}"
+              })
 
-        _ =
-          Store.apply_progress(%{
-            job_id: job_id,
-            stage: "solving",
-            progress: progress,
-            iteration: completed_nodes,
-            message: "completed workflow node #{node_id}"
-          })
+            :ok
 
-        :ok
+          {:error, reason} ->
+            apply_terminal_progress(job_id, "failed", "failed to persist workflow progress: #{inspect(reason)}")
+        end
 
       :error ->
         :ok
@@ -177,7 +184,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
 
   defp watchdog_job_timeout_ms do
     Application.get_env(:kyuubiki_web, KyuubikiWeb.Jobs.Watchdog, [])
-    |> Keyword.get(:job_timeout_ms, 120_000)
+    |> Keyword.get(:workflow_timeout_ms, 30_000)
   end
 
   defp maybe_put_orchestration_value(context, _key, nil), do: context

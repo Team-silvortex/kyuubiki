@@ -158,6 +158,7 @@ defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.input-to-output-compact"
     assert result_payload["result"]["completed_nodes"] == ["input_node", "output_node"]
+    assert result_payload["result"]["response_options"]["response_mode"] == "compact"
     refute Map.has_key?(result_payload["result"], "artifacts")
     refute Map.has_key?(result_payload["result"], "node_runs")
     refute Map.has_key?(result_payload["result"], "artifact_lineage")
@@ -190,6 +191,7 @@ defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts, 2000)
 
     assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["response_options"]["response_mode"] == "auto-compact"
     assert result_payload["result"]["response_options"]["include_artifacts"] == false
     refute Map.has_key?(result_payload["result"], "artifacts")
     refute Map.has_key?(result_payload["result"], "node_runs")

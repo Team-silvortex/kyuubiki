@@ -54,6 +54,30 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   def from_node(_node, _input_artifact, _opts), do: {:error, :invalid_operator_task_node}
 
+  @spec ref_from_node(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def ref_from_node(node, opts \\ [])
+
+  def ref_from_node(%{"operator_id" => operator_id} = node, opts)
+      when is_binary(operator_id) and is_list(opts) do
+    with {:ok, %{"operator" => operator}} <- WorkflowOperatorCatalog.fetch(operator_id) do
+      execution = Map.get(operator, "execution", %{})
+
+      {:ok,
+       %{
+         "schema_version" => @schema_version,
+         "task_id" => Keyword.get(opts, :task_id) || default_task_id(operator, node),
+         "agent_rpc_method" => agent_rpc_method(),
+         "operator_id" => operator_id,
+         "operator_kind" => Map.get(operator, "kind"),
+         "descriptor_digest" => descriptor_digest(operator),
+         "required_capabilities" =>
+           Map.get(runtime_hints(operator, execution, opts), "required_capabilities", [])
+       }}
+    end
+  end
+
+  def ref_from_node(_node, _opts), do: {:error, :invalid_operator_task_node_ref}
+
   @spec agent_rpc_method() :: String.t()
   def agent_rpc_method, do: @agent_rpc_method
 

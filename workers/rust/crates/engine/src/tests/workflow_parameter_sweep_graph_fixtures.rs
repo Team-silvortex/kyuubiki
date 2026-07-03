@@ -278,6 +278,150 @@ pub(super) fn parameter_sweep_result_scoring_graph(target_score: f64) -> Workflo
     }
 }
 
+pub(super) fn material_study_envelope_inputs() -> BTreeMap<String, serde_json::Value> {
+    BTreeMap::from([(
+        "material_rows".to_string(),
+        serde_json::json!({
+            "rows": [
+                {
+                    "case_id": "cool_stiff",
+                    "summaries": {
+                        "thermal": { "max_temperature": 82.0 },
+                        "structural": { "max_stress": 100.0 }
+                    }
+                },
+                {
+                    "case_id": "warm_safe",
+                    "summaries": {
+                        "thermal": { "max_temperature": 90.0 },
+                        "structural": { "max_stress": 120.0 }
+                    }
+                },
+                {
+                    "case_id": "hot_light",
+                    "summaries": {
+                        "thermal": { "max_temperature": 140.0 },
+                        "structural": { "max_stress": 110.0 }
+                    }
+                }
+            ]
+        }),
+    )])
+}
+
+pub(super) fn material_study_envelope_graph() -> WorkflowGraph {
+    WorkflowGraph {
+        schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+        id: "workflow.material-study-envelope".to_string(),
+        name: "Material study envelope ranking".to_string(),
+        version: "1.0.0".to_string(),
+        description: Some(
+            "Compose material study envelopes, rank candidates, and extract Pareto frontier."
+                .to_string(),
+        ),
+        dataset_contract: None,
+        entry_nodes: vec!["material_rows".to_string()],
+        output_nodes: vec!["ranking_output".to_string(), "pareto_output".to_string()],
+        defaults: WorkflowDefaults::default(),
+        nodes: vec![
+            sweep_node(
+                "material_rows",
+                WorkflowNodeKind::Input,
+                None,
+                vec![],
+                vec![sweep_port("rows")],
+                None,
+            ),
+            sweep_node(
+                "compose_envelopes",
+                WorkflowNodeKind::Transform,
+                Some("transform.compose_material_study_envelope"),
+                vec![sweep_port("rows")],
+                vec![sweep_port("envelopes")],
+                None,
+            ),
+            sweep_node(
+                "rank_envelopes",
+                WorkflowNodeKind::Transform,
+                Some("transform.rank_material_candidates"),
+                vec![sweep_port("envelopes")],
+                vec![sweep_port("ranking")],
+                Some(serde_json::json!({
+                    "margin_prefix": "material_envelope",
+                    "include_best_summary": false
+                })),
+            ),
+            sweep_node(
+                "pareto_envelopes",
+                WorkflowNodeKind::Transform,
+                Some("transform.extract_material_pareto_frontier"),
+                vec![sweep_port("envelopes")],
+                vec![sweep_port("pareto")],
+                Some(serde_json::json!({
+                    "feasible_field": "material_envelope_status",
+                    "objectives": [
+                        { "field": "material_envelope_score", "goal": "min" },
+                        { "field": "material_envelope_safety_factor", "goal": "max" }
+                    ]
+                })),
+            ),
+            sweep_node(
+                "ranking_output",
+                WorkflowNodeKind::Output,
+                None,
+                vec![sweep_port("ranking")],
+                vec![],
+                None,
+            ),
+            sweep_node(
+                "pareto_output",
+                WorkflowNodeKind::Output,
+                None,
+                vec![sweep_port("pareto")],
+                vec![],
+                None,
+            ),
+        ],
+        edges: vec![
+            sweep_edge(
+                "edge-rows-envelope",
+                "material_rows",
+                "rows",
+                "compose_envelopes",
+                "rows",
+            ),
+            sweep_edge(
+                "edge-envelope-rank",
+                "compose_envelopes",
+                "envelopes",
+                "rank_envelopes",
+                "envelopes",
+            ),
+            sweep_edge(
+                "edge-envelope-pareto",
+                "compose_envelopes",
+                "envelopes",
+                "pareto_envelopes",
+                "envelopes",
+            ),
+            sweep_edge(
+                "edge-rank-output",
+                "rank_envelopes",
+                "ranking",
+                "ranking_output",
+                "ranking",
+            ),
+            sweep_edge(
+                "edge-pareto-output",
+                "pareto_envelopes",
+                "pareto",
+                "pareto_output",
+                "pareto",
+            ),
+        ],
+    }
+}
+
 fn sweep_node(
     id: &str,
     kind: WorkflowNodeKind,

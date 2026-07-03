@@ -43,7 +43,7 @@ defmodule KyuubikiWeb.Orchestra.Engine do
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
-         {:ok, result} <- execute_workflow_graph(graph, input_artifacts) do
+         {:ok, result} <- execute_workflow_graph(graph, input_artifacts, %{}, nil, response_options) do
       {:ok, WorkflowGraphResponse.shape(graph, result, response_options)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
@@ -53,27 +53,31 @@ defmodule KyuubikiWeb.Orchestra.Engine do
     end
   end
 
-  @spec execute_workflow_graph(map(), map(), map(), progress_callback() | nil) ::
+  @spec execute_workflow_graph(map(), map(), map(), progress_callback() | nil, map()) ::
           {:ok, map()} | {:error, term()}
   def execute_workflow_graph(
         graph,
         input_artifacts,
         orchestration_context \\ %{},
-        progress_callback \\ nil
+        progress_callback \\ nil,
+        response_options \\ %{}
       )
 
   def execute_workflow_graph(
         %{} = graph,
         input_artifacts,
         orchestration_context,
-        progress_callback
+        progress_callback,
+        response_options
       )
       when is_map(input_artifacts) and is_map(orchestration_context) and
-             (is_nil(progress_callback) or is_function(progress_callback, 1)) do
+             (is_nil(progress_callback) or is_function(progress_callback, 1)) and
+             is_map(response_options) do
     WorkflowGraphRunner.run(
       graph,
       input_artifacts,
       dataset_contract: Map.get(graph, "dataset_contract"),
+      result_options: response_options,
       progress_callback: progress_callback,
       execute_solve: fn operator_id, payload, node ->
         WorkflowOperatorRuntime.run_solve_operator(
@@ -92,7 +96,8 @@ defmodule KyuubikiWeb.Orchestra.Engine do
         _graph,
         _input_artifacts,
         _orchestration_context,
-        _progress_callback
+        _progress_callback,
+        _response_options
       ),
       do: {:error, :invalid_workflow_graph}
 end

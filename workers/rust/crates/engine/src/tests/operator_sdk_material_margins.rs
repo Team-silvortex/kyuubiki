@@ -219,3 +219,223 @@ fn extracts_material_pareto_frontier_for_multi_objective_candidates() {
                 && entry["dominated_by"].as_str() == Some("infeasible"))
     );
 }
+
+#[test]
+fn composes_material_study_envelope_from_multiphysics_summaries() {
+    let envelope = run_transform_operator(
+        "transform.compose_material_study_envelope",
+        serde_json::json!({
+            "candidate_id": "alloy_a",
+            "summaries": {
+                "thermal": {
+                    "max_temperature": 96.0,
+                    "max_heat_flux": 18.0
+                },
+                "structural": {
+                    "max_stress": 280.0,
+                    "max_displacement": 0.006
+                },
+                "electrostatic": {
+                    "max_electric_field": 3.0
+                }
+            }
+        }),
+        serde_json::Value::Null,
+    )
+    .expect("material study envelope should compose");
+
+    assert_eq!(
+        envelope["material_envelope_contract"].as_str(),
+        Some("kyuubiki.material_study_envelope/v1")
+    );
+    assert_eq!(
+        envelope["material_envelope_candidate_id"].as_str(),
+        Some("alloy_a")
+    );
+    assert_eq!(envelope["material_envelope_domain_count"].as_u64(), Some(3));
+    assert_eq!(envelope["material_envelope_metric_count"].as_u64(), Some(5));
+    assert_eq!(envelope["material_envelope_status"].as_str(), Some("fail"));
+    assert_eq!(
+        envelope["material_envelope_critical_metric"].as_str(),
+        Some("structural.stress")
+    );
+    assert!(
+        envelope["material_envelope_failure_index"]
+            .as_f64()
+            .is_some_and(|value| (value - 1.12).abs() < 1.0e-12)
+    );
+}
+
+#[test]
+fn composes_material_study_envelope_with_visible_metric_config() {
+    let envelope = run_transform_operator(
+        "transform.compose_material_study_envelope",
+        serde_json::json!({
+            "candidate_id": "foam_b",
+            "thermal": { "surface": { "temperature": 88.0 } },
+            "transport": { "species_flux": 0.3 }
+        }),
+        serde_json::json!({
+            "output_prefix": "study",
+            "metrics": [
+                {
+                    "source": "thermal",
+                    "field": "surface.temperature",
+                    "alias": "surface_temperature",
+                    "limit": 100.0,
+                    "direction": "max",
+                    "weight": 2.0
+                },
+                {
+                    "source": "transport",
+                    "field": "species_flux",
+                    "alias": "species_flux",
+                    "limit": 0.5,
+                    "direction": "abs",
+                    "weight": 1.0
+                }
+            ]
+        }),
+    )
+    .expect("configured material study envelope should compose");
+
+    assert_eq!(envelope["study_status"].as_str(), Some("pass"));
+    assert_eq!(envelope["study_metric_count"].as_u64(), Some(2));
+    assert_eq!(
+        envelope["study_critical_metric"].as_str(),
+        Some("thermal.surface_temperature")
+    );
+    assert!(
+        envelope["study_score"]
+            .as_f64()
+            .is_some_and(|value| (value - 2.36).abs() < 1.0e-12)
+    );
+}
+
+#[test]
+fn composes_material_study_envelope_batch_from_sweep_rows() {
+    let batch = run_transform_operator(
+        "transform.compose_material_study_envelope",
+        serde_json::json!({
+            "rows": [
+                {
+                    "case_id": "cool_stiff",
+                    "summaries": {
+                        "thermal": { "max_temperature": 82.0 },
+                        "structural": { "max_stress": 160.0 }
+                    }
+                },
+                {
+                    "case_id": "hot_light",
+                    "summaries": {
+                        "thermal": { "max_temperature": 140.0 },
+                        "structural": { "max_stress": 120.0 }
+                    }
+                }
+            ]
+        }),
+        serde_json::Value::Null,
+    )
+    .expect("material envelope batch should compose");
+
+    assert_eq!(
+        batch["material_envelope_batch_contract"].as_str(),
+        Some("kyuubiki.material_study_envelope_batch/v1")
+    );
+    assert_eq!(
+        batch["material_envelope_best_candidate_id"].as_str(),
+        Some("cool_stiff")
+    );
+    assert_eq!(batch["material_envelope_candidate_count"].as_u64(), Some(2));
+    assert_eq!(
+        batch["candidates"]["hot_light"]["material_envelope_status"].as_str(),
+        Some("fail")
+    );
+    assert_eq!(
+        batch["candidates"]["cool_stiff"]["material_envelope_candidate_id"].as_str(),
+        Some("cool_stiff")
+    );
+}
+
+#[test]
+fn material_envelope_batch_feeds_ranking_and_pareto_chain() {
+    let batch = run_transform_operator(
+        "transform.compose_material_study_envelope",
+        serde_json::json!({
+            "rows": [
+                {
+                    "case_id": "cool_stiff",
+                    "summaries": {
+                        "thermal": { "max_temperature": 82.0 },
+                        "structural": { "max_stress": 160.0 }
+                    }
+                },
+                {
+                    "case_id": "warm_safe",
+                    "summaries": {
+                        "thermal": { "max_temperature": 90.0 },
+                        "structural": { "max_stress": 120.0 }
+                    }
+                },
+                {
+                    "case_id": "hot_light",
+                    "summaries": {
+                        "thermal": { "max_temperature": 140.0 },
+                        "structural": { "max_stress": 110.0 }
+                    }
+                }
+            ]
+        }),
+        serde_json::Value::Null,
+    )
+    .expect("material envelope batch should compose");
+
+    let ranking = run_transform_operator(
+        "transform.rank_material_candidates",
+        batch.clone(),
+        serde_json::json!({
+            "margin_prefix": "material_envelope",
+            "include_best_summary": false
+        }),
+    )
+    .expect("envelope candidates should rank");
+    assert_eq!(
+        ranking["material_best_candidate_id"].as_str(),
+        Some("cool_stiff")
+    );
+    assert_eq!(ranking["material_feasible_count"].as_u64(), Some(2));
+    assert_eq!(
+        ranking["material_failure_reasons"]["thermal.temperature"].as_u64(),
+        Some(1)
+    );
+
+    let pareto = run_transform_operator(
+        "transform.extract_material_pareto_frontier",
+        batch,
+        serde_json::json!({
+            "feasible_field": "material_envelope_status",
+            "objectives": [
+                { "field": "material_envelope_score", "goal": "min" },
+                { "field": "material_envelope_safety_factor", "goal": "max" }
+            ]
+        }),
+    )
+    .expect("envelope candidates should feed pareto");
+    assert_eq!(pareto["material_pareto_candidate_count"].as_u64(), Some(3));
+    assert_eq!(pareto["material_pareto_feasible_count"].as_u64(), Some(2));
+    assert!(
+        pareto["material_pareto_frontier"]
+            .as_array()
+            .expect("frontier array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("cool_stiff"))
+    );
+    assert!(
+        pareto["material_pareto_dominated"]
+            .as_array()
+            .expect("dominated array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("hot_light")
+                && entry["dominated_by"].as_str() == Some("infeasible"))
+    );
+}

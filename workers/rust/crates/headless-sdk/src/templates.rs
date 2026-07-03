@@ -64,6 +64,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "mechanical", "screening", "stiffness"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_study_envelope_ranking",
+        title: "Material Envelope Ranking",
+        description: "Submit a material-study envelope workflow graph that ranks candidates and extracts a Pareto frontier.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "workflow", "ranking", "pareto"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_plane_quad",
         title: "Direct Plane Quad",
         description: "Submit a plane quad structural solve directly and fetch the final result.",

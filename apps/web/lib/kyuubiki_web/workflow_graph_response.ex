@@ -6,9 +6,10 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
     "include_artifacts" => true,
     "include_branch_decisions" => true,
     "include_dataset_lineage" => true,
-    "include_node_runs" => true
+    "include_node_runs" => true,
+    "response_mode" => "full"
   }
-  @large_workflow_compact_threshold 1024
+  @large_workflow_compact_threshold 256
 
   def compact_options do
     %{
@@ -16,23 +17,35 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
       "include_artifacts" => false,
       "include_branch_decisions" => false,
       "include_dataset_lineage" => false,
-      "include_node_runs" => false
+      "include_node_runs" => false,
+      "response_mode" => "compact"
     }
   end
 
   def normalize_options(options) when is_map(options) do
-    Enum.reduce(@default_options, @default_options, fn {key, default}, acc ->
-      Map.put(acc, key, Map.get(options, key, default) == true)
-    end)
+    mode = Map.get(options, "response_mode")
+
+    case mode do
+      "compact" -> compact_options()
+      "full" -> @default_options
+      _ -> normalize_boolean_options(options)
+    end
   end
 
   def normalize_options(_options), do: @default_options
 
+  def resolve_options(graph, options) when is_map(graph) and options == %{},
+    do: resolve_options(graph, nil)
+
   def resolve_options(graph, options) when is_map(graph) and is_map(options),
-    do: normalize_options(options)
+    do: normalize_options(options) |> put_default_custom_mode(options)
 
   def resolve_options(graph, _options) when is_map(graph) do
-    if large_workflow?(graph), do: compact_options(), else: @default_options
+    if large_workflow?(graph) do
+      compact_options() |> Map.put("response_mode", "auto-compact")
+    else
+      @default_options |> Map.put("response_mode", "auto-full")
+    end
   end
 
   def shape(graph, result, options) when is_map(graph) and is_map(result) and is_map(options) do
@@ -95,5 +108,23 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
     |> Map.get("nodes", [])
     |> length()
     |> Kernel.>=(@large_workflow_compact_threshold)
+  end
+
+  defp normalize_boolean_options(options) do
+    Enum.reduce(@default_options, @default_options, fn
+      {"response_mode", _default}, acc ->
+        acc
+
+      {key, default}, acc ->
+        Map.put(acc, key, Map.get(options, key, default) == true)
+    end)
+  end
+
+  defp put_default_custom_mode(options, source_options) do
+    if Map.has_key?(source_options, "response_mode") do
+      options
+    else
+      Map.put(options, "response_mode", "custom")
+    end
   end
 end

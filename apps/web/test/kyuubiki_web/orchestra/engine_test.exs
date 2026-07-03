@@ -74,4 +74,26 @@ defmodule KyuubikiWeb.Orchestra.EngineTest do
     assert is_binary(fatigue_run["task_ir_ref"]["descriptor_digest"])
     assert "workflow_transform_runtime" in fatigue_run["task_ir_ref"]["required_capabilities"]
   end
+
+  test "omits heavy debug fields in compact workflow graph responses" do
+    assert {:ok, graph} = Engine.workflow_graph_by_id("workflow.material-fatigue-life-json")
+
+    assert {:ok, result} =
+             Engine.run_workflow_graph(%{
+               "graph" => graph,
+               "input_artifacts" => %{
+                 "candidates_input" => %{
+                   "candidates" => %{"aluminum" => %{"stress_amplitude" => 95.0}}
+                 }
+               },
+               "response_options" => %{"response_mode" => "compact"}
+             })
+
+    assert result["performance"]["completed_node_count"] > 0
+    assert result["performance"]["node_kind_breakdown"]["transform"]["count"] > 0
+    refute Map.has_key?(result, "node_runs")
+    refute Map.has_key?(result, "artifacts")
+    refute Map.has_key?(result, "artifact_lineage")
+    refute Map.has_key?(result, "dataset_lineage")
+  end
 end

@@ -91,6 +91,13 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
     let root = repo_root();
     let web_root = root.join("apps/web");
     let server_script = web_root.join("test/support/headless_live_server.exs");
+    let sqlite_path = std::env::temp_dir().join(format!(
+        "kyuubiki-headless-live-{}.sqlite3",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
 
     let mut child = Command::new("mix")
         .arg("run")
@@ -98,6 +105,7 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
         .current_dir(&web_root)
         .env("MIX_ENV", "test")
         .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
+        .env("SQLITE_DATABASE_PATH", sqlite_path)
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
         .env(
             "KYUUBIKI_HEADLESS_LIVE_SCENARIO",

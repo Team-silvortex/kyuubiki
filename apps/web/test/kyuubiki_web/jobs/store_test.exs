@@ -82,6 +82,11 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
     assert result["max_displacement"] == 1.23e-4
   end
 
+  test "result store reports missing job constraints without crashing" do
+    assert {:error, _reason} =
+             AnalysisResultStore.put("missing-job", %{"status" => "orphaned_result"})
+  end
+
   defp restart_application do
     :ok = Application.stop(:kyuubiki_web)
     {:ok, _started} = Application.ensure_all_started(:kyuubiki_web)

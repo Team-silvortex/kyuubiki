@@ -26,7 +26,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   def run(_graph, _input_artifacts, _opts), do: {:error, :invalid_workflow_graph}
   defp run_ordered_workflow_graph(indexes, input_artifacts, state, opts) do
     state = %{state | loop_passes: state.loop_passes + 1}
-
     {next_state, progressed?} =
       Enum.reduce(indexes.nodes, {state, false}, fn node, {acc, progressed?} ->
         case process_workflow_node(Map.get(node, "id"), indexes, input_artifacts, acc, opts) do
@@ -34,11 +33,9 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           {:ok, updated, false} -> {updated, progressed?}
         end
       end)
-
     cond do
       WorkflowGraphScheduler.complete?(indexes, next_state) ->
         finalize_workflow_result(indexes, next_state, opts)
-
       progressed? ->
         do_run_workflow_graph(
           indexes,
@@ -47,14 +44,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           next_state,
           opts
         )
-
       true ->
         stalled_workflow(indexes, next_state)
     end
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
-
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
@@ -72,7 +67,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          opts
        ) do
     state = %{state | loop_passes: state.loop_passes + 1}
-
     case process_workflow_node(node_id, indexes, input_artifacts, state, opts) do
       {:ok, updated, true} ->
         do_run_workflow_graph(
@@ -82,14 +76,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           updated,
           opts
         )
-
       {:ok, updated, false} ->
         do_run_workflow_graph(indexes, rest, input_artifacts, updated, opts)
     end
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
-
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
@@ -98,14 +90,11 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     node = Map.fetch!(indexes.nodes_by_id, node_id)
     incoming = Map.get(indexes.incoming_edges_by_node, node_id, [])
     kind = Map.get(node, "kind")
-
     cond do
       WorkflowGraphScheduler.resolved?(state, node_id) ->
         {:ok, state, false}
-
       kind == "input" or workflow_node_ready?(node, incoming, state.artifacts) ->
         started_at_us = System.monotonic_time(:microsecond)
-
         case execute_workflow_node(node, incoming, input_artifacts, state, opts) do
           {:ok, next_state} ->
             updated =
@@ -114,7 +103,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
                 node_id,
                 node,
                 incoming,
-                (System.monotonic_time(:microsecond) - started_at_us) / 1000.0
+                (System.monotonic_time(:microsecond) - started_at_us) / 1000.0,
+                opts
               )
 
             maybe_emit_progress(updated, indexes.node_count, opts)
@@ -125,7 +115,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         end
 
       unresolved_missing_inputs?(incoming, state.artifacts, state.completed, state.skipped) ->
-        updated = mark_skipped(state, node_id, node, incoming)
+        updated = mark_skipped(state, node_id, node, incoming, opts)
         {:ok, updated, true}
 
       true ->
@@ -140,7 +130,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       "dataset_contract" => Keyword.get(opts, :dataset_contract)
     }
 
-    {:ok, WorkflowGraphRunnerMetrics.finalize_result(state, graph, state.artifact_lineage)}
+    {:ok,
+     WorkflowGraphRunnerMetrics.finalize_result(
+       state,
+       graph,
+       state.artifact_lineage,
+       Keyword.get(opts, :result_options, %{})
+     )}
   end
 
   defp stalled_workflow(indexes, state),
@@ -553,7 +549,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     %{state | branch_decisions: [entry | state.branch_decisions]}
   end
 
-  defp mark_completed(state, node_id, node, incoming, duration_ms),
+  defp mark_completed(state, node_id, node, incoming, duration_ms, opts),
     do:
       WorkflowGraphRunnerMetrics.mark_completed(
         state,
@@ -561,19 +557,21 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         node,
         incoming,
         duration_ms,
+        Keyword.get(opts, :result_options, %{}),
         &transform_operator_accepts_partial_inputs?/1,
         &consumed_artifacts_for_node/3,
         &incoming_artifact_keys/2,
         &artifact_key/2
       )
 
-  defp mark_skipped(state, node_id, node, incoming),
+  defp mark_skipped(state, node_id, node, incoming, opts),
     do:
       WorkflowGraphRunnerMetrics.mark_skipped(
         state,
         node_id,
         node,
         incoming,
+        Keyword.get(opts, :result_options, %{}),
         &incoming_artifact_keys/2
       )
 

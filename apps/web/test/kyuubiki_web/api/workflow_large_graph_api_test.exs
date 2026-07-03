@@ -36,6 +36,7 @@ defmodule KyuubikiWeb.Api.WorkflowLargeGraphApiTest do
 
     assert length(payload["completed_nodes"]) == 517
     assert get_in(payload, ["performance", "completed_node_count"]) == 517
+    assert result["response_options"]["response_mode"] == "compact"
     refute Map.has_key?(payload, "artifacts")
     refute Map.has_key?(payload, "node_runs")
     refute Map.has_key?(payload, "artifact_lineage")
@@ -59,9 +60,27 @@ defmodule KyuubikiWeb.Api.WorkflowLargeGraphApiTest do
     tail_key =
       "pass_#{String.pad_leading(Integer.to_string(pass_through_count - 1), 3, "0")}.result"
 
-    assert get_in(payload, ["artifacts", tail_key, "max_temperature"]) == 100.0
-    assert get_in(payload, ["artifacts", "thermo_output.result", "max_stress"]) > 0.0
-    assert length(payload["node_runs"]) == pass_through_count + 5
+    response_options =
+      KyuubikiWeb.WorkflowGraphResponse.resolve_options(
+        WorkflowLargeGraphBenchmark.build_graph(pass_through_count),
+        nil
+      )
+
+    assert result["response_options"]["response_mode"] == response_options["response_mode"]
+
+    if response_options["include_artifacts"] do
+      assert get_in(payload, ["artifacts", tail_key, "max_temperature"]) == 100.0
+      assert get_in(payload, ["artifacts", "thermo_output.result", "max_stress"]) > 0.0
+    else
+      refute Map.has_key?(payload, "artifacts")
+    end
+
+    if response_options["include_node_runs"] do
+      assert length(payload["node_runs"]) == pass_through_count + 5
+    else
+      refute Map.has_key?(payload, "node_runs")
+    end
+
     assert get_in(payload, ["performance", "completed_node_count"]) == pass_through_count + 5
     assert get_in(payload, ["performance", "artifact_count"]) >= pass_through_count + 5
     assert get_in(payload, ["performance", "total_elapsed_ms"]) >= 0.0
@@ -75,9 +94,11 @@ defmodule KyuubikiWeb.Api.WorkflowLargeGraphApiTest do
     assert get_in(payload, ["performance", "node_kind_breakdown", "output", "count"]) == 1
     assert length(get_in(payload, ["performance", "slowest_nodes"])) > 0
 
-    assert Enum.any?(payload["node_runs"], fn entry ->
-             entry["node_id"] == "solve_heat" and is_number(entry["duration_ms"])
-           end)
+    if response_options["include_node_runs"] do
+      assert Enum.any?(payload["node_runs"], fn entry ->
+               entry["node_id"] == "solve_heat" and is_number(entry["duration_ms"])
+             end)
+    end
 
     assert Enum.all?(get_in(payload, ["performance", "slowest_nodes"]), fn entry ->
              is_binary(entry["node_id"]) and is_number(entry["duration_ms"])
