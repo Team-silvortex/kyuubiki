@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntime do
   alias KyuubikiWeb.WorkflowMaterialCardRuntime
   alias KyuubikiWeb.WorkflowMaterialCardBatchRuntime
   alias KyuubikiWeb.WorkflowMaterialCardCandidateRuntime
+  alias KyuubikiWeb.WorkflowMaterialEnvelopeRuntime
   alias KyuubikiWeb.WorkflowMaterialCardScreeningRuntime
   alias KyuubikiWeb.WorkflowMaterialScoringRuntime
   alias KyuubikiWeb.WorkflowMaterialStateRuntime
@@ -72,6 +73,9 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntime do
   end
 
   def rank_material_candidates(_payload, _config), do: {:error, :invalid_material_candidates}
+
+  defdelegate compose_material_study_envelope(payload, config),
+    to: WorkflowMaterialEnvelopeRuntime
 
   defdelegate validate_material_card(payload, config), to: WorkflowMaterialCardRuntime
   defdelegate validate_material_card_batch(payload, config), to: WorkflowMaterialCardBatchRuntime

@@ -6,11 +6,23 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.WorkflowBuilders
   alias KyuubikiSdk.WorkflowResults
   alias KyuubikiSdk.MaterialReports
+  alias KyuubikiSdk.MaterialWorkflows
   alias KyuubikiSdk.AdvancedSolverWorkflows
 
   def new_session(opts \\ []), do: Session.new(opts)
   def material_study_catalog, do: MaterialReports.material_study_catalog()
   def describe_material_study(study), do: MaterialReports.describe_material_study(study)
+  def material_workflow_catalog, do: MaterialWorkflows.material_workflow_catalog()
+
+  def material_envelope_catalog_workflow_id,
+    do: MaterialWorkflows.material_envelope_catalog_workflow_id()
+
+  def material_study_envelope_input_artifacts(attrs \\ %{}),
+    do: MaterialWorkflows.material_study_envelope_input_artifacts(attrs)
+
+  def material_study_envelope_catalog_request(input_artifacts \\ nil),
+    do: MaterialWorkflows.material_study_envelope_catalog_request(input_artifacts)
+
   def modal_frame_2d_workflow(attrs \\ %{}), do: AdvancedSolverWorkflows.modal_frame_2d(attrs)
   def modal_frame_3d_workflow(attrs \\ %{}), do: AdvancedSolverWorkflows.modal_frame_3d(attrs)
 

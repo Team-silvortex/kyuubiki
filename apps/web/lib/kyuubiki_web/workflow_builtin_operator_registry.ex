@@ -56,6 +56,18 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"transform.evaluate_material_margins", "material_margin",
      "Evaluate material and physics safety margins from solver summaries using configured field limits.",
      ["transform", "material", "failure_index", "safety_factor", "optimization", "headless_safe"]},
+    {"transform.compose_material_study_envelope", "material_study_envelope",
+     "Compose multi-domain material study envelopes from solver summaries for ranking and Pareto workflow graphs.",
+     [
+       "transform",
+       "material",
+       "envelope",
+       "multi_physics",
+       "ranking",
+       "pareto",
+       "optimization",
+       "headless_safe"
+     ]},
     {"transform.rank_material_candidates", "material_candidate_rank",
      "Rank material candidates from margin summaries and emit the best feasible design with failure reason counts.",
      ["transform", "material", "ranking", "candidate_selection", "optimization", "headless_safe"]},

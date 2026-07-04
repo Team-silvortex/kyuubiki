@@ -72,6 +72,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "workflow", "ranking", "pareto"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_study_envelope_catalog",
+        title: "Material Envelope Catalog Job",
+        description: "Submit the built-in material-study envelope workflow from the Orchestra workflow catalog.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "workflow", "catalog", "ranking", "pareto"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_plane_quad",
         title: "Direct Plane Quad",
         description: "Submit a plane quad structural solve directly and fetch the final result.",

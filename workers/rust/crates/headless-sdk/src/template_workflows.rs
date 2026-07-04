@@ -59,6 +59,23 @@ pub(super) fn build_template_workflow(
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
             ),
         ],
+        "material_study_envelope_catalog" => vec![
+            HeadlessWorkflowStep::new(
+                "workflow_submit_catalog",
+                json!({
+                    "workflow_id": "workflow.material-study-envelope-ranking-json",
+                    "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
+                }),
+            ),
+            HeadlessWorkflowStep::new(
+                "job_wait",
+                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
+            ),
+            HeadlessWorkflowStep::new(
+                "result_fetch",
+                json!({ "job_id": "{{steps.1.result.job_id}}" }),
+            ),
+        ],
         "direct_plane_quad" => vec![
             HeadlessWorkflowStep::new(
                 "solve_plane_quad_2d",

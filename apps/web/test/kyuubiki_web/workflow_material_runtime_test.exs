@@ -1,7 +1,17 @@
 defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
   use ExUnit.Case, async: true
 
+  alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
+
+  test "catalog exposes material study envelope transform" do
+    assert {:ok, %{"operator" => operator}} =
+             WorkflowOperatorCatalog.fetch("transform.compose_material_study_envelope")
+
+    assert operator["family"] == "material_study_envelope"
+    assert "envelope" in operator["capability_tags"]
+    assert "headless_safe" in operator["capability_tags"]
+  end
 
   test "evaluates material margins from solver summary limits" do
     assert {:ok, margin} =
@@ -21,6 +31,86 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert margin["material_status"] == "fail"
     assert margin["material_critical_metric"] == "max_stress"
     assert margin["material_failure_index"] == 1.125
+  end
+
+  test "composes material study envelope from multi-domain summaries" do
+    assert {:ok, envelope} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_material_study_envelope",
+               %{
+                 "candidate_id" => "cool_stiff",
+                 "summaries" => %{
+                   "thermal" => %{"max_temperature" => 90.0},
+                   "structural" => %{"max_stress" => 180.0},
+                   "electrostatic" => %{"max_electric_field" => 3.0}
+                 }
+               },
+               %{}
+             )
+
+    assert envelope["material_envelope_contract"] == "kyuubiki.material_study_envelope/v1"
+    assert envelope["material_envelope_candidate_id"] == "cool_stiff"
+    assert envelope["material_envelope_status"] == "pass"
+    assert envelope["material_envelope_metric_count"] == 3
+    assert envelope["material_envelope_domain_count"] == 3
+    assert envelope["material_envelope_critical_metric"] == "thermal.temperature"
+  end
+
+  test "composes material envelope batch for ranking and Pareto operators" do
+    assert {:ok, batch} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_material_study_envelope",
+               %{
+                 "rows" => [
+                   %{
+                     "case_id" => "cool_stiff",
+                     "summaries" => %{
+                       "thermal" => %{"max_temperature" => 90.0},
+                       "structural" => %{"max_stress" => 180.0}
+                     }
+                   },
+                   %{
+                     "case_id" => "hot_light",
+                     "summaries" => %{
+                       "thermal" => %{"max_temperature" => 130.0},
+                       "structural" => %{"max_stress" => 120.0}
+                     }
+                   }
+                 ]
+               },
+               %{}
+             )
+
+    assert batch["material_envelope_batch_contract"] ==
+             "kyuubiki.material_study_envelope_batch/v1"
+
+    assert batch["material_envelope_candidate_count"] == 2
+    assert batch["material_envelope_best_candidate_id"] == "cool_stiff"
+
+    assert {:ok, ranking} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.rank_material_candidates",
+               batch,
+               %{"margin_prefix" => "material_envelope"}
+             )
+
+    assert ranking["material_best_candidate_id"] == "cool_stiff"
+
+    assert {:ok, pareto} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.extract_material_pareto_frontier",
+               %{"candidates" => batch["candidates"]},
+               %{
+                 "feasible_field" => "material_envelope_status",
+                 "objectives" => [
+                   %{"field" => "material_envelope_score", "goal" => "min"},
+                   %{"field" => "material_envelope_safety_factor", "goal" => "max"}
+                 ]
+               }
+             )
+
+    assert pareto["material_pareto_candidate_count"] == 2
+    assert pareto["material_pareto_best_candidate_id"] == "cool_stiff"
   end
 
   test "ranks material candidates by feasibility and safety factor" do

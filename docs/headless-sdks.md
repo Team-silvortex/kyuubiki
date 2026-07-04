@@ -139,6 +139,10 @@ They now also expose a small workflow layer:
   in-plane pyrolytic graphite
 - generate structural panel material workflows over aluminum, steel, and carbon
   fiber candidates without opening the Workbench
+- submit the built-in material envelope workflow through the Orchestra catalog
+  with the `material_study_envelope_catalog` template
+- keep an offline material envelope graph path available through
+  `material_study_envelope_ranking` when a client cannot rely on the catalog
 - build material research reports from headless result payloads, with explicit
   metric specs, weighted ranking, and visible missing-metric warnings
 - expose optimization profiles as first-class report contracts, including
@@ -163,3 +167,16 @@ kyuubiki-material-report thermo-shield --results thermo-results.json --profile p
 kyuubiki-material-report structural-panel --results structural-results.json --json
 kyuubiki-material-report structural-panel --results headless-run-report.json --json
 ```
+
+Material envelope automation now has two explicit SDK paths:
+
+- `material_study_envelope_catalog`
+  submits `workflow.material-study-envelope-ranking-json` through
+  `workflow_submit_catalog`, then waits and fetches the result. This is the
+  preferred path for normal Orchestra-connected deployments because the graph
+  remains owned by the central workflow catalog. Python and Elixir SDKs expose
+  request helpers for this catalog-first path.
+- `material_study_envelope_ranking`
+  submits an inline workflow graph through `workflow_submit_graph`. This is the
+  fallback path for offline or decentralized runs where the catalog is not
+  reachable.

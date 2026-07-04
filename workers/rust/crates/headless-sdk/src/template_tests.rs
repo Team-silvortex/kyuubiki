@@ -124,7 +124,7 @@ fn search_templates_surfaces_material_envelope_workflow() {
 
     assert_eq!(
         ids.first().copied(),
-        Some("material_study_envelope_ranking")
+        Some("material_study_envelope_catalog")
     );
 }
 
@@ -194,7 +194,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
-        ("materials", 5),
+        ("materials", 6),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
@@ -341,6 +341,30 @@ fn material_envelope_template_submits_graph_with_default_candidates() {
     assert_eq!(
         steps[0].payload["graph"]["id"].as_str(),
         Some("workflow.material-study-envelope")
+    );
+    assert_eq!(
+        steps[0].payload["input_artifacts"]["material_rows"]["rows"][0]["case_id"].as_str(),
+        Some("cool_stiff")
+    );
+
+    let batch = normalize_workflow_document(&document).unwrap();
+    let plan = build_execution_plan(&batch);
+    assert!(plan.ok);
+    assert!(plan.compatibility.service_only_ok);
+}
+
+#[test]
+fn material_envelope_catalog_template_submits_orchestra_catalog_workflow() {
+    let document = build_template_document("material_study_envelope_catalog", None)
+        .expect("material envelope catalog template should build");
+    let steps = &document.workflow.steps;
+    assert_eq!(steps.len(), 3);
+    assert_eq!(steps[0].action, "workflow_submit_catalog");
+    assert_eq!(steps[1].action, "job_wait");
+    assert_eq!(steps[2].action, "result_fetch");
+    assert_eq!(
+        steps[0].payload["workflow_id"].as_str(),
+        Some("workflow.material-study-envelope-ranking-json")
     );
     assert_eq!(
         steps[0].payload["input_artifacts"]["material_rows"]["rows"][0]["case_id"].as_str(),

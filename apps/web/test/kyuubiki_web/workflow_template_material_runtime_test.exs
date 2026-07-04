@@ -363,6 +363,44 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialRuntimeTest do
     assert Enum.any?(summary["material_pareto_dominated"], &(&1["candidate_id"] == "failed"))
   end
 
+  test "runs material study envelope ranking template through graph runner" do
+    assert {:ok, result} =
+             run_template("workflow.material-study-envelope-ranking-json", %{
+               "material_rows" => %{
+                 "rows" => [
+                   %{
+                     "case_id" => "cool_stiff",
+                     "summaries" => %{
+                       "thermal" => %{"max_temperature" => 90.0},
+                       "structural" => %{"max_stress" => 180.0}
+                     }
+                   },
+                   %{
+                     "case_id" => "hot_light",
+                     "summaries" => %{
+                       "thermal" => %{"max_temperature" => 130.0},
+                       "structural" => %{"max_stress" => 120.0}
+                     }
+                   }
+                 ]
+               }
+             })
+
+    summary = exported_summary(result)
+
+    assert dataset_value_emitted?(result, "material_envelopes")
+    assert dataset_value_emitted?(result, "material_envelope_ranking")
+    assert dataset_value_emitted?(result, "material_envelope_pareto")
+    assert dataset_value_emitted?(result, "material_envelope_decision_bundle")
+
+    assert summary["bundle_source_count"] == 2
+    assert MapSet.new(summary["bundle_sources"]) == MapSet.new(["ranking", "pareto"])
+    assert summary["bundle_payloads"]["ranking"]["material_best_candidate_id"] == "cool_stiff"
+
+    assert summary["bundle_payloads"]["pareto"]["material_pareto_best_candidate_id"] ==
+             "cool_stiff"
+  end
+
   defp run_template(workflow_id, input_artifacts) do
     with {:ok, graph} <- WorkflowTemplateCatalog.graph_by_id(workflow_id) do
       WorkflowGraphRunner.run(graph, input_artifacts,

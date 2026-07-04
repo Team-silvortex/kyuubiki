@@ -31,6 +31,13 @@ session =
 {:ok, retried} = KyuubikiSdk.AgentClient.run_study_with_retry(session, "truss_2d", %{"model" => %{}, "case" => %{}}, max_attempts: 3)
 {:ok, workflow_run} = KyuubikiSdk.AgentClient.run_workflow_catalog(session, "workflow.heat-to-thermo-quad-2d", %{"thermal_case" => %{"loadcase" => "baseline"}}, timeout: 60_000)
 workflow_runtime = workflow_run.workflow_runtime
+material_envelope = KyuubikiSdk.material_study_envelope_catalog_request()
+{:ok, material_envelope_job} =
+  KyuubikiSdk.ControlPlaneClient.submit_workflow_catalog_job(
+    client,
+    material_envelope["workflow_id"],
+    material_envelope["input_artifacts"]
+  )
 pages = Enum.take(KyuubikiSdk.AgentClient.stream_result_chunks(session, bundle.terminal["job"]["job_id"], "nodes", page_size: 250), 2)
 
 dataset =
@@ -95,6 +102,7 @@ Highlights:
 - jobs/results/export CRUD on the control plane
 - operator catalog listing, filtering, and descriptor fetch
 - workflow catalog descriptor fetch plus auto graph resolution for catalog runs
+- material envelope catalog workflow helper for BEAM automation clients
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, electrostatic, modal, and nonlinear study families
 - direct framed TCP solver-RPC access
@@ -114,8 +122,12 @@ Highlights:
 Example:
 
 - Run from [run_study.exs](examples/run_study.exs)
+- Material envelope workflow example:
+  [run_material_envelope.exs](examples/run_material_envelope.exs)
 - Advanced solver example: [run_advanced_solvers.exs](examples/run_advanced_solvers.exs)
 - Typical invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
+- Material envelope invocation:
+  `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_material_envelope.exs`
 - Smoke test:
   `cd sdks/elixir && mix test`

@@ -21,6 +21,7 @@ from kyuubiki_sdk import (
     build_workflow_node,
     build_workflow_output_manifest,
     build_workflow_port,
+    material_study_envelope_catalog_request,
     validate_workflow_dataset_contract,
     validate_workflow_graph,
     validate_workflow_result_against_graph,
@@ -71,6 +72,11 @@ workflow_descriptor = cp.fetch_workflow_catalog_workflow("workflow.heat-to-therm
 workflow_job = cp.submit_workflow_catalog_job(
     "workflow.heat-to-thermo-quad-2d",
     {"thermal_case": {"loadcase": "baseline"}},
+)
+material_envelope = material_study_envelope_catalog_request()
+material_envelope_job = cp.submit_workflow_catalog_job(
+    material_envelope["workflow_id"],
+    material_envelope["input_artifacts"],
 )
 workflow_run = agent.run_workflow_catalog(
     "workflow.heat-to-thermo-quad-2d",
@@ -164,6 +170,7 @@ Highlights:
 - control-plane jobs/results/export CRUD
 - control-plane workflow catalog, operator catalog, and workflow submission
 - direct workflow catalog descriptor fetch plus auto graph resolution for catalog runs
+- material envelope catalog workflow helper for Python automation clients
 - operator catalog filtering plus single-operator descriptor fetch
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, electrostatic, modal, and nonlinear study families
@@ -185,8 +192,12 @@ Highlights:
 Example:
 
 - Run from [run_study.py](examples/run_study.py)
+- Material envelope workflow example:
+  [run_material_envelope.py](examples/run_material_envelope.py)
 - Advanced solver example: [run_advanced_solvers.py](examples/run_advanced_solvers.py)
 - Typical invocation:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_study.py`
+- Material envelope invocation:
+  `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_material_envelope.py`
 - Smoke test:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`

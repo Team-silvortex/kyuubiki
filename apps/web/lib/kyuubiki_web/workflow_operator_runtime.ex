@@ -193,6 +193,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.evaluate_material_margins" when is_map(config) ->
         WorkflowMaterialRuntime.evaluate_material_margins(payload, config)
 
+      "transform.compose_material_study_envelope" when is_map(config) ->
+        WorkflowMaterialRuntime.compose_material_study_envelope(payload, config)
+
       "transform.rank_material_candidates" when is_map(config) ->
         WorkflowMaterialRuntime.rank_material_candidates(payload, config)
 

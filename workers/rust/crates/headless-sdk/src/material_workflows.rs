@@ -25,20 +25,32 @@ pub struct MaterialWorkflowCatalogEntry {
     pub aliases: Vec<String>,
 }
 
-const MATERIAL_WORKFLOWS: &[MaterialWorkflowDescriptor] = &[MaterialWorkflowDescriptor {
-    id: "material_study_envelope_ranking",
-    title: "Material Study Envelope Ranking",
-    domain: "multi_physics_materials",
-    objective: "compose material envelopes, rank candidates, and extract a Pareto frontier",
-    template_id: "material_study_envelope_ranking",
-    workflow_kind: "operator_graph",
-    required_actions: &["workflow_submit_graph", "job_wait", "result_fetch"],
-    aliases: &[
-        "material-envelope",
-        "material_envelope",
-        "material.pareto_ranking.v1",
-    ],
-}];
+const MATERIAL_WORKFLOWS: &[MaterialWorkflowDescriptor] = &[
+    MaterialWorkflowDescriptor {
+        id: "material_study_envelope_catalog",
+        title: "Material Study Envelope Catalog Job",
+        domain: "multi_physics_materials",
+        objective: "submit the built-in material envelope workflow from the Orchestra catalog",
+        template_id: "material_study_envelope_catalog",
+        workflow_kind: "orchestra_catalog_job",
+        required_actions: &["workflow_submit_catalog", "job_wait", "result_fetch"],
+        aliases: &["material-envelope-catalog", "material_envelope_catalog"],
+    },
+    MaterialWorkflowDescriptor {
+        id: "material_study_envelope_ranking",
+        title: "Material Study Envelope Ranking",
+        domain: "multi_physics_materials",
+        objective: "compose material envelopes, rank candidates, and extract a Pareto frontier",
+        template_id: "material_study_envelope_ranking",
+        workflow_kind: "operator_graph",
+        required_actions: &["workflow_submit_graph", "job_wait", "result_fetch"],
+        aliases: &[
+            "material-envelope",
+            "material_envelope",
+            "material.pareto_ranking.v1",
+        ],
+    },
+];
 
 pub fn material_workflow_descriptors() -> &'static [MaterialWorkflowDescriptor] {
     MATERIAL_WORKFLOWS
@@ -116,12 +128,12 @@ mod tests {
     fn material_workflow_catalog_exposes_envelope_graph_entry() {
         let catalog = material_workflow_catalog();
 
-        assert_eq!(catalog.len(), 1);
-        assert_eq!(catalog[0].id, "material_study_envelope_ranking");
-        assert_eq!(catalog[0].workflow_kind, "operator_graph");
+        assert_eq!(catalog.len(), 2);
+        assert_eq!(catalog[0].id, "material_study_envelope_catalog");
+        assert_eq!(catalog[0].workflow_kind, "orchestra_catalog_job");
         assert_eq!(
             catalog[0].required_actions,
-            vec!["workflow_submit_graph", "job_wait", "result_fetch"]
+            vec!["workflow_submit_catalog", "job_wait", "result_fetch"]
         );
     }
 
@@ -135,10 +147,10 @@ mod tests {
 
     #[test]
     fn material_workflow_search_finds_envelope_ranking_template() {
-        let matches = search_material_workflow_templates("material envelope pareto");
+        let matches = search_material_workflow_templates("material envelope catalog pareto");
 
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].id, "material_study_envelope_ranking");
+        assert_eq!(matches[0].id, "material_study_envelope_catalog");
     }
 
     #[test]

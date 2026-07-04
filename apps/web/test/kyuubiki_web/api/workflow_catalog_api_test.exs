@@ -29,6 +29,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
                "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
                "workflow.electrostatic-quad-triangle-compare-json",
                "workflow.electrostatic-heat-thermo-summary-json",
+               "workflow.material-study-envelope-ranking-json",
                "workflow.heat-to-thermo-quad-2d"
              ]),
              workflow_ids
@@ -74,6 +75,11 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
         workflow["id"] == "workflow.diagnostics-bundle-guard-report-markdown"
       end)
 
+    material_envelope_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.material-study-envelope-ranking-json"
+      end)
+
     coupled_diagnostics_workflow =
       Enum.find(workflows, fn workflow ->
         workflow["id"] == "workflow.electrostatic-heat-thermo-diagnostics-markdown"
@@ -109,6 +115,8 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert diagnostics_bundle_workflow["name"] ==
              "Diagnostics bundle guard report markdown"
+
+    assert material_envelope_workflow["name"] == "Material study envelope ranking JSON"
 
     assert coupled_diagnostics_workflow["name"] ==
              "Electrostatic heat thermo diagnostics markdown"
@@ -431,6 +439,23 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_triangle_guard_heat_thermo_fetched["id"] ==
              "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
+
+    material_envelope_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.material-study-envelope-ranking-json")
+      |> Router.call(@opts)
+
+    assert material_envelope_fetch_conn.status == 200
+
+    material_envelope_fetched =
+      Jason.decode!(material_envelope_fetch_conn.resp_body)["workflow"]
+
+    assert material_envelope_fetched["graph"]["dataset_contract"]["id"] ==
+             "kyuubiki.dataset.material_study_envelope_ranking/v1"
+
+    assert "transform.compose_material_study_envelope" in material_envelope_fetched[
+             "runtime_manifest"
+           ]["required_operator_ids"]
   end
 
   test "filters workflow catalog by query contract fields" do
@@ -446,5 +471,18 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     workflows = payload["workflows"]
     assert length(workflows) == 1
     assert hd(workflows)["id"] == "workflow.heat-to-thermo-quad-2d"
+  end
+
+  test "filters workflow catalog for material envelope workflows" do
+    conn =
+      :get
+      |> conn(
+        "/api/v1/workflows/catalog?q=envelope&domain=material&capability=pareto&operator_id=transform.compose_material_study_envelope"
+      )
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    workflows = Jason.decode!(conn.resp_body)["workflows"]
+    assert Enum.map(workflows, & &1["id"]) == ["workflow.material-study-envelope-ranking-json"]
   end
 end

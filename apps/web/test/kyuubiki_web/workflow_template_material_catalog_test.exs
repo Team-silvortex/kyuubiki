@@ -26,6 +26,8 @@ defmodule KyuubikiWeb.WorkflowTemplateMaterialCatalogTest do
       "transform.prepare_material_next_round_request",
     "workflow.material-exploration-snapshot-json" =>
       "transform.build_material_exploration_snapshot",
+    "workflow.material-study-envelope-ranking-json" =>
+      "transform.compose_material_study_envelope",
     "workflow.material-pareto-frontier-json" => "transform.extract_material_pareto_frontier"
   }
 

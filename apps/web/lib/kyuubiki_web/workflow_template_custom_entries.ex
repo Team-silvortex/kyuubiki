@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
   alias KyuubikiWeb.WorkflowTemplateMaterialAnalysisEntries
   alias KyuubikiWeb.WorkflowTemplateMaterialCardEntries
   alias KyuubikiWeb.WorkflowTemplateMaterialCardLoopEntries
+  alias KyuubikiWeb.WorkflowTemplateMaterialEnvelopeEntries
   alias KyuubikiWeb.WorkflowTemplateMaterialEntries
   alias KyuubikiWeb.WorkflowTemplateMaterialLoopEntries
   alias KyuubikiWeb.WorkflowTemplateMagnetostaticEntries
@@ -28,6 +29,7 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
       WorkflowTemplateCfdEntries.list() ++
       WorkflowTemplateMaterialCardEntries.list() ++
       WorkflowTemplateMaterialCardLoopEntries.list() ++
+      WorkflowTemplateMaterialEnvelopeEntries.list() ++
       WorkflowTemplateMaterialEntries.list() ++
       WorkflowTemplateMaterialAnalysisEntries.list() ++
       WorkflowTemplateMaterialLoopEntries.list() ++

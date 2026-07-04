@@ -211,13 +211,33 @@ This is the simplest workflow and should become the easiest headless example.
 
 ## Built-in workflow catalog
 
-The first built-in workflow descriptor is:
+The first built-in workflow descriptor was:
 
 - `workflow.heat-to-thermo-quad-2d`
 
 Its role is to make one reference multi-operator path discoverable and reusable
 by Hub, Workbench, SDK callers, and automation without forcing every client to
 ship the full graph inline.
+
+The catalog now also contains a material envelope workflow:
+
+- `workflow.material-study-envelope-ranking-json`
+
+This workflow accepts material candidate rows, composes multi-domain material
+envelopes, ranks feasible candidates, extracts a Pareto frontier, bundles the
+decision payload, and exports JSON.
+
+SDK clients should treat the catalog workflow as the default path:
+
+- `material_study_envelope_catalog`
+  uses `workflow_submit_catalog` and relies on the central workflow catalog.
+- `material_study_envelope_ranking`
+  uses `workflow_submit_graph` and carries an inline graph for offline or
+  decentralized use.
+
+This keeps the product path aligned with the operator-library rule: normal
+agents fetch workflow and operator definitions from Orchestra, while offline
+mesh-style execution can still carry a portable graph envelope.
 
 ## Workflow runtime contract
 
