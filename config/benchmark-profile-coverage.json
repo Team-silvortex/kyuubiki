@@ -1,0 +1,16 @@
+{
+  "schema_version": "kyuubiki.benchmark-profile-coverage/v1",
+  "targets": [
+    {
+      "matrix": "mechanical-core",
+      "profile": "four_hundred_k",
+      "expected_cases": [
+        "axial-bar-400k",
+        "truss-roof-400k",
+        "space-frame-400k",
+        "plane-panel-400k",
+        "plane-quad-panel-400k"
+      ]
+    }
+  ]
+}

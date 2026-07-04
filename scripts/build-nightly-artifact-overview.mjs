@@ -174,6 +174,40 @@ async function readWorkflowMeshLane(tmpRoot) {
   };
 }
 
+async function readBenchmarkProfileLane(tmpRoot) {
+  const indexPath = path.join(tmpRoot, "benchmark-profile", "index.json");
+  if (!(await exists(indexPath))) {
+    return null;
+  }
+
+  const payload = JSON.parse(await readFile(indexPath, "utf8"));
+  const run = Array.isArray(payload.retained_runs) ? payload.retained_runs[0] : null;
+  if (!run) {
+    return {
+      id: "benchmark-profile",
+      title: "Benchmark profile exploration",
+      summary: "No retained exploratory benchmark profile runs yet.",
+      generatedAtUnixS: payload.generated_at_unix_s ?? 0,
+      links: ["benchmark-profile/index.json", "benchmark-profile/README.md"],
+      detail: `Gate ${payload.gate?.status ?? "unknown"}.`,
+    };
+  }
+
+  return {
+    id: "benchmark-profile",
+    title: "Benchmark profile exploration",
+    summary: `Latest profile run \`${run.slug}\` for matrix \`${run.matrix}\` on profile \`${run.profile}\`.`,
+    generatedAtUnixS: run.generated_at_unix_s ?? payload.generated_at_unix_s ?? 0,
+    links: [
+      "benchmark-profile/index.json",
+      "benchmark-profile/README.md",
+      `benchmark-profile/${run.files.summary_json}`,
+      `benchmark-profile/${run.files.readme_md}`,
+    ],
+    detail: `Gate ${payload.gate?.status ?? "unknown"}; cases ${run.case_count}; total median ${Number(run.total_median_ms).toFixed(3)} ms; peak RSS ${Number(run.peak_rss_mib).toFixed(1)} MiB.`,
+  };
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -277,6 +311,7 @@ async function main() {
       readWorkflowMeshLane(options.tmpRoot),
       readWorkflowCatalogLane(options.tmpRoot),
       readStandardLane(options.tmpRoot),
+      readBenchmarkProfileLane(options.tmpRoot),
     ])
   ).filter(Boolean);
 

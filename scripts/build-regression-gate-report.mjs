@@ -66,13 +66,13 @@ function renderMarkdown(report) {
     `- Failing lane count: \`${report.failing_lane_count}\``,
     `- Warning lane count: \`${report.warning_lane_count}\``,
     "",
-    "| Lane | Gate | Status | Reason count |",
-    "| --- | --- | --- | ---: |",
+    "| Lane | Scope | Gate | Status | Reason count |",
+    "| --- | --- | --- | --- | ---: |",
   ];
 
   for (const lane of report.lanes) {
     lines.push(
-      `| \`${lane.id}\` | \`${lane.gate_status}\` | \`${lane.status}\` | \`${lane.gate_reasons.length}\` |`,
+      `| \`${lane.id}\` | \`${lane.gate_scope}\` | \`${lane.gate_status}\` | \`${lane.status}\` | \`${lane.gate_reasons.length}\` |`,
     );
   }
 
@@ -105,6 +105,7 @@ async function main() {
     id: lane.id,
     title: lane.title,
     category: lane.category,
+    gate_scope: lane.gate_scope ?? "enforced",
     status: lane.status ?? "unknown",
     gate_status: lane.gate?.status ?? lane.status ?? "unknown",
     gate_reasons: Array.isArray(lane.gate?.reasons) ? lane.gate.reasons : [],
@@ -112,8 +113,9 @@ async function main() {
     links: Array.isArray(lane.links) ? lane.links : [],
   }));
 
-  const failingLaneCount = normalizedLanes.filter((lane) => lane.gate_status === "fail").length;
-  const warningLaneCount = normalizedLanes.filter((lane) => lane.gate_status === "warn").length;
+  const enforcedLanes = normalizedLanes.filter((lane) => lane.gate_scope !== "advisory");
+  const failingLaneCount = enforcedLanes.filter((lane) => lane.gate_status === "fail").length;
+  const warningLaneCount = enforcedLanes.filter((lane) => lane.gate_status === "warn").length;
 
   const report = {
     schema_version: "kyuubiki.regression-gate-report/v1",

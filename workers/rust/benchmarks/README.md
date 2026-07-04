@@ -54,6 +54,11 @@ make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roo
 make benchmark-profile-remote PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1
 make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=axial-bar-400k REPEAT=1
 make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=truss-roof-400k REPEAT=1 SOLVER_PRECONDITIONER=all
+make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-triangle-400k REPEAT=1 SOLVER_PRECONDITIONER=auto
+make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-quad-400k REPEAT=1 SOLVER_PRECONDITIONER=auto
+make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural REPEAT=1 SOLVER_PRECONDITIONER=auto
+make benchmark-profile-report PROFILE=400k MATRIX=thermal-structural OUTPUT_SLUG=thermal-structural-400k-auto-full
+make benchmark-profile-index
 ```
 
 These Make targets run the benchmark crate in `--release` mode so checked-in
@@ -118,22 +123,48 @@ Current `400k` exploratory lab evidence:
 | `heat-plane-quad-400k` | 6747.954 | 1529.2 | Thermal leg inside compound matrix |
 | `compound-surface-panel-400k` | 80774.351 | 1776.6 | Heavy surface leg inside compound matrix |
 
-`thermal-structural` is not yet a default `400k` matrix lane. The original
-long-run blocker was `thermal-bar-400k`; the solver now uses a chain-specific
-tridiagonal fast path, and the remote single-case probe completes in about
-`190.527 ms` with roughly `512.6 MiB` peak RSS. The next observed blocker is
-`thermal-plane-triangle-400k`, which remains a manual long-run thermal surface
-probe rather than an interactive smoke. The thermal plane assembly path now
-uses row-capacity hints, but it still needs a dedicated stage profile before it
-can graduate into a regular `400k` matrix lane. A `100k` remote
-`thermal-plane-triangle` probe also exceeds the interactive window, so this is
-a solver-path hotspot rather than only a `400k` scale-tier issue.
+`thermal-structural` now has usable large-scale single-case thermal surface
+probes. The original long-run blocker was `thermal-bar-400k`; the solver now
+uses a chain-specific tridiagonal fast path, and the remote single-case probe
+completes in about `190.527 ms` with roughly `512.6 MiB` peak RSS. The next
+blocker was `thermal-plane-triangle`: validation and precompute previously
+rebuilt full node views per element. Those paths now reuse one converted node
+view per solve, so `thermal-plane-triangle-100k` completes in about
+`10447.681 ms`, and `thermal-plane-triangle-400k` completes in about
+`97332.506 ms` with Jacobi or `64778.082 ms` with symmetric Gauss-Seidel.
+The matching quad surface path also works with `auto`: `thermal-plane-quad-100k`
+completes in about `7562.447 ms`, and `thermal-plane-quad-400k` completes in
+about `64423.066 ms` with roughly `1625.6 MiB` peak RSS.
+The full `thermal-structural-400k` matrix now completes as a remote smoke with
+`SOLVER_PRECONDITIONER=auto`: all nine cases pass with about `121496.498 ms`
+summed median time and roughly `1625.8 MiB` peak RSS. The two surface cases
+remain the dominant cost; the remaining frame/truss fixtures are effectively
+sanity probes at this scale tier. Use `make benchmark-profile-report` with the
+original `OUTPUT_SLUG` to rebuild the Markdown summary from copied JSON without
+touching the remote host.
 
-Truss profiles can compare SPD solver preconditioners by setting
+First full `thermal-structural-400k` remote smoke:
+
+| Case | Median ms | Peak RSS MiB | Notes |
+|---|---:|---:|---|
+| `thermal-bar-400k` | 189.547 | 512.8 | Chain-specific tridiagonal fast path |
+| `thermal-truss-2d-400k` | 0.019 | 512.8 | Small coupled fixture sanity check |
+| `thermal-truss-3d-400k` | 0.014 | 512.8 | Small coupled fixture sanity check |
+| `thermal-plane-triangle-400k` | 64092.147 | 1512.7 | SGS selected by `auto`; dominant surface solve |
+| `thermal-plane-quad-400k` | 57214.733 | 1625.8 | SGS selected by `auto`; dominant surface solve |
+| `frame-2d-400k` | 0.016 | 1625.8 | Small static frame fixture sanity check |
+| `frame-3d-400k` | 0.010 | 1625.8 | Small static frame fixture sanity check |
+| `thermal-frame-2d-400k` | 0.005 | 1625.8 | Small coupled frame fixture sanity check |
+| `thermal-frame-3d-400k` | 0.007 | 1625.8 | Small coupled frame fixture sanity check |
+
+SPD profiles can compare solver preconditioners by setting
 `SOLVER_PRECONDITIONER=all`. The benchmark emits separate
 `#jacobi` and `#symmetric-gauss-seidel` result rows, including iteration count
 and residual norm. Use `SOLVER_PRECONDITIONER=jacobi` or
 `SOLVER_PRECONDITIONER=symmetric-gauss-seidel` for a single-strategy smoke.
+Use `SOLVER_PRECONDITIONER=auto` when you want the benchmark to keep Jacobi for
+general cases but select symmetric Gauss-Seidel for large thermal-plane
+triangle/quad probes.
 
 Current regression-gate default:
 

@@ -11,6 +11,8 @@ mod generators_thermal_structural;
 mod headless_cases;
 mod models;
 mod runner;
+mod runner_metrics;
+mod runner_preconditioner;
 mod runner_progress;
 mod runner_shape;
 mod runner_structural;

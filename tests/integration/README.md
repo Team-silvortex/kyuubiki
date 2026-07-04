@@ -49,6 +49,7 @@ Run with:
 - `make test-integration-api`
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
+- `make test-integration-benchmark-profile-index`
 - `make test-integration-direct-mesh-docker`
 - `make test-integration-remote-ssh-fixture`
 - `make test-integration-direct-mesh-docker-compare`
@@ -87,6 +88,16 @@ The current checked-in Docker baseline lives at:
 The current checked-in workflow catalog baseline lives at:
 
 - `tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json`
+
+The benchmark profile index contract smoke is intentionally local-only. It
+creates temporary retained-run summaries and verifies that the profile index
+advisory gate reports `pass` for valid metrics, `warn` for an empty root, and
+keeps indexing when a malformed retained summary is skipped. It also covers the
+default benchmark coverage manifest plus a custom `--coverage-targets`
+manifest so future physics matrices can add completeness checks without
+changing the indexer code:
+
+- `make test-integration-benchmark-profile-index`
 
 To compare an existing workflow catalog benchmark report against that baseline:
 

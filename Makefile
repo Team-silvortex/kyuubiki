@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -77,6 +77,7 @@ help:
 	@echo "  make test-integration-cluster Run the protected cluster registration/heartbeat integration smoke test"
 	@echo "  make test-integration-direct-mesh Run the direct_mesh_gui LAN agent solve + chunk smoke test"
 	@echo "  make test-integration-desktop-gui Run Hub + Installer + Workbench desktop preview regression checks"
+	@echo "  make test-integration-benchmark-profile-index Run benchmark profile index contract smoke tests"
 	@echo "  make test-integration-direct-mesh-docker Run the direct_mesh_gui benchmark harness inside Docker and export repeat summaries"
 	@echo "  make test-integration-remote-ssh-fixture Run the explicit local Docker sshd fixture probe"
 	@echo "  make test-integration-workflow-mesh Run the distributed workflow mesh regression trio in sequence"
@@ -94,6 +95,8 @@ help:
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
 	@echo "  make benchmark-physics-coverage Run the 1.14.x broad physics smoke matrix"
 	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1)"
+	@echo "  make benchmark-profile-report Regenerate a profile Markdown summary from an existing local JSON report"
+	@echo "  make benchmark-profile-index Rebuild the retained exploratory profile run index under tmp/benchmark-profile"
 	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k/300k/400k supported)"
 	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k/400k)"
 	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k/400k)"
@@ -244,6 +247,7 @@ build-update-catalog:
 	@node ./scripts/build-update-catalog.mjs
 
 regression-gate-report:
+	@node ./scripts/build-benchmark-profile-index.mjs
 	@node ./scripts/build-regression-lane-catalog.mjs --tmp-root ./tmp
 	@node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
 	@node ./scripts/build-nightly-artifact-overview.mjs --tmp-root ./tmp
@@ -326,7 +330,7 @@ test-installer-gui:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
-test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-ui-mechanical test-integration-ui-thermal
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
 	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
@@ -339,6 +343,9 @@ test-integration-direct-mesh:
 
 test-integration-desktop-gui:
 	@node --test tests/integration/desktop-shell-regression.test.mjs tests/integration/workbench-shell-regression.test.mjs
+
+test-integration-benchmark-profile-index:
+	@node --test tests/integration/benchmark-profile-index.test.mjs
 
 test-integration-direct-mesh-docker:
 	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
@@ -430,6 +437,12 @@ benchmark-physics-coverage:
 
 benchmark-profile-remote:
 	@$(ENTRYPOINT) benchmark-profile-remote
+
+benchmark-profile-report:
+	@REPORT_ONLY=1 $(ENTRYPOINT) benchmark-profile-remote
+
+benchmark-profile-index:
+	@node ./scripts/build-benchmark-profile-index.mjs
 
 benchmark-baseline:
 	@matrix=$${MATRIX:-core}; profile=$${PROFILE:-10k}; baseline=$$( [ "$$matrix" = "core" ] && printf 'benchmarks/%s-baseline.json' "$$profile" || printf 'benchmarks/%s-%s-baseline.json' "$$matrix" "$$profile" ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $$profile --matrix $$matrix --repeat $${REPEAT:-5} --baseline-out $$baseline

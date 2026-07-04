@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 mod benchmark_profile_remote;
+mod benchmark_profile_remote_summary;
 mod desktop;
 mod desktop_linux_remote;
 mod direct_mesh_container;

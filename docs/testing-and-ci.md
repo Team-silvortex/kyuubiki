@@ -224,6 +224,17 @@ Use these entrypoints:
 - `make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=truss-roof-400k REPEAT=1 SOLVER_PRECONDITIONER=all`
   Run the heavy 400k truss probe and compare Jacobi against symmetric
   Gauss-Seidel before choosing a default iterative-solver lane.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-triangle-400k REPEAT=1 SOLVER_PRECONDITIONER=auto`
+  Run the 400k thermal structural surface probe with the benchmark-selected
+  thermal-plane preconditioner. `auto` keeps Jacobi for general cases but uses
+  symmetric Gauss-Seidel for thermal plane triangle/quad workloads.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-quad-400k REPEAT=1 SOLVER_PRECONDITIONER=auto`
+  Run the matching 400k thermal quad surface probe. Current lab evidence is
+  comparable to the triangle path and useful as a second FEM surface-shape
+  pressure test.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural REPEAT=1 SOLVER_PRECONDITIONER=auto`
+  Run the full 400k coupled thermal-structural matrix after the two surface
+  probes pass. This is a long remote smoke, not a local or default nightly lane.
 
 Baseline and report surfaces:
 
@@ -236,9 +247,27 @@ Baseline and report surfaces:
 - local/latest per-matrix reports:
   `tmp/standard-benchmark/<slug>/*-core-<profile>-compare.md`
 - exploratory profile smoke output:
-  `tmp/benchmark-profile/<slug>/<matrix>-<profile>.json` plus a generated
-  `README.md`; truss cases include solver preconditioner, iteration count, and
-  residual norm when available
+  `tmp/benchmark-profile/<slug>/<matrix>-<profile>.json` plus generated
+  `README.md` and `summary.json`; truss cases include solver preconditioner,
+  iteration count, and residual norm when available
+- exploratory profile report rebuild:
+  `make benchmark-profile-report PROFILE=<profile> MATRIX=<matrix> OUTPUT_SLUG=<slug>`
+  regenerates the local `README.md` from an already copied JSON report without
+  SSH, rsync, or rerunning a large remote benchmark. Set `LOCAL_JSON_PATH` to
+  an absolute report path when backfilling older non-standard JSON filenames.
+- exploratory profile run index:
+  `make benchmark-profile-index` rebuilds `tmp/benchmark-profile/index.json`
+  and `tmp/benchmark-profile/README.md` from retained `summary.json` files;
+  its gate is advisory and checks only for retained runs plus finite case/time/RSS
+  metrics. Malformed retained summaries are listed under `skipped_runs` instead
+  of aborting the index refresh. Matrix-level rollups are emitted under
+  `matrix_summaries` for quick mechanical/thermal coverage review, and
+  `coverage_summaries` tracks release-scale completeness such as
+  `mechanical-core` `400k`. Coverage targets live in
+  `config/benchmark-profile-coverage.json`; use
+  `./scripts/build-benchmark-profile-index.mjs --coverage-targets <manifest>`
+  for experimental matrix contracts. The manifest is validated strictly, so
+  malformed or empty coverage targets fail the index refresh.
 - local run index:
   `tmp/standard-benchmark/index.json`, `tmp/standard-benchmark/README.md`, and
   `tmp/standard-benchmark/index.html`
@@ -257,6 +286,9 @@ Current behavior notes:
   rely on checked-in server-specific runtime configuration files
 - remote profile runs enable benchmark `--progress`, which prints per-case
   start/done lines to stderr while keeping stdout valid JSON for report files
+- `SOLVER_PRECONDITIONER=auto` is available for exploratory large thermal
+  structural probes; it selects symmetric Gauss-Seidel for thermal plane
+  triangle/quad cases and Jacobi elsewhere
 - local retained run folders are now indexed and pruned by retention count so
   nightly artifact history does not sprawl indefinitely on the runner workspace
 - `400k` is exploratory, not a default nightly tier. Use narrow thermal and
@@ -267,14 +299,15 @@ Current behavior notes:
   cases, with peak RSS ranging from roughly `404 MiB` to `1.85 GiB`. Treat
   those numbers as exploratory evidence rather than hard regression baselines
   until repeat runs are available.
-- `thermal-structural 400k` now has per-case progress. Its initial long-run
-  blocker, `thermal-bar-400k`, has a chain-specific fast path and completes as
-  a narrow remote probe. The next known long-run hotspot is
-  `thermal-plane-triangle-400k`, so keep the full matrix manual until that
-  surface path is optimized or split into its own long-run tier. A `100k`
-  thermal-plane-triangle probe already exceeds the interactive window, which
-  makes this a dedicated solver-path optimization target rather than only a
-  `400k` scale-tier issue.
+- `thermal-structural 400k` now has per-case progress and usable single-case
+  probes. `thermal-bar-400k` uses a chain-specific fast path, and
+  `thermal-plane-triangle-400k` has stage profiling plus fixed validation and
+  precompute paths. Current lab evidence is about `97.33 s` with Jacobi and
+  `64.78 s` with symmetric Gauss-Seidel. The matching
+  `thermal-plane-quad-400k` auto probe is about `64.42 s` with roughly
+  `1.59 GiB` peak RSS. A full `thermal-structural-400k` auto smoke now passes
+  all nine cases in about `121.50 s` summed median time with roughly `1.59 GiB`
+  peak RSS. Checked-baseline promotion should still wait for repeat runs.
 
 ## Nightly lane map
 
@@ -287,6 +320,11 @@ Current self-hosted nightly flows have distinct jobs:
 - standard benchmark nightly:
   solver-family performance regression for the standard Rust matrix trio on the
   reference lab machine
+- benchmark profile exploration:
+  retained 300k/400k exploratory profile summaries for scale-tier evidence,
+  indexed from `tmp/benchmark-profile/*/summary.json`. This lane appears in
+  the regression catalog with `gate_scope=advisory`, so it is visible in
+  reports but excluded from the enforced overall gate.
 
 Local nightly artifacts are also indexed together under:
 

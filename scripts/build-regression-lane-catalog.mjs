@@ -2,6 +2,7 @@
 
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { readBenchmarkProfileLane } from "./build-regression-lane-catalog-profile.mjs";
 
 const DEFAULT_TMP_ROOT = path.resolve("tmp");
 const GATE_POLICY = {
@@ -115,6 +116,12 @@ function worstGateStatus(statuses) {
     return "warn";
   }
   return "pass";
+}
+
+function enforceableGateStatuses(lanes) {
+  return lanes
+    .filter((lane) => lane.gate_scope !== "advisory")
+    .map((lane) => lane.gate?.status ?? lane.status ?? "pass");
 }
 
 async function readJson(filePath) {
@@ -384,9 +391,7 @@ async function readWorkflowMeshLane(tmpRoot) {
 }
 
 function renderReadme(tmpRoot, lanes) {
-  const overallStatus = worstGateStatus(
-    lanes.map((lane) => lane.gate?.status ?? lane.status ?? "pass"),
-  );
+  const overallStatus = worstGateStatus(enforceableGateStatuses(lanes));
   const lines = [
     "# Regression Lane Catalog",
     "",
@@ -409,9 +414,7 @@ function renderReadme(tmpRoot, lanes) {
 }
 
 function renderHtml(tmpRoot, lanes) {
-  const overallStatus = worstGateStatus(
-    lanes.map((lane) => lane.gate?.status ?? lane.status ?? "pass"),
-  );
+  const overallStatus = worstGateStatus(enforceableGateStatuses(lanes));
   const cards = lanes
     .map(
       (lane) => `<article class="docs-card">
@@ -422,6 +425,7 @@ function renderHtml(tmpRoot, lanes) {
           <span class="docs-chip">Lane: ${escapeHtml(lane.id)}</span>
           <span class="docs-chip">Status: ${escapeHtml(lane.status)}</span>
           <span class="docs-chip">Gate: ${escapeHtml(lane.gate?.status ?? "n/a")}</span>
+          <span class="docs-chip">Scope: ${escapeHtml(lane.gate_scope ?? "enforced")}</span>
           <span class="docs-chip">Generated at unix: ${escapeHtml(lane.generated_at_unix_s)}</span>
         </div>
         ${
@@ -484,6 +488,7 @@ async function main() {
       readDirectMeshLane(options.tmpRoot),
       readWorkflowCatalogLane(options.tmpRoot),
       readWorkflowMeshLane(options.tmpRoot),
+      readBenchmarkProfileLane(options.tmpRoot),
     ])
   )
     .filter(Boolean)
@@ -494,9 +499,7 @@ async function main() {
     root: path.relative(process.cwd(), options.tmpRoot) || ".",
     generated_at_unix_s: Math.floor(Date.now() / 1000),
     policy: GATE_POLICY,
-    overall_gate_status: worstGateStatus(
-      lanes.map((lane) => lane.gate?.status ?? lane.status ?? "pass"),
-    ),
+    overall_gate_status: worstGateStatus(enforceableGateStatuses(lanes)),
     lanes,
   };
 

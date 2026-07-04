@@ -169,6 +169,28 @@ mod tests {
     }
 
     #[test]
+    fn solver_preconditioner_auto_uses_sgs_for_thermal_plane_cases() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
+        let selected = cases
+            .iter()
+            .filter(|case| case.id == "thermal-plane-triangle-medium")
+            .collect::<Vec<_>>();
+        let report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "thermal-structural",
+            "auto",
+        );
+
+        assert_eq!(report.cases.len(), 1);
+        assert_eq!(
+            report.cases[0].solver_preconditioner.as_deref(),
+            Some("symmetric-gauss-seidel")
+        );
+    }
+
+    #[test]
     fn standard_matrices_exist_for_v19_baselines() {
         let spec = default_catalog_spec();
         let names = spec

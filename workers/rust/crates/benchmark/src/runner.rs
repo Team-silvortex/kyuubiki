@@ -4,16 +4,20 @@ use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::{
-    SpdPreconditioner, SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
+    SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
     profile_truss_2d_with_options,
 };
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
 };
+use crate::runner_metrics::apply_metrics;
+use crate::runner_preconditioner::{
+    effective_preconditioner, parse_preconditioner, solver_preconditioners,
+};
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
-use crate::runner_structural::{WorkloadMetrics, run_thermal_structural_workload};
+use crate::runner_structural::run_thermal_structural_workload;
 use crate::runner_util::{current_peak_rss_kib, percentile, unix_timestamp};
 
 pub(crate) fn build_report(
@@ -47,12 +51,14 @@ pub(crate) fn build_report_with_progress(
         .iter()
         .flat_map(|case| {
             preconditioners.iter().map(move |preconditioner| {
+                let effective_preconditioner = effective_preconditioner(case, preconditioner);
                 if progress {
-                    print_case_start(case, preconditioner, repeat);
+                    print_case_start(case, effective_preconditioner, repeat);
                 }
-                let mut result = run_case_with_preconditioner(case, repeat, preconditioner);
+                let mut result =
+                    run_case_with_preconditioner(case, repeat, effective_preconditioner);
                 if tag_results && result.solver_preconditioner.is_some() {
-                    result.id = format!("{}#{}", result.id, preconditioner);
+                    result.id = format!("{}#{}", result.id, effective_preconditioner);
                 }
                 if progress {
                     print_case_done(&result);
@@ -94,7 +100,9 @@ pub(crate) fn run_case_with_preconditioner(
 
     for _ in 0..repeat {
         let started = Instant::now();
-        let outcome = if let Some(outcome) = run_thermal_structural_workload(&case.workload) {
+        let outcome = if let Some(outcome) =
+            run_thermal_structural_workload(&case.workload, solver_preconditioner)
+        {
             outcome.map(|metrics| {
                 apply_metrics(
                     metrics,
@@ -103,6 +111,10 @@ pub(crate) fn run_case_with_preconditioner(
                     &mut dof_count,
                     &mut max_displacement,
                     &mut max_stress,
+                    &mut memory_stages,
+                    &mut solver_iterations,
+                    &mut solver_residual_norm,
+                    &mut solver_preconditioner_name,
                 );
             })
         } else {
@@ -555,34 +567,4 @@ pub(crate) fn run_case_with_preconditioner(
         max_displacement,
         max_stress,
     }
-}
-
-fn parse_preconditioner(value: &str) -> SpdPreconditioner {
-    match value {
-        "sgs" | "symmetric-gauss-seidel" => SpdPreconditioner::SymmetricGaussSeidel,
-        _ => SpdPreconditioner::Jacobi,
-    }
-}
-
-fn solver_preconditioners(value: &str) -> Vec<&'static str> {
-    match value {
-        "all" | "compare" => vec!["jacobi", "symmetric-gauss-seidel"],
-        "sgs" | "symmetric-gauss-seidel" => vec!["symmetric-gauss-seidel"],
-        _ => vec!["jacobi"],
-    }
-}
-
-fn apply_metrics(
-    metrics: WorkloadMetrics,
-    node_count: &mut usize,
-    element_count: &mut usize,
-    dof_count: &mut usize,
-    max_displacement: &mut f64,
-    max_stress: &mut f64,
-) {
-    *node_count = metrics.node_count;
-    *element_count = metrics.element_count;
-    *dof_count = metrics.dof_count;
-    *max_displacement = metrics.max_displacement;
-    *max_stress = metrics.max_stress;
 }

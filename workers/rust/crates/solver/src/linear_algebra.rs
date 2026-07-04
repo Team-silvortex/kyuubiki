@@ -1,5 +1,6 @@
 use crate::linear_dense::{solve_linear_system, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
+use crate::linear_spd::solve_spd_compressed;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
@@ -7,11 +8,11 @@ pub(crate) struct SparseMatrix {
 }
 
 #[derive(Debug, Clone)]
-struct CompressedSparseMatrix {
-    row_offsets: Vec<usize>,
-    columns: Vec<usize>,
-    values: Vec<f64>,
-    diagonal: Vec<f64>,
+pub(crate) struct CompressedSparseMatrix {
+    pub(crate) row_offsets: Vec<usize>,
+    pub(crate) columns: Vec<usize>,
+    pub(crate) values: Vec<f64>,
+    pub(crate) diagonal: Vec<f64>,
 }
 
 impl SparseMatrix {
@@ -139,7 +140,7 @@ impl SparseMatrix {
 }
 
 impl CompressedSparseMatrix {
-    fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.diagonal.len()
     }
 
@@ -147,7 +148,7 @@ impl CompressedSparseMatrix {
         self.diagonal[index]
     }
 
-    fn multiply_vector_into(&self, vector: &[f64], result: &mut [f64]) {
+    pub(crate) fn multiply_vector_into(&self, vector: &[f64], result: &mut [f64]) {
         debug_assert_eq!(result.len(), self.size());
         for row in 0..self.size() {
             let start = self.row_offsets[row];
@@ -160,11 +161,12 @@ impl CompressedSparseMatrix {
         }
     }
 
-    fn apply_preconditioner_into(
+    pub(crate) fn apply_preconditioner_into(
         &self,
         kind: SpdPreconditioner,
         residual: &[f64],
         result: &mut [f64],
+        workspace: &mut [f64],
     ) {
         match kind {
             SpdPreconditioner::Jacobi => {
@@ -172,13 +174,15 @@ impl CompressedSparseMatrix {
                     result[index] = residual[index] / safe_diagonal(self.diagonal(index));
                 }
             }
-            SpdPreconditioner::SymmetricGaussSeidel => self.apply_sgs_into(residual, result),
+            SpdPreconditioner::SymmetricGaussSeidel => {
+                self.apply_sgs_into(residual, result, workspace)
+            }
         }
     }
 
-    fn apply_sgs_into(&self, residual: &[f64], result: &mut [f64]) {
+    fn apply_sgs_into(&self, residual: &[f64], result: &mut [f64], forward: &mut [f64]) {
         let size = self.size();
-        let mut forward = vec![0.0; size];
+        debug_assert_eq!(forward.len(), size);
         for row in 0..size {
             let mut sum = residual[row];
             for index in self.row_offsets[row]..self.row_offsets[row + 1] {
@@ -384,95 +388,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
     .map(|profile| unscale_profile(profile, &scaling))
 }
 
-fn solve_spd_compressed(
-    matrix: &CompressedSparseMatrix,
-    rhs: &[f64],
-    fallback_source: &SparseMatrix,
-    preconditioner: SpdPreconditioner,
-) -> Result<SpdSolveProfile, String> {
-    let size = rhs.len();
-
-    let mut x = vec![0.0; size];
-    let mut r = rhs.to_vec();
-    let mut z = vec![0.0; size];
-    let mut p = vec![0.0; size];
-    let mut ap = vec![0.0; size];
-    let mut ax = vec![0.0; size];
-    matrix.apply_preconditioner_into(preconditioner, &r, &mut z);
-    p.clone_from(&z);
-
-    let rhs_norm = dot(rhs, rhs).sqrt().max(1.0);
-    let tolerance = 1.0e-9 * rhs_norm;
-    let mut rz_old = dot(&r, &z);
-    if !rz_old.is_finite() || rz_old.abs() < 1.0e-20 {
-        return Ok(SpdSolveProfile {
-            solution: x,
-            iterations: 0,
-            residual_norm: dot(&r, &r).sqrt(),
-        });
-    }
-
-    let max_iter = (size.saturating_mul(8)).clamp(256, 40_000);
-
-    for iteration in 0..max_iter {
-        matrix.multiply_vector_into(&p, &mut ap);
-        let mut denom = dot(&p, &ap);
-        if !denom.is_finite() || denom.abs() < 1.0e-20 {
-            p.clone_from(&z);
-            matrix.multiply_vector_into(&p, &mut ap);
-            denom = dot(&p, &ap);
-            if !denom.is_finite() || denom.abs() < 1.0e-20 {
-                return solve_spd_fallback(fallback_source, rhs, "system is singular");
-            }
-        }
-
-        let alpha = rz_old / denom;
-        for index in 0..size {
-            x[index] += alpha * p[index];
-            r[index] -= alpha * ap[index];
-        }
-
-        if iteration % 32 == 31 {
-            matrix.multiply_vector_into(&x, &mut ax);
-            for index in 0..size {
-                r[index] = rhs[index] - ax[index];
-            }
-        }
-
-        let residual_norm = dot(&r, &r).sqrt();
-        if residual_norm <= tolerance {
-            return Ok(SpdSolveProfile {
-                solution: x,
-                iterations: iteration + 1,
-                residual_norm,
-            });
-        }
-
-        matrix.apply_preconditioner_into(preconditioner, &r, &mut z);
-
-        let rz_new = dot(&r, &z);
-        if !rz_new.is_finite() {
-            return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
-        }
-        let beta = if rz_old.abs() < 1.0e-20 {
-            0.0
-        } else {
-            rz_new / rz_old
-        };
-        for index in 0..size {
-            p[index] = z[index] + beta * p[index];
-        }
-        rz_old = rz_new;
-    }
-
-    solve_spd_fallback(fallback_source, rhs, "iterative solver did not converge")
-}
-
-fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
-    lhs.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
-}
-
-fn safe_diagonal(value: f64) -> f64 {
+pub(crate) fn safe_diagonal(value: f64) -> f64 {
     if value.abs() < 1.0e-12 {
         1.0e-12
     } else {
@@ -480,23 +396,7 @@ fn safe_diagonal(value: f64) -> f64 {
     }
 }
 
-fn solve_spd_fallback(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-    reason: &str,
-) -> Result<SpdSolveProfile, String> {
-    if rhs.len() <= 1024 {
-        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| SpdSolveProfile {
-            solution,
-            iterations: 0,
-            residual_norm: 0.0,
-        })
-    } else {
-        Err(reason.to_string())
-    }
-}
-
-fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
+pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
     let size = matrix.size();
     let mut dense = zero_matrix(size);
     for (row_index, row) in matrix.rows.iter().enumerate() {

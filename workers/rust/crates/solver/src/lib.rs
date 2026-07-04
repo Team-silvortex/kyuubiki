@@ -15,6 +15,7 @@ mod heat_plane_2d_validation;
 mod linear_algebra;
 mod linear_dense;
 mod linear_solver_profile;
+mod linear_spd;
 mod magnetostatic_bar_1d;
 mod magnetostatic_plane_2d;
 mod modal_frame_2d;
@@ -29,6 +30,9 @@ mod stokes_flow_plane_2d;
 mod thermal_bar_1d_fast;
 mod thermal_frame_3d;
 mod thermal_plane_2d;
+mod thermal_plane_2d_profile;
+mod thermal_plane_2d_results;
+mod thermal_plane_2d_util;
 mod thermal_plane_2d_validation;
 mod thermal_truss;
 mod torsion_1d;
@@ -68,7 +72,13 @@ pub use solid_tetra_3d::solve_solid_tetra_3d;
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
 pub use stokes_flow_plane_2d::solve_stokes_flow_plane_quad_2d;
 pub use thermal_frame_3d::solve_thermal_frame_3d;
-pub use thermal_plane_2d::{solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d};
+pub use thermal_plane_2d::{
+    profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
+};
+pub use thermal_plane_2d_profile::{
+    ThermalPlaneProfileStage, ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile,
+};
 pub use thermal_truss::{solve_thermal_truss_2d, solve_thermal_truss_3d};
 pub use torsion_1d::solve_torsion_1d;
 pub use transient_heat_bar_1d::solve_transient_heat_bar_1d;

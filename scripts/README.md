@@ -217,9 +217,33 @@ Useful smoke wrappers:
   Compatibility shim for `./scripts/kyuubiki benchmark-profile-remote`. It runs
   one remote Rust benchmark profile/matrix smoke without requiring a checked
   baseline. Use this for new scale tiers before promoting them into the
-  standard regression gate. Outputs land under `tmp/benchmark-profile/`.
-  Set `SOLVER_PRECONDITIONER=all` on truss cases to emit Jacobi and symmetric
-  Gauss-Seidel rows in the same smoke report.
+  standard regression gate. Outputs land under `tmp/benchmark-profile/` as the
+  raw benchmark JSON, `README.md`, and a compact `summary.json`.
+  The remote profile runner defaults to `SOLVER_PRECONDITIONER=auto`, which
+  keeps Jacobi for general cases but selects symmetric Gauss-Seidel for
+  thermal plane triangle/quad workloads. Set `SOLVER_PRECONDITIONER=all` on
+  solver probes to emit Jacobi and symmetric Gauss-Seidel rows in the same
+  smoke report. Set `REPORT_ONLY=1` with the same `PROFILE`, `MATRIX`, `CASE`,
+  and `OUTPUT_SLUG`/`LOCAL_OUTPUT_DIR` when regenerating Markdown from an
+  already copied JSON report without SSH, rsync, or rerunning a large case.
+  Set `LOCAL_JSON_PATH=/absolute/path/to/report.json` when backfilling
+  summaries from older, non-standard profile JSON filenames.
+- `./scripts/build-benchmark-profile-index.mjs`
+  Rebuild the exploratory benchmark profile run index under
+  `tmp/benchmark-profile/` from retained `summary.json` files. This emits
+  `index.json` plus `README.md` without rerunning any benchmark. Its gate is
+  advisory and checks only retained-run presence plus finite case/time/RSS
+  metrics. Malformed retained `summary.json` files are recorded under
+  `skipped_runs` and do not abort index generation. The index also emits
+  `matrix_summaries` so mechanical, thermal, and coupled exploratory evidence
+  can be reviewed by matrix instead of by individual run folder only. It also
+  emits `coverage_summaries` for release-scale matrix completeness checks such
+  as `mechanical-core` `400k`. New profile summaries should provide
+  `case_ids`; the index falls back to `slowest_case` only for old summaries.
+  Coverage targets are loaded from `config/benchmark-profile-coverage.json` by
+  default and can be overridden with `--coverage-targets <manifest.json>`.
+  The coverage manifest is validated strictly so malformed targets fail before
+  a misleading empty coverage report can be generated.
 - `./scripts/run-standard-benchmark-regression.sh`
   Compatibility shim for `./scripts/kyuubiki standard-benchmark-regression`.
   It syncs the Rust workspace without `target/` to `kyuubiki-lab`, runs the standard Rust
@@ -233,14 +257,20 @@ Useful smoke wrappers:
   `index.json`, `README.md`, and `index.html`.
 - `./scripts/build-nightly-artifact-overview.mjs`
   Rebuild the top-level `tmp/` nightly artifact overview across the direct-mesh,
-  workflow-catalog, and standard-benchmark lanes. This emits `tmp/README.md`,
+  workflow-catalog, standard-benchmark, workflow-mesh, and exploratory
+  benchmark-profile lanes. This emits `tmp/README.md`,
   `tmp/nightly-overview.json`, and `tmp/nightly-overview.html`.
 - `./scripts/build-regression-lane-catalog.mjs --tmp-root tmp`
   Rebuild the normalized cross-lane regression catalog for the latest retained
-  direct-mesh, workflow-catalog, and workflow-mesh outputs. This emits
+  direct-mesh, workflow-catalog, workflow-mesh, and advisory benchmark-profile
+  outputs. This emits
   `tmp/regression-lane-catalog.json`, `tmp/regression-lane-catalog.md`, and
   `tmp/regression-lane-catalog.html`, including a shared `gate` decision layer
-  with per-lane reasons plus the catalog-level `overall_gate_status`.
+  with per-lane reasons plus the catalog-level `overall_gate_status`. Advisory
+  evidence lanes are visible but excluded from the enforced overall gate. The
+  benchmark-profile lane reader lives in
+  `build-regression-lane-catalog-profile.mjs` to keep the catalog builder below
+  the source organization line limit.
 - `./scripts/build-regression-gate-report.mjs --tmp-root tmp`
   Collapse the shared regression lane catalog into a CI/installer-friendly gate
   output. This emits `tmp/regression-gate-report.json` plus
