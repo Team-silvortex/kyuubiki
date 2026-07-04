@@ -36,7 +36,6 @@ Examples:
   ./scripts/upload-desktop-release-remote.sh macos
   PURGE_LOCAL=1 ./scripts/upload-desktop-release-remote.sh all
   KYUUBIKI_RELEASE_REMOTE_HOST=kyuubiki-dev@192.168.1.12 ./scripts/upload-desktop-release-remote.sh macos
-  KYUUBIKI_RELEASE_REMOTE_PASSWORD=secret ./scripts/upload-desktop-release-remote.sh macos
 EOF
 }
 
@@ -72,8 +71,9 @@ if [[ -n "$REMOTE_PASSWORD" ]]; then
     echo "KYUUBIKI_RELEASE_REMOTE_PASSWORD was set but sshpass is not installed" >&2
     exit 1
   fi
-  SSH_COMMAND=(sshpass -p "$REMOTE_PASSWORD" "$SSH_BIN" "${SSH_OPTS[@]}")
-  RSYNC_COMMAND=(sshpass -p "$REMOTE_PASSWORD" "$RSYNC_BIN")
+  export SSHPASS="$REMOTE_PASSWORD"
+  SSH_COMMAND=(sshpass -e "$SSH_BIN" "${SSH_OPTS[@]}")
+  RSYNC_COMMAND=(sshpass -e "$RSYNC_BIN")
 else
   SSH_COMMAND=("$SSH_BIN" "${SSH_OPTS[@]}")
   RSYNC_COMMAND=("$RSYNC_BIN")

@@ -2,6 +2,7 @@ mod agent_client;
 mod auth;
 mod control_plane;
 mod error;
+mod material_workflows;
 mod session;
 mod solver_rpc;
 mod workflow_builders;
@@ -15,6 +16,10 @@ pub use agent_client::{
 pub use auth::KyuubikiAuth;
 pub use control_plane::ControlPlaneClient;
 pub use error::{SdkError, SdkResult};
+pub use material_workflows::{
+    MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, material_study_envelope_catalog_request,
+    material_study_envelope_input_artifacts, material_workflow_catalog,
+};
 pub use session::{JobRequest, JobWaitOutcome, KyuubikiSession};
 pub use solver_rpc::{RpcCallOutcome, SolverRpcClient};
 pub use workflow_builders::{

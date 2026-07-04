@@ -15,6 +15,7 @@ _SOLVER_METHODS: dict[str, str] = {
     "transient_heat_bar_1d": "solve_transient_heat_bar_1d",
     "electrostatic_bar_1d": "solve_electrostatic_bar_1d",
     "magnetostatic_bar_1d": "solve_magnetostatic_bar_1d",
+    "advection_diffusion_bar_1d": "solve_advection_diffusion_bar_1d",
     "magnetostatic_plane_triangle_2d": "solve_magnetostatic_plane_triangle_2d",
     "magnetostatic_plane_quad_2d": "solve_magnetostatic_plane_quad_2d",
     "acoustic_bar_1d": "solve_acoustic_bar_1d",

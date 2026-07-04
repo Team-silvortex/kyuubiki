@@ -2,12 +2,12 @@ use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, reduce_sparse_system_with_prescribed,
     solve_spd_system,
 };
+use crate::thermal_bar_1d_fast::{build_thermal_bar_1d_result, solve_thermal_bar_1d_chain};
 use kyuubiki_protocol::{
     ElectrostaticBar1dElementResult, ElectrostaticBar1dNodeResult, ElementResult,
     HeatBar1dElementResult, HeatBar1dNodeResult, NodeResult, SolveBarRequest, SolveBarResult,
     SolveElectrostaticBar1dRequest, SolveElectrostaticBar1dResult, SolveHeatBar1dRequest,
     SolveHeatBar1dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
-    ThermalBar1dElementResult, ThermalBar1dNodeResult,
 };
 
 pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String> {
@@ -74,6 +74,9 @@ pub fn solve_thermal_bar_1d(
     request: &SolveThermalBar1dRequest,
 ) -> Result<SolveThermalBar1dResult, String> {
     validate_thermal_bar_1d_request(request)?;
+    if let Some(result) = solve_thermal_bar_1d_chain(request) {
+        return result;
+    }
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 12);
@@ -127,78 +130,7 @@ pub fn solve_thermal_bar_1d(
         displacements[dof] = reduced_displacements[index];
     }
 
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| ThermalBar1dNodeResult {
-            index,
-            id: node.id.clone(),
-            x: node.x,
-            ux: displacements[index],
-            temperature_delta: node.temperature_delta,
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
-            let node_i = &request.nodes[element.node_i];
-            let node_j = &request.nodes[element.node_j];
-            let length = (node_j.x - node_i.x).abs();
-            let average_temperature_delta =
-                0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-            let total_strain =
-                (displacements[element.node_j] - displacements[element.node_i]) / length;
-            let thermal_strain = element.thermal_expansion * average_temperature_delta;
-            let mechanical_strain = total_strain - thermal_strain;
-            let stress = element.youngs_modulus * mechanical_strain;
-            let axial_force = stress * element.area;
-
-            ThermalBar1dElementResult {
-                index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                length,
-                average_temperature_delta,
-                thermal_strain,
-                mechanical_strain,
-                total_strain,
-                stress,
-                axial_force,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let max_displacement = nodes
-        .iter()
-        .map(|node| node.ux.abs())
-        .fold(0.0_f64, f64::max);
-    let max_stress = elements
-        .iter()
-        .map(|element| element.stress.abs())
-        .fold(0.0_f64, f64::max);
-    let max_axial_force = elements
-        .iter()
-        .map(|element| element.axial_force.abs())
-        .fold(0.0_f64, f64::max);
-    let max_temperature_delta = nodes
-        .iter()
-        .map(|node| node.temperature_delta.abs())
-        .fold(0.0_f64, f64::max);
-
-    Ok(SolveThermalBar1dResult {
-        input: request.clone(),
-        nodes,
-        elements,
-        max_displacement,
-        max_stress,
-        max_axial_force,
-        max_temperature_delta,
-    })
+    Ok(build_thermal_bar_1d_result(request, displacements))
 }
 
 pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar1dResult, String> {

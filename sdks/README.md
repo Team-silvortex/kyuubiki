@@ -28,6 +28,7 @@ Minimal runnable examples now live at:
 - [sdks/rust/examples/run_study.rs](rust/examples/run_study.rs)
 - [sdks/python/examples/run_material_envelope.py](python/examples/run_material_envelope.py)
 - [sdks/elixir/examples/run_material_envelope.exs](elixir/examples/run_material_envelope.exs)
+- [sdks/rust/examples/run_material_envelope.rs](rust/examples/run_material_envelope.rs)
 - [sdks/python/examples/execute_operator_task_batch.py](python/examples/execute_operator_task_batch.py)
 - [sdks/elixir/examples/execute_operator_task_batch.exs](elixir/examples/execute_operator_task_batch.exs)
 - [sdks/rust/examples/execute_operator_task_batch.rs](rust/examples/execute_operator_task_batch.rs)
@@ -67,7 +68,7 @@ Recent additions:
 - workflow catalog and inline-graph runs lifted into the session and agent layers
 - catalog workflow descriptors can be fetched directly, and catalog runs can auto-resolve
   their backing graph for output validation
-- Python and Elixir SDK callers can build the
+- Rust, Python, and Elixir SDK callers can build the
   `workflow.material-study-envelope-ranking-json` material envelope catalog
   request without embedding the workflow graph inline
 - headless workflow plans now expose runtime style, engine mix, step bindings,

@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use kyuubiki_headless_sdk::{
     build_workflow_output_manifest, validate_workflow_result_against_graph, ControlPlaneClient, KyuubikiAgentClient, KyuubikiAuth,
-    KyuubikiSession, RetryPolicy, SolverRpcClient,
+    KyuubikiSession, RetryPolicy, SolverRpcClient, material_study_envelope_catalog_request,
     WorkflowDatasetContract, WorkflowGraphDefinition, workflow_dataset_contract, workflow_dataset_value, workflow_defaults,
     workflow_edge, workflow_graph, workflow_node, workflow_operator_fetch_entry, workflow_port,
 };
@@ -21,6 +21,11 @@ let structural_operators = cp.list_workflow_operators_with_query(Some(&[
 ]))?;
 let operator = cp.fetch_workflow_operator("solver.truss_2d")?;
 let workflow_descriptor = cp.fetch_workflow_catalog_workflow("workflow.heat-to-thermo-quad-2d")?;
+let material_envelope = material_study_envelope_catalog_request(None);
+let material_envelope_job = cp.submit_workflow_catalog_job(
+    material_envelope["workflow_id"].as_str().unwrap(),
+    &material_envelope["input_artifacts"],
+)?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
@@ -130,6 +135,7 @@ Highlights:
 - jobs/results/export control-plane surface
 - operator catalog listing, filtering, and descriptor fetch
 - workflow catalog descriptor fetch plus auto graph resolution for catalog runs
+- material envelope catalog workflow helper for Rust automation clients
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, and electrostatic study families
 - workflow graph and dataset contract typed structs with validation
@@ -147,8 +153,12 @@ Highlights:
 Example:
 
 - Run from [run_study.rs](examples/run_study.rs)
+- Material envelope workflow example:
+  [run_material_envelope.rs](examples/run_material_envelope.rs)
 - Typical invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example run_study`
+- Material envelope invocation:
+  `cargo run --manifest-path sdks/rust/Cargo.toml --example run_material_envelope`
 - Smoke test:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test smoke`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`

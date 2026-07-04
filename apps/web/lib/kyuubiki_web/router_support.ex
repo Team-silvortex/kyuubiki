@@ -114,6 +114,9 @@ defmodule KyuubikiWeb.RouterSupport do
     }
   end
 
+  defp encode_unprocessable(:invalid_material_envelope_catalog_request),
+    do: %{"error" => "invalid_material_envelope_catalog_request"}
+
   defp encode_unprocessable(reason), do: %{"error" => inspect(reason)}
 
   defp encode_entity_key({:fingerprint, value}), do: %{"kind" => "fingerprint", "value" => value}

@@ -11,6 +11,7 @@ pub(crate) struct BenchmarkConfig {
     pub(crate) baseline_compare: Option<String>,
     pub(crate) compare_report_out: Option<String>,
     pub(crate) solver_preconditioner: String,
+    pub(crate) progress: bool,
     pub(crate) fail_on_median_regression_pct: Option<f64>,
     pub(crate) fail_on_rss_regression_pct: Option<f64>,
     pub(crate) min_baseline_median_ms: f64,
@@ -34,6 +35,7 @@ pub(crate) enum BenchmarkProfile {
     HundredK,
     TwoHundredK,
     ThreeHundredK,
+    FourHundredK,
 }
 
 impl BenchmarkProfile {
@@ -48,6 +50,7 @@ impl BenchmarkProfile {
             Self::HundredK => "100k",
             Self::TwoHundredK => "200k",
             Self::ThreeHundredK => "300k",
+            Self::FourHundredK => "400k",
         }
     }
 }
@@ -64,6 +67,7 @@ impl BenchmarkConfig {
             baseline_compare: None,
             compare_report_out: None,
             solver_preconditioner: "jacobi".to_string(),
+            progress: false,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -109,6 +113,7 @@ impl BenchmarkConfig {
                             "100k" => BenchmarkProfile::HundredK,
                             "200k" => BenchmarkProfile::TwoHundredK,
                             "300k" => BenchmarkProfile::ThreeHundredK,
+                            "400k" => BenchmarkProfile::FourHundredK,
                             _ => BenchmarkProfile::TenK,
                         };
                     }
@@ -132,6 +137,9 @@ impl BenchmarkConfig {
                     if let Some(value) = args.next() {
                         config.solver_preconditioner = value.clone();
                     }
+                }
+                "--progress" => {
+                    config.progress = true;
                 }
                 "--fail-on-median-regression-pct" => {
                     if let Some(value) = args.next() {

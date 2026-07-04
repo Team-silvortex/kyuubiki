@@ -26,6 +26,7 @@ mod plane_2d_math;
 mod solid_tetra_3d;
 mod spring;
 mod stokes_flow_plane_2d;
+mod thermal_bar_1d_fast;
 mod thermal_frame_3d;
 mod thermal_plane_2d;
 mod thermal_plane_2d_validation;

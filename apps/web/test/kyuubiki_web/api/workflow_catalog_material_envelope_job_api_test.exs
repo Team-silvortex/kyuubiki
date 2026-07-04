@@ -49,4 +49,30 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogMaterialEnvelopeJobApiTest do
     assert summary["bundle_payloads"]["pareto"]["material_pareto_best_candidate_id"] ==
              "cool_stiff"
   end
+
+  test "rejects oversized material envelope catalog requests" do
+    conn =
+      conn(
+        :post,
+        "/api/v1/workflows/catalog/workflow.material-study-envelope-ranking-json/jobs",
+        Jason.encode!(%{
+          "input_artifacts" => %{
+            "material_rows" => %{
+              "rows" =>
+                Enum.map(1..129, fn index ->
+                  %{
+                    "case_id" => "candidate-#{index}",
+                    "summaries" => %{"thermal" => %{"max_temperature" => 90.0}}
+                  }
+                end)
+            }
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> KyuubikiWeb.Router.call(@opts)
+
+    assert conn.status == 422
+    assert Jason.decode!(conn.resp_body)["error"] == "invalid_material_envelope_catalog_request"
+  end
 end

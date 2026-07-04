@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -68,6 +68,7 @@ help:
 	@echo "  make test-frontend Run frontend typecheck and production build"
 	@echo "  make workflow-preflight Run workflow topology plus layout/search guards (requires frontend dev server)"
 	@echo "  make test-sdk    Run Python / Elixir / Rust SDK smoke tests"
+	@echo "  make test-agent-capability-smoke Run solver-agent advertised-capability smoke against AGENT_HOST/AGENT_PORT"
 	@echo "  make test-hub-gui Run Hub desktop shell smoke tests"
 	@echo "  make test-installer-gui Run installer desktop shell smoke tests"
 	@echo "  make test-workbench-gui Run desktop workbench shell smoke tests"
@@ -92,12 +93,12 @@ help:
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
 	@echo "  make benchmark-physics-coverage Run the 1.14.x broad physics smoke matrix"
-	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=300k MATRIX=thermal-core CASE=heat-plane-quad-300k REPEAT=1)"
-	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k/300k supported)"
-	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k)"
-	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k)"
-	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k|200k|300k>"
-	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k|200k|300k>"
+	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1)"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k/300k/400k supported)"
+	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k/400k)"
+	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k/300k/400k)"
+	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k|200k|300k|400k>"
+	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k|200k|300k|400k>"
 	@echo "  make benchmark-standard-report Write per-matrix reports plus a merged standard comparison report"
 	@echo "  make benchmark-standard-nightly Run the remote kyuubiki-lab standard benchmark regression flow and pull reports back"
 	@echo "  make regression-gate-report Rebuild the normalized regression catalog and compact gate report under tmp/"
@@ -309,6 +310,9 @@ workflow-preflight:
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke
+
+test-agent-capability-smoke:
+	@$(ENTRYPOINT) agent-capability-smoke --host $${AGENT_HOST:-127.0.0.1} --port $${AGENT_PORT:-5001} --profile $${AGENT_SMOKE_PROFILE:-advertised} --output $${OUTPUT:-tmp/agent-capability-smoke.json} $${AGENT_SMOKE_ARGS:-}
 
 test-playground:
 	@node --test apps/web/playground/test/fem.test.mjs

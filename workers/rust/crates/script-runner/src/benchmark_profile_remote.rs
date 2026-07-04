@@ -170,7 +170,7 @@ fn remote_command(options: &Options) -> String {
         .map(|case| format!(" --case {}", shell_escape(case)))
         .unwrap_or_default();
     format!(
-        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {}{} > {}",
+        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {} --progress{} > {}",
         shell_escape(&dirname(&options.remote_json_path)),
         shell_escape(&options.remote_dir),
         shell_escape(&options.rustup_toolchain),

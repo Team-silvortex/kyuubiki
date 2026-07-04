@@ -193,8 +193,8 @@ Environment overrides:
 - `KYUUBIKI_RELEASE_REMOTE_DIR`
   Remote root path that will receive `releases/<version>/...`.
 - `KYUUBIKI_RELEASE_REMOTE_PASSWORD`
-  Optional password for `sshpass`-backed non-interactive uploads when the
-  remote host is not yet configured for key-based auth.
+  Temporary compatibility password for `sshpass -e` uploads when the remote
+  host is not yet configured for key-based auth. Prefer SSH keys or an agent.
 - `KYUUBIKI_RELEASE_VERSION`
   Override the version folder. By default the script uses
   `deploy/update-channels.json` `shipping_version`.

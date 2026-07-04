@@ -281,6 +281,29 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert is_list(example["blocked_case_ids"])
   end
 
+  test "material envelope catalog request example matches the shared request contract" do
+    required_fields =
+      schema_path("material-envelope-catalog-request.schema.json")
+      |> File.read!()
+      |> Jason.decode!()
+      |> Map.fetch!("required")
+
+    example =
+      schema_path("examples.material-envelope-catalog-request.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert example["$schema"] == "material-envelope-catalog-request.schema.json"
+    assert Map.take(example, required_fields) |> map_size() == length(required_fields)
+    assert example["workflow_id"] == "workflow.material-study-envelope-ranking-json"
+
+    rows = get_in(example, ["input_artifacts", "material_rows", "rows"])
+    assert is_list(rows)
+    assert length(rows) == 3
+    assert Enum.all?(rows, &is_binary(&1["case_id"]))
+    assert Enum.all?(rows, &(map_size(&1["summaries"]) > 0))
+  end
+
   defp heat_model(load) do
     %{
       "nodes" => [

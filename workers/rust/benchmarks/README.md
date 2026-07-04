@@ -22,7 +22,7 @@ Baseline naming convention:
 1.9 baseline workflow:
 
 - use `make benchmark-standard-baselines PROFILE=10k REPEAT=3` to refresh the first-line checked baseline set
-- expand the same trio to `15k`, `20k`, selected `100k`, and remote `200k`/`300k` runs as hardware budget allows
+- expand the same trio to `15k`, `20k`, selected `100k`, and remote `200k`/`300k`/`400k` runs as hardware budget allows
 - use `make benchmark-standard-compare PROFILE=10k REPEAT=1` to run the standard regression gate trio
 - use `make benchmark-standard-report PROFILE=10k REPEAT=1` to emit the per-matrix reports plus one merged summary report
 - use `make benchmark-standard-nightly PROFILE=10k REPEAT=1` to run the same trio on `kyuubiki-lab` and pull the reports back locally
@@ -51,6 +51,9 @@ make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=thermal-structural REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1
 make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roof-300k REPEAT=1 SOLVER_PRECONDITIONER=all
+make benchmark-profile-remote PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1
+make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=axial-bar-400k REPEAT=1
+make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=truss-roof-400k REPEAT=1 SOLVER_PRECONDITIONER=all
 ```
 
 These Make targets run the benchmark crate in `--release` mode so checked-in
@@ -78,12 +81,53 @@ project can prepare the `1.15.x` engine/operator SDK contracts and the `1.16.x`
 executable task file format against real examples from the major physics
 families.
 
-For the `100k`, `200k`, and `300k` profiles, prefer running on a dedicated remote/Linux
+For the `100k`, `200k`, `300k`, and `400k` profiles, prefer running on a dedicated remote/Linux
 host instead of a laptop-class development machine. A full `repeat=3` baseline
 can take significantly longer than the default `10k` tier and may peak above
 `500 MiB` RSS depending on the case mix. Use `make benchmark-profile-remote`
-for 200k/300k smoke coverage before promoting a matrix into the checked regression
-baseline set.
+for 200k/300k/400k smoke coverage before promoting a matrix into the checked
+regression baseline set. Remote profile runs pass `--progress` so each case
+start/done line is visible over SSH while JSON output still lands in the
+configured report file.
+
+Initial `400k` lab smokes show that `heat-plane-quad-400k` is a practical
+first pressure probe, while `truss-roof-400k` is a heavier iterative-solver
+probe. For truss cases, keep `SOLVER_PRECONDITIONER=all` during exploration:
+the symmetric Gauss-Seidel strategy can materially reduce iteration count
+without materially changing peak RSS.
+
+Current `400k` exploratory lab evidence:
+
+| Case | Median ms | Peak RSS MiB | Notes |
+|---|---:|---:|---|
+| `axial-bar-400k` | 10.828 | 404.2 | Cheapest mechanical sanity probe |
+| `heat-plane-quad-400k` | 6837.637 | 472.9 | Practical first thermal surface probe |
+| `truss-roof-400k#jacobi` | 76146.610 | 1375.0 | Heavy iterative structural probe |
+| `truss-roof-400k#symmetric-gauss-seidel` | 60873.403 | 1376.5 | Faster truss strategy with similar RSS |
+| `space-frame-400k` | 1138.850 | 1562.2 | Fast 3D frame assembly and memory probe |
+| `plane-panel-400k` | 86160.547 | 1849.5 | Heavy triangular structural surface probe |
+| `plane-quad-panel-400k` | 93180.998 | 1759.6 | Heavy structural surface probe |
+
+`compound-core` also has a first `400k` remote smoke with
+`SOLVER_PRECONDITIONER=symmetric-gauss-seidel`:
+
+| Case | Median ms | Peak RSS MiB | Notes |
+|---|---:|---:|---|
+| `truss-roof-400k` | 59250.060 | 1335.3 | SGS truss leg inside compound matrix |
+| `space-frame-400k` | 899.321 | 1529.2 | Fast 3D frame leg inside compound matrix |
+| `heat-plane-quad-400k` | 6747.954 | 1529.2 | Thermal leg inside compound matrix |
+| `compound-surface-panel-400k` | 80774.351 | 1776.6 | Heavy surface leg inside compound matrix |
+
+`thermal-structural` is not yet a default `400k` matrix lane. The original
+long-run blocker was `thermal-bar-400k`; the solver now uses a chain-specific
+tridiagonal fast path, and the remote single-case probe completes in about
+`190.527 ms` with roughly `512.6 MiB` peak RSS. The next observed blocker is
+`thermal-plane-triangle-400k`, which remains a manual long-run thermal surface
+probe rather than an interactive smoke. The thermal plane assembly path now
+uses row-capacity hints, but it still needs a dedicated stage profile before it
+can graduate into a regular `400k` matrix lane. A `100k` remote
+`thermal-plane-triangle` probe also exceeds the interactive window, so this is
+a solver-path hotspot rather than only a `400k` scale-tier issue.
 
 Truss profiles can compare SPD solver preconditioners by setting
 `SOLVER_PRECONDITIONER=all`. The benchmark emits separate

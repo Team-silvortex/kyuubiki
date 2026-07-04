@@ -13,6 +13,7 @@ from .errors import (
 )
 from .session import KyuubikiSession
 from .solver_rpc import SolverRpcClient
+from .solver_fixtures import minimal_solver_payloads, solver_fixture_rpc_methods
 from .material_reports import (
     build_material_report,
     build_material_report_from_payload,
@@ -64,6 +65,8 @@ from .workflow_results import (
 __all__ = [
     "ControlPlaneClient",
     "SolverRpcClient",
+    "minimal_solver_payloads",
+    "solver_fixture_rpc_methods",
     "build_material_report",
     "build_material_report_from_payload",
     "describe_material_study",

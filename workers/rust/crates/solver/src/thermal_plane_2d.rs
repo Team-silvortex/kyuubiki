@@ -48,7 +48,7 @@ pub fn solve_thermal_plane_triangle_2d(
     validate_thermal_plane_triangle_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 18);
     let mut force_vector = build_force_vector(request);
     let computed_elements = request
         .elements
@@ -84,7 +84,7 @@ pub fn solve_thermal_plane_quad_2d(
     validate_thermal_plane_quad_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 24);
     let mut force_vector = build_quad_force_vector(request);
     let computed_elements = request
         .elements

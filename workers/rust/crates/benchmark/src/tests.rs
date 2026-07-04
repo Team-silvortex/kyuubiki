@@ -21,6 +21,7 @@ mod tests {
             baseline_compare: None,
             compare_report_out: None,
             solver_preconditioner: "jacobi".to_string(),
+            progress: false,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -76,7 +77,7 @@ mod tests {
 
         assert_eq!(spec.templates.len(), 36);
         assert!(spec.matrices.len() >= 10);
-        assert_eq!(spec.profiles.len(), 9);
+        assert_eq!(spec.profiles.len(), 10);
         assert!(
             spec.profiles
                 .iter()
@@ -91,6 +92,11 @@ mod tests {
             spec.profiles
                 .iter()
                 .any(|profile| profile.profile == BenchmarkProfile::ThreeHundredK)
+        );
+        assert!(
+            spec.profiles
+                .iter()
+                .any(|profile| profile.profile == BenchmarkProfile::FourHundredK)
         );
     }
 
@@ -427,6 +433,32 @@ mod tests {
             assert!(
                 cases.iter().all(|case| case.id.ends_with("-300k")),
                 "{matrix} should keep the 300k case suffix"
+            );
+        }
+    }
+
+    #[test]
+    fn four_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
+        let matrix_cases = [
+            ("mechanical-core", 5, 400_000),
+            ("thermal-core", 1, 400_000),
+            ("compound-core", 4, 400_000),
+            ("thermal-structural", 9, 400_000),
+        ];
+
+        for (matrix, expected_count, minimum_nodes) in matrix_cases {
+            let cases = benchmark_cases(BenchmarkProfile::FourHundredK, matrix);
+
+            assert_eq!(cases.len(), expected_count, "{matrix} case count changed");
+            assert!(
+                cases
+                    .iter()
+                    .any(|case| benchmark_shape(case).0 >= minimum_nodes),
+                "{matrix} no longer includes a 400k-scale case"
+            );
+            assert!(
+                cases.iter().all(|case| case.id.ends_with("-400k")),
+                "{matrix} should keep the 400k case suffix"
             );
         }
     }

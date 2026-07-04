@@ -263,6 +263,16 @@
       "plane_triangle": { "nx": 548, "ny": 548, "width": 548.0, "height": 548.0 },
       "plane_quad": { "nx": 548, "ny": 548, "width": 548.0, "height": 548.0 },
       "heat_plane_quad": { "nx": 548, "ny": 548, "width": 548.0, "height": 548.0 }
+    },
+    {
+      "profile": "four_hundred_k",
+      "suffix": "400k",
+      "axial_elements": 400000,
+      "truss": { "kind": "lattice", "nx": 632, "ny": 632, "width": 758.0, "height": 758.0 },
+      "space_frame": { "nx": 447, "ny": 447, "width": 894.0, "depth": 894.0, "height": 40.0 },
+      "plane_triangle": { "nx": 632, "ny": 632, "width": 632.0, "height": 632.0 },
+      "plane_quad": { "nx": 632, "ny": 632, "width": 632.0, "height": 632.0 },
+      "heat_plane_quad": { "nx": 632, "ny": 632, "width": 632.0, "height": 632.0 }
     }
   ]
 }

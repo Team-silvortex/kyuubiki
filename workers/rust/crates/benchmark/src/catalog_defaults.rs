@@ -426,6 +426,30 @@ fn default_profiles() -> Vec<ProfileScaleSpec> {
                 height: 548.0,
             },
         ),
+        profile_scale_spec(
+            BenchmarkProfile::FourHundredK,
+            "400k",
+            400_000,
+            TrussScale::Lattice {
+                nx: 632,
+                ny: 632,
+                width: 758.0,
+                height: 758.0,
+            },
+            FrameGridScale {
+                nx: 447,
+                ny: 447,
+                width: 894.0,
+                depth: 894.0,
+                height: 40.0,
+            },
+            PanelScale {
+                nx: 632,
+                ny: 632,
+                width: 632.0,
+                height: 632.0,
+            },
+        ),
     ]
 }
 

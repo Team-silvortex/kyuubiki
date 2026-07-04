@@ -3,6 +3,11 @@ defmodule KyuubikiSdk.MaterialWorkflowsTest do
 
   alias KyuubikiSdk.MaterialWorkflows
 
+  @fixture_path Path.expand(
+                  "../../../schemas/examples.material-envelope-catalog-request.json",
+                  __DIR__
+                )
+
   test "catalog prefers Orchestra catalog workflow before graph fallback" do
     catalog = MaterialWorkflows.material_workflow_catalog()
 
@@ -14,8 +19,10 @@ defmodule KyuubikiSdk.MaterialWorkflowsTest do
 
   test "catalog request targets the built-in material envelope workflow" do
     request = MaterialWorkflows.material_study_envelope_catalog_request()
+    {:ok, fixture} = @fixture_path |> File.read!() |> Jason.decode()
 
     assert request["workflow_id"] == MaterialWorkflows.material_envelope_catalog_workflow_id()
+    assert request == Map.delete(fixture, "$schema")
 
     assert get_in(request, ["input_artifacts", "material_rows", "rows", Access.at(0), "case_id"]) ==
              "cool_stiff"

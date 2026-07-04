@@ -197,6 +197,9 @@ fn run() -> RunnerResult<u8> {
             workflow_mesh_remote::run_workflow_mesh_remote(&paths.root, rest)
         }
         "workflow-mesh-regression" => workflow_mesh::run_workflow_mesh_regression(&paths.root),
+        "agent-capability-smoke" => {
+            run_python_script(&paths.root, "agent-capability-smoke.py", rest)
+        }
         "worker" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-cli", rest)),
         "benchmark" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-benchmark", rest)),
         "agent" => {
@@ -280,6 +283,17 @@ fn run_node_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResu
         [root.join("scripts").join(script).into_os_string()]
             .into_iter()
             .chain(rest),
+    )
+}
+
+fn run_python_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {
+    run_with_env(
+        root,
+        "python3",
+        [root.join("scripts").join(script).into_os_string()]
+            .into_iter()
+            .chain(rest),
+        &[("PYTHONPATH", "sdks/python")],
     )
 }
 
@@ -386,6 +400,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   workflow-catalog-benchmark-regression\n  \
   workflow-mesh-regression-remote\n  \
   workflow-mesh-regression\n  \
+  agent-capability-smoke\n  \
 worker benchmark agent frontend format\n  \
 hub-gui-dev installer-gui-dev workbench-gui-dev\n  \
 native-script-audit\n"

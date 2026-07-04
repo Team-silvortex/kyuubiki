@@ -215,6 +215,15 @@ Use these entrypoints:
   Run the truss solver strategy probe with both Jacobi and symmetric
   Gauss-Seidel preconditioners. Use `jacobi` or `symmetric-gauss-seidel` to
   force one strategy.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1`
+  Run the first remote 400k smoke as a narrow, low-risk probe before promoting
+  broader matrices.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=axial-bar-400k REPEAT=1`
+  Run the cheapest 400k mechanical path to confirm catalog shape and end-to-end
+  runner behavior before attempting truss or full matrix coverage.
+- `make benchmark-profile-remote PROFILE=400k MATRIX=mechanical-core CASE=truss-roof-400k REPEAT=1 SOLVER_PRECONDITIONER=all`
+  Run the heavy 400k truss probe and compare Jacobi against symmetric
+  Gauss-Seidel before choosing a default iterative-solver lane.
 
 Baseline and report surfaces:
 
@@ -240,14 +249,32 @@ Current behavior notes:
   timing should prefer `kyuubiki-lab`
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
-- `200k` and `300k` are remote-first: CI checks the catalog shape, while timing evidence
+- `200k`, `300k`, and `400k` are remote-first: CI checks the catalog shape, while timing evidence
   should be collected from `kyuubiki-lab` before adding checked baselines
 - cases under `5.0 ms` baseline median remain visible in reports but are not
   treated as hard failures by default
 - the remote wrapper syncs the Rust workspace without `target/` and does not
   rely on checked-in server-specific runtime configuration files
+- remote profile runs enable benchmark `--progress`, which prints per-case
+  start/done lines to stderr while keeping stdout valid JSON for report files
 - local retained run folders are now indexed and pruned by retention count so
   nightly artifact history does not sprawl indefinitely on the runner workspace
+- `400k` is exploratory, not a default nightly tier. Use narrow thermal and
+  mechanical probes first, then promote only stable matrices into checked
+  baselines.
+- the first `400k` probes passed for axial bar, thermal quad, truss, 3D
+  space-frame, triangular structural surface, and quad structural surface
+  cases, with peak RSS ranging from roughly `404 MiB` to `1.85 GiB`. Treat
+  those numbers as exploratory evidence rather than hard regression baselines
+  until repeat runs are available.
+- `thermal-structural 400k` now has per-case progress. Its initial long-run
+  blocker, `thermal-bar-400k`, has a chain-specific fast path and completes as
+  a narrow remote probe. The next known long-run hotspot is
+  `thermal-plane-triangle-400k`, so keep the full matrix manual until that
+  surface path is optimized or split into its own long-run tier. A `100k`
+  thermal-plane-triangle probe already exceeds the interactive window, which
+  makes this a dedicated solver-path optimization target rather than only a
+  `400k` scale-tier issue.
 
 ## Nightly lane map
 

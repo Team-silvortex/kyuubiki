@@ -174,8 +174,8 @@ Material envelope automation now has two explicit SDK paths:
   submits `workflow.material-study-envelope-ranking-json` through
   `workflow_submit_catalog`, then waits and fetches the result. This is the
   preferred path for normal Orchestra-connected deployments because the graph
-  remains owned by the central workflow catalog. Python and Elixir SDKs expose
-  request helpers for this catalog-first path.
+  remains owned by the central workflow catalog. Rust, Python, and Elixir SDKs
+  expose request helpers for this catalog-first path.
 - `material_study_envelope_ranking`
   submits an inline workflow graph through `workflow_submit_graph`. This is the
   fallback path for offline or decentralized runs where the catalog is not

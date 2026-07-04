@@ -87,6 +87,17 @@ Useful smoke wrappers:
   Current Elixir -> Rust integration smoke flow.
 - `./scripts/kyuubiki sdk-smoke`
   Python / Elixir / Rust headless SDK smoke suite.
+- `./scripts/kyuubiki agent-capability-smoke --host 192.168.1.12 --port 5001 --output tmp/agent-capability-smoke-5001.json`
+  Probe a running solver agent, read its advertised RPC methods, and run the
+  matching minimal Python SDK solver fixtures. This is the preferred quick
+  check for installer-managed lab agents because it reports both tested and
+  untested advertised methods without mutating the remote service.
+- `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
+  Run the same check through Make with an explicit release gate. Raise
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.14.x` agent with the
+  newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
+  `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
+  release assertions.
 - `./scripts/kyuubiki rust-line-audit`
   Enforce the Rust source file line-count ceiling without running the full
   Rust test suite.
@@ -126,9 +137,9 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki desktop-upload-remote macos`
   Upload the current shipping-version desktop release outputs to the remote
   download server. Override the target with
-  `KYUUBIKI_RELEASE_REMOTE_HOST=user@host`, optionally provide
-  `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` for `sshpass`-backed non-interactive
-  auth, and set `PURGE_LOCAL=1` to remove local `dist/` and platform-matched
+  `KYUUBIKI_RELEASE_REMOTE_HOST=user@host`. Prefer SSH keys or an agent; the
+  temporary `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` compatibility path uses
+  `sshpass -e`, and `PURGE_LOCAL=1` removes local `dist/` and platform-matched
   Tauri bundle outputs after a successful upload.
 - `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
   Compatibility shim for
@@ -202,7 +213,7 @@ Useful smoke wrappers:
 - `make test-integration-workflow-catalog-nightly`
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
-- `PROFILE=300k MATRIX=mechanical-core CASE=axial-bar-300k REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+- `PROFILE=400k MATRIX=mechanical-core CASE=axial-bar-400k REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   Compatibility shim for `./scripts/kyuubiki benchmark-profile-remote`. It runs
   one remote Rust benchmark profile/matrix smoke without requiring a checked
   baseline. Use this for new scale tiers before promoting them into the

@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
 
 from kyuubiki_sdk import (
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID,
     material_study_envelope_catalog_request,
     material_study_envelope_input_artifacts,
     material_workflow_catalog,
+)
+
+FIXTURE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "schemas"
+    / "examples.material-envelope-catalog-request.json"
 )
 
 
@@ -21,8 +29,11 @@ class MaterialWorkflowTest(unittest.TestCase):
 
     def test_material_envelope_catalog_request_uses_builtin_workflow_id(self) -> None:
         request = material_study_envelope_catalog_request()
+        fixture = json.loads(FIXTURE_PATH.read_text())
+        fixture.pop("$schema")
 
         self.assertEqual(request["workflow_id"], MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID)
+        self.assertEqual(request, fixture)
         self.assertEqual(
             request["input_artifacts"]["material_rows"]["rows"][0]["case_id"],
             "cool_stiff",

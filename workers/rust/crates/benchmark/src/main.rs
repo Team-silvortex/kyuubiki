@@ -11,6 +11,7 @@ mod generators_thermal_structural;
 mod headless_cases;
 mod models;
 mod runner;
+mod runner_progress;
 mod runner_shape;
 mod runner_structural;
 mod runner_util;
@@ -27,7 +28,7 @@ use compare::{
 use config::{BenchmarkConfig, OutputFormat};
 use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
 use models::select_cases;
-use runner::build_report;
+use runner::{build_report, build_report_with_progress};
 
 fn main() {
     let config = BenchmarkConfig::from_env();
@@ -37,13 +38,24 @@ fn main() {
         benchmark_cases(config.profile, &config.matrix)
     };
     let selected = select_cases(&cases, config.case_filter.as_deref());
-    let report = build_report(
-        &selected,
-        config.repeat,
-        config.profile,
-        &config.matrix,
-        &config.solver_preconditioner,
-    );
+    let report = if config.progress {
+        build_report_with_progress(
+            &selected,
+            config.repeat,
+            config.profile,
+            &config.matrix,
+            &config.solver_preconditioner,
+            true,
+        )
+    } else {
+        build_report(
+            &selected,
+            config.repeat,
+            config.profile,
+            &config.matrix,
+            &config.solver_preconditioner,
+        )
+    };
 
     if let Some(path) = &config.baseline_out {
         let payload = serde_json::to_string_pretty(&report).expect("report should serialize");

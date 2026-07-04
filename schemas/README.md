@@ -21,6 +21,9 @@ README.
 - `workflow-dataset.schema.json` is for ONNX-like cross-operator data
   contracts, including named values, shape semantics, encoding, and stable
   schema references shared across workflow nodes
+- `material-envelope-catalog-request.schema.json` is for cross-SDK material
+  envelope catalog job requests that keep the built-in workflow graph owned by
+  the central workflow catalog
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
@@ -53,6 +56,9 @@ README.
   `heat -> thermo_mechanical` graph wiring
 - `examples.workflow-dataset.json` is the matching reference dataset contract
   for that workflow's cross-operator payloads
+- `examples.material-envelope-catalog-request.json` is the shared SDK fixture
+  for submitting the built-in material envelope ranking workflow through the
+  workflow catalog without embedding its graph inline
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
 - `examples.operator-task-batch.json` is the matching batch wrapper sample for

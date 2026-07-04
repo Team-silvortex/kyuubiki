@@ -11,6 +11,7 @@ use kyuubiki_solver::{
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
 };
+use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
 use crate::runner_structural::{WorkloadMetrics, run_thermal_structural_workload};
 use crate::runner_util::{current_peak_rss_kib, percentile, unix_timestamp};
@@ -22,15 +23,39 @@ pub(crate) fn build_report(
     matrix: &str,
     solver_preconditioner: &str,
 ) -> BenchmarkReport {
+    build_report_with_progress(
+        selected,
+        repeat,
+        profile,
+        matrix,
+        solver_preconditioner,
+        false,
+    )
+}
+
+pub(crate) fn build_report_with_progress(
+    selected: &[&BenchmarkCase],
+    repeat: usize,
+    profile: crate::config::BenchmarkProfile,
+    matrix: &str,
+    solver_preconditioner: &str,
+    progress: bool,
+) -> BenchmarkReport {
     let preconditioners = solver_preconditioners(solver_preconditioner);
     let tag_results = preconditioners.len() > 1;
     let cases = selected
         .iter()
         .flat_map(|case| {
             preconditioners.iter().map(move |preconditioner| {
+                if progress {
+                    print_case_start(case, preconditioner, repeat);
+                }
                 let mut result = run_case_with_preconditioner(case, repeat, preconditioner);
                 if tag_results && result.solver_preconditioner.is_some() {
                     result.id = format!("{}#{}", result.id, preconditioner);
+                }
+                if progress {
+                    print_case_done(&result);
                 }
                 result
             })

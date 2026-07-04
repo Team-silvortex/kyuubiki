@@ -11,6 +11,9 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.WorkflowGraphResponse
 
+  @material_envelope_catalog_workflow_id "workflow.material-study-envelope-ranking-json"
+  @material_envelope_max_rows 128
+
   defdelegate submit_axial_bar(params), to: AnalysisSolverSubmissions
   defdelegate submit_acoustic_bar_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_bar_1d(params), to: AnalysisSolverSubmissions
@@ -66,6 +69,7 @@ defmodule KyuubikiWeb.Analysis do
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         :ok <- validate_catalog_input_artifacts(workflow_id, input_artifacts),
          {:ok, payload} <-
            submit_workflow_graph(%{
              "graph" => graph,
@@ -86,6 +90,27 @@ defmodule KyuubikiWeb.Analysis do
       _ -> {:error, :invalid_workflow_graph_request}
     end
   end
+
+  defp validate_catalog_input_artifacts(@material_envelope_catalog_workflow_id, input_artifacts) do
+    with %{"material_rows" => %{"rows" => rows}} when is_list(rows) <- input_artifacts,
+         true <- rows != [],
+         true <- length(rows) <= @material_envelope_max_rows,
+         true <- Enum.all?(rows, &valid_material_envelope_row?/1) do
+      :ok
+    else
+      false -> {:error, :invalid_material_envelope_catalog_request}
+      _ -> {:error, :invalid_material_envelope_catalog_request}
+    end
+  end
+
+  defp validate_catalog_input_artifacts(_workflow_id, _input_artifacts), do: :ok
+
+  defp valid_material_envelope_row?(%{"case_id" => case_id, "summaries" => summaries})
+       when is_binary(case_id) and byte_size(case_id) in 1..128 and is_map(summaries) do
+    map_size(summaries) > 0
+  end
+
+  defp valid_material_envelope_row?(_row), do: false
 
   @spec submit_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def submit_workflow_graph(params) when is_map(params) do
