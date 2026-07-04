@@ -86,6 +86,7 @@ fn run() -> RunnerResult<u8> {
         "doctor" => run_installer(&paths, "doctor", rest),
         "validate-env" => run_installer(&paths, "validate-env", rest),
         "cross-platform-audit" => run_installer(&paths, "cross-platform-audit", rest),
+        "operator-package-preflight" => run_installer(&paths, "operator-package-preflight", rest),
         "install" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-installer", rest)),
         "package" | "package-runtime" => {
             let platform = host_platform().as_str();
@@ -387,6 +388,7 @@ fn print_help() {
 Native commands:\n  \
 status/start/stop/restart/export-db/hot-status\n  \
 doctor validate-env install package cross-platform-audit\n  \
+operator-package-preflight\n  \
 project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \

@@ -1,7 +1,11 @@
 {
   "schema_version": "kyuubiki.operator-package/v1",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
   "package_id": "operator.template.summary",
   "package_version": "0.1.0",
+  "minimum_host_version": "1.15.0",
+  "validation_status": "partial",
+  "validation_notes": "Template package runs a local smoke example; replace this with your operator's validation evidence before distribution.",
   "runtime": "rust_crate",
   "entrypoint": "target/debug/{lib_prefix}kyuubiki_operator_template.{lib_extension}",
   "operators": [

@@ -170,6 +170,16 @@ export function syncCurrentReleaseContracts({ version, codename, line }) {
     product_line: lineLabel,
     shipping_version: version,
     workspace_version: version,
+    components: (contract.components ?? []).map((component) => ({
+      ...component,
+      version,
+      visible_rules: (component.visible_rules ?? []).map((rule) =>
+        rule.label === "release_version" ? { ...rule, value: version } : rule,
+      ),
+      checks: (component.checks ?? []).map((check) =>
+        check.label === "release_version" ? { ...check, value: version } : check,
+      ),
+    })),
     visible_rules: (contract.visible_rules ?? []).map((rule) =>
       rule.label === "required shipping version" ? { ...rule, value: version } : rule,
     ),

@@ -1,16 +1,22 @@
+use kyuubiki_protocol::OperatorValidationStatus;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub const OPERATOR_PACKAGE_SCHEMA_VERSION: &str = "kyuubiki.operator-package/v1";
+pub const OPERATOR_SDK_API_VERSION: &str = "kyuubiki.operator-sdk/v1";
 pub const OPERATOR_PACKAGE_MANIFEST_FILE: &str = "kyuubiki-operator.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OperatorPackageManifest {
     pub schema_version: String,
+    pub sdk_api_version: String,
     pub package_id: String,
     pub package_version: String,
+    pub minimum_host_version: String,
+    pub validation_status: OperatorValidationStatus,
+    pub validation_notes: String,
     pub runtime: String,
     pub entrypoint: String,
     #[serde(default)]
@@ -131,6 +137,15 @@ fn validate_operator_package_manifest(
             ),
         });
     }
+    if manifest.sdk_api_version != OPERATOR_SDK_API_VERSION {
+        return Err(OperatorManifestError::Invalid {
+            path: manifest_path.to_path_buf(),
+            message: format!(
+                "expected sdk_api_version {} but found {}",
+                OPERATOR_SDK_API_VERSION, manifest.sdk_api_version
+            ),
+        });
+    }
     if manifest.package_id.trim().is_empty() {
         return Err(OperatorManifestError::Invalid {
             path: manifest_path.to_path_buf(),
@@ -141,6 +156,18 @@ fn validate_operator_package_manifest(
         return Err(OperatorManifestError::Invalid {
             path: manifest_path.to_path_buf(),
             message: "package_version must not be empty".to_string(),
+        });
+    }
+    if manifest.minimum_host_version.trim().is_empty() {
+        return Err(OperatorManifestError::Invalid {
+            path: manifest_path.to_path_buf(),
+            message: "minimum_host_version must not be empty".to_string(),
+        });
+    }
+    if manifest.validation_notes.trim().is_empty() {
+        return Err(OperatorManifestError::Invalid {
+            path: manifest_path.to_path_buf(),
+            message: "validation_notes must not be empty".to_string(),
         });
     }
     if manifest.entrypoint.trim().is_empty() {
@@ -199,8 +226,12 @@ mod tests {
             &manifest_path,
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
                 "package_id": "operator.example.peak_field",
                 "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Manifest parser smoke fixture.",
                 "runtime": "rust_crate",
                 "entrypoint": "target/debug/liboperator_example_peak_field.dylib",
                 "operators": [
@@ -233,8 +264,12 @@ mod tests {
             alpha.join(OPERATOR_PACKAGE_MANIFEST_FILE),
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
                 "package_id": "operator.alpha",
                 "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Discovery smoke fixture.",
                 "runtime": "rust_crate",
                 "entrypoint": "target/debug/liboperator_alpha.dylib",
                 "operators": [
@@ -252,8 +287,12 @@ mod tests {
             beta.join(OPERATOR_PACKAGE_MANIFEST_FILE),
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
                 "package_id": "operator.beta",
                 "package_version": "0.2.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Discovery smoke fixture.",
                 "runtime": "rust_crate",
                 "entrypoint": "target/debug/liboperator_beta.dylib",
                 "operators": [
@@ -272,6 +311,70 @@ mod tests {
         assert_eq!(packages.len(), 2);
         assert_eq!(packages[0].manifest.package_id, "operator.alpha");
         assert_eq!(packages[1].manifest.package_id, "operator.beta");
+    }
+
+    #[test]
+    fn rejects_manifest_with_wrong_sdk_api_version() {
+        let dir = temp_dir("manifest-sdk-version");
+        let manifest_path = dir.join(OPERATOR_PACKAGE_MANIFEST_FILE);
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": "kyuubiki.operator-sdk/v0",
+                "package_id": "operator.bad",
+                "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Bad SDK version fixture.",
+                "runtime": "rust_crate",
+                "entrypoint": "target/debug/liboperator_bad.dylib",
+                "operators": [
+                    {
+                        "operator_id": "extract.bad",
+                        "kind": "extract",
+                        "entry_symbol": "register_bad"
+                    }
+                ]
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let error = read_operator_package_manifest(&manifest_path).expect_err("manifest rejects");
+        assert!(error.to_string().contains("sdk_api_version"));
+    }
+
+    #[test]
+    fn rejects_manifest_without_validation_notes() {
+        let dir = temp_dir("manifest-validation-notes");
+        let manifest_path = dir.join(OPERATOR_PACKAGE_MANIFEST_FILE);
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "package_id": "operator.bad",
+                "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "",
+                "runtime": "rust_crate",
+                "entrypoint": "target/debug/liboperator_bad.dylib",
+                "operators": [
+                    {
+                        "operator_id": "extract.bad",
+                        "kind": "extract",
+                        "entry_symbol": "register_bad"
+                    }
+                ]
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let error = read_operator_package_manifest(&manifest_path).expect_err("manifest rejects");
+        assert!(error.to_string().contains("validation_notes"));
     }
 
     fn temp_dir(label: &str) -> PathBuf {

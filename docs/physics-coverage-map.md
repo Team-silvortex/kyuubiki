@@ -1,13 +1,13 @@
 # Physics Coverage Map
 
-This document defines the `tamamono 1.14.x` physics-coverage push.
+This document defines the `tamamono 1.15.x` physics-coverage push.
 
 The goal is breadth with honest limits, not final numerical authority. The
 coverage created in this window prepares the `1.15.x` and `1.16.x` work on
 engine boundaries, executable task files, operator descriptors, and durable
 workflow contracts.
 
-## 1.14.x Rule
+## 1.15.x Rule
 
 Every major simulation family should have at least one runnable path through
 the Rust solver and benchmark stack.
@@ -56,7 +56,7 @@ format work must preserve.
 The executable task format should not be designed around only one or two
 favorite solvers.
 
-By the end of the `1.14.x` window, the engine-facing task shape needs examples
+By the end of the `1.15.x` window, the engine-facing task shape needs examples
 from:
 
 - scalar field solves
@@ -154,11 +154,11 @@ Use these labels consistently:
   the family has external validation, convergence posture, and documented
   limits suitable for serious engineering claims
 
-Most `1.14.x` additions should stop at `smoke` or `baseline`.
+Most `1.15.x` additions should stop at `smoke` or `baseline`.
 
 ## Exit Criteria
 
-`1.14.x` is ready to hand off to the `1.15.x` and `1.16.x` contract work when:
+`1.15.x` is ready to hand off to the `1.15.x` and `1.16.x` contract work when:
 
 - the `physics-coverage` matrix runs all built-in benchmark templates
 - each `physics-coverage` solver family has a matching headless workflow solve

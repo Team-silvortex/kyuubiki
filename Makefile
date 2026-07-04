@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -45,6 +45,7 @@ help:
 	@echo "  make desktop-linux-remote Build Linux desktop packages on kyuubiki-lab"
 	@echo "  make desktop-linux-remote-install-deps Install Linux desktop apt dependencies on kyuubiki-lab with sudo -n"
 	@echo "  make desktop-linux-remote-preflight Check kyuubiki-lab Linux desktop build prerequisites"
+	@echo "  make operator-package-preflight Run read-only external operator package admission checks"
 	@echo "  make sync-desktop-shared Refresh shared desktop UI helper files into each Tauri app"
 	@echo "  make build-installation-docs Regenerate installation integrity HTML docs from the shared JSON contract"
 	@echo "  make build-update-catalog Regenerate the unified update catalog JSON and HTML docs"
@@ -93,7 +94,7 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
-	@echo "  make benchmark-physics-coverage Run the 1.14.x broad physics smoke matrix"
+	@echo "  make benchmark-physics-coverage Run the 1.15.x broad physics smoke matrix"
 	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1)"
 	@echo "  make benchmark-profile-report Regenerate a profile Markdown summary from an existing local JSON report"
 	@echo "  make benchmark-profile-index Rebuild the retained exploratory profile run index under tmp/benchmark-profile"
@@ -237,6 +238,9 @@ desktop-linux-remote-install-deps:
 desktop-linux-remote-preflight:
 	@$(ENTRYPOINT) desktop-linux-remote preflight
 
+operator-package-preflight:
+	@$(ENTRYPOINT) operator-package-preflight $(or $(PACKAGES_ROOT),$(CURDIR)/workers/rust/templates) $(if $(OUT),--out $(abspath $(OUT)),) $(if $(FAIL_ON_REJECTED),--fail-on-rejected,)
+
 sync-desktop-shared:
 	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs
 
@@ -275,6 +279,7 @@ audit-project-organization:
 
 architecture-check:
 	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) operator-package-preflight
 	@jq empty docs/book-manifest.json
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
 	@cd workers/rust && cargo test -p kyuubiki-cli operator_task_ir_rpc
@@ -401,6 +406,7 @@ verify:
 	@cd workers/rust && cargo fmt --check && cargo test
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
 	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) operator-package-preflight
 	@$(ENTRYPOINT) sdk-smoke
 	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}
 	@node --test apps/web/playground/test/fem.test.mjs

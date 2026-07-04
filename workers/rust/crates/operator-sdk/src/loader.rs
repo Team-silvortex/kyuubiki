@@ -1,6 +1,7 @@
 use crate::OperatorRegistry;
 use crate::manifest::{DiscoveredOperatorPackage, discover_operator_packages};
 use crate::{current_platform_library_file_name, expand_platform_library_template};
+use kyuubiki_protocol::OperatorValidationStatus;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -11,6 +12,40 @@ pub struct OperatorPackageLoadPlan {
     pub entrypoint_path: PathBuf,
     pub entrypoint_candidates: Vec<PathBuf>,
     pub manifest: crate::OperatorPackageManifest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperatorPackageLoadSummary {
+    pub package_id: String,
+    pub package_version: String,
+    pub sdk_api_version: String,
+    pub minimum_host_version: String,
+    pub validation_status: OperatorValidationStatus,
+    pub validation_notes: String,
+    pub runtime: String,
+    pub operator_ids: Vec<String>,
+    pub entrypoint_path: PathBuf,
+}
+
+impl OperatorPackageLoadPlan {
+    pub fn admission_summary(&self) -> OperatorPackageLoadSummary {
+        OperatorPackageLoadSummary {
+            package_id: self.manifest.package_id.clone(),
+            package_version: self.manifest.package_version.clone(),
+            sdk_api_version: self.manifest.sdk_api_version.clone(),
+            minimum_host_version: self.manifest.minimum_host_version.clone(),
+            validation_status: self.manifest.validation_status,
+            validation_notes: self.manifest.validation_notes.clone(),
+            runtime: self.manifest.runtime.clone(),
+            operator_ids: self
+                .manifest
+                .operators
+                .iter()
+                .map(|operator| operator.operator_id.clone())
+                .collect(),
+            entrypoint_path: self.entrypoint_path.clone(),
+        }
+    }
 }
 
 pub trait OperatorPackageActivator {
@@ -236,8 +271,12 @@ mod tests {
             &manifest_path,
             serde_json::json!({
                 "schema_version": crate::OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": crate::OPERATOR_SDK_API_VERSION,
                 "package_id": "operator.example.loader",
                 "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Loader path smoke fixture.",
                 "runtime": "rust_crate",
                 "entrypoint": "target/debug/{lib_prefix}operator_example_loader.{lib_extension}",
                 "operators": [
@@ -267,6 +306,10 @@ mod tests {
                     "operator_example_loader",
                 ))
         );
+        let summary = plan.admission_summary();
+        assert_eq!(summary.package_id, "operator.example.loader");
+        assert_eq!(summary.minimum_host_version, "1.15.0");
+        assert_eq!(summary.operator_ids, vec!["extract.example_loader"]);
         assert!(!plan.entrypoint_candidates.is_empty());
     }
 
@@ -279,8 +322,12 @@ mod tests {
             package_dir.join(crate::OPERATOR_PACKAGE_MANIFEST_FILE),
             serde_json::json!({
                 "schema_version": crate::OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": crate::OPERATOR_SDK_API_VERSION,
                 "package_id": "operator.alpha",
                 "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Activation smoke fixture.",
                 "runtime": "rust_crate",
                 "entrypoint": "target/debug/liboperator_alpha.dylib",
                 "operators": [

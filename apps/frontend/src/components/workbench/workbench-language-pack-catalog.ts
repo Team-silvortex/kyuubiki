@@ -15,13 +15,13 @@ const REMOTE_READY_STATUS = {
 
 const WORKBENCH_LANGUAGE_PACK_CATALOG: WorkbenchLanguagePackCatalogEntry[] = [
   {
-    id: "workbench-fr-core-1.14",
+    id: "workbench-fr-core-1.15",
     language: "fr",
     name: "French Workbench Core",
     status: REMOTE_READY_STATUS.en,
   },
   {
-    id: "workbench-ko-core-1.14",
+    id: "workbench-ko-core-1.15",
     language: "ko",
     name: "Korean Workbench Core",
     status: REMOTE_READY_STATUS.en,
@@ -47,16 +47,16 @@ export function findWorkbenchLanguagePackCatalogEntry(packId: string): Workbench
 
 export function getBuiltinWorkbenchLanguagePack(packId: string): WorkbenchLanguagePack | null {
   switch (packId) {
-    case "workbench-fr-core-1.14":
+    case "workbench-fr-core-1.15":
       return {
         schema_version: "kyuubiki.language-pack/v1",
-        id: "workbench-fr-core-1.14",
+        id: "workbench-fr-core-1.15",
         language: "fr",
         targetSurface: "workbench",
         name: "French Workbench Core",
-        version: "1.14.0",
+        version: "1.15.0",
         versionLine: "tamamono 1.x",
-        targetAppVersion: "1.14.0",
+        targetAppVersion: "1.15.0",
         source: "downloaded",
         updatedAt: "2026-06-30T00:00:00.000Z",
         description: "Core French UI overrides for Workbench navigation, workflow, store, and system surfaces.",
@@ -99,16 +99,16 @@ export function getBuiltinWorkbenchLanguagePack(packId: string): WorkbenchLangua
           languagePackCatalogAction: "Bientot",
         },
       };
-    case "workbench-ko-core-1.14":
+    case "workbench-ko-core-1.15":
       return {
         schema_version: "kyuubiki.language-pack/v1",
-        id: "workbench-ko-core-1.14",
+        id: "workbench-ko-core-1.15",
         language: "ko",
         targetSurface: "workbench",
         name: "Korean Workbench Core",
-        version: "1.14.0",
+        version: "1.15.0",
         versionLine: "tamamono 1.x",
-        targetAppVersion: "1.14.0",
+        targetAppVersion: "1.15.0",
         source: "downloaded",
         updatedAt: "2026-06-30T00:00:00.000Z",
         description: "Core Korean UI overrides for Workbench navigation, workflow, store, and system surfaces.",

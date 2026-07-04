@@ -1,6 +1,6 @@
 # Project Architecture Organization
 
-This document is the working organization map for the `tamamono 1.14.x`
+This document is the working organization map for the `tamamono 1.15.x`
 architecture line. It exists to keep feature work, protocol work, and cleanup
 moving in the same direction.
 
@@ -131,7 +131,9 @@ line, split by responsibility rather than by arbitrary chunks.
 Current source-side posture:
 
 - `node ./scripts/audit-project-organization.mjs` is the repository-wide guard
-  for this rule and should report `tracked debt 0`.
+  for this rule and should report `tracked debt 0`. It checks tracked files
+  and untracked files that are not ignored, so new source modules are covered
+  before they are staged.
 - Hub keeps the shell document small by loading large static markup from
   `apps/hub-gui/ui/hub-static-partials.js` before `app.js` starts. Any new
   static Hub section should follow that boundary instead of growing
@@ -145,6 +147,10 @@ Current source-side posture:
 - Tests should split by operator family, runtime surface, or fixture domain.
   Shared fixtures should remain narrow enough that a new domain can be moved
   out without changing public fixture APIs.
+- Installer tests use `workers/rust/crates/installer/src/tests.rs` only as a
+  module index; add new installer tests under the responsibility modules in
+  `workers/rust/crates/installer/src/tests/`. The organization audit enforces
+  this module-index boundary.
 
 Allowed large-file categories:
 
@@ -185,7 +191,8 @@ matters; do not move source boundaries just to reduce generated output.
 - Keep `node ./scripts/audit-project-organization.mjs` green before adding
   new architecture or workflow files.
 - Run `make architecture-check` after changing TaskIR, orchestration boundary
-  code, architecture docs, or project organization docs.
+  code, external operator package admission contracts, architecture docs, or
+  project organization docs.
 - Keep Hub static partial smoke coverage aligned with every new shell partial.
 - Keep legacy shell modules below the shared line ceiling until native commands
   can retire them.

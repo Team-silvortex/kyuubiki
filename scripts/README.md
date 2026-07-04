@@ -31,8 +31,10 @@ This directory contains host-native operational entry points.
   so crate and test modules stay split before they become hard to review.
 - `audit-project-organization.mjs`
   Enforce the repository-wide source organization guard. New source and docs
-  files stay under the shared line ceiling, while explicitly tracked historical
-  debt files are allowed only up to their current debt limit.
+  files, including untracked files that are not ignored, stay under the shared
+  line ceiling, while explicitly tracked historical debt files are allowed only
+  up to their current debt limit. It also keeps installer `tests.rs` as a
+  module index instead of a growing test bucket.
 - `make architecture-check`
   Lightweight guard for the current architecture organization line. It combines
   the repository organization audit, docs manifest JSON validation, focused
@@ -94,7 +96,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.14.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.15.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.
@@ -134,6 +136,19 @@ Useful smoke wrappers:
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
   exercise the live workbench benchmark surface.
+- `./scripts/kyuubiki operator-package-preflight ./operator-packages`
+  Read-only external operator package admission report. It prints
+  `kyuubiki.operator-package-preflight/v1` JSON with accepted packages,
+  rejected package reasons, and a safety block confirming that dynamic
+  libraries were not loaded.
+- `make operator-package-preflight`
+  Runs the same admission report against the checked-in Rust operator crate
+  template under `workers/rust/templates/`.
+- `make operator-package-preflight OUT=tmp/operator-package-preflight.json`
+  Writes the same report to a repo-root-relative JSON file for CI artifacts or
+  installer diagnostics.
+- `make operator-package-preflight FAIL_ON_REJECTED=1`
+  Turns rejected external operator packages into a non-zero quality gate.
 - `./scripts/kyuubiki desktop-upload-remote macos`
   Upload the current shipping-version desktop release outputs to the remote
   download server. Override the target with

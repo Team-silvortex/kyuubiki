@@ -118,7 +118,10 @@ struct SummaryStats {
 
 impl SummaryStats {
     fn from_cases(cases: &[Value]) -> Self {
-        let case_ids = cases.iter().map(|entry| string_field(entry, "id")).collect();
+        let case_ids = cases
+            .iter()
+            .map(|entry| string_field(entry, "id"))
+            .collect();
         let total_median_ms = cases
             .iter()
             .filter_map(|entry| entry["median_ms"].as_f64())

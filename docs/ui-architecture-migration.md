@@ -1,6 +1,6 @@
 # UI Architecture Migration
 
-This page tracks the `1.14.x` UI refactor path for moving the desktop UI away
+This page tracks the `1.15.x` UI refactor path for moving the desktop UI away
 from ad-hoc JavaScript modules into typed, layered contracts without breaking
 the Tauri shells.
 

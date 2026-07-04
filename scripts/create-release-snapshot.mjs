@@ -158,7 +158,7 @@ function buildSnapshot(version, options) {
       ],
       web_checks: [],
       rust_checks: [],
-      repo_checks: ["git diff --check"],
+      repo_checks: ["git diff --check", "make operator-package-preflight"],
     },
   };
 }
@@ -176,7 +176,13 @@ function updateIndex(version, options) {
     snapshot_path: snapshotRelativePath(version),
   };
 
-  const nextSnapshots = (index.snapshots ?? []).filter((item) => item.version !== version);
+  const nextSnapshots = (index.snapshots ?? [])
+    .filter((item) => item.version !== version)
+    .map((item) =>
+      options.status === "current" && item.status === "current"
+        ? { ...item, status: "archived" }
+        : item,
+    );
   nextSnapshots.unshift(entry);
 
   return {
@@ -184,6 +190,30 @@ function updateIndex(version, options) {
     current_version: options.status === "current" ? version : index.current_version ?? version,
     snapshots: nextSnapshots,
   };
+}
+
+function archivePreviousCurrentSnapshots(nextIndex, options) {
+  if (options.status !== "current") {
+    return;
+  }
+
+  for (const entry of nextIndex.snapshots ?? []) {
+    if (entry.version === options.version || entry.status !== "archived") {
+      continue;
+    }
+
+    const filePath = path.join(rootDir, "releases", entry.snapshot_path);
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+
+    const snapshot = readJson(filePath);
+    if (snapshot.status !== "current") {
+      continue;
+    }
+
+    writeJson(filePath, { ...snapshot, status: "archived" });
+  }
 }
 
 function main() {
@@ -214,6 +244,7 @@ function main() {
   fs.mkdirSync(snapshotsDir, { recursive: true });
   writeJson(snapshotPath, snapshot);
   writeJson(releaseIndexPath, nextIndex);
+  archivePreviousCurrentSnapshots(nextIndex, options);
 
   if (options.status === "current") {
     syncCurrentReleaseContracts({

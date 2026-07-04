@@ -15,6 +15,7 @@ mod integrity;
 mod integrity_contract;
 mod integrity_versions;
 mod linux_desktop_dependencies;
+mod operator_package_preflight;
 mod release;
 mod remote_deployment;
 mod remote_deployment_artifacts;
@@ -29,6 +30,10 @@ mod update_catalog;
 mod update_source;
 
 pub use exports::*;
+pub use operator_package_preflight::{
+    OperatorPackagePreflightOutcome, operator_package_preflight, operator_package_preflight_json,
+    write_operator_package_preflight_json, write_operator_package_preflight_outcome,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DoctorCheck {

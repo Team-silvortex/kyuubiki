@@ -28,9 +28,9 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current published release snapshot in this line is `tamamono 1.14.0`.
+The current published release snapshot in this line is `tamamono 1.15.0`.
 
-The current shipping point now sits inside the wider `1.14.x` to `1.20.x`
+The current shipping point now sits inside the wider `1.15.x` to `1.20.x`
 industrialization range, where the main job is still hardening trust,
 contracts, and operator-visible runtime behavior rather than inflating feature
 count.
@@ -38,7 +38,7 @@ count.
 The immediate hardening focus is:
 
 - benchmark-backed accuracy claims instead of anecdotal confidence
-- broad `1.14.x` physics smoke coverage before task-file and engine contracts
+- broad `1.15.x` physics smoke coverage before task-file and engine contracts
   harden in `1.15.x` and `1.16.x`
 - clearer task, failure, and recovery semantics across runtime surfaces
 - stronger workflow and asset contracts instead of ad hoc payload growth
@@ -83,7 +83,7 @@ agent surfaces.
    Reliability roadmap for turning material studies from runnable prototypes
    into reproducible screening, review, and qualification-oriented workflows.
 6. [physics-coverage-map.md](physics-coverage-map.md)
-   `1.14.x` solver-family coverage map and the benchmark lane used to keep
+   `1.15.x` solver-family coverage map and the benchmark lane used to keep
    broad physics support visible.
 7. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.

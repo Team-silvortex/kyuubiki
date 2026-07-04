@@ -1,7 +1,7 @@
 # Installer Remote Control Surface
 
 Use this page as the source-of-truth note for the Installer remote deployment
-and remote runtime control surface in the `tamamono 1.14.x` preparation line.
+and remote runtime control surface in the `tamamono 1.15.x` preparation line.
 
 For maturity tracking, pair this control-surface note with
 [remote-deployment-roadmap.html](remote-deployment-roadmap.html). The current
@@ -234,16 +234,16 @@ Failure advice should prefer:
 
 instead of generic “something failed” messaging.
 
-## Relationship to `1.14.x`
+## Relationship to `1.15.x`
 
-Inside the `1.14.x` to `1.20.x` industrialization range, this surface is
-especially relevant to the `1.14.x` trust-hardening and remote-deployment
+Inside the `1.15.x` to `1.20.x` industrialization range, this surface is
+especially relevant to the `1.15.x` trust-hardening and remote-deployment
 themes:
 
-- `1.14.x`
+- `1.15.x`
   trust hardening, clearer operator-facing runtime claims, and fewer ambiguous
   control paths
-- `1.14.x`
+- `1.15.x`
   asset and lineage formalization, where remote workflow snapshots should stop
   being isolated UI history and become part of a clearer execution record
 

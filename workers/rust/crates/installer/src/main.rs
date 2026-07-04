@@ -7,10 +7,10 @@ use kyuubiki_installer::{
     default_remote_deployment_journal, default_remote_deployment_plan,
     default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
     default_remote_ssh_fixture_report, embedded_runtime_report, exit_on_err, export_launch_config,
-    init_env, installation_integrity_report, linux_desktop_dependency_plan, parse_platform,
-    prepare_layout, prepare_staged_update, print_help, remote_deployment_roadmap,
-    repair_installation, run_doctor, stage_release, unified_update_plan, unified_update_preview,
-    validate_env_file,
+    init_env, installation_integrity_report, linux_desktop_dependency_plan,
+    operator_package_preflight, parse_platform, prepare_layout, prepare_staged_update, print_help,
+    remote_deployment_roadmap, repair_installation, run_doctor, stage_release, unified_update_plan,
+    unified_update_preview, validate_env_file, write_operator_package_preflight_outcome,
 };
 
 fn main() {
@@ -25,6 +25,25 @@ fn main() {
         "cross-platform-audit" => println!("{}", cross_platform_audit_report().render()),
         "linux-desktop-deps" => println!("{}", linux_desktop_dependency_plan().render()),
         "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
+        "operator-package-preflight" => {
+            let Some(packages_root) = args.next() else {
+                eprintln!("missing packages root for operator-package-preflight");
+                print_help();
+                std::process::exit(1);
+            };
+            let packages_root = PathBuf::from(packages_root);
+            match parse_operator_package_preflight_flags(args.collect()) {
+                Ok(flags) => exit_on_err(run_operator_package_preflight_command(
+                    &packages_root,
+                    flags,
+                )),
+                Err(error) => {
+                    eprintln!("{error}");
+                    print_help();
+                    std::process::exit(1);
+                }
+            }
+        }
         "update-plan" => {
             let channel = args.next();
             exit_on_err(unified_update_plan(channel).map(|report| report.render()))
@@ -81,4 +100,65 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct OperatorPackagePreflightFlags {
+    output_path: Option<PathBuf>,
+    fail_on_rejected: bool,
+}
+
+fn parse_operator_package_preflight_flags(
+    args: Vec<String>,
+) -> Result<OperatorPackagePreflightFlags, String> {
+    let mut flags = OperatorPackagePreflightFlags::default();
+    let mut output_path = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--out" => {
+                let Some(path) = args.get(index + 1) else {
+                    return Err("missing value for --out".to_string());
+                };
+                output_path = Some(PathBuf::from(path));
+                index += 2;
+            }
+            "--fail-on-rejected" => {
+                flags.fail_on_rejected = true;
+                index += 1;
+            }
+            other => return Err(format!("unknown operator-package-preflight flag: {other}")),
+        }
+    }
+    flags.output_path = output_path;
+    Ok(flags)
+}
+
+fn run_operator_package_preflight_command(
+    packages_root: &std::path::Path,
+    flags: OperatorPackagePreflightFlags,
+) -> Result<String, String> {
+    if let Some(output_path) = flags.output_path {
+        let outcome = operator_package_preflight(packages_root)?;
+        write_operator_package_preflight_outcome(&outcome, &output_path)?;
+        outcome.ensure_no_rejections().or_else(|error| {
+            if flags.fail_on_rejected {
+                Err(error)
+            } else {
+                Ok(())
+            }
+        })?;
+        return Ok(format!("wrote {}", output_path.display()));
+    }
+
+    let outcome = operator_package_preflight(packages_root)?;
+    let json = outcome.json.clone();
+    outcome.ensure_no_rejections().or_else(|error| {
+        if flags.fail_on_rejected {
+            Err(error)
+        } else {
+            Ok(())
+        }
+    })?;
+    Ok(json)
 }

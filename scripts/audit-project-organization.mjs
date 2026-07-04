@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -39,14 +39,23 @@ const IGNORED_PATH_PATTERNS = [
 
 const TRACKED_DEBT_LIMITS = new Map([]);
 
-function gitFiles() {
-  return execFileSync("git", ["ls-files"], {
+function gitFileList(args) {
+  return execFileSync("git", args, {
     cwd: ROOT,
     encoding: "utf8",
   })
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function projectFiles() {
+  return [
+    ...new Set([
+      ...gitFileList(["ls-files"]),
+      ...gitFileList(["ls-files", "--others", "--exclude-standard"]),
+    ]),
+  ].sort();
 }
 
 function shouldCheck(relativePath) {
@@ -64,7 +73,7 @@ function lineCount(relativePath) {
 const violations = [];
 const debtFilesSeen = new Set();
 
-for (const relativePath of gitFiles()) {
+for (const relativePath of projectFiles()) {
   if (!shouldCheck(relativePath)) continue;
 
   const lines = lineCount(relativePath);
@@ -81,6 +90,49 @@ for (const relativePath of gitFiles()) {
     });
   }
 }
+
+function checkInstallerTestIndex() {
+  const relativePath = "workers/rust/crates/installer/src/tests.rs";
+  const absolutePath = path.join(ROOT, relativePath);
+  if (!existsSync(absolutePath)) return;
+
+  const lines = readFileSync(absolutePath, "utf8").split("\n");
+  for (const [index, line] of lines.entries()) {
+    const trimmed = line.trim();
+    if (trimmed === "" || trimmed.startsWith("//")) continue;
+    const match = trimmed.match(/^mod ([a-z0-9_]+);$/);
+    if (!match) {
+      violations.push({
+        relativePath,
+        lines: index + 1,
+        limit: "module-index-only",
+        customMessage:
+          "installer tests.rs should only declare test modules; put tests in workers/rust/crates/installer/src/tests/",
+      });
+      return;
+    }
+
+    const modulePath = path.join(
+      ROOT,
+      "workers/rust/crates/installer/src/tests",
+      `${match[1]}.rs`,
+    );
+    if (!existsSync(modulePath)) {
+      violations.push({
+        relativePath,
+        lines: index + 1,
+        limit: "module-file-required",
+        customMessage: `installer test module ${match[1]} is missing ${path.relative(
+          ROOT,
+          modulePath,
+        )}`,
+      });
+      return;
+    }
+  }
+}
+
+checkInstallerTestIndex();
 
 for (const relativePath of TRACKED_DEBT_LIMITS.keys()) {
   if (!debtFilesSeen.has(relativePath)) {
@@ -100,6 +152,9 @@ if (violations.length > 0) {
     .map((violation) => {
       if (violation.missingDebtFile) {
         return `${violation.relativePath}: debt guard references a missing file`;
+      }
+      if (violation.customMessage) {
+        return `${violation.relativePath}: ${violation.customMessage}`;
       }
       return `${violation.relativePath}: ${violation.lines} lines (limit ${violation.limit}${
         violation.debtTracked ? ", tracked debt" : ""

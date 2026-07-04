@@ -1,14 +1,17 @@
 use crate::{
     BuiltInOperatorRegistryKind, ExternalOperatorHostConfig, ExternalOperatorTrustPolicy,
     built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
-    load_external_operator_packages_with_dynamic_host,
+    load_external_operator_packages_with_dynamic_host, preflight_external_operator_packages,
 };
 use kyuubiki_operator_sdk::{
     OperatorDescriptorBuilder, OperatorHandler, OperatorPackageActivator, OperatorPackageLoadError,
     OperatorPackageLoadPlan, OperatorRegistry, OperatorSdkError,
     current_platform_library_file_name, current_platform_library_path, partial_validation,
 };
-use kyuubiki_protocol::{OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult};
+use kyuubiki_protocol::{
+    OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
+    OperatorValidationStatus,
+};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
@@ -67,6 +70,49 @@ impl OperatorPackageActivator for TestActivator {
     }
 }
 
+fn package_manifest(
+    package_id: &str,
+    operator_id: &str,
+    runtime: &str,
+    entrypoint: impl serde::Serialize,
+    entry_symbol: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
+        "sdk_api_version": kyuubiki_operator_sdk::OPERATOR_SDK_API_VERSION,
+        "package_id": package_id,
+        "package_version": "0.1.0",
+        "minimum_host_version": "1.15.0",
+        "validation_status": "partial",
+        "validation_notes": "Engine external-operator host smoke fixture.",
+        "runtime": runtime,
+        "entrypoint": entrypoint,
+        "operators": [
+            {
+                "operator_id": operator_id,
+                "kind": "extract",
+                "entry_symbol": entry_symbol
+            }
+        ]
+    })
+}
+
+fn package_manifest_with_minimum_host(
+    package_id: &str,
+    operator_id: &str,
+    minimum_host_version: &str,
+) -> serde_json::Value {
+    let mut manifest = package_manifest(
+        package_id,
+        operator_id,
+        "rust_crate",
+        "target/debug/{lib_prefix}operator_versioned.{lib_extension}",
+        "register_versioned",
+    );
+    manifest["minimum_host_version"] = serde_json::json!(minimum_host_version);
+    manifest
+}
+
 #[test]
 fn loads_external_local_package_into_built_in_registry() {
     let packages_root = temp_dir("external-host-success");
@@ -74,20 +120,13 @@ fn loads_external_local_package_into_built_in_registry() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.alpha",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": "target/debug/{lib_prefix}operator_alpha.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.alpha",
-                    "kind": "extract",
-                    "entry_symbol": "register_alpha"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.alpha",
+            "extract.alpha",
+            "rust_crate",
+            "target/debug/{lib_prefix}operator_alpha.{lib_extension}",
+            "register_alpha",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -99,6 +138,16 @@ fn loads_external_local_package_into_built_in_registry() {
     .expect("external package should load");
 
     assert_eq!(report.activated_packages.len(), 1);
+    assert_eq!(report.host_version, env!("CARGO_PKG_VERSION"));
+    assert_eq!(report.activated_package_summaries.len(), 1);
+    assert_eq!(
+        report.activated_package_summaries[0].validation_status,
+        OperatorValidationStatus::Partial
+    );
+    assert_eq!(
+        report.activated_package_summaries[0].operator_ids,
+        vec!["extract.alpha"]
+    );
     assert_eq!(
         report.activated_packages[0].manifest.package_id,
         "operator.alpha"
@@ -125,20 +174,13 @@ fn deferred_host_reports_dynamic_loading_as_not_enabled() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.beta",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": "target/debug/{lib_prefix}operator_beta.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.beta",
-                    "kind": "extract",
-                    "entry_symbol": "register_beta"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.beta",
+            "extract.beta",
+            "rust_crate",
+            "target/debug/{lib_prefix}operator_beta.{lib_extension}",
+            "register_beta",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -166,20 +208,13 @@ fn dynamic_host_reports_missing_library_path() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.gamma",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": "target/debug/{lib_prefix}operator_gamma.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.gamma",
-                    "kind": "extract",
-                    "entry_symbol": "register_gamma"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.gamma",
+            "extract.gamma",
+            "rust_crate",
+            "target/debug/{lib_prefix}operator_gamma.{lib_extension}",
+            "register_gamma",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -203,20 +238,13 @@ fn host_policy_rejects_non_allowlisted_package_id() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.delta",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": "target/debug/{lib_prefix}operator_delta.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.delta",
-                    "kind": "extract",
-                    "entry_symbol": "register_delta"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.delta",
+            "extract.delta",
+            "rust_crate",
+            "target/debug/{lib_prefix}operator_delta.{lib_extension}",
+            "register_delta",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -243,20 +271,13 @@ fn host_policy_rejects_disallowed_runtime() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.epsilon",
-            "package_version": "0.1.0",
-            "runtime": "python_wasm",
-            "entrypoint": "target/debug/{lib_prefix}operator_epsilon.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.epsilon",
-                    "kind": "extract",
-                    "entry_symbol": "register_epsilon"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.epsilon",
+            "extract.epsilon",
+            "python_wasm",
+            "target/debug/{lib_prefix}operator_epsilon.{lib_extension}",
+            "register_epsilon",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -278,26 +299,109 @@ fn host_policy_rejects_disallowed_runtime() {
 }
 
 #[test]
+fn host_policy_rejects_future_minimum_host_version() {
+    let packages_root = temp_dir("external-host-policy-version");
+    let package_dir = packages_root.join("operator-versioned");
+    fs::create_dir_all(&package_dir).expect("create package dir");
+    fs::write(
+        package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
+        package_manifest_with_minimum_host("operator.versioned", "extract.versioned", "99.0.0")
+            .to_string(),
+    )
+    .expect("write manifest");
+
+    let error = match built_in_registry_with_external_packages(
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root),
+        &TestActivator,
+    ) {
+        Ok(_) => panic!("host policy should reject future host requirement"),
+        Err(error) => error,
+    };
+
+    assert!(error.to_string().contains("minimum_host_version 99.0.0"));
+    assert!(error.to_string().contains("operator.versioned"));
+}
+
+#[test]
+fn host_policy_accepts_package_when_host_version_satisfies_minimum() {
+    let packages_root = temp_dir("external-host-policy-version-ok");
+    let package_dir = packages_root.join("operator-versioned");
+    fs::create_dir_all(&package_dir).expect("create package dir");
+    fs::write(
+        package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
+        package_manifest_with_minimum_host("operator.versioned", "extract.versioned", "1.15.0")
+            .to_string(),
+    )
+    .expect("write manifest");
+
+    let (registry, report) = built_in_registry_with_external_packages(
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root)
+            .with_host_version("1.16.0"),
+        &TestActivator,
+    )
+    .expect("host version should satisfy package minimum");
+
+    assert_eq!(report.activated_packages.len(), 1);
+    assert!(registry.describe("extract.versioned").is_some());
+}
+
+#[test]
+fn preflight_reports_accepted_and_rejected_packages_without_activation() {
+    let packages_root = temp_dir("external-host-preflight");
+    let alpha_dir = packages_root.join("operator-alpha");
+    let future_dir = packages_root.join("operator-future");
+    fs::create_dir_all(&alpha_dir).expect("create alpha package dir");
+    fs::create_dir_all(&future_dir).expect("create future package dir");
+    fs::write(
+        alpha_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
+        package_manifest(
+            "operator.alpha",
+            "extract.alpha",
+            "rust_crate",
+            "target/debug/{lib_prefix}operator_alpha.{lib_extension}",
+            "register_alpha",
+        )
+        .to_string(),
+    )
+    .expect("write alpha manifest");
+    fs::write(
+        future_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
+        package_manifest_with_minimum_host("operator.future", "extract.future", "99.0.0")
+            .to_string(),
+    )
+    .expect("write future manifest");
+
+    let report = preflight_external_operator_packages(&ExternalOperatorHostConfig::new(
+        BuiltInOperatorRegistryKind::Extract,
+        &packages_root,
+    ))
+    .expect("preflight should collect policy results");
+
+    assert_eq!(report.accepted_packages.len(), 1);
+    assert_eq!(report.accepted_packages[0].package_id, "operator.alpha");
+    assert_eq!(report.rejected_packages.len(), 1);
+    assert_eq!(report.rejected_packages[0].package_id, "operator.future");
+    assert!(
+        report.rejected_packages[0]
+            .reason
+            .contains("minimum_host_version 99.0.0")
+    );
+}
+
+#[test]
 fn host_policy_rejects_entrypoint_outside_package_root() {
     let packages_root = temp_dir("external-host-policy-root");
     let package_dir = packages_root.join("operator-zeta");
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.zeta",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": "../outside/{lib_prefix}operator_zeta.{lib_extension}",
-            "operators": [
-                {
-                    "operator_id": "extract.zeta",
-                    "kind": "extract",
-                    "entry_symbol": "register_zeta"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.zeta",
+            "extract.zeta",
+            "rust_crate",
+            "../outside/{lib_prefix}operator_zeta.{lib_extension}",
+            "register_zeta",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -326,20 +430,13 @@ fn host_policy_can_allow_absolute_entrypoints_for_trusted_packages() {
     fs::write(&trusted_library, b"placeholder").expect("write placeholder library");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.eta",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": trusted_library,
-            "operators": [
-                {
-                    "operator_id": "extract.eta",
-                    "kind": "extract",
-                    "entry_symbol": "register_eta"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.eta",
+            "extract.eta",
+            "rust_crate",
+            &trusted_library,
+            "register_eta",
+        )
         .to_string(),
     )
     .expect("write manifest");
@@ -382,20 +479,13 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
     fs::create_dir_all(&package_dir).expect("create package dir");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
-        serde_json::json!({
-            "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
-            "package_id": "operator.template.summary",
-            "package_version": "0.1.0",
-            "runtime": "rust_crate",
-            "entrypoint": template_dylib,
-            "operators": [
-                {
-                    "operator_id": "extract.template_summary",
-                    "kind": "extract",
-                    "entry_symbol": "register_template_operator"
-                }
-            ]
-        })
+        package_manifest(
+            "operator.template.summary",
+            "extract.template_summary",
+            "rust_crate",
+            &template_dylib,
+            "register_template_operator",
+        )
         .to_string(),
     )
     .expect("write manifest");

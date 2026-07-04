@@ -1,7 +1,7 @@
 use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
-    OperatorRegistrationEntrypoint, OperatorRegistry,
+    OperatorPackageLoadSummary, OperatorRegistrationEntrypoint, OperatorRegistry,
 };
 use libloading::Library;
 use std::collections::BTreeSet;
@@ -13,6 +13,7 @@ use std::sync::Mutex;
 pub struct ExternalOperatorHostConfig {
     pub registry_kind: BuiltInOperatorRegistryKind,
     pub packages_root: PathBuf,
+    pub host_version: String,
     pub trust_policy: ExternalOperatorTrustPolicy,
 }
 
@@ -24,8 +25,14 @@ impl ExternalOperatorHostConfig {
         Self {
             registry_kind,
             packages_root: packages_root.into(),
+            host_version: env!("CARGO_PKG_VERSION").to_string(),
             trust_policy: ExternalOperatorTrustPolicy::default(),
         }
+    }
+
+    pub fn with_host_version(mut self, host_version: impl Into<String>) -> Self {
+        self.host_version = host_version.into();
+        self
     }
 
     pub fn with_trust_policy(mut self, trust_policy: ExternalOperatorTrustPolicy) -> Self {
@@ -72,7 +79,25 @@ impl ExternalOperatorTrustPolicy {
 pub struct ExternalOperatorLoadReport {
     pub registry_kind: BuiltInOperatorRegistryKind,
     pub packages_root: PathBuf,
+    pub host_version: String,
+    pub activated_package_summaries: Vec<OperatorPackageLoadSummary>,
     pub activated_packages: Vec<OperatorPackageLoadPlan>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalOperatorRejectedPackage {
+    pub package_id: String,
+    pub manifest_path: PathBuf,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalOperatorPreflightReport {
+    pub registry_kind: BuiltInOperatorRegistryKind,
+    pub packages_root: PathBuf,
+    pub host_version: String,
+    pub accepted_packages: Vec<OperatorPackageLoadSummary>,
+    pub rejected_packages: Vec<ExternalOperatorRejectedPackage>,
 }
 
 #[derive(Debug)]
@@ -118,9 +143,48 @@ pub fn built_in_registry_with_external_packages(
         ExternalOperatorLoadReport {
             registry_kind: config.registry_kind,
             packages_root: config.packages_root.clone(),
+            host_version: config.host_version.clone(),
+            activated_package_summaries: activated_packages
+                .iter()
+                .map(OperatorPackageLoadPlan::admission_summary)
+                .collect(),
             activated_packages,
         },
     ))
+}
+
+pub fn preflight_external_operator_packages(
+    config: &ExternalOperatorHostConfig,
+) -> Result<ExternalOperatorPreflightReport, ExternalOperatorHostError> {
+    let discovered = kyuubiki_operator_sdk::discover_operator_packages(&config.packages_root)
+        .map_err(kyuubiki_operator_sdk::OperatorPackageLoadError::Manifest)
+        .map_err(ExternalOperatorHostError::from)?;
+    let mut accepted_packages = Vec::new();
+    let mut rejected_packages = Vec::new();
+
+    for package in discovered {
+        let plan = kyuubiki_operator_sdk::build_operator_package_load_plan(package);
+        match validate_load_plan_against_policy(&plan, config) {
+            Ok(()) => accepted_packages.push(plan.admission_summary()),
+            Err(ExternalOperatorHostError::Policy {
+                package_id,
+                message,
+            }) => rejected_packages.push(ExternalOperatorRejectedPackage {
+                package_id,
+                manifest_path: plan.manifest_path.clone(),
+                reason: message,
+            }),
+            Err(error) => return Err(error),
+        }
+    }
+
+    Ok(ExternalOperatorPreflightReport {
+        registry_kind: config.registry_kind,
+        packages_root: config.packages_root.clone(),
+        host_version: config.host_version.clone(),
+        accepted_packages,
+        rejected_packages,
+    })
 }
 
 fn discover_activate_and_validate_operator_packages(
@@ -134,7 +198,7 @@ fn discover_activate_and_validate_operator_packages(
     let mut activated = Vec::new();
     for package in discovered {
         let plan = kyuubiki_operator_sdk::build_operator_package_load_plan(package);
-        validate_load_plan_against_policy(&plan, &config.trust_policy)?;
+        validate_load_plan_against_policy(&plan, config)?;
         activator.activate_package(&plan, registry)?;
         activated.push(plan);
     }
@@ -143,8 +207,9 @@ fn discover_activate_and_validate_operator_packages(
 
 fn validate_load_plan_against_policy(
     plan: &OperatorPackageLoadPlan,
-    trust_policy: &ExternalOperatorTrustPolicy,
+    config: &ExternalOperatorHostConfig,
 ) -> Result<(), ExternalOperatorHostError> {
+    let trust_policy = &config.trust_policy;
     let normalized_package_root = normalize_path(&plan.package_root);
     let normalized_entrypoint_path = normalize_path(&plan.entrypoint_path);
 
@@ -166,6 +231,16 @@ fn validate_load_plan_against_policy(
             message: format!(
                 "runtime {} is not allowed by the host policy",
                 plan.manifest.runtime
+            ),
+        });
+    }
+
+    if !host_satisfies_minimum_version(&config.host_version, &plan.manifest.minimum_host_version) {
+        return Err(ExternalOperatorHostError::Policy {
+            package_id: plan.manifest.package_id.clone(),
+            message: format!(
+                "minimum_host_version {} is newer than host {}",
+                plan.manifest.minimum_host_version, config.host_version
             ),
         });
     }
@@ -193,6 +268,28 @@ fn validate_load_plan_against_policy(
     }
 
     Ok(())
+}
+
+fn host_satisfies_minimum_version(host_version: &str, minimum_host_version: &str) -> bool {
+    let Some(host) = parse_version_triplet(host_version) else {
+        return false;
+    };
+    let Some(minimum) = parse_version_triplet(minimum_host_version) else {
+        return false;
+    };
+    host >= minimum
+}
+
+fn parse_version_triplet(value: &str) -> Option<(u64, u64, u64)> {
+    let normalized = value.split_once('-').map_or(value, |(version, _)| version);
+    let mut parts = normalized.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.parse().ok()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    Some((major, minor, patch))
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

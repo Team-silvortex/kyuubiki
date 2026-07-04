@@ -29,11 +29,12 @@ The repository now keeps validation split by responsibility.
   Rust source organization guard; fails when any `workers/rust/crates/**/*.rs`
   file exceeds the current `600` line ceiling
 - `make audit-project-organization`
-  Repository-wide organization guard; scans tracked source/docs files, keeps
-  new files under the shared line ceiling, and prevents known historical debt
-  files from growing further
+  Repository-wide organization guard; scans tracked files plus untracked
+  files that are not ignored, keeps new files under the shared line ceiling,
+  prevents known historical debt files from growing further, and keeps
+  installer `tests.rs` as a module index
 - `make architecture-check`
-  Lightweight new-architecture guard for the `1.14.x` line. It runs the
+  Lightweight new-architecture guard for the `1.15.x` line. It runs the
   repository organization audit, validates the docs book manifest JSON, and
   exercises the focused Operator TaskIR control-plane plus Rust live path.
 - `./scripts/kyuubiki rust-line-audit`
@@ -44,15 +45,42 @@ The repository now keeps validation split by responsibility.
 - `make workflow-preflight`
   workflow unit/topology plus browser-backed search/layout guard validation
 
+### Installer Test Organization
+
+Installer crate tests are split by installer responsibility instead of growing
+`workers/rust/crates/installer/src/tests.rs`. Put new tests under:
+
+- `control_update.rs` for platform parsing, agent manifests, cross-platform
+  audit, and update-plan behavior
+- `security_integrity.rs` for credential storage and installation integrity
+  contracts
+- `release_runtime.rs` for release manifests, launch manifests, embedded
+  runtimes, and Linux desktop dependency plans
+- `remote_deployment.rs` for remote deployment, artifact delivery, SSH fixture,
+  and host trust plans
+- `operator_package_preflight.rs` for external operator package admission JSON
+  and quality gates
+
 ### SDK checks
 
 - `make test-sdk`
+- `make operator-package-preflight`
 
 This runs:
 
 - Python SDK smoke tests
 - Elixir SDK smoke tests
 - Rust SDK smoke tests
+
+The operator package preflight is a separate read-only admission check for the
+external Rust operator template. It emits `kyuubiki.operator-package-preflight/v1`
+JSON and confirms the package manifest, SDK API version, host version gate, and
+dynamic-loading safety posture before an external package reaches runtime
+activation.
+Use `make operator-package-preflight OUT=tmp/operator-package-preflight.json`
+when a CI job should retain the JSON report as an artifact.
+Use `FAIL_ON_REJECTED=1` when rejected packages should fail the job instead of
+only appearing in the report.
 
 These tests use small local loopback fixtures and focus on:
 
@@ -195,7 +223,7 @@ Use these entrypoints:
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
 - `make benchmark-physics-coverage`
-  Run the `1.14.x` broad physics smoke matrix across every built-in benchmark
+  Run the `1.15.x` broad physics smoke matrix across every built-in benchmark
   template. This is the quickest product-level check that the main physics
   families still have real solver execution paths before `1.15.x` and `1.16.x`
   contract work hardens engine/task formats.

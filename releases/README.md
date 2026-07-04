@@ -44,6 +44,14 @@ That keeps workflow topology plus browser-backed layout/search validation
 visible in the release record instead of leaving workflow-heavy frontend
 quality as an unwritten expectation.
 
+Snapshot scaffolds also seed repository verification with:
+
+- `git diff --check`
+- `make operator-package-preflight`
+
+That keeps external operator package manifests, SDK API version gates, host
+version gates, and read-only dynamic-loading safety visible in release records.
+
 If the snapshot is created with `--status current`, the same command also
 advances:
 

@@ -258,6 +258,66 @@ For external-local authoring, there is now a copyable starter crate at
 - a `kyuubiki-operator.json` manifest for external-local discovery using
   `{lib_prefix}` / `{lib_extension}` placeholders for cross-platform library
   naming
+- required package-level industrialization fields:
+  `sdk_api_version`, `minimum_host_version`, `validation_status`, and
+  `validation_notes`
+- strict manifest validation, so packages that do not declare their SDK
+  contract or verification posture fail before runtime activation
+
+The current package manifest contract is:
+
+```json
+{
+  "schema_version": "kyuubiki.operator-package/v1",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "package_id": "operator.template.summary",
+  "package_version": "0.1.0",
+  "minimum_host_version": "1.15.0",
+  "validation_status": "partial",
+  "validation_notes": "Describe smoke, baseline, or qualification evidence.",
+  "runtime": "rust_crate",
+  "entrypoint": "target/debug/{lib_prefix}my_operator.{lib_extension}",
+  "operators": [
+    {
+      "operator_id": "extract.my_summary",
+      "kind": "extract",
+      "entry_symbol": "register_my_operator"
+    }
+  ]
+}
+```
+
+For `tamamono 1.15.x`, `validation_status` should normally stay `partial`
+unless the operator family has explicit baseline evidence and release checks.
+The engine host checks `minimum_host_version` before activation, so an operator
+package built for a newer host line fails at load time instead of reaching an
+undefined runtime path.
+Successful activation also produces a package admission summary with the host
+version, SDK API version, validation status, validation notes, runtime, and
+operator ids so Installer and future CLI/UI surfaces can explain what was
+accepted without reparsing the full package manifest.
+Hosts can also call the external-operator preflight path to collect accepted
+and rejected package summaries without activating dynamic code. Runtime loading
+remains fail-fast, while preflight is the user-facing explanation surface.
+The installer exposes the same read-only path as machine-readable JSON:
+
+```bash
+cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages
+cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --out tmp/operator-package-preflight.json
+cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --fail-on-rejected
+```
+
+For the repository template package, use the Make target:
+
+```bash
+make operator-package-preflight
+make operator-package-preflight OUT=tmp/operator-package-preflight.json
+make operator-package-preflight FAIL_ON_REJECTED=1
+```
+
+The JSON schema is `kyuubiki.operator-package-preflight/v1` and includes
+accepted package summaries, rejected package reasons, host version, registry
+kind, and a safety block that confirms dynamic libraries were not loaded.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately
