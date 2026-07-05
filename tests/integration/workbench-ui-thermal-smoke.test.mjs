@@ -19,10 +19,16 @@ test(
       const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
       await page.goto(FRONTEND_URL, { waitUntil: "networkidle", timeout: 60_000 });
 
-      await assertWorkbenchSampleUi(page, "Thermal", "Heat Bar 1D", "Heat Bar 1D", "1D heat bar");
-      await assertWorkbenchSampleUi(page, "Thermal", "Heat Plane Quad 2D", "Heat Plane Quad 2D", "2D heat plane quad");
-      await assertWorkbenchSampleUi(page, "Thermo-mechanical", "Thermal Bar 1D", "Thermal Bar 1D", "1D thermal bar");
-      await assertWorkbenchSampleUi(page, "Thermo-mechanical", "Thermal Plane Quad 2D", "Thermal Plane Quad 2D", "2D thermal plane quad");
+      await assertWorkbenchSampleUi(page, "thermal", "heat-bar-1d", "Heat Bar 1D", "Heat Bar 1D");
+      await assertWorkbenchSampleUi(page, "thermal", "heat-plane-quad-2d", "Heat Plane Quad 2D", "Heat Plane Quad 2D");
+      await assertWorkbenchSampleUi(page, "thermoMechanical", "thermal-bar-1d", "Thermal Bar 1D", "Thermal Bar 1D");
+      await assertWorkbenchSampleUi(
+        page,
+        "thermoMechanical",
+        "thermal-plane-quad-2d",
+        "Thermal Plane Quad 2D",
+        "Thermal Plane Quad 2D",
+      );
     } finally {
       await browser.close();
       try {

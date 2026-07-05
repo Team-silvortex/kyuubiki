@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import assert from "node:assert/strict";
 import path from "node:path";
 import {
   desktopArtifactPaths,
@@ -21,6 +22,19 @@ import {
   updateChannelsPath,
   writeJson,
 } from "./release-metadata.mjs";
+
+const RELEASE_FRONTEND_CHECKS = [
+  "npm run typecheck",
+  "npm run build",
+  "npm run check:workflow-preflight",
+];
+
+const RELEASE_REPO_CHECKS = [
+  "git diff --check",
+  "make audit-project-organization",
+  "make operator-package-preflight",
+  "make architecture-check",
+];
 
 function usage() {
   console.log(`Usage:
@@ -81,6 +95,15 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function runSelfTest() {
+  assert(RELEASE_FRONTEND_CHECKS.includes("npm run check:workflow-preflight"));
+  assert(RELEASE_REPO_CHECKS.includes("make audit-project-organization"));
+  assert(RELEASE_REPO_CHECKS.includes("make operator-package-preflight"));
+  assert(RELEASE_REPO_CHECKS.includes("make architecture-check"));
+  assert.equal(new Set(RELEASE_REPO_CHECKS).size, RELEASE_REPO_CHECKS.length);
+  console.log("release snapshot self-test passed");
 }
 
 function buildSnapshot(version, options) {
@@ -151,14 +174,10 @@ function buildSnapshot(version, options) {
         installer: packageVersion("apps/installer-gui/package.json"),
       },
       collected_desktop_bundle_versions: collectedDesktopBundleVersions,
-      frontend_checks: [
-        "npm run typecheck",
-        "npm run build",
-        "npm run check:workflow-preflight",
-      ],
+      frontend_checks: RELEASE_FRONTEND_CHECKS,
       web_checks: [],
       rust_checks: [],
-      repo_checks: ["git diff --check", "make operator-package-preflight"],
+      repo_checks: RELEASE_REPO_CHECKS,
     },
   };
 }
@@ -217,6 +236,11 @@ function archivePreviousCurrentSnapshots(nextIndex, options) {
 }
 
 function main() {
+  if (process.argv.includes("--self-test")) {
+    runSelfTest();
+    return;
+  }
+
   const options = parseArgs(process.argv.slice(2));
   if (!options.version || options.version === "--help" || options.version === "-h") {
     usage();

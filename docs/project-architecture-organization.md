@@ -133,7 +133,8 @@ Current source-side posture:
 - `node ./scripts/audit-project-organization.mjs` is the repository-wide guard
   for this rule and should report `tracked debt 0`. It checks tracked files
   and untracked files that are not ignored, so new source modules are covered
-  before they are staged.
+  before they are staged. Run it with `--self-test` when changing audit helper
+  logic.
 - Hub keeps the shell document small by loading large static markup from
   `apps/hub-gui/ui/hub-static-partials.js` before `app.js` starts. Any new
   static Hub section should follow that boundary instead of growing
@@ -151,6 +152,12 @@ Current source-side posture:
   module index; add new installer tests under the responsibility modules in
   `workers/rust/crates/installer/src/tests/`. The organization audit enforces
   this module-index boundary.
+- Dependency-audit lockfiles are required project structure, not disposable
+  generated output. The organization audit enforces that the shipped npm
+  `package-lock.json` files and Rust/Tauri `Cargo.lock` files used by
+  `make audit-dependencies` exist and are not ignored by git. Keep the shared
+  lane contract in `config/dependency-audit-lockfiles.json` synchronized with
+  shipped app, SDK, and runtime surfaces.
 
 Allowed large-file categories:
 
@@ -193,6 +200,8 @@ matters; do not move source boundaries just to reduce generated output.
 - Run `make architecture-check` after changing TaskIR, orchestration boundary
   code, external operator package admission contracts, architecture docs, or
   project organization docs.
+- Run `make check-ui-automation-contract` before changing product-owned
+  Workbench shell, rail, library, runtime, viewport, or control-window anchors.
 - Keep Hub static partial smoke coverage aligned with every new shell partial.
 - Keep legacy shell modules below the shared line ceiling until native commands
   can retire them.

@@ -34,10 +34,18 @@ This directory contains host-native operational entry points.
   files, including untracked files that are not ignored, stay under the shared
   line ceiling, while explicitly tracked historical debt files are allowed only
   up to their current debt limit. It also keeps installer `tests.rs` as a
-  module index instead of a growing test bucket.
+  module index instead of a growing test bucket. Use `--self-test` to verify
+  the audit helper rules themselves.
+- `audit-dependencies.mjs`
+  Run the security dependency audit lanes that require lockfiles: npm
+  production audits for frontend/desktop packages plus RustSec audits for the
+  Rust workspace, Rust SDK, and Tauri desktop shells. Use `--self-test` when
+  changing lane coverage or audit arguments. Lane coverage is read from
+  `config/dependency-audit-lockfiles.json`.
 - `make architecture-check`
   Lightweight guard for the current architecture organization line. It combines
-  the repository organization audit, docs manifest JSON validation, focused
+  the repository organization audit self-test and scan, dependency audits,
+  external operator package preflight, docs manifest JSON validation, focused
   Operator TaskIR API tests, and the Rust headless live operator task test.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
@@ -48,6 +56,11 @@ This directory contains host-native operational entry points.
 - `validate-language-packs.mjs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current `tamamono 1.x` line.
+- `check-ui-automation-contract.mjs`
+  Verify the product-owned Workbench automation selector contract. It compares
+  `docs/ui-automation-contract.json`, the frontend TS selector constants, and
+  the component implementation anchors used by wasm-python and UI smoke tests.
+  Use `--self-test` when changing selector coverage.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -103,6 +116,17 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki rust-line-audit`
   Enforce the Rust source file line-count ceiling without running the full
   Rust test suite.
+- `make audit-dependencies`
+  Run npm `--omit=dev --package-lock-only` audits for the shipped JS app
+  lockfiles and RustSec `cargo audit` against every checked Rust/Tauri
+  `Cargo.lock`. The Make target runs the dependency-audit self-test first.
+  Keep the lockfiles tracked for these lanes so security results are
+  reproducible. Add or remove lanes through
+  `config/dependency-audit-lockfiles.json`.
+- `make check-ui-automation-contract`
+  Check that product-owned Workbench UI automation anchors still match the
+  documented selector contract. Run this before changing rail, library,
+  runtime, viewport, control-window, or shell DOM structure.
 - `make check-elixir-self-host`
   Check the current machine's Elixir, Mix, OTP, and orchestrator environment
   contract against `config/toolchains.json`. Use `node

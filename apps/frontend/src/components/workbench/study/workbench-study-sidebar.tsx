@@ -104,7 +104,7 @@ export function WorkbenchStudySidebar({
         <section className="sidebar-card">
           <div className="card-head">
             <h2>{sectionTitle}</h2>
-            <span>{loadedModelName}</span>
+            <span aria-label="workbench-loaded-model">{loadedModelName}</span>
           </div>
           <div className="form-grid compact">
             <label>

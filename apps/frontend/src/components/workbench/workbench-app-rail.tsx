@@ -38,6 +38,7 @@ export function WorkbenchAppRail({
         {railItems.map((item) => (
           <button
             key={item.key}
+            aria-label={`workbench-rail:${item.key}`}
             className={`rail-button${sidebarSection === item.key ? " rail-button--active" : ""}`}
             onClick={() => onSidebarSectionChange(item.key)}
             type="button"

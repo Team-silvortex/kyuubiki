@@ -9,6 +9,7 @@ export function buildWorkbenchMainShellProps(props: Record<string, any>) {
     hasAnyResult: props.hasAnyResult,
     frontendRuntimeMode: props.frontendRuntimeMode,
     studyKind: props.studyKind,
+    loadedModelName: props.loadedModelName,
     language: props.language,
     assistantApiKey: props.assistantApiKey,
     assistantApiBaseUrl: props.assistantApiBaseUrl,

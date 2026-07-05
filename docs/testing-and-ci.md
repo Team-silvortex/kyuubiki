@@ -32,11 +32,25 @@ The repository now keeps validation split by responsibility.
   Repository-wide organization guard; scans tracked files plus untracked
   files that are not ignored, keeps new files under the shared line ceiling,
   prevents known historical debt files from growing further, and keeps
-  installer `tests.rs` as a module index
+  installer `tests.rs` as a module index. The Make target runs the audit
+  script self-test before scanning the repository.
 - `make architecture-check`
   Lightweight new-architecture guard for the `1.15.x` line. It runs the
-  repository organization audit, validates the docs book manifest JSON, and
-  exercises the focused Operator TaskIR control-plane plus Rust live path.
+  organization audit self-test and scan, UI automation contract checks,
+  dependency audits, external operator package preflight, docs book manifest
+  validation, focused Operator TaskIR control-plane tests, and the Rust live
+  operator task path.
+- `make check-ui-automation-contract`
+  Product-owned Workbench UI selector contract guard. It compares
+  `docs/ui-automation-contract.json`, frontend TS selector constants, and the
+  component implementation anchors used by wasm-python automation and UI smoke
+  tests.
+- `make audit-dependencies`
+  Reproducible dependency security audit. It runs npm production dependency
+  audits for the frontend and desktop packages, then RustSec `cargo audit` for
+  the Rust workspace, Rust SDK, and every Tauri desktop shell. The Make target
+  runs the audit lane self-test before invoking external tools. The checked
+  `Cargo.lock` files under those roots are part of this contract.
 - `./scripts/kyuubiki rust-line-audit`
   Same guard through the unified launcher, useful on remote hosts and CI jobs
   that do not enter through Make
@@ -111,6 +125,13 @@ The full integration entrypoint list stays in:
 
 - [tests/integration/README.md](../tests/integration/README.md)
 
+## CI lanes
+
+- `architecture-contracts`
+  Runs source organization, UI automation contract, language pack, toolchain,
+  and docs-book checks without booting services. This lane is meant to catch
+  contract drift early before heavier build or integration jobs spend time.
+
 ### Desktop shell checks
 
 - `make test-hub-gui`
@@ -128,6 +149,10 @@ Use these when you want the repo to choose the right lower-level commands:
 - `./scripts/kyuubiki verify`
 - `./scripts/kyuubiki smoke`
 - `make audit-rust-lines`
+
+`make verify` is the higher-confidence pre-release lane: it includes toolchain
+checks, language-pack checks, organization audits, dependency audits, external
+operator package preflight, SDK smoke tests, and the standard benchmark gate.
 
 For narrower SDK or frontend-only entrypoints, use the package or Make targets
 listed above.
@@ -157,6 +182,9 @@ Current GitHub Actions jobs are intentionally separated:
 - `rust-test`
   Runs Rust formatting, workspace tests, the `600` line-count audit, and the
   medium benchmark regression gate.
+- `dependency-audit`
+  Should run `make audit-dependencies` when dependency or lockfile surfaces
+  change, and before release branches are cut.
 - `frontend-test`
 - `sdk-smoke`
 - `integration-smoke-api`

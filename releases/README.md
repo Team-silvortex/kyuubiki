@@ -27,6 +27,7 @@ Instead, each snapshot records:
 Create the next snapshot scaffold with:
 
 ```bash
+node ./scripts/create-release-snapshot.mjs --self-test
 node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged --dry-run
 node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged
 ```
@@ -47,10 +48,15 @@ quality as an unwritten expectation.
 Snapshot scaffolds also seed repository verification with:
 
 - `git diff --check`
+- `make audit-project-organization`
 - `make operator-package-preflight`
+- `make architecture-check`
 
-That keeps external operator package manifests, SDK API version gates, host
-version gates, and read-only dynamic-loading safety visible in release records.
+That keeps repository organization, installer test module boundaries, external
+operator package manifests, SDK API version gates, host version gates, and
+read-only dynamic-loading safety visible in release records. The architecture
+check is the aggregate guard that also exercises docs manifest validation,
+focused Operator TaskIR checks, and the Rust live operator task path.
 
 If the snapshot is created with `--status current`, the same command also
 advances:

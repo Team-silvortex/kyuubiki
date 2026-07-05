@@ -39,6 +39,7 @@ import {
   isTrussResult,
   localMaterialLabel,
 } from "@/components/workbench/workbench-result-helpers";
+import { round as roundNumber } from "@/components/workbench/workbench-truss-helpers";
 import { SECURITY_EVENT_WINDOW_MS } from "@/components/workbench/workbench-types";
 import {
   fixed,
@@ -55,6 +56,7 @@ import {
 
 export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const { rootState } = props;
+  const round = props.round ?? roundNumber;
 
   const resultWindowMaxTotal = rootState.resultWindow
     ? Math.max(rootState.resultWindow.totalNodes, rootState.resultWindow.totalElements)
@@ -121,6 +123,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     jobPollTokenRef: rootState.jobPollTokenRef,
     setJob: rootState.setJob,
     setMessage: rootState.setMessage,
+    setSystemAlerts: rootState.setSystemAlerts,
     startTransition: rootState.startTransition,
     resultRecords: rootState.resultRecords,
     projects: rootState.projects,
@@ -197,7 +200,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     spring2dModel: rootState.spring2dModel,
     spring3dModel: rootState.spring3dModel,
     parametric: rootState.parametric,
-    round: props.round,
+    round,
     updateProject: props.updateProject,
     deleteProject: props.deleteProject,
     updateModel: props.updateModel,
@@ -302,7 +305,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     securityEventWindowFilter: adminSecurityState.securityEventWindowFilter,
     formatTime,
     formatMilliseconds,
-    round: props.round,
+    round,
     resultWindowLimit: rootState.resultWindowLimit,
     resultWindowMaxTotal,
     resultWindowOffset: rootState.resultWindowOffset,

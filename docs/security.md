@@ -54,6 +54,25 @@ configured state.
 
 ## Current security model
 
+### Supply-chain dependency guard
+
+Dependency updates are part of the security boundary, not just build hygiene.
+
+The current gate is:
+
+```bash
+make audit-dependencies
+```
+
+It runs a self-test first, then checks:
+
+- npm production lockfiles with `npm audit --omit=dev --package-lock-only`
+- Rust workspace and desktop-shell lockfiles with RustSec `cargo audit`
+
+The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
+desktop, SDK, and Rust workspace surfaces must stay reproducible. Do not remove
+lockfiles from review just because the source package manifests look small.
+
 ### Control plane
 
 The orchestrator can now enforce an API token for:
@@ -383,6 +402,7 @@ Sensitivity levels:
 | `apps/frontend/src/lib/models/model-import.ts` | Imports external model JSON into solver/project state. | Schema validation, size limits, numeric bounds, and safe evolution across model schema versions. |
 | `apps/frontend/src/lib/projects/**` | Project bundle import/export. | Archive/file parsing, path traversal prevention, payload size, and result/data export scope. |
 | `apps/frontend/src/lib/materials/material-library.ts` | External material library import. | CSV/JSON parsing, numeric bounds, duplicate IDs, and maliciously large files. |
+| `scripts/audit-dependencies.mjs` and checked JS/Rust lockfiles | Supply-chain gate for npm production dependencies and RustSec advisories. | Keep lane coverage, `--package-lock-only`, self-test behavior, and lockfile tracking aligned with shipped app/runtime surfaces. |
 | `sdks/python/kyuubiki_sdk/auth.py`, `sdks/elixir/lib/kyuubiki_sdk/auth.ex`, `sdks/rust/src/auth.rs` | Token/header construction used by external automation and AI clients. | Header parity with control plane, token scoping, and clear examples that avoid hardcoding secrets. |
 | `deploy/agents.*.json` and `schemas/agent-manifest.schema.json` | Static distributed-agent manifests. | Do not commit real hostnames/secrets; validate endpoint shape and intended deployment mode. |
 
@@ -456,5 +476,7 @@ Before changing any critical or high-sensitivity module:
    command execution, or direct TCP access.
 4. Add or update tests for auth success, missing-token failure, and
    wrong-token failure when the behavior is externally reachable.
-5. Keep `docs/security.md` synchronized with actual route enforcement and
+5. Run `make audit-dependencies` when dependency manifests, lockfiles, desktop
+   shells, SDK dependencies, or CI dependency-audit behavior changes.
+6. Keep `docs/security.md` synchronized with actual route enforcement and
    deployment behavior.

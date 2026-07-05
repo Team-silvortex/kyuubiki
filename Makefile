@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs audit-rust-lines audit-project-organization architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs check-ui-automation-contract audit-rust-lines audit-project-organization audit-dependencies architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -54,8 +54,10 @@ help:
 	@echo "  make check-toolchains Verify Docker, Mix, Node, Rust, and lab defaults against config/toolchains.json"
 	@echo "  make check-elixir-self-host Verify Elixir/Mix/OTP and self-host orchestrator env contracts"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language support packs"
+	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
+	@echo "  make audit-dependencies Run npm production and RustSec lockfile dependency audits"
 	@echo "  make architecture-check Run the lightweight new-architecture organization and TaskIR contract check"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
@@ -271,14 +273,26 @@ check-elixir-self-host:
 check-language-packs:
 	@node ./scripts/validate-language-packs.mjs
 
+check-ui-automation-contract:
+	@node ./scripts/check-ui-automation-contract.mjs --self-test
+	@node ./scripts/check-ui-automation-contract.mjs
+
 audit-rust-lines:
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
 
 audit-project-organization:
+	@node ./scripts/audit-project-organization.mjs --self-test
 	@node ./scripts/audit-project-organization.mjs
 
+audit-dependencies:
+	@node ./scripts/audit-dependencies.mjs --self-test
+	@node ./scripts/audit-dependencies.mjs
+
 architecture-check:
+	@node ./scripts/audit-project-organization.mjs --self-test
 	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) check-ui-automation-contract
+	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
 	@jq empty docs/book-manifest.json
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
@@ -402,10 +416,13 @@ verify:
 	@$(MAKE) check-toolchains
 	@$(MAKE) check-elixir-self-host
 	@$(MAKE) check-language-packs
+	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
+	@node ./scripts/audit-project-organization.mjs --self-test
 	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
 	@$(ENTRYPOINT) sdk-smoke
 	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}

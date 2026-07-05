@@ -9,10 +9,15 @@
     "shell": "[data-workbench-shell=\"root\"]",
     "sidebar": "[data-workbench-panel=\"sidebar\"]",
     "sidebarSection(section)": "[data-workbench-sidebar-section=\"${section}\"]",
+    "railButton(section)": "workbench-rail:${section}",
     "inspector": "[data-workbench-panel=\"inspector\"]",
     "console": "[data-workbench-panel=\"console\"]",
     "viewportPanel": "[data-workbench-panel=\"viewport\"]",
     "viewportStage": "[data-workbench-viewport=\"stage\"]",
+    "loadedModelState": "[data-workbench-state=\"loaded-model\"]",
+    "libraryTab(tab)": "workbench-library-tab:${tab}",
+    "sampleDomain(domain)": "workbench-sample-domain:${domain}",
+    "sample(sampleId)": "workbench-sample:${sampleId}",
     "runtimePanel": "[data-workbench-runtime=\"panel\"]",
     "runtimeTabs": "[data-workbench-runtime=\"tabs\"]",
     "runtimeTab(page)": "[data-workbench-runtime-tab=\"${page}\"]",
@@ -29,6 +34,7 @@
   "rules": [
     "The workbench shell structure is product-owned and not user-extensible.",
     "Automation must target stable data-* selectors from this contract instead of visual text.",
+    "Accessible labels used for automation are product-owned ids, not localized copy.",
     "Built-in sidebar, inspector, console, viewport, and runtime panels remain product-owned surfaces.",
     "Workflow/operator/data extensions may change content, but not the shell selector contract.",
     "Breaking changes to these selectors require a contract version bump."

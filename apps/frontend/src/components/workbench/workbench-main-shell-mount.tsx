@@ -33,6 +33,12 @@ type WorkbenchMainShellMountProps = Record<string, any>;
 export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
   return (
     <>
+      <span
+        data-workbench-state="loaded-model"
+        style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}
+      >
+        {props.loadedModelName}
+      </span>
       {workspaceChunk(
         props.sidebarSection,
         "overlay.assistant",

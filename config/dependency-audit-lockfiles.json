@@ -1,0 +1,16 @@
+{
+  "schema": "kyuubiki.dependency-audit-lockfiles/v1",
+  "npm": [
+    "apps/frontend",
+    "apps/hub-gui",
+    "apps/installer-gui",
+    "apps/workbench-gui"
+  ],
+  "cargo": [
+    "workers/rust",
+    "sdks/rust",
+    "apps/hub-gui/src-tauri",
+    "apps/installer-gui/src-tauri",
+    "apps/workbench-gui/src-tauri"
+  ]
+}

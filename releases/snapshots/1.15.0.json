@@ -179,7 +179,9 @@
     "rust_checks": [],
     "repo_checks": [
       "git diff --check",
-      "make operator-package-preflight"
+      "make audit-project-organization",
+      "make operator-package-preflight",
+      "make architecture-check"
     ]
   }
 }

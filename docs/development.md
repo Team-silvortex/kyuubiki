@@ -87,7 +87,8 @@ The shortest useful loops are:
 - `make audit-rust-lines`
   Rust module size guard for the `600` line ceiling
 - `./scripts/kyuubiki verify`
-  higher-confidence pre-merge check
+  higher-confidence pre-merge check with organization, dependency, SDK, and
+  benchmark gates
 
 For exact runtime/storage mode details, use
 [operations.md](operations.md).

@@ -100,11 +100,11 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs panel-tabs--wide">
-        <button className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
+        <button aria-label="workbench-library-tab:jobs" className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
+        <button aria-label="workbench-library-tab:results" className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
+        <button aria-label="workbench-library-tab:models" className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
+        <button aria-label="workbench-library-tab:projects" className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
+        <button aria-label="workbench-library-tab:samples" className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
       </div>
 
       {libraryTab === "jobs" ? (
@@ -266,6 +266,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
                     {sampleDomainOptions.map((option) => (
                       <button
                         key={option.key}
+                        aria-label={`workbench-sample-domain:${option.key}`}
                         className={`ghost-button ghost-button--compact${selectedSampleDomain === option.key ? " ghost-button--active" : ""}`}
                         onClick={() => setSelectedSampleDomain(option.key)}
                         type="button"
@@ -286,7 +287,13 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
                     </div>
                     <div className="sample-group__items">
                       {group.rows.map((sample) => (
-                        <button key={sample.id} className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
+                        <button
+                          key={sample.id}
+                          aria-label={`workbench-sample:${sample.id}`}
+                          className="history-item"
+                          onClick={() => onOpenSample(sample.href)}
+                          type="button"
+                        >
                           <strong>{sample.name}</strong>
                           <span>{sample.kindLabel}</span>
                           <small>{sample.summary}</small>

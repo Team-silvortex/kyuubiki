@@ -73,6 +73,55 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            apps/frontend/package-lock.json
+            apps/hub-gui/package-lock.json
+            apps/installer-gui/package-lock.json
+            apps/workbench-gui/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            workers/rust
+            sdks/rust
+            apps/hub-gui/src-tauri
+            apps/installer-gui/src-tauri
+            apps/workbench-gui/src-tauri
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - run: make audit-dependencies
+
+  architecture-contracts:
+    name: architecture-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: make audit-project-organization
+      - run: make check-ui-automation-contract
+      - run: make check-language-packs
+      - run: make check-toolchains
+      - run: make check-doc-book
+
   workflow-preflight:
     name: workflow-preflight
     runs-on: ubuntu-latest

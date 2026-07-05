@@ -22,8 +22,19 @@ export function runKyuubiki(args) {
   });
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+async function clickStable(locator, label, attempts = 4) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await locator.waitFor({ state: "visible", timeout: 10_000 });
+      await locator.click({ timeout: 10_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+  }
+  throw new Error(`failed to click ${label}: ${lastError?.message ?? lastError}`);
 }
 
 export async function waitForFrontend(timeoutMs = 60_000, intervalMs = 500) {
@@ -45,35 +56,24 @@ export async function waitForFrontend(timeoutMs = 60_000, intervalMs = 500) {
   throw new Error(`timed out waiting for ${FRONTEND_URL}`);
 }
 
-export async function assertWorkbenchSampleUi(page, domainLabel, sampleLabel, importedModelLabel, studyLabel) {
-  await page.getByRole("button", { name: "H History" }).click();
-  await page.getByRole("button", { name: /^S\s+Samples$/ }).click();
-  if (domainLabel) {
-    await page
-      .locator("button")
-      .filter({ hasText: new RegExp(`^${escapeRegExp(domainLabel)}$`) })
-      .first()
-      .click();
+export async function assertWorkbenchSampleUi(page, domainKey, sampleId, sampleLabel, importedModelLabel) {
+  await clickStable(page.getByLabel("workbench-rail:library"), "History rail button");
+  await clickStable(page.getByLabel("workbench-library-tab:samples"), "Samples tab");
+  if (domainKey) {
+    await clickStable(page.getByLabel(`workbench-sample-domain:${domainKey}`), `${domainKey} sample domain`);
   }
+  await clickStable(page.getByLabel(`workbench-sample:${sampleId}`), `${sampleLabel} sample`);
   await page
-    .locator("button.history-item")
-    .filter({ hasText: sampleLabel })
+    .locator('[data-workbench-state="loaded-model"]')
+    .filter({ hasText: importedModelLabel })
     .first()
-    .click();
-  await page.waitForFunction(
-    ({ importedModelLabel: importedModel, studyLabel: study }) => {
-      const text = document.body.innerText || "";
-      return text.includes(`Imported model: ${importedModel}`) && text.includes(study);
-    },
-    { importedModelLabel, studyLabel },
-    { timeout: 30_000 },
-  );
+    .waitFor({ state: "attached", timeout: 30_000 });
 
   const resultButton = page.getByRole("button", { name: "Result" }).first();
   assert.equal(await resultButton.isVisible(), true, `${sampleLabel} should expose Result`);
-  await resultButton.click();
-  await page.getByRole("button", { name: "Actions" }).first().click();
-  await page.getByRole("button", { name: "Export Data" }).first().click();
+  await clickStable(resultButton, `${sampleLabel} Result tab`);
+  await clickStable(page.getByRole("button", { name: "Actions" }).first(), `${sampleLabel} Actions tab`);
+  await clickStable(page.getByRole("button", { name: "Export Data" }).first(), `${sampleLabel} Export Data action`);
 
   const exportJsonButton = page.getByRole("button", { name: "Export Data JSON" }).first();
   const exportCsvButton = page.getByRole("button", { name: "Export Data CSV" }).first();

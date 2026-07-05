@@ -16,6 +16,7 @@ export function buildWorkbenchMainShellComposition(props: Record<string, any>) {
     hasAnyResult: studyResultDerived.hasAnyResult,
     frontendRuntimeMode: shellState.frontendRuntimeMode,
     studyKind: workspaceState.studyKind,
+    loadedModelName: workspaceState.loadedModelName,
     language: shellState.language,
     assistantApiKey: shellState.assistantApiKey,
     assistantApiBaseUrl: shellState.assistantApiBaseUrl,

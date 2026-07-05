@@ -141,3 +141,8 @@ The Workbench UI smoke suite is split by domain so failures are easier to triage
 
 - `workbench-ui-mechanical-smoke.test.mjs`
 - `workbench-ui-thermal-smoke.test.mjs`
+
+These smoke tests intentionally target the product-owned UI automation
+contract instead of localized labels. Before changing Workbench rail buttons,
+library tabs, sample cards, loaded-model state, runtime panels, viewport
+panels, or control-mode windows, run `make check-ui-automation-contract`.

@@ -79,7 +79,7 @@
   <body>
     <main>
       <section class="hero">
-        <div class="eyebrow">tamamono 1.6.x</div>
+        <div class="eyebrow">tamamono 1.15.x</div>
         <h1>Kyuubiki Workbench UI Automation Contract</h1>
         <p>
           This contract defines the stable product-owned DOM anchors for the built-in
@@ -100,6 +100,7 @@
           <ul>
             <li>The workbench shell structure is product-owned and not user-extensible.</li>
             <li>Automation must target stable <code>data-*</code> selectors from this contract instead of visual text.</li>
+            <li>Accessible labels used for automation are product-owned ids, not localized copy.</li>
             <li>Built-in sidebar, inspector, console, viewport, and runtime panels remain product-owned surfaces.</li>
             <li>Workflow, operator, and dataset extensions may change content, but not the shell selector contract.</li>
             <li>Breaking changes to these selectors require a contract version bump.</li>
@@ -129,10 +130,15 @@
             <tr><td>shell</td><td><code>[data-workbench-shell="root"]</code></td></tr>
             <tr><td>sidebar</td><td><code>[data-workbench-panel="sidebar"]</code></td></tr>
             <tr><td>sidebarSection(section)</td><td><code>[data-workbench-sidebar-section="${section}"]</code></td></tr>
+            <tr><td>railButton(section)</td><td><code>workbench-rail:${section}</code></td></tr>
             <tr><td>inspector</td><td><code>[data-workbench-panel="inspector"]</code></td></tr>
             <tr><td>console</td><td><code>[data-workbench-panel="console"]</code></td></tr>
             <tr><td>viewportPanel</td><td><code>[data-workbench-panel="viewport"]</code></td></tr>
             <tr><td>viewportStage</td><td><code>[data-workbench-viewport="stage"]</code></td></tr>
+            <tr><td>loadedModelState</td><td><code>[data-workbench-state="loaded-model"]</code></td></tr>
+            <tr><td>libraryTab(tab)</td><td><code>workbench-library-tab:${tab}</code></td></tr>
+            <tr><td>sampleDomain(domain)</td><td><code>workbench-sample-domain:${domain}</code></td></tr>
+            <tr><td>sample(sampleId)</td><td><code>workbench-sample:${sampleId}</code></td></tr>
             <tr><td>runtimePanel</td><td><code>[data-workbench-runtime="panel"]</code></td></tr>
             <tr><td>runtimeTabs</td><td><code>[data-workbench-runtime="tabs"]</code></td></tr>
             <tr><td>runtimeTab(page)</td><td><code>[data-workbench-runtime-tab="${page}"]</code></td></tr>
