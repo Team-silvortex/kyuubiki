@@ -26,21 +26,17 @@ fn runs_electrostatic_to_heat_to_thermo_plane_quad_workflow() {
         "workflow.electrostatic-heat-to-thermo-quad-2d"
     );
     assert!(result.electrostatic_result.max_electric_field > 0.0);
-    assert!(
-        result
-            .bridged_heat_model
-            .nodes
-            .iter()
-            .all(|node| node.heat_load > 0.0)
-    );
+    assert!(result
+        .bridged_heat_model
+        .nodes
+        .iter()
+        .all(|node| node.heat_load > 0.0));
     assert!(result.heat_result.max_heat_flux > 0.0);
-    assert!(
-        result
-            .bridged_thermo_model
-            .nodes
-            .iter()
-            .any(|node| node.temperature_delta > 30.0)
-    );
+    assert!(result
+        .bridged_thermo_model
+        .nodes
+        .iter()
+        .any(|node| node.temperature_delta > 30.0));
     assert!(result.thermo_result.max_stress > 0.0);
 }
 
@@ -60,21 +56,17 @@ fn runs_electrostatic_to_heat_to_thermo_plane_triangle_workflow() {
         "workflow.electrostatic-heat-to-thermo-triangle-2d"
     );
     assert!(result.electrostatic_result.max_electric_field > 0.0);
-    assert!(
-        result
-            .bridged_heat_model
-            .nodes
-            .iter()
-            .all(|node| node.heat_load > 0.0)
-    );
+    assert!(result
+        .bridged_heat_model
+        .nodes
+        .iter()
+        .all(|node| node.heat_load > 0.0));
     assert!(result.heat_result.max_heat_flux > 0.0);
-    assert!(
-        result
-            .bridged_thermo_model
-            .nodes
-            .iter()
-            .any(|node| node.temperature_delta > 30.0)
-    );
+    assert!(result
+        .bridged_thermo_model
+        .nodes
+        .iter()
+        .any(|node| node.temperature_delta > 30.0));
     assert!(result.thermo_result.max_stress > 0.0);
 }
 

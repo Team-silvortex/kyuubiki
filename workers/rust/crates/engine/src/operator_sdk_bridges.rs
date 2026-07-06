@@ -12,7 +12,7 @@ use crate::magnetostatic_bridge::{
     bridge_magnetostatic_result_to_heat_plane_quad_model,
     resolve_magnetostatic_to_heat_bridge_contract,
 };
-use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
+use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunResult, SolveElectrostaticPlaneQuad2dResult,

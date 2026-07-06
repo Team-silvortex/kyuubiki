@@ -299,11 +299,9 @@ fn runs_multi_stage_summary_merge_workflow_graph() {
     assert!(summary.get("heat_max_heat_flux").is_some());
     assert!(summary.get("thermo_max_displacement").is_some());
     assert!(summary.get("thermo_max_stress").is_some());
-    assert!(
-        summary["thermo_max_temperature_delta"]
-            .as_f64()
-            .is_some_and(|value| value > 0.0)
-    );
+    assert!(summary["thermo_max_temperature_delta"]
+        .as_f64()
+        .is_some_and(|value| value > 0.0));
 }
 
 fn port(id: &str, artifact_type: &str) -> WorkflowPort {

@@ -5,6 +5,7 @@ use crate::workflow_executor::{
     run_extract_operator, run_solve_operator, run_transform_operator,
     transform_operator_accepts_partial_inputs, transform_operator_requires_port_map,
 };
+use crate::workflow_security::{validate_workflow_artifact_budget, validate_workflow_security};
 use kyuubiki_protocol::{
     JobStatus, WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
     WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus, WorkflowNodeRunTrace,
@@ -12,8 +13,8 @@ use kyuubiki_protocol::{
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 fn incoming_artifact_keys(
     incoming: &[&kyuubiki_protocol::WorkflowEdge],
@@ -54,6 +55,7 @@ fn workflow_progress_event(
 pub fn run_workflow_graph(
     request: WorkflowGraphRunRequest,
 ) -> Result<WorkflowGraphRunResult, String> {
+    validate_workflow_security(&request)?;
     let graph = request.graph;
     validate_workflow_dataset_contract(&graph)?;
     let node_map = graph
@@ -169,6 +171,10 @@ pub fn run_workflow_graph(
                     })?;
                     let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
                     let output_value = run_solve_operator(operator_id, payload)?;
+                    validate_workflow_artifact_budget(
+                        &format!("workflow node {} output", node.id),
+                        &output_value,
+                    )?;
                     for output in &node.outputs {
                         let key = artifact_key(&node.id, &output.id);
                         artifacts.insert(key.clone(), output_value.clone());
@@ -197,6 +203,10 @@ pub fn run_workflow_graph(
                         payload,
                         node.config.clone().unwrap_or(Value::Null),
                     )?;
+                    validate_workflow_artifact_budget(
+                        &format!("workflow node {} output", node.id),
+                        &output_value,
+                    )?;
                     for output in &node.outputs {
                         let key = artifact_key(&node.id, &output.id);
                         artifacts.insert(key.clone(), output_value.clone());
@@ -219,6 +229,10 @@ pub fn run_workflow_graph(
                         payload,
                         node.config.clone().unwrap_or(Value::Null),
                     )?;
+                    validate_workflow_artifact_budget(
+                        &format!("workflow node {} output", node.id),
+                        &output_value,
+                    )?;
                     for output in &node.outputs {
                         let key = artifact_key(&node.id, &output.id);
                         artifacts.insert(key.clone(), output_value.clone());
@@ -240,6 +254,10 @@ pub fn run_workflow_graph(
                         operator_id,
                         payload,
                         node.config.clone().unwrap_or(Value::Null),
+                    )?;
+                    validate_workflow_artifact_budget(
+                        &format!("workflow node {} output", node.id),
+                        &output_value,
                     )?;
                     for output in &node.outputs {
                         let key = artifact_key(&node.id, &output.id);

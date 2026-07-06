@@ -34,6 +34,13 @@ to keep the trust-level ordering and release-gate behavior from regressing.
 The shard layout keeps each domain contract below the project source-size limit
 while preserving one release-level verification command.
 
+The Rust engine now applies a workflow security preflight before executing a
+graph. The guard rejects unsupported workflow schema versions, excessive graph
+sizes, duplicate node or edge ids, malformed identifiers, unsupported
+operators, invalid edge references, and input artifacts that target non-input
+nodes. This keeps GUI, headless SDK, and agent/orchestra execution paths behind
+the same first safety gate.
+
 The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
 roadmap candidates reference existing manifest operators and already satisfy

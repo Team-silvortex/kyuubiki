@@ -1,6 +1,6 @@
 use crate::bridge::{
-    BridgeDiagnostics, ElectrostaticToHeatBridgeContract, derive_element_nodal_target_field,
-    resolve_electrostatic_to_heat_bridge_contract,
+    derive_element_nodal_target_field, resolve_electrostatic_to_heat_bridge_contract,
+    BridgeDiagnostics, ElectrostaticToHeatBridgeContract,
 };
 use kyuubiki_protocol::{SolveHeatPlaneQuad2dRequest, SolveMagnetostaticPlaneQuad2dResult};
 use serde_json::Value;

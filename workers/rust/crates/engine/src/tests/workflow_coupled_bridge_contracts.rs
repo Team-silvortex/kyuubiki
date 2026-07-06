@@ -273,13 +273,11 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         heat_model["__bridge_diagnostics"]["source_field"].as_str(),
         Some("stored_energy_area_density")
     );
-    assert!(
-        heat_model["nodes"]
-            .as_array()
-            .expect("heat model nodes should exist")
-            .iter()
-            .any(|node| node["heat_load"].as_f64().is_some_and(|value| value > 0.0))
-    );
+    assert!(heat_model["nodes"]
+        .as_array()
+        .expect("heat model nodes should exist")
+        .iter()
+        .any(|node| node["heat_load"].as_f64().is_some_and(|value| value > 0.0)));
 
     assert_eq!(
         thermo_nodes[0]["temperature_delta"].as_f64(),
@@ -297,13 +295,12 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         thermo_nodes[3]["temperature_delta"].as_f64(),
         Some(second_average)
     );
-    assert!(
-        run.artifacts
-            .get("summary_output.summary")
-            .and_then(|summary| summary.get("max_temperature_delta"))
-            .and_then(|value| value.as_f64())
-            .is_some_and(|value| value > 0.0)
-    );
+    assert!(run
+        .artifacts
+        .get("summary_output.summary")
+        .and_then(|summary| summary.get("max_temperature_delta"))
+        .and_then(|value| value.as_f64())
+        .is_some_and(|value| value > 0.0));
 }
 
 fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {

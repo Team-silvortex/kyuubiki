@@ -266,12 +266,10 @@ fn runs_magnetostatic_bar_quality_workflow_graph() {
         .artifacts
         .get("json_output.json")
         .expect("json export artifact should exist");
-    assert!(
-        exported["content"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("magnetostatic_quality_total_energy")
-    );
+    assert!(exported["content"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("magnetostatic_quality_total_energy"));
 }
 
 fn quality_graph() -> WorkflowGraph {

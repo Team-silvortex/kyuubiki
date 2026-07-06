@@ -29,6 +29,7 @@ fn workflow_runs_modal_frame_2d_solver() {
                     "model",
                     "solve_modal",
                     "model",
+                    "study_model/modal_frame_2d",
                 ),
                 edge(
                     "solve_to_output",
@@ -36,6 +37,7 @@ fn workflow_runs_modal_frame_2d_solver() {
                     "result",
                     "modal_output",
                     "result",
+                    "result/modal_frame_2d",
                 ),
             ],
         },
@@ -94,7 +96,14 @@ fn output_node() -> WorkflowNode {
     }
 }
 
-fn edge(id: &str, from_node: &str, from_port: &str, to_node: &str, to_port: &str) -> WorkflowEdge {
+fn edge(
+    id: &str,
+    from_node: &str,
+    from_port: &str,
+    to_node: &str,
+    to_port: &str,
+    artifact_type: &str,
+) -> WorkflowEdge {
     WorkflowEdge {
         id: id.to_string(),
         from: WorkflowNodePortRef {
@@ -105,7 +114,7 @@ fn edge(id: &str, from_node: &str, from_port: &str, to_node: &str, to_port: &str
             node: to_node.to_string(),
             port: to_port.to_string(),
         },
-        artifact_type: "result/modal_frame_2d".to_string(),
+        artifact_type: artifact_type.to_string(),
         dataset_value: None,
     }
 }

@@ -266,12 +266,10 @@ fn runs_modal_frame_quality_workflow_graph() {
         .artifacts
         .get("json_output.json")
         .expect("json export artifact should exist");
-    assert!(
-        exported["content"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("modal_quality_frequency_span_hz")
-    );
+    assert!(exported["content"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("modal_quality_frequency_span_hz"));
 }
 
 fn quality_graph() -> WorkflowGraph {

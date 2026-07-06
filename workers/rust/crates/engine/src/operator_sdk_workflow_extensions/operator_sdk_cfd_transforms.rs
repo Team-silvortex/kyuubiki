@@ -1,6 +1,6 @@
 use crate::catalog::describe_built_in_operator;
 use crate::cfd_diagnostics::{extract_stokes_flow_result_diagnostics, score_cfd_quality};
-use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
+use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
 use crate::workflow_guard_transforms::{benchmark_cfd_pair, evaluate_cfd_guard};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{OperatorDescriptor, OperatorRunContext, OperatorRunResult};

@@ -266,12 +266,10 @@ fn runs_acoustic_bar_quality_workflow_graph() {
         .artifacts
         .get("json_output.json")
         .expect("json export artifact should exist");
-    assert!(
-        exported["content"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("acoustic_quality_max_pressure")
-    );
+    assert!(exported["content"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("acoustic_quality_max_pressure"));
 }
 
 fn quality_graph() -> WorkflowGraph {

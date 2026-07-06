@@ -1,4 +1,4 @@
-use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
+use crate::operator_sdk_runtime::{built_in_operator_registry, BuiltInOperatorRegistryKind};
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
     OperatorPackageLoadSummary, OperatorRegistrationEntrypoint, OperatorRegistry,
@@ -47,6 +47,7 @@ pub struct ExternalOperatorTrustPolicy {
     pub allowed_runtimes: BTreeSet<String>,
     pub allow_absolute_entrypoints: bool,
     pub require_entrypoint_within_package_root: bool,
+    pub require_platform_library_entrypoint: bool,
 }
 
 impl Default for ExternalOperatorTrustPolicy {
@@ -58,6 +59,7 @@ impl Default for ExternalOperatorTrustPolicy {
             allowed_runtimes,
             allow_absolute_entrypoints: false,
             require_entrypoint_within_package_root: true,
+            require_platform_library_entrypoint: true,
         }
     }
 }
@@ -213,6 +215,8 @@ fn validate_load_plan_against_policy(
     let normalized_package_root = normalize_path(&plan.package_root);
     let normalized_entrypoint_path = normalize_path(&plan.entrypoint_path);
 
+    validate_manifest_identifiers(plan)?;
+
     if let Some(allowed_package_ids) = &trust_policy.allowed_package_ids {
         if !allowed_package_ids.contains(&plan.manifest.package_id) {
             return Err(ExternalOperatorHostError::Policy {
@@ -267,6 +271,110 @@ fn validate_load_plan_against_policy(
         });
     }
 
+    if trust_policy.require_platform_library_entrypoint {
+        validate_platform_library_entrypoint(plan)?;
+    }
+
+    Ok(())
+}
+
+fn validate_manifest_identifiers(
+    plan: &OperatorPackageLoadPlan,
+) -> Result<(), ExternalOperatorHostError> {
+    validate_identifier(
+        &plan.manifest.package_id,
+        IdentifierKind::Dotted,
+        &plan.manifest.package_id,
+        "package_id",
+    )?;
+    validate_identifier(
+        &plan.manifest.runtime,
+        IdentifierKind::Flat,
+        &plan.manifest.package_id,
+        "runtime",
+    )?;
+    for operator in &plan.manifest.operators {
+        validate_identifier(
+            &operator.operator_id,
+            IdentifierKind::Dotted,
+            &plan.manifest.package_id,
+            "operator_id",
+        )?;
+        validate_identifier(
+            &operator.kind,
+            IdentifierKind::Flat,
+            &plan.manifest.package_id,
+            "operator kind",
+        )?;
+        validate_identifier(
+            &operator.entry_symbol,
+            IdentifierKind::RustSymbol,
+            &plan.manifest.package_id,
+            "entry_symbol",
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_platform_library_entrypoint(
+    plan: &OperatorPackageLoadPlan,
+) -> Result<(), ExternalOperatorHostError> {
+    let extension = plan
+        .entrypoint_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    let expected = kyuubiki_operator_sdk::current_platform_library_extension();
+    if extension != expected {
+        return Err(ExternalOperatorHostError::Policy {
+            package_id: plan.manifest.package_id.clone(),
+            message: format!(
+                "entrypoint {} is not a current-platform dynamic library with .{} extension",
+                plan.entrypoint_path.display(),
+                expected
+            ),
+        });
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum IdentifierKind {
+    Dotted,
+    Flat,
+    RustSymbol,
+}
+
+fn validate_identifier(
+    value: &str,
+    kind: IdentifierKind,
+    package_id: &str,
+    label: &str,
+) -> Result<(), ExternalOperatorHostError> {
+    if value.is_empty() || value.len() > 128 {
+        return Err(ExternalOperatorHostError::Policy {
+            package_id: package_id.to_string(),
+            message: format!("{label} length must be between 1 and 128"),
+        });
+    }
+
+    let valid = value.chars().enumerate().all(|(index, entry)| match kind {
+        IdentifierKind::Dotted => {
+            entry.is_ascii_alphanumeric() || entry == '_' || entry == '-' || entry == '.'
+        }
+        IdentifierKind::Flat => entry.is_ascii_alphanumeric() || entry == '_' || entry == '-',
+        IdentifierKind::RustSymbol => {
+            (entry.is_ascii_alphabetic() || entry == '_' || (index > 0 && entry.is_ascii_digit()))
+                && entry != '-'
+                && entry != '.'
+        }
+    });
+    if !valid {
+        return Err(ExternalOperatorHostError::Policy {
+            package_id: package_id.to_string(),
+            message: format!("{label} contains unsupported characters"),
+        });
+    }
     Ok(())
 }
 

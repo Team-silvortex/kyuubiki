@@ -62,12 +62,10 @@ fn expands_parameter_sweep_cases_through_sdk_registry() {
         Some(7800.0)
     );
     assert_eq!(cases[0]["metadata"]["source"].as_str(), Some("unit-test"));
-    assert!(
-        cases[3]["label"]
-            .as_str()
-            .expect("case label should exist")
-            .contains("density=7800")
-    );
+    assert!(cases[3]["label"]
+        .as_str()
+        .expect("case label should exist")
+        .contains("density=7800"));
 }
 
 #[test]

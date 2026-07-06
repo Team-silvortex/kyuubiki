@@ -1,4 +1,4 @@
-use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
+use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{OperatorDescriptor, OperatorRunContext, OperatorRunResult};
 use serde_json::{Map, Value};
@@ -275,12 +275,13 @@ fn evaluate_pareto_candidate(
     let mut metrics = Map::new();
     let mut objective_score = 0.0;
     for objective in objectives {
-        let value = lookup_summary_numeric(&candidate.summary, &objective.field).ok_or_else(|| {
-            format!(
+        let value =
+            lookup_summary_numeric(&candidate.summary, &objective.field).ok_or_else(|| {
+                format!(
                 "transform.extract_material_pareto_frontier candidate {} missing numeric field {}",
                 candidate.candidate_id, objective.field
             )
-        })?;
+            })?;
         metrics.insert(objective.field.clone(), Value::from(value));
         objective_score += objective.weighted_score(value);
     }
