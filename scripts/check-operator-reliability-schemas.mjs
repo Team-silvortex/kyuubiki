@@ -1,23 +1,24 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { operatorReliabilityPaths } from "./operator-reliability-contracts.mjs";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 
 const schemaContracts = [
   {
-    config: "config/operator-reliability-manifest.json",
-    schema: "schemas/operator-reliability-manifest.schema.json",
+    config: operatorReliabilityPaths.manifest,
+    schema: operatorReliabilityPaths.manifestSchema,
     schemaVersionPath: ["properties", "schema_version", "const"],
   },
   {
-    config: "config/operator-qualification-roadmap.json",
-    schema: "schemas/operator-qualification-roadmap.schema.json",
+    config: operatorReliabilityPaths.roadmap,
+    schema: operatorReliabilityPaths.roadmapSchema,
     schemaVersionPath: ["properties", "schema_version", "const"],
   },
   {
-    config: "config/operator-qualification-evidence-kits.json",
-    schema: "schemas/operator-qualification-evidence-kits.schema.json",
+    config: operatorReliabilityPaths.evidenceKits,
+    schema: operatorReliabilityPaths.evidenceKitsSchema,
     schemaVersionPath: ["properties", "schema_version", "const"],
   },
 ];
@@ -87,18 +88,18 @@ function checkSchemaContract({ config, schema, schemaVersionPath }) {
 }
 
 function checkReliabilityShards() {
-  const manifest = readJson("config/operator-reliability-manifest.json");
-  const shardSchema = readJson("schemas/operator-reliability-shard.schema.json");
+  const manifest = readJson(operatorReliabilityPaths.manifest);
+  const shardSchema = readJson(operatorReliabilityPaths.shardSchema);
   const expectedSchemaVersion = schemaValueAt(shardSchema, [
     "properties",
     "schema_version",
     "const",
   ]);
   if (!expectedSchemaVersion) {
-    fail("schemas/operator-reliability-shard.schema.json: missing schema_version const");
+    fail(`${operatorReliabilityPaths.shardSchema}: missing schema_version const`);
   }
   if (!Array.isArray(manifest.shards) || manifest.shards.length === 0) {
-    fail("config/operator-reliability-manifest.json: shards must be non-empty");
+    fail(`${operatorReliabilityPaths.manifest}: shards must be non-empty`);
   }
   for (const shardPath of manifest.shards) {
     const shard = readJson(shardPath);

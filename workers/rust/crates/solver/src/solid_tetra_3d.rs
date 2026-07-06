@@ -1,4 +1,4 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{add_at, reduce_sparse_system, solve_spd_system, SparseMatrix};
 use kyuubiki_protocol::{
     SolidTetra3dElementInput, SolidTetra3dElementResult, SolidTetra3dNodeResult,
     SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
@@ -313,6 +313,16 @@ fn validate_request(request: &SolveSolidTetra3dRequest) -> Result<(), String> {
             "solid tetra 3d model must restrain at least six degrees of freedom".to_string(),
         );
     }
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !(node.x.is_finite() && node.y.is_finite() && node.z.is_finite()) {
+            return Err(format!(
+                "solid tetra 3d node {index} coordinates must be finite"
+            ));
+        }
+        if !(node.load_x.is_finite() && node.load_y.is_finite() && node.load_z.is_finite()) {
+            return Err(format!("solid tetra 3d node {index} loads must be finite"));
+        }
+    }
     for element in &request.elements {
         validate_element(request, element)?;
     }
@@ -336,9 +346,21 @@ fn validate_element(
             ));
         }
     }
+    if !element.youngs_modulus.is_finite() {
+        return Err(format!(
+            "solid tetra element {} youngs_modulus must be finite",
+            element.id
+        ));
+    }
     if element.youngs_modulus <= 0.0 {
         return Err(format!(
             "solid tetra element {} must have positive youngs_modulus",
+            element.id
+        ));
+    }
+    if !element.poisson_ratio.is_finite() {
+        return Err(format!(
+            "solid tetra element {} poisson_ratio must be finite",
             element.id
         ));
     }

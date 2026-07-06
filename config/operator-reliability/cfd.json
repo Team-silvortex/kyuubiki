@@ -23,14 +23,18 @@
           "boundary_checks": [
             "fixed_wall_velocity",
             "fixed_reference_pressure",
-            "body_force_response"
+            "body_force_response",
+            "lid_driven_shear_boundary_response"
           ],
           "diagnostics": [
             "velocity_components",
             "pressure",
             "divergence_error",
             "reynolds_number",
-            "viscous_dissipation"
+            "viscous_dissipation",
+            "divergence_tolerance_policy",
+            "non_finite_input_rejection",
+            "non_finite_material_input_rejection"
           ],
           "tests": [
             "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs"
@@ -41,6 +45,8 @@
         "stokes_only",
         "screening_only",
         "rectangular_screening_baseline",
+        "lid_driven_shear_boundary_fixture",
+        "screening_divergence_tolerance_1e-10",
         "single_quad_patch"
       ]
     }

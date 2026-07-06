@@ -1,12 +1,12 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, ContactGap1dContactInput, Frame2dNodeInput,
     Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
-    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolveBeam1dRequest,
-    SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-    SolveSpring3dRequest, SolveThermalBeam1dRequest, Spring1dElementInput, Spring1dNodeInput,
-    Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
-    ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
+    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolidTetra3dElementInput,
+    SolidTetra3dNodeInput, SolveBeam1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest,
+    Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
+    Spring3dElementInput, Spring3dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
 };
 
 pub(crate) fn generate_spring_1d_case(elements: usize) -> SolveSpring1dRequest {
@@ -161,6 +161,26 @@ pub(crate) fn generate_spring_3d_case() -> SolveSpring3dRequest {
     }
 }
 
+pub(crate) fn generate_solid_tetra_3d_case() -> SolveSolidTetra3dRequest {
+    SolveSolidTetra3dRequest {
+        nodes: vec![
+            solid_tetra_3d_node("s0", 0.0, 0.0, 0.0, true, 0.0),
+            solid_tetra_3d_node("s1", 1.0, 0.0, 0.0, true, 0.0),
+            solid_tetra_3d_node("s2", 0.0, 1.0, 0.0, true, 0.0),
+            solid_tetra_3d_node("tip", 0.0, 0.0, 1.0, false, -1000.0),
+        ],
+        elements: vec![SolidTetra3dElementInput {
+            id: "tet0".to_string(),
+            node_a: 0,
+            node_b: 1,
+            node_c: 2,
+            node_d: 3,
+            youngs_modulus: 70.0e9,
+            poisson_ratio: 0.33,
+        }],
+    }
+}
+
 pub(crate) fn generate_modal_frame_2d_case() -> SolveModalFrame2dRequest {
     SolveModalFrame2dRequest {
         nodes: vec![
@@ -287,6 +307,28 @@ fn spring_3d_element(
         node_i,
         node_j,
         stiffness,
+    }
+}
+
+fn solid_tetra_3d_node(
+    id: &str,
+    x: f64,
+    y: f64,
+    z: f64,
+    fixed: bool,
+    load_z: f64,
+) -> SolidTetra3dNodeInput {
+    SolidTetra3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x: fixed,
+        fix_y: fixed,
+        fix_z: fixed,
+        load_x: 0.0,
+        load_y: 0.0,
+        load_z,
     }
 }
 

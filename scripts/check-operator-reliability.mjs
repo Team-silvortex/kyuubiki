@@ -2,6 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  operatorReliabilityPaths,
+  operatorReliabilitySchemaVersions,
+} from "./operator-reliability-contracts.mjs";
+import {
   allowedLevels,
   isBelowMinimumCoverageLevel,
   qualificationEvidenceErrors,
@@ -99,7 +103,7 @@ function validateQualificationEvidence(entry, context, options = {}) {
 }
 
 function loadManifest() {
-  const manifest = readJson("config/operator-reliability-manifest.json");
+  const manifest = readJson(operatorReliabilityPaths.manifest);
   if (Array.isArray(manifest.operators)) {
     return manifest;
   }
@@ -116,7 +120,7 @@ function loadManifest() {
     seenShards.add(shardPath);
 
     const shard = readJson(shardPath);
-    if (shard.schema_version !== "kyuubiki.operator-reliability-shard/v1") {
+    if (shard.schema_version !== operatorReliabilitySchemaVersions.shard) {
       fail(`${shardPath}: unexpected shard schema_version`);
     }
     if (!shard.domain) {
@@ -137,26 +141,34 @@ function loadManifest() {
 }
 
 function validateQualificationEvidenceKits(manifest, roadmap) {
-  const kitsPath = "config/operator-qualification-evidence-kits.json";
-  const absoluteKitsPath = path.join(repoRoot, kitsPath);
-  if (!fs.existsSync(absoluteKitsPath)) {
-    return;
-  }
-
+  const kitsPath = operatorReliabilityPaths.evidenceKits;
   const kits = readJson(kitsPath);
   const errors = qualificationEvidenceKitErrors(kits, roadmap, manifest);
   if (errors.length > 0) {
     fail(`qualification evidence kits: ${errors[0]}`);
   }
+  const makefile = fs.readFileSync(path.join(repoRoot, "Makefile"), "utf8");
+  for (const kit of kits.kits) {
+    for (const requirement of kit.artifact_requirements ?? []) {
+      if (requirement.artifact_path) {
+        ensureFileContains(
+          requirement.artifact_path,
+          null,
+          `qualification evidence kit ${kit.candidate_id}:${requirement.artifact_id}`
+        );
+      }
+      if (requirement.artifact_command && !makefile.includes(requirement.artifact_command)) {
+        fail(
+          `qualification evidence kit ${kit.candidate_id}:${requirement.artifact_id}: ` +
+            `artifact_command is not discoverable in Makefile`
+        );
+      }
+    }
+  }
 }
 
 function validateQualificationRoadmap(manifest, seenOperators, operatorLevels) {
-  const roadmapPath = "config/operator-qualification-roadmap.json";
-  const absoluteRoadmapPath = path.join(repoRoot, roadmapPath);
-  if (!fs.existsSync(absoluteRoadmapPath)) {
-    return;
-  }
-
+  const roadmapPath = operatorReliabilityPaths.roadmap;
   const roadmap = readJson(roadmapPath);
   const errors = qualificationRoadmapErrors(roadmap, manifest, seenOperators, operatorLevels);
   if (errors.length > 0) {
@@ -167,7 +179,7 @@ function validateQualificationRoadmap(manifest, seenOperators, operatorLevels) {
 
 function validate() {
   const manifest = loadManifest();
-  if (manifest.schema_version !== "kyuubiki.operator-reliability-manifest/v1") {
+  if (manifest.schema_version !== operatorReliabilitySchemaVersions.manifest) {
     fail("unexpected schema_version");
   }
   if (manifest.coverage_matrix !== "physics-coverage") {
@@ -253,11 +265,6 @@ function validate() {
     `operator reliability manifest ok: ${manifest.operators.length} operators, ` +
       `${[...levelCounts.entries()].map(([level, count]) => `${level}=${count}`).join(", ")}`
   );
-}
-
-if (process.argv.includes("--self-test")) {
-  await import("./test-operator-reliability-rules.mjs");
-  process.exit(0);
 }
 
 validate();

@@ -4,7 +4,7 @@
   "kits": [
     {
       "candidate_id": "line-field-closed-form",
-      "status": "planned",
+      "status": "collecting",
       "artifact_profile": "analytic_closed_form",
       "operator_ids": [
         "solve.bar_1d",
@@ -16,13 +16,29 @@
         {
           "artifact_id": "analytic-derivation",
           "kind": "derivation_note",
-          "gate": "derive expected displacement, temperature, potential, or flux from closed form",
+          "gate": "derive expected displacement, temperature, potential, or flux from closed form through evidence/operator-qualification/line-field-closed-form-derivation.md",
+          "artifact_path": "evidence/operator-qualification/line-field-closed-form-derivation.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "baseline-json",
           "kind": "versioned_baseline",
-          "gate": "pin numeric reference outputs and tolerances to the shipping line",
+          "gate": "pin numeric reference outputs and tolerances to the shipping line through evidence/operator-qualification/line-field-closed-form-baseline.json",
+          "artifact_path": "evidence/operator-qualification/line-field-closed-form-baseline.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "tolerance-policy",
+          "kind": "tolerance_policy",
+          "gate": "bound where tight closed-form tolerances can and cannot be reused through evidence/operator-qualification/line-field-tolerance-policy.json",
+          "artifact_path": "evidence/operator-qualification/line-field-tolerance-policy.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-regression-output",
+          "kind": "release_retained_regression_output",
+          "gate": "retain output from make capture-line-field-qualification-release-evidence with the release record before promotion",
+          "artifact_command": "make capture-line-field-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
@@ -126,7 +142,7 @@
     },
     {
       "candidate_id": "screening-cfd-boundary",
-      "status": "planned",
+      "status": "collecting",
       "artifact_profile": "screening_scope_boundary",
       "operator_ids": [
         "solve.stokes_flow_quad_2d"
@@ -136,12 +152,14 @@
           "artifact_id": "alternate-boundary-response",
           "kind": "boundary_regression",
           "gate": "add a second Stokes boundary fixture before any higher trust claim",
+          "artifact_path": "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "screening-scope-note",
           "kind": "scope_note",
           "gate": "state Stokes-only limits, divergence tolerance, and non-Navier-Stokes scope",
+          "artifact_path": "docs/operator-reliability.md",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]

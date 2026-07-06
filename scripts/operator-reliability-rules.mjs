@@ -1,3 +1,5 @@
+import { operatorReliabilitySchemaVersions } from "./operator-reliability-contracts.mjs";
+
 export const orderedLevels = ["smoke", "baseline", "review", "qualification"];
 export const allowedLevels = new Set(orderedLevels);
 export const allowedKitStatuses = new Set(["planned", "collecting", "ready_for_review", "blocked"]);
@@ -32,7 +34,7 @@ export function qualificationEvidenceErrors(entry) {
 
 export function qualificationRoadmapErrors(roadmap, manifest, seenOperators, operatorLevels) {
   const errors = [];
-  if (roadmap.schema_version !== "kyuubiki.operator-qualification-roadmap/v1") {
+  if (roadmap.schema_version !== operatorReliabilitySchemaVersions.roadmap) {
     errors.push("unexpected schema_version");
   }
   if (roadmap.version_line !== manifest.version_line) {
@@ -82,7 +84,7 @@ export function qualificationRoadmapErrors(roadmap, manifest, seenOperators, ope
 
 export function qualificationEvidenceKitErrors(kits, roadmap, manifest) {
   const errors = [];
-  if (kits.schema_version !== "kyuubiki.operator-qualification-evidence-kits/v1") {
+  if (kits.schema_version !== operatorReliabilitySchemaVersions.evidenceKits) {
     errors.push("unexpected schema_version");
   }
   if (kits.version_line !== manifest.version_line) {
@@ -136,6 +138,12 @@ export function qualificationEvidenceKitErrors(kits, roadmap, manifest) {
     if (!Array.isArray(kit.artifact_requirements) || kit.artifact_requirements.length === 0) {
       errors.push(`${context}: artifact_requirements must be non-empty`);
     }
+    const hasCollectingEntry = (kit.artifact_requirements ?? []).some(
+      (requirement) => requirement.artifact_path || requirement.artifact_command
+    );
+    if ((kit.status === "collecting" || kit.status === "ready_for_review") && !hasCollectingEntry) {
+      errors.push(`${context}: ${kit.status} kits must declare artifact_path or artifact_command`);
+    }
     const seenArtifacts = new Set();
     for (const requirement of kit.artifact_requirements ?? []) {
       if (seenArtifacts.has(requirement.artifact_id)) {
@@ -146,6 +154,19 @@ export function qualificationEvidenceKitErrors(kits, roadmap, manifest) {
       for (const field of ["artifact_id", "kind", "gate", "path_policy"]) {
         if (typeof requirement[field] !== "string" || requirement[field].length === 0) {
           errors.push(`${context}: artifact_requirements.${field} must be non-empty`);
+        }
+      }
+      for (const field of ["artifact_path", "artifact_command"]) {
+        if (
+          requirement[field] !== undefined &&
+          (typeof requirement[field] !== "string" || requirement[field].length === 0)
+        ) {
+          errors.push(`${context}: artifact_requirements.${field} must be non-empty when set`);
+        }
+      }
+      if (requirement.artifact_path) {
+        if (requirement.artifact_path.startsWith("/") || requirement.artifact_path.includes("..")) {
+          errors.push(`${context}: artifact_path must be repo-relative and stay inside the repo`);
         }
       }
     }

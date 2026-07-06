@@ -88,18 +88,52 @@ fn validate_request(request: &SolveStokesFlowPlaneQuad2dRequest) -> Result<(), S
         return Err("stokes flow quad model requires at least one element".into());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !(node.x.is_finite() && node.y.is_finite()) {
+            return Err(format!(
+                "stokes flow node {index} coordinates must be finite"
+            ));
+        }
+        if !(node.velocity_x.is_finite() && node.velocity_y.is_finite()) {
+            return Err(format!("stokes flow node {index} velocity must be finite"));
+        }
+        if !node.pressure.is_finite() {
+            return Err(format!("stokes flow node {index} pressure must be finite"));
+        }
+        if !(node.body_force_x.is_finite() && node.body_force_y.is_finite()) {
+            return Err(format!(
+                "stokes flow node {index} body force must be finite"
+            ));
+        }
+    }
+
     for (index, element) in request.elements.iter().enumerate() {
         validate_node_index(request.nodes.len(), element.node_i, index, "node_i")?;
         validate_node_index(request.nodes.len(), element.node_j, index, "node_j")?;
         validate_node_index(request.nodes.len(), element.node_k, index, "node_k")?;
         validate_node_index(request.nodes.len(), element.node_l, index, "node_l")?;
+        if !element.viscosity.is_finite() {
+            return Err(format!(
+                "stokes flow element {index} viscosity must be finite"
+            ));
+        }
         if element.viscosity <= 0.0 {
             return Err(format!(
                 "stokes flow element {index} has non-positive viscosity"
             ));
         }
+        if !element.density.is_finite() {
+            return Err(format!(
+                "stokes flow element {index} density must be finite"
+            ));
+        }
         if element.density < 0.0 {
             return Err(format!("stokes flow element {index} has negative density"));
+        }
+        if !element.thickness.is_finite() {
+            return Err(format!(
+                "stokes flow element {index} thickness must be finite"
+            ));
         }
         if element.thickness <= 0.0 {
             return Err(format!(
@@ -147,7 +181,11 @@ fn average_viscosity_for_node(
         }
     }
 
-    if count == 0.0 { 1.0 } else { total / count }
+    if count == 0.0 {
+        1.0
+    } else {
+        total / count
+    }
 }
 
 fn element_result(

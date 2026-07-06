@@ -11,6 +11,7 @@
   ],
   "shards": [
     "config/operator-reliability/structural.json",
+    "config/operator-reliability/structural-solid.json",
     "config/operator-reliability/thermal-structural.json",
     "config/operator-reliability/acoustic.json",
     "config/operator-reliability/thermal.json",

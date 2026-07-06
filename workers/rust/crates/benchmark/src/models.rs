@@ -6,12 +6,12 @@ use kyuubiki_protocol::{
     SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
-    SolveSpring2dRequest, SolveSpring3dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
-    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +47,7 @@ pub(crate) enum BenchmarkWorkload {
     ThermalFrame3d(SolveThermalFrame3dRequest),
     ModalFrame2d(SolveModalFrame2dRequest),
     ModalFrame3d(SolveModalFrame3dRequest),
+    SolidTetra3d(SolveSolidTetra3dRequest),
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
     ThermalTruss2d(SolveThermalTruss2dRequest),

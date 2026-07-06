@@ -34,21 +34,24 @@ to keep the trust-level ordering and release-gate behavior from regressing.
 The shard layout keeps each domain contract below the project source-size limit
 while preserving one release-level verification command.
 
-The optional qualification roadmap lives at
+The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
 roadmap candidates reference existing manifest operators and already satisfy
 the roadmap's minimum candidate level.
 
-The optional qualification evidence kits live at
+The qualification evidence kits live at
 `config/operator-qualification-evidence-kits.json`. They are deliberately
 planning-grade: they list the artifacts that must be collected before a
 roadmap candidate can be promoted into real `evidence.qualification` manifest
 entries. The checker keeps every kit tied to an existing roadmap candidate and
 prevents operators from drifting into the wrong qualification group.
+`make build-operator-qualification-readiness` writes a local JSON report that
+summarizes which roadmap artifacts are present, command-backed, missing, or not
+started.
 
 ## Current State
 
-The first `tamamono 1.15.x` manifest covers all 36 solve operators in the
+The first `tamamono 1.15.x` manifest covers all 37 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring at least
 `review` evidence for every covered operator.
 
@@ -56,12 +59,41 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 36 operators
+- `review`: 37 operators
 - `qualification`: 0 operators
 
 This is intentionally conservative. The platform has broad executable
 coverage, but most evidence is still regression-oriented rather than
 engineering-qualification evidence.
+
+The CFD-facing Stokes quad operator is still `screening_only`, but it now has
+two review fixtures: the original body-force response and a lid-driven shear
+boundary response. That moves the `screening-cfd-boundary` evidence kit into
+`collecting`, not `qualification`. The test suite now encodes a screening
+divergence tolerance, but the operator still needs tolerance provenance and an
+explicit Stokes-only scope note before any stronger claim.
+
+The first qualification evidence collection track is now active for
+`line-field-closed-form`. Its versioned baseline artifact lives at
+`evidence/operator-qualification/line-field-closed-form-baseline.json` and is
+paired with
+`evidence/operator-qualification/line-field-closed-form-derivation.md` plus
+`evidence/operator-qualification/line-field-tolerance-policy.json`. These are
+checked by `make check-line-field-closed-form-baseline`. This pins the
+closed-form expected values, tolerances, and tolerance scope for `solve.bar_1d`,
+`solve.thermal_bar_1d`, `solve.heat_bar_1d`, and
+`solve.electrostatic_bar_1d`, but it is not a trust-level promotion by itself.
+`make capture-line-field-qualification-provenance` can emit the release-time
+revision, toolchain, platform, and input-hash envelope without adding local
+machine paths to Git. `make capture-line-field-qualification-release-evidence`
+runs the evidence checker and solver baseline and writes the release-retained
+regression bundle. The remaining blocker is attaching that generated bundle to
+the actual release record before any manifest entry becomes `qualification`.
+
+`solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
+solid-tetra benchmark template and a solver-level review fixture for a
+restrained single-tetra load path. It is still a screening fixture, not a
+mesh-convergence or qualification claim.
 
 ## Smoke-Level Gaps
 
@@ -106,9 +138,11 @@ The most useful next upgrades are:
 
 - harden selected review operators toward `qualification` with external,
   convergence, or literature-backed evidence
+- turn the `line-field-closed-form` baseline artifact into a complete
+  qualification packet with derivation and provenance notes
 - add mesh, boundary, and material-assumption evidence where review coverage is
   still based on compact screening fixtures
-- add a second Stokes-flow fixture that checks a different boundary response
-  shape before any CFD-facing claim moves beyond screening
+- expand Stokes-flow screening evidence from the second boundary-response
+  fixture into documented divergence tolerance provenance and scope limits
 - keep `qualification` empty until external, convergence, or literature
   evidence exists

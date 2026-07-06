@@ -63,31 +63,39 @@ This directory contains host-native operational entry points.
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and
   the component implementation anchors used by wasm-python and UI smoke tests.
   Use `--self-test` when changing selector coverage.
-- `check-operator-reliability.mjs`
-  Verify `config/operator-reliability-manifest.json` and its per-domain shards
-  against the Rust `physics-coverage` benchmark matrix, workflow solve operator
-  ids, evidence files, declared trust levels, and the manifest's minimum
-  coverage-level release gate. When present, it also validates
-  `config/operator-qualification-roadmap.json` so qualification candidates
-  reference covered operators that satisfy the roadmap minimum, plus
-  `config/operator-qualification-evidence-kits.json` so every qualification
-  candidate has a planned artifact kit. Use `--self-test` when changing level
-  ordering, release-gate behavior, or qualification planning rules.
-- `operator-reliability-rules.mjs`
-  Shared rule helpers for the reliability checker. Keep trust-level ordering,
-  qualification roadmap checks, and evidence-kit checks here so the executable
-  checker remains below the project file-size limit.
-- `test-operator-reliability-rules.mjs`
-  Focused self-test for the reliability rule helpers. It is invoked by
-  `check-operator-reliability.mjs --self-test` and can be run directly when
-  editing trust-level, qualification roadmap, or evidence-kit rules.
-  Prefer `make check-operator-reliability-rules` for the same focused check
-  through the standard project entrypoint.
-- `check-operator-reliability-schemas.mjs`
-  Zero-dependency smoke check for operator reliability JSON schema contracts.
-  It verifies that the checked-in manifest, roadmap, evidence kits, and all
-  manifest-listed shards keep their `schema_version` aligned with the matching
-  schema files, and recursively checks schema-declared required fields.
+- `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
+  Operator reliability gate family. `operator-reliability-contracts.mjs`
+  centralizes config/schema paths and schema versions,
+  `operator-reliability-rules.mjs` owns pure trust-level and qualification
+  rules, `test-operator-reliability-rules.mjs` tests those rules,
+  `check-operator-reliability-schemas.mjs` runs the zero-dependency schema
+  smoke, and `check-operator-reliability.mjs` performs the manifest,
+  benchmark, workflow payload, evidence-file, roadmap, and evidence-kit gate.
+- `check-line-field-closed-form-baseline.mjs`
+  Verify the first versioned qualification evidence artifact for the
+  `line-field-closed-form` candidate. It checks that all four 1D closed-form
+  operator baselines are present, finite, tolerance-bearing, and linked to the
+  Rust accuracy-baseline tests. It also checks the candidate tolerance policy
+  so tight closed-form tolerances cannot silently expand into broader claims.
+- `capture-line-field-qualification-provenance.mjs`
+  Emit a repo-relative provenance JSON envelope for the same candidate. The
+  output records revision state, toolchain versions, platform metadata, command
+  contracts, and hashes of the evidence inputs without embedding local absolute
+  paths.
+- `capture-line-field-qualification-release-evidence.mjs`
+  Run the line-field evidence checker and Rust solver baseline, then retain
+  command status, duration, output, and provenance in a repo-local JSON bundle.
+  It is intended for release artifacts under `tmp/` or a release staging area,
+  not for direct Git commits.
+- `check-line-field-qualification-release-evidence.mjs`
+  Validate a retained line-field release evidence bundle. It checks schema
+  version, command success, provenance inputs, SHA-256 shape, release-retention
+  flags, and absence of local absolute repository paths.
+- `build-operator-qualification-readiness.mjs`
+  Build a repo-local JSON readiness report for all qualification roadmap
+  candidates. The report summarizes planned versus collecting status, concrete
+  artifact paths or commands, missing files, not-started artifacts, and the
+  graduation gate for each candidate.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -123,6 +131,62 @@ Typical responsibilities:
 - release metadata normalization across `releases/` and `deploy/`
 - remote release artifact upload and local bundle cleanup
 
+Useful checks:
+
+- `make audit-dependencies`
+  Run npm `--omit=dev --package-lock-only` audits for the shipped JS app
+  lockfiles and RustSec `cargo audit` against every checked Rust/Tauri
+  `Cargo.lock`. The Make target runs the dependency-audit self-test first.
+  Keep the lockfiles tracked for these lanes so security results are
+  reproducible. Add or remove lanes through
+  `config/dependency-audit-lockfiles.json`.
+- `./scripts/kyuubiki rust-line-audit`
+  Enforce the Rust source file line-count ceiling without running the full
+  Rust test suite.
+- `make check-ui-automation-contract`
+  Check that product-owned Workbench UI automation anchors still match the
+  documented selector contract. Run this before changing rail, library,
+  runtime, viewport, control-window, or shell DOM structure.
+- `make check-version-line`
+  Check that release metadata, package metadata, generated docs mirrors, update
+  catalogs, and shipped language-pack catalog entries all match the current
+  shipping version.
+- `make check-operator-reliability`
+  Check that every `physics-coverage` solve operator has a reliability manifest
+  entry with benchmark, headless workflow, evidence, visible limitations, and a
+  coverage level that satisfies the release minimum gate. The Make target runs
+  the focused rule, schema smoke, and line-field closed-form baseline checks
+  first.
+- `make check-operator-reliability-rules`
+  Run only the pure reliability rule self-test without loading benchmark
+  catalogs, workflow payloads, manifest shards, or evidence files.
+- `make check-operator-reliability-schemas`
+  Run only the operator reliability schema/config version smoke without loading
+  benchmark catalogs, workflow payloads, or evidence files. This covers
+  schema-version alignment and required-field presence, not full JSON Schema
+  validation.
+- `make build-operator-qualification-readiness`
+  Write a generated readiness report for the qualification roadmap. Override
+  `OUT=tmp/name.json`; the report is a local planning artifact and should stay
+  out of Git unless deliberately retained with a release.
+- `make capture-line-field-qualification-provenance`
+  Write a release-retainable provenance JSON envelope for the first
+  qualification candidate. Override `OUT=tmp/name.json`; the output path must
+  stay repo-local and should normally remain outside Git until attached to a
+  release.
+- `make capture-line-field-qualification-release-evidence`
+  Run the first qualification candidate's release-retained regression evidence
+  lane and write the resulting JSON bundle. Override `OUT=tmp/name.json`; keep
+  routine run output outside Git and attach it to the release record instead.
+- `make check-line-field-qualification-release-evidence`
+  Validate the generated or staged line-field release evidence bundle. Override
+  `IN=tmp/name.json` when checking a release-staging copy.
+- `make check-elixir-self-host`
+  Check the current machine's Elixir, Mix, OTP, and orchestrator environment
+  contract against `config/toolchains.json`. Use `node
+  ./scripts/check-elixir-self-host.mjs --static-only --json` when preparing an
+  installer image where Elixir is not yet installed.
+
 Useful smoke wrappers:
 
 - `./scripts/kyuubiki smoke`
@@ -140,42 +204,6 @@ Useful smoke wrappers:
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.
-- `./scripts/kyuubiki rust-line-audit`
-  Enforce the Rust source file line-count ceiling without running the full
-  Rust test suite.
-- `make audit-dependencies`
-  Run npm `--omit=dev --package-lock-only` audits for the shipped JS app
-  lockfiles and RustSec `cargo audit` against every checked Rust/Tauri
-  `Cargo.lock`. The Make target runs the dependency-audit self-test first.
-  Keep the lockfiles tracked for these lanes so security results are
-  reproducible. Add or remove lanes through
-  `config/dependency-audit-lockfiles.json`.
-- `make check-ui-automation-contract`
-  Check that product-owned Workbench UI automation anchors still match the
-  documented selector contract. Run this before changing rail, library,
-  runtime, viewport, control-window, or shell DOM structure.
-- `make check-version-line`
-  Check that release metadata, package metadata, generated docs mirrors, update
-  catalogs, and shipped language-pack catalog entries all match the current
-  shipping version.
-- `make check-operator-reliability`
-  Check that every `physics-coverage` solve operator has a reliability manifest
-  entry with benchmark, headless workflow, evidence, visible limitations, and a
-  coverage level that satisfies the release minimum gate. The Make target runs
-  the focused rule and schema smoke checks first.
-- `make check-operator-reliability-rules`
-  Run only the pure reliability rule self-test without loading benchmark
-  catalogs, workflow payloads, manifest shards, or evidence files.
-- `make check-operator-reliability-schemas`
-  Run only the operator reliability schema/config version smoke without loading
-  benchmark catalogs, workflow payloads, or evidence files. This covers
-  schema-version alignment and required-field presence, not full JSON Schema
-  validation.
-- `make check-elixir-self-host`
-  Check the current machine's Elixir, Mix, OTP, and orchestrator environment
-  contract against `config/toolchains.json`. Use `node
-  ./scripts/check-elixir-self-host.mjs --static-only --json` when preparing an
-  installer image where Elixir is not yet installed.
 - `cargo run -p kyuubiki-installer -- embedded-runtimes`
   Print the installer-managed runtime payload contract for the current
   platform. The same data is written to

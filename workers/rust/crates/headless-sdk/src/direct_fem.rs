@@ -1,4 +1,4 @@
-use crate::{HeadlessActionContract, HeadlessEngine, HeadlessRisk, find_action_contract};
+use crate::{find_action_contract, HeadlessActionContract, HeadlessEngine, HeadlessRisk};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -261,6 +261,10 @@ mod tests {
         assert_eq!(
             direct_fem_submit_route("solve_truss_3d"),
             Some("/api/v1/fem/truss-3d/jobs")
+        );
+        assert_eq!(
+            direct_fem_submit_route("solve_solid_tetra_3d"),
+            Some("/api/v1/fem/solid-tetra-3d/jobs")
         );
         assert_eq!(
             direct_fem_submit_route("solve_thermal_frame_3d"),

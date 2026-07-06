@@ -114,6 +114,7 @@ Examples:
 
 - `solve.axial_bar_1d`
 - `solve.frame_3d`
+- `solve.solid_tetra_3d`
 - `solve.thermal_plane_quad_2d`
 
 These consume a study/model payload and produce result summaries plus detailed
@@ -436,6 +437,7 @@ verification momentum:
 3. `thermal_truss_2d / 3d`
 4. `heat_plane_triangle_2d / quad_2d`
 5. `spring_1d / 2d / 3d`
+6. `solid_tetra_3d`
 
 These are good seed families because they already have:
 

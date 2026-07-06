@@ -1,0 +1,48 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "structural",
+  "operators": [
+    {
+      "operator_id": "solve.solid_tetra_3d",
+      "benchmark_template": "solid-tetra-3d",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs"
+        ],
+        "reliability_suite": "solid_tetra_3d_review",
+        "review": {
+          "assumptions": [
+            "linear_elastic",
+            "small_strain",
+            "constant_strain_tetra"
+          ],
+          "boundary_checks": [
+            "restrained_base_displacement",
+            "loaded_tip_response",
+            "degenerate_geometry_rejection"
+          ],
+          "diagnostics": [
+            "nodal_displacement",
+            "element_strain",
+            "element_stress",
+            "von_mises",
+            "non_finite_material_input_rejection"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_elastic",
+        "small_strain",
+        "single_constant_strain_tetra",
+        "screening_fixture"
+      ]
+    }
+  ]
+}

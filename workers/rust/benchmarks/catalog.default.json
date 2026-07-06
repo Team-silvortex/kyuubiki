@@ -21,6 +21,7 @@
     { "stem": "thermal-frame-3d", "family": "thermal_frame3d" },
     { "stem": "modal-frame-2d", "family": "modal_frame2d" },
     { "stem": "modal-frame-3d", "family": "modal_frame3d" },
+    { "stem": "solid-tetra-3d", "family": "solid_tetra3d" },
     { "stem": "truss-roof", "family": "truss2d" },
     { "stem": "space-frame", "family": "truss_frame3d" },
     { "stem": "thermal-truss-2d", "family": "thermal_truss2d" },
@@ -111,7 +112,8 @@
         "beam-line",
         "thermal-beam-line",
         "modal-frame-2d",
-        "modal-frame-3d"
+        "modal-frame-3d",
+        "solid-tetra-3d"
       ],
       "owned_templates": []
     },
@@ -154,6 +156,7 @@
         "thermal-frame-3d",
         "modal-frame-2d",
         "modal-frame-3d",
+        "solid-tetra-3d",
         "truss-roof",
         "space-frame",
         "thermal-truss-2d",

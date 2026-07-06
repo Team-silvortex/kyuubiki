@@ -111,6 +111,7 @@ All three SDKs expose the same conceptual split:
 - `solve_bar_1d`
 - `solve_truss_2d`
 - `solve_truss_3d`
+- `solve_solid_tetra_3d`
 - `solve_plane_triangle_2d`
 - `cancel_job`
 

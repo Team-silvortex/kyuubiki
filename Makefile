@@ -1,7 +1,51 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs check-ui-automation-contract check-version-line check-operator-reliability-rules check-operator-reliability-schemas check-operator-reliability audit-rust-lines audit-project-organization audit-dependencies architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree
+.PHONY: build-frontend build-orchestrator build-agent
+.PHONY: build-hub-gui build-installer-gui build-workbench-gui
+.PHONY: package-runtime package-desktop package
+.PHONY: desktop-status desktop-stage desktop-build-host desktop-release desktop-verify
+.PHONY: desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight
+.PHONY: operator-package-preflight sync-desktop-shared
+.PHONY: build-installation-docs build-update-catalog
+.PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
+.PHONY: check-language-packs check-ui-automation-contract check-version-line
+.PHONY: build-operator-qualification-readiness
+.PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
+.PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
+.PHONY: check-operator-reliability-rules check-operator-reliability-schemas
+.PHONY: check-operator-reliability audit-rust-lines audit-project-organization
+.PHONY: audit-dependencies architecture-check verify
+.PHONY: start start-local start-cloud start-distributed status stop restart
+.PHONY: restart-local restart-cloud restart-distributed
+.PHONY: hot-local hot-cloud hot-distributed hot-web hot-agent
+.PHONY: hot-hub-gui hot-installer-gui hot-workbench-gui
+.PHONY: export-db install doctor validate-env
+.PHONY: hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build
+.PHONY: workbench-gui-dev workbench-gui-build
+.PHONY: test test-web test-rust test-frontend workflow-preflight test-sdk
+.PHONY: test-agent-capability-smoke test-playground
+.PHONY: test-hub-gui test-installer-gui test-workbench-gui
+.PHONY: test-integration test-integration-api test-integration-cluster
+.PHONY: test-integration-direct-mesh test-integration-desktop-gui
+.PHONY: test-integration-benchmark-profile-index
+.PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture
+.PHONY: test-integration-direct-mesh-docker-compare
+.PHONY: test-integration-direct-mesh-docker-report
+.PHONY: test-integration-direct-mesh-docker-nightly
+.PHONY: test-integration-workflow-mesh test-integration-workflow-mesh-nightly
+.PHONY: test-integration-workflow-catalog-compare
+.PHONY: test-integration-workflow-catalog-report
+.PHONY: test-integration-workflow-catalog-nightly
+.PHONY: test-integration-ui-mechanical test-integration-ui-thermal
+.PHONY: format format-web format-rust tdd-web tdd-rust
+.PHONY: smoke worker agent orchestrator playground frontend
+.PHONY: benchmark benchmark-physics-coverage benchmark-profile-remote
+.PHONY: benchmark-profile-report benchmark-profile-index
+.PHONY: benchmark-baseline benchmark-compare benchmark-report
+.PHONY: benchmark-standard-baselines benchmark-standard-compare
+.PHONY: benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -58,6 +102,11 @@ help:
 	@echo "  make check-version-line Verify release, package, docs, and language-pack version contracts"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
 	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"
+	@echo "  make build-operator-qualification-readiness Write operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"
+	@echo "  make capture-line-field-qualification-provenance Write line-field qualification provenance JSON to OUT=tmp/line-field-qualification-provenance.json"
+	@echo "  make capture-line-field-qualification-release-evidence Run and retain line-field qualification evidence output under OUT=tmp/line-field-qualification-release-evidence.json"
+	@echo "  make check-line-field-closed-form-baseline Verify line-field closed-form qualification baseline artifact"
+	@echo "  make check-line-field-qualification-release-evidence Verify release evidence JSON from IN=tmp/line-field-qualification-release-evidence.json"
 	@echo "  make check-operator-reliability Verify physics-coverage operator reliability evidence"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
@@ -291,9 +340,22 @@ check-operator-reliability-schemas:
 	@node ./scripts/check-operator-reliability-schemas.mjs --self-test
 	@node ./scripts/check-operator-reliability-schemas.mjs
 
-check-operator-reliability:
-	@$(MAKE) check-operator-reliability-rules
-	@$(MAKE) check-operator-reliability-schemas
+build-operator-qualification-readiness:
+	@node ./scripts/build-operator-qualification-readiness.mjs --out $${OUT:-tmp/operator-qualification-readiness.json}
+
+capture-line-field-qualification-provenance:
+	@node ./scripts/capture-line-field-qualification-provenance.mjs --out $${OUT:-tmp/line-field-qualification-provenance.json}
+
+capture-line-field-qualification-release-evidence:
+	@node ./scripts/capture-line-field-qualification-release-evidence.mjs --out $${OUT:-tmp/line-field-qualification-release-evidence.json}
+
+check-line-field-closed-form-baseline:
+	@node ./scripts/check-line-field-closed-form-baseline.mjs
+
+check-line-field-qualification-release-evidence:
+	@node ./scripts/check-line-field-qualification-release-evidence.mjs --in $${IN:-tmp/line-field-qualification-release-evidence.json}
+
+check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline
 	@node ./scripts/check-operator-reliability.mjs
 
 audit-rust-lines:
@@ -308,8 +370,7 @@ audit-dependencies:
 	@node ./scripts/audit-dependencies.mjs
 
 architecture-check:
-	@node ./scripts/audit-project-organization.mjs --self-test
-	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) audit-project-organization
 	@$(MAKE) check-version-line
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-ui-automation-contract
@@ -442,9 +503,8 @@ verify:
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
-	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
-	@node ./scripts/audit-project-organization.mjs --self-test
-	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) audit-rust-lines
+	@$(MAKE) audit-project-organization
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
 	@$(ENTRYPOINT) sdk-smoke

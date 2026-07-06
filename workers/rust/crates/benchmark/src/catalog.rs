@@ -21,8 +21,9 @@ use crate::{
     },
     generators_structural::{
         generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_case,
-        generate_modal_frame_3d_case, generate_nonlinear_spring_1d_case, generate_spring_1d_case,
-        generate_spring_2d_case, generate_spring_3d_case, generate_thermal_beam_1d_case,
+        generate_modal_frame_3d_case, generate_nonlinear_spring_1d_case,
+        generate_solid_tetra_3d_case, generate_spring_1d_case, generate_spring_2d_case,
+        generate_spring_3d_case, generate_thermal_beam_1d_case,
     },
     generators_thermal_structural::{
         generate_frame_2d_case, generate_frame_3d_case, generate_thermal_bar_case,
@@ -91,6 +92,7 @@ pub(crate) enum BenchmarkFamily {
     ThermalFrame3d,
     ModalFrame2d,
     ModalFrame3d,
+    SolidTetra3d,
     Truss2d,
     TrussFrame3d,
     ThermalTruss2d,
@@ -324,6 +326,11 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "modal_frame_3d",
             workload: BenchmarkWorkload::ModalFrame3d(generate_modal_frame_3d_case()),
         },
+        BenchmarkFamily::SolidTetra3d => BenchmarkCase {
+            id,
+            family: "solid_tetra_3d",
+            workload: BenchmarkWorkload::SolidTetra3d(generate_solid_tetra_3d_case()),
+        },
         BenchmarkFamily::Truss2d => build_truss_case(id, &profile.truss),
         BenchmarkFamily::TrussFrame3d => BenchmarkCase {
             id,
@@ -470,8 +477,8 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
 #[cfg(test)]
 mod tests {
     use super::{
-        BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec, CaseTemplateSpec,
-        resolve_matrix_templates,
+        resolve_matrix_templates, BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec,
+        CaseTemplateSpec,
     };
 
     #[test]

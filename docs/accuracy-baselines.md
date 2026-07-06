@@ -40,11 +40,24 @@ These baselines are enforced in:
 
 - [accuracy_baselines.rs](../workers/rust/crates/solver/tests/accuracy_baselines.rs)
 
+The first qualification-oriented evidence packet for the 1D closed-form subset
+is tracked in:
+
+- [line-field-closed-form-baseline.json](../evidence/operator-qualification/line-field-closed-form-baseline.json)
+- [line-field-closed-form-derivation.md](../evidence/operator-qualification/line-field-closed-form-derivation.md)
+- [line-field-tolerance-policy.json](../evidence/operator-qualification/line-field-tolerance-policy.json)
+
 Run them with:
 
 ```bash
 cd workers/rust
 cargo test -p kyuubiki-solver --test accuracy_baselines
+```
+
+For the qualification-oriented subset, retain a release evidence bundle with:
+
+```bash
+make capture-line-field-qualification-release-evidence
 ```
 
 ## Why these three first

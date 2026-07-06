@@ -15,9 +15,8 @@
       ],
       "rationale": "Small line-field cases have direct closed-form references and are the safest first qualification candidates.",
       "evidence_gaps": [
-        "documented tolerance provenance",
-        "release-blocking analytic baseline artifact",
-        "environment and solver-version provenance"
+        "release-retained regression output",
+        "environment and solver-version provenance attached to the retained run"
       ],
       "required_artifacts": [
         "analytic derivation note",
@@ -122,10 +121,9 @@
       "operator_ids": [
         "solve.stokes_flow_quad_2d"
       ],
-      "rationale": "The Stokes operator is intentionally screening-grade and needs a second boundary response before higher trust.",
+      "rationale": "The Stokes operator is intentionally screening-grade; it now has a second boundary response but still needs explicit scope and qualification evidence before higher trust.",
       "evidence_gaps": [
-        "second boundary-condition fixture",
-        "divergence tolerance policy",
+        "documented divergence tolerance provenance",
         "scope note explaining Stokes-only limits"
       ],
       "required_artifacts": [
@@ -133,7 +131,7 @@
         "divergence tolerance note",
         "screening-scope documentation"
       ],
-      "graduation_gate": "do not qualify until a second Stokes fixture and explicit screening scope are documented"
+      "graduation_gate": "do not qualify until the Stokes-only screening scope and divergence tolerance provenance are documented"
     }
   ]
 }

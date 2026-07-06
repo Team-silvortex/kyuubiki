@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use super::{BenchmarkConfig, OutputFormat, benchmark_cases, headless_sdk_cases};
+    use super::{benchmark_cases, headless_sdk_cases, BenchmarkConfig, OutputFormat};
     use crate::catalog::{
-        BenchmarkCatalogSpec, catalog_spec_path_candidates, default_catalog_spec,
+        catalog_spec_path_candidates, default_catalog_spec, BenchmarkCatalogSpec,
     };
     use crate::config::BenchmarkProfile;
     use crate::models::{BenchmarkCase, BenchmarkWorkload};
@@ -75,29 +75,25 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 36);
+        assert_eq!(spec.templates.len(), 37);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 10);
-        assert!(
-            spec.profiles
-                .iter()
-                .any(|profile| profile.profile == BenchmarkProfile::HundredK)
-        );
-        assert!(
-            spec.profiles
-                .iter()
-                .any(|profile| profile.profile == BenchmarkProfile::TwoHundredK)
-        );
-        assert!(
-            spec.profiles
-                .iter()
-                .any(|profile| profile.profile == BenchmarkProfile::ThreeHundredK)
-        );
-        assert!(
-            spec.profiles
-                .iter()
-                .any(|profile| profile.profile == BenchmarkProfile::FourHundredK)
-        );
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::HundredK));
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::TwoHundredK));
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::ThreeHundredK));
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::FourHundredK));
     }
 
     #[test]
@@ -124,11 +120,9 @@ mod tests {
     fn compound_matrix_can_define_owned_templates() {
         let cases = benchmark_cases(BenchmarkProfile::TenK, "compound");
 
-        assert!(
-            cases
-                .iter()
-                .any(|case| case.id == "compound-surface-panel-10k")
-        );
+        assert!(cases
+            .iter()
+            .any(|case| case.id == "compound-surface-panel-10k"));
         assert!(cases.iter().any(|case| case.id == "heat-plane-quad-10k"));
     }
 
@@ -160,12 +154,10 @@ mod tests {
 
         assert_eq!(report.cases.len(), 2);
         assert!(report.cases.iter().any(|case| case.id.ends_with("#jacobi")));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.id.ends_with("#symmetric-gauss-seidel"))
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.id.ends_with("#symmetric-gauss-seidel")));
     }
 
     #[test]
@@ -246,24 +238,18 @@ mod tests {
 
         assert_eq!(report.cases.len(), 12);
         assert!(report.cases.iter().all(|case| case.ok));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "advection_diffusion_bar_1d")
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "stokes_flow_plane_quad_2d")
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "magnetostatic_plane_quad_2d")
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "advection_diffusion_bar_1d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "stokes_flow_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "magnetostatic_plane_quad_2d"));
     }
 
     #[test]
@@ -278,20 +264,20 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 9);
+        assert_eq!(report.cases.len(), 10);
         assert!(report.cases.iter().all(|case| case.ok));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "modal_frame_3d")
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "contact_gap_1d")
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "modal_frame_3d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "solid_tetra_3d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "contact_gap_1d"));
     }
 
     #[test]
@@ -308,12 +294,10 @@ mod tests {
 
         assert_eq!(report.cases.len(), 9);
         assert!(report.cases.iter().all(|case| case.ok));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "thermal_frame_3d")
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "thermal_frame_3d"));
         assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
     }
 
@@ -334,24 +318,18 @@ mod tests {
         assert_eq!(report.cases.len(), spec.templates.len());
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "stokes_flow_plane_quad_2d")
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "magnetostatic_plane_quad_2d")
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.family == "thermal_frame_3d")
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "stokes_flow_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "magnetostatic_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "thermal_frame_3d"));
     }
 
     #[test]
@@ -500,18 +478,14 @@ mod tests {
         assert_eq!(report.matrix, "headless-sdk");
         assert_eq!(report.cases.len(), 2);
         assert!(report.cases.iter().all(|case| case.ok));
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.id == "headless-action-manifest" && case.node_count >= 40)
-        );
-        assert!(
-            report
-                .cases
-                .iter()
-                .any(|case| case.id == "direct-fem-manifest" && case.node_count >= 26)
-        );
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.id == "headless-action-manifest" && case.node_count >= 40));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.id == "direct-fem-manifest" && case.node_count >= 26));
     }
 
     fn benchmark_shape(case: &BenchmarkCase) -> (usize, usize, usize) {

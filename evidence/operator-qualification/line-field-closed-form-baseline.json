@@ -1,0 +1,263 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-baseline/v1",
+  "version_line": "tamamono 1.15.x",
+  "candidate_id": "line-field-closed-form",
+  "status": "collecting",
+  "artifact_profile": "analytic_closed_form",
+  "source_test": "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+  "derivation_note": "evidence/operator-qualification/line-field-closed-form-derivation.md",
+  "tolerance_policy": "evidence/operator-qualification/line-field-tolerance-policy.json",
+  "notes": [
+    "This artifact pins closed-form baseline values already enforced by the solver accuracy-baseline tests.",
+    "It is qualification evidence input, not a qualification claim by itself."
+  ],
+  "baselines": [
+    {
+      "operator_id": "solve.bar_1d",
+      "test_name": "accuracy_baseline_axial_bar_1d_closed_form",
+      "case_id": "axial_bar_1d_closed_form",
+      "closed_form": {
+        "summary": "Uniform axial bar with one fixed end and one tensile tip force.",
+        "formulae": [
+          "tip_displacement = F * L / (A * E)",
+          "max_stress = F / A",
+          "reaction_force = -F"
+        ]
+      },
+      "inputs": {
+        "length": 1.0,
+        "area": 0.01,
+        "youngs_modulus": 210000000000.0,
+        "elements": 1,
+        "tip_force": 1000.0
+      },
+      "expectations": [
+        {
+          "field": "tip_displacement",
+          "value": 4.761904761904762e-7,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "max_stress",
+          "value": 100000.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-6
+          }
+        },
+        {
+          "field": "reaction_force",
+          "value": -1000.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-6
+          }
+        }
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_bar_1d",
+      "test_name": "accuracy_baseline_thermal_bar_1d_restrained_uniform_rise",
+      "case_id": "thermal_bar_1d_restrained_uniform_rise",
+      "closed_form": {
+        "summary": "Fully restrained uniform temperature rise in a linear elastic bar.",
+        "formulae": [
+          "free_expansion = alpha * delta_temperature * L",
+          "restrained_stress_magnitude = E * alpha * delta_temperature",
+          "restrained_axial_force_magnitude = restrained_stress_magnitude * A"
+        ]
+      },
+      "inputs": {
+        "length": 1.0,
+        "area": 0.01,
+        "youngs_modulus": 210000000000.0,
+        "thermal_expansion": 0.000012,
+        "temperature_delta": 40.0,
+        "end_constraints": "both_ends_fixed"
+      },
+      "expectations": [
+        {
+          "field": "max_displacement",
+          "value": 0.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "max_stress",
+          "value": 100800000.0,
+          "tolerance": {
+            "kind": "relative",
+            "value": 1e-9
+          }
+        },
+        {
+          "field": "max_axial_force",
+          "value": 1008000.0,
+          "tolerance": {
+            "kind": "relative",
+            "value": 1e-9
+          }
+        },
+        {
+          "field": "max_temperature_delta",
+          "value": 40.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "element_0_stress_sign",
+          "value": "negative",
+          "tolerance": {
+            "kind": "sign",
+            "value": "compression"
+          }
+        }
+      ]
+    },
+    {
+      "operator_id": "solve.heat_bar_1d",
+      "test_name": "accuracy_baseline_heat_bar_1d_two_element_gradient",
+      "case_id": "heat_bar_1d_two_element_gradient",
+      "closed_form": {
+        "summary": "Two equal conduction elements with fixed end temperatures and no internal heat source.",
+        "formulae": [
+          "middle_temperature = (T_left + T_right) / 2 for equal conductance",
+          "temperature_gradient = (T_right - T_left) / L",
+          "heat_flux = -conductivity * temperature_gradient"
+        ]
+      },
+      "inputs": {
+        "node_positions": [0.0, 1.0, 2.0],
+        "fixed_temperatures": {
+          "left": 100.0,
+          "right": 20.0
+        },
+        "area": 0.01,
+        "conductivity": 45.0,
+        "heat_loads": [0.0, 0.0, 0.0]
+      },
+      "expectations": [
+        {
+          "field": "max_temperature",
+          "value": 100.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "max_heat_flux",
+          "value": 1800.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-9
+          }
+        },
+        {
+          "field": "node_1_temperature",
+          "value": 60.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "element_0_temperature_gradient",
+          "value": -40.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "element_1_temperature_gradient",
+          "value": -40.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        }
+      ]
+    },
+    {
+      "operator_id": "solve.electrostatic_bar_1d",
+      "test_name": "accuracy_baseline_electrostatic_bar_1d_two_element_gradient",
+      "case_id": "electrostatic_bar_1d_two_element_gradient",
+      "closed_form": {
+        "summary": "Two equal electrostatic elements with fixed end potentials and no free charge.",
+        "formulae": [
+          "middle_potential = (V_left + V_right) / 2 for equal permittivity and spacing",
+          "electric_field = -(V_right - V_left) / L",
+          "flux_density = permittivity * electric_field"
+        ]
+      },
+      "inputs": {
+        "node_positions": [0.0, 1.0, 2.0],
+        "fixed_potentials": {
+          "left": 12.0,
+          "right": 4.0
+        },
+        "area": 0.01,
+        "permittivity": 3.0,
+        "charge_density": [0.0, 0.0, 0.0]
+      },
+      "expectations": [
+        {
+          "field": "max_potential",
+          "value": 12.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "max_electric_field",
+          "value": 4.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "max_flux_density",
+          "value": 12.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "node_1_potential",
+          "value": 8.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "element_0_electric_field",
+          "value": 4.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        },
+        {
+          "field": "element_1_electric_field",
+          "value": 4.0,
+          "tolerance": {
+            "kind": "absolute",
+            "value": 1e-12
+          }
+        }
+      ]
+    }
+  ]
+}

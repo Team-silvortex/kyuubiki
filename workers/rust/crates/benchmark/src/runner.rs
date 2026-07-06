@@ -1,11 +1,11 @@
 use std::time::Instant;
 
-use kyuubiki_engine::{EngineSolveRequest, solve};
+use kyuubiki_engine::{solve, EngineSolveRequest};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::{
-    SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
-    profile_truss_2d_with_options,
+    profile_heat_plane_quad_2d, profile_plane_quad_2d, profile_truss_2d_with_options,
+    SpdSolveOptions,
 };
 
 use crate::models::{
@@ -314,6 +314,18 @@ pub(crate) fn run_case_with_preconditioner(
                         dof_count = result.free_dofs.len();
                         max_displacement = result.min_frequency_hz;
                         max_stress = result.max_frequency_hz;
+                    })
+                }
+                BenchmarkWorkload::SolidTetra3d(request) => {
+                    solve(EngineSolveRequest::SolidTetra3d(request.clone())).map(|result| {
+                        let AnalysisResult::SolidTetra3d(result) = result else {
+                            unreachable!("solid tetra solve should return solid tetra result")
+                        };
+                        node_count = result.nodes.len();
+                        element_count = result.elements.len();
+                        dof_count = result.nodes.len() * 3;
+                        max_displacement = result.max_displacement;
+                        max_stress = result.max_von_mises_stress;
                     })
                 }
                 BenchmarkWorkload::Truss2d(request) => {

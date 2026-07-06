@@ -1,10 +1,11 @@
 use crate::{
-    EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
+    built_in_operator_descriptors, chunk_result, describe_built_in_operator,
     is_supported_workflow_operator, solve, supported_workflow_operator_ids,
-    workflow_solve_executor::run_solve_operator,
+    workflow_solve_executor::run_solve_operator, EngineSolveRequest,
 };
 use kyuubiki_protocol::{
-    AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolveBarRequest,
+    AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput,
+    SolidTetra3dNodeInput, SolveBarRequest, SolveSolidTetra3dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveTruss2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, TrussElementInput, TrussNodeInput,
 };
@@ -130,24 +131,66 @@ fn chunks_result_items() {
 }
 
 #[test]
+fn chunks_solid_tetra_nodes_and_elements() {
+    let result = solve(EngineSolveRequest::SolidTetra3d(SolveSolidTetra3dRequest {
+        nodes: vec![
+            solid_node("n0", 0.0, 0.0, 0.0, true),
+            solid_node("n1", 1.0, 0.0, 0.0, true),
+            solid_node("n2", 0.0, 1.0, 0.0, true),
+            solid_node("tip", 0.0, 0.0, 1.0, false),
+        ],
+        elements: vec![SolidTetra3dElementInput {
+            id: "tet0".to_string(),
+            node_a: 0,
+            node_b: 1,
+            node_c: 2,
+            node_d: 3,
+            youngs_modulus: 70.0e9,
+            poisson_ratio: 0.33,
+        }],
+    }))
+    .expect("solid tetra should solve");
+
+    let nodes = chunk_result(
+        &result,
+        &ResultChunkRequest {
+            kind: ResultChunkKind::Nodes,
+            offset: 3,
+            limit: 1,
+        },
+    )
+    .expect("node chunk should build");
+    let elements = chunk_result(
+        &result,
+        &ResultChunkRequest {
+            kind: ResultChunkKind::Elements,
+            offset: 0,
+            limit: 1,
+        },
+    )
+    .expect("element chunk should build");
+
+    assert_eq!(nodes.total, 4);
+    assert_eq!(nodes.items[0]["id"], "tip");
+    assert_eq!(elements.total, 1);
+    assert_eq!(elements.items[0]["id"], "tet0");
+}
+
+#[test]
 fn exposes_verified_built_in_operator_descriptors() {
     let descriptors = built_in_operator_descriptors();
     assert!(descriptors.len() >= 4);
-    assert!(
-        descriptors
-            .iter()
-            .any(|descriptor| descriptor.id == "solve.frame_3d")
-    );
+    assert!(descriptors
+        .iter()
+        .any(|descriptor| descriptor.id == "solve.frame_3d"));
 
     let descriptor = describe_built_in_operator("solve.thermal_frame_3d").expect("descriptor");
     assert_eq!(descriptor.kind, OperatorKind::Solver);
     assert_eq!(descriptor.family, "thermal_frame_3d");
-    assert!(
-        descriptor
-            .capability_tags
-            .iter()
-            .any(|tag| tag == "verified")
-    );
+    assert!(descriptor
+        .capability_tags
+        .iter()
+        .any(|tag| tag == "verified"));
     assert!(descriptors.iter().any(|descriptor| {
         descriptor.id == "bridge.electrostatic_field_to_heat_quad_2d"
             && descriptor.kind == OperatorKind::WorkflowBridge
@@ -321,6 +364,21 @@ fn diagnostics_template_sources() -> String {
     })
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+fn solid_node(id: &str, x: f64, y: f64, z: f64, fixed: bool) -> SolidTetra3dNodeInput {
+    SolidTetra3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x: fixed,
+        fix_y: fixed,
+        fix_z: fixed,
+        load_x: 0.0,
+        load_y: 0.0,
+        load_z: if fixed { 0.0 } else { -1000.0 },
+    }
 }
 
 fn stokes_node(

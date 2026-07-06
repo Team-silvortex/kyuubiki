@@ -6,6 +6,7 @@ import {
   qualificationEvidenceKitErrors,
   qualificationRoadmapErrors,
 } from "./operator-reliability-rules.mjs";
+import { operatorReliabilitySchemaVersions } from "./operator-reliability-contracts.mjs";
 
 const failures = [];
 
@@ -64,7 +65,7 @@ function run() {
     ["solve.low", "baseline"],
   ]);
   const roadmap = {
-    schema_version: "kyuubiki.operator-qualification-roadmap/v1",
+    schema_version: operatorReliabilitySchemaVersions.roadmap,
     version_line: "tamamono self-test",
     minimum_candidate_level: "review",
     candidates: [
@@ -113,7 +114,7 @@ function run() {
   );
 
   const kits = {
-    schema_version: "kyuubiki.operator-qualification-evidence-kits/v1",
+    schema_version: operatorReliabilitySchemaVersions.evidenceKits,
     version_line: "tamamono self-test",
     kits: [
       {
@@ -126,6 +127,7 @@ function run() {
             artifact_id: "reference",
             kind: "note",
             gate: "gate",
+            artifact_path: "docs/reference.md",
             path_policy: "repo-relative-required-before-qualification",
           },
         ],
@@ -143,6 +145,30 @@ function run() {
       manifest
     ).some((error) => error.includes("is not in qualification roadmap")),
     "qualification evidence kit without roadmap candidate must fail"
+  );
+  assert(
+    qualificationEvidenceKitErrors(
+      {
+        ...kits,
+        kits: [
+          {
+            ...kits.kits[0],
+            status: "collecting",
+            artifact_requirements: [
+              {
+                artifact_id: "reference",
+                kind: "note",
+                gate: "gate",
+                path_policy: "repo-relative-required-before-qualification",
+              },
+            ],
+          },
+        ],
+      },
+      roadmap,
+      manifest
+    ).some((error) => error.includes("collecting kits must declare artifact_path or artifact_command")),
+    "collecting qualification evidence kit without artifact entry must fail"
   );
   assert(
     qualificationEvidenceKitErrors(
@@ -186,6 +212,27 @@ function run() {
       manifest
     ).some((error) => error.includes("duplicate artifact_id reference")),
     "qualification evidence kit duplicate artifact must fail"
+  );
+  assert(
+    qualificationEvidenceKitErrors(
+      {
+        ...kits,
+        kits: [
+          {
+            ...kits.kits[0],
+            artifact_requirements: [
+              {
+                ...kits.kits[0].artifact_requirements[0],
+                artifact_path: "/tmp/reference.md",
+              },
+            ],
+          },
+        ],
+      },
+      roadmap,
+      manifest
+    ).some((error) => error.includes("artifact_path must be repo-relative")),
+    "qualification evidence kit absolute artifact path must fail"
   );
   assert(
     qualificationEvidenceKitErrors({ ...kits, kits: [] }, roadmap, manifest).includes(
