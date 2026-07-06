@@ -1,6 +1,7 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
 .PHONY: check-make-modules
 .PHONY: check-language-packs check-ui-automation-contract check-version-line
+.PHONY: check-material-score-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
@@ -32,6 +33,9 @@ check-ui-automation-contract:
 
 check-version-line:
 	@node ./scripts/audit-version-line.mjs
+
+check-material-score-contract:
+	@node ./scripts/validate-material-score-contract.mjs
 
 check-operator-reliability-rules:
 	@node ./scripts/test-operator-reliability-rules.mjs
@@ -73,6 +77,7 @@ architecture-check:
 	@$(MAKE) audit-project-organization
 	@$(MAKE) check-make-modules
 	@$(MAKE) check-version-line
+	@$(MAKE) check-material-score-contract
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-ui-automation-contract
 	@$(MAKE) audit-dependencies

@@ -33,7 +33,7 @@ pub(super) fn score_material_candidates(payload: &Value, config: &Value) -> Resu
         .iter()
         .map(|criterion| criterion.weight)
         .sum::<f64>();
-    let infeasible_penalty = numeric_config(config, "infeasible_penalty", 1.0);
+    let infeasible_penalty = parse_infeasible_penalty(config)?;
     let mut scored = candidates
         .iter()
         .map(|(candidate_id, summary)| {
@@ -86,6 +86,8 @@ pub(super) fn score_material_candidates(payload: &Value, config: &Value) -> Resu
         "material_score_best_candidate_id": best.map(|entry| entry.candidate_id.as_str()).unwrap_or(""),
         "material_score_best_score": best.map(|entry| entry.final_score).unwrap_or(0.0),
         "material_score_criteria": criteria.iter().map(score_criterion_value).collect::<Vec<_>>(),
+        "material_score_policy": score_policy_value(config, total_weight, infeasible_penalty),
+        "material_score_ranges": ranges,
         "material_score_rankings": scored.iter()
             .map(|entry| score_ranking_summary(entry, config))
             .collect::<Vec<_>>()
@@ -223,6 +225,29 @@ fn score_criterion_value(criterion: &ScoreCriterion) -> Value {
         "field": criterion.field,
         "goal": criterion.goal,
         "weight": criterion.weight
+    })
+}
+
+fn parse_infeasible_penalty(config: &Value) -> Result<f64, String> {
+    let penalty = numeric_config(config, "infeasible_penalty", 1.0);
+    if penalty < 0.0 {
+        return Err("invalid_material_score_policy".to_string());
+    }
+    Ok(penalty)
+}
+
+fn score_policy_value(config: &Value, total_weight: f64, infeasible_penalty: f64) -> Value {
+    serde_json::json!({
+        "total_weight": total_weight,
+        "infeasible_penalty": infeasible_penalty,
+        "status_field": config
+            .get("status_field")
+            .and_then(Value::as_str)
+            .unwrap_or("material_status"),
+        "feasible_status": config
+            .get("feasible_status")
+            .and_then(Value::as_str)
+            .unwrap_or("pass")
     })
 }
 

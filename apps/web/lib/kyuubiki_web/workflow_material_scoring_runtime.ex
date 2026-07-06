@@ -4,7 +4,8 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   def score_material_candidates(payload, config) when is_map(payload) and is_map(config) do
     with {:ok, criteria} <- parse_score_criteria(config),
          candidates when candidates != [] <- candidate_entries(payload),
-         {:ok, scored} <- score_candidates(candidates, criteria, config) do
+         {:ok, scored, ranges, total_weight, infeasible_penalty} <-
+           score_candidates(candidates, criteria, config) do
       rankings =
         scored
         |> Enum.sort_by(&{-&1.final_score, -&1.weighted_score, &1.candidate_id})
@@ -19,6 +20,8 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
          "material_score_best_candidate_id" => Map.get(best, "candidate_id", ""),
          "material_score_best_score" => Map.get(best, "final_score", 0.0),
          "material_score_criteria" => criteria,
+         "material_score_policy" => score_policy(config, total_weight, infeasible_penalty),
+         "material_score_ranges" => ranges,
          "material_score_rankings" => rankings
        }}
     else
@@ -187,10 +190,10 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   end
 
   defp score_candidates(candidates, criteria, config) do
-    with {:ok, metrics_by_candidate} <- collect_candidate_metrics(candidates, criteria) do
+    with {:ok, metrics_by_candidate} <- collect_candidate_metrics(candidates, criteria),
+         {:ok, infeasible_penalty} <- parse_infeasible_penalty(config) do
       ranges = criterion_ranges(metrics_by_candidate, criteria)
       total_weight = Enum.reduce(criteria, 0.0, &(&1["weight"] + &2))
-      infeasible_penalty = numeric_config(config, "infeasible_penalty", 1.0)
 
       scored =
         Enum.map(candidates, fn {candidate_id, summary} ->
@@ -214,7 +217,7 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
           }
         end)
 
-      {:ok, scored}
+      {:ok, scored, ranges, total_weight, infeasible_penalty}
     end
   end
 
@@ -236,7 +239,7 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   defp criterion_ranges(metrics_by_candidate, criteria) do
     Map.new(criteria, fn %{"field" => field} ->
       values = Enum.map(metrics_by_candidate, fn {_candidate_id, metrics} -> metrics[field] end)
-      {field, %{min: Enum.min(values), max: Enum.max(values)}}
+      {field, %{"min" => Enum.min(values), "max" => Enum.max(values)}}
     end)
   end
 
@@ -256,8 +259,34 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   end
 
   defp normalize_score(_value, %{min: same, max: same}, _goal), do: 1.0
+  defp normalize_score(_value, %{"min" => same, "max" => same}, _goal), do: 1.0
   defp normalize_score(value, %{min: min, max: max}, "max"), do: (value - min) / (max - min)
   defp normalize_score(value, %{min: min, max: max}, _goal), do: (max - value) / (max - min)
+
+  defp normalize_score(value, %{"min" => min, "max" => max}, "max"),
+    do: (value - min) / (max - min)
+
+  defp normalize_score(value, %{"min" => min, "max" => max}, _goal),
+    do: (max - value) / (max - min)
+
+  defp parse_infeasible_penalty(config) do
+    penalty = numeric_config(config, "infeasible_penalty", 1.0)
+
+    if penalty < 0.0 do
+      {:error, :invalid_material_score_policy}
+    else
+      {:ok, penalty}
+    end
+  end
+
+  defp score_policy(config, total_weight, infeasible_penalty) do
+    %{
+      "total_weight" => total_weight,
+      "infeasible_penalty" => infeasible_penalty,
+      "status_field" => Map.get(config, "status_field", "material_status"),
+      "feasible_status" => Map.get(config, "feasible_status", "pass")
+    }
+  end
 
   defp score_ranking_summary(scored, config) do
     summary = %{
@@ -446,13 +475,14 @@ defmodule KyuubikiWeb.WorkflowMaterialScoringRuntime do
   end
 
   defp feasible?(summary, config) do
-    field = Map.get(config, "feasible_field", "material_status")
+    field = Map.get(config, "status_field", Map.get(config, "feasible_field", "material_status"))
 
-    case Map.get(summary, field) do
-      value when value in [true, "pass", "feasible"] -> true
-      value when value in [false, "fail", "infeasible"] -> false
-      value when is_number(value) -> value != 0
-      _ -> Map.get(summary, "objective_feasible", true)
+    case {Map.get(config, "feasible_status"), Map.get(summary, field)} do
+      {expected, value} when is_binary(expected) -> value == expected
+      {_expected, value} when value in [true, "pass", "feasible"] -> true
+      {_expected, value} when value in [false, "fail", "infeasible"] -> false
+      {_expected, value} when is_number(value) -> value != 0
+      _fallback -> Map.get(summary, "objective_feasible", true)
     end
   end
 

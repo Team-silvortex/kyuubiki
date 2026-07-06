@@ -51,6 +51,7 @@ pub fn validate_workflow_security(request: &WorkflowGraphRunRequest) -> Result<(
         ));
     }
 
+    validate_graph_metadata(graph)?;
     let node_ports = validate_nodes(graph)?;
     validate_edges(graph, &node_ports)?;
     validate_entry_and_output_nodes(graph, &node_ports)?;
@@ -69,6 +70,24 @@ pub fn validate_workflow_artifact_budget(label: &str, artifact: &Value) -> Resul
             max_key_len: MAX_WORKFLOW_JSON_KEY_LEN,
         },
     )
+}
+
+fn validate_graph_metadata(graph: &WorkflowGraph) -> Result<(), String> {
+    if let Some(dataset_contract) = &graph.dataset_contract {
+        let value = serde_json::to_value(dataset_contract)
+            .map_err(|error| format!("workflow dataset contract failed to serialize: {error}"))?;
+        validate_json_budget(
+            "workflow dataset_contract",
+            &value,
+            JsonBudget {
+                max_nodes: MAX_NODE_CONFIG_JSON_NODES,
+                max_depth: MAX_WORKFLOW_JSON_DEPTH,
+                max_string_len: MAX_WORKFLOW_JSON_STRING_LEN,
+                max_key_len: MAX_WORKFLOW_JSON_KEY_LEN,
+            },
+        )?;
+    }
+    Ok(())
 }
 
 fn validate_nodes(graph: &WorkflowGraph) -> Result<HashMap<String, NodePorts>, String> {

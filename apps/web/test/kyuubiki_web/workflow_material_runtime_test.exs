@@ -268,10 +268,67 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert scored["material_score_candidate_count"] == 3
     assert scored["material_score_feasible_count"] == 2
     assert scored["material_score_best_candidate_id"] == "titanium"
+    assert is_number(scored["material_score_best_score"])
     assert hd(rankings)["candidate_id"] == "titanium"
     assert Enum.at(rankings, 1)["candidate_id"] == "aluminum"
     assert List.last(rankings)["candidate_id"] == "polymer"
     assert hd(rankings)["criteria_breakdown"] |> length() == 3
+    assert scored["material_score_ranges"]["mass"]["min"] == 1.0
+    assert scored["material_score_ranges"]["mass"]["max"] == 2.4
+    assert scored["material_score_ranges"]["material_safety_factor"]["max"] == 2.0
+    assert scored["material_score_policy"]["total_weight"] == 1.0
+    assert scored["material_score_policy"]["infeasible_penalty"] == 1.0
+    assert scored["material_score_policy"]["status_field"] == "material_status"
+  end
+
+  test "scores material candidates with custom feasibility policy" do
+    assert {:ok, scored} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_material_candidates",
+               %{
+                 "candidates" => %{
+                   "baseline" => %{"score_metric" => 0.8, "review_status" => "approved"},
+                   "experimental" => %{"score_metric" => 1.0, "review_status" => "rejected"}
+                 }
+               },
+               %{
+                 "status_field" => "review_status",
+                 "feasible_status" => "approved",
+                 "infeasible_penalty" => 1.2,
+                 "criteria" => [%{"field" => "score_metric", "goal" => "max", "weight" => 2.0}]
+               }
+             )
+
+    rankings = scored["material_score_rankings"]
+
+    assert scored["material_score_policy"]["status_field"] == "review_status"
+    assert scored["material_score_policy"]["feasible_status"] == "approved"
+    assert scored["material_score_policy"]["total_weight"] == 2.0
+    assert hd(rankings)["candidate_id"] == "baseline"
+    assert Enum.at(rankings, 1)["candidate_id"] == "experimental"
+    assert Enum.at(rankings, 1)["feasible"] == false
+    assert_in_delta Enum.at(rankings, 1)["final_score"], -0.2, 1.0e-9
+  end
+
+  test "rejects invalid material score policy" do
+    assert {:error, :invalid_material_score_policy} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_material_candidates",
+               %{"candidates" => %{"aluminum" => %{"mass" => 1.8}}},
+               %{
+                 "infeasible_penalty" => -0.1,
+                 "criteria" => [%{"field" => "mass", "goal" => "min", "weight" => 1.0}]
+               }
+             )
+  end
+
+  test "rejects missing material score candidates" do
+    assert {:error, :missing_material_candidates} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_material_candidates",
+               %{"candidates" => %{}},
+               %{"criteria" => [%{"field" => "mass", "goal" => "min", "weight" => 1.0}]}
+             )
   end
 
   test "plans material experiments from scored candidate rankings" do

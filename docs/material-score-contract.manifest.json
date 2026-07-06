@@ -1,0 +1,47 @@
+{
+  "schema_version": "kyuubiki.material-score-contract/v1",
+  "operator_id": "transform.score_material_candidates",
+  "runtime_paths": [
+    "apps/web/lib/kyuubiki_web/workflow_material_scoring_runtime.ex",
+    "workers/rust/crates/cli/src/operator_task_builtin/material/scoring.rs"
+  ],
+  "test_paths": [
+    "apps/web/test/kyuubiki_web/workflow_material_runtime_test.exs",
+    "workers/rust/crates/cli/src/tests/operator_task_ir_rpc/agent_native_material.rs"
+  ],
+  "required_result_fields": [
+    "material_score_candidate_count",
+    "material_score_feasible_count",
+    "material_score_best_candidate_id",
+    "material_score_best_score",
+    "material_score_criteria",
+    "material_score_policy",
+    "material_score_ranges",
+    "material_score_rankings"
+  ],
+  "ranking_fields": [
+    "candidate_id",
+    "feasible",
+    "weighted_score",
+    "final_score",
+    "metrics",
+    "criteria_breakdown"
+  ],
+  "policy_fields": [
+    "total_weight",
+    "infeasible_penalty",
+    "status_field",
+    "feasible_status"
+  ],
+  "range_fields": [
+    "min",
+    "max"
+  ],
+  "stable_error_codes": [
+    "missing_material_candidates",
+    "missing_material_score_criteria",
+    "invalid_material_score_criterion",
+    "missing_material_score_metric",
+    "invalid_material_score_policy"
+  ]
+}

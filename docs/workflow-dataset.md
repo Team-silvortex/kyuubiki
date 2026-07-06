@@ -219,8 +219,28 @@ The first stable schema lives in:
 - [workflow-dataset.schema.json](../schemas/workflow-dataset.schema.json)
 - [examples.workflow-dataset.json](../schemas/examples.workflow-dataset.json)
 
+## Material Score Value
+
+Material screening workflows use `transform.score_material_candidates` to
+produce a report-style dataset value. Its cross-runtime shape is pinned in
+[material-score-contract.md](material-score-contract.md).
+
+That contract is deliberately more specific than a generic `report/json`
+dataset value because downstream experiment planning, reports, SDK clients, and
+agent-native execution all depend on the same fields:
+
+- `material_score_policy`
+- `material_score_ranges`
+- `material_score_rankings`
+
+Workflow dataset entries that carry material scoring output should use a
+semantic type such as `report/material_score` and point their schema reference
+or documentation link at that contract.
+
 The first runtime validation layer now also exists in the Rust engine:
 
+- `WorkflowGraph.dataset_contract` is checked against workflow JSON security
+  budgets before semantic validation
 - ports that reference `dataset_value` must resolve inside the contract
 - edges cannot disagree with connected ports about the named dataset value
 - `artifact_type` and dataset `semantic_type` must stay aligned

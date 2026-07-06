@@ -1,5 +1,6 @@
 use crate::run_workflow_graph;
 use kyuubiki_protocol::{
+    WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetShape, WorkflowDatasetValueInfo,
     WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode,
     WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
 };
@@ -164,6 +165,38 @@ fn rejects_node_config_over_json_depth_budget() {
     graph.nodes[1].config = Some(nested_json(65));
 
     assert_engine_security_error(graph, "exceeds JSON depth security budget");
+}
+
+#[test]
+fn rejects_dataset_contract_over_json_depth_budget() {
+    let mut graph = minimal_graph();
+    graph.dataset_contract = Some(WorkflowDatasetContract {
+        id: "dataset.security".to_string(),
+        version: "1.0.0".to_string(),
+        values: vec![WorkflowDatasetValueInfo {
+            id: "summary".to_string(),
+            data_class: "report".to_string(),
+            element_type: "json_object".to_string(),
+            shape: WorkflowDatasetShape {
+                axes: vec![WorkflowDatasetAxis {
+                    id: "axis".to_string(),
+                    label: None,
+                    size: None,
+                    semantic: Some("x".repeat(1_000_001)),
+                }],
+            },
+            semantic_type: Some("report/security".to_string()),
+            unit: None,
+            encoding: None,
+            schema_ref: None,
+        }],
+        metadata: BTreeMap::new(),
+    });
+
+    assert_engine_security_error(
+        graph,
+        "workflow dataset_contract string exceeds length security budget",
+    );
 }
 
 #[test]

@@ -4,6 +4,9 @@ This document is the working organization map for the `tamamono 1.15.x`
 architecture line. It exists to keep feature work, protocol work, and cleanup
 moving in the same direction.
 
+For a whole-system module map before diving into source ownership details, read
+[module-architecture.md](module-architecture.md) first.
+
 ## Architecture Posture
 
 Kyuubiki is now organized around a strict split between product shells,
@@ -34,6 +37,8 @@ control-plane services, runtime engines, and shared contracts.
 
 - Runtime and product shell boundaries:
   `docs/app-runtime-boundaries.md`
+- System module architecture:
+  `docs/module-architecture.md`
 - Agent and orchestrator boundary:
   `docs/agent-orchestrator-boundary.md`
 - Headless agent contract:

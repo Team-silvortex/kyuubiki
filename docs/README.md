@@ -22,13 +22,14 @@ Read these first, in order:
 3. `navigation-matrix.html`
 4. `current-line.md`
 5. `system-overview.md`
-6. `project-architecture-organization.md`
-7. `protocols.md`
-8. `repository-structure.md`
-9. `testing-and-ci.md`
-10. `maintenance.md`
-11. `installer-remote-control.md`
-12. `minimal-industrial-closure.md`
+6. `module-architecture.md`
+7. `project-architecture-organization.md`
+8. `protocols.md`
+9. `repository-structure.md`
+10. `testing-and-ci.md`
+11. `maintenance.md`
+12. `installer-remote-control.md`
+13. `minimal-industrial-closure.md`
 
 For the current `1.15.x` hardening path, keep four threads mentally linked:
 
@@ -76,6 +77,9 @@ Then branch by intent:
 - `minimal-industrial-closure.md`
   The narrower `1.15.x -> 1.20.x` bridge checklist for closing the first
   bounded industrial workflow before broader `2.0` commercial claims.
+- `module-architecture.md`
+  System-wide module map for product shells, control plane, runtime data
+  plane, SDKs, contracts, verification gates, and where new work belongs.
 - `minimal-industrial-closure.manifest.json`
   Machine-readable gate map for the same minimum industrial loop, validated by
   `node ./scripts/validate-minimal-industrial-closure.mjs`.
@@ -107,6 +111,9 @@ Then branch by intent:
 - `material-research-roadmap.md`
   Reliability roadmap for moving material studies from runnable prototypes to
   reproducible screening, review, and eventual qualification workflows.
+- `material-score-contract.md`
+  Cross-runtime result contract for material candidate scoring, including
+  criteria, ranges, feasibility policy, ranking semantics, and stable errors.
 - `physics-coverage-map.md`
   `1.15.x` coverage map for broad solver-family execution coverage and the
   review-level reliability gate before the `1.15.x` and `1.16.x`
@@ -140,6 +147,10 @@ Then branch by intent:
   release posture.
 - `system-overview.md`
   Full runtime map across GUI, control plane, and solver data plane.
+- `module-architecture.md`
+  First architecture map for understanding which module owns a capability and
+  how the product, control plane, runtime, SDK, contract, and verification
+  layers fit together.
 - `app-runtime-boundaries.md`
   Hard role split between Hub, Workbench, Installer, and runtime/agent layers.
 - `mobile-gui-runtime-boundary.md`
