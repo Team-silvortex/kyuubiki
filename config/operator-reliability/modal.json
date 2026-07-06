@@ -1,0 +1,87 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "modal",
+  "operators": [
+    {
+      "operator_id": "solve.modal_frame_2d",
+      "benchmark_template": "modal-frame-2d",
+      "domain": "modal",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/operator_modal_reliability.rs"
+        ],
+        "reliability_suite": "operator_modal_reliability",
+        "review": {
+          "assumptions": [
+            "linear_modal",
+            "lumped_mass",
+            "single_member_cantilever"
+          ],
+          "boundary_checks": [
+            "fixed_root_modal_shape",
+            "free_dof_set"
+          ],
+          "diagnostics": [
+            "natural_frequency",
+            "period",
+            "mode_shape",
+            "participation_norm",
+            "total_mass"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/modal_frame_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_modal",
+        "lumped_mass",
+        "screening_only"
+      ]
+    },
+    {
+      "operator_id": "solve.modal_frame_3d",
+      "benchmark_template": "modal-frame-3d",
+      "domain": "modal",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/operator_modal_reliability.rs"
+        ],
+        "reliability_suite": "operator_modal_reliability",
+        "review": {
+          "assumptions": [
+            "linear_modal",
+            "lumped_mass",
+            "single_member_3d_cantilever",
+            "degenerate_modes_allowed"
+          ],
+          "boundary_checks": [
+            "fixed_root_modal_shape",
+            "free_dof_set"
+          ],
+          "diagnostics": [
+            "natural_frequency",
+            "period",
+            "mode_shape",
+            "participation_norm",
+            "total_mass"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/modal_frame_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_modal",
+        "lumped_mass",
+        "screening_only"
+      ]
+    }
+  ]
+}

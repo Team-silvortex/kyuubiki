@@ -1,0 +1,48 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "acoustic",
+  "operators": [
+    {
+      "operator_id": "solve.acoustic_bar_1d",
+      "benchmark_template": "acoustic-bar",
+      "domain": "acoustic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs"
+        ],
+        "reliability_suite": "acoustic_bar_reliability",
+        "review": {
+          "assumptions": [
+            "one_dimensional",
+            "single_element",
+            "frequency_domain_response"
+          ],
+          "boundary_checks": [
+            "fixed_inlet_pressure",
+            "source_node_pressure_response",
+            "positive_frequency"
+          ],
+          "diagnostics": [
+            "angular_frequency",
+            "speed_of_sound",
+            "wave_number",
+            "particle_velocity",
+            "acoustic_intensity",
+            "damping_loss"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "one_dimensional",
+        "single_element_frequency_baseline",
+        "linear_frequency_response"
+      ]
+    }
+  ]
+}

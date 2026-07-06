@@ -36,15 +36,26 @@ The repository now keeps validation split by responsibility.
   script self-test before scanning the repository.
 - `make architecture-check`
   Lightweight new-architecture guard for the `1.15.x` line. It runs the
-  organization audit self-test and scan, UI automation contract checks,
-  dependency audits, external operator package preflight, docs book manifest
-  validation, focused Operator TaskIR control-plane tests, and the Rust live
-  operator task path.
+  organization audit self-test and scan, version-line checks, UI automation
+  contract checks, dependency audits, external operator package preflight, docs
+  book manifest validation, focused Operator TaskIR control-plane tests, and
+  the Rust live operator task path.
 - `make check-ui-automation-contract`
   Product-owned Workbench UI selector contract guard. It compares
   `docs/ui-automation-contract.json`, frontend TS selector constants, and the
   component implementation anchors used by wasm-python automation and UI smoke
   tests.
+- `make check-version-line`
+  Shipping-version contract guard. It checks the release index, package
+  metadata, generated docs mirrors, update catalogs, and shipped language-pack
+  catalog against the current release line.
+- `make check-operator-reliability`
+  Operator reliability evidence guard. It verifies that every `physics-coverage`
+  solve operator has a machine-readable manifest shard entry with benchmark
+  coverage, headless workflow support, evidence files, trust level, and visible
+  limits. It also runs a checker self-test and enforces the manifest's
+  `minimum_coverage_level`, currently `review` for the `tamamono 1.15.x`
+  physics-coverage gate.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
   audits for the frontend and desktop packages, then RustSec `cargo audit` for
@@ -128,9 +139,10 @@ The full integration entrypoint list stays in:
 ## CI lanes
 
 - `architecture-contracts`
-  Runs source organization, UI automation contract, language pack, toolchain,
-  and docs-book checks without booting services. This lane is meant to catch
-  contract drift early before heavier build or integration jobs spend time.
+  Runs source organization, UI automation contract, language pack,
+  version-line, operator reliability, toolchain, and docs-book checks without
+  booting services. This lane is meant to catch contract drift early before
+  heavier build or integration jobs spend time.
 
 ### Desktop shell checks
 
@@ -151,8 +163,9 @@ Use these when you want the repo to choose the right lower-level commands:
 - `make audit-rust-lines`
 
 `make verify` is the higher-confidence pre-release lane: it includes toolchain
-checks, language-pack checks, organization audits, dependency audits, external
-operator package preflight, SDK smoke tests, and the standard benchmark gate.
+checks, language-pack checks, version-line checks, operator reliability checks,
+organization audits, dependency audits, external operator package preflight,
+SDK smoke tests, and the standard benchmark gate.
 
 For narrower SDK or frontend-only entrypoints, use the package or Make targets
 listed above.

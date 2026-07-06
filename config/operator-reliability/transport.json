@@ -1,0 +1,46 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "transport",
+  "operators": [
+    {
+      "operator_id": "solve.advection_diffusion_bar_1d",
+      "benchmark_template": "advection-diffusion-bar",
+      "domain": "transport",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs"
+        ],
+        "reliability_suite": "advection_diffusion_bar_reliability",
+        "review": {
+          "assumptions": [
+            "one_dimensional",
+            "single_element",
+            "steady_advection_diffusion"
+          ],
+          "boundary_checks": [
+            "fixed_inlet_concentration",
+            "fixed_outlet_concentration",
+            "linear_concentration_gradient"
+          ],
+          "diagnostics": [
+            "diffusive_flux",
+            "advective_flux",
+            "total_flux",
+            "peclet_number"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "one_dimensional",
+        "single_element_flux_baseline",
+        "constant_coefficients"
+      ]
+    }
+  ]
+}

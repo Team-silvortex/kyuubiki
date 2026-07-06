@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-reliability-manifest.schema.json",
+  "title": "Kyuubiki Operator Reliability Manifest Index",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "version_line",
+    "coverage_matrix",
+    "minimum_coverage_level",
+    "levels",
+    "shards"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-reliability-manifest/v1" },
+    "version_line": { "type": "string", "minLength": 1 },
+    "coverage_matrix": { "type": "string", "minLength": 1 },
+    "minimum_coverage_level": { "enum": ["smoke", "baseline", "review", "qualification"] },
+    "levels": {
+      "type": "array",
+      "items": { "enum": ["smoke", "baseline", "review", "qualification"] },
+      "minItems": 4,
+      "uniqueItems": true
+    },
+    "shards": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^config/operator-reliability/[a-z0-9-]+\\.json$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}

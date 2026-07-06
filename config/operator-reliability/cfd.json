@@ -1,0 +1,48 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "cfd",
+  "operators": [
+    {
+      "operator_id": "solve.stokes_flow_quad_2d",
+      "benchmark_template": "stokes-plane-quad",
+      "domain": "cfd",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/stokes_flow_reliability.rs"
+        ],
+        "reliability_suite": "stokes_flow_reliability",
+        "review": {
+          "assumptions": [
+            "stokes_only",
+            "rectangular_screening_patch",
+            "low_reynolds_number"
+          ],
+          "boundary_checks": [
+            "fixed_wall_velocity",
+            "fixed_reference_pressure",
+            "body_force_response"
+          ],
+          "diagnostics": [
+            "velocity_components",
+            "pressure",
+            "divergence_error",
+            "reynolds_number",
+            "viscous_dissipation"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "stokes_only",
+        "screening_only",
+        "rectangular_screening_baseline",
+        "single_quad_patch"
+      ]
+    }
+  ]
+}

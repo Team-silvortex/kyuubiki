@@ -43,6 +43,20 @@ README.
 - `operator-execution-program.schema.json` is for the language-neutral program
   contract carried inside operator task IR and consumed by agent engines,
   including solver RPC vs generic operator-task ABI consistency rules
+- `operator-reliability-manifest.schema.json` is for the machine-readable
+  reliability evidence index that lists release metadata, the release minimum
+  coverage level gate, and per-domain reliability shards
+- `operator-reliability-shard.schema.json` is for each per-domain reliability
+  shard that maps physics-coverage solve operators to benchmark templates,
+  tests, current trust level, explicit limitations, and the extra evidence
+  required before any operator may claim `qualification`
+- `operator-qualification-roadmap.schema.json` is for the release-owned
+  qualification candidate queue that lists priority groups, evidence gaps,
+  required artifacts, and graduation gates before selected review operators can
+  move toward `qualification`
+- `operator-qualification-evidence-kits.schema.json` is for the planning-grade
+  artifact kits attached to qualification roadmap candidates before any of
+  those artifacts are promoted into manifest-level `evidence.qualification`
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench

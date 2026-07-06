@@ -1,0 +1,569 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "structural",
+  "operators": [
+    {
+      "operator_id": "solve.bar_1d",
+      "benchmark_template": "axial-bar",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_axial_bar_1d_closed_form",
+        "review": {
+          "assumptions": [
+            "linear_elastic",
+            "small_strain",
+            "uniform_axial_section"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement",
+            "tip_force_reaction_balance"
+          ],
+          "diagnostics": [
+            "tip_displacement",
+            "max_stress",
+            "reaction_force",
+            "element_force_uniformity"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_elastic",
+        "small_strain",
+        "one_dimensional_bar"
+      ]
+    },
+    {
+      "operator_id": "solve.torsion_1d",
+      "benchmark_template": "torsion-shaft",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_torsion_1d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "linear_elastic",
+            "circular_shaft_torsion",
+            "small_twist"
+          ],
+          "boundary_checks": [
+            "fixed_root_rotation",
+            "tip_torque_response"
+          ],
+          "diagnostics": [
+            "tip_rotation",
+            "twist",
+            "twist_rate",
+            "torque",
+            "shear_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/torsion_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_elastic",
+        "sample_fixture",
+        "single_shaft_torsion"
+      ]
+    },
+    {
+      "operator_id": "solve.spring_1d",
+      "benchmark_template": "spring-chain",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_spring_1d_chain_fixture",
+        "review": {
+          "assumptions": [
+            "linear_spring_network",
+            "small_displacement",
+            "static_equilibrium"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement",
+            "loaded_tip_response",
+            "series_chain_force_continuity"
+          ],
+          "diagnostics": [
+            "node_displacement",
+            "element_extension",
+            "element_force",
+            "equivalent_stiffness"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_spring_network",
+        "sample_fixture",
+        "one_dimensional_chain"
+      ]
+    },
+    {
+      "operator_id": "solve.spring_2d",
+      "benchmark_template": "spring-grid",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_spring_2d_grid_fixture",
+        "review": {
+          "assumptions": [
+            "linear_spring_network",
+            "small_displacement",
+            "static_equilibrium"
+          ],
+          "boundary_checks": [
+            "fixed_corner_displacement",
+            "roller_dof_constraints",
+            "loaded_corner_response"
+          ],
+          "diagnostics": [
+            "node_displacement",
+            "element_extension",
+            "element_force",
+            "diagonal_member_projection"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_spring_network",
+        "fixture_scale",
+        "planar_grid_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.spring_3d",
+      "benchmark_template": "spring-cage",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_spring_3d_cage_fixture",
+        "review": {
+          "assumptions": [
+            "linear_spring_network",
+            "small_displacement",
+            "static_equilibrium"
+          ],
+          "boundary_checks": [
+            "fixed_base_dofs",
+            "loaded_top_response",
+            "three_dimensional_member_projection"
+          ],
+          "diagnostics": [
+            "node_displacement_vector",
+            "element_extension",
+            "element_force",
+            "member_length"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_spring_network",
+        "fixture_scale",
+        "three_dimensional_cage_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.nonlinear_spring_1d",
+      "benchmark_template": "nonlinear-spring-chain",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs"
+        ],
+        "reliability_suite": "nonlinear_spring_reliability",
+        "review": {
+          "assumptions": [
+            "hardening_cubic_spring_law",
+            "incremental_static_load",
+            "newton_equilibrium_iteration"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement",
+            "loaded_tip_response",
+            "monotonic_load_factor_steps"
+          ],
+          "diagnostics": [
+            "convergence_status",
+            "residual_norm",
+            "load_step_iterations",
+            "element_force",
+            "tangent_stiffness"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "toy_nonlinear_law",
+        "screening_only",
+        "single_hardening_spring_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.contact_gap_1d",
+      "benchmark_template": "contact-gap-chain",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/contact_gap_reliability.rs"
+        ],
+        "reliability_suite": "contact_gap_reliability",
+        "review": {
+          "assumptions": [
+            "one_dimensional_contact",
+            "penalty_normal_contact",
+            "incremental_static_load"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement",
+            "active_gap_stop",
+            "contact_force_split_equilibrium"
+          ],
+          "diagnostics": [
+            "active_contact_count",
+            "penetration",
+            "contact_force",
+            "spring_force",
+            "residual_norm"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/contact_gap_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "one_dimensional_contact",
+        "screening_only",
+        "single_penalty_stop_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.beam_1d",
+      "benchmark_template": "beam-line",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_beam_1d_tip_loaded_cantilever",
+        "review": {
+          "assumptions": [
+            "linear_beam",
+            "small_strain",
+            "single_member_cantilever"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement_rotation",
+            "tip_load_response"
+          ],
+          "diagnostics": [
+            "tip_displacement",
+            "tip_rotation",
+            "end_shear",
+            "end_moment",
+            "bending_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/beam_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_beam",
+        "small_strain",
+        "single_member_cantilever"
+      ]
+    },
+    {
+      "operator_id": "solve.frame_2d",
+      "benchmark_template": "frame-2d",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_frame_2d_tip_loaded_cantilever",
+        "review": {
+          "assumptions": [
+            "linear_frame",
+            "small_strain",
+            "euler_bernoulli_beam"
+          ],
+          "boundary_checks": [
+            "fixed_root_translation_rotation",
+            "tip_load_response"
+          ],
+          "diagnostics": [
+            "tip_displacement",
+            "tip_rotation",
+            "end_shear",
+            "end_moment",
+            "bending_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/frame_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_frame",
+        "small_strain",
+        "single_member_cantilever"
+      ]
+    },
+    {
+      "operator_id": "solve.frame_3d",
+      "benchmark_template": "frame-3d",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_frame_3d_tip_loaded_cantilever",
+        "review": {
+          "assumptions": [
+            "linear_frame",
+            "small_strain",
+            "single_member_3d_cantilever"
+          ],
+          "boundary_checks": [
+            "fixed_root_translation_rotation",
+            "tip_load_response"
+          ],
+          "diagnostics": [
+            "tip_displacement",
+            "tip_rotation",
+            "end_shear",
+            "end_moment",
+            "bending_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/frame_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_frame",
+        "small_strain",
+        "single_member_cantilever_response"
+      ]
+    },
+    {
+      "operator_id": "solve.truss_2d",
+      "benchmark_template": "truss-roof",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/structural_space.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_truss_2d_small_triangular_patch",
+        "review": {
+          "assumptions": [
+            "linear_truss",
+            "pin_jointed",
+            "small_displacement"
+          ],
+          "boundary_checks": [
+            "fixed_support_displacement",
+            "roller_vertical_constraint",
+            "loaded_node_equilibrium"
+          ],
+          "diagnostics": [
+            "member_axial_force",
+            "member_stress",
+            "loaded_node_displacement",
+            "internal_force_balance"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/truss_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_truss",
+        "pin_jointed",
+        "small_displacement"
+      ]
+    },
+    {
+      "operator_id": "solve.truss_3d",
+      "benchmark_template": "space-frame",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/structural_space.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_truss_3d_space_frame_pyramid_fixture",
+        "review": {
+          "assumptions": [
+            "linear_truss",
+            "pin_jointed",
+            "small_displacement",
+            "space_frame_pyramid_fixture"
+          ],
+          "boundary_checks": [
+            "fixed_base_displacement",
+            "loaded_top_node_equilibrium"
+          ],
+          "diagnostics": [
+            "member_axial_force",
+            "member_stress",
+            "loaded_node_displacement",
+            "internal_force_balance_3d"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/truss_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_truss",
+        "pin_jointed",
+        "small_displacement"
+      ]
+    },
+    {
+      "operator_id": "solve.plane_triangle_2d",
+      "benchmark_template": "plane-panel",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_plane_triangle_2d_small_patch",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "small_strain",
+            "constant_strain_triangle"
+          ],
+          "boundary_checks": [
+            "left_edge_x_constraint",
+            "bottom_edge_y_constraint",
+            "loaded_top_edge_response"
+          ],
+          "diagnostics": [
+            "nodal_displacement",
+            "element_strain",
+            "element_stress",
+            "principal_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_triangle_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "small_strain",
+        "constant_strain_triangle"
+      ]
+    },
+    {
+      "operator_id": "solve.plane_quad_2d",
+      "benchmark_template": "plane-quad-panel",
+      "domain": "structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_plane_quad_2d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "small_strain",
+            "quad_split_into_constant_strain_triangles"
+          ],
+          "boundary_checks": [
+            "left_edge_x_constraint",
+            "bottom_edge_y_constraint",
+            "loaded_top_edge_response"
+          ],
+          "diagnostics": [
+            "nodal_displacement",
+            "weighted_element_strain",
+            "weighted_element_stress",
+            "principal_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "small_strain",
+        "quad_split_triangles"
+      ]
+    }
+  ]
+}

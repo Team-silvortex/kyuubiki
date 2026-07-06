@@ -119,6 +119,8 @@ jobs:
       - run: make audit-project-organization
       - run: make check-ui-automation-contract
       - run: make check-language-packs
+      - run: make check-version-line
+      - run: make check-operator-reliability
       - run: make check-toolchains
       - run: make check-doc-book
 

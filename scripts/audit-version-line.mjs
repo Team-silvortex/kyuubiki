@@ -243,6 +243,34 @@ function exactChecks(expectedVersion) {
     actual: readJson("releases/update-catalog.json").shipping_version ?? null,
   });
 
+  const languagePackCatalog = readJson("language-packs/catalog.json");
+  checks.push({
+    kind: "language_pack_catalog_shipping_version",
+    file: "language-packs/catalog.json",
+    field: "shipping_version",
+    expected: expectedVersion,
+    actual: languagePackCatalog.shipping_version ?? null,
+  });
+
+  for (const entry of languagePackCatalog.packs ?? []) {
+    const packPath = `language-packs/${entry.path}`;
+    const pack = readJson(packPath);
+    checks.push({
+      kind: "language_pack_version",
+      file: packPath,
+      field: "version",
+      expected: expectedVersion,
+      actual: pack.version ?? null,
+    });
+    checks.push({
+      kind: "language_pack_target_app_version",
+      file: packPath,
+      field: "targetAppVersion",
+      expected: expectedVersion,
+      actual: pack.targetAppVersion ?? null,
+    });
+  }
+
   const currentSnapshots = (releaseIndex.snapshots ?? [])
     .filter((snapshot) => snapshot.status === "current")
     .map((snapshot) => snapshot.version);

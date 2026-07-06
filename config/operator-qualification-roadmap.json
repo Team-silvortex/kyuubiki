@@ -1,0 +1,139 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-roadmap/v1",
+  "version_line": "tamamono 1.15.x",
+  "minimum_candidate_level": "review",
+  "candidates": [
+    {
+      "candidate_id": "line-field-closed-form",
+      "priority": "p0",
+      "domain": "core_line_fields",
+      "operator_ids": [
+        "solve.bar_1d",
+        "solve.thermal_bar_1d",
+        "solve.heat_bar_1d",
+        "solve.electrostatic_bar_1d"
+      ],
+      "rationale": "Small line-field cases have direct closed-form references and are the safest first qualification candidates.",
+      "evidence_gaps": [
+        "documented tolerance provenance",
+        "release-blocking analytic baseline artifact",
+        "environment and solver-version provenance"
+      ],
+      "required_artifacts": [
+        "analytic derivation note",
+        "versioned baseline JSON",
+        "release-gated regression test"
+      ],
+      "graduation_gate": "analytic reference, tolerance provenance, and CI artifact must all be present before qualification"
+    },
+    {
+      "candidate_id": "beam-frame-classic",
+      "priority": "p0",
+      "domain": "structural",
+      "operator_ids": [
+        "solve.beam_1d",
+        "solve.torsion_1d",
+        "solve.frame_2d"
+      ],
+      "rationale": "Classic beam, torsion, and frame cases are central to engineering trust and have textbook references.",
+      "evidence_gaps": [
+        "second independent load case",
+        "textbook reference citation",
+        "sign-convention explanation"
+      ],
+      "required_artifacts": [
+        "canonical benchmark note",
+        "multi-case regression test",
+        "documented force and moment sign convention"
+      ],
+      "graduation_gate": "two independent canonical cases must pass with documented tolerances"
+    },
+    {
+      "candidate_id": "thermal-plane-patch",
+      "priority": "p1",
+      "domain": "thermal_structural",
+      "operator_ids": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d",
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "rationale": "2D thermal and thermoelastic patches are needed before material heat-spreader claims can mature.",
+      "evidence_gaps": [
+        "mesh convergence record",
+        "boundary coverage fingerprint",
+        "material assumption provenance"
+      ],
+      "required_artifacts": [
+        "mesh refinement report",
+        "boundary-condition coverage report",
+        "material-card linked benchmark fixture"
+      ],
+      "graduation_gate": "mesh and boundary evidence must be linked from the operator reliability entry"
+    },
+    {
+      "candidate_id": "electromagnetic-plane-patch",
+      "priority": "p1",
+      "domain": "electromagnetic",
+      "operator_ids": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "rationale": "Plane electromagnetic patches are important for dielectric and magnetic material screening.",
+      "evidence_gaps": [
+        "energy-density tolerance derivation",
+        "independent patch orientation case",
+        "material permittivity or permeability provenance"
+      ],
+      "required_artifacts": [
+        "rotated patch regression",
+        "field-energy derivation note",
+        "material-card linked field fixture"
+      ],
+      "graduation_gate": "field, flux, and stored-energy checks must pass across at least two orientations"
+    },
+    {
+      "candidate_id": "modal-frame-sanity",
+      "priority": "p2",
+      "domain": "modal",
+      "operator_ids": [
+        "solve.modal_frame_2d",
+        "solve.modal_frame_3d"
+      ],
+      "rationale": "Modal workflows need convergence and mode-order evidence before serious vibration claims.",
+      "evidence_gaps": [
+        "mode-shape normalization policy",
+        "mesh or discretization convergence",
+        "degenerate-mode handling note"
+      ],
+      "required_artifacts": [
+        "frequency convergence report",
+        "mode-order regression test",
+        "mode normalization documentation"
+      ],
+      "graduation_gate": "mode frequencies and ordering must remain stable under documented refinement"
+    },
+    {
+      "candidate_id": "screening-cfd-boundary",
+      "priority": "p2",
+      "domain": "cfd",
+      "operator_ids": [
+        "solve.stokes_flow_quad_2d"
+      ],
+      "rationale": "The Stokes operator is intentionally screening-grade and needs a second boundary response before higher trust.",
+      "evidence_gaps": [
+        "second boundary-condition fixture",
+        "divergence tolerance policy",
+        "scope note explaining Stokes-only limits"
+      ],
+      "required_artifacts": [
+        "alternate boundary response regression",
+        "divergence tolerance note",
+        "screening-scope documentation"
+      ],
+      "graduation_gate": "do not qualify until a second Stokes fixture and explicit screening scope are documented"
+    }
+  ]
+}

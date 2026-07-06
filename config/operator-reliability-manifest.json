@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-manifest/v1",
+  "version_line": "tamamono 1.15.x",
+  "coverage_matrix": "physics-coverage",
+  "minimum_coverage_level": "review",
+  "levels": [
+    "smoke",
+    "baseline",
+    "review",
+    "qualification"
+  ],
+  "shards": [
+    "config/operator-reliability/structural.json",
+    "config/operator-reliability/thermal-structural.json",
+    "config/operator-reliability/acoustic.json",
+    "config/operator-reliability/thermal.json",
+    "config/operator-reliability/electromagnetic.json",
+    "config/operator-reliability/transport.json",
+    "config/operator-reliability/modal.json",
+    "config/operator-reliability/cfd.json"
+  ]
+}

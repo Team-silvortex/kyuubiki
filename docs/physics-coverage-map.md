@@ -24,7 +24,16 @@ must be:
 
 ## Current Coverage Families
 
-The `physics-coverage` benchmark matrix is the broad smoke lane for this work.
+The `physics-coverage` benchmark matrix is the broad execution lane for this
+work. The reliability evidence index for that matrix starts at
+`config/operator-reliability-manifest.json`, loads per-domain shards from
+`config/operator-reliability/`, and is guarded by
+`make check-operator-reliability`.
+
+For `tamamono 1.15.x`, every covered solve operator now carries at least
+`review` evidence. The manifest's `minimum_coverage_level` is `review`, so the
+guard fails if a covered solver is accidentally downgraded to `baseline` or
+`smoke`.
 
 It covers:
 
@@ -154,7 +163,16 @@ Use these labels consistently:
   the family has external validation, convergence posture, and documented
   limits suitable for serious engineering claims
 
-Most `1.15.x` additions should stop at `smoke` or `baseline`.
+The first `1.15.x` reliability pass now requires all covered solve operators
+to reach at least `review`. New experimental families may still start as
+`smoke` or `baseline` outside this release gate, but they should not be added
+to the release-gated `physics-coverage` manifest until their evidence satisfies
+the declared minimum.
+
+The current machine-readable manifest should be treated as the source of truth
+for per-operator trust level. A solver family can only move from `smoke` to
+`baseline`, `review`, or `qualification` when the manifest points to concrete
+benchmark, test, validation, and limitation evidence.
 
 ## Exit Criteria
 
@@ -170,3 +188,4 @@ Most `1.15.x` additions should stop at `smoke` or `baseline`.
 - material studies can point to the solver families they depend on
 - TaskIR and executable task design have examples from all major coverage
   classes, not only mechanical fixtures
+- `make check-operator-reliability` reports `36 operators, review=36`

@@ -93,12 +93,17 @@ Then branch by intent:
   the experiments that should not be repeated blindly.
 - `operator-sdk.md`
   Current extension-contract direction for new operator capabilities.
+- `operator-reliability.md`
+  Machine-readable reliability manifest policy for solve operators, including
+  trust levels, evidence expectations, and the current release minimum coverage
+  gate.
 - `material-research-roadmap.md`
   Reliability roadmap for moving material studies from runnable prototypes to
   reproducible screening, review, and eventual qualification workflows.
 - `physics-coverage-map.md`
-  `1.15.x` coverage map for broad solver-family smoke coverage before the
-  `1.15.x` and `1.16.x` engine/task-format contract freeze.
+  `1.15.x` coverage map for broad solver-family execution coverage and the
+  review-level reliability gate before the `1.15.x` and `1.16.x`
+  engine/task-format contract freeze.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`
@@ -275,6 +280,9 @@ Then branch by intent:
 
 - `scripts/README.md`
   Unified launcher, host-side workflow commands, and packaging entrypoints.
+- `../config/README.md`
+  Checked-in configuration contracts for reliability gates, qualification
+  planning, benchmark coverage, audit lanes, and self-host toolchains.
 - `deploy/README.md`
   Deployment descriptors, agent manifests, and workload-catalog examples.
 - `tmp/README.md`

@@ -1,0 +1,335 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "thermal_structural",
+  "operators": [
+    {
+      "operator_id": "solve.thermal_bar_1d",
+      "benchmark_template": "thermal-bar",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_bar_1d_restrained_uniform_rise",
+        "review": {
+          "assumptions": [
+            "linear_elastic",
+            "uniform_temperature_delta",
+            "fully_restrained_bar"
+          ],
+          "boundary_checks": [
+            "fixed_end_displacements",
+            "zero_total_strain",
+            "compressive_thermal_stress_sign"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "total_strain",
+            "stress",
+            "axial_force",
+            "temperature_delta"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_elastic",
+        "uniform_temperature_fixture",
+        "single_restrained_bar"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_beam_1d",
+      "benchmark_template": "thermal-beam-line",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_beam_1d_free_gradient_response",
+        "review": {
+          "assumptions": [
+            "linear_beam",
+            "linear_temperature_gradient",
+            "free_thermal_curvature"
+          ],
+          "boundary_checks": [
+            "fixed_root_displacement_rotation",
+            "free_tip_thermal_response",
+            "near_zero_free_expansion_internal_force"
+          ],
+          "diagnostics": [
+            "thermal_curvature",
+            "tip_displacement",
+            "tip_rotation",
+            "end_moment",
+            "bending_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_beam",
+        "linear_temperature_gradient",
+        "single_member_free_curvature"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_frame_2d",
+      "benchmark_template": "thermal-frame-2d",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_frame_2d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "linear_frame",
+            "uniform_temperature_delta",
+            "fully_restrained_member"
+          ],
+          "boundary_checks": [
+            "fixed_end_translations",
+            "fixed_end_rotations",
+            "zero_total_strain"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "axial_force",
+            "axial_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_frame_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_frame",
+        "uniform_temperature_delta",
+        "single_member_restrained_response"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_frame_3d",
+      "benchmark_template": "thermal-frame-3d",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients",
+        "review": {
+          "assumptions": [
+            "linear_frame",
+            "uniform_temperature_delta",
+            "linear_temperature_gradient",
+            "fully_restrained_member"
+          ],
+          "boundary_checks": [
+            "fixed_end_translations",
+            "fixed_end_rotations",
+            "zero_total_strain"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "thermal_curvature",
+            "axial_force",
+            "bending_moment",
+            "combined_stress"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_frame",
+        "linear_temperature_response",
+        "single_member_restrained_response"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_truss_2d",
+      "benchmark_template": "thermal-truss-2d",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/thermal_structural.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_truss_2d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "linear_truss",
+            "mixed_temperature_delta",
+            "external_nodal_load"
+          ],
+          "boundary_checks": [
+            "fixed_support_displacement",
+            "roller_vertical_constraint",
+            "loaded_node_equilibrium"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "member_axial_force",
+            "member_stress",
+            "internal_force_balance"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_truss",
+        "mixed_temperature_fixture",
+        "small_displacement"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_truss_3d",
+      "benchmark_template": "thermal-truss-3d",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/thermal_structural.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_truss_3d_restrained_uniform_rise",
+        "review": {
+          "assumptions": [
+            "linear_truss",
+            "uniform_temperature_delta",
+            "fully_restrained_nodes"
+          ],
+          "boundary_checks": [
+            "fixed_node_displacements",
+            "zero_total_strain"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "compressive_stress",
+            "axial_force",
+            "temperature_delta"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_truss_3d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_truss",
+        "uniform_temperature_fixture",
+        "fully_restrained_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_plane_triangle_2d",
+      "benchmark_template": "thermal-plane-triangle",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/thermal_structural.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_plane_triangle_2d_restrained_patch",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "uniform_temperature_delta",
+            "fully_restrained_patch",
+            "constant_strain_triangle"
+          ],
+          "boundary_checks": [
+            "all_displacements_fixed",
+            "uniform_temperature_delta",
+            "zero_total_strain"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "compressive_stress",
+            "principal_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "uniform_temperature_delta",
+        "restrained_patch",
+        "constant_strain_triangle"
+      ]
+    },
+    {
+      "operator_id": "solve.thermal_plane_quad_2d",
+      "benchmark_template": "thermal-plane-quad",
+      "domain": "thermal_structural",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/thermal_structural.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_thermal_plane_quad_2d_restrained_patch",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "uniform_temperature_delta",
+            "fully_restrained_patch"
+          ],
+          "boundary_checks": [
+            "all_displacements_fixed",
+            "uniform_temperature_delta",
+            "zero_total_strain"
+          ],
+          "diagnostics": [
+            "thermal_strain",
+            "mechanical_strain",
+            "compressive_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "uniform_temperature_delta",
+        "restrained_patch"
+      ]
+    }
+  ]
+}

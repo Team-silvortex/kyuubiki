@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-qualification-evidence-kits.schema.json",
+  "title": "Kyuubiki Operator Qualification Evidence Kits",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "version_line",
+    "kits"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-qualification-evidence-kits/v1"
+    },
+    "version_line": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kits": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "status",
+          "artifact_profile",
+          "operator_ids",
+          "artifact_requirements"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "collecting",
+              "ready_for_review",
+              "blocked"
+            ]
+          },
+          "artifact_profile": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operator_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^solve\\.[a-z0-9_]+$"
+            },
+            "uniqueItems": true
+          },
+          "artifact_requirements": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "artifact_id",
+                "kind",
+                "gate",
+                "path_policy"
+              ],
+              "properties": {
+                "artifact_id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "gate": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path_policy": {
+                  "enum": [
+                    "repo-relative-required-before-qualification"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

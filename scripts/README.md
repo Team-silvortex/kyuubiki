@@ -25,7 +25,9 @@ This directory contains host-native operational entry points.
   cleanup path for disk-constrained workstations.
 - `audit-version-line.mjs`
   Audit repository-wide version contracts and inventory visible version
-  references before advancing a shipping line such as `tamamono 1.7.0`.
+  references before advancing a shipping line such as `tamamono 1.7.0`. The
+  exact-contract lane includes release metadata, package metadata, generated
+  docs mirrors, update catalogs, and shipped language-pack catalog versions.
 - `audit-rust-line-counts.mjs`
   Enforce the Rust source line-count ceiling, currently `600` lines per file,
   so crate and test modules stay split before they become hard to review.
@@ -55,12 +57,37 @@ This directory contains host-native operational entry points.
   environment contract before a machine is treated as installer-managed.
 - `validate-language-packs.mjs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
-  envelopes for the current `tamamono 1.x` line.
+  envelopes for the current release index version in the `tamamono 1.x` line.
 - `check-ui-automation-contract.mjs`
   Verify the product-owned Workbench automation selector contract. It compares
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and
   the component implementation anchors used by wasm-python and UI smoke tests.
   Use `--self-test` when changing selector coverage.
+- `check-operator-reliability.mjs`
+  Verify `config/operator-reliability-manifest.json` and its per-domain shards
+  against the Rust `physics-coverage` benchmark matrix, workflow solve operator
+  ids, evidence files, declared trust levels, and the manifest's minimum
+  coverage-level release gate. When present, it also validates
+  `config/operator-qualification-roadmap.json` so qualification candidates
+  reference covered operators that satisfy the roadmap minimum, plus
+  `config/operator-qualification-evidence-kits.json` so every qualification
+  candidate has a planned artifact kit. Use `--self-test` when changing level
+  ordering, release-gate behavior, or qualification planning rules.
+- `operator-reliability-rules.mjs`
+  Shared rule helpers for the reliability checker. Keep trust-level ordering,
+  qualification roadmap checks, and evidence-kit checks here so the executable
+  checker remains below the project file-size limit.
+- `test-operator-reliability-rules.mjs`
+  Focused self-test for the reliability rule helpers. It is invoked by
+  `check-operator-reliability.mjs --self-test` and can be run directly when
+  editing trust-level, qualification roadmap, or evidence-kit rules.
+  Prefer `make check-operator-reliability-rules` for the same focused check
+  through the standard project entrypoint.
+- `check-operator-reliability-schemas.mjs`
+  Zero-dependency smoke check for operator reliability JSON schema contracts.
+  It verifies that the checked-in manifest, roadmap, evidence kits, and all
+  manifest-listed shards keep their `schema_version` aligned with the matching
+  schema files, and recursively checks schema-declared required fields.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -127,6 +154,23 @@ Useful smoke wrappers:
   Check that product-owned Workbench UI automation anchors still match the
   documented selector contract. Run this before changing rail, library,
   runtime, viewport, control-window, or shell DOM structure.
+- `make check-version-line`
+  Check that release metadata, package metadata, generated docs mirrors, update
+  catalogs, and shipped language-pack catalog entries all match the current
+  shipping version.
+- `make check-operator-reliability`
+  Check that every `physics-coverage` solve operator has a reliability manifest
+  entry with benchmark, headless workflow, evidence, visible limitations, and a
+  coverage level that satisfies the release minimum gate. The Make target runs
+  the focused rule and schema smoke checks first.
+- `make check-operator-reliability-rules`
+  Run only the pure reliability rule self-test without loading benchmark
+  catalogs, workflow payloads, manifest shards, or evidence files.
+- `make check-operator-reliability-schemas`
+  Run only the operator reliability schema/config version smoke without loading
+  benchmark catalogs, workflow payloads, or evidence files. This covers
+  schema-version alignment and required-field presence, not full JSON Schema
+  validation.
 - `make check-elixir-self-host`
   Check the current machine's Elixir, Mix, OTP, and orchestrator environment
   contract against `config/toolchains.json`. Use `node

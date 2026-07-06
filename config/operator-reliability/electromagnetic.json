@@ -1,0 +1,249 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "electromagnetic",
+  "operators": [
+    {
+      "operator_id": "solve.electrostatic_bar_1d",
+      "benchmark_template": "electrostatic-bar",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_electrostatic_bar_1d_two_element_gradient",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "one_dimensional_field",
+            "dirichlet_potential_boundary"
+          ],
+          "boundary_checks": [
+            "fixed_end_potentials",
+            "linear_midpoint_potential",
+            "uniform_two_element_gradient"
+          ],
+          "diagnostics": [
+            "potential_gradient",
+            "electric_field",
+            "electric_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "one_dimensional",
+        "two_element_dirichlet_fixture"
+      ]
+    },
+    {
+      "operator_id": "solve.magnetostatic_bar_1d",
+      "benchmark_template": "magnetostatic-bar",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/magnetostatic_bar_reliability.rs"
+        ],
+        "reliability_suite": "magnetostatic_bar_reliability",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "one_dimensional_field",
+            "single_element_permeance"
+          ],
+          "boundary_checks": [
+            "grounded_magnetic_potential",
+            "source_node_response",
+            "single_element_permeance_balance"
+          ],
+          "diagnostics": [
+            "magnetic_potential_gradient",
+            "magnetic_field_strength",
+            "magnetic_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/magnetostatic_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "one_dimensional",
+        "single_element_permeance_baseline",
+        "screening_only"
+      ]
+    },
+    {
+      "operator_id": "solve.electrostatic_plane_triangle_2d",
+      "benchmark_template": "electrostatic-plane-triangle",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_electrostatic_plane_triangle_2d_patch",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "constant_potential_gradient",
+            "single_triangle_patch"
+          ],
+          "boundary_checks": [
+            "fixed_nodal_potentials",
+            "uniform_x_gradient",
+            "zero_y_gradient"
+          ],
+          "diagnostics": [
+            "potential_gradient",
+            "electric_field",
+            "electric_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "two_dimensional",
+        "single_triangle_patch"
+      ]
+    },
+    {
+      "operator_id": "solve.electrostatic_plane_quad_2d",
+      "benchmark_template": "electrostatic-plane-quad",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_electrostatic_plane_quad_2d_patch",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "constant_potential_gradient",
+            "single_quad_patch"
+          ],
+          "boundary_checks": [
+            "fixed_nodal_potentials",
+            "uniform_x_gradient",
+            "zero_y_gradient"
+          ],
+          "diagnostics": [
+            "potential_gradient",
+            "electric_field",
+            "electric_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "two_dimensional",
+        "single_quad_patch"
+      ]
+    },
+    {
+      "operator_id": "solve.magnetostatic_plane_triangle_2d",
+      "benchmark_template": "magnetostatic-plane-triangle",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs"
+        ],
+        "reliability_suite": "magnetostatic_plane_reliability",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "constant_source_density",
+            "single_triangle_patch"
+          ],
+          "boundary_checks": [
+            "grounded_edge_vector_potential",
+            "source_node_response",
+            "zero_x_gradient"
+          ],
+          "diagnostics": [
+            "vector_potential_gradient",
+            "magnetic_field_strength",
+            "magnetic_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "two_dimensional",
+        "screening_only",
+        "single_triangle_patch"
+      ]
+    },
+    {
+      "operator_id": "solve.magnetostatic_plane_quad_2d",
+      "benchmark_template": "magnetostatic-plane-quad",
+      "domain": "electromagnetic",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs"
+        ],
+        "reliability_suite": "magnetostatic_plane_reliability",
+        "review": {
+          "assumptions": [
+            "linear_material",
+            "constant_source_density",
+            "single_quad_patch"
+          ],
+          "boundary_checks": [
+            "grounded_edge_vector_potential",
+            "source_edge_response",
+            "zero_x_gradient"
+          ],
+          "diagnostics": [
+            "vector_potential_gradient",
+            "magnetic_field_strength",
+            "magnetic_flux_density",
+            "stored_energy"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_material",
+        "two_dimensional",
+        "screening_only",
+        "single_quad_patch"
+      ]
+    }
+  ]
+}

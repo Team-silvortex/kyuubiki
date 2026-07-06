@@ -11,7 +11,7 @@ const packRoot = path.join(repoRoot, "language-packs");
 const PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
 const CATALOG_SCHEMA_VERSION = "kyuubiki.language-pack-catalog/v1";
 const VERSION_LINE = "tamamono 1.x";
-const TARGET_APP_VERSION = "1.15.0";
+const TARGET_APP_VERSION = readCurrentReleaseVersion();
 const SOURCE_VALUES = new Set(["downloaded", "imported"]);
 const SURFACES = new Set(["workbench", "hub"]);
 
@@ -33,6 +33,15 @@ function readJson(relativePath) {
     fail(`${relativePath}: ${error.message}`);
     return null;
   }
+}
+
+function readCurrentReleaseVersion() {
+  const releaseIndexPath = path.join(repoRoot, "releases/index.json");
+  const releaseIndex = JSON.parse(fs.readFileSync(releaseIndexPath, "utf8"));
+  if (typeof releaseIndex.current_version !== "string" || !releaseIndex.current_version.trim()) {
+    throw new Error("releases/index.json must declare current_version for language pack validation");
+  }
+  return releaseIndex.current_version;
 }
 
 function validateString(pack, field, relativePath) {

@@ -1,0 +1,126 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "thermal",
+  "operators": [
+    {
+      "operator_id": "solve.heat_bar_1d",
+      "benchmark_template": "heat-bar",
+      "domain": "thermal",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_heat_bar_1d_two_element_gradient",
+        "review": {
+          "assumptions": [
+            "steady_state",
+            "linear_conductivity",
+            "one_dimensional_bar"
+          ],
+          "boundary_checks": [
+            "fixed_hot_boundary",
+            "fixed_cold_boundary",
+            "internal_temperature_continuity"
+          ],
+          "diagnostics": [
+            "temperature_gradient",
+            "heat_flux",
+            "average_temperature",
+            "flux_continuity"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/heat_bar_1d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "steady_state",
+        "linear_conductivity",
+        "one_dimensional_bar"
+      ]
+    },
+    {
+      "operator_id": "solve.heat_plane_triangle_2d",
+      "benchmark_template": "heat-plane-triangle",
+      "domain": "thermal",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_heat_plane_triangle_2d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "steady_state",
+            "linear_conductivity",
+            "constant_gradient_triangles"
+          ],
+          "boundary_checks": [
+            "fixed_hot_boundary",
+            "fixed_cold_boundaries",
+            "free_node_temperature_resolution"
+          ],
+          "diagnostics": [
+            "temperature_gradient_x",
+            "temperature_gradient_y",
+            "heat_flux_vector",
+            "average_temperature"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "steady_state",
+        "linear_conductivity",
+        "constant_gradient_triangles"
+      ]
+    },
+    {
+      "operator_id": "solve.heat_plane_quad_2d",
+      "benchmark_template": "heat-plane-quad",
+      "domain": "thermal",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_heat_plane_quad_2d_single_patch",
+        "review": {
+          "assumptions": [
+            "steady_state",
+            "linear_conductivity",
+            "single_quad_patch"
+          ],
+          "boundary_checks": [
+            "fixed_hot_boundary",
+            "fixed_cold_boundaries",
+            "free_node_temperature_resolution"
+          ],
+          "diagnostics": [
+            "temperature_gradient_x",
+            "temperature_gradient_y",
+            "heat_flux_vector",
+            "average_temperature"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs"
+          ]
+        }
+      },
+      "limits": [
+        "steady_state",
+        "linear_conductivity",
+        "single_quad_patch"
+      ]
+    }
+  ]
+}

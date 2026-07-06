@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs check-ui-automation-contract audit-rust-lines audit-project-organization audit-dependencies architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight operator-package-preflight sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-language-packs check-ui-automation-contract check-version-line check-operator-reliability-rules check-operator-reliability-schemas check-operator-reliability audit-rust-lines audit-project-organization audit-dependencies architecture-check start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-agent-capability-smoke test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-report benchmark-profile-index benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -55,6 +55,10 @@ help:
 	@echo "  make check-elixir-self-host Verify Elixir/Mix/OTP and self-host orchestrator env contracts"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language support packs"
 	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
+	@echo "  make check-version-line Verify release, package, docs, and language-pack version contracts"
+	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
+	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"
+	@echo "  make check-operator-reliability Verify physics-coverage operator reliability evidence"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
 	@echo "  make audit-dependencies Run npm production and RustSec lockfile dependency audits"
@@ -277,6 +281,21 @@ check-ui-automation-contract:
 	@node ./scripts/check-ui-automation-contract.mjs --self-test
 	@node ./scripts/check-ui-automation-contract.mjs
 
+check-version-line:
+	@node ./scripts/audit-version-line.mjs
+
+check-operator-reliability-rules:
+	@node ./scripts/test-operator-reliability-rules.mjs
+
+check-operator-reliability-schemas:
+	@node ./scripts/check-operator-reliability-schemas.mjs --self-test
+	@node ./scripts/check-operator-reliability-schemas.mjs
+
+check-operator-reliability:
+	@$(MAKE) check-operator-reliability-rules
+	@$(MAKE) check-operator-reliability-schemas
+	@node ./scripts/check-operator-reliability.mjs
+
 audit-rust-lines:
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
 
@@ -291,6 +310,8 @@ audit-dependencies:
 architecture-check:
 	@node ./scripts/audit-project-organization.mjs --self-test
 	@node ./scripts/audit-project-organization.mjs
+	@$(MAKE) check-version-line
+	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-ui-automation-contract
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
@@ -416,6 +437,8 @@ verify:
 	@$(MAKE) check-toolchains
 	@$(MAKE) check-elixir-self-host
 	@$(MAKE) check-language-packs
+	@$(MAKE) check-version-line
+	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test

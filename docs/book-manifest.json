@@ -86,6 +86,8 @@
         "docs/accuracy-plan.md",
         "docs/accuracy-baselines.md",
         "docs/physics-coverage-map.md",
+        "docs/operator-reliability.md",
+        "config/README.md",
         "docs/security.md",
         "docs/testing-and-ci.md",
         "docs/installer-remote-control.md",

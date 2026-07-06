@@ -1,0 +1,150 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-evidence-kits/v1",
+  "version_line": "tamamono 1.15.x",
+  "kits": [
+    {
+      "candidate_id": "line-field-closed-form",
+      "status": "planned",
+      "artifact_profile": "analytic_closed_form",
+      "operator_ids": [
+        "solve.bar_1d",
+        "solve.thermal_bar_1d",
+        "solve.heat_bar_1d",
+        "solve.electrostatic_bar_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "analytic-derivation",
+          "kind": "derivation_note",
+          "gate": "derive expected displacement, temperature, potential, or flux from closed form",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "baseline-json",
+          "kind": "versioned_baseline",
+          "gate": "pin numeric reference outputs and tolerances to the shipping line",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "beam-frame-classic",
+      "status": "planned",
+      "artifact_profile": "canonical_structural_benchmark",
+      "operator_ids": [
+        "solve.beam_1d",
+        "solve.torsion_1d",
+        "solve.frame_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "textbook-case-note",
+          "kind": "reference_note",
+          "gate": "cite and reproduce at least two independent canonical load cases",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "force-sign-convention",
+          "kind": "scope_note",
+          "gate": "document force, moment, rotation, and torsion sign conventions",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "thermal-plane-patch",
+      "status": "planned",
+      "artifact_profile": "mesh_boundary_convergence",
+      "operator_ids": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d",
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "mesh-refinement-report",
+          "kind": "convergence_report",
+          "gate": "show stable thermal and thermoelastic response under refinement",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "boundary-coverage",
+          "kind": "boundary_report",
+          "gate": "cover Dirichlet, Neumann, and mixed thermal boundary assumptions",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "electromagnetic-plane-patch",
+      "status": "planned",
+      "artifact_profile": "field_energy_orientation",
+      "operator_ids": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "rotated-patch-regression",
+          "kind": "orientation_regression",
+          "gate": "compare field, flux, and stored energy across two orientations",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "material-field-provenance",
+          "kind": "material_provenance",
+          "gate": "link permittivity or permeability assumptions to material-card data",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "modal-frame-sanity",
+      "status": "planned",
+      "artifact_profile": "modal_convergence",
+      "operator_ids": [
+        "solve.modal_frame_2d",
+        "solve.modal_frame_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "frequency-convergence",
+          "kind": "convergence_report",
+          "gate": "show frequency stability and documented mode ordering under refinement",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "mode-normalization",
+          "kind": "scope_note",
+          "gate": "document mode-shape normalization and degenerate-mode handling",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "screening-cfd-boundary",
+      "status": "planned",
+      "artifact_profile": "screening_scope_boundary",
+      "operator_ids": [
+        "solve.stokes_flow_quad_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "alternate-boundary-response",
+          "kind": "boundary_regression",
+          "gate": "add a second Stokes boundary fixture before any higher trust claim",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "screening-scope-note",
+          "kind": "scope_note",
+          "gate": "state Stokes-only limits, divergence tolerance, and non-Navier-Stokes scope",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    }
+  ]
+}
