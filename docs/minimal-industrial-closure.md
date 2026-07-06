@@ -168,6 +168,7 @@ Evidence:
 - [workflow-dataset.md](workflow-dataset.md)
 - [headless-sdks.md](headless-sdks.md)
 - [material-research-roadmap.md](material-research-roadmap.md)
+- [automated-material-research-example.md](automated-material-research-example.md)
 - [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
 
 ## 6. Security And Credentials

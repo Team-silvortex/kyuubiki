@@ -170,6 +170,8 @@ pub struct WorkflowGraphRunResult {
     #[serde(default)]
     pub skipped_nodes: Vec<String>,
     #[serde(default)]
+    pub failed_nodes: Vec<String>,
+    #[serde(default)]
     pub progress_events: Vec<WorkflowProgressEvent>,
     #[serde(default)]
     pub branch_decisions: Vec<WorkflowBranchDecision>,
@@ -206,6 +208,7 @@ pub struct WorkflowBranchDecision {
 pub enum WorkflowNodeRunStatus {
     Completed,
     Skipped,
+    Failed,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -218,6 +221,8 @@ pub struct WorkflowNodeRunTrace {
     pub consumed_artifacts: Vec<String>,
     #[serde(default)]
     pub produced_artifacts: Vec<String>,
+    #[serde(default)]
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

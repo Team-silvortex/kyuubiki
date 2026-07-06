@@ -7,6 +7,12 @@ pub(crate) fn solve_linear_system(
     if matrix.len() != size || matrix.iter().any(|row| row.len() != size) {
         return Err("matrix dimensions do not match vector".to_string());
     }
+    if vector.iter().any(|value| !value.is_finite()) {
+        return Err("linear system vector contains non-finite value".to_string());
+    }
+    if matrix.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("linear system matrix contains non-finite value".to_string());
+    }
 
     let mut augmented = matrix
         .into_iter()

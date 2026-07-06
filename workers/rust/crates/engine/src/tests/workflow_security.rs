@@ -103,6 +103,28 @@ fn rejects_unsupported_operator_before_execution() {
 }
 
 #[test]
+fn rejects_unknown_recovery_policy_before_execution() {
+    let mut graph = minimal_graph();
+    graph.nodes[1].config = Some(serde_json::json!({ "on_error": "restart_everything" }));
+
+    assert_engine_security_error(
+        graph,
+        "workflow node solve config.on_error has unsupported recovery policy restart_everything",
+    );
+}
+
+#[test]
+fn rejects_non_string_recovery_policy_before_execution() {
+    let mut graph = minimal_graph();
+    graph.nodes[1].config = Some(serde_json::json!({ "recovery": { "on_error": true } }));
+
+    assert_engine_security_error(
+        graph,
+        "workflow node solve config.recovery.on_error must be a string recovery policy",
+    );
+}
+
+#[test]
 fn rejects_wrong_workflow_schema_version_before_execution() {
     let mut graph = minimal_graph();
     graph.schema_version = "kyuubiki.workflow-graph/v0".to_string();

@@ -6,6 +6,7 @@
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas
+.PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
 .PHONY: audit-dependencies architecture-check verify
 
@@ -58,6 +59,16 @@ check-line-field-closed-form-baseline:
 
 check-line-field-qualification-release-evidence:
 	@node ./scripts/check-line-field-qualification-release-evidence.mjs --in $${IN:-tmp/line-field-qualification-release-evidence.json}
+
+capture-material-research-example:
+	@node ./scripts/capture-material-research-example.mjs --out $${OUT:-tmp/material-research-example.json}
+
+check-material-research-example:
+	@node ./scripts/check-material-research-example.mjs --in $${IN:-tmp/material-research-example.json}
+
+verify-material-research-example:
+	@$(MAKE) capture-material-research-example OUT=$${OUT:-tmp/material-research-example.json}
+	@$(MAKE) check-material-research-example IN=$${OUT:-tmp/material-research-example.json}
 
 check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline
 	@node ./scripts/check-operator-reliability.mjs

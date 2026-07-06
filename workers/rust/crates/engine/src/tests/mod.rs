@@ -41,6 +41,7 @@ mod workflow_parameter_sweep_scoring;
 mod workflow_quality_objective;
 mod workflow_quality_ranking;
 mod workflow_quality_sweep_plan;
+mod workflow_recovery;
 mod workflow_security;
 mod workflow_solver_extended;
 mod workflow_solver_structural;

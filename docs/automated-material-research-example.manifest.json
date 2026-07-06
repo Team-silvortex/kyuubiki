@@ -1,0 +1,52 @@
+{
+  "schema_version": "kyuubiki.automated-material-research-example-manifest/v1",
+  "example_id": "material.heat_spreader_screening.automated_research.v1",
+  "study": "heat-spreader",
+  "output_path": "tmp/material-research-example.json",
+  "capture_target": "capture-material-research-example",
+  "check_target": "check-material-research-example",
+  "verify_target": "verify-material-research-example",
+  "command": {
+    "id": "material_explore_heat_spreader",
+    "cwd": "workers/rust",
+    "argv_contains": [
+      "cargo",
+      "kyuubiki-material-explore",
+      "heat-spreader",
+      "--json"
+    ]
+  },
+  "expected": {
+    "evidence_schema_version": "kyuubiki.automated-material-research-example/v1",
+    "exploration_schema_version": "kyuubiki.material-exploration-run/v1",
+    "report_schema_version": "kyuubiki.material-research-report/v1",
+    "exploration_study": "material_heat_spreader_screening",
+    "mode": "local_solver",
+    "candidate_count": 3,
+    "result_payload_count": 3,
+    "winner_candidate_id": "pyrolytic_graphite_in_plane",
+    "optimization_id": "material.heat_spreader_screening.optimization.v1",
+    "reliability_posture": "screening_only"
+  },
+  "required_candidate_fields": [
+    "rank",
+    "candidate_id",
+    "score",
+    "peak_temperature_c",
+    "areal_mass_kg_m2",
+    "optimization_terms"
+  ],
+  "required_report_sections": [
+    "optimization",
+    "reliability",
+    "metric_specs",
+    "candidates"
+  ],
+  "required_reliability_sections": [
+    "quality_gates",
+    "limitations",
+    "model_assumptions",
+    "evidence_refs"
+  ],
+  "documentation": "docs/automated-material-research-example.md"
+}

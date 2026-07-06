@@ -460,6 +460,7 @@ fn serializes_workflow_graph_run_request_round_trip() {
         workflow_id: decoded.graph.id,
         completed_nodes: vec!["heat_model".to_string(), "thermo_summary".to_string()],
         skipped_nodes: vec![],
+        failed_nodes: vec![],
         progress_events: vec![],
         branch_decisions: vec![],
         node_runs: vec![],

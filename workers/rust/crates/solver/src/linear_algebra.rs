@@ -339,6 +339,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
     if matrix.size() != size {
         return Err("matrix dimensions do not match vector".to_string());
     }
+    validate_sparse_system_finite(matrix, rhs)?;
     if size == 0 {
         return Ok(SpdSolveProfile {
             solution: Vec::new(),
@@ -490,4 +491,19 @@ fn regularize_sparse_diagonal(matrix: &SparseMatrix, epsilon: f64) -> SparseMatr
     }
 
     regularized
+}
+
+fn validate_sparse_system_finite(matrix: &SparseMatrix, rhs: &[f64]) -> Result<(), String> {
+    if rhs.iter().any(|value| !value.is_finite()) {
+        return Err("linear system vector contains non-finite value".to_string());
+    }
+    if matrix
+        .rows
+        .iter()
+        .flatten()
+        .any(|(_, value)| !value.is_finite())
+    {
+        return Err("linear system matrix contains non-finite value".to_string());
+    }
+    Ok(())
 }

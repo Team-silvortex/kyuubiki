@@ -43,6 +43,17 @@ dataset contracts, input artifacts, and output artifacts. This keeps GUI,
 headless SDK, and agent/orchestra execution paths behind the same first safety
 gate.
 
+Workflow execution is still fail-fast by default. A non-core node can opt into
+node-level recovery with `config.on_error: "skip"` or
+`config.recovery.on_error: "skip"`; `fail` is also accepted as an explicit
+fail-fast policy. Other recovery policy values are rejected during workflow
+security preflight. When a recoverable node returns an error or panics, the run
+records the node as `failed`, preserves its error message in `node_runs`, rolls
+back artifacts written by the failed node, skips downstream nodes that cannot
+resolve artifacts, and continues independent branches. This prevents
+recoverable analysis/reporting failures from cascading across the whole graph
+without hiding the failure from SDK or GUI callers.
+
 The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
 roadmap candidates reference existing manifest operators and already satisfy

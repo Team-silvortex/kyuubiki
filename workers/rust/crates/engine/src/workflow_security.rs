@@ -115,6 +115,7 @@ fn validate_nodes(graph: &WorkflowGraph) -> Result<HashMap<String, NodePorts>, S
                     max_key_len: MAX_WORKFLOW_JSON_KEY_LEN,
                 },
             )?;
+            validate_node_recovery_policy(&node.id, config)?;
         }
 
         let mut inputs = HashMap::new();
@@ -153,6 +154,31 @@ fn validate_nodes(graph: &WorkflowGraph) -> Result<HashMap<String, NodePorts>, S
         );
     }
     Ok(node_ports)
+}
+
+fn validate_node_recovery_policy(node_id: &str, config: &serde_json::Value) -> Result<(), String> {
+    for (path, value) in [
+        ("on_error", config.get("on_error")),
+        ("recovery.on_error", config.pointer("/recovery/on_error")),
+    ] {
+        let Some(value) = value else {
+            continue;
+        };
+        match value.as_str() {
+            Some("skip" | "fail") => {}
+            Some(other) => {
+                return Err(format!(
+                    "workflow node {node_id} config.{path} has unsupported recovery policy {other}"
+                ));
+            }
+            None => {
+                return Err(format!(
+                    "workflow node {node_id} config.{path} must be a string recovery policy"
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_edges(

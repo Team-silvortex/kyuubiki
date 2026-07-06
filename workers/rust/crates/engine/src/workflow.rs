@@ -12,7 +12,9 @@ use kyuubiki_protocol::{
     WorkflowProgressEvent,
 };
 use serde_json::Value;
+use std::any::Any;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
@@ -25,6 +27,40 @@ fn incoming_artifact_keys(
         .map(|edge| artifact_key(&edge.from.node, &edge.from.port))
         .filter(|key| artifacts.contains_key(key))
         .collect()
+}
+
+fn node_allows_skip_on_error(config: Option<&Value>) -> bool {
+    let Some(config) = config else {
+        return false;
+    };
+    config
+        .get("on_error")
+        .or_else(|| config.pointer("/recovery/on_error"))
+        .and_then(Value::as_str)
+        .is_some_and(|value| value == "skip")
+}
+
+pub(crate) fn run_with_panic_boundary<F>(node_id: &str, run: F) -> Result<(), String>
+where
+    F: FnOnce() -> Result<(), String>,
+{
+    match catch_unwind(AssertUnwindSafe(run)) {
+        Ok(result) => result,
+        Err(payload) => Err(format!(
+            "workflow node {node_id} panicked: {}",
+            panic_payload_message(payload.as_ref())
+        )),
+    }
+}
+
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        return (*message).to_string();
+    }
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    "unknown panic payload".to_string()
 }
 
 fn workflow_progress_event(
@@ -65,8 +101,10 @@ pub fn run_workflow_graph(
         .collect::<HashMap<_, _>>();
     let mut completed = HashSet::new();
     let mut skipped = HashSet::new();
+    let mut failed = HashSet::new();
     let mut ordered_completed = Vec::new();
     let mut ordered_skipped = Vec::new();
+    let mut ordered_failed = Vec::new();
     let mut branch_decisions = Vec::new();
     let mut node_runs = Vec::new();
     let mut artifact_lineage = Vec::new();
@@ -84,7 +122,10 @@ pub fn run_workflow_graph(
         let mut progressed = false;
 
         for node in &graph.nodes {
-            if completed.contains(&node.id) || skipped.contains(&node.id) {
+            if completed.contains(&node.id)
+                || skipped.contains(&node.id)
+                || failed.contains(&node.id)
+            {
                 continue;
             }
 
@@ -114,6 +155,7 @@ pub fn run_workflow_graph(
                 artifacts.contains_key(&key)
                     || completed.contains(&edge.from.node)
                     || skipped.contains(&edge.from.node)
+                    || failed.contains(&edge.from.node)
             });
 
             if node.kind != WorkflowNodeKind::Input && !ready {
@@ -127,10 +169,11 @@ pub fn run_workflow_graph(
                         status: WorkflowNodeRunStatus::Skipped,
                         consumed_artifacts: incoming_artifact_keys(&incoming, &artifacts),
                         produced_artifacts: Vec::new(),
+                        error_message: None,
                     });
                     progress_events.push(workflow_progress_event(
                         JobStatus::Partitioning,
-                        (completed.len() + skipped.len()) as f32 / total_nodes,
+                        (completed.len() + skipped.len() + failed.len()) as f32 / total_nodes,
                         format!("skipped node {}", node.id),
                         Some(&node.id),
                         Some(node.kind),
@@ -142,197 +185,235 @@ pub fn run_workflow_graph(
 
             let consumed_artifacts = incoming_artifact_keys(&incoming, &artifacts);
             let mut produced_artifacts = Vec::new();
+            let artifact_lineage_checkpoint = artifact_lineage.len();
+            let branch_decision_checkpoint = branch_decisions.len();
 
-            match node.kind {
-                WorkflowNodeKind::Input => {
-                    let value =
-                        request
-                            .input_artifacts
-                            .get(&node.id)
-                            .cloned()
-                            .ok_or_else(|| {
-                                format!("missing workflow input artifact for node {}", node.id)
+            let run_result = run_with_panic_boundary(&node.id, || -> Result<(), String> {
+                match node.kind {
+                    WorkflowNodeKind::Input => {
+                        let value =
+                            request
+                                .input_artifacts
+                                .get(&node.id)
+                                .cloned()
+                                .ok_or_else(|| {
+                                    format!("missing workflow input artifact for node {}", node.id)
+                                })?;
+                        for output in &node.outputs {
+                            let key = artifact_key(&node.id, &output.id);
+                            artifacts.insert(key.clone(), value.clone());
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: output.id.clone(),
+                                source_artifacts: Vec::new(),
+                            });
+                        }
+                    }
+                    WorkflowNodeKind::Solve => {
+                        let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                            format!("workflow solve node {} is missing operator_id", node.id)
+                        })?;
+                        let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                        let output_value = run_solve_operator(operator_id, payload)?;
+                        validate_workflow_artifact_budget(
+                            &format!("workflow node {} output", node.id),
+                            &output_value,
+                        )?;
+                        for output in &node.outputs {
+                            let key = artifact_key(&node.id, &output.id);
+                            artifacts.insert(key.clone(), output_value.clone());
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: output.id.clone(),
+                                source_artifacts: consumed_artifacts.clone(),
+                            });
+                        }
+                    }
+                    WorkflowNodeKind::Transform => {
+                        let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                            format!("workflow transform node {} is missing operator_id", node.id)
+                        })?;
+                        let payload = if transform_operator_accepts_partial_inputs(operator_id) {
+                            resolve_first_available_input_payload(node, &incoming, &artifacts)?
+                        } else if transform_operator_requires_port_map(operator_id) {
+                            resolve_named_input_payloads(node, &incoming, &artifacts)?
+                        } else {
+                            resolve_single_input_payload(node, &incoming, &artifacts)?
+                        };
+                        let output_value = run_transform_operator(
+                            operator_id,
+                            payload,
+                            node.config.clone().unwrap_or(Value::Null),
+                        )?;
+                        validate_workflow_artifact_budget(
+                            &format!("workflow node {} output", node.id),
+                            &output_value,
+                        )?;
+                        for output in &node.outputs {
+                            let key = artifact_key(&node.id, &output.id);
+                            artifacts.insert(key.clone(), output_value.clone());
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: output.id.clone(),
+                                source_artifacts: consumed_artifacts.clone(),
+                            });
+                        }
+                    }
+                    WorkflowNodeKind::Extract => {
+                        let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                            format!("workflow extract node {} is missing operator_id", node.id)
+                        })?;
+                        let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                        let output_value = run_extract_operator(
+                            operator_id,
+                            payload,
+                            node.config.clone().unwrap_or(Value::Null),
+                        )?;
+                        validate_workflow_artifact_budget(
+                            &format!("workflow node {} output", node.id),
+                            &output_value,
+                        )?;
+                        for output in &node.outputs {
+                            let key = artifact_key(&node.id, &output.id);
+                            artifacts.insert(key.clone(), output_value.clone());
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: output.id.clone(),
+                                source_artifacts: consumed_artifacts.clone(),
+                            });
+                        }
+                    }
+                    WorkflowNodeKind::Export => {
+                        let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                            format!("workflow export node {} is missing operator_id", node.id)
+                        })?;
+                        let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                        let output_value = run_export_operator(
+                            operator_id,
+                            payload,
+                            node.config.clone().unwrap_or(Value::Null),
+                        )?;
+                        validate_workflow_artifact_budget(
+                            &format!("workflow node {} output", node.id),
+                            &output_value,
+                        )?;
+                        for output in &node.outputs {
+                            let key = artifact_key(&node.id, &output.id);
+                            artifacts.insert(key.clone(), output_value.clone());
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: output.id.clone(),
+                                source_artifacts: consumed_artifacts.clone(),
+                            });
+                        }
+                    }
+                    WorkflowNodeKind::Output => {
+                        for edge in incoming {
+                            let source_key = artifact_key(&edge.from.node, &edge.from.port);
+                            let value = artifacts.get(&source_key).cloned().ok_or_else(|| {
+                                format!(
+                                    "workflow output node {} could not read {}.{}",
+                                    node.id, edge.from.node, edge.from.port
+                                )
                             })?;
-                    for output in &node.outputs {
-                        let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), value.clone());
-                        produced_artifacts.push(key.clone());
-                        artifact_lineage.push(WorkflowArtifactLineage {
-                            artifact_key: key,
-                            node_id: node.id.clone(),
-                            port_id: output.id.clone(),
-                            source_artifacts: Vec::new(),
-                        });
+                            let key = artifact_key(&node.id, &edge.to.port);
+                            artifacts.insert(key.clone(), value);
+                            produced_artifacts.push(key.clone());
+                            artifact_lineage.push(WorkflowArtifactLineage {
+                                artifact_key: key,
+                                node_id: node.id.clone(),
+                                port_id: edge.to.port.clone(),
+                                source_artifacts: vec![source_key],
+                            });
+                        }
                     }
-                }
-                WorkflowNodeKind::Solve => {
-                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
-                        format!("workflow solve node {} is missing operator_id", node.id)
-                    })?;
-                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
-                    let output_value = run_solve_operator(operator_id, payload)?;
-                    validate_workflow_artifact_budget(
-                        &format!("workflow node {} output", node.id),
-                        &output_value,
-                    )?;
-                    for output in &node.outputs {
-                        let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
+                    WorkflowNodeKind::Condition => {
+                        let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                        let predicate_result = evaluate_condition_operator(
+                            &payload,
+                            &node.config.clone().unwrap_or(Value::Null),
+                        )?;
+                        let chosen_output = node
+                            .outputs
+                            .iter()
+                            .find(|output| {
+                                (predicate_result
+                                    && (output.id == "if_true" || output.id == "true"))
+                                    || (!predicate_result
+                                        && (output.id == "if_false" || output.id == "false"))
+                            })
+                            .or_else(|| {
+                                if predicate_result {
+                                    node.outputs.first()
+                                } else {
+                                    node.outputs.get(1).or_else(|| node.outputs.first())
+                                }
+                            })
+                            .ok_or_else(|| {
+                                format!(
+                                    "workflow condition node {} requires branch output ports",
+                                    node.id
+                                )
+                            })?;
+                        let key = artifact_key(&node.id, &chosen_output.id);
+                        artifacts.insert(key.clone(), payload);
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
                             artifact_key: key,
                             node_id: node.id.clone(),
-                            port_id: output.id.clone(),
+                            port_id: chosen_output.id.clone(),
                             source_artifacts: consumed_artifacts.clone(),
                         });
-                    }
-                }
-                WorkflowNodeKind::Transform => {
-                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
-                        format!("workflow transform node {} is missing operator_id", node.id)
-                    })?;
-                    let payload = if transform_operator_accepts_partial_inputs(operator_id) {
-                        resolve_first_available_input_payload(node, &incoming, &artifacts)?
-                    } else if transform_operator_requires_port_map(operator_id) {
-                        resolve_named_input_payloads(node, &incoming, &artifacts)?
-                    } else {
-                        resolve_single_input_payload(node, &incoming, &artifacts)?
-                    };
-                    let output_value = run_transform_operator(
-                        operator_id,
-                        payload,
-                        node.config.clone().unwrap_or(Value::Null),
-                    )?;
-                    validate_workflow_artifact_budget(
-                        &format!("workflow node {} output", node.id),
-                        &output_value,
-                    )?;
-                    for output in &node.outputs {
-                        let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
-                        produced_artifacts.push(key.clone());
-                        artifact_lineage.push(WorkflowArtifactLineage {
-                            artifact_key: key,
+                        branch_decisions.push(WorkflowBranchDecision {
                             node_id: node.id.clone(),
-                            port_id: output.id.clone(),
-                            source_artifacts: consumed_artifacts.clone(),
+                            chosen_output: chosen_output.id.clone(),
+                            predicate_result,
                         });
                     }
                 }
-                WorkflowNodeKind::Extract => {
-                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
-                        format!("workflow extract node {} is missing operator_id", node.id)
-                    })?;
-                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
-                    let output_value = run_extract_operator(
-                        operator_id,
-                        payload,
-                        node.config.clone().unwrap_or(Value::Null),
-                    )?;
-                    validate_workflow_artifact_budget(
-                        &format!("workflow node {} output", node.id),
-                        &output_value,
-                    )?;
-                    for output in &node.outputs {
-                        let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
-                        produced_artifacts.push(key.clone());
-                        artifact_lineage.push(WorkflowArtifactLineage {
-                            artifact_key: key,
-                            node_id: node.id.clone(),
-                            port_id: output.id.clone(),
-                            source_artifacts: consumed_artifacts.clone(),
-                        });
-                    }
+                Ok(())
+            });
+
+            if let Err(error) = run_result {
+                for key in &produced_artifacts {
+                    artifacts.remove(key);
                 }
-                WorkflowNodeKind::Export => {
-                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
-                        format!("workflow export node {} is missing operator_id", node.id)
-                    })?;
-                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
-                    let output_value = run_export_operator(
-                        operator_id,
-                        payload,
-                        node.config.clone().unwrap_or(Value::Null),
-                    )?;
-                    validate_workflow_artifact_budget(
-                        &format!("workflow node {} output", node.id),
-                        &output_value,
-                    )?;
-                    for output in &node.outputs {
-                        let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
-                        produced_artifacts.push(key.clone());
-                        artifact_lineage.push(WorkflowArtifactLineage {
-                            artifact_key: key,
-                            node_id: node.id.clone(),
-                            port_id: output.id.clone(),
-                            source_artifacts: consumed_artifacts.clone(),
-                        });
-                    }
-                }
-                WorkflowNodeKind::Output => {
-                    for edge in incoming {
-                        let source_key = artifact_key(&edge.from.node, &edge.from.port);
-                        let value = artifacts.get(&source_key).cloned().ok_or_else(|| {
-                            format!(
-                                "workflow output node {} could not read {}.{}",
-                                node.id, edge.from.node, edge.from.port
-                            )
-                        })?;
-                        let key = artifact_key(&node.id, &edge.to.port);
-                        artifacts.insert(key.clone(), value);
-                        produced_artifacts.push(key.clone());
-                        artifact_lineage.push(WorkflowArtifactLineage {
-                            artifact_key: key,
-                            node_id: node.id.clone(),
-                            port_id: edge.to.port.clone(),
-                            source_artifacts: vec![source_key],
-                        });
-                    }
-                }
-                WorkflowNodeKind::Condition => {
-                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
-                    let predicate_result = evaluate_condition_operator(
-                        &payload,
-                        &node.config.clone().unwrap_or(Value::Null),
-                    )?;
-                    let chosen_output = node
-                        .outputs
-                        .iter()
-                        .find(|output| {
-                            (predicate_result && (output.id == "if_true" || output.id == "true"))
-                                || (!predicate_result
-                                    && (output.id == "if_false" || output.id == "false"))
-                        })
-                        .or_else(|| {
-                            if predicate_result {
-                                node.outputs.first()
-                            } else {
-                                node.outputs.get(1).or_else(|| node.outputs.first())
-                            }
-                        })
-                        .ok_or_else(|| {
-                            format!(
-                                "workflow condition node {} requires branch output ports",
-                                node.id
-                            )
-                        })?;
-                    let key = artifact_key(&node.id, &chosen_output.id);
-                    artifacts.insert(key.clone(), payload);
-                    produced_artifacts.push(key.clone());
-                    artifact_lineage.push(WorkflowArtifactLineage {
-                        artifact_key: key,
+                artifact_lineage.truncate(artifact_lineage_checkpoint);
+                branch_decisions.truncate(branch_decision_checkpoint);
+
+                if node_allows_skip_on_error(node.config.as_ref()) {
+                    failed.insert(node.id.clone());
+                    ordered_failed.push(node.id.clone());
+                    node_runs.push(WorkflowNodeRunTrace {
                         node_id: node.id.clone(),
-                        port_id: chosen_output.id.clone(),
-                        source_artifacts: consumed_artifacts.clone(),
+                        kind: node.kind,
+                        operator_id: node.operator_id.clone(),
+                        status: WorkflowNodeRunStatus::Failed,
+                        consumed_artifacts,
+                        produced_artifacts: Vec::new(),
+                        error_message: Some(error.clone()),
                     });
-                    branch_decisions.push(WorkflowBranchDecision {
-                        node_id: node.id.clone(),
-                        chosen_output: chosen_output.id.clone(),
-                        predicate_result,
-                    });
+                    progress_events.push(workflow_progress_event(
+                        JobStatus::Partitioning,
+                        (completed.len() + skipped.len() + failed.len()) as f32 / total_nodes,
+                        format!("recovered node {} failure: {}", node.id, error),
+                        Some(&node.id),
+                        Some(node.kind),
+                    ));
+                    progressed = true;
+                    continue;
                 }
+                return Err(format!("workflow node {} failed: {}", node.id, error));
             }
 
             completed.insert(node.id.clone());
@@ -344,10 +425,11 @@ pub fn run_workflow_graph(
                 status: WorkflowNodeRunStatus::Completed,
                 consumed_artifacts,
                 produced_artifacts,
+                error_message: None,
             });
             progress_events.push(workflow_progress_event(
                 JobStatus::Solving,
-                (completed.len() + skipped.len()) as f32 / total_nodes,
+                (completed.len() + skipped.len() + failed.len()) as f32 / total_nodes,
                 format!("completed node {}", node.id),
                 Some(&node.id),
                 Some(node.kind),
@@ -355,14 +437,18 @@ pub fn run_workflow_graph(
             progressed = true;
         }
 
-        if completed.len() + skipped.len() == graph.nodes.len() {
+        if completed.len() + skipped.len() + failed.len() == graph.nodes.len() {
             break;
         }
         if !progressed {
             let pending = graph
                 .nodes
                 .iter()
-                .filter(|node| !completed.contains(&node.id) && !skipped.contains(&node.id))
+                .filter(|node| {
+                    !completed.contains(&node.id)
+                        && !skipped.contains(&node.id)
+                        && !failed.contains(&node.id)
+                })
                 .map(|node| node.id.clone())
                 .collect::<Vec<_>>();
             return Err(format!(
@@ -397,6 +483,7 @@ pub fn run_workflow_graph(
         workflow_id: graph.id,
         completed_nodes: ordered_completed,
         skipped_nodes: ordered_skipped,
+        failed_nodes: ordered_failed,
         progress_events,
         branch_decisions,
         node_runs,

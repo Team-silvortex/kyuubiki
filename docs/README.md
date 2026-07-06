@@ -111,6 +111,9 @@ Then branch by intent:
 - `material-research-roadmap.md`
   Reliability roadmap for moving material studies from runnable prototypes to
   reproducible screening, review, and eventual qualification workflows.
+- `automated-material-research-example.md`
+  First executable heat-spreader material research loop with real solver
+  outputs, optimization metrics, and a machine-checkable evidence artifact.
 - `material-score-contract.md`
   Cross-runtime result contract for material candidate scoring, including
   criteria, ranges, feasibility policy, ranking semantics, and stable errors.
@@ -331,6 +334,6 @@ Then branch by intent:
 - Rust solver/agent work:
   `philosophy.md` -> `system-overview.md` -> `project-architecture-organization.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
 - Material research work:
-  `material-research-roadmap.md` -> `headless-sdks.md` -> `accuracy-plan.md` -> `workflow-dataset.md` -> `operator-sdk.md`
+  `material-research-roadmap.md` -> `automated-material-research-example.md` -> `headless-sdks.md` -> `accuracy-plan.md` -> `workflow-dataset.md` -> `operator-sdk.md`
 - Packaging/release work:
   `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `commercial-readiness-2.0.md` -> `update-catalog.html`
