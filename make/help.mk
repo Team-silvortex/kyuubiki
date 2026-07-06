@@ -63,6 +63,8 @@ help:
 	@echo "  make capture-material-research-example Run the heat-spreader automated material research example to OUT=tmp/material-research-example.json"
 	@echo "  make check-material-research-example Verify the automated material research example from IN=tmp/material-research-example.json"
 	@echo "  make verify-material-research-example Capture and verify the automated material research example"
+	@echo "  make remote-material-research-example Sync to lab and run the material research example plus PROFILE=100k release benchmark"
+	@echo "  make remote-material-research-summary Summarize retained remote material benchmark evidence under tmp/"
 	@echo "  make check-operator-reliability Verify physics-coverage operator reliability evidence"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"

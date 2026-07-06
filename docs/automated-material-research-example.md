@@ -49,6 +49,33 @@ By default both commands use:
 
 The output is intentionally under `tmp/` and should not be committed directly.
 
+## Remote Lab Run
+
+Run the same example on the lab machine, then add a larger release benchmark:
+
+```sh
+make remote-material-research-example
+```
+
+The remote runner:
+
+- syncs the current working tree to `.kyuubiki-remote-runs/material-research-example`
+- excludes local build output, dependency folders, `tmp/`, and `.git/`
+- runs `make verify-material-research-example` on the remote host
+- runs the material exploration CLI tests
+- runs `kyuubiki-benchmark` with `PROFILE=100k`, `MATRIX=compound-core`, and `REPEAT=1`
+- pulls JSON evidence back under `tmp/remote-material-research/`
+
+Override the scale without changing the script:
+
+```sh
+PROFILE=400k MATRIX=thermal-core REPEAT=1 make remote-material-research-example
+```
+
+The runner requires an existing SSH key or host config. It does not store
+credentials, and `rsync --delete` is scoped to the dedicated remote scratch
+directory only.
+
 ## Study
 
 The example runs `material_heat_spreader_screening`.

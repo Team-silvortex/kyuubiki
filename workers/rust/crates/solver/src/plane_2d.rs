@@ -1,10 +1,11 @@
 use std::time::Instant;
 
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::plane_2d_math::{
     PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element,
     precompute_plane_triangle_element_from_nodes, signed_triangle_area,
 };
+use crate::plane_2d_profile::{profile_plane_displacements, solve_plane_displacements};
 use kyuubiki_protocol::{
     PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
@@ -187,14 +188,24 @@ fn solve_plane_quad_2d_internal(
 
     let triangle_request = to_triangle_request(request);
     stage_started = Instant::now();
-    let displacements =
-        solve_plane_displacements(&triangle_request, &global_stiffness, &force_vector)?;
+    let displacement_profile =
+        profile_plane_displacements(&triangle_request, &global_stiffness, &force_vector)?;
+    let displacements = displacement_profile.displacements;
     push_plane_quad_stage(
         &mut stages,
         collect_stages,
         "solve_system",
         stage_started.elapsed(),
     );
+    if collect_stages {
+        stages.extend(displacement_profile.stages.into_iter().map(|stage| {
+            PlaneQuadProfileStage {
+                label: stage.label,
+                rss_kib: stage.rss_kib,
+                elapsed_ms: stage.elapsed_ms,
+            }
+        }));
+    }
 
     stage_started = Instant::now();
     let nodes = build_plane_nodes(&triangle_request, &displacements);
@@ -424,33 +435,6 @@ fn precompute_plane_quad_element(
         first: precompute_plane_triangle_element_from_nodes(&request.nodes, &first)?,
         second: precompute_plane_triangle_element_from_nodes(&request.nodes, &second)?,
     })
-}
-
-fn solve_plane_displacements(
-    request: &SolvePlaneTriangle2dRequest,
-    global_stiffness: &SparseMatrix,
-    force_vector: &[f64],
-) -> Result<Vec<f64>, String> {
-    let constrained = request
-        .nodes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, node)| {
-            [
-                node.fix_x.then_some(index * 2),
-                node.fix_y.then_some(index * 2 + 1),
-            ]
-        })
-        .flatten()
-        .collect::<Vec<_>>();
-    let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(global_stiffness, force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
-    let mut displacements = vec![0.0; request.nodes.len() * 2];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
-    Ok(displacements)
 }
 
 fn build_plane_nodes(

@@ -7,6 +7,7 @@
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
+.PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
 .PHONY: audit-dependencies architecture-check verify
 
@@ -69,6 +70,12 @@ check-material-research-example:
 verify-material-research-example:
 	@$(MAKE) capture-material-research-example OUT=$${OUT:-tmp/material-research-example.json}
 	@$(MAKE) check-material-research-example IN=$${OUT:-tmp/material-research-example.json}
+
+remote-material-research-example:
+	@node ./scripts/run-remote-material-research-example.mjs --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
+
+remote-material-research-summary:
+	@node ./scripts/build-remote-material-benchmark-summary.mjs
 
 check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline
 	@node ./scripts/check-operator-reliability.mjs

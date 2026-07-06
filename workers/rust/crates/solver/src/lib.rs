@@ -24,6 +24,7 @@ mod modal_math;
 mod nonlinear_spring_1d;
 mod plane_2d;
 mod plane_2d_math;
+mod plane_2d_profile;
 mod solid_tetra_3d;
 mod spring;
 mod stokes_flow_plane_2d;
