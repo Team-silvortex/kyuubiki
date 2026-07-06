@@ -95,6 +95,74 @@ fn thermal_shock_operator_task_ir() -> serde_json::Value {
     task
 }
 
+fn transform_operator_task_ir(
+    task_id: &str,
+    operator_id: &str,
+    family: &str,
+    input_artifact: serde_json::Value,
+    config: serde_json::Value,
+) -> serde_json::Value {
+    let mut task = serde_json::json!({
+        "schema_version": "kyuubiki.operator-task-ir/v1",
+        "task_id": task_id,
+        "operator": {
+            "id": operator_id,
+            "family": family,
+            "kind": "transform"
+        },
+        "descriptor_authoring": {
+            "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+            "mode": "rust_native",
+            "runtime": "rust",
+            "source": "operator_task_ir_rpc_test",
+            "hot_reloadable": false,
+            "execution_language": "language_neutral"
+        },
+        "node": {},
+        "input_artifact": input_artifact,
+        "config": config,
+        "execution_program": {
+            "schema_version": "kyuubiki.operator-execution-program/v1",
+            "program_id": operator_id,
+            "program_family": family,
+            "program_kind": "transform",
+            "operator_category_id": null,
+            "package_ref": null,
+            "package_version": "library-managed",
+            "package_integrity": null,
+            "runtime_protocol": "kyuubiki.operator-execution/v1",
+            "abi": {
+                "kind": "operator_task",
+                "input_encoding": "json",
+                "output_encoding": "json"
+            },
+            "entrypoint": {
+                "kind": "operator_id",
+                "name": operator_id,
+                "operator_kind": "transform"
+            },
+            "bindings": {
+                "input_artifact": "task.input_artifact",
+                "config": "task.config",
+                "output_artifact": "task.output_artifact"
+            },
+            "node_binding": { "node_id": null, "input_ports": [], "output_ports": [] }
+        },
+        "dataset_contract": {},
+        "orchestration_context": {},
+        "runtime_hints": {
+            "authority_mode": "central_operator_library",
+            "execution_mode": "orchestra_fetch",
+            "cache_scope": "job",
+            "agent_fetchable": true,
+            "operator_kind": "transform"
+        }
+    });
+    let digest = compute_operator_task_digest(&task).expect("transform task should digest");
+    task["integrity"] = serde_json::json!({ "task_digest": digest });
+    task
+}
+
 #[test]
 fn describes_operator_task_ir_rpc_method() {
     let request = RpcRequest {
@@ -250,6 +318,163 @@ fn operator_task_runtime_executes_agent_native_material_thermal_shock() {
     assert_eq!(
         result["result"]["material_thermal_shock_assessments"][1]["thermal_shock_status"],
         "fail"
+    );
+}
+
+#[test]
+fn operator_task_runtime_executes_agent_native_material_margins() {
+    let task = transform_operator_task_ir(
+        "agent-native-material-margins",
+        "transform.evaluate_material_margins",
+        "material_margin",
+        serde_json::json!({
+            "max_stress": 225.0,
+            "max_temperature": 80.0
+        }),
+        serde_json::json!({
+            "limits": {
+                "max_stress": { "limit": 200.0 },
+                "max_temperature": { "limit": 120.0 }
+            }
+        }),
+    );
+
+    let result = run_operator_task_ir(&serde_json::json!({
+        "mode": OPERATOR_TASK_MODE_EXECUTE,
+        "task_ir": task
+    }))
+    .expect("agent-native material margins should execute");
+
+    assert_eq!(result["operator_task_ir_status"], "executed");
+    assert_eq!(result["result"]["material_constraint_count"], 2);
+    assert_eq!(result["result"]["material_violation_count"], 1);
+    assert_eq!(result["result"]["material_status"], "fail");
+    assert_eq!(result["result"]["material_critical_metric"], "max_stress");
+    assert_eq!(result["result"]["material_failure_index"], 1.125);
+}
+
+#[test]
+fn operator_task_runtime_executes_agent_native_material_ranking() {
+    let task = transform_operator_task_ir(
+        "agent-native-material-ranking",
+        "transform.rank_material_candidates",
+        "material_candidate_rank",
+        serde_json::json!({
+            "candidates": {
+                "aluminum": {
+                    "material_status": "pass",
+                    "material_violation_count": 0,
+                    "material_failure_index": 0.82,
+                    "material_safety_factor": 1.21,
+                    "material_critical_metric": "max_stress"
+                },
+                "titanium": {
+                    "material_status": "pass",
+                    "material_violation_count": 0,
+                    "material_failure_index": 0.55,
+                    "material_safety_factor": 1.81,
+                    "material_critical_metric": "max_temperature"
+                },
+                "polymer": {
+                    "material_status": "fail",
+                    "material_violation_count": 1,
+                    "material_failure_index": 1.4,
+                    "material_safety_factor": 0.71,
+                    "material_critical_metric": "max_temperature"
+                }
+            }
+        }),
+        serde_json::json!({}),
+    );
+
+    let result = run_operator_task_ir(&serde_json::json!({
+        "mode": OPERATOR_TASK_MODE_EXECUTE,
+        "task_ir": task
+    }))
+    .expect("agent-native material ranking should execute");
+
+    assert_eq!(result["operator_task_ir_status"], "executed");
+    assert_eq!(result["result"]["material_candidate_count"], 3);
+    assert_eq!(result["result"]["material_feasible_count"], 2);
+    assert_eq!(result["result"]["material_best_candidate_id"], "titanium");
+    assert_eq!(
+        result["result"]["material_failure_reasons"]["max_temperature"],
+        1
+    );
+    assert_eq!(
+        result["result"]["material_rankings"][0]["candidate_id"],
+        "titanium"
+    );
+}
+
+#[test]
+fn operator_task_runtime_executes_agent_native_material_scoring() {
+    let task = transform_operator_task_ir(
+        "agent-native-material-scoring",
+        "transform.score_material_candidates",
+        "material_candidate_score",
+        serde_json::json!({
+            "candidates": {
+                "aluminum": {
+                    "mass": 1.8,
+                    "cost": 4.0,
+                    "material_safety_factor": 1.3,
+                    "material_status": "pass"
+                },
+                "titanium": {
+                    "mass": 2.4,
+                    "cost": 10.0,
+                    "material_safety_factor": 2.0,
+                    "material_status": "pass"
+                },
+                "polymer": {
+                    "mass": 1.0,
+                    "cost": 2.0,
+                    "material_safety_factor": 0.7,
+                    "material_status": "fail"
+                }
+            }
+        }),
+        serde_json::json!({
+            "criteria": [
+                { "field": "mass", "goal": "min", "weight": 0.35 },
+                { "field": "cost", "goal": "min", "weight": 0.15 },
+                { "field": "material_safety_factor", "goal": "max", "weight": 0.5 }
+            ]
+        }),
+    );
+
+    let result = run_operator_task_ir(&serde_json::json!({
+        "mode": OPERATOR_TASK_MODE_EXECUTE,
+        "task_ir": task
+    }))
+    .expect("agent-native material scoring should execute");
+
+    assert_eq!(result["operator_task_ir_status"], "executed");
+    assert_eq!(result["result"]["material_score_candidate_count"], 3);
+    assert_eq!(result["result"]["material_score_feasible_count"], 2);
+    assert_eq!(
+        result["result"]["material_score_best_candidate_id"],
+        "titanium"
+    );
+    assert_eq!(
+        result["result"]["material_score_rankings"][0]["candidate_id"],
+        "titanium"
+    );
+    assert_eq!(
+        result["result"]["material_score_rankings"][1]["candidate_id"],
+        "aluminum"
+    );
+    assert_eq!(
+        result["result"]["material_score_rankings"][2]["candidate_id"],
+        "polymer"
+    );
+    assert_eq!(
+        result["result"]["material_score_rankings"][0]["criteria_breakdown"]
+            .as_array()
+            .expect("criteria breakdown should be an array")
+            .len(),
+        3
     );
 }
 
