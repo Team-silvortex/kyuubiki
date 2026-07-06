@@ -17,6 +17,7 @@ const CHECKED_EXTENSIONS = new Set([
   ".json",
   ".jsx",
   ".md",
+  ".mk",
   ".mjs",
   ".py",
   ".rs",

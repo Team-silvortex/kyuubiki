@@ -1,11 +1,11 @@
 use std::time::Instant;
 
-use kyuubiki_engine::{solve, EngineSolveRequest};
+use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::{
-    profile_heat_plane_quad_2d, profile_plane_quad_2d, profile_truss_2d_with_options,
-    SpdSolveOptions,
+    SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
+    profile_truss_2d_with_options,
 };
 
 use crate::models::{

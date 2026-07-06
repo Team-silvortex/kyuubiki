@@ -440,10 +440,12 @@ fn runs_electrostatic_to_heat_to_thermo_summary_workflow_graph() {
             .expect("bridged thermo model"),
     )
     .expect("thermo model should decode");
-    assert!(thermo_model
-        .nodes
-        .iter()
-        .any(|node| node.temperature_delta > 30.0));
+    assert!(
+        thermo_model
+            .nodes
+            .iter()
+            .any(|node| node.temperature_delta > 30.0)
+    );
     let thermo_diagnostics = run
         .artifacts
         .get("bridge_temperature.thermo_model")

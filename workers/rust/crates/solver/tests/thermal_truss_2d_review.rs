@@ -50,11 +50,7 @@ fn thermal_truss_2d_review_bundle_checks_mixed_temperature_load_and_node_balance
             12.0e-6 * element.average_temperature_delta,
             1.0e-12,
         );
-        assert_close(
-            element.stress,
-            70.0e9 * element.mechanical_strain,
-            1.0e-12,
-        );
+        assert_close(element.stress, 70.0e9 * element.mechanical_strain, 1.0e-12);
     }
 
     let (internal_x, internal_y) = loaded_node_internal_force(&request, &result.elements, 2);
@@ -80,7 +76,11 @@ fn loaded_node_internal_force(
         let length = (dx * dx + dy * dy).sqrt();
         let c = dx / length;
         let s = dy / length;
-        let sign = if element.node_i == node_index { 1.0 } else { -1.0 };
+        let sign = if element.node_i == node_index {
+            1.0
+        } else {
+            -1.0
+        };
         force_x += sign * element.axial_force * c;
         force_y += sign * element.axial_force * s;
     }

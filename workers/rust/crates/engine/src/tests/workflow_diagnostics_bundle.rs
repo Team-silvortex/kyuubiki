@@ -95,10 +95,14 @@ fn composes_diagnostics_bundle_through_transform_executor() {
     let fields = bundle["bundle_numeric_fields"]
         .as_array()
         .expect("bundle numeric fields should be an array");
-    assert!(fields
-        .iter()
-        .any(|field| field.as_str() == Some("thermal_temperature_max")));
-    assert!(fields
-        .iter()
-        .any(|field| field.as_str() == Some("thermo_stress_peak")));
+    assert!(
+        fields
+            .iter()
+            .any(|field| field.as_str() == Some("thermal_temperature_max"))
+    );
+    assert!(
+        fields
+            .iter()
+            .any(|field| field.as_str() == Some("thermo_stress_peak"))
+    );
 }

@@ -1,7 +1,7 @@
 use crate::{
-    built_in_operator_descriptors, chunk_result, describe_built_in_operator,
+    EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
     is_supported_workflow_operator, solve, supported_workflow_operator_ids,
-    workflow_solve_executor::run_solve_operator, EngineSolveRequest,
+    workflow_solve_executor::run_solve_operator,
 };
 use kyuubiki_protocol::{
     AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput,
@@ -180,17 +180,21 @@ fn chunks_solid_tetra_nodes_and_elements() {
 fn exposes_verified_built_in_operator_descriptors() {
     let descriptors = built_in_operator_descriptors();
     assert!(descriptors.len() >= 4);
-    assert!(descriptors
-        .iter()
-        .any(|descriptor| descriptor.id == "solve.frame_3d"));
+    assert!(
+        descriptors
+            .iter()
+            .any(|descriptor| descriptor.id == "solve.frame_3d")
+    );
 
     let descriptor = describe_built_in_operator("solve.thermal_frame_3d").expect("descriptor");
     assert_eq!(descriptor.kind, OperatorKind::Solver);
     assert_eq!(descriptor.family, "thermal_frame_3d");
-    assert!(descriptor
-        .capability_tags
-        .iter()
-        .any(|tag| tag == "verified"));
+    assert!(
+        descriptor
+            .capability_tags
+            .iter()
+            .any(|tag| tag == "verified")
+    );
     assert!(descriptors.iter().any(|descriptor| {
         descriptor.id == "bridge.electrostatic_field_to_heat_quad_2d"
             && descriptor.kind == OperatorKind::WorkflowBridge

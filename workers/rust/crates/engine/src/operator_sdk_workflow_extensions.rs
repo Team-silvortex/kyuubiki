@@ -12,7 +12,7 @@ mod operator_sdk_transport_transforms;
 
 use crate::catalog::describe_built_in_operator;
 use crate::magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_acoustic_transforms::register_acoustic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_cfd_transforms::{
     register_cfd_extract_extensions, register_cfd_transform_extensions,

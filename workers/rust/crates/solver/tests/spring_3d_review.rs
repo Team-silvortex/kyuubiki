@@ -10,7 +10,9 @@ fn spring_3d_review_bundle_checks_cage_supports_top_displacement_and_member_forc
             node("base-a", 0.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
             node("base-b", 1.2, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
             node("base-c", 0.0, 1.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
-            node("top", 0.45, 0.35, 1.1, false, false, false, 250.0, 0.0, -1100.0),
+            node(
+                "top", 0.45, 0.35, 1.1, false, false, false, 250.0, 0.0, -1100.0,
+            ),
         ],
         elements: vec![
             element("leg-a", 0, 3, 18_000.0),

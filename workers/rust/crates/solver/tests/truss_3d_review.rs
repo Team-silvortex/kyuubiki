@@ -38,7 +38,11 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
     assert_close(loaded.ux, 2.897_530_666_749_509e-7, 1.0e-12);
     assert_close(loaded.uy, 2.897_530_666_749_509e-7, 1.0e-12);
     assert_close(loaded.uz, -0.000_001_525_842_024_648_877_3, 1.0e-12);
-    assert_close(result.max_displacement, 0.000_001_579_907_454_086_998_8, 1.0e-12);
+    assert_close(
+        result.max_displacement,
+        0.000_001_579_907_454_086_998_8,
+        1.0e-12,
+    );
     assert_close(result.max_stress, 74_386.378_681_404_68, 1.0e-9);
 
     for element in &result.elements {
@@ -84,7 +88,11 @@ fn loaded_node_internal_force(
         let l = dx / length;
         let m = dy / length;
         let n = dz / length;
-        let sign = if element.node_i == node_index { 1.0 } else { -1.0 };
+        let sign = if element.node_i == node_index {
+            1.0
+        } else {
+            -1.0
+        };
         force_x += sign * element.axial_force * l;
         force_y += sign * element.axial_force * m;
         force_z += sign * element.axial_force * n;

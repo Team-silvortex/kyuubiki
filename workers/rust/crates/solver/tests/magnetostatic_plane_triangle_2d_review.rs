@@ -40,9 +40,15 @@ fn magnetostatic_plane_triangle_2d_review_bundle_checks_source_patch_flux_and_en
 
     let element = &result.elements[0];
     assert_close(element.area, 0.5);
-    assert_close(element.average_vector_potential, expected_vector_potential / 3.0);
+    assert_close(
+        element.average_vector_potential,
+        expected_vector_potential / 3.0,
+    );
     assert_close(element.vector_potential_gradient_x, 0.0);
-    assert_close(element.vector_potential_gradient_y, expected_vector_potential);
+    assert_close(
+        element.vector_potential_gradient_y,
+        expected_vector_potential,
+    );
     assert_close(element.magnetic_flux_density_x, expected_vector_potential);
     assert_close(element.magnetic_flux_density_y, 0.0);
     assert_close(element.magnetic_field_strength_x, 100.0);

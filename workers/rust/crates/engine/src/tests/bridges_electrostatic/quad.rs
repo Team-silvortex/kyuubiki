@@ -2,7 +2,7 @@ use crate::bridge::{
     bridge_electrostatic_result_to_heat_plane_quad_model,
     resolve_electrostatic_to_heat_bridge_contract,
 };
-use crate::{solve, EngineSolveRequest};
+use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
     AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest,

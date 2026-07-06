@@ -58,13 +58,13 @@ pub use heat_bridge::{
     bridge_heat_result_to_thermal_plane_triangle_model,
 };
 pub use operator_sdk_host::{
-    built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
-    load_external_operator_packages_with_dynamic_host, preflight_external_operator_packages,
     DeferredDynamicLoadActivator, DynamicLibraryOperatorActivator, DynamicOperatorHostSession,
     ExternalOperatorHostConfig, ExternalOperatorHostError, ExternalOperatorLoadReport,
     ExternalOperatorPreflightReport, ExternalOperatorRejectedPackage, ExternalOperatorTrustPolicy,
+    built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
+    load_external_operator_packages_with_dynamic_host, preflight_external_operator_packages,
 };
-pub use operator_sdk_runtime::{built_in_operator_registry, BuiltInOperatorRegistryKind};
+pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 pub use workflow::run_workflow_graph;
 pub use workflow_executor::{
     is_supported_workflow_operator, run_solve_operator, supported_workflow_operator_ids,

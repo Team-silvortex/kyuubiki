@@ -1,0 +1,194 @@
+{
+  "schema_version": "kyuubiki.minimal-industrial-closure/v1",
+  "release_line": "1.15.x -> 1.20.x",
+  "posture": "minimum bounded industrial workflow closure",
+  "exit_statement": "A bounded FEM workflow can be installed, prepared, executed on local or agent-backed runtimes, audited, repeated, updated, and cleaned without hidden UI state or private operational knowledge.",
+  "state_values": [
+    "present",
+    "partial",
+    "missing",
+    "blocked"
+  ],
+  "gates": [
+    {
+      "id": "executable_task_contract",
+      "title": "Executable Task Contract",
+      "minimum_state": "partial",
+      "required": [
+        "workflow graphs lower into language-neutral operator task IR",
+        "TaskIR digests cover executable inputs, config, dataset context, runtime hints, and execution program",
+        "agent-facing execution programs do not depend on Elixir, Phoenix, React, or private UI state",
+        "external operator packages pass host-side admission and workflow security preflight before execution"
+      ],
+      "next_closure_work": [
+        "freeze the 1.16 executable task IR compatibility surface",
+        "add golden examples for Rust-native and Elixir-authored task descriptors",
+        "make package fetch, integrity, dispatch, and result serialization visible in agent execute mode"
+      ],
+      "evidence_docs": [
+        "project-architecture-organization.md",
+        "agent-orchestrator-boundary.md",
+        "operator-task-ir-digest.md",
+        "workflow-graph.md",
+        "workflow-dataset.md"
+      ]
+    },
+    {
+      "id": "operator_reliability",
+      "title": "Operator Reliability",
+      "minimum_state": "partial",
+      "required": [
+        "core solve operators have reliability manifest entries",
+        "release gates distinguish runnable, review-level, and qualification-ready evidence",
+        "critical operators expose limitations, tolerance policy, and benchmark or headless evidence",
+        "workflow output artifacts are validated before becoming runtime state"
+      ],
+      "next_closure_work": [
+        "promote selected mechanical, thermal, electromagnetic, and CFD paths to qualification candidates",
+        "add convergence diagnostics and failure classification to the critical solve path",
+        "retain release evidence bundles for candidate operators"
+      ],
+      "evidence_docs": [
+        "operator-reliability.md",
+        "physics-coverage-map.md",
+        "material-research-roadmap.md",
+        "accuracy-plan.md",
+        "accuracy-baselines.md"
+      ]
+    },
+    {
+      "id": "agent_orchestration_loop",
+      "title": "Agent And Orchestration Loop",
+      "minimum_state": "partial",
+      "required": [
+        "Rust agents self-describe execution capability and authority mode",
+        "one agent cannot ambiguously accept multiple orchestrator authorities",
+        "orchestrated and offline-mesh modes are contractually separate",
+        "agents report watchdog-visible failure reasons for runtime failures"
+      ],
+      "next_closure_work": [
+        "turn agent execute mode from preflight-centered to package-backed execution",
+        "wire installer-managed remote agents into repeatable lab and local tests",
+        "record scheduler, agent, package, and engine versions in run provenance"
+      ],
+      "evidence_docs": [
+        "agent-orchestrator-boundary.md",
+        "agent-control-authority.md",
+        "headless-agent-contract.md",
+        "operator-library-centralization.md",
+        "operations.md"
+      ]
+    },
+    {
+      "id": "installer_runtime_update",
+      "title": "Installer Runtime And Update",
+      "minimum_state": "partial",
+      "required": [
+        "supported platform install paths and managed runtime payloads are visible",
+        "update source, staging, cleanup, and rollback behavior are documented",
+        "remote deployment is installer-owned rather than hidden SSH procedure",
+        "component integrity rules cover required paths and cleanup behavior"
+      ],
+      "next_closure_work": [
+        "make self-host runtime bundles the default deployment path for lab nodes",
+        "connect update catalogs to installer apply and rollback flows",
+        "expand component integrity checks from report generation to repair planning"
+      ],
+      "evidence_docs": [
+        "installer-remote-control.md",
+        "component-integrity-protocol.html",
+        "installation-integrity-contract.html",
+        "toolchain-contract.md",
+        "desktop-release-checklist.md"
+      ]
+    },
+    {
+      "id": "persistence_provenance",
+      "title": "Persistence And Provenance",
+      "minimum_state": "partial",
+      "required": [
+        "workflow, input, output, material, operator, runtime, and agent context can be traced",
+        "snapshots and result bundles have visible lifecycle and cleanup rules",
+        "headless SDK outputs are machine-readable enough for CI and AI-agent loops",
+        "release evidence avoids local absolute paths"
+      ],
+      "next_closure_work": [
+        "standardize immutable run records and project-level result bundle layout",
+        "add replay checks that verify workflow, package, and runtime provenance",
+        "make optimization metrics first-class report fields"
+      ],
+      "evidence_docs": [
+        "workflow-dataset.md",
+        "headless-sdks.md",
+        "material-research-roadmap.md",
+        "commercial-readiness-2.0.md"
+      ]
+    },
+    {
+      "id": "security_and_credentials",
+      "title": "Security And Credentials",
+      "minimum_state": "partial",
+      "required": [
+        "credentials and certificates are not ordinary project files",
+        "remote control behavior is visible and auditable",
+        "operator package and workflow admission fail closed for malformed contracts",
+        "sensitive configuration distinguishes editable values from read-only policy"
+      ],
+      "next_closure_work": [
+        "define platform credential-store adapters for desktop and mobile-fronted control surfaces",
+        "add signed package and signed update source verification",
+        "promote security audit checks from docs to release gates"
+      ],
+      "evidence_docs": [
+        "security.md",
+        "installer-remote-control.md",
+        "component-integrity-protocol.html",
+        "operator-sdk.md"
+      ]
+    },
+    {
+      "id": "workbench_user_loop",
+      "title": "Workbench User Loop",
+      "minimum_state": "partial",
+      "required": [
+        "users have a clear path from project setup to workflow run, result review, report, and snapshot",
+        "Workbench, SDKs, and runtime contracts share the same workflow and result concepts",
+        "UI automation anchors are product-owned and stable",
+        "layout and error recovery stay usable at supported resolutions"
+      ],
+      "next_closure_work": [
+        "make the main workflow path explicit in the Workbench navigation model",
+        "connect project-scoped operator, workflow-template, and DSL-template installation to the same concepts as headless execution",
+        "continue streaming and chunked UI loading for non-hot-path views"
+      ],
+      "evidence_docs": [
+        "ui-automation-contract.html",
+        "frontend-implementation.md",
+        "workflow-graph.md",
+        "headless-sdks.md"
+      ]
+    },
+    {
+      "id": "performance_regression",
+      "title": "Performance And Regression",
+      "minimum_state": "partial",
+      "required": [
+        "benchmark profiles are repeatable through local and remote lanes",
+        "large graph, workflow catalog, and direct mesh paths have retained summaries",
+        "regression reports explain budget and drift rather than only pass or fail",
+        "compute-heavy tests can move to managed lab nodes without local disk pressure"
+      ],
+      "next_closure_work": [
+        "turn 300k and 400k profiles into scheduled remote regression lanes",
+        "add operator-family coverage to benchmark reports",
+        "define minimum release budgets for solver, workflow, SDK, and UI startup paths"
+      ],
+      "evidence_docs": [
+        "testing-and-ci.md",
+        "operations.md",
+        "solver-matrix-optimization-pack.md",
+        "material-research-roadmap.md"
+      ]
+    }
+  ]
+}

@@ -144,9 +144,11 @@ fn ranks_material_candidates_with_partial_summaries() {
         Some(1)
     );
     assert!(ranking.get("material_best_summary").is_none());
-    assert!(ranking["material_rankings"][1]["failure_index"]
-        .as_f64()
-        .is_some_and(f64::is_finite));
+    assert!(
+        ranking["material_rankings"][1]["failure_index"]
+            .as_f64()
+            .is_some_and(f64::is_finite)
+    );
 }
 
 #[test]
@@ -208,12 +210,14 @@ fn extracts_material_pareto_frontier_for_multi_objective_candidates() {
         frontier["material_pareto_dominated"][0]["candidate_id"].as_str(),
         Some("dominated")
     );
-    assert!(frontier["material_pareto_dominated"]
-        .as_array()
-        .expect("dominated should be an array")
-        .iter()
-        .any(|entry| entry["candidate_id"].as_str() == Some("unsafe")
-            && entry["dominated_by"].as_str() == Some("infeasible")));
+    assert!(
+        frontier["material_pareto_dominated"]
+            .as_array()
+            .expect("dominated should be an array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("unsafe")
+                && entry["dominated_by"].as_str() == Some("infeasible"))
+    );
 }
 
 #[test]
@@ -255,9 +259,11 @@ fn composes_material_study_envelope_from_multiphysics_summaries() {
         envelope["material_envelope_critical_metric"].as_str(),
         Some("structural.stress")
     );
-    assert!(envelope["material_envelope_failure_index"]
-        .as_f64()
-        .is_some_and(|value| (value - 1.12).abs() < 1.0e-12));
+    assert!(
+        envelope["material_envelope_failure_index"]
+            .as_f64()
+            .is_some_and(|value| (value - 1.12).abs() < 1.0e-12)
+    );
 }
 
 #[test]
@@ -299,9 +305,11 @@ fn composes_material_study_envelope_with_visible_metric_config() {
         envelope["study_critical_metric"].as_str(),
         Some("thermal.surface_temperature")
     );
-    assert!(envelope["study_score"]
-        .as_f64()
-        .is_some_and(|value| (value - 2.36).abs() < 1.0e-12));
+    assert!(
+        envelope["study_score"]
+            .as_f64()
+            .is_some_and(|value| (value - 2.36).abs() < 1.0e-12)
+    );
 }
 
 #[test]
@@ -415,15 +423,19 @@ fn material_envelope_batch_feeds_ranking_and_pareto_chain() {
     .expect("envelope candidates should feed pareto");
     assert_eq!(pareto["material_pareto_candidate_count"].as_u64(), Some(3));
     assert_eq!(pareto["material_pareto_feasible_count"].as_u64(), Some(2));
-    assert!(pareto["material_pareto_frontier"]
-        .as_array()
-        .expect("frontier array")
-        .iter()
-        .any(|entry| entry["candidate_id"].as_str() == Some("cool_stiff")));
-    assert!(pareto["material_pareto_dominated"]
-        .as_array()
-        .expect("dominated array")
-        .iter()
-        .any(|entry| entry["candidate_id"].as_str() == Some("hot_light")
-            && entry["dominated_by"].as_str() == Some("infeasible")));
+    assert!(
+        pareto["material_pareto_frontier"]
+            .as_array()
+            .expect("frontier array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("cool_stiff"))
+    );
+    assert!(
+        pareto["material_pareto_dominated"]
+            .as_array()
+            .expect("dominated array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("hot_light")
+                && entry["dominated_by"].as_str() == Some("infeasible"))
+    );
 }

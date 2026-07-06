@@ -1,4 +1,4 @@
-use crate::{solve, EngineSolveRequest};
+use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::AnalysisResult;
 use serde_json::Value;
 

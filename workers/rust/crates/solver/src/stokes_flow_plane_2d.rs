@@ -181,11 +181,7 @@ fn average_viscosity_for_node(
         }
     }
 
-    if count == 0.0 {
-        1.0
-    } else {
-        total / count
-    }
+    if count == 0.0 { 1.0 } else { total / count }
 }
 
 fn element_result(

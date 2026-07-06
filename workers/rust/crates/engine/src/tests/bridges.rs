@@ -1,8 +1,8 @@
 use crate::workflow_executor::run_transform_operator;
 use crate::{
-    bridge_heat_result_to_thermal_plane_quad_model,
+    EngineSolveRequest, bridge_heat_result_to_thermal_plane_quad_model,
     bridge_heat_result_to_thermal_plane_triangle_model, run_heat_to_thermo_plane_quad_2d_workflow,
-    run_heat_to_thermo_plane_triangle_2d_workflow, solve, EngineSolveRequest,
+    run_heat_to_thermo_plane_triangle_2d_workflow, solve,
 };
 use kyuubiki_protocol::{
     AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,

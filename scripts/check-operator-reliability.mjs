@@ -74,6 +74,19 @@ function ensureFileContains(relativePath, needle, context) {
   }
 }
 
+function makeTargetSources() {
+  const sources = [fs.readFileSync(path.join(repoRoot, "Makefile"), "utf8")];
+  const makeDir = path.join(repoRoot, "make");
+  if (fs.existsSync(makeDir)) {
+    for (const entry of fs.readdirSync(makeDir).sort()) {
+      if (entry.endsWith(".mk")) {
+        sources.push(fs.readFileSync(path.join(makeDir, entry), "utf8"));
+      }
+    }
+  }
+  return sources.join("\n");
+}
+
 function validateReviewEvidence(entry, context) {
   const review = entry.evidence.review;
   if (!review) {
@@ -147,7 +160,7 @@ function validateQualificationEvidenceKits(manifest, roadmap) {
   if (errors.length > 0) {
     fail(`qualification evidence kits: ${errors[0]}`);
   }
-  const makefile = fs.readFileSync(path.join(repoRoot, "Makefile"), "utf8");
+  const makefile = makeTargetSources();
   for (const kit of kits.kits) {
     for (const requirement of kit.artifact_requirements ?? []) {
       if (requirement.artifact_path) {
@@ -160,7 +173,7 @@ function validateQualificationEvidenceKits(manifest, roadmap) {
       if (requirement.artifact_command && !makefile.includes(requirement.artifact_command)) {
         fail(
           `qualification evidence kit ${kit.candidate_id}:${requirement.artifact_id}: ` +
-            `artifact_command is not discoverable in Makefile`
+            `artifact_command is not discoverable in Make target sources`
         );
       }
     }

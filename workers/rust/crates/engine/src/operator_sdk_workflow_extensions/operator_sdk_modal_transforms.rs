@@ -1,6 +1,6 @@
 use crate::catalog::describe_built_in_operator;
 use crate::modal_quality::score_modal_quality;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_guard_transforms::{benchmark_modal_pair, evaluate_modal_guard};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{OperatorDescriptor, OperatorRunContext, OperatorRunResult};

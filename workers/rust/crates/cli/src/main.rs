@@ -8,6 +8,7 @@ mod agent_mesh;
 mod agent_state;
 mod agent_watchdog;
 mod config;
+mod operator_task_builtin;
 mod operator_task_runtime;
 mod rpc;
 mod transport;

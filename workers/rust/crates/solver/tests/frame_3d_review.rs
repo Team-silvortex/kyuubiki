@@ -12,8 +12,8 @@ fn frame_3d_review_bundle_checks_cantilever_boundaries_moment_and_stress_diagnos
                 0.0, 0.0,
             ),
             node(
-                "tip", 2.0, 0.0, 0.0, false, false, false, false, false, false, 0.0, -1000.0,
-                0.0, 0.0, 0.0, 0.0,
+                "tip", 2.0, 0.0, 0.0, false, false, false, false, false, false, 0.0, -1000.0, 0.0,
+                0.0, 0.0, 0.0,
             ),
         ],
         elements: vec![Frame3dElementInput {

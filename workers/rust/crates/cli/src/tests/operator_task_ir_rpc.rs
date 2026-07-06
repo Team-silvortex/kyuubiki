@@ -5,12 +5,94 @@ use crate::operator_task_runtime::{
     OperatorPackageRuntimeAttachment, OperatorPackageRuntimeBinding, run_operator_task_ir,
     run_operator_task_ir_with_runtime,
 };
+use kyuubiki_protocol::compute_operator_task_digest;
 
 fn golden_operator_task_ir() -> serde_json::Value {
     serde_json::from_str(include_str!(
         "../../../../../../schemas/examples.operator-task-ir.json"
     ))
     .expect("operator TaskIR example should decode")
+}
+
+fn thermal_shock_operator_task_ir() -> serde_json::Value {
+    let mut task = serde_json::json!({
+        "schema_version": "kyuubiki.operator-task-ir/v1",
+        "task_id": "agent-native-thermal-shock",
+        "operator": {
+            "id": "transform.evaluate_material_thermal_shock",
+            "family": "material_thermal_shock",
+            "kind": "transform"
+        },
+        "descriptor_authoring": {
+            "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+            "mode": "rust_native",
+            "runtime": "rust",
+            "source": "operator_task_ir_rpc_test",
+            "hot_reloadable": false,
+            "execution_language": "language_neutral"
+        },
+        "node": {},
+        "input_artifact": {
+            "candidates": {
+                "alloy": {
+                    "temperature_delta": 160.0,
+                    "thermal_expansion": 1.2e-5,
+                    "youngs_modulus": 70000000000.0,
+                    "poisson_ratio": 0.33,
+                    "yield_strength": 320000000.0
+                },
+                "ceramic": {
+                    "temperature_delta": 160.0,
+                    "thermal_expansion": 8.0e-6,
+                    "youngs_modulus": 300000000000.0,
+                    "poisson_ratio": 0.22,
+                    "tensile_strength": 180000000.0,
+                    "fracture_toughness": 3000000.0,
+                    "flaw_size": 0.001
+                }
+            }
+        },
+        "config": { "constraint_factor": 0.7 },
+        "execution_program": {
+            "schema_version": "kyuubiki.operator-execution-program/v1",
+            "program_id": "transform.evaluate_material_thermal_shock",
+            "program_family": "material_thermal_shock",
+            "program_kind": "transform",
+            "operator_category_id": null,
+            "package_ref": null,
+            "package_version": "library-managed",
+            "package_integrity": null,
+            "runtime_protocol": "kyuubiki.operator-execution/v1",
+            "abi": {
+                "kind": "operator_task",
+                "input_encoding": "json",
+                "output_encoding": "json"
+            },
+            "entrypoint": {
+                "kind": "operator_id",
+                "name": "transform.evaluate_material_thermal_shock",
+                "operator_kind": "transform"
+            },
+            "bindings": {
+                "input_artifact": "task.input_artifact",
+                "config": "task.config",
+                "output_artifact": "task.output_artifact"
+            },
+            "node_binding": { "node_id": null, "input_ports": [], "output_ports": [] }
+        },
+        "dataset_contract": {},
+        "orchestration_context": {},
+        "runtime_hints": {
+            "authority_mode": "central_operator_library",
+            "execution_mode": "orchestra_fetch",
+            "cache_scope": "job",
+            "agent_fetchable": true,
+            "operator_kind": "transform"
+        }
+    });
+    let digest = compute_operator_task_digest(&task).expect("thermal shock task should digest");
+    task["integrity"] = serde_json::json!({ "task_digest": digest });
+    task
 }
 
 #[test]
@@ -135,6 +217,58 @@ fn operator_task_runtime_accepts_explicit_execute_mode_as_blocked_dispatch() {
     assert_eq!(
         result["execution_runtime_status"],
         OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
+    );
+}
+
+#[test]
+fn operator_task_runtime_executes_agent_native_material_thermal_shock() {
+    let result = run_operator_task_ir(&serde_json::json!({
+        "mode": OPERATOR_TASK_MODE_EXECUTE,
+        "task_ir": thermal_shock_operator_task_ir()
+    }))
+    .expect("agent-native builtin should execute");
+
+    assert_eq!(result["operator_task_ir_status"], "executed");
+    assert_eq!(
+        result["execution_runtime_status"],
+        "agent_native_builtin_executed"
+    );
+    assert!(result["blocked_stage"].is_null());
+    assert!(result["package_fetch_request"].is_null());
+    assert_eq!(result["execution_plan"][2]["status"], "skipped");
+    assert_eq!(result["execution_plan"][4]["stage"], "dispatch_entrypoint");
+    assert_eq!(result["execution_plan"][4]["status"], "complete");
+    assert_eq!(
+        result["result"]["material_thermal_shock_candidate_count"],
+        2
+    );
+    assert_eq!(result["result"]["material_thermal_shock_pass_count"], 1);
+    assert_eq!(
+        result["result"]["material_thermal_shock_best_candidate_id"],
+        "alloy"
+    );
+    assert_eq!(
+        result["result"]["material_thermal_shock_assessments"][1]["thermal_shock_status"],
+        "fail"
+    );
+}
+
+#[test]
+fn operator_task_runtime_preflights_agent_native_material_thermal_shock_without_execution() {
+    let result = run_operator_task_ir(&serde_json::json!({
+        "mode": OPERATOR_TASK_MODE_PREFLIGHT,
+        "task_ir": thermal_shock_operator_task_ir()
+    }))
+    .expect("preflight should not dispatch agent-native builtin");
+
+    assert_eq!(
+        result["operator_task_ir_status"],
+        OPERATOR_TASK_STATUS_VERIFIED_PENDING
+    );
+    assert!(result.get("result").is_none());
+    assert_eq!(
+        result["package_fetch_request"]["request_status"],
+        "blocked_runtime_not_attached"
     );
 }
 

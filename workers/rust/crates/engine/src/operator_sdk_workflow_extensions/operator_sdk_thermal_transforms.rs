@@ -1,5 +1,5 @@
 use crate::catalog::describe_built_in_operator;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
     thermal_peak_summary, thermo_peak_summary,
 };

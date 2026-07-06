@@ -1,4 +1,4 @@
-use crate::linear_algebra::{add_at, reduce_sparse_system, solve_spd_system, SparseMatrix};
+use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
 use kyuubiki_protocol::{
     SolidTetra3dElementInput, SolidTetra3dElementResult, SolidTetra3dNodeResult,
     SolveSolidTetra3dRequest, SolveSolidTetra3dResult,

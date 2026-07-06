@@ -312,7 +312,7 @@ fn validate_input_artifacts(
                 return Err(format!(
                     "workflow input artifact {} targets an unknown node",
                     node_id
-                ))
+                ));
             }
         }
         validate_json_budget(

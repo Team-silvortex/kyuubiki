@@ -157,6 +157,15 @@ Agent engines should treat this as the execution contract. They should not
 depend on Phoenix routes, Elixir modules, or control-plane private function
 names to run operator work.
 
+Agent-native builtins are allowed only when they still enter through the same
+TaskIR and execution-program envelope. For example, the Rust agent may execute a
+library-managed transform such as `transform.evaluate_material_thermal_shock`
+directly after digest verification. That is not a bypass around TaskIR; it is a
+compute-side dispatch implementation for an operator whose package reference is
+already represented as library-managed or agent-native. External operator
+packages must still go through package resolution, integrity verification,
+activation, dispatch, and result serialization stages.
+
 ## Dual-Mode Task Description
 
 Task descriptions are allowed to be authored through more than one runtime.

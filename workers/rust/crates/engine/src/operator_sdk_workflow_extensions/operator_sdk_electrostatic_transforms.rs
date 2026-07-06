@@ -1,6 +1,6 @@
 use crate::catalog::describe_built_in_operator;
 use crate::electrostatic_quality::score_electrostatic_quality;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_guard_transforms::{
     benchmark_electrostatic_pair, evaluate_electrostatic_guard,
 };

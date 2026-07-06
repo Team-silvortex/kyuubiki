@@ -29,8 +29,14 @@ fn modal_frame_3d_review_bundle_checks_cantilever_modes_and_shape_contract() {
     assert_eq!(result.free_dofs, vec![6, 7, 8, 9, 10, 11]);
     assert_close(result.total_mass, density * area * length);
     assert_eq!(result.modes.len(), 3);
-    assert_close(result.min_frequency_hz, result.modes[0].natural_frequency_hz);
-    assert_close(result.max_frequency_hz, result.modes[2].natural_frequency_hz);
+    assert_close(
+        result.min_frequency_hz,
+        result.modes[0].natural_frequency_hz,
+    );
+    assert_close(
+        result.max_frequency_hz,
+        result.modes[2].natural_frequency_hz,
+    );
 
     let mut previous_frequency = 0.0;
     for (index, mode) in result.modes.iter().enumerate() {

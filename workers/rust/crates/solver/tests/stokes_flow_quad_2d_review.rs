@@ -43,8 +43,9 @@ fn stokes_flow_quad_2d_review_bundle_checks_velocity_pressure_divergence_reynold
 
     let average_velocity_x = 0.5;
     let average_velocity_y = 0.0625;
-    let average_velocity_magnitude =
-        f64::sqrt(average_velocity_x * average_velocity_x + average_velocity_y * average_velocity_y);
+    let average_velocity_magnitude = f64::sqrt(
+        average_velocity_x * average_velocity_x + average_velocity_y * average_velocity_y,
+    );
     let average_pressure = -0.875;
     let du_dx = 1.0;
     let dv_dy = 0.125;
@@ -63,7 +64,10 @@ fn stokes_flow_quad_2d_review_bundle_checks_velocity_pressure_divergence_reynold
     assert_close(element.area, 1.0);
     assert_close(element.average_velocity_x, average_velocity_x);
     assert_close(element.average_velocity_y, average_velocity_y);
-    assert_close(element.average_velocity_magnitude, average_velocity_magnitude);
+    assert_close(
+        element.average_velocity_magnitude,
+        average_velocity_magnitude,
+    );
     assert_close(element.average_pressure, average_pressure);
     assert_close(element.velocity_gradient_x, velocity_gradient_x);
     assert_close(element.velocity_gradient_y, velocity_gradient_y);

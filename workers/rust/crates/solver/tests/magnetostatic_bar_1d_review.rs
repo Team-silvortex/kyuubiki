@@ -32,8 +32,7 @@ fn magnetostatic_bar_1d_review_bundle_checks_permeance_field_flux_and_energy() {
     let expected_gradient = expected_potential / length;
     let expected_field = -expected_gradient;
     let expected_flux_density = permeability * expected_field;
-    let expected_energy =
-        0.5 * permeability * expected_field * expected_field * area * length;
+    let expected_energy = 0.5 * permeability * expected_field * expected_field * area * length;
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);

@@ -14,10 +14,7 @@ fn heat_plane_triangle_2d_review_bundle_checks_boundary_field_and_flux_diagnosti
             node("cold_upper", 1.0, 1.0, true, 20.0),
             node("cool_upper", 0.0, 1.0, true, 20.0),
         ],
-        elements: vec![
-            element("tri_lower", 0, 1, 2),
-            element("tri_upper", 0, 2, 3),
-        ],
+        elements: vec![element("tri_lower", 0, 1, 2), element("tri_upper", 0, 2, 3)],
     })
     .expect("review heat plane triangle should solve");
 
@@ -52,13 +49,7 @@ fn heat_plane_triangle_2d_review_bundle_checks_boundary_field_and_flux_diagnosti
     assert_close(result.max_heat_flux, upper.heat_flux_magnitude);
 }
 
-fn node(
-    id: &str,
-    x: f64,
-    y: f64,
-    fix_temperature: bool,
-    temperature: f64,
-) -> HeatPlaneNodeInput {
+fn node(id: &str, x: f64, y: f64, fix_temperature: bool, temperature: f64) -> HeatPlaneNodeInput {
     HeatPlaneNodeInput {
         id: id.to_string(),
         x,

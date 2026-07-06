@@ -3,6 +3,9 @@ use std::sync::{Mutex, OnceLock};
 use serde_json::Value;
 
 use crate::config::AgentConfig;
+use crate::operator_task_builtin::{
+    is_agent_native_builtin_operator, run_agent_native_builtin_task,
+};
 use kyuubiki_protocol::{
     OperatorTaskExecutionSummary, summarize_operator_task_execution, verify_operator_task_digest,
 };
@@ -13,6 +16,8 @@ pub(crate) const OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED: &str =
 const OPERATOR_PACKAGE_RUNTIME_ATTACHED_PENDING_FETCH: &str =
     "operator_package_runtime_attached_pending_package_fetch";
 const OPERATOR_PACKAGE_RUNTIME_READY_FOR_FETCH: &str = "operator_package_runtime_ready_for_fetch";
+const OPERATOR_TASK_STATUS_EXECUTED: &str = "executed";
+const OPERATOR_TASK_AGENT_NATIVE_STATUS: &str = "agent_native_builtin_executed";
 pub(crate) const OPERATOR_TASK_BLOCKED_STAGE: &str = "fetch_package";
 pub(crate) const OPERATOR_TASK_MODE_PREFLIGHT: &str = "preflight";
 pub(crate) const OPERATOR_TASK_MODE_EXECUTE: &str = "execute";
@@ -134,6 +139,19 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     let summary = summarize_operator_task_execution(task_ir)
         .map_err(|error| OperatorTaskRuntimeError::new("operator_task_invalid", error))?;
 
+    if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
+    {
+        let result =
+            run_agent_native_builtin_task(&summary.operator_id, task_ir).map_err(|error| {
+                OperatorTaskRuntimeError::new("operator_task_execution_failed", error)
+            })?;
+        return Ok(build_agent_native_execution_payload(
+            summary,
+            package_runtime,
+            result,
+        ));
+    }
+
     Ok(build_preflight_payload(summary, mode, package_runtime))
 }
 
@@ -191,6 +209,41 @@ fn build_preflight_payload(
         "execution_mode": summary.execution_mode,
         "cache_scope": summary.cache_scope,
         "agent_fetchable": summary.agent_fetchable
+    })
+}
+
+fn build_agent_native_execution_payload(
+    summary: OperatorTaskExecutionSummary,
+    package_runtime: OperatorPackageRuntimeBinding,
+    result: Value,
+) -> Value {
+    serde_json::json!({
+        "requested_mode": OPERATOR_TASK_MODE_EXECUTE,
+        "operator_task_ir_status": OPERATOR_TASK_STATUS_EXECUTED,
+        "execution_runtime_status": OPERATOR_TASK_AGENT_NATIVE_STATUS,
+        "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
+        "package_fetch_request": Value::Null,
+        "operator_package_runtime_ready": package_runtime.is_attached(),
+        "blocked_stage": Value::Null,
+        "next_stage": "serialize_result",
+        "execution_plan": agent_native_execution_plan(),
+        "task_digest": summary.task_digest,
+        "task_id": summary.task_id,
+        "operator_id": summary.operator_id,
+        "operator_kind": summary.operator_kind,
+        "program_id": summary.program_id,
+        "program_kind": summary.program_kind,
+        "runtime_protocol": summary.runtime_protocol,
+        "abi_kind": summary.abi_kind,
+        "entrypoint_kind": summary.entrypoint_kind,
+        "entrypoint_name": summary.entrypoint_name,
+        "package_ref": summary.package_ref,
+        "package_version": summary.package_version,
+        "authority_mode": summary.authority_mode,
+        "execution_mode": summary.execution_mode,
+        "cache_scope": summary.cache_scope,
+        "agent_fetchable": summary.agent_fetchable,
+        "result": result
     })
 }
 
@@ -305,6 +358,44 @@ fn operator_package_runtime_attachment(binding: &OperatorPackageRuntimeBinding) 
             "activated_package_count": attachment.activated_package_count
         }),
     }
+}
+
+fn agent_native_execution_plan() -> Value {
+    serde_json::json!([
+        {
+            "stage": "verify_digest",
+            "status": "complete",
+            "owner": "agent_runtime"
+        },
+        {
+            "stage": "summarize_execution_program",
+            "status": "complete",
+            "owner": "agent_runtime"
+        },
+        {
+            "stage": OPERATOR_TASK_BLOCKED_STAGE,
+            "status": "skipped",
+            "owner": "agent_runtime",
+            "reason": "agent_native_builtin"
+        },
+        {
+            "stage": "verify_package_integrity",
+            "status": "skipped",
+            "owner": "agent_runtime",
+            "reason": "agent_native_builtin"
+        },
+        {
+            "stage": "dispatch_entrypoint",
+            "status": "complete",
+            "owner": "agent_runtime",
+            "reason": "agent_native_builtin"
+        },
+        {
+            "stage": "serialize_result",
+            "status": "complete",
+            "owner": "agent_runtime"
+        }
+    ])
 }
 
 fn execution_plan(mode: &str, binding: &OperatorPackageRuntimeBinding) -> Value {

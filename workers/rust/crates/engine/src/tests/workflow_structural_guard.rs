@@ -260,10 +260,12 @@ fn runs_bar_structural_quality_workflow_graph() {
         .artifacts
         .get("json_output.json")
         .expect("json export artifact should exist");
-    assert!(exported["content"]
-        .as_str()
-        .unwrap_or_default()
-        .contains("structural_quality_max_stress"));
+    assert!(
+        exported["content"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("structural_quality_max_stress")
+    );
 }
 
 fn quality_graph() -> WorkflowGraph {

@@ -59,7 +59,11 @@ fn loaded_node_internal_force(
         let length = (dx * dx + dy * dy).sqrt();
         let c = dx / length;
         let s = dy / length;
-        let sign = if element.node_i == node_index { 1.0 } else { -1.0 };
+        let sign = if element.node_i == node_index {
+            1.0
+        } else {
+            -1.0
+        };
         force_x += sign * element.axial_force * c;
         force_y += sign * element.axial_force * s;
     }

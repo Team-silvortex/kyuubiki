@@ -20,15 +20,13 @@ pub use kyuubiki_platform::{
 };
 pub use loader::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
-    OperatorPackageLoadSummary,
-    activate_discovered_operator_packages, build_operator_package_load_plan,
-    discover_and_activate_operator_packages,
+    OperatorPackageLoadSummary, activate_discovered_operator_packages,
+    build_operator_package_load_plan, discover_and_activate_operator_packages,
 };
 pub use manifest::{
     DiscoveredOperatorPackage, OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION,
     OPERATOR_SDK_API_VERSION, OperatorManifestError, OperatorPackageManifest,
-    OperatorPackageOperatorEntry,
-    discover_operator_packages, read_operator_package_manifest,
+    OperatorPackageOperatorEntry, discover_operator_packages, read_operator_package_manifest,
 };
 
 pub type OperatorRegistrationEntrypoint =

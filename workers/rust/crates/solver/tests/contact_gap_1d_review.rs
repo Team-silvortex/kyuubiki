@@ -9,7 +9,10 @@ const TOL: f64 = 1.0e-10;
 #[test]
 fn contact_gap_1d_review_bundle_checks_active_stop_penetration_and_force_split() {
     let result = solve_contact_gap_1d(&SolveContactGap1dRequest {
-        nodes: vec![node("fixed", 0.0, true, 0.0), node("tip", 1.0, false, 100.0)],
+        nodes: vec![
+            node("fixed", 0.0, true, 0.0),
+            node("tip", 1.0, false, 100.0),
+        ],
         elements: vec![NonlinearSpring1dElementInput {
             id: "spring".to_string(),
             node_i: 0,

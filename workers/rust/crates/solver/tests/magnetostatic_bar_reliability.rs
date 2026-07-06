@@ -45,16 +45,24 @@ fn magnetostatic_bar_1d_matches_single_element_permeance_baseline() {
     let expected_gradient = (expected_potential - fixed_potential) / length;
     let expected_field = -expected_gradient;
     let expected_flux_density = permeability * expected_field;
-    let expected_energy =
-        0.5 * permeability * expected_field * expected_field * area * length;
+    let expected_energy = 0.5 * permeability * expected_field * expected_field * area * length;
 
     assert_close(result.nodes[0].magnetic_potential, fixed_potential);
     assert_close(result.nodes[1].magnetic_potential, expected_potential);
     assert_close(result.max_magnetic_potential, expected_potential.abs());
-    assert_close(result.elements[0].average_magnetic_potential, expected_potential / 2.0);
-    assert_close(result.elements[0].magnetic_potential_gradient, expected_gradient);
+    assert_close(
+        result.elements[0].average_magnetic_potential,
+        expected_potential / 2.0,
+    );
+    assert_close(
+        result.elements[0].magnetic_potential_gradient,
+        expected_gradient,
+    );
     assert_close(result.elements[0].magnetic_field_strength, expected_field);
-    assert_close(result.elements[0].magnetic_flux_density, expected_flux_density);
+    assert_close(
+        result.elements[0].magnetic_flux_density,
+        expected_flux_density,
+    );
     assert_close(result.elements[0].stored_energy, expected_energy);
     assert_close(result.total_stored_energy, expected_energy);
     assert_close(result.max_magnetic_field_strength, expected_field.abs());

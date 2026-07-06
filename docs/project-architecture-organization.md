@@ -40,6 +40,8 @@ control-plane services, runtime engines, and shared contracts.
   `docs/headless-agent-contract.md`
 - Operator TaskIR digest rules:
   `docs/operator-task-ir-digest.md`
+- Minimum industrial closure bridge:
+  `docs/minimal-industrial-closure.md`
 - Shared schema index:
   `schemas/README.md`
 - Repository shape:
@@ -118,6 +120,9 @@ The implementation anchors are:
 - `schemas`
   should hold JSON contracts and examples, not app-specific implementation
   prose.
+- `make`
+  should hold modular Make target groups. The root `Makefile` should stay a
+  small include-based entrypoint instead of growing target logic directly.
 - `docs`
   should hold source-of-truth architecture documents. Hub docs may mirror them
   for operator reading, but should not silently become the deeper source.
@@ -192,6 +197,10 @@ matters; do not move source boundaries just to reduce generated output.
    visibly separate.
 5. Prefer adding examples and golden fixtures for protocol changes before
    expanding UI affordances.
+6. Treat `docs/minimal-industrial-closure.md` as the `1.16` to `1.20`
+   bridge. New TaskIR, installer, agent, operator-reliability, persistence,
+   security, UX, and benchmark work should either close one of its gates or
+   explicitly remain outside the minimum industrial loop.
 
 ## Near-Term Cleanup Queue
 
@@ -205,6 +214,8 @@ matters; do not move source boundaries just to reduce generated output.
 - Keep Hub static partial smoke coverage aligned with every new shell partial.
 - Keep legacy shell modules below the shared line ceiling until native commands
   can retire them.
+- Keep Make target logic under `make/*.mk`, with the root `Makefile` limited to
+  shared variables and includes.
 - Move remaining operator TaskIR API examples into schema examples.
 - Keep the Rust protocol TaskIR summary as the basis for future agent-native
   execution.

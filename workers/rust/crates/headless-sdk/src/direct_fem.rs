@@ -1,4 +1,4 @@
-use crate::{find_action_contract, HeadlessActionContract, HeadlessEngine, HeadlessRisk};
+use crate::{HeadlessActionContract, HeadlessEngine, HeadlessRisk, find_action_contract};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

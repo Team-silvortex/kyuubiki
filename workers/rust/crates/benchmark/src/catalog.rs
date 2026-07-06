@@ -477,8 +477,8 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
 #[cfg(test)]
 mod tests {
     use super::{
-        resolve_matrix_templates, BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec,
-        CaseTemplateSpec,
+        BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec, CaseTemplateSpec,
+        resolve_matrix_templates,
     };
 
     #[test]

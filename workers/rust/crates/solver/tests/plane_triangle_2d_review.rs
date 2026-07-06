@@ -42,10 +42,7 @@ fn request() -> SolvePlaneTriangle2dRequest {
             node("top_right", 1.0, 1.0, false, false, 0.0, -1000.0),
             node("top_left", 0.0, 1.0, true, false, 0.0, -1000.0),
         ],
-        elements: vec![
-            element("tri_lower", 0, 1, 2),
-            element("tri_upper", 0, 2, 3),
-        ],
+        elements: vec![element("tri_lower", 0, 1, 2), element("tri_upper", 0, 2, 3)],
     }
 }
 

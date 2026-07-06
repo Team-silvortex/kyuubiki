@@ -55,6 +55,10 @@ This directory contains host-native operational entry points.
 - `check-elixir-self-host.mjs`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
+- `check-make-modules.mjs`
+  Verify that the root `Makefile` stays as a small include-based entrypoint,
+  that every `make/*.mk` module is included, and that retired catch-all modules
+  do not come back.
 - `validate-language-packs.mjs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current release index version in the `tamamono 1.x` line.
@@ -99,6 +103,10 @@ This directory contains host-native operational entry points.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
+- `validate-minimal-industrial-closure.mjs`
+  Verify the narrower `1.15.x -> 1.20.x` minimum industrial closure manifest
+  against its Markdown gate, including gate count, evidence links, supported
+  state values, and the shared exit statement.
 - `sync-doc-book-version.mjs`
   Update the hand-maintained book entry pages to the current shipping version
   without touching the generated installation or update-catalog pages.

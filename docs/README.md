@@ -28,6 +28,7 @@ Read these first, in order:
 9. `testing-and-ci.md`
 10. `maintenance.md`
 11. `installer-remote-control.md`
+12. `minimal-industrial-closure.md`
 
 For the current `1.15.x` hardening path, keep four threads mentally linked:
 
@@ -72,6 +73,12 @@ Then branch by intent:
 - `commercial-readiness-2.0.manifest.json`
   Machine-readable gate map for the same `2.0` checklist, validated by
   `node ./scripts/validate-commercial-readiness.mjs`.
+- `minimal-industrial-closure.md`
+  The narrower `1.15.x -> 1.20.x` bridge checklist for closing the first
+  bounded industrial workflow before broader `2.0` commercial claims.
+- `minimal-industrial-closure.manifest.json`
+  Machine-readable gate map for the same minimum industrial loop, validated by
+  `node ./scripts/validate-minimal-industrial-closure.mjs`.
 - `fem-blender-roadmap.md`
   Product north star and staged path toward becoming the Blender of FEM,
   including the `2.0` early-commercial trust line and `3.0`
@@ -157,6 +164,10 @@ Then branch by intent:
   Current `1.15.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and 600-line cleanup
   boundaries.
+- `minimal-industrial-closure.md`
+  Current bounded industrial-loop closure map tying executable TaskIR,
+  operator reliability, agent/orchestra, installer, persistence, security,
+  UX, and benchmark gates together.
 
 ### Build against stable boundaries
 

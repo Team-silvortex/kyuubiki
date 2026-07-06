@@ -55,7 +55,10 @@ fn acoustic_bar_1d_review_bundle_checks_frequency_response_velocity_intensity_an
     assert_close(result.angular_frequency, omega);
     assert_close(result.nodes[0].pressure, fixed_pressure);
     assert_close(result.nodes[1].pressure, expected_pressure);
-    assert_close(result.max_pressure, expected_pressure.abs().max(fixed_pressure));
+    assert_close(
+        result.max_pressure,
+        expected_pressure.abs().max(fixed_pressure),
+    );
     assert_close(result.total_damping_loss, expected_damping_loss);
 
     let element = &result.elements[0];

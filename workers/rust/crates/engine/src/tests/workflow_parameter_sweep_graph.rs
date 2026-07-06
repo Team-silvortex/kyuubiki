@@ -202,10 +202,12 @@ fn runs_material_study_envelope_ranking_workflow_graph() {
         .expect("material envelope pareto should exist");
     assert_eq!(pareto["material_pareto_candidate_count"].as_u64(), Some(3));
     assert_eq!(pareto["material_pareto_feasible_count"].as_u64(), Some(2));
-    assert!(pareto["material_pareto_dominated"]
-        .as_array()
-        .expect("dominated array")
-        .iter()
-        .any(|entry| entry["candidate_id"].as_str() == Some("hot_light")
-            && entry["dominated_by"].as_str() == Some("infeasible")));
+    assert!(
+        pareto["material_pareto_dominated"]
+            .as_array()
+            .expect("dominated array")
+            .iter()
+            .any(|entry| entry["candidate_id"].as_str() == Some("hot_light")
+                && entry["dominated_by"].as_str() == Some("infeasible"))
+    );
 }

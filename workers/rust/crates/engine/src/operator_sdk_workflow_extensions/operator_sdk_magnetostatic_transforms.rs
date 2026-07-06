@@ -1,6 +1,6 @@
 use crate::catalog::describe_built_in_operator;
 use crate::magnetostatic_quality::score_magnetostatic_quality;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_guard_transforms::{
     benchmark_magnetostatic_pair, evaluate_magnetostatic_guard,
 };

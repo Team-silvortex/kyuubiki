@@ -1,5 +1,5 @@
 use crate::catalog::describe_built_in_operator;
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::transport_diagnostics::extract_transport_result_diagnostics;
 use crate::transport_quality::score_transport_quality;
 use crate::workflow_guard_transforms::{benchmark_transport_pair, evaluate_transport_guard};

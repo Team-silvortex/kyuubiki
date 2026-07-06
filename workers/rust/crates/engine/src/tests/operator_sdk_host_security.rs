@@ -1,6 +1,6 @@
 use crate::{
-    built_in_registry_with_external_packages, BuiltInOperatorRegistryKind,
-    ExternalOperatorHostConfig,
+    BuiltInOperatorRegistryKind, ExternalOperatorHostConfig,
+    built_in_registry_with_external_packages,
 };
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan, OperatorRegistry,
@@ -46,9 +46,11 @@ fn host_policy_rejects_non_library_entrypoint_by_default() {
         "host policy should reject script entrypoint",
     );
 
-    assert!(error
-        .to_string()
-        .contains("current-platform dynamic library"));
+    assert!(
+        error
+            .to_string()
+            .contains("current-platform dynamic library")
+    );
     assert!(error.to_string().contains("operator.script"));
 }
 
@@ -72,9 +74,11 @@ fn host_policy_rejects_malformed_package_id() {
         "host policy should reject malformed package id",
     );
 
-    assert!(error
-        .to_string()
-        .contains("package_id contains unsupported characters"));
+    assert!(
+        error
+            .to_string()
+            .contains("package_id contains unsupported characters")
+    );
 }
 
 #[test]
@@ -97,9 +101,11 @@ fn host_policy_rejects_malformed_entry_symbol() {
         "host policy should reject malformed entry symbol",
     );
 
-    assert!(error
-        .to_string()
-        .contains("entry_symbol contains unsupported characters"));
+    assert!(
+        error
+            .to_string()
+            .contains("entry_symbol contains unsupported characters")
+    );
 }
 
 fn package_manifest(

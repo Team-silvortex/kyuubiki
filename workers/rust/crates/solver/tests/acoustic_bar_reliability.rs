@@ -64,7 +64,10 @@ fn acoustic_bar_1d_matches_single_element_frequency_baseline() {
 
     assert_close(result.nodes[0].pressure, fixed_pressure);
     assert_close(result.nodes[1].pressure, expected_pressure);
-    assert_close(result.max_pressure, expected_pressure.abs().max(fixed_pressure));
+    assert_close(
+        result.max_pressure,
+        expected_pressure.abs().max(fixed_pressure),
+    );
     assert_close(result.angular_frequency, omega);
     assert_close(result.elements[0].speed_of_sound, expected_speed);
     assert_close(result.elements[0].wave_number, expected_wave_number);
