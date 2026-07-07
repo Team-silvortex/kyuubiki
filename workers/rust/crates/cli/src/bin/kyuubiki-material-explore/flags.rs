@@ -5,6 +5,7 @@ pub(crate) struct Flags {
     pub(crate) json: bool,
     pub(crate) plan_next: Option<String>,
     pub(crate) run_next: Option<String>,
+    pub(crate) run_materialized: Option<String>,
     pub(crate) chain_next: Option<String>,
     pub(crate) rounds: usize,
 }
@@ -19,10 +20,14 @@ impl Flags {
         let mut json = false;
         let mut plan_next = None;
         let mut run_next = None;
+        let mut run_materialized = None;
         let mut chain_next = None;
         let mut rounds = 2;
         let mut index = 1;
-        if study == "--plan-next" || study == "--run-next" || study == "--chain-next" {
+        if matches!(
+            study.as_str(),
+            "--plan-next" | "--run-next" | "--run-materialized" | "--chain-next"
+        ) {
             let option = study.clone();
             let Some(path) = args.get(1) else {
                 return Err(format!("{option} requires a value"));
@@ -34,6 +39,8 @@ impl Flags {
                 plan_next = Some(path.clone());
             } else if option == "--run-next" {
                 run_next = Some(path.clone());
+            } else if option == "--run-materialized" {
+                run_materialized = Some(path.clone());
             } else {
                 chain_next = Some(path.clone());
             }
@@ -46,6 +53,9 @@ impl Flags {
                 "--out" => out = Some(take_value(&args, &mut index, "--out")?),
                 "--plan-next" => plan_next = Some(take_value(&args, &mut index, "--plan-next")?),
                 "--run-next" => run_next = Some(take_value(&args, &mut index, "--run-next")?),
+                "--run-materialized" => {
+                    run_materialized = Some(take_value(&args, &mut index, "--run-materialized")?)
+                }
                 "--chain-next" => chain_next = Some(take_value(&args, &mut index, "--chain-next")?),
                 "--rounds" => rounds = parse_rounds(take_value(&args, &mut index, "--rounds")?)?,
                 other => return Err(format!("unsupported flag: {other}\n\n{}", usage())),
@@ -58,6 +68,7 @@ impl Flags {
             json,
             plan_next,
             run_next,
+            run_materialized,
             chain_next,
             rounds,
         })
@@ -89,5 +100,5 @@ fn parse_rounds(value: String) -> Result<usize, String> {
 }
 
 fn usage() -> String {
-    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
+    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --run-materialized materialization-plan.json [--out rerun.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
 }

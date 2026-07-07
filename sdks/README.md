@@ -150,9 +150,30 @@ solver contract. Draft batches include an execution policy that requires human
 review, disallows automatic materialization, and blocks qualification claims
 until the rerun quality gates pass. They also include a `review_checklist` for
 material-card provenance, geometry deltas, SI units, solver result schema, and
-rerun quality gates. Each exploration artifact carries an `iteration`, so
-repeated runs can preserve lineage instead of looking like disconnected
-one-shot solver batches.
+rerun quality gates. `review_status` starts as `pending_review` and `blocking`
+so agents can report an audit gate instead of misclassifying the batch as a
+solver failure. `allowed_review_actions` exposes approve, request-changes, and
+reject transitions, each requiring reviewer identity and a reason.
+`review_decision_template` gives UI and headless clients the standard payload
+shape for submitting that decision. `review_decision_contract` lists required
+fields, allowed actions, approval checklist requirements, and timestamp format
+for preflight validation. SDK callers can apply a review decision to the batch
+state, turning approved batches into `approved_for_materialization` while
+keeping request-changes and reject paths blocking with reviewer provenance.
+Approved batches can then produce a
+`kyuubiki.material-candidate-materialization-request/v1` payload that is ready
+for agent materialization and solver rerun dispatch. Combining that request
+with the candidate draft list produces a
+`kyuubiki.material-candidate-materialization-plan/v1` containing materialized
+candidate specs and `requires_solver_rerun` status. Composite panel materialized
+specs can be converted back into concrete
+`solve_composite_thermo_electric_panel` workflow steps, applying the selected
+strategy to model parameters before rerun instead of only renaming the
+candidate. The CLI can also consume that materialization plan directly and emit
+a `kyuubiki.materialized-candidate-rerun/v1` artifact with rerun results,
+materialized ranking report, and the next-round decision. Each exploration
+artifact carries an `iteration`, so repeated runs can preserve lineage instead
+of looking like disconnected one-shot solver batches.
 
 To materialize that next step without rerunning the first round:
 
@@ -162,6 +183,12 @@ kyuubiki-material-explore --plan-next exploration.json --out next-round.json --j
 
 The generated `kyuubiki.material-exploration-next-round-execution/v1` payload is
 intended for agents, CI, and future orchestra runners.
+
+To run approved materialized composite candidates locally:
+
+```bash
+kyuubiki-material-explore --run-materialized materialization-plan.json --out materialized-rerun.json --json
+```
 
 To run that next step locally and emit the next exploration artifact:
 

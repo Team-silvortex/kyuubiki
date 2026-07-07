@@ -11,9 +11,11 @@ mod flags;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    HeadlessWorkflowStep, build_material_exploration_next_round_execution_plan,
-    build_material_exploration_run, build_material_exploration_run_for_iteration,
-    material_exploration_steps,
+    HeadlessWorkflowStep, build_composite_materialized_candidate_report,
+    build_composite_materialized_candidate_steps,
+    build_material_exploration_next_round_execution_plan,
+    build_material_exploration_next_round_plan, build_material_exploration_run,
+    build_material_exploration_run_for_iteration, material_exploration_steps,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -48,6 +50,18 @@ fn run() -> Result<(), String> {
             print_json(&exploration)?;
         } else {
             print_summary(&exploration);
+        }
+        return Ok(());
+    }
+    if let Some(path) = &flags.run_materialized {
+        let rerun = run_materialized_candidates(path)?;
+        if let Some(out) = &flags.out {
+            write_json(out, &rerun)?;
+        }
+        if flags.json {
+            print_json(&rerun)?;
+        } else {
+            print_materialized_rerun_summary(&rerun);
         }
         return Ok(());
     }
@@ -90,6 +104,26 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+fn run_materialized_candidates(path: &str) -> Result<Value, String> {
+    let plan = read_materialization_plan(path)?;
+    let steps = build_composite_materialized_candidate_steps(&plan)?;
+    let result_payloads = steps
+        .iter()
+        .map(run_solve_step)
+        .collect::<Result<Vec<_>, _>>()?;
+    let report = build_composite_materialized_candidate_report(&result_payloads)?;
+    let next_round = build_material_exploration_next_round_plan(&report, 1);
+    Ok(serde_json::json!({
+        "schema_version": "kyuubiki.materialized-candidate-rerun/v1",
+        "mode": "local_solver_materialized_rerun",
+        "study": "material_composite_thermo_electric_panel",
+        "step_count": steps.len(),
+        "result_payloads": result_payloads,
+        "report": report,
+        "next_round": next_round
+    }))
+}
+
 fn plan_next_round(path: &str) -> Result<Value, String> {
     let text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
@@ -98,6 +132,18 @@ fn plan_next_round(path: &str) -> Result<Value, String> {
     let exploration = payload.get("exploration").cloned().unwrap_or(payload);
     let plan = build_material_exploration_next_round_execution_plan(&exploration)?;
     serde_json::to_value(plan).map_err(|error| error.to_string())
+}
+
+fn read_materialization_plan(path: &str) -> Result<Value, String> {
+    let text =
+        fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
+    let payload: Value =
+        serde_json::from_str(&text).map_err(|error| format!("failed to parse {path}: {error}"))?;
+    Ok(payload
+        .get("materialization_plan")
+        .cloned()
+        .or_else(|| payload.get("plan").cloned())
+        .unwrap_or(payload))
 }
 
 fn run_next_round(path: &str) -> Result<Value, String> {
@@ -265,4 +311,18 @@ fn print_json(payload: &Value) -> Result<(), String> {
     let text = serde_json::to_string_pretty(payload).map_err(|error| error.to_string())?;
     println!("{text}");
     Ok(())
+}
+
+fn print_materialized_rerun_summary(payload: &Value) {
+    println!(
+        "Materialized rerun: {}",
+        payload["study"].as_str().unwrap_or("unknown")
+    );
+    println!("Steps: {}", payload["step_count"].as_u64().unwrap_or(0));
+    if let Some(winner) = payload["report"]["winner_candidate_id"].as_str() {
+        println!("Winner: {winner}");
+    }
+    if let Some(decision) = payload["next_round"]["decision"].as_str() {
+        println!("Next round: {decision}");
+    }
 }

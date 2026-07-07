@@ -6,8 +6,14 @@ mod direct_fem;
 mod executor;
 mod hybrid_executor;
 mod material_candidate_drafts;
+mod material_candidate_materialization;
+mod material_candidate_review;
 mod material_composite;
 mod material_composite_interfaces;
+mod material_composite_materialization;
+#[cfg(test)]
+mod material_composite_materialization_tests;
+mod material_composite_materialized_report;
 mod material_composite_models;
 #[cfg(test)]
 mod material_composite_tests;
@@ -52,6 +58,10 @@ pub use executor::{
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
+pub use material_candidate_materialization::build_material_candidate_materialization_plan;
+pub use material_candidate_review::{
+    apply_material_candidate_review_decision, build_material_candidate_materialization_request,
+};
 pub use material_composite::{
     CompositePanelCandidate, CompositePanelCandidateReport, CompositePanelReport,
     build_composite_panel_report, build_composite_panel_steps, composite_panel_candidates,
@@ -60,6 +70,8 @@ pub use material_composite::{
 pub use material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, composite_material_regions,
 };
+pub use material_composite_materialization::build_composite_materialized_candidate_steps;
+pub use material_composite_materialized_report::build_composite_materialized_candidate_report;
 pub use material_dielectric::{
     DielectricMaterialCandidate, DielectricMaterialCandidateReport, DielectricMaterialReport,
     build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
