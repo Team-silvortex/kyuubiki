@@ -1,11 +1,15 @@
 use std::time::Instant;
 
 use crate::linear_algebra::{SparseMatrix, add_at};
+use crate::linear_solver_profile::SpdSolveOptions;
 use crate::plane_2d_math::{
     PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element,
     precompute_plane_triangle_element_from_nodes, signed_triangle_area,
 };
-use crate::plane_2d_profile::{profile_plane_displacements, solve_plane_displacements};
+use crate::plane_2d_profile::{
+    PlaneProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
+    profile_plane_displacements_with_options, push_plane_profile_stage,
+};
 use kyuubiki_protocol::{
     PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
@@ -21,17 +25,37 @@ struct PlaneQuadComputed {
 pub fn solve_plane_triangle_2d(
     request: &SolvePlaneTriangle2dRequest,
 ) -> Result<SolvePlaneTriangle2dResult, String> {
+    solve_plane_triangle_2d_internal(request, false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
+}
+
+pub fn profile_plane_triangle_2d_with_options(
+    request: &SolvePlaneTriangle2dRequest,
+    solve_options: SpdSolveOptions,
+) -> Result<PlaneTriangleProfile, String> {
+    solve_plane_triangle_2d_internal(request, true, solve_options)
+}
+
+fn solve_plane_triangle_2d_internal(
+    request: &SolvePlaneTriangle2dRequest,
+    collect_stages: bool,
+    solve_options: SpdSolveOptions,
+) -> Result<PlaneTriangleProfile, String> {
     validate_plane_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
+    let mut stages = Vec::new();
+    let mut stage_started = Instant::now();
     let computed_elements = request
         .elements
         .iter()
         .map(|element| precompute_plane_triangle_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
+    push_plane_profile_stage(&mut stages, collect_stages, "precompute", stage_started);
 
+    stage_started = Instant::now();
     for (index, node) in request.nodes.iter().enumerate() {
         force_vector[index * 2] = node.load_x;
         force_vector[index * 2 + 1] = node.load_y;
@@ -50,8 +74,36 @@ pub fn solve_plane_triangle_2d(
             }
         }
     }
+    push_plane_profile_stage(
+        &mut stages,
+        collect_stages,
+        "assemble_global",
+        stage_started,
+    );
 
-    let displacements = solve_plane_displacements(request, &global_stiffness, &force_vector)?;
+    stage_started = Instant::now();
+    let displacement_profile = profile_plane_displacements_with_options(
+        request,
+        &global_stiffness,
+        &force_vector,
+        solve_options,
+    )?;
+    let displacements = displacement_profile.displacements;
+    push_plane_profile_stage(&mut stages, collect_stages, "solve_system", stage_started);
+    if collect_stages {
+        stages.extend(
+            displacement_profile
+                .stages
+                .into_iter()
+                .map(|stage| PlaneProfileStage {
+                    label: stage.label,
+                    rss_kib: stage.rss_kib,
+                    elapsed_ms: stage.elapsed_ms,
+                }),
+        );
+    }
+
+    stage_started = Instant::now();
     let nodes = build_plane_nodes(request, &displacements);
     let elements = request
         .elements
@@ -87,47 +139,50 @@ pub fn solve_plane_triangle_2d(
             }
         })
         .collect::<Vec<_>>();
+    push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
-    Ok(SolvePlaneTriangle2dResult {
-        input: request.clone(),
-        max_displacement: max_plane_displacement(&nodes),
-        max_stress: elements
-            .iter()
-            .map(|element| element.von_mises.abs())
-            .fold(0.0_f64, f64::max),
-        nodes,
-        elements,
+    Ok(PlaneTriangleProfile {
+        result: SolvePlaneTriangle2dResult {
+            input: request.clone(),
+            max_displacement: max_plane_displacement(&nodes),
+            max_stress: elements
+                .iter()
+                .map(|element| element.von_mises.abs())
+                .fold(0.0_f64, f64::max),
+            nodes,
+            elements,
+        },
+        solver_iterations: displacement_profile.solver_iterations,
+        solver_matrix_non_zero_count: displacement_profile.solver_matrix_non_zero_count,
+        solver_residual_norm: displacement_profile.solver_residual_norm,
+        stages,
     })
 }
 
 pub fn solve_plane_quad_2d(
     request: &SolvePlaneQuad2dRequest,
 ) -> Result<SolvePlaneQuad2dResult, String> {
-    solve_plane_quad_2d_internal(request, false).map(|profile| profile.result)
-}
-
-#[derive(Debug, Clone)]
-pub struct PlaneQuadProfileStage {
-    pub label: &'static str,
-    pub rss_kib: u64,
-    pub elapsed_ms: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct PlaneQuadProfile {
-    pub result: SolvePlaneQuad2dResult,
-    pub stages: Vec<PlaneQuadProfileStage>,
+    solve_plane_quad_2d_internal(request, false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
 }
 
 pub fn profile_plane_quad_2d(
     request: &SolvePlaneQuad2dRequest,
 ) -> Result<PlaneQuadProfile, String> {
-    solve_plane_quad_2d_internal(request, true)
+    profile_plane_quad_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn profile_plane_quad_2d_with_options(
+    request: &SolvePlaneQuad2dRequest,
+    solve_options: SpdSolveOptions,
+) -> Result<PlaneQuadProfile, String> {
+    solve_plane_quad_2d_internal(request, true, solve_options)
 }
 
 fn solve_plane_quad_2d_internal(
     request: &SolvePlaneQuad2dRequest,
     collect_stages: bool,
+    solve_options: SpdSolveOptions,
 ) -> Result<PlaneQuadProfile, String> {
     validate_plane_quad_request(request)?;
 
@@ -141,12 +196,7 @@ fn solve_plane_quad_2d_internal(
         .iter()
         .map(|element| precompute_plane_quad_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
-    push_plane_quad_stage(
-        &mut stages,
-        collect_stages,
-        "precompute",
-        stage_started.elapsed(),
-    );
+    push_plane_profile_stage(&mut stages, collect_stages, "precompute", stage_started);
 
     stage_started = Instant::now();
     for (index, node) in request.nodes.iter().enumerate() {
@@ -179,43 +229,40 @@ fn solve_plane_quad_2d_internal(
             }
         }
     }
-    push_plane_quad_stage(
+    push_plane_profile_stage(
         &mut stages,
         collect_stages,
         "assemble_global",
-        stage_started.elapsed(),
+        stage_started,
     );
 
     let triangle_request = to_triangle_request(request);
     stage_started = Instant::now();
-    let displacement_profile =
-        profile_plane_displacements(&triangle_request, &global_stiffness, &force_vector)?;
+    let displacement_profile = profile_plane_displacements_with_options(
+        &triangle_request,
+        &global_stiffness,
+        &force_vector,
+        solve_options,
+    )?;
     let displacements = displacement_profile.displacements;
-    push_plane_quad_stage(
-        &mut stages,
-        collect_stages,
-        "solve_system",
-        stage_started.elapsed(),
-    );
+    push_plane_profile_stage(&mut stages, collect_stages, "solve_system", stage_started);
     if collect_stages {
-        stages.extend(displacement_profile.stages.into_iter().map(|stage| {
-            PlaneQuadProfileStage {
-                label: stage.label,
-                rss_kib: stage.rss_kib,
-                elapsed_ms: stage.elapsed_ms,
-            }
-        }));
+        stages.extend(
+            displacement_profile
+                .stages
+                .into_iter()
+                .map(|stage| PlaneProfileStage {
+                    label: stage.label,
+                    rss_kib: stage.rss_kib,
+                    elapsed_ms: stage.elapsed_ms,
+                }),
+        );
     }
 
     stage_started = Instant::now();
     let nodes = build_plane_nodes(&triangle_request, &displacements);
     let elements = build_plane_quad_elements(request, &computed_elements, &displacements);
-    push_plane_quad_stage(
-        &mut stages,
-        collect_stages,
-        "assemble",
-        stage_started.elapsed(),
-    );
+    push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneQuadProfile {
         result: SolvePlaneQuad2dResult {
@@ -228,6 +275,9 @@ fn solve_plane_quad_2d_internal(
             nodes,
             elements,
         },
+        solver_iterations: displacement_profile.solver_iterations,
+        solver_matrix_non_zero_count: displacement_profile.solver_matrix_non_zero_count,
+        solver_residual_norm: displacement_profile.solver_residual_norm,
         stages,
     })
 }
@@ -487,51 +537,6 @@ fn triangle_displacements(
 ) -> [f64; 6] {
     let map = triangle_dof_map(node_i, node_j, node_k);
     std::array::from_fn(|index| displacements[map[index]])
-}
-
-fn push_plane_quad_stage(
-    stages: &mut Vec<PlaneQuadProfileStage>,
-    enabled: bool,
-    label: &'static str,
-    elapsed: std::time::Duration,
-) {
-    if !enabled {
-        return;
-    }
-
-    stages.push(PlaneQuadProfileStage {
-        label,
-        rss_kib: current_rss_kib(),
-        elapsed_ms: elapsed.as_secs_f64() * 1000.0,
-    });
-}
-
-fn current_rss_kib() -> u64 {
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
-            if let Some(resident_pages) = statm.split_whitespace().nth(1) {
-                if let Ok(resident_pages) = resident_pages.parse::<u64>() {
-                    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-                    if page_size > 0 {
-                        return resident_pages * page_size as u64 / 1024;
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
-        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
-        if status == 0 {
-            let usage = unsafe { usage.assume_init() };
-            return (usage.ru_maxrss as u64) / 1024;
-        }
-    }
-
-    0
 }
 
 fn max_plane_displacement(nodes: &[PlaneNodeResult]) -> f64 {

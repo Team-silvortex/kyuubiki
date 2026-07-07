@@ -8,12 +8,14 @@ const DEFAULT_REMOTE_DIR = ".kyuubiki-remote-runs/material-research-example";
 
 function parseArgs(argv) {
   const options = {
+    caseFilter: process.env.CASE_FILTER || "",
     host: process.env.KYUUBIKI_LAB_HOST || "kyuubiki-lab",
     matrix: process.env.MATRIX || "compound-core",
     outputSlug: process.env.OUTPUT_SLUG || timestampSlug(),
     profile: process.env.PROFILE || "100k",
     remoteDir: process.env.KYUUBIKI_REMOTE_MATERIAL_DIR || DEFAULT_REMOTE_DIR,
     repeat: process.env.REPEAT || "1",
+    solverPreconditioner: process.env.SOLVER_PRECONDITIONER || "auto",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -24,6 +26,9 @@ function parseArgs(argv) {
     const next = argv[index + 1];
     if (arg === "--host" && next) {
       options.host = next;
+      index += 1;
+    } else if (arg === "--case" && next) {
+      options.caseFilter = next;
       index += 1;
     } else if (arg === "--remote-dir" && next) {
       options.remoteDir = next;
@@ -39,6 +44,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--output-slug" && next) {
       options.outputSlug = next;
+      index += 1;
+    } else if (arg === "--solver-preconditioner" && next) {
+      options.solverPreconditioner = next;
       index += 1;
     } else {
       fail(`unknown or incomplete argument: ${arg}`);
@@ -88,6 +96,8 @@ function remoteCommand(options) {
   const profile = shellQuote(options.profile);
   const matrix = shellQuote(options.matrix);
   const repeat = shellQuote(options.repeat);
+  const solverPreconditioner = shellQuote(options.solverPreconditioner);
+  const caseArgs = options.caseFilter ? ` --case ${shellQuote(options.caseFilter)}` : "";
   return [
     "set -euo pipefail",
     `cd ${shellQuote(options.remoteDir)}`,
@@ -96,7 +106,7 @@ function remoteCommand(options) {
     "cd workers/rust",
     "cargo test -p kyuubiki-cli material_report",
     "cargo test -p kyuubiki-cli --bin kyuubiki-material-explore",
-    `cargo run --release -q -p kyuubiki-benchmark -- --profile ${profile} --matrix ${matrix} --repeat ${repeat} --format json > ../../tmp/remote-material-research-benchmark.json`,
+    `cargo run --release -q -p kyuubiki-benchmark -- --profile ${profile} --matrix ${matrix} --repeat ${repeat} --format json --solver-preconditioner ${solverPreconditioner}${caseArgs} > ../../tmp/remote-material-research-benchmark.json`,
   ].join("; ");
 }
 
@@ -147,11 +157,14 @@ function printUsage() {
 
 Options:
   --host <ssh-host>       Default: KYUUBIKI_LAB_HOST or kyuubiki-lab
+  --case <substring>      Optional benchmark case filter, default: CASE_FILTER
   --remote-dir <path>     Relative remote scratch dir, default: ${DEFAULT_REMOTE_DIR}
   --profile <profile>     Benchmark profile, default: PROFILE or 100k
   --matrix <matrix>       Benchmark matrix, default: MATRIX or compound-core
   --repeat <count>        Benchmark repeat count, default: REPEAT or 1
   --output-slug <slug>    Local tmp output slug
+  --solver-preconditioner <name>
+                          Default: SOLVER_PRECONDITIONER or auto
 
 This runner never stores credentials. It requires an existing SSH key/config and
 uses rsync --delete only inside the selected remote scratch directory.`);
@@ -166,7 +179,7 @@ const options = parseArgs(process.argv.slice(2));
 const localDir = path.join(repoRoot, "tmp", "remote-material-research", options.outputSlug);
 console.log(`remote host: ${options.host}`);
 console.log(`remote dir: ${options.remoteDir}`);
-console.log(`benchmark: profile=${options.profile} matrix=${options.matrix} repeat=${options.repeat}`);
+console.log(`benchmark: profile=${options.profile} matrix=${options.matrix} repeat=${options.repeat} solver_preconditioner=${options.solverPreconditioner} case=${options.caseFilter || "all"}`);
 syncSources(options);
 requireOk("remote material research run", run("ssh", sshArgs(options.host, remoteCommand(options))));
 pullEvidence(options, localDir);

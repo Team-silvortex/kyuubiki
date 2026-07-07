@@ -3,17 +3,15 @@ use std::time::Instant;
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
-use kyuubiki_solver::{
-    SpdSolveOptions, profile_heat_plane_quad_2d, profile_plane_quad_2d,
-    profile_truss_2d_with_options,
-};
+use kyuubiki_solver::{SpdSolveOptions, profile_heat_plane_quad_2d, profile_truss_2d_with_options};
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
 };
 use crate::runner_metrics::apply_metrics;
 use crate::runner_preconditioner::{
-    effective_preconditioner, parse_preconditioner, solver_preconditioners,
+    effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
+    solver_preconditioners,
 };
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
@@ -73,6 +71,7 @@ pub(crate) fn build_report_with_progress(
         profile,
         matrix: matrix.to_string(),
         generated_at_unix_s: unix_timestamp(),
+        preconditioner_comparisons: preconditioner_comparisons(&cases),
         cases,
     }
 }
@@ -94,6 +93,7 @@ pub(crate) fn run_case_with_preconditioner(
     let mut peak_rss_kib = current_peak_rss_kib();
     let mut memory_stages = Vec::new();
     let mut solver_iterations = None;
+    let mut solver_matrix_non_zero_count = None;
     let mut solver_residual_norm = None;
     let mut solver_preconditioner_name = None;
     let mut error = None;
@@ -113,6 +113,7 @@ pub(crate) fn run_case_with_preconditioner(
                     &mut max_stress,
                     &mut memory_stages,
                     &mut solver_iterations,
+                    &mut solver_matrix_non_zero_count,
                     &mut solver_residual_norm,
                     &mut solver_preconditioner_name,
                 );
@@ -340,39 +341,9 @@ pub(crate) fn run_case_with_preconditioner(
                         max_displacement = result.max_displacement;
                         max_stress = result.max_stress;
                         solver_iterations = Some(profile.solver_iterations);
+                        solver_matrix_non_zero_count = Some(profile.solver_matrix_non_zero_count);
                         solver_residual_norm = Some(profile.solver_residual_norm);
                         solver_preconditioner_name = Some(solver_preconditioner.to_string());
-                        memory_stages = profile
-                            .stages
-                            .into_iter()
-                            .map(|stage| BenchmarkMemoryStage {
-                                label: stage.label.to_string(),
-                                rss_kib: stage.rss_kib,
-                                elapsed_ms: Some(stage.elapsed_ms),
-                            })
-                            .collect();
-                    })
-                }
-                BenchmarkWorkload::PlaneTriangle2d(request) => {
-                    solve(EngineSolveRequest::PlaneTriangle2d(request.clone())).map(|result| {
-                        let AnalysisResult::PlaneTriangle2d(result) = result else {
-                            unreachable!("plane solve should return plane result")
-                        };
-                        node_count = result.nodes.len();
-                        element_count = result.elements.len();
-                        dof_count = result.nodes.len() * 2;
-                        max_displacement = result.max_displacement;
-                        max_stress = result.max_stress;
-                    })
-                }
-                BenchmarkWorkload::PlaneQuad2d(request) => {
-                    profile_plane_quad_2d(request).map(|profile| {
-                        let result = profile.result;
-                        node_count = result.nodes.len();
-                        element_count = result.elements.len();
-                        dof_count = result.nodes.len() * 2;
-                        max_displacement = result.max_displacement;
-                        max_stress = result.max_stress;
                         memory_stages = profile
                             .stages
                             .into_iter()
@@ -574,6 +545,7 @@ pub(crate) fn run_case_with_preconditioner(
         peak_rss_kib,
         memory_stages,
         solver_iterations,
+        solver_matrix_non_zero_count,
         solver_residual_norm,
         solver_preconditioner: solver_preconditioner_name,
         max_displacement,

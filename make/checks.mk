@@ -75,7 +75,12 @@ remote-material-research-example:
 	@node ./scripts/run-remote-material-research-example.mjs --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
 
 remote-material-research-summary:
+	@node ./scripts/build-remote-material-benchmark-summary.mjs --self-test
 	@node ./scripts/build-remote-material-benchmark-summary.mjs
+	@node ./scripts/check-remote-material-preconditioner-health.mjs --self-test
+	@node ./scripts/check-remote-material-preconditioner-health.mjs
+	@node ./scripts/check-remote-material-stage-health.mjs --self-test
+	@node ./scripts/check-remote-material-stage-health.mjs
 
 check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline
 	@node ./scripts/check-operator-reliability.mjs

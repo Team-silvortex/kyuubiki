@@ -3,7 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  optimizationTargets,
+  preconditionerEconomics,
+  solverTuningNotes,
+  sparseMatvecThroughput,
+  summarizeStageRows,
+} from "./remote-material-benchmark-analysis.mjs";
+import { writeRemoteMaterialBenchmarkMarkdown } from "./remote-material-benchmark-markdown.mjs";
+import { runRemoteMaterialBenchmarkSummarySelfTest } from "./remote-material-benchmark-summary-self-test.mjs";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 function parseArgs(argv) {
   const options = {
@@ -17,6 +28,8 @@ function parseArgs(argv) {
     if (arg === "--help" || arg === "-h") {
       printUsage();
       process.exit(0);
+    } else if (arg === "--self-test") {
+      options.selfTest = true;
     } else if (arg === "--input-dir" && next) {
       options.inputDir = path.resolve(next);
       index += 1;
@@ -53,7 +66,8 @@ function readRuns(inputDir) {
   return runs;
 }
 
-function buildSummary(runs) {
+export function buildSummary(runs) {
+  const sortedRuns = [...runs].sort((left, right) => left.name.localeCompare(right.name));
   const cases = runs.flatMap((run) =>
     (run.benchmark.cases || []).map((item) => ({
       case_id: item.id,
@@ -66,37 +80,46 @@ function buildSummary(runs) {
       residual_norm: item.solver_residual_norm,
       run: run.name,
       solver_iterations: item.solver_iterations,
+      solver_matrix_non_zero_count: item.solver_matrix_non_zero_count,
+      solver_preconditioner: item.solver_preconditioner || preconditionerFromCaseId(item.id),
     })),
   );
   const sortedByTime = [...cases].sort((left, right) => right.median_ms - left.median_ms);
   const sortedByMemory = [...cases].sort(
     (left, right) => (right.peak_rss_mib || 0) - (left.peak_rss_mib || 0),
   );
-  const stageHotspots = runs
-    .flatMap((run) =>
-      (run.benchmark.cases || []).flatMap((item) =>
-        (item.memory_stages || [])
-          .filter((stage) => Number.isFinite(stage.elapsed_ms))
-          .map((stage) => ({
-            case_id: item.id,
-            elapsed_ms: stage.elapsed_ms,
-            matrix: run.benchmark.matrix,
-            profile: run.benchmark.profile,
-            run: run.name,
-            stage: stage.label,
-            stage_rss_mib: stage.rss_kib == null ? null : stage.rss_kib / 1024,
-          })),
-      ),
-    )
-    .sort((left, right) => right.elapsed_ms - left.elapsed_ms);
+  const latestCases = latestCaseResults(sortedRuns);
+  const bestCases = bestCaseResults(cases);
+  const stageHotspots = stageRowsForRuns(runs);
+  const latestStageHotspots = latestStageRows(sortedRuns, latestCases);
+  const latestStageSummary = summarizeStageRows(latestStageHotspots);
+  const stageSummary = summarizeStageRows(stageHotspots);
+  const latestPreconditionerComparisons = latestPreconditionerComparisonsForRuns(
+    sortedRuns,
+    latestCases,
+  );
+  const latestPreconditionerEconomics = preconditionerEconomics(
+    latestPreconditionerComparisons,
+    latestStageHotspots,
+  );
   return {
     schema_version: "kyuubiki.remote-material-benchmark-summary/v1",
     generated_at_utc: new Date().toISOString(),
     run_count: runs.length,
     case_count: cases.length,
+    best_cases: bestCases.slice(0, 12),
     failed_cases: cases.filter((item) => !item.ok),
     hottest_cases: sortedByTime.slice(0, 8),
+    latest_cases: latestCases,
+    latest_optimization_targets: optimizationTargets(latestStageSummary).slice(0, 8),
+    latest_preconditioner_economics: latestPreconditionerEconomics,
+    latest_preconditioner_comparisons: latestPreconditionerComparisons,
+    latest_solver_tuning_notes: solverTuningNotes(latestPreconditionerEconomics),
+    latest_sparse_matvec_throughput: sparseMatvecThroughput(latestStageSummary),
+    latest_stage_summary: latestStageSummary,
+    latest_stage_hotspots: latestStageHotspots.slice(0, 12),
     memory_heaviest_cases: sortedByMemory.slice(0, 8),
+    stage_summary: stageSummary,
     stage_hotspots: stageHotspots.slice(0, 12),
     runs: runs.map((run) => ({
       matrix: run.benchmark.matrix,
@@ -108,51 +131,192 @@ function buildSummary(runs) {
   };
 }
 
-function writeMarkdown(summary, outputPath) {
-  const lines = [
-    "# Remote Material Benchmark Summary",
-    "",
-    `Generated: ${summary.generated_at_utc}`,
-    "",
-    `Runs: ${summary.run_count}`,
-    "",
-    `Cases: ${summary.case_count}`,
-    "",
-    `Failed cases: ${summary.failed_cases.length}`,
-    "",
-    "## Hottest Cases",
-    "",
-    "| Rank | Matrix | Case | Median ms | RSS MiB | DOF | Iterations | Residual |",
-    "| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |",
-    ...summary.hottest_cases.map((item, index) => caseRow(index + 1, item)),
-    "",
-    "## Memory Heaviest Cases",
-    "",
-    "| Rank | Matrix | Case | Median ms | RSS MiB | DOF | Iterations | Residual |",
-    "| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |",
-    ...summary.memory_heaviest_cases.map((item, index) => caseRow(index + 1, item)),
-    "",
-    "## Stage Hotspots",
-    "",
-    "| Rank | Matrix | Case | Stage | Elapsed ms | Stage RSS MiB |",
-    "| ---: | --- | --- | --- | ---: | ---: |",
-    ...summary.stage_hotspots.map((item, index) => stageRow(index + 1, item)),
-    "",
-  ];
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, `${lines.join("\n")}\n`);
+function latestCaseResults(sortedRuns) {
+  const latestByCase = new Map();
+  for (const run of sortedRuns) {
+    for (const row of caseRowsForRun(run)) {
+      latestByCase.set(caseKey(row), row);
+    }
+  }
+  return [...latestByCase.values()].sort(compareCaseRows);
 }
 
-function caseRow(rank, item) {
-  const rss = item.peak_rss_mib == null ? "n/a" : item.peak_rss_mib.toFixed(1);
-  const iterations = item.solver_iterations == null ? "n/a" : String(item.solver_iterations);
-  const residual = item.residual_norm == null ? "n/a" : Number(item.residual_norm).toExponential(2);
-  return `| ${rank} | ${item.matrix} | ${item.case_id} | ${item.median_ms.toFixed(2)} | ${rss} | ${item.dof_count} | ${iterations} | ${residual} |`;
+function caseRowsForRun(run) {
+  return (run.benchmark.cases || []).map((item) => ({
+    case_id: item.id,
+    dof_count: item.dof_count,
+    matrix: run.benchmark.matrix,
+    median_ms: item.median_ms,
+    ok: item.ok,
+    peak_rss_mib: item.peak_rss_kib == null ? null : item.peak_rss_kib / 1024,
+    profile: run.benchmark.profile,
+    residual_norm: item.solver_residual_norm,
+    run: run.name,
+    solver_iterations: item.solver_iterations,
+    solver_matrix_non_zero_count: item.solver_matrix_non_zero_count,
+    solver_preconditioner: item.solver_preconditioner || preconditionerFromCaseId(item.id),
+  }));
 }
 
-function stageRow(rank, item) {
-  const rss = item.stage_rss_mib == null ? "n/a" : item.stage_rss_mib.toFixed(1);
-  return `| ${rank} | ${item.matrix} | ${item.case_id} | ${item.stage} | ${item.elapsed_ms.toFixed(2)} | ${rss} |`;
+function latestStageRows(sortedRuns, latestCases) {
+  const latestCaseKeys = new Set(
+    latestCases.map((item) => `${item.run}/${item.matrix}/${item.profile}/${item.case_id}`),
+  );
+  return stageRowsForRuns(sortedRuns).filter((item) =>
+    latestCaseKeys.has(`${item.run}/${item.matrix}/${item.profile}/${item.case_id}`),
+  );
+}
+
+function caseKey(item) {
+  return `${item.matrix}/${item.profile}/${item.case_id}`;
+}
+
+function compareCaseRows(left, right) {
+  return (
+    left.matrix.localeCompare(right.matrix) ||
+    left.profile.localeCompare(right.profile) ||
+    left.case_id.localeCompare(right.case_id)
+  );
+}
+
+function stageRowsForRuns(runs) {
+  return runs
+    .flatMap((run) =>
+      (run.benchmark.cases || []).flatMap((item) =>
+        (item.memory_stages || [])
+          .filter((stage) => Number.isFinite(stage.elapsed_ms) && isHotspotStage(stage.label))
+          .map((stage) => ({
+            case_id: item.id,
+            elapsed_ms: stage.elapsed_ms,
+            matrix: run.benchmark.matrix,
+            profile: run.benchmark.profile,
+            run: run.name,
+            solver_iterations: item.solver_iterations,
+            solver_matrix_non_zero_count: item.solver_matrix_non_zero_count,
+            stage: stage.label,
+            stage_share_pct:
+              Number.isFinite(item.median_ms) && item.median_ms > 0
+                ? (stage.elapsed_ms / item.median_ms) * 100.0
+                : null,
+            stage_rss_mib: stage.rss_kib == null ? null : stage.rss_kib / 1024,
+          })),
+      ),
+    )
+    .sort((left, right) => right.elapsed_ms - left.elapsed_ms);
+}
+
+function isHotspotStage(label) {
+  return !["solve_system", "solve_spd_system"].includes(label);
+}
+
+function bestCaseResults(cases) {
+  const best = new Map();
+  for (const item of cases.filter((candidate) => candidate.ok)) {
+    const key = `${item.matrix}/${item.profile}/${item.case_id}`;
+    const current = best.get(key);
+    if (!current || item.median_ms < current.median_ms) best.set(key, item);
+  }
+  return [...best.values()].sort((left, right) => right.median_ms - left.median_ms);
+}
+
+function preconditionerComparisons(cases) {
+  const groups = new Map();
+  for (const item of cases.filter((candidate) => candidate.ok && candidate.solver_preconditioner)) {
+    const key = `${item.matrix}/${item.profile}/${baseCaseId(item.case_id)}`;
+    const group = groups.get(key) || [];
+    group.push(item);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map((items) => dedupeByPreconditioner(items))
+    .filter((items) => items.length > 1)
+    .map((items) => {
+      const sorted = [...items].sort((left, right) => left.median_ms - right.median_ms);
+      return {
+        base_case_id: baseCaseId(sorted[0].case_id),
+        compared: sorted.map((item) => ({
+          median_ms: item.median_ms,
+          solver_iterations: item.solver_iterations,
+          solver_preconditioner: item.solver_preconditioner,
+        })),
+        matrix: sorted[0].matrix,
+        profile: sorted[0].profile,
+        winner_iteration_reduction_pct: iterationReductionPct(
+          sorted[0].solver_iterations,
+          sorted.at(-1)?.solver_iterations,
+        ),
+        winner_median_ms: sorted[0].median_ms,
+        winner_preconditioner: sorted[0].solver_preconditioner,
+        winner_solver_iterations: sorted[0].solver_iterations,
+        winner_speedup_ratio: (sorted.at(-1)?.median_ms || sorted[0].median_ms) / sorted[0].median_ms,
+      };
+    })
+    .sort((left, right) => right.winner_median_ms - left.winner_median_ms);
+}
+
+function latestPreconditionerComparisonsForRuns(sortedRuns, latestCases) {
+  const latestByCase = new Map(latestCases.map((item) => [caseKey(item), item]));
+  const comparisons = new Map(
+    preconditionerComparisons(latestCases).map((item) => [comparisonKey(item), item]),
+  );
+  for (const run of sortedRuns) {
+    for (const comparison of run.benchmark.preconditioner_comparisons || []) {
+      if (!reportComparisonMatchesLatest(run, comparison, latestByCase)) continue;
+      const item = {
+        base_case_id: comparison.base_case_id,
+        compared: comparison.compared || [],
+        matrix: run.benchmark.matrix,
+        profile: run.benchmark.profile,
+        winner_iteration_reduction_pct: comparison.winner_iteration_reduction_pct,
+        winner_median_ms: comparison.winner_median_ms,
+        winner_preconditioner: comparison.winner_preconditioner,
+        winner_solver_iterations: comparison.winner_solver_iterations,
+        winner_speedup_ratio: comparison.winner_speedup_ratio,
+      };
+      comparisons.set(comparisonKey(item), item);
+    }
+  }
+  return [...comparisons.values()].sort(
+    (left, right) => right.winner_median_ms - left.winner_median_ms,
+  );
+}
+
+function comparisonKey(item) {
+  return `${item.matrix}/${item.profile}/${item.base_case_id}`;
+}
+
+function iterationReductionPct(winnerIterations, slowestIterations) {
+  if (!Number.isFinite(winnerIterations) || !Number.isFinite(slowestIterations)) return null;
+  if (slowestIterations <= 0) return null;
+  return ((slowestIterations - winnerIterations) / slowestIterations) * 100.0;
+}
+
+function reportComparisonMatchesLatest(run, comparison, latestByCase) {
+  return (comparison.compared || []).every((item) => {
+    const caseId = `${comparison.base_case_id}#${item.solver_preconditioner}`;
+    const latest = latestByCase.get(`${run.benchmark.matrix}/${run.benchmark.profile}/${caseId}`);
+    return latest?.run === run.name;
+  });
+}
+
+function dedupeByPreconditioner(items) {
+  const hasExplicitVariants = items.some((item) => item.case_id.includes("#"));
+  const bestByPreconditioner = new Map();
+  for (const item of items.filter((candidate) => !hasExplicitVariants || candidate.case_id.includes("#"))) {
+    const current = bestByPreconditioner.get(item.solver_preconditioner);
+    if (!current || item.median_ms < current.median_ms) {
+      bestByPreconditioner.set(item.solver_preconditioner, item);
+    }
+  }
+  return [...bestByPreconditioner.values()];
+}
+
+function baseCaseId(caseId) {
+  return caseId.split("#")[0];
+}
+
+function preconditionerFromCaseId(caseId) {
+  return caseId.includes("#") ? caseId.split("#").at(-1) : null;
 }
 
 function readJson(filePath) {
@@ -174,10 +338,16 @@ function fail(message) {
   process.exit(1);
 }
 
-const options = parseArgs(process.argv.slice(2));
-const runs = readRuns(options.inputDir);
-const summary = buildSummary(runs);
-fs.mkdirSync(path.dirname(options.jsonOut), { recursive: true });
-fs.writeFileSync(options.jsonOut, `${JSON.stringify(summary, null, 2)}\n`);
-writeMarkdown(summary, options.markdownOut);
-console.log(`remote material benchmark summary: ${options.markdownOut}`);
+if (isMain) {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.selfTest) {
+    runRemoteMaterialBenchmarkSummarySelfTest(buildSummary);
+    process.exit(0);
+  }
+  const runs = readRuns(options.inputDir);
+  const summary = buildSummary(runs);
+  fs.mkdirSync(path.dirname(options.jsonOut), { recursive: true });
+  fs.writeFileSync(options.jsonOut, `${JSON.stringify(summary, null, 2)}\n`);
+  writeRemoteMaterialBenchmarkMarkdown(summary, options.markdownOut);
+  console.log(`remote material benchmark summary: ${options.markdownOut}`);
+}

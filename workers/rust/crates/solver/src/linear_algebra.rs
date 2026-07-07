@@ -10,9 +10,12 @@ pub(crate) struct SparseMatrix {
 #[derive(Debug, Clone)]
 pub(crate) struct CompressedSparseMatrix {
     pub(crate) row_offsets: Vec<usize>,
+    pub(crate) lower_end_offsets: Vec<usize>,
+    pub(crate) upper_start_offsets: Vec<usize>,
     pub(crate) columns: Vec<usize>,
     pub(crate) values: Vec<f64>,
     pub(crate) diagonal: Vec<f64>,
+    inverse_diagonal: Vec<f64>,
 }
 
 impl SparseMatrix {
@@ -34,7 +37,7 @@ impl SparseMatrix {
         self.rows.len()
     }
 
-    fn non_zero_count(&self) -> usize {
+    pub(crate) fn non_zero_count(&self) -> usize {
         self.rows.iter().map(Vec::len).sum()
     }
 
@@ -114,12 +117,19 @@ impl SparseMatrix {
     fn compress(&self) -> CompressedSparseMatrix {
         let size = self.size();
         let mut row_offsets = Vec::with_capacity(size + 1);
+        let mut lower_end_offsets = Vec::with_capacity(size);
+        let mut upper_start_offsets = Vec::with_capacity(size);
         let mut columns = Vec::new();
         let mut values = Vec::new();
         let mut diagonal = vec![0.0; size];
 
         row_offsets.push(0);
         for (row_index, row) in self.rows.iter().enumerate() {
+            let row_start = columns.len();
+            lower_end_offsets
+                .push(row_start + row.partition_point(|(column, _)| *column < row_index));
+            upper_start_offsets
+                .push(row_start + row.partition_point(|(column, _)| *column <= row_index));
             for &(column, value) in row {
                 if column == row_index {
                     diagonal[row_index] = value;
@@ -130,11 +140,19 @@ impl SparseMatrix {
             row_offsets.push(columns.len());
         }
 
+        let inverse_diagonal = diagonal
+            .iter()
+            .map(|value| safe_diagonal(*value).recip())
+            .collect();
+
         CompressedSparseMatrix {
             row_offsets,
+            lower_end_offsets,
+            upper_start_offsets,
             columns,
             values,
             diagonal,
+            inverse_diagonal,
         }
     }
 }
@@ -144,8 +162,16 @@ impl CompressedSparseMatrix {
         self.diagonal.len()
     }
 
+    pub(crate) fn non_zero_count(&self) -> usize {
+        self.values.len()
+    }
+
     fn diagonal(&self, index: usize) -> f64 {
         self.diagonal[index]
+    }
+
+    fn inverse_diagonal(&self, index: usize) -> f64 {
+        self.inverse_diagonal[index]
     }
 
     pub(crate) fn multiply_vector_into(&self, vector: &[f64], result: &mut [f64]) {
@@ -154,8 +180,10 @@ impl CompressedSparseMatrix {
             let start = self.row_offsets[row];
             let end = self.row_offsets[row + 1];
             let mut sum = 0.0;
-            for index in start..end {
-                sum += self.values[index] * vector[self.columns[index]];
+            let columns = &self.columns[start..end];
+            let values = &self.values[start..end];
+            for (&column, &value) in columns.iter().zip(values.iter()) {
+                sum += value * vector[column];
             }
             result[row] = sum;
         }
@@ -171,7 +199,7 @@ impl CompressedSparseMatrix {
         match kind {
             SpdPreconditioner::Jacobi => {
                 for index in 0..self.size() {
-                    result[index] = residual[index] / safe_diagonal(self.diagonal(index));
+                    result[index] = residual[index] * self.inverse_diagonal(index);
                 }
             }
             SpdPreconditioner::SymmetricGaussSeidel => {
@@ -185,24 +213,20 @@ impl CompressedSparseMatrix {
         debug_assert_eq!(forward.len(), size);
         for row in 0..size {
             let mut sum = residual[row];
-            for index in self.row_offsets[row]..self.row_offsets[row + 1] {
+            for index in self.row_offsets[row]..self.lower_end_offsets[row] {
                 let column = self.columns[index];
-                if column < row {
-                    sum -= self.values[index] * forward[column];
-                }
+                sum -= self.values[index] * forward[column];
             }
-            forward[row] = sum / safe_diagonal(self.diagonal(row));
+            forward[row] = sum * self.inverse_diagonal(row);
         }
 
         for row in (0..size).rev() {
             let mut sum = self.diagonal(row) * forward[row];
-            for index in self.row_offsets[row]..self.row_offsets[row + 1] {
+            for index in self.upper_start_offsets[row]..self.row_offsets[row + 1] {
                 let column = self.columns[index];
-                if column > row {
-                    sum -= self.values[index] * result[column];
-                }
+                sum -= self.values[index] * result[column];
             }
-            result[row] = sum / safe_diagonal(self.diagonal(row));
+            result[row] = sum * self.inverse_diagonal(row);
         }
     }
 }
@@ -344,7 +368,9 @@ pub(crate) fn solve_spd_system_profile_with_options(
         return Ok(SpdSolveProfile {
             solution: Vec::new(),
             iterations: 0,
+            matrix_non_zero_count: 0,
             residual_norm: 0.0,
+            stages: Vec::new(),
         });
     }
     if size <= 1024 {
@@ -352,7 +378,9 @@ pub(crate) fn solve_spd_system_profile_with_options(
             SpdSolveProfile {
                 solution,
                 iterations: 0,
+                matrix_non_zero_count: matrix.non_zero_count(),
                 residual_norm: 0.0,
+                stages: Vec::new(),
             }
         });
     }
@@ -460,7 +488,9 @@ fn unscale_profile(profile: SpdSolveProfile, scaling: &[f64]) -> SpdSolveProfile
     SpdSolveProfile {
         solution: unscale_solution(&profile.solution, scaling),
         iterations: profile.iterations,
+        matrix_non_zero_count: profile.matrix_non_zero_count,
         residual_norm: profile.residual_norm,
+        stages: profile.stages,
     }
 }
 

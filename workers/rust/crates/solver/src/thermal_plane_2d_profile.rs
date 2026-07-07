@@ -13,6 +13,7 @@ pub struct ThermalPlaneTriangleProfile {
     pub result: SolveThermalPlaneTriangle2dResult,
     pub stages: Vec<ThermalPlaneProfileStage>,
     pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
     pub solver_residual_norm: f64,
 }
 
@@ -21,6 +22,7 @@ pub struct ThermalPlaneQuadProfile {
     pub result: SolveThermalPlaneQuad2dResult,
     pub stages: Vec<ThermalPlaneProfileStage>,
     pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
     pub solver_residual_norm: f64,
 }
 

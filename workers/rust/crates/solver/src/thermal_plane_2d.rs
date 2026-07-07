@@ -47,6 +47,7 @@ struct ThermalPlaneQuadComputed {
 struct ThermalPlaneSolvedDisplacements {
     displacements: Vec<f64>,
     solver_iterations: usize,
+    solver_matrix_non_zero_count: usize,
     solver_residual_norm: f64,
 }
 
@@ -141,6 +142,7 @@ fn solve_thermal_plane_triangle_2d_internal(
         },
         stages,
         solver_iterations: solved.solver_iterations,
+        solver_matrix_non_zero_count: solved.solver_matrix_non_zero_count,
         solver_residual_norm: solved.solver_residual_norm,
     })
 }
@@ -257,6 +259,7 @@ fn solve_thermal_plane_quad_2d_internal(
         },
         stages,
         solver_iterations: solved.solver_iterations,
+        solver_matrix_non_zero_count: solved.solver_matrix_non_zero_count,
         solver_residual_norm: solved.solver_residual_norm,
     })
 }
@@ -537,6 +540,7 @@ fn solve_thermal_plane_displacements(
     let solve_profile =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, solve_options)?;
     let solver_iterations = solve_profile.iterations;
+    let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
     let solver_residual_norm = solve_profile.residual_norm;
     let reduced_displacements = solve_profile.solution;
     push_thermal_plane_stage(
@@ -553,6 +557,7 @@ fn solve_thermal_plane_displacements(
     Ok(ThermalPlaneSolvedDisplacements {
         displacements,
         solver_iterations,
+        solver_matrix_non_zero_count,
         solver_residual_norm,
     })
 }

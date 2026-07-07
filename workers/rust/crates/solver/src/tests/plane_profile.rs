@@ -69,6 +69,9 @@ fn plane_quad_profile_exposes_solver_stage_breakdown() {
         "scatter_solution",
         "assemble",
     ] {
-        assert!(labels.contains(&expected), "missing profile stage {expected}");
+        assert!(
+            labels.contains(&expected),
+            "missing profile stage {expected}"
+        );
     }
 }

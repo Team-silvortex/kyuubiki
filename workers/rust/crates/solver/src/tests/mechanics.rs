@@ -271,6 +271,45 @@ fn solves_a_small_two_dimensional_truss() {
 }
 
 #[test]
+fn truss_profile_exposes_iterative_solver_hotspots() {
+    let node_count = 1027;
+    let nodes = (0..node_count)
+        .map(|index| TrussNodeInput {
+            id: format!("n{index}"),
+            x: index as f64,
+            y: 0.0,
+            fix_x: index == 0,
+            fix_y: true,
+            load_x: if index == node_count - 1 { 1000.0 } else { 0.0 },
+            load_y: 0.0,
+        })
+        .collect::<Vec<_>>();
+    let elements = (0..node_count - 1)
+        .map(|index| TrussElementInput {
+            id: format!("e{index}"),
+            node_i: index,
+            node_j: index + 1,
+            area: 0.01,
+            youngs_modulus: 70.0e9,
+        })
+        .collect::<Vec<_>>();
+
+    let profile =
+        profile_truss_2d(&SolveTruss2dRequest { nodes, elements }).expect("truss should solve");
+    let labels = profile
+        .stages
+        .iter()
+        .map(|stage| stage.label)
+        .collect::<Vec<_>>();
+
+    assert!(labels.contains(&"solve_spd_matvec"));
+    assert!(labels.contains(&"solve_spd_preconditioner"));
+    assert!(labels.contains(&"solve_spd_vector_update"));
+    assert!(labels.contains(&"solve_spd_direction_update"));
+    assert!(labels.contains(&"solve_spd_dot"));
+}
+
+#[test]
 fn rejects_truss_responses_that_blow_past_small_displacement_limits() {
     let error = solve_truss_2d(&SolveTruss2dRequest {
         nodes: vec![

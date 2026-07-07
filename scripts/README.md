@@ -75,6 +75,23 @@ This directory contains host-native operational entry points.
   `check-operator-reliability-schemas.mjs` runs the zero-dependency schema
   smoke, and `check-operator-reliability.mjs` performs the manifest,
   benchmark, workflow payload, evidence-file, roadmap, and evidence-kit gate.
+- `build-remote-material-benchmark-summary.mjs` and helpers
+  Retained lab benchmark evidence summarizer. The builder reads
+  `tmp/remote-material-research/`, emits JSON, and delegates Markdown rendering
+  to `remote-material-benchmark-markdown.mjs`; stage summaries, optimization
+  targets, sparse matvec throughput, preconditioner economics, and tuning notes
+  live in `remote-material-benchmark-analysis.mjs`. Self-test fixtures live in
+  `remote-material-benchmark-summary-self-test.mjs` so the builder stays small
+  and import-safe. `check-remote-material-preconditioner-health.mjs` applies a
+  conservative retained-evidence gate so SGS/Jacobi comparison wins cannot
+  silently regress, while `check-remote-material-stage-health.mjs` verifies
+  retained stage timing/share and summary fields; the generated stage summary
+  tables are the optimization triage entrypoint for system-wide solver
+  hotspots. Sparse matvec summaries also normalize measured rows by
+  `ms / M nnz-visits`, using only samples that expose solver matrix nnz. Use
+  their `--self-test` lanes when changing threshold logic. The preconditioner
+  economics table reports the extra sweep cost versus the non-preconditioner
+  time saved, so SGS-style changes can be judged by net solver value.
 - `check-line-field-closed-form-baseline.mjs`
   Verify the first versioned qualification evidence artifact for the
   `line-field-closed-form` candidate. It checks that all four 1D closed-form
@@ -168,6 +185,13 @@ Useful checks:
 - `make check-operator-reliability-rules`
   Run only the pure reliability rule self-test without loading benchmark
   catalogs, workflow payloads, manifest shards, or evidence files.
+- `make remote-material-research-summary`
+  Run the remote material benchmark summary self-test, then summarize retained
+  lab evidence under `tmp/remote-material-research/`. Use this after targeted
+  remote reruns so single-case evidence updates do not hide the rest of the
+  latest benchmark matrix. The target also checks retained preconditioner and
+  stage health using the generated summary, after first running each health
+  checker self-test.
 - `make check-operator-reliability-schemas`
   Run only the operator reliability schema/config version smoke without loading
   benchmark catalogs, workflow payloads, or evidence files. This covers

@@ -66,8 +66,11 @@ pub use modal_frame_2d::solve_modal_frame_2d;
 pub use modal_frame_3d::solve_modal_frame_3d;
 pub use nonlinear_spring_1d::{solve_contact_gap_1d, solve_nonlinear_spring_1d};
 pub use plane_2d::{
-    PlaneQuadProfile, PlaneQuadProfileStage, profile_plane_quad_2d, solve_plane_quad_2d,
-    solve_plane_triangle_2d,
+    profile_plane_quad_2d, profile_plane_quad_2d_with_options,
+    profile_plane_triangle_2d_with_options, solve_plane_quad_2d, solve_plane_triangle_2d,
+};
+pub use plane_2d_profile::{
+    PlaneProfileStage as PlaneQuadProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
 };
 pub use solid_tetra_3d::solve_solid_tetra_3d;
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};

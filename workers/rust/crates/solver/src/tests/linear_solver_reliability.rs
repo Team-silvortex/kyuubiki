@@ -1,5 +1,8 @@
-use crate::linear_algebra::{SparseMatrix, add_at, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, solve_spd_system, solve_spd_system_profile_with_options,
+};
 use crate::linear_dense::solve_linear_system;
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 
 fn assert_err_contains<T: std::fmt::Debug>(result: Result<T, String>, expected: &str) {
     let error = result.expect_err("solver should reject invalid numeric input");
@@ -50,4 +53,33 @@ fn sparse_spd_solver_rejects_non_finite_rhs_before_solving() {
         solve_spd_system(&matrix, &[1.0, f64::NEG_INFINITY]),
         "linear system vector contains non-finite value",
     );
+}
+
+#[test]
+fn sparse_spd_profile_exposes_iterative_hotspots() {
+    let size = 1025;
+    let mut matrix = SparseMatrix::new(size);
+    let rhs = vec![2.0; size];
+    for index in 0..size {
+        add_at(&mut matrix, index, index, 2.0);
+    }
+
+    let profile = solve_spd_system_profile_with_options(
+        &matrix,
+        &rhs,
+        SpdSolveOptions {
+            preconditioner: SpdPreconditioner::Jacobi,
+        },
+    )
+    .expect("diagonal SPD system should solve");
+    let labels = profile
+        .stages
+        .iter()
+        .map(|stage| stage.label)
+        .collect::<Vec<_>>();
+
+    assert!(labels.contains(&"solve_spd_matvec"));
+    assert!(labels.contains(&"solve_spd_preconditioner"));
+    assert!(labels.contains(&"solve_spd_vector_update"));
+    assert!(labels.contains(&"solve_spd_dot"));
 }

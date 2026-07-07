@@ -321,6 +321,7 @@ mod tests {
             peak_rss_kib: 1024,
             memory_stages: Vec::new(),
             solver_iterations: None,
+            solver_matrix_non_zero_count: None,
             solver_residual_norm: None,
             solver_preconditioner: None,
             max_displacement: 0.0,

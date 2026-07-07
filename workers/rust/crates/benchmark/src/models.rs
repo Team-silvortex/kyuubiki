@@ -74,6 +74,8 @@ pub(crate) struct BenchmarkReport {
     pub(crate) matrix: String,
     pub(crate) generated_at_unix_s: u64,
     pub(crate) cases: Vec<BenchmarkResult>,
+    #[serde(default)]
+    pub(crate) preconditioner_comparisons: Vec<BenchmarkPreconditionerComparison>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,11 +107,31 @@ pub(crate) struct BenchmarkResult {
     #[serde(default)]
     pub(crate) solver_iterations: Option<usize>,
     #[serde(default)]
+    pub(crate) solver_matrix_non_zero_count: Option<usize>,
+    #[serde(default)]
     pub(crate) solver_residual_norm: Option<f64>,
     #[serde(default)]
     pub(crate) solver_preconditioner: Option<String>,
     pub(crate) max_displacement: f64,
     pub(crate) max_stress: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct BenchmarkPreconditionerComparison {
+    pub(crate) base_case_id: String,
+    pub(crate) winner_preconditioner: String,
+    pub(crate) winner_median_ms: f64,
+    pub(crate) winner_solver_iterations: Option<usize>,
+    pub(crate) winner_speedup_ratio: f64,
+    pub(crate) winner_iteration_reduction_pct: Option<f64>,
+    pub(crate) compared: Vec<BenchmarkPreconditionerResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct BenchmarkPreconditionerResult {
+    pub(crate) solver_preconditioner: String,
+    pub(crate) median_ms: f64,
+    pub(crate) solver_iterations: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize)]

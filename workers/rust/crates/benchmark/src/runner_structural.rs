@@ -1,11 +1,13 @@
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::{
-    SpdPreconditioner, SpdSolveOptions, profile_thermal_plane_quad_2d_with_options,
-    profile_thermal_plane_triangle_2d_with_options,
+    PlaneQuadProfileStage, SpdSolveOptions, ThermalPlaneProfileStage,
+    profile_plane_quad_2d_with_options, profile_plane_triangle_2d_with_options,
+    profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
 };
 
 use crate::models::{BenchmarkMemoryStage, BenchmarkWorkload};
+use crate::runner_preconditioner::parse_preconditioner;
 
 pub(crate) struct WorkloadMetrics {
     pub(crate) node_count: usize,
@@ -15,6 +17,7 @@ pub(crate) struct WorkloadMetrics {
     pub(crate) max_stress: f64,
     pub(crate) memory_stages: Vec<BenchmarkMemoryStage>,
     pub(crate) solver_iterations: Option<usize>,
+    pub(crate) solver_matrix_non_zero_count: Option<usize>,
     pub(crate) solver_residual_norm: Option<f64>,
     pub(crate) solver_preconditioner: Option<String>,
 }
@@ -81,8 +84,9 @@ pub(crate) fn run_thermal_structural_workload(
                         result.max_stress,
                     )
                     .with_profile(
-                        profile.stages,
+                        benchmark_stages_from_thermal(profile.stages),
                         profile.solver_iterations,
+                        profile.solver_matrix_non_zero_count,
                         profile.solver_residual_norm,
                         solver_preconditioner,
                     )
@@ -100,8 +104,47 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_stress,
                 )
                 .with_profile(
-                    profile.stages,
+                    benchmark_stages_from_thermal(profile.stages),
                     profile.solver_iterations,
+                    profile.solver_matrix_non_zero_count,
+                    profile.solver_residual_norm,
+                    solver_preconditioner,
+                )
+            })
+        }
+        BenchmarkWorkload::PlaneTriangle2d(request) => {
+            profile_plane_triangle_2d_with_options(request, solve_options.clone()).map(|profile| {
+                let result = profile.result;
+                WorkloadMetrics::from_counts(
+                    result.nodes.len(),
+                    result.elements.len(),
+                    result.nodes.len() * 2,
+                    result.max_displacement,
+                    result.max_stress,
+                )
+                .with_profile(
+                    benchmark_stages_from_plane(profile.stages),
+                    profile.solver_iterations,
+                    profile.solver_matrix_non_zero_count,
+                    profile.solver_residual_norm,
+                    solver_preconditioner,
+                )
+            })
+        }
+        BenchmarkWorkload::PlaneQuad2d(request) => {
+            profile_plane_quad_2d_with_options(request, solve_options).map(|profile| {
+                let result = profile.result;
+                WorkloadMetrics::from_counts(
+                    result.nodes.len(),
+                    result.elements.len(),
+                    result.nodes.len() * 2,
+                    result.max_displacement,
+                    result.max_stress,
+                )
+                .with_profile(
+                    benchmark_stages_from_plane(profile.stages),
+                    profile.solver_iterations,
+                    profile.solver_matrix_non_zero_count,
                     profile.solver_residual_norm,
                     solver_preconditioner,
                 )
@@ -183,6 +226,7 @@ impl WorkloadMetrics {
             max_stress,
             memory_stages: Vec::new(),
             solver_iterations: None,
+            solver_matrix_non_zero_count: None,
             solver_residual_norm: None,
             solver_preconditioner: None,
         }
@@ -190,29 +234,41 @@ impl WorkloadMetrics {
 
     fn with_profile(
         mut self,
-        stages: Vec<kyuubiki_solver::ThermalPlaneProfileStage>,
+        memory_stages: Vec<BenchmarkMemoryStage>,
         solver_iterations: usize,
+        solver_matrix_non_zero_count: usize,
         solver_residual_norm: f64,
         solver_preconditioner: &str,
     ) -> Self {
-        self.memory_stages = stages
-            .into_iter()
-            .map(|stage| BenchmarkMemoryStage {
-                label: stage.label.to_string(),
-                rss_kib: stage.rss_kib,
-                elapsed_ms: Some(stage.elapsed_ms),
-            })
-            .collect();
+        self.memory_stages = memory_stages;
         self.solver_iterations = Some(solver_iterations);
+        self.solver_matrix_non_zero_count = Some(solver_matrix_non_zero_count);
         self.solver_residual_norm = Some(solver_residual_norm);
         self.solver_preconditioner = Some(solver_preconditioner.to_string());
         self
     }
 }
 
-fn parse_preconditioner(value: &str) -> SpdPreconditioner {
-    match value {
-        "sgs" | "symmetric-gauss-seidel" => SpdPreconditioner::SymmetricGaussSeidel,
-        _ => SpdPreconditioner::Jacobi,
-    }
+fn benchmark_stages_from_plane(stages: Vec<PlaneQuadProfileStage>) -> Vec<BenchmarkMemoryStage> {
+    stages
+        .into_iter()
+        .map(|stage| BenchmarkMemoryStage {
+            label: stage.label.to_string(),
+            rss_kib: stage.rss_kib,
+            elapsed_ms: Some(stage.elapsed_ms),
+        })
+        .collect()
+}
+
+fn benchmark_stages_from_thermal(
+    stages: Vec<ThermalPlaneProfileStage>,
+) -> Vec<BenchmarkMemoryStage> {
+    stages
+        .into_iter()
+        .map(|stage| BenchmarkMemoryStage {
+            label: stage.label.to_string(),
+            rss_kib: stage.rss_kib,
+            elapsed_ms: Some(stage.elapsed_ms),
+        })
+        .collect()
 }

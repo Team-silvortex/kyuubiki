@@ -158,28 +158,78 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.id.ends_with("#symmetric-gauss-seidel")));
+        assert_eq!(report.preconditioner_comparisons.len(), 1);
+        assert_eq!(
+            report.preconditioner_comparisons[0].base_case_id,
+            "truss-roof-medium"
+        );
+        assert_eq!(report.preconditioner_comparisons[0].compared.len(), 2);
+        assert!(report.preconditioner_comparisons[0].winner_speedup_ratio >= 1.0);
+        let json = serde_json::to_value(&report).expect("benchmark report should serialize");
+        assert!(json.get("preconditioner_comparisons").is_some());
+        assert!(json["preconditioner_comparisons"][0]
+            .get("winner_speedup_ratio")
+            .is_some());
     }
 
     #[test]
-    fn solver_preconditioner_auto_uses_sgs_for_thermal_plane_cases() {
-        let cases = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
+    fn solver_preconditioner_auto_uses_sgs_for_iterative_cases() {
+        for (matrix, case_id) in [
+            ("thermal-structural", "thermal-plane-triangle-medium"),
+            ("thermal-structural", "thermal-plane-quad-medium"),
+            ("mechanical-core", "truss-roof-medium"),
+            ("mechanical-core", "plane-panel-medium"),
+            ("mechanical-core", "plane-quad-panel-medium"),
+        ] {
+            let cases = benchmark_cases(BenchmarkProfile::Medium, matrix);
+            let selected = cases
+                .iter()
+                .filter(|case| case.id == case_id)
+                .collect::<Vec<_>>();
+            let report =
+                crate::runner::build_report(&selected, 1, BenchmarkProfile::Medium, matrix, "auto");
+
+            assert_eq!(report.cases.len(), 1);
+            assert_eq!(
+                report.cases[0].solver_preconditioner.as_deref(),
+                Some("symmetric-gauss-seidel"),
+                "case {case_id} should use SGS in auto mode"
+            );
+        }
+    }
+
+    #[test]
+    fn iterative_structural_cases_expose_solver_hotspot_stages() {
+        let cases = benchmark_cases(BenchmarkProfile::TenK, "mechanical-core");
         let selected = cases
             .iter()
-            .filter(|case| case.id == "thermal-plane-triangle-medium")
+            .filter(|case| case.id == "plane-panel-10k")
             .collect::<Vec<_>>();
         let report = crate::runner::build_report(
             &selected,
             1,
-            BenchmarkProfile::Medium,
-            "thermal-structural",
+            BenchmarkProfile::TenK,
+            "mechanical-core",
             "auto",
         );
+        let stage_labels = report.cases[0]
+            .memory_stages
+            .iter()
+            .map(|stage| stage.label.as_str())
+            .collect::<Vec<_>>();
 
-        assert_eq!(report.cases.len(), 1);
         assert_eq!(
             report.cases[0].solver_preconditioner.as_deref(),
             Some("symmetric-gauss-seidel")
         );
+        assert!(
+            report.cases[0].solver_matrix_non_zero_count.unwrap_or_default() > 0,
+            "iterative benchmark cases should expose reduced sparse matrix nnz"
+        );
+        assert!(stage_labels.contains(&"solve_spd_system"));
+        assert!(stage_labels.contains(&"solve_spd_matvec"));
+        assert!(stage_labels.contains(&"solve_spd_preconditioner"));
+        assert!(stage_labels.contains(&"solve_spd_dot"));
     }
 
     #[test]

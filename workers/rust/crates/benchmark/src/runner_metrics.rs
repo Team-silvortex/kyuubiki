@@ -10,6 +10,7 @@ pub(crate) fn apply_metrics(
     max_stress: &mut f64,
     memory_stages: &mut Vec<BenchmarkMemoryStage>,
     solver_iterations: &mut Option<usize>,
+    solver_matrix_non_zero_count: &mut Option<usize>,
     solver_residual_norm: &mut Option<f64>,
     solver_preconditioner_name: &mut Option<String>,
 ) {
@@ -24,6 +25,9 @@ pub(crate) fn apply_metrics(
     }
     if metrics.solver_iterations.is_some() {
         *solver_iterations = metrics.solver_iterations;
+    }
+    if metrics.solver_matrix_non_zero_count.is_some() {
+        *solver_matrix_non_zero_count = metrics.solver_matrix_non_zero_count;
     }
     if metrics.solver_residual_norm.is_some() {
         *solver_residual_norm = metrics.solver_residual_norm;

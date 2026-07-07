@@ -13,7 +13,15 @@ pub struct SpdSolveOptions {
 pub(crate) struct SpdSolveProfile {
     pub solution: Vec<f64>,
     pub iterations: usize,
+    pub matrix_non_zero_count: usize,
     pub residual_norm: f64,
+    pub stages: Vec<SpdSolveStage>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct SpdSolveStage {
+    pub label: &'static str,
+    pub elapsed_ms: f64,
 }
 
 impl Default for SpdSolveOptions {

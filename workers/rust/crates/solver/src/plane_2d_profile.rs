@@ -1,8 +1,38 @@
 use std::time::Instant;
 
-use kyuubiki_protocol::SolvePlaneTriangle2dRequest;
+use kyuubiki_protocol::{
+    SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
+};
 
-use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
+
+#[derive(Debug, Clone)]
+pub struct PlaneProfileStage {
+    pub label: &'static str,
+    pub rss_kib: u64,
+    pub elapsed_ms: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlaneTriangleProfile {
+    pub result: SolvePlaneTriangle2dResult,
+    pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
+    pub solver_residual_norm: f64,
+    pub stages: Vec<PlaneProfileStage>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlaneQuadProfile {
+    pub result: SolvePlaneQuad2dResult,
+    pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
+    pub solver_residual_norm: f64,
+    pub stages: Vec<PlaneProfileStage>,
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct PlaneDisplacementProfileStage {
@@ -11,24 +41,37 @@ pub(crate) struct PlaneDisplacementProfileStage {
     pub(crate) elapsed_ms: f64,
 }
 
+pub(crate) fn push_plane_profile_stage(
+    stages: &mut Vec<PlaneProfileStage>,
+    enabled: bool,
+    label: &'static str,
+    started: Instant,
+) {
+    if !enabled {
+        return;
+    }
+
+    stages.push(PlaneProfileStage {
+        label,
+        rss_kib: current_rss_kib(),
+        elapsed_ms: started.elapsed().as_secs_f64() * 1000.0,
+    });
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct PlaneDisplacementProfile {
     pub(crate) displacements: Vec<f64>,
+    pub(crate) solver_iterations: usize,
+    pub(crate) solver_matrix_non_zero_count: usize,
+    pub(crate) solver_residual_norm: f64,
     pub(crate) stages: Vec<PlaneDisplacementProfileStage>,
 }
 
-pub(crate) fn solve_plane_displacements(
+pub(crate) fn profile_plane_displacements_with_options(
     request: &SolvePlaneTriangle2dRequest,
     global_stiffness: &SparseMatrix,
     force_vector: &[f64],
-) -> Result<Vec<f64>, String> {
-    Ok(profile_plane_displacements(request, global_stiffness, force_vector)?.displacements)
-}
-
-pub(crate) fn profile_plane_displacements(
-    request: &SolvePlaneTriangle2dRequest,
-    global_stiffness: &SparseMatrix,
-    force_vector: &[f64],
+    solve_options: SpdSolveOptions,
 ) -> Result<PlaneDisplacementProfile, String> {
     let constrained = constrained_plane_dofs(request);
     let mut stages = Vec::new();
@@ -39,18 +82,29 @@ pub(crate) fn profile_plane_displacements(
     push_stage(&mut stages, "reduce_system", started);
 
     let started = Instant::now();
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let solve_profile =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, solve_options)?;
     push_stage(&mut stages, "solve_spd_system", started);
+    for stage in solve_profile.stages.iter() {
+        stages.push(PlaneDisplacementProfileStage {
+            label: stage.label,
+            rss_kib: current_rss_kib(),
+            elapsed_ms: stage.elapsed_ms,
+        });
+    }
 
     let started = Instant::now();
     let mut displacements = vec![0.0; request.nodes.len() * 2];
     for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
+        displacements[dof] = solve_profile.solution[index];
     }
     push_stage(&mut stages, "scatter_solution", started);
 
     Ok(PlaneDisplacementProfile {
         displacements,
+        solver_iterations: solve_profile.iterations,
+        solver_matrix_non_zero_count: solve_profile.matrix_non_zero_count,
+        solver_residual_norm: solve_profile.residual_norm,
         stages,
     })
 }
@@ -82,7 +136,7 @@ fn push_stage(
     });
 }
 
-fn current_rss_kib() -> u64 {
+pub(crate) fn current_rss_kib() -> u64 {
     #[cfg(target_os = "linux")]
     {
         if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {

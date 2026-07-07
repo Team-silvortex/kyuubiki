@@ -27,6 +27,7 @@ pub struct Truss2dProfile {
     pub result: SolveTruss2dResult,
     pub stages: Vec<Truss2dProfileStage>,
     pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
     pub solver_residual_norm: f64,
 }
 
@@ -131,7 +132,17 @@ fn solve_truss_2d_internal(
     let solve_profile =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, solve_options)?;
     let solver_iterations = solve_profile.iterations;
+    let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
     let solver_residual_norm = solve_profile.residual_norm;
+    if collect_stages {
+        for stage in solve_profile.stages.iter() {
+            stages.push(Truss2dProfileStage {
+                label: stage.label,
+                rss_kib: current_rss_kib(),
+                elapsed_ms: stage.elapsed_ms,
+            });
+        }
+    }
     let reduced_displacements = solve_profile.solution;
     push_truss_2d_stage(
         &mut stages,
@@ -221,6 +232,7 @@ fn solve_truss_2d_internal(
         },
         stages,
         solver_iterations,
+        solver_matrix_non_zero_count,
         solver_residual_norm,
     })
 }
