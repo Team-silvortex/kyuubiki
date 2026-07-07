@@ -36,14 +36,34 @@
       "--json"
     ]
   },
+  "chain_next_command": {
+    "id": "material_explore_chain_next_rounds",
+    "cwd": "workers/rust",
+    "rounds": 2,
+    "argv_contains": [
+      "cargo",
+      "kyuubiki-material-explore",
+      "--chain-next",
+      "--rounds",
+      "--json"
+    ]
+  },
   "expected": {
     "evidence_schema_version": "kyuubiki.automated-material-research-example/v1",
     "exploration_schema_version": "kyuubiki.material-exploration-run/v1",
+    "chain_schema_version": "kyuubiki.material-exploration-chain/v1",
     "next_round_schema_version": "kyuubiki.material-exploration-next-round/v1",
     "next_round_execution_schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
     "report_schema_version": "kyuubiki.material-research-report/v1",
     "exploration_study": "material_heat_spreader_screening",
     "mode": "local_solver",
+    "initial_iteration": 1,
+    "next_run_iteration": 2,
+    "next_run_next_round_iteration": 3,
+    "chain_round_count": 2,
+    "chain_final_iteration": 3,
+    "chain_stop_reason": "repair_required",
+    "chain_all_winners_stable": true,
     "candidate_count": 3,
     "result_payload_count": 3,
     "winner_candidate_id": "pyrolytic_graphite_in_plane",

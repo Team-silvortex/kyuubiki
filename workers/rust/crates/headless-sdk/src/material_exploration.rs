@@ -1,7 +1,8 @@
 use crate::{
-    HeadlessWorkflowStep, build_dielectric_screening_steps, build_heat_spreader_screening_steps,
-    build_material_report, build_structural_panel_screening_steps,
-    build_thermo_shield_screening_steps, describe_material_study,
+    HeadlessWorkflowStep, build_composite_panel_steps, build_dielectric_screening_steps,
+    build_heat_spreader_screening_steps, build_material_report,
+    build_structural_panel_screening_steps, build_thermo_shield_screening_steps,
+    describe_material_study,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -11,11 +12,14 @@ pub const MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION: &str =
     "kyuubiki.material-exploration-next-round/v1";
 pub const MATERIAL_EXPLORATION_NEXT_ROUND_EXECUTION_SCHEMA_VERSION: &str =
     "kyuubiki.material-exploration-next-round-execution/v1";
+pub const MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION: &str =
+    "kyuubiki.material-exploration-chain/v1";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialExplorationRun {
     pub schema_version: String,
     pub mode: String,
+    pub iteration: usize,
     pub study: String,
     pub template_id: String,
     pub candidate_count: usize,
@@ -59,13 +63,23 @@ pub fn build_material_exploration_run(
     mode: impl Into<String>,
     result_payloads: Vec<Value>,
 ) -> Result<MaterialExplorationRun, String> {
+    build_material_exploration_run_for_iteration(study, mode, result_payloads, 1)
+}
+
+pub fn build_material_exploration_run_for_iteration(
+    study: &str,
+    mode: impl Into<String>,
+    result_payloads: Vec<Value>,
+    iteration: usize,
+) -> Result<MaterialExplorationRun, String> {
     let description = describe_material_study(study)
         .ok_or_else(|| format!("unsupported material study: {study}"))?;
     let report = build_material_report(&description.id, &result_payloads)?;
-    let next_round = build_material_exploration_next_round_plan(&report, 1);
+    let next_round = build_material_exploration_next_round_plan(&report, iteration);
     Ok(MaterialExplorationRun {
         schema_version: MATERIAL_EXPLORATION_SCHEMA_VERSION.to_string(),
         mode: mode.into(),
+        iteration,
         study: description.id,
         template_id: description.template_id,
         candidate_count: result_payloads.len(),
@@ -171,6 +185,7 @@ fn material_exploration_steps_by_id(study_id: &str) -> Result<Vec<HeadlessWorkfl
         "material_dielectric_screening" => Ok(build_dielectric_screening_steps()),
         "material_thermo_shield_screening" => Ok(build_thermo_shield_screening_steps()),
         "material_structural_panel_screening" => Ok(build_structural_panel_screening_steps()),
+        "material_composite_thermo_electric_panel" => Ok(build_composite_panel_steps()),
         other => Err(format!("unsupported material exploration study: {other}")),
     }
 }
@@ -305,6 +320,7 @@ mod tests {
             "dielectric-screening",
             "thermo-shield",
             "structural-panel",
+            "composite-thermo-electric-panel",
         ] {
             let steps = material_exploration_steps(study).expect("material steps");
             let solve_count = steps
@@ -330,6 +346,7 @@ mod tests {
 
         assert_eq!(run.schema_version, MATERIAL_EXPLORATION_SCHEMA_VERSION);
         assert_eq!(run.mode, "unit-test");
+        assert_eq!(run.iteration, 1);
         assert_eq!(run.candidate_count, 3);
         assert_eq!(
             run.report["winner_candidate_id"].as_str(),
@@ -347,6 +364,24 @@ mod tests {
                 .actions
                 .contains(&"run_next_quality_batch".to_string())
         );
+    }
+
+    #[test]
+    fn builds_next_round_from_explicit_iteration() {
+        let run = build_material_exploration_run_for_iteration(
+            "dielectric-screening",
+            "unit-test",
+            vec![
+                json!({ "max_electric_field": 42.0e6, "max_flux_density": 1.2e-3 }),
+                json!({ "max_electric_field": 38.0e6, "max_flux_density": 3.3e-3 }),
+                json!({ "max_electric_field": 48.0e6, "max_flux_density": 0.9e-3 }),
+            ],
+            2,
+        )
+        .expect("exploration run");
+
+        assert_eq!(run.iteration, 2);
+        assert_eq!(run.next_round.iteration, 3);
     }
 
     #[test]

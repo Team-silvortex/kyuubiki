@@ -65,6 +65,11 @@ If the current screening data is complete, it returns `expand_around_winner`
 with actions such as `generate_neighbor_candidates` and
 `run_next_quality_batch`.
 
+Each exploration artifact also carries its current `iteration`. The first
+captured run is iteration `1`, its `next_round.iteration` points to `2`, and a
+local `--run-next` result becomes iteration `2` with a new next-round pointer to
+iteration `3`.
+
 The same CLI can turn a captured exploration into a runnable next-round plan:
 
 ```sh
@@ -92,6 +97,27 @@ kyuubiki-material-explore --run-next tmp/material-research-example.json --json
 This keeps the current prototype honest: the closed-loop block is not only a
 recommendation for an agent, it can already drive the next solver batch through
 the same material exploration contract.
+
+For smoke-testing a continuous loop, the CLI can chain several next-round runs:
+
+```sh
+kyuubiki-material-explore --chain-next tmp/material-research-example.json --rounds 2 --json
+```
+
+The chain wrapper uses:
+
+```text
+kyuubiki.material-exploration-chain/v1
+```
+
+It contains one full exploration artifact per requested round plus a final
+iteration, final winner, decision counts, a `stop_reason`, winner stability,
+one compact summary per round, and a `repair_summary` that lifts violated
+quality gates and focus candidates to the top level. When repair is required,
+`repair_plan` lists concrete actions such as inspecting failed gates, rerunning
+focused candidates, resolving warnings, and rebuilding the report before
+expansion. This is intentionally still small: it gives agents and CI a stable
+lineage envelope before a heavier optimizer is added.
 
 ## Remote Lab Run
 

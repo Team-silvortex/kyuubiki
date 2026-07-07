@@ -79,6 +79,9 @@ Recent additions:
 - the Rust headless SDK also includes `material_dielectric_screening`, an
   electrostatic dielectric material study that ranks breakdown margin, field
   intensity, dielectric loss proxy, and mass
+- `material_composite_thermo_electric_panel` is the first mixed-material
+  sequential multiphysics prototype, running electrostatic, heat, and
+  thermo-mechanical solves for conductor/dielectric/substrate panel stacks
 - Rust, Python, and Elixir material research helpers can turn result payloads into a
   ranked report with explicit metric contracts and missing-metric warnings
 - material reports include first-class optimization profiles so downstream
@@ -117,6 +120,7 @@ kyuubiki-material-explore heat-spreader --json
 kyuubiki-material-explore dielectric-screening
 kyuubiki-material-explore thermo-shield --out thermo-exploration.json
 kyuubiki-material-explore structural-panel
+kyuubiki-material-explore composite-thermo-electric-panel --json
 ```
 
 `kyuubiki-material-explore` enumerates the study candidates, runs the generated
@@ -126,7 +130,9 @@ back into the material report ranking layer. The output uses the reusable
 agent, and mesh runners can share the same result shape. It also emits a
 `kyuubiki.material-exploration-next-round/v1` `next_round` plan that tells
 automation whether to repair/rerun incomplete results or expand around the
-current winner.
+current winner. Each exploration artifact carries an `iteration`, so repeated
+runs can preserve lineage instead of looking like disconnected one-shot solver
+batches.
 
 To materialize that next step without rerunning the first round:
 
@@ -142,6 +148,20 @@ To run that next step locally and emit the next exploration artifact:
 ```bash
 kyuubiki-material-explore --run-next exploration.json --out next-exploration.json --json
 ```
+
+For a minimal continuous-loop smoke test, chain repeated next-round execution:
+
+```bash
+kyuubiki-material-explore --chain-next exploration.json --rounds 2 --out chain.json --json
+```
+
+The chain wrapper uses `kyuubiki.material-exploration-chain/v1` and keeps the
+full exploration artifact plus a compact per-round summary for each generated
+round. It also exposes `stop_reason`, decision counts, and winner stability so
+agents can decide whether to continue, repair, or escalate. When repair is
+required, `repair_summary` lifts violated quality gates and focus candidates to
+the chain top level, while `repair_plan` turns that state into concrete
+agent-facing actions.
 
 `list` and `describe` expose the machine-readable study contract: aliases,
 template id, report schema, research domain, objective, and metric specs.

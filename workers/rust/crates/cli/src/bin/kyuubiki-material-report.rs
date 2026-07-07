@@ -138,7 +138,7 @@ fn take_value(args: &[String], index: &mut usize, option: &str) -> Result<String
 }
 
 fn usage() -> String {
-    "kyuubiki-material-report list [--json]\nkyuubiki-material-report describe <study> [--json]\nkyuubiki-material-report <heat-spreader|dielectric-screening|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]\n\nresults.json may be a raw result array, an object with results/result_payloads, or a kyuubiki.headless-execution-run/v1 report.".to_string()
+    "kyuubiki-material-report list [--json]\nkyuubiki-material-report describe <study> [--json]\nkyuubiki-material-report <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> --results results.json [--profile profile.json] [--out report.json] [--json]\n\nresults.json may be a raw result array, an object with results/result_payloads, or a kyuubiki.headless-execution-run/v1 report.".to_string()
 }
 
 fn print_study_list(json: bool) -> Result<(), String> {

@@ -164,11 +164,114 @@ function validateRunNextCommand(inputPath, manifest) {
   );
   assertEquals(exploration.mode, "local_solver_next_round", "run-next mode");
   assertEquals(
+    exploration.iteration,
+    manifest.expected.next_run_iteration,
+    "run-next iteration",
+  );
+  assertEquals(
     exploration.candidate_count,
     manifest.expected.candidate_count,
     "run-next candidate count",
   );
   validateNextRound(exploration.next_round, manifest);
+  assertEquals(
+    exploration.next_round.iteration,
+    manifest.expected.next_run_next_round_iteration,
+    "run-next next_round iteration",
+  );
+}
+
+function validateChainNextCommand(inputPath, manifest) {
+  const absoluteInputPath = path.resolve(repoRoot, inputPath);
+  const command = materialExploreCommand(
+    manifest.chain_next_command,
+    "--chain-next",
+    absoluteInputPath,
+  );
+  command.argv.push("--rounds", String(manifest.chain_next_command.rounds));
+  for (const expected of manifest.chain_next_command.argv_contains) {
+    if (!command.argv.includes(expected)) {
+      fail(`chain_next_command.argv missing ${expected}`);
+    }
+  }
+  const result = spawnSync(command.argv[0], command.argv.slice(1), {
+    cwd: path.join(repoRoot, command.cwd),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    fail(result.stderr.trim() || "chain-next command failed");
+  }
+  let chain;
+  try {
+    chain = JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`chain-next did not emit JSON: ${error.message}`);
+  }
+  assertEquals(
+    chain.schema_version,
+    manifest.expected.chain_schema_version,
+    "chain-next schema",
+  );
+  assertEquals(chain.round_count, manifest.expected.chain_round_count, "chain round count");
+  assertEquals(
+    chain.final_iteration,
+    manifest.expected.chain_final_iteration,
+    "chain final iteration",
+  );
+  assertEquals(
+    chain.stop_reason,
+    manifest.expected.chain_stop_reason,
+    "chain stop reason",
+  );
+  assertEquals(
+    chain.all_winners_stable,
+    manifest.expected.chain_all_winners_stable,
+    "chain winner stability",
+  );
+  if (chain.decision_counts == null || typeof chain.decision_counts !== "object") {
+    fail("chain-next must expose decision_counts");
+  }
+  if (chain.repair_summary == null || typeof chain.repair_summary !== "object") {
+    fail("chain-next must expose repair_summary");
+  }
+  if (chain.repair_plan == null || typeof chain.repair_plan !== "object") {
+    fail("chain-next must expose repair_plan");
+  }
+  if (chain.stop_reason === "repair_required") {
+    assertEquals(chain.repair_summary.required, true, "chain repair_summary.required");
+    assertEquals(chain.repair_plan.required, true, "chain repair_plan.required");
+    assertEquals(chain.repair_plan.priority, "before_expansion", "chain repair_plan.priority");
+    if (!Array.isArray(chain.repair_plan.actions) || chain.repair_plan.actions.length < 3) {
+      fail("repair_plan must expose concrete repair actions");
+    }
+    if (
+      !Array.isArray(chain.repair_summary.violated_gate_ids) ||
+      chain.repair_summary.violated_gate_ids.length === 0
+    ) {
+      fail("repair_summary must expose violated quality gates");
+    }
+    if (
+      !Array.isArray(chain.repair_summary.focus_candidate_ids) ||
+      chain.repair_summary.focus_candidate_ids.length === 0
+    ) {
+      fail("repair_summary must expose focus candidates");
+    }
+  }
+  if (!Array.isArray(chain.runs) || chain.runs.length !== manifest.expected.chain_round_count) {
+    fail("chain-next must expose one exploration artifact per requested round");
+  }
+  if (
+    !Array.isArray(chain.summaries) ||
+    chain.summaries.length !== manifest.expected.chain_round_count
+  ) {
+    fail("chain-next must expose one summary per requested round");
+  }
+  assertEquals(
+    chain.summaries.at(-1)?.iteration,
+    manifest.expected.chain_final_iteration,
+    "chain final summary iteration",
+  );
 }
 
 function materialExploreCommand(commandManifest, mode, inputPath) {
@@ -251,6 +354,7 @@ function validateExploration(exploration, manifest) {
   );
   assertEquals(exploration.study, expected.exploration_study, "exploration.study");
   assertEquals(exploration.mode, expected.mode, "exploration.mode");
+  assertEquals(exploration.iteration, expected.initial_iteration, "exploration.iteration");
   assertEquals(exploration.candidate_count, expected.candidate_count, "exploration.candidate_count");
   if (
     !Array.isArray(exploration.result_payloads) ||
@@ -309,6 +413,7 @@ function validateDocumentation(manifest) {
   requireMarkdownContains(markdown, manifest.expected.optimization_id, "optimization id");
   requireMarkdownContains(markdown, manifest.expected.reliability_posture, "reliability posture");
   requireMarkdownContains(markdown, manifest.expected.next_round_schema_version, "next round schema");
+  requireMarkdownContains(markdown, manifest.expected.chain_schema_version, "chain schema");
 }
 
 function validateEvidence(evidence, manifest) {
@@ -321,6 +426,12 @@ function validateEvidence(evidence, manifest) {
   assertEquals(evidence.example_id, manifest.example_id, "example_id");
   assertEquals(evidence.posture, "screening_research_example", "posture");
   assertEquals(evidence.summary?.winner_candidate_id, expected.winner_candidate_id, "summary winner");
+  assertEquals(evidence.summary?.iteration, expected.initial_iteration, "summary iteration");
+  assertEquals(
+    evidence.summary?.next_round_iteration,
+    expected.next_run_iteration,
+    "summary next_round_iteration",
+  );
   assertEquals(evidence.summary?.result_payload_count, expected.result_payload_count, "summary result count");
   validateCommand(evidence.command, manifest);
   validateExploration(evidence.exploration, manifest);
@@ -333,4 +444,5 @@ validateDocumentation(manifest);
 validateEvidence(readEvidence(args.input), manifest);
 validateNextRoundCommand(args.input, manifest);
 validateRunNextCommand(args.input, manifest);
+validateChainNextCommand(args.input, manifest);
 console.log(`material research example ok: ${args.input}`);

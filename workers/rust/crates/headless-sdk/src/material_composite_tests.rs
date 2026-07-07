@@ -1,0 +1,30 @@
+use crate::build_composite_panel_report;
+use serde_json::json;
+
+#[test]
+fn composite_report_exposes_regions_and_reliability() {
+    let report = build_composite_panel_report(&[
+        json!({
+            "electrostatic": { "max_electric_field": 42.0e6 },
+            "heat": { "max_temperature": 90.0 },
+            "thermal": { "max_stress": 120.0e6 }
+        }),
+        json!({
+            "electrostatic": { "max_electric_field": 38.0e6 },
+            "heat": { "max_temperature": 105.0 },
+            "thermal": { "max_stress": 150.0e6 }
+        }),
+        json!({
+            "electrostatic": { "max_electric_field": 48.0e6 },
+            "heat": { "max_temperature": 82.0 },
+            "thermal": { "max_stress": 95.0e6 }
+        }),
+    ])
+    .expect("composite report");
+
+    assert_eq!(report.schema_version, "kyuubiki.composite-panel-report/v1");
+    assert_eq!(report.material_regions.len(), 3);
+    assert_eq!(report.reliability.posture, "prototype_screening_only");
+    assert!(report.reliability.quality_gates.len() >= 4);
+    assert!(report.winner_candidate_id.is_some());
+}

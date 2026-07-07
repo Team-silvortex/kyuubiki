@@ -5,6 +5,10 @@ mod contracts;
 mod direct_fem;
 mod executor;
 mod hybrid_executor;
+mod material_composite;
+mod material_composite_models;
+#[cfg(test)]
+mod material_composite_tests;
 mod material_dielectric;
 mod material_envelope_workflow;
 mod material_exploration;
@@ -44,6 +48,11 @@ pub use executor::{
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
+pub use material_composite::{
+    CompositePanelCandidate, CompositePanelCandidateReport, CompositePanelMaterialRegion,
+    CompositePanelReport, build_composite_panel_report, build_composite_panel_steps,
+    composite_material_regions, composite_panel_candidates, composite_panel_metric_specs,
+};
 pub use material_dielectric::{
     DielectricMaterialCandidate, DielectricMaterialCandidateReport, DielectricMaterialReport,
     build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
@@ -51,11 +60,12 @@ pub use material_dielectric::{
     dielectric_screening_metric_specs,
 };
 pub use material_exploration::{
-    MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION, MATERIAL_EXPLORATION_SCHEMA_VERSION,
-    MaterialExplorationNextRoundExecutionPlan, MaterialExplorationNextRoundPlan,
-    MaterialExplorationRun, build_material_exploration_next_round_execution_plan,
+    MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION, MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION,
+    MATERIAL_EXPLORATION_SCHEMA_VERSION, MaterialExplorationNextRoundExecutionPlan,
+    MaterialExplorationNextRoundPlan, MaterialExplorationRun,
+    build_material_exploration_next_round_execution_plan,
     build_material_exploration_next_round_plan, build_material_exploration_run,
-    material_exploration_steps,
+    build_material_exploration_run_for_iteration, material_exploration_steps,
 };
 pub use material_optimization::{
     MaterialOptimizationConstraint, MaterialOptimizationProfile, MaterialOptimizationTerm,

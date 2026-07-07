@@ -1,7 +1,8 @@
 use crate::{
     HeadlessRunReport, MaterialOptimizationProfile, MaterialResearchMetricSpec,
-    build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
-    build_heat_spreader_screening_report, build_heat_spreader_screening_report_with_optimization,
+    build_composite_panel_report, build_dielectric_screening_report,
+    build_dielectric_screening_report_with_optimization, build_heat_spreader_screening_report,
+    build_heat_spreader_screening_report_with_optimization,
     build_structural_panel_screening_report,
     build_structural_panel_screening_report_with_optimization,
     build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
@@ -85,6 +86,19 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         schema_version: "kyuubiki.structural-material-report/v1",
         template_id: "material_structural_panel_screening",
     },
+    MaterialStudyDescriptor {
+        id: "material_composite_thermo_electric_panel",
+        title: "Composite Thermo-Electric Panel",
+        domain: "multiphysics_materials",
+        objective: "rank mixed-material panel stacks across electric field, heat, thermal stress, and mass",
+        aliases: &[
+            "composite-thermo-electric-panel",
+            "composite_thermo_electric_panel",
+            "material.composite_thermo_electric_panel.v1",
+        ],
+        schema_version: "kyuubiki.composite-panel-report/v1",
+        template_id: "material_composite_thermo_electric_panel",
+    },
 ];
 
 pub fn material_study_descriptors() -> &'static [MaterialStudyDescriptor] {
@@ -149,6 +163,15 @@ pub fn build_material_report_with_optimization(
             }
             None => build_structural_panel_screening_report(result_payloads),
         }),
+        "material_composite_thermo_electric_panel" => {
+            if optimization.is_some() {
+                return Err(
+                    "composite thermo-electric panel does not yet accept custom optimization profiles"
+                        .to_string(),
+                );
+            }
+            to_value(build_composite_panel_report(result_payloads))
+        }
         other => Err(format!("unsupported material report study: {other}")),
     }
 }
@@ -266,6 +289,9 @@ fn material_study_metric_specs(study_id: &str) -> Vec<MaterialResearchMetricSpec
         "material_structural_panel_screening" => {
             crate::material_structural::structural_panel_metric_specs()
         }
+        "material_composite_thermo_electric_panel" => {
+            crate::material_composite::composite_panel_metric_specs()
+        }
         _ => vec![],
     }
 }
@@ -302,7 +328,7 @@ mod tests {
     fn material_study_catalog_exposes_machine_readable_contracts() {
         let catalog = material_study_catalog();
 
-        assert_eq!(catalog.len(), 4);
+        assert_eq!(catalog.len(), 5);
         assert!(catalog.iter().all(|study| !study.metric_specs.is_empty()));
         assert!(catalog.iter().any(|study| {
             study.id == "material_dielectric_screening"
