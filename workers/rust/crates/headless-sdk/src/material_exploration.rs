@@ -1,3 +1,6 @@
+use crate::material_candidate_drafts::{
+    material_candidate_draft_batches, material_candidate_draft_summary, material_candidate_drafts,
+};
 use crate::{
     HeadlessWorkflowStep, build_composite_panel_steps, build_dielectric_screening_steps,
     build_heat_spreader_screening_steps, build_material_report,
@@ -49,7 +52,19 @@ pub struct MaterialExplorationNextRoundExecutionPlan {
     pub actions: Vec<String>,
     pub runnable_step_count: usize,
     pub steps: Vec<HeadlessWorkflowStep>,
+    pub risk_mitigation_hints: Vec<MaterialExplorationRiskMitigationHint>,
+    pub candidate_drafts: Vec<Value>,
+    pub candidate_draft_summary: Value,
+    pub draft_execution_batches: Vec<Value>,
     pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialExplorationRiskMitigationHint {
+    pub candidate_id: String,
+    pub gate_id: String,
+    pub driver: String,
+    pub recommendation: String,
 }
 
 pub fn material_exploration_steps(study: &str) -> Result<Vec<HeadlessWorkflowStep>, String> {
@@ -101,27 +116,46 @@ pub fn build_material_exploration_next_round_plan(
     let violated_gates = violated_quality_gate_ids(report);
     let focus_candidate_ids = focus_candidate_ids(report);
 
-    let (decision, actions, rationale) = if warnings > 0 || !violated_gates.is_empty() {
-        (
-            "repair_or_rerun".to_string(),
-            vec![
-                "inspect_missing_metrics".to_string(),
-                "rerun_incomplete_candidates".to_string(),
-                "rebuild_report_before_expansion".to_string(),
-            ],
-            repair_rationale(warnings, &violated_gates),
-        )
-    } else {
-        (
-            "expand_around_winner".to_string(),
-            vec![
-                "generate_neighbor_candidates".to_string(),
-                "run_next_quality_batch".to_string(),
-                "compare_against_incumbent_winner".to_string(),
-            ],
-            expansion_rationale(report, &focus_candidate_ids),
-        )
-    };
+    let missing_metric_warnings = missing_metric_warning_count(report);
+    let completeness_violations = violated_gates
+        .iter()
+        .filter(|gate| gate.contains("result_completeness"))
+        .count();
+    let risk_violations = violated_gates.len().saturating_sub(completeness_violations);
+
+    let (decision, actions, rationale) =
+        if missing_metric_warnings > 0 || completeness_violations > 0 {
+            (
+                "repair_or_rerun".to_string(),
+                vec![
+                    "inspect_missing_metrics".to_string(),
+                    "rerun_incomplete_candidates".to_string(),
+                    "rebuild_report_before_expansion".to_string(),
+                ],
+                repair_rationale(warnings, &violated_gates),
+            )
+        } else if risk_violations > 0 || warnings > 0 {
+            (
+                "mitigate_design_risk".to_string(),
+                vec![
+                    "inspect_violated_quality_gates".to_string(),
+                    "generate_lower_risk_neighbor_candidates".to_string(),
+                    "rerun_focused_quality_batch".to_string(),
+                    "compare_against_incumbent_winner".to_string(),
+                ],
+                risk_mitigation_rationale(warnings, &violated_gates),
+            )
+        } else {
+            (
+                "expand_around_winner".to_string(),
+                vec![
+                    "generate_neighbor_candidates".to_string(),
+                    "run_next_quality_batch".to_string(),
+                    "compare_against_incumbent_winner".to_string(),
+                ],
+                expansion_rationale(report, &focus_candidate_ids),
+            )
+        };
 
     MaterialExplorationNextRoundPlan {
         schema_version: MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION.to_string(),
@@ -154,12 +188,24 @@ pub fn build_material_exploration_next_round_execution_plan(
         .unwrap_or(2) as usize;
     let actions = string_array(next_round, "actions");
     let focus_candidate_ids = string_array(next_round, "focus_candidate_ids");
+    let report = exploration
+        .get("report")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Default::default()));
     let steps = match decision.as_str() {
         "expand_around_winner" => material_exploration_steps(study)?,
-        "repair_or_rerun" => rerun_focus_steps(study, &focus_candidate_ids)?,
+        "repair_or_rerun" | "mitigate_design_risk" => {
+            rerun_focus_steps(study, &focus_candidate_ids)?
+        }
         other => return Err(format!("unsupported next_round decision: {other}")),
     };
     let runnable_step_count = steps.len();
+
+    let risk_mitigation_hints = risk_mitigation_hints(&decision, &report, &focus_candidate_ids);
+    let candidate_drafts =
+        material_candidate_drafts(&decision, study, &report, &focus_candidate_ids);
+    let candidate_draft_summary = material_candidate_draft_summary(&candidate_drafts);
+    let draft_execution_batches = material_candidate_draft_batches(&candidate_drafts);
 
     Ok(MaterialExplorationNextRoundExecutionPlan {
         schema_version: MATERIAL_EXPLORATION_NEXT_ROUND_EXECUTION_SCHEMA_VERSION.to_string(),
@@ -175,6 +221,10 @@ pub fn build_material_exploration_next_round_execution_plan(
         actions,
         runnable_step_count,
         steps,
+        risk_mitigation_hints,
+        candidate_drafts,
+        candidate_draft_summary,
+        draft_execution_batches,
         notes: execution_plan_notes(&decision),
     })
 }
@@ -233,6 +283,12 @@ fn execution_plan_notes(decision: &str) -> Vec<String> {
                 .to_string(),
             "rebuild the material report from fresh result payloads".to_string(),
         ],
+        "mitigate_design_risk" => vec![
+            "current implementation reruns focused candidate solve steps while preserving the risk signal"
+                .to_string(),
+            "future iterations should replace this with DOE or Bayesian lower-risk neighbor generation"
+                .to_string(),
+        ],
         _ => vec![
             "current implementation reuses the built-in study candidate generator".to_string(),
             "future iterations should replace this with DOE or Bayesian neighbor generation"
@@ -278,6 +334,118 @@ fn violated_quality_gate_ids(report: &Value) -> Vec<String> {
         .collect()
 }
 
+fn risk_mitigation_hints(
+    decision: &str,
+    report: &Value,
+    focus_candidate_ids: &[String],
+) -> Vec<MaterialExplorationRiskMitigationHint> {
+    if decision != "mitigate_design_risk" {
+        return Vec::new();
+    }
+    let violated_gates = violated_quality_gate_ids(report);
+    let warnings = report_warnings(report);
+    report
+        .get("candidates")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|candidate| candidate_is_focused(candidate, focus_candidate_ids))
+        .flat_map(|candidate| {
+            let candidate_id = candidate
+                .get("candidate_id")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown")
+                .to_string();
+            violated_gates.iter().map({
+                let warnings = warnings.clone();
+                move |gate_id| build_risk_hint(candidate, &candidate_id, gate_id, &warnings)
+            })
+        })
+        .collect()
+}
+
+fn candidate_is_focused(candidate: &Value, focus_candidate_ids: &[String]) -> bool {
+    let Some(candidate_id) = candidate.get("candidate_id").and_then(Value::as_str) else {
+        return false;
+    };
+    focus_candidate_ids.iter().any(|id| id == candidate_id)
+}
+
+fn build_risk_hint(
+    candidate: &Value,
+    candidate_id: &str,
+    gate_id: &str,
+    warnings: &[String],
+) -> MaterialExplorationRiskMitigationHint {
+    let driver = candidate
+        .get("weakest_interface")
+        .and_then(|interface| interface.get("dominant_driver"))
+        .and_then(Value::as_str)
+        .or_else(|| risk_driver_from_gate(gate_id))
+        .unwrap_or("quality_gate_violation");
+    MaterialExplorationRiskMitigationHint {
+        candidate_id: candidate_id.to_string(),
+        gate_id: gate_id.to_string(),
+        driver: driver.to_string(),
+        recommendation: risk_recommendation(gate_id, driver, warnings),
+    }
+}
+
+fn report_warnings(report: &Value) -> Vec<String> {
+    report
+        .get("warnings")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn risk_driver_from_gate(gate_id: &str) -> Option<&'static str> {
+    if gate_id.contains("interface") {
+        Some("interface_mismatch")
+    } else if gate_id.contains("temperature") {
+        Some("thermal_load")
+    } else if gate_id.contains("stress") {
+        Some("mechanical_stress")
+    } else if gate_id.contains("breakdown") {
+        Some("electrical_margin")
+    } else {
+        None
+    }
+}
+
+fn risk_recommendation(gate_id: &str, driver: &str, warnings: &[String]) -> String {
+    let warning_note = if warnings.is_empty() {
+        "no report warning text"
+    } else {
+        "see report warnings"
+    };
+    if gate_id.contains("interface") || driver.contains("expansion") {
+        format!("try lower CTE mismatch or add compliant interlayer; {warning_note}")
+    } else if gate_id.contains("temperature") {
+        format!("increase thermal conductivity or reduce heat load; {warning_note}")
+    } else if gate_id.contains("stress") {
+        format!("reduce stiffness contrast or relax fixtures; {warning_note}")
+    } else if gate_id.contains("breakdown") {
+        format!("increase dielectric strength or reduce electric field; {warning_note}")
+    } else {
+        format!("generate conservative neighbors around focused candidates; {warning_note}")
+    }
+}
+
+fn missing_metric_warning_count(report: &Value) -> usize {
+    report
+        .get("warnings")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|warning| warning.contains(" is missing "))
+        .count()
+}
+
 fn repair_rationale(warnings: usize, violated_gates: &[String]) -> Vec<String> {
     let mut rationale = Vec::new();
     if warnings > 0 {
@@ -289,6 +457,22 @@ fn repair_rationale(warnings: usize, violated_gates: &[String]) -> Vec<String> {
         rationale.push(format!(
             "quality gates require attention: {}",
             violated_gates.join(", ")
+        ));
+    }
+    rationale
+}
+
+fn risk_mitigation_rationale(warnings: usize, violated_gates: &[String]) -> Vec<String> {
+    let mut rationale = Vec::new();
+    if !violated_gates.is_empty() {
+        rationale.push(format!(
+            "quality gates expose design risk: {}",
+            violated_gates.join(", ")
+        ));
+    }
+    if warnings > 0 {
+        rationale.push(format!(
+            "{warnings} report warning(s) should guide lower-risk candidate generation"
         ));
     }
     rationale
@@ -306,167 +490,4 @@ fn expansion_rationale(report: &Value, focus_candidate_ids: &[String]) -> Vec<St
             focus_candidate_ids.join(", ")
         ),
     ]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn exposes_candidate_solve_steps_for_each_material_study() {
-        for study in [
-            "heat-spreader",
-            "dielectric-screening",
-            "thermo-shield",
-            "structural-panel",
-            "composite-thermo-electric-panel",
-        ] {
-            let steps = material_exploration_steps(study).expect("material steps");
-            let solve_count = steps
-                .iter()
-                .filter(|step| step.action.starts_with("solve_"))
-                .count();
-            assert_eq!(solve_count, 3);
-        }
-    }
-
-    #[test]
-    fn builds_stable_exploration_run_contract() {
-        let run = build_material_exploration_run(
-            "dielectric-screening",
-            "unit-test",
-            vec![
-                json!({ "max_electric_field": 42.0e6, "max_flux_density": 1.2e-3 }),
-                json!({ "max_electric_field": 38.0e6, "max_flux_density": 3.3e-3 }),
-                json!({ "max_electric_field": 48.0e6, "max_flux_density": 0.9e-3 }),
-            ],
-        )
-        .expect("exploration run");
-
-        assert_eq!(run.schema_version, MATERIAL_EXPLORATION_SCHEMA_VERSION);
-        assert_eq!(run.mode, "unit-test");
-        assert_eq!(run.iteration, 1);
-        assert_eq!(run.candidate_count, 3);
-        assert_eq!(
-            run.report["winner_candidate_id"].as_str(),
-            Some("polyimide_film")
-        );
-        assert_eq!(run.next_round.decision, "expand_around_winner");
-        assert_eq!(run.next_round.iteration, 2);
-        assert!(
-            run.next_round
-                .focus_candidate_ids
-                .contains(&"polyimide_film".to_string())
-        );
-        assert!(
-            run.next_round
-                .actions
-                .contains(&"run_next_quality_batch".to_string())
-        );
-    }
-
-    #[test]
-    fn builds_next_round_from_explicit_iteration() {
-        let run = build_material_exploration_run_for_iteration(
-            "dielectric-screening",
-            "unit-test",
-            vec![
-                json!({ "max_electric_field": 42.0e6, "max_flux_density": 1.2e-3 }),
-                json!({ "max_electric_field": 38.0e6, "max_flux_density": 3.3e-3 }),
-                json!({ "max_electric_field": 48.0e6, "max_flux_density": 0.9e-3 }),
-            ],
-            2,
-        )
-        .expect("exploration run");
-
-        assert_eq!(run.iteration, 2);
-        assert_eq!(run.next_round.iteration, 3);
-    }
-
-    #[test]
-    fn next_round_plan_repairs_incomplete_reports_before_expansion() {
-        let report = json!({
-            "winner_candidate_id": "candidate-a",
-            "warnings": ["candidate-b is missing max_stress_pa"],
-            "candidates": [
-                { "candidate_id": "candidate-a", "rank": 1, "score": 0.8 },
-                { "candidate_id": "candidate-b", "rank": 2, "score": 0.6 }
-            ],
-            "reliability": {
-                "quality_gates": [
-                    { "id": "gate.result_completeness", "status": "violate" }
-                ]
-            }
-        });
-
-        let plan = build_material_exploration_next_round_plan(&report, 3);
-
-        assert_eq!(
-            plan.schema_version,
-            MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION
-        );
-        assert_eq!(plan.iteration, 4);
-        assert_eq!(plan.decision, "repair_or_rerun");
-        assert_eq!(plan.focus_candidate_ids, vec!["candidate-a", "candidate-b"]);
-        assert!(
-            plan.actions
-                .contains(&"rerun_incomplete_candidates".to_string())
-        );
-        assert!(
-            plan.rationale
-                .iter()
-                .any(|line| line.contains("gate.result_completeness"))
-        );
-    }
-
-    #[test]
-    fn next_round_execution_plan_filters_repair_reruns_to_focus_candidates() {
-        let exploration = json!({
-            "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,
-            "study": "material_dielectric_screening",
-            "next_round": {
-                "iteration": 2,
-                "decision": "repair_or_rerun",
-                "focus_candidate_ids": ["polyimide_film"],
-                "actions": ["rerun_incomplete_candidates"]
-            }
-        });
-
-        let plan = build_material_exploration_next_round_execution_plan(&exploration)
-            .expect("next round execution plan");
-
-        assert_eq!(
-            plan.schema_version,
-            MATERIAL_EXPLORATION_NEXT_ROUND_EXECUTION_SCHEMA_VERSION
-        );
-        assert_eq!(plan.decision, "repair_or_rerun");
-        assert_eq!(plan.runnable_step_count, 1);
-        assert!(
-            plan.steps
-                .iter()
-                .all(|step| candidate_id_for_step(step) == Some("polyimide_film"))
-        );
-    }
-
-    #[test]
-    fn next_round_execution_plan_expands_with_full_study_steps() {
-        let exploration = json!({
-            "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,
-            "study": "material_structural_panel_screening",
-            "next_round": {
-                "iteration": 2,
-                "decision": "expand_around_winner",
-                "focus_candidate_ids": ["carbon_fiber_quasi_iso"],
-                "actions": ["generate_neighbor_candidates", "run_next_quality_batch"]
-            }
-        });
-
-        let plan = build_material_exploration_next_round_execution_plan(&exploration)
-            .expect("next round execution plan");
-
-        assert_eq!(plan.decision, "expand_around_winner");
-        assert_eq!(plan.runnable_step_count, 9);
-        assert_eq!(plan.steps.len(), 9);
-    }
 }

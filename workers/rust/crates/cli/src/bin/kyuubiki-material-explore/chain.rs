@@ -51,6 +51,10 @@ fn chain_stop_reason(summaries: &[Value], requested_rounds: usize) -> &'static s
         summary.get("next_round_decision").and_then(Value::as_str) == Some("repair_or_rerun")
     }) {
         "repair_required"
+    } else if summaries.iter().any(|summary| {
+        summary.get("next_round_decision").and_then(Value::as_str) == Some("mitigate_design_risk")
+    }) {
+        "risk_mitigation_required"
     } else if summaries.len() >= requested_rounds {
         "round_budget_exhausted"
     } else {
@@ -114,7 +118,7 @@ fn repair_summary(runs: &[Value]) -> Value {
             .get("next_round")
             .and_then(|next_round| next_round.get("decision"))
             .and_then(Value::as_str)
-            == Some("repair_or_rerun")
+            .is_some_and(is_attention_decision)
         {
             for candidate_id in run
                 .get("next_round")
@@ -135,6 +139,10 @@ fn repair_summary(runs: &[Value]) -> Value {
         "violated_gate_ids": violated_gate_ids,
         "focus_candidate_ids": focus_candidate_ids,
     })
+}
+
+fn is_attention_decision(decision: &str) -> bool {
+    matches!(decision, "repair_or_rerun" | "mitigate_design_risk")
 }
 
 fn repair_plan(summary: &Value) -> Value {
@@ -160,6 +168,10 @@ fn repair_plan(summary: &Value) -> Value {
         json!({
             "id": "inspect_violated_quality_gates",
             "target_gate_ids": violated_gate_ids,
+        }),
+        json!({
+            "id": "generate_lower_risk_neighbor_candidates",
+            "target_candidate_ids": focus_candidate_ids.clone(),
         }),
         json!({
             "id": "rerun_focused_candidates",

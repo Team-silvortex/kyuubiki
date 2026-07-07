@@ -77,7 +77,7 @@ fn panel_nodes(kind: &str) -> Vec<Value> {
                 "y": y,
                 "fix_temperature": matches!(index, 3 | 7),
                 "temperature": 35.0,
-                "heat_load": if matches!(index, 1 | 5) { 80.0 } else { 0.0 }
+                "heat_load": if matches!(index, 1 | 5) { 0.01 } else { 0.0 }
             }),
             _ => json!({
                 "id": format!("n{index}"),

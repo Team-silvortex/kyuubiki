@@ -1,3 +1,7 @@
+use crate::material_composite_interfaces::{
+    CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, assess_composite_interfaces,
+    composite_material_regions,
+};
 use crate::material_composite_models::{
     composite_research_metadata, electrostatic_model, heat_model, thermal_model,
 };
@@ -37,18 +41,11 @@ pub struct CompositePanelCandidateReport {
     pub max_temperature_c: Option<f64>,
     pub max_thermal_stress_pa: Option<f64>,
     pub breakdown_safety_factor: Option<f64>,
+    pub interface_risk_score: Option<f64>,
+    pub weakest_interface: Option<CompositePanelInterfaceAssessment>,
     pub areal_mass_kg_m2: f64,
     pub optimization_terms: Vec<MaterialOptimizationTerm>,
     pub missing_metrics: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CompositePanelMaterialRegion {
-    pub id: String,
-    pub role: String,
-    pub material_family: String,
-    pub elements: Vec<String>,
-    pub active_fields: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -149,8 +146,16 @@ pub fn composite_panel_metric_specs() -> Vec<MaterialResearchMetricSpec> {
             "Areal mass",
             "kg/m^2",
             "minimize",
-            0.10,
+            0.08,
             "candidate.stack_areal_mass",
+        ),
+        metric(
+            "interface_risk_score",
+            "Interface risk score",
+            "0..1",
+            "minimize",
+            0.12,
+            "candidate.interface_compatibility",
         ),
     ]
 }
@@ -194,7 +199,7 @@ pub fn build_composite_panel_report(
     for (index, row) in rows.iter_mut().enumerate() {
         row.rank = index + 1;
     }
-    let warnings = rows
+    let mut warnings = rows
         .iter()
         .flat_map(|row| {
             row.missing_metrics
@@ -202,6 +207,15 @@ pub fn build_composite_panel_report(
                 .map(|metric| format!("{} is missing {}", row.candidate_id, metric))
         })
         .collect::<Vec<_>>();
+    warnings.extend(rows.iter().filter_map(|row| {
+        let risk = row.interface_risk_score?;
+        (risk > 0.70).then(|| {
+            format!(
+                "{} exceeds prototype interface risk threshold: {:.3}",
+                row.candidate_id, risk
+            )
+        })
+    }));
     Ok(CompositePanelReport {
         schema_version: "kyuubiki.composite-panel-report/v1".to_string(),
         study: "material.composite_thermo_electric_panel.v1".to_string(),
@@ -217,44 +231,6 @@ pub fn build_composite_panel_report(
     })
 }
 
-pub fn composite_material_regions() -> Vec<CompositePanelMaterialRegion> {
-    vec![
-        CompositePanelMaterialRegion {
-            id: "conductor_left".to_string(),
-            role: "conductor_heat_spreader".to_string(),
-            material_family: "metal".to_string(),
-            elements: vec!["conductor_left".to_string()],
-            active_fields: vec![
-                "electrostatic".to_string(),
-                "heat".to_string(),
-                "thermal_stress".to_string(),
-            ],
-        },
-        CompositePanelMaterialRegion {
-            id: "dielectric_core".to_string(),
-            role: "electrical_isolation".to_string(),
-            material_family: "dielectric".to_string(),
-            elements: vec!["dielectric_core".to_string()],
-            active_fields: vec![
-                "electrostatic".to_string(),
-                "heat".to_string(),
-                "thermal_stress".to_string(),
-            ],
-        },
-        CompositePanelMaterialRegion {
-            id: "substrate_right".to_string(),
-            role: "mechanical_support".to_string(),
-            material_family: "substrate".to_string(),
-            elements: vec!["substrate_right".to_string()],
-            active_fields: vec![
-                "electrostatic".to_string(),
-                "heat".to_string(),
-                "thermal_stress".to_string(),
-            ],
-        },
-    ]
-}
-
 fn composite_candidate_report(
     candidate: &CompositePanelCandidate,
     payload: &Value,
@@ -266,12 +242,25 @@ fn composite_candidate_report(
     let breakdown_safety_factor = max_electric_field_v_m
         .filter(|field| *field > 0.0)
         .map(|field| candidate.dielectric_breakdown_field_v_m / field);
+    let interfaces = assess_composite_interfaces(candidate);
+    let weakest_interface = interfaces
+        .iter()
+        .max_by(|left, right| {
+            left.risk_score
+                .partial_cmp(&right.risk_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .cloned();
+    let interface_risk_score = weakest_interface
+        .as_ref()
+        .map(|interface| interface.risk_score);
     let mut missing_metrics = Vec::new();
     for (metric, value) in [
         ("max_electric_field_v_m", max_electric_field_v_m),
         ("max_temperature_c", max_temperature_c),
         ("max_thermal_stress_pa", max_thermal_stress_pa),
         ("breakdown_safety_factor", breakdown_safety_factor),
+        ("interface_risk_score", interface_risk_score),
     ] {
         if value.is_none() {
             missing_metrics.push(metric.to_string());
@@ -286,6 +275,8 @@ fn composite_candidate_report(
         max_temperature_c,
         max_thermal_stress_pa,
         breakdown_safety_factor,
+        interface_risk_score,
+        weakest_interface,
         areal_mass_kg_m2: candidate.areal_mass_kg_m2,
         optimization_terms: Vec::new(),
         missing_metrics,
@@ -308,6 +299,10 @@ fn apply_scores(rows: &mut [CompositePanelCandidateReport], profile: &MaterialOp
     let margins = rows
         .iter()
         .filter_map(|r| r.breakdown_safety_factor)
+        .collect::<Vec<_>>();
+    let interface_risks = rows
+        .iter()
+        .filter_map(|r| r.interface_risk_score)
         .collect::<Vec<_>>();
     let masses = rows.iter().map(|r| r.areal_mass_kg_m2).collect::<Vec<_>>();
     for row in rows {
@@ -337,6 +332,12 @@ fn apply_scores(rows: &mut [CompositePanelCandidateReport], profile: &MaterialOp
                 &masses,
                 profile,
                 "areal_mass_kg_m2",
+            ),
+            term_min(
+                row.interface_risk_score,
+                &interface_risks,
+                profile,
+                "interface_risk_score",
             ),
         ];
         row.score = terms.iter().map(|term| term.weighted_score).sum();
@@ -369,18 +370,20 @@ fn term_max(
 fn composite_optimization_profile() -> MaterialOptimizationProfile {
     material_optimization_profile(
         "material.composite_thermo_electric_panel.optimization.v1",
-        "Balance electric margin, peak temperature, thermal stress, and mass.",
-        "0.25*E:min + 0.25*T:min + 0.25*stress:min + 0.15*margin:max + 0.10*mass:min",
+        "Balance electric margin, peak temperature, thermal stress, interface risk, and mass.",
+        "0.23*E:min + 0.23*T:min + 0.22*stress:min + 0.15*margin:max + 0.12*interface:min + 0.05*mass:min",
         vec![
-            material_optimization_weight("max_electric_field_v_m", "minimize", 0.25),
-            material_optimization_weight("max_temperature_c", "minimize", 0.25),
-            material_optimization_weight("max_thermal_stress_pa", "minimize", 0.25),
+            material_optimization_weight("max_electric_field_v_m", "minimize", 0.23),
+            material_optimization_weight("max_temperature_c", "minimize", 0.23),
+            material_optimization_weight("max_thermal_stress_pa", "minimize", 0.22),
             material_optimization_weight("breakdown_safety_factor", "maximize", 0.15),
-            material_optimization_weight("areal_mass_kg_m2", "minimize", 0.10),
+            material_optimization_weight("interface_risk_score", "minimize", 0.12),
+            material_optimization_weight("areal_mass_kg_m2", "minimize", 0.05),
         ],
         vec![
             material_optimization_constraint("breakdown_safety_factor", ">=", 1.5, "warning"),
             material_optimization_constraint("max_temperature_c", "<=", 140.0, "warning"),
+            material_optimization_constraint("interface_risk_score", "<=", 0.70, "warning"),
         ],
     )
 }
@@ -398,8 +401,9 @@ fn composite_reliability_envelope(
         quality_gates: composite_quality_gates(rows),
         limitations: vec![
             "Sequential coupling maps electrostatic, heat, and thermal stress through fixed synthetic fixtures rather than a monolithic coupled matrix.".to_string(),
-            "Material regions are scalar and isotropic; anisotropy, temperature-dependent curves, interfaces, and delamination are not modeled yet.".to_string(),
+            "Material regions are scalar and isotropic; anisotropy, temperature-dependent curves, and delamination propagation are not modeled yet.".to_string(),
             "Electrical heating is represented by a screening heat fixture, not a Joule-loss field projection from electrostatic energy density.".to_string(),
+            "Interface risk is a screening heuristic over CTE mismatch and stiffness contrast, not an adhesive fracture mechanics model.".to_string(),
             "Use this prototype for architecture validation and candidate ordering only, not qualification claims.".to_string(),
         ],
     }
@@ -433,6 +437,15 @@ fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<Materi
             250.0e6,
             max_optional(rows.iter().filter_map(|row| row.max_thermal_stress_pa)),
             "Thermal stress should stay within a conservative prototype warning bound.",
+        ),
+        material_quality_gate(
+            "gate.interface_risk.prototype",
+            "Interface compatibility prototype gate",
+            "interface_risk_score",
+            "<=",
+            0.70,
+            max_optional(rows.iter().filter_map(|row| row.interface_risk_score)),
+            "Mixed-material interfaces should remain below the prototype mismatch risk threshold.",
         ),
         material_quality_gate(
             "gate.result_completeness",

@@ -25,6 +25,19 @@ fn composite_report_exposes_regions_and_reliability() {
     assert_eq!(report.schema_version, "kyuubiki.composite-panel-report/v1");
     assert_eq!(report.material_regions.len(), 3);
     assert_eq!(report.reliability.posture, "prototype_screening_only");
-    assert!(report.reliability.quality_gates.len() >= 4);
+    assert!(report.reliability.quality_gates.len() >= 5);
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| { row.interface_risk_score.is_some() && row.weakest_interface.is_some() })
+    );
+    assert!(
+        report
+            .reliability
+            .quality_gates
+            .iter()
+            .any(|gate| { gate.id == "gate.interface_risk.prototype" })
+    );
     assert!(report.winner_candidate_id.is_some());
 }

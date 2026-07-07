@@ -81,7 +81,8 @@ Recent additions:
   intensity, dielectric loss proxy, and mass
 - `material_composite_thermo_electric_panel` is the first mixed-material
   sequential multiphysics prototype, running electrostatic, heat, and
-  thermo-mechanical solves for conductor/dielectric/substrate panel stacks
+  thermo-mechanical solves for conductor/dielectric/substrate panel stacks,
+  with screening-level interface mismatch risk in the ranked report
 - Rust, Python, and Elixir material research helpers can turn result payloads into a
   ranked report with explicit metric contracts and missing-metric warnings
 - material reports include first-class optimization profiles so downstream
@@ -130,9 +131,28 @@ back into the material report ranking layer. The output uses the reusable
 agent, and mesh runners can share the same result shape. It also emits a
 `kyuubiki.material-exploration-next-round/v1` `next_round` plan that tells
 automation whether to repair/rerun incomplete results or expand around the
-current winner. Each exploration artifact carries an `iteration`, so repeated
-runs can preserve lineage instead of looking like disconnected one-shot solver
-batches.
+current winner. When quality gates fail with complete data, the plan uses
+`mitigate_design_risk` so agents generate lower-risk neighbors instead of
+blindly rerunning the same candidate. The `--plan-next` execution plan also
+includes `risk_mitigation_hints` with focused candidate IDs, violated gates,
+dominant risk drivers, and recommended mitigation moves. It can also emit
+`candidate_drafts` such as compliant-interlayer or lower-CTE dielectric
+variants; these drafts are explicitly marked as requiring solver reruns before
+they can be ranked. Candidate drafts carry `draft_id`, `lineage`, and
+`required_result_schema` fields so agents can deduplicate, preserve provenance,
+and route the draft to the right solver contract. `candidate_draft_summary`
+adds aggregate draft counts, source candidate IDs, strategy counts, and required
+result schemas so orchestration layers can size and route the next batch without
+scanning every draft. `draft_execution_batches` groups draft IDs by required
+result schema and marks them as `pending_agent_materialization`, giving
+orchestra or mesh agents a direct dispatch shape for rerunning the focused
+solver contract. Draft batches include an execution policy that requires human
+review, disallows automatic materialization, and blocks qualification claims
+until the rerun quality gates pass. They also include a `review_checklist` for
+material-card provenance, geometry deltas, SI units, solver result schema, and
+rerun quality gates. Each exploration artifact carries an `iteration`, so
+repeated runs can preserve lineage instead of looking like disconnected
+one-shot solver batches.
 
 To materialize that next step without rerunning the first round:
 

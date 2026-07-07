@@ -13,7 +13,7 @@ fn explores_heat_spreader_with_real_solver_results() {
     assert!(
         matches!(
             exploration["next_round"]["decision"].as_str(),
-            Some("expand_around_winner" | "repair_or_rerun")
+            Some("expand_around_winner" | "repair_or_rerun" | "mitigate_design_risk")
         ),
         "real solver runs should produce an actionable next-round decision"
     );
@@ -62,7 +62,18 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
             .as_array()
-            .is_some_and(|gates| gates.len() >= 4)
+            .is_some_and(|gates| gates.len() >= 5)
+    );
+    assert!(
+        exploration["report"]["candidates"]
+            .as_array()
+            .is_some_and(|rows| rows.iter().all(|row| {
+                row["interface_risk_score"].is_number() && row["weakest_interface"].is_object()
+            }))
+    );
+    assert_eq!(
+        exploration["next_round"]["decision"].as_str(),
+        Some("mitigate_design_risk")
     );
     assert_eq!(
         exploration["result_payloads"][0]["schema_version"].as_str(),
@@ -158,10 +169,13 @@ fn chains_next_rounds_from_previous_exploration_json() {
         Some("kyuubiki.material-exploration-chain/v1")
     );
     assert_eq!(chain["round_count"].as_u64(), Some(2));
-    assert_eq!(chain["stop_reason"].as_str(), Some("repair_required"));
+    assert_eq!(
+        chain["stop_reason"].as_str(),
+        Some("risk_mitigation_required")
+    );
     assert_eq!(chain["all_winners_stable"].as_bool(), Some(true));
     assert_eq!(
-        chain["decision_counts"]["repair_or_rerun"].as_u64(),
+        chain["decision_counts"]["mitigate_design_risk"].as_u64(),
         Some(2)
     );
     assert_eq!(chain["repair_summary"]["required"].as_bool(), Some(true));
@@ -183,7 +197,9 @@ fn chains_next_rounds_from_previous_exploration_json() {
     assert!(
         chain["repair_plan"]["actions"]
             .as_array()
-            .is_some_and(|actions| actions.len() >= 3)
+            .is_some_and(|actions| actions.iter().any(|action| {
+                action["id"].as_str() == Some("generate_lower_risk_neighbor_candidates")
+            }))
     );
     assert_eq!(chain["final_iteration"].as_u64(), Some(3));
     assert_eq!(chain["summaries"].as_array().map(Vec::len), Some(2));
