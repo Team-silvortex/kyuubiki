@@ -184,6 +184,26 @@ kyuubiki-material-explore --plan-next exploration.json --out next-round.json --j
 The generated `kyuubiki.material-exploration-next-round-execution/v1` payload is
 intended for agents, CI, and future orchestra runners.
 
+Export a review decision template from the pending draft batch:
+
+```bash
+kyuubiki-material-explore --review-template next-round.json --out decision-template.json --json
+```
+
+The template export is read-only; it does not approve or materialize candidates.
+After review, either edit the template manually or generate an explicit approval
+decision with reviewer identity, reason, and timestamp:
+
+```bash
+kyuubiki-material-explore --approve-review-template decision-template.json --reviewer-id reviewer-1 --reason "prototype rerun approved" --decided-at 2026-07-07T00:00:00Z --out decision.json --json
+```
+
+Apply the explicit decision to produce a materialization plan:
+
+```bash
+kyuubiki-material-explore --materialize-reviewed next-round.json --review-decision decision.json --out materialization-plan.json --json
+```
+
 To run approved materialized composite candidates locally:
 
 ```bash

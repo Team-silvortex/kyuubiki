@@ -6,16 +6,19 @@ mod chain;
 mod display;
 #[path = "kyuubiki-material-explore/flags.rs"]
 mod flags;
+#[path = "kyuubiki-material-explore/materialization.rs"]
+mod materialization;
+#[cfg(test)]
+#[path = "kyuubiki-material-explore/materialization_tests.rs"]
+mod materialization_tests;
 #[cfg(test)]
 #[path = "kyuubiki-material-explore/tests.rs"]
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    HeadlessWorkflowStep, build_composite_materialized_candidate_report,
-    build_composite_materialized_candidate_steps,
-    build_material_exploration_next_round_execution_plan,
-    build_material_exploration_next_round_plan, build_material_exploration_run,
-    build_material_exploration_run_for_iteration, material_exploration_steps,
+    HeadlessWorkflowStep, build_material_exploration_next_round_execution_plan,
+    build_material_exploration_run, build_material_exploration_run_for_iteration,
+    material_exploration_steps,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -31,6 +34,11 @@ use serde_json::Value;
 use chain::chain_next_rounds_from_initial;
 use display::{print_chain_summary, print_next_round_plan_summary, print_summary};
 use flags::Flags;
+use materialization::{
+    approve_review_template, materialize_reviewed_candidates, print_materialization_summary,
+    print_materialized_rerun_summary, print_review_decision_summary, print_review_template_summary,
+    required_flag, review_decision_template, run_materialized_candidates,
+};
 
 fn main() {
     if let Err(error) = run() {
@@ -50,6 +58,55 @@ fn run() -> Result<(), String> {
             print_json(&exploration)?;
         } else {
             print_summary(&exploration);
+        }
+        return Ok(());
+    }
+    if let Some(path) = &flags.review_template {
+        let template = review_decision_template(path)?;
+        if let Some(out) = &flags.out {
+            write_json(out, &template)?;
+        }
+        if flags.json {
+            print_json(&template)?;
+        } else {
+            print_review_template_summary(&template);
+        }
+        return Ok(());
+    }
+    if let Some(path) = &flags.approve_review_template {
+        let reviewer_id = required_flag(&flags.reviewer_id, "--reviewer-id")?;
+        let reason = required_flag(&flags.reason, "--reason")?;
+        let decided_at = required_flag(&flags.decided_at, "--decided-at")?;
+        let decision = approve_review_template(
+            path,
+            reviewer_id,
+            flags.reviewer_name.as_deref().unwrap_or(reviewer_id),
+            reason,
+            decided_at,
+        )?;
+        if let Some(out) = &flags.out {
+            write_json(out, &decision)?;
+        }
+        if flags.json {
+            print_json(&decision)?;
+        } else {
+            print_review_decision_summary(&decision);
+        }
+        return Ok(());
+    }
+    if let Some(path) = &flags.materialize_reviewed {
+        let decision_path = flags
+            .review_decision
+            .as_deref()
+            .ok_or_else(|| "--materialize-reviewed requires --review-decision".to_string())?;
+        let materialization = materialize_reviewed_candidates(path, decision_path)?;
+        if let Some(out) = &flags.out {
+            write_json(out, &materialization)?;
+        }
+        if flags.json {
+            print_json(&materialization)?;
+        } else {
+            print_materialization_summary(&materialization);
         }
         return Ok(());
     }
@@ -104,46 +161,17 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
-fn run_materialized_candidates(path: &str) -> Result<Value, String> {
-    let plan = read_materialization_plan(path)?;
-    let steps = build_composite_materialized_candidate_steps(&plan)?;
-    let result_payloads = steps
-        .iter()
-        .map(run_solve_step)
-        .collect::<Result<Vec<_>, _>>()?;
-    let report = build_composite_materialized_candidate_report(&result_payloads)?;
-    let next_round = build_material_exploration_next_round_plan(&report, 1);
-    Ok(serde_json::json!({
-        "schema_version": "kyuubiki.materialized-candidate-rerun/v1",
-        "mode": "local_solver_materialized_rerun",
-        "study": "material_composite_thermo_electric_panel",
-        "step_count": steps.len(),
-        "result_payloads": result_payloads,
-        "report": report,
-        "next_round": next_round
-    }))
-}
-
 fn plan_next_round(path: &str) -> Result<Value, String> {
-    let text =
-        fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
-    let payload: Value =
-        serde_json::from_str(&text).map_err(|error| format!("failed to parse {path}: {error}"))?;
+    let payload = read_json_file(path)?;
     let exploration = payload.get("exploration").cloned().unwrap_or(payload);
     let plan = build_material_exploration_next_round_execution_plan(&exploration)?;
     serde_json::to_value(plan).map_err(|error| error.to_string())
 }
 
-fn read_materialization_plan(path: &str) -> Result<Value, String> {
+pub(crate) fn read_json_file(path: &str) -> Result<Value, String> {
     let text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
-    let payload: Value =
-        serde_json::from_str(&text).map_err(|error| format!("failed to parse {path}: {error}"))?;
-    Ok(payload
-        .get("materialization_plan")
-        .cloned()
-        .or_else(|| payload.get("plan").cloned())
-        .unwrap_or(payload))
+    serde_json::from_str(&text).map_err(|error| format!("failed to parse {path}: {error}"))
 }
 
 fn run_next_round(path: &str) -> Result<Value, String> {
@@ -232,7 +260,7 @@ fn candidate_id_for_step(step: &HeadlessWorkflowStep) -> Option<&str> {
         .and_then(Value::as_str)
 }
 
-fn run_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String> {
+pub(crate) fn run_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String> {
     if step.action == "solve_composite_thermo_electric_panel" {
         return run_composite_solve_step(step);
     }
@@ -311,18 +339,4 @@ fn print_json(payload: &Value) -> Result<(), String> {
     let text = serde_json::to_string_pretty(payload).map_err(|error| error.to_string())?;
     println!("{text}");
     Ok(())
-}
-
-fn print_materialized_rerun_summary(payload: &Value) {
-    println!(
-        "Materialized rerun: {}",
-        payload["study"].as_str().unwrap_or("unknown")
-    );
-    println!("Steps: {}", payload["step_count"].as_u64().unwrap_or(0));
-    if let Some(winner) = payload["report"]["winner_candidate_id"].as_str() {
-        println!("Winner: {winner}");
-    }
-    if let Some(decision) = payload["next_round"]["decision"].as_str() {
-        println!("Next round: {decision}");
-    }
 }

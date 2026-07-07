@@ -5,6 +5,14 @@ pub(crate) struct Flags {
     pub(crate) json: bool,
     pub(crate) plan_next: Option<String>,
     pub(crate) run_next: Option<String>,
+    pub(crate) review_template: Option<String>,
+    pub(crate) approve_review_template: Option<String>,
+    pub(crate) materialize_reviewed: Option<String>,
+    pub(crate) review_decision: Option<String>,
+    pub(crate) reviewer_id: Option<String>,
+    pub(crate) reviewer_name: Option<String>,
+    pub(crate) reason: Option<String>,
+    pub(crate) decided_at: Option<String>,
     pub(crate) run_materialized: Option<String>,
     pub(crate) chain_next: Option<String>,
     pub(crate) rounds: usize,
@@ -20,13 +28,27 @@ impl Flags {
         let mut json = false;
         let mut plan_next = None;
         let mut run_next = None;
+        let mut review_template = None;
+        let mut approve_review_template = None;
+        let mut materialize_reviewed = None;
+        let mut review_decision = None;
+        let mut reviewer_id = None;
+        let mut reviewer_name = None;
+        let mut reason = None;
+        let mut decided_at = None;
         let mut run_materialized = None;
         let mut chain_next = None;
         let mut rounds = 2;
         let mut index = 1;
         if matches!(
             study.as_str(),
-            "--plan-next" | "--run-next" | "--run-materialized" | "--chain-next"
+            "--plan-next"
+                | "--run-next"
+                | "--review-template"
+                | "--approve-review-template"
+                | "--materialize-reviewed"
+                | "--run-materialized"
+                | "--chain-next"
         ) {
             let option = study.clone();
             let Some(path) = args.get(1) else {
@@ -39,6 +61,12 @@ impl Flags {
                 plan_next = Some(path.clone());
             } else if option == "--run-next" {
                 run_next = Some(path.clone());
+            } else if option == "--review-template" {
+                review_template = Some(path.clone());
+            } else if option == "--approve-review-template" {
+                approve_review_template = Some(path.clone());
+            } else if option == "--materialize-reviewed" {
+                materialize_reviewed = Some(path.clone());
             } else if option == "--run-materialized" {
                 run_materialized = Some(path.clone());
             } else {
@@ -53,6 +81,28 @@ impl Flags {
                 "--out" => out = Some(take_value(&args, &mut index, "--out")?),
                 "--plan-next" => plan_next = Some(take_value(&args, &mut index, "--plan-next")?),
                 "--run-next" => run_next = Some(take_value(&args, &mut index, "--run-next")?),
+                "--review-template" => {
+                    review_template = Some(take_value(&args, &mut index, "--review-template")?)
+                }
+                "--approve-review-template" => {
+                    approve_review_template =
+                        Some(take_value(&args, &mut index, "--approve-review-template")?)
+                }
+                "--materialize-reviewed" => {
+                    materialize_reviewed =
+                        Some(take_value(&args, &mut index, "--materialize-reviewed")?)
+                }
+                "--review-decision" => {
+                    review_decision = Some(take_value(&args, &mut index, "--review-decision")?)
+                }
+                "--reviewer-id" => {
+                    reviewer_id = Some(take_value(&args, &mut index, "--reviewer-id")?)
+                }
+                "--reviewer-name" => {
+                    reviewer_name = Some(take_value(&args, &mut index, "--reviewer-name")?)
+                }
+                "--reason" => reason = Some(take_value(&args, &mut index, "--reason")?),
+                "--decided-at" => decided_at = Some(take_value(&args, &mut index, "--decided-at")?),
                 "--run-materialized" => {
                     run_materialized = Some(take_value(&args, &mut index, "--run-materialized")?)
                 }
@@ -68,6 +118,14 @@ impl Flags {
             json,
             plan_next,
             run_next,
+            review_template,
+            approve_review_template,
+            materialize_reviewed,
+            review_decision,
+            reviewer_id,
+            reviewer_name,
+            reason,
+            decided_at,
             run_materialized,
             chain_next,
             rounds,
@@ -100,5 +158,86 @@ fn parse_rounds(value: String) -> Result<usize, String> {
 }
 
 fn usage() -> String {
-    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --run-materialized materialization-plan.json [--out rerun.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
+    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --review-template next-round.json [--out decision-template.json] [--json]\nkyuubiki-material-explore --approve-review-template decision-template.json --reviewer-id id --reason text --decided-at timestamp [--out decision.json] [--json]\nkyuubiki-material-explore --materialize-reviewed next-round.json --review-decision decision.json [--out materialization-plan.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --run-materialized materialization-plan.json [--out rerun.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Flags;
+
+    #[test]
+    fn parses_review_template_short_form() {
+        let flags = parse(["--review-template", "next-round.json", "--json"]);
+
+        assert_eq!(flags.study, "from-previous-exploration");
+        assert_eq!(flags.review_template.as_deref(), Some("next-round.json"));
+        assert!(flags.json);
+    }
+
+    #[test]
+    fn parses_approve_review_template_arguments() {
+        let flags = parse([
+            "--approve-review-template",
+            "decision-template.json",
+            "--reviewer-id",
+            "reviewer-1",
+            "--reviewer-name",
+            "Reviewer One",
+            "--reason",
+            "prototype approved",
+            "--decided-at",
+            "2026-07-07T00:00:00Z",
+            "--out",
+            "decision.json",
+        ]);
+
+        assert_eq!(
+            flags.approve_review_template.as_deref(),
+            Some("decision-template.json")
+        );
+        assert_eq!(flags.reviewer_id.as_deref(), Some("reviewer-1"));
+        assert_eq!(flags.reviewer_name.as_deref(), Some("Reviewer One"));
+        assert_eq!(flags.reason.as_deref(), Some("prototype approved"));
+        assert_eq!(flags.decided_at.as_deref(), Some("2026-07-07T00:00:00Z"));
+        assert_eq!(flags.out.as_deref(), Some("decision.json"));
+    }
+
+    #[test]
+    fn parses_materialize_and_run_materialized_paths() {
+        let materialize = parse([
+            "--materialize-reviewed",
+            "next-round.json",
+            "--review-decision",
+            "decision.json",
+        ]);
+        let rerun = parse(["--run-materialized", "materialization-plan.json"]);
+
+        assert_eq!(
+            materialize.materialize_reviewed.as_deref(),
+            Some("next-round.json")
+        );
+        assert_eq!(
+            materialize.review_decision.as_deref(),
+            Some("decision.json")
+        );
+        assert_eq!(
+            rerun.run_materialized.as_deref(),
+            Some("materialization-plan.json")
+        );
+    }
+
+    #[test]
+    fn rejects_missing_review_template_value() {
+        let error = Flags::parse(strings(["--review-template", "--json"])).unwrap_err();
+
+        assert!(error.contains("--review-template requires a value"));
+    }
+
+    fn parse<const N: usize>(args: [&str; N]) -> Flags {
+        Flags::parse(strings(args)).expect("flags")
+    }
+
+    fn strings<const N: usize>(args: [&str; N]) -> Vec<String> {
+        args.into_iter().map(ToString::to_string).collect()
+    }
 }
