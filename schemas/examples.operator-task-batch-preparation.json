@@ -12,6 +12,8 @@
   "task_count": 1,
   "verified_count": 1,
   "error_count": 0,
+  "error_codes": [],
+  "error_code_counts": {},
   "summaries": [
     {
       "case_id": "quality_case_a",

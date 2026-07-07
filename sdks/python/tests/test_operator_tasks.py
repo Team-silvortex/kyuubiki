@@ -26,6 +26,8 @@ class _OperatorTaskHandler(BaseHTTPRequestHandler):
                     "task_count": 1,
                     "verified_count": 1,
                     "error_count": 0,
+                    "error_codes": [],
+                    "error_code_counts": {},
                     "summaries": [{"case_id": "case-a", "status": "verified"}],
                 },
             )
@@ -40,6 +42,8 @@ class _OperatorTaskHandler(BaseHTTPRequestHandler):
                     "task_count": 1,
                     "ok_count": 1,
                     "error_count": 0,
+                    "error_codes": [],
+                    "error_code_counts": {},
                     "results": [
                         {
                             "case_id": "case-a",
@@ -137,6 +141,8 @@ class OperatorTaskClientTest(unittest.TestCase):
 
         self.assertEqual(result["status"], "executed")
         self.assertEqual(result["ok_count"], 1)
+        self.assertEqual(result["error_codes"], [])
+        self.assertEqual(result["error_code_counts"], {})
         self.assertEqual(
             result["results"][0]["result"]["material_thermal_shock_status"],
             "pass",
@@ -233,6 +239,8 @@ class OperatorTaskClientTest(unittest.TestCase):
 
         self.assertEqual(result["status"], "verified")
         self.assertEqual(result["verified_count"], 1)
+        self.assertEqual(result["error_codes"], [])
+        self.assertEqual(result["error_code_counts"], {})
         self.assertEqual(result["summaries"][0]["case_id"], "case-a")
         self.assertEqual(
             _OperatorTaskHandler.observed_payload,

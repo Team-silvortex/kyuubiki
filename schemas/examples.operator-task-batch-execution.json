@@ -1,0 +1,31 @@
+{
+  "$schema": "operator-task-batch-execution.schema.json",
+  "status": "executed",
+  "operator_task_batch_execution_contract": "kyuubiki.operator_task_batch_execution/v1",
+  "run_id": "operator-task-batch:execute:86c14d1fb8d85ca3",
+  "run_phase": "execute",
+  "batch_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+  "digest_algorithm": "sha256",
+  "started_at": "2026-01-01T00:00:00Z",
+  "finished_at": "2026-01-01T00:00:01Z",
+  "task_count": 1,
+  "executed_count": 1,
+  "ok_count": 1,
+  "error_count": 0,
+  "error_codes": [],
+  "error_code_counts": {},
+  "failed_case_ids": [],
+  "results": [
+    {
+      "case_id": "quality_case_a",
+      "status": "ok",
+      "task_id": "quality-contract-quality_case_a",
+      "task_digest": "86c14d1fb8d85ca302cb2b8b44e75e4bb930b228e531833f1397b08718051628",
+      "operator_id": "transform.fixture",
+      "result": {
+        "material_thermal_shock_status": "pass",
+        "material_thermal_shock_safety_factor": 1.25
+      }
+    }
+  ]
+}

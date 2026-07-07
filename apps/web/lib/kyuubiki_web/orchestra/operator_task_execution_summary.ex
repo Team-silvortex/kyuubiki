@@ -40,6 +40,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
          {:ok, entrypoint_name} <-
            required_string(task, ["execution_program", "entrypoint", "name"]),
          :ok <- validate_program_match(operator_id, operator_kind, program_id, program_kind),
+         :ok <- validate_mirror_fields(task, operator_kind),
          :ok <- validate_execution_abi(program_kind, runtime_protocol, abi_kind, entrypoint_kind),
          :ok <- validate_entrypoint(program_kind, operator_id, entrypoint_name) do
       {:ok,
@@ -81,6 +82,71 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
 
   defp validate_program_match(_operator_id, _operator_kind, _program_id, _program_kind),
     do: {:error, :operator_task_program_mismatch}
+
+  defp validate_mirror_fields(task, operator_kind) do
+    with :ok <-
+           validate_mirror(
+             task,
+             ["operator", "kind"],
+             operator_kind,
+             ["execution_program", "entrypoint", "operator_kind"]
+           ),
+         :ok <-
+           validate_mirror(
+             task,
+             ["operator", "kind"],
+             operator_kind,
+             ["runtime_hints", "operator_kind"]
+           ),
+         :ok <-
+           validate_optional_mirror(
+             task,
+             ["execution_program", "package_ref"],
+             ["operator", "execution", "package_ref"]
+           ),
+         :ok <-
+           validate_optional_mirror(
+             task,
+             ["execution_program", "package_ref"],
+             ["runtime_hints", "package_ref"]
+           ),
+         :ok <-
+           validate_optional_mirror(
+             task,
+             ["execution_program", "package_version"],
+             ["runtime_hints", "package_version"]
+           ) do
+      :ok
+    end
+  end
+
+  defp validate_mirror(task, source_path, source_value, mirror_path) do
+    case get_in(task, mirror_path) do
+      nil -> :ok
+      ^source_value -> :ok
+      _ -> mirror_mismatch(source_path, mirror_path)
+    end
+  end
+
+  defp validate_optional_mirror(task, source_path, mirror_path) do
+    source_value = get_in(task, source_path)
+    mirror_value = get_in(task, mirror_path)
+
+    if is_nil(source_value) or is_nil(mirror_value) or source_value == mirror_value do
+      :ok
+    else
+      mirror_mismatch(source_path, mirror_path)
+    end
+  end
+
+  defp mirror_mismatch(source_path, mirror_path) do
+    {:error,
+     {:operator_task_mirror_mismatch,
+      %{
+        source: Enum.join(source_path, "."),
+        mirror: Enum.join(mirror_path, ".")
+      }}}
+  end
 
   defp validate_execution_abi("solver", @solver_protocol, "solver_rpc", "solver_method"), do: :ok
 

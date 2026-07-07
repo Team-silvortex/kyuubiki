@@ -187,6 +187,9 @@ language-neutral task IR and execution program.
 Directly authored descriptors must still carry the minimum executable identity:
 `id`, `family`, `kind`, and an `execution.package_ref` bound to the same
 operator id. Bypassing catalog lookup must not mean bypassing package identity.
+When TaskIR repeats identity in `execution_program` or `runtime_hints`, those
+fields are mirrors, not independent override points: kind, package ref, and
+package version must match the descriptor and execution program.
 
 Task IR integrity includes both a descriptor digest and a task digest. The
 descriptor digest covers the operator snapshot; the task digest covers the

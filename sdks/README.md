@@ -95,6 +95,9 @@ Recent additions:
   for language-neutral Operator TaskIR payloads, then derive resume plans through
   `/api/v1/operator-tasks/*`, including `quality_execution_batch` files emitted
   by optimization workflows
+- Operator TaskIR batch prepare/execute responses expose top-level
+  `error_codes` and `error_code_counts`, so headless agents and benchmark
+  runners can classify failures without scanning every case result
 
 The same report path is also exposed as a Rust CLI:
 
@@ -120,7 +123,25 @@ kyuubiki-material-explore structural-panel
 models through local Rust solver kernels, and feeds the real result payloads
 back into the material report ranking layer. The output uses the reusable
 `kyuubiki.material-exploration-run/v1` SDK contract, so later local, remote
-agent, and mesh runners can share the same result shape.
+agent, and mesh runners can share the same result shape. It also emits a
+`kyuubiki.material-exploration-next-round/v1` `next_round` plan that tells
+automation whether to repair/rerun incomplete results or expand around the
+current winner.
+
+To materialize that next step without rerunning the first round:
+
+```bash
+kyuubiki-material-explore --plan-next exploration.json --out next-round.json --json
+```
+
+The generated `kyuubiki.material-exploration-next-round-execution/v1` payload is
+intended for agents, CI, and future orchestra runners.
+
+To run that next step locally and emit the next exploration artifact:
+
+```bash
+kyuubiki-material-explore --run-next exploration.json --out next-exploration.json --json
+```
 
 `list` and `describe` expose the machine-readable study contract: aliases,
 template id, report schema, research domain, objective, and metric specs.

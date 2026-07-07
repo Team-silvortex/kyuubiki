@@ -16,9 +16,31 @@
       "--json"
     ]
   },
+  "next_round_command": {
+    "id": "material_explore_next_round_plan",
+    "cwd": "workers/rust",
+    "argv_contains": [
+      "cargo",
+      "kyuubiki-material-explore",
+      "--plan-next",
+      "--json"
+    ]
+  },
+  "run_next_command": {
+    "id": "material_explore_run_next_round",
+    "cwd": "workers/rust",
+    "argv_contains": [
+      "cargo",
+      "kyuubiki-material-explore",
+      "--run-next",
+      "--json"
+    ]
+  },
   "expected": {
     "evidence_schema_version": "kyuubiki.automated-material-research-example/v1",
     "exploration_schema_version": "kyuubiki.material-exploration-run/v1",
+    "next_round_schema_version": "kyuubiki.material-exploration-next-round/v1",
+    "next_round_execution_schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
     "report_schema_version": "kyuubiki.material-research-report/v1",
     "exploration_study": "material_heat_spreader_screening",
     "mode": "local_solver",
@@ -28,6 +50,16 @@
     "optimization_id": "material.heat_spreader_screening.optimization.v1",
     "reliability_posture": "screening_only"
   },
+  "allowed_next_round_decisions": [
+    "expand_around_winner",
+    "repair_or_rerun"
+  ],
+  "required_next_round_sections": [
+    "decision",
+    "focus_candidate_ids",
+    "actions",
+    "rationale"
+  ],
   "required_candidate_fields": [
     "rank",
     "candidate_id",

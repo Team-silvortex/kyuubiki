@@ -254,10 +254,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
     assert result["ok_count"] == 1
     assert result["error_count"] == 1
+    assert result["error_codes"] == ["operator_task_digest_mismatch"]
+    assert result["error_code_counts"] == %{"operator_task_digest_mismatch" => 1}
     assert result["failed_case_ids"] == ["case-b"]
     assert List.last(result["results"])["case_id"] == "case-b"
     assert List.last(result["results"])["status"] == "error"
     assert List.last(result["results"])["error"] =~ "operator_task_digest_mismatch"
+    assert List.last(result["results"])["error_code"] == "operator_task_digest_mismatch"
   end
 
   test "rejects task batch headers that disagree with the task list" do
@@ -303,7 +306,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert {:ok, result} = OperatorTaskExecutor.execute_batch(batch)
     assert result["ok_count"] == 0
     assert result["error_count"] == 1
+    assert result["error_codes"] == ["operator_task_batch_entry_rpc_mirror_mismatch"]
+
+    assert result["error_code_counts"] == %{
+             "operator_task_batch_entry_rpc_mirror_mismatch" => 1
+           }
+
     assert hd(result["results"])["error"] =~ "operator_task_batch_entry_rpc_mirror_mismatch"
+
+    assert hd(result["results"])["error_code"] ==
+             "operator_task_batch_entry_rpc_mirror_mismatch"
   end
 
   test "rejects malformed task IR envelopes" do
@@ -394,6 +406,39 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
     assert {:error, :operator_task_entrypoint_mismatch} =
              OperatorTaskExecutor.execute(mismatched_entrypoint)
+  end
+
+  test "rejects digest-valid task IR with inconsistent mirrored identity fields" do
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    mismatched_package_hint =
+      task
+      |> put_in(["runtime_hints", "package_ref"], "orchestra://operator-package/wrong")
+      |> refresh_task_digest()
+
+    assert {:error,
+            {:operator_task_mirror_mismatch,
+             %{
+               source: "execution_program.package_ref",
+               mirror: "runtime_hints.package_ref"
+             }}} = OperatorTaskExecutor.execute(mismatched_package_hint)
+
+    mismatched_kind_hint =
+      task
+      |> put_in(["runtime_hints", "operator_kind"], "solver")
+      |> refresh_task_digest()
+
+    assert {:error,
+            {:operator_task_mirror_mismatch,
+             %{
+               source: "operator.kind",
+               mirror: "runtime_hints.operator_kind"
+             }}} = OperatorTaskExecutor.execute(mismatched_kind_hint)
   end
 
   defp refresh_task_digest(task) do

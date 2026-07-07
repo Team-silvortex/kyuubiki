@@ -18,6 +18,7 @@ Run a repeatable local material exploration that:
 - uses real Rust solver kernels
 - ranks multiple candidates with an optimization profile
 - retains solver result payloads and report metrics
+- emits an explicit next-round plan for repair/rerun or candidate expansion
 - exposes reliability posture, assumptions, limitations, and quality gates
 - fails if the output shape or expected winner drifts unexpectedly
 
@@ -48,6 +49,49 @@ By default both commands use:
 - runner: `workers/rust` `kyuubiki-material-explore`
 
 The output is intentionally under `tmp/` and should not be committed directly.
+
+## Closed-Loop Step
+
+The captured exploration includes:
+
+```text
+kyuubiki.material-exploration-next-round/v1
+```
+
+This `next_round` block is the first closed-loop research contract. If the
+report has missing metrics or violated quality gates, it returns a
+`repair_or_rerun` decision with actions such as `rerun_incomplete_candidates`.
+If the current screening data is complete, it returns `expand_around_winner`
+with actions such as `generate_neighbor_candidates` and
+`run_next_quality_batch`.
+
+The same CLI can turn a captured exploration into a runnable next-round plan:
+
+```sh
+kyuubiki-material-explore --plan-next tmp/material-research-example.json --json
+```
+
+The output uses:
+
+```text
+kyuubiki.material-exploration-next-round-execution/v1
+```
+
+For `repair_or_rerun`, the plan emits only focused candidate solve steps. For
+`expand_around_winner`, the current v1 implementation emits the built-in study
+candidate generator as the next executable batch shape; future iterations can
+replace that generator with DOE or Bayesian neighbor generation.
+
+The CLI can also execute that next-round plan locally and emit a fresh
+exploration artifact:
+
+```sh
+kyuubiki-material-explore --run-next tmp/material-research-example.json --json
+```
+
+This keeps the current prototype honest: the closed-loop block is not only a
+recommendation for an agent, it can already drive the next solver batch through
+the same material exploration contract.
 
 ## Remote Lab Run
 
@@ -119,6 +163,7 @@ The report must keep:
 - `reliability.posture: screening_only`
 - candidate-level optimization terms
 - solver result payloads for all three candidates
+- next-round decision, focus candidates, actions, and rationale
 - reliability quality gates
 - visible limitations and assumptions
 - no local absolute repository paths

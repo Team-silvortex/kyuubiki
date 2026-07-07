@@ -4,6 +4,38 @@
   "title": "Kyuubiki operator task IR",
   "type": "object",
   "additionalProperties": true,
+  "x-kyuubiki-mirror_constraints": [
+    {
+      "source": "/operator/kind",
+      "mirror": "/execution_program/program_kind",
+      "reason": "execution program kind must dispatch the declared operator kind"
+    },
+    {
+      "source": "/operator/kind",
+      "mirror": "/execution_program/entrypoint/operator_kind",
+      "reason": "entrypoint metadata must not retarget the operator kind"
+    },
+    {
+      "source": "/operator/kind",
+      "mirror": "/runtime_hints/operator_kind",
+      "reason": "runtime routing hints must preserve the operator kind"
+    },
+    {
+      "source": "/operator/execution/package_ref",
+      "mirror": "/execution_program/package_ref",
+      "reason": "descriptor package identity and executable package identity must match"
+    },
+    {
+      "source": "/execution_program/package_ref",
+      "mirror": "/runtime_hints/package_ref",
+      "reason": "runtime fetch hints must point at the same executable package"
+    },
+    {
+      "source": "/execution_program/package_version",
+      "mirror": "/runtime_hints/package_version",
+      "reason": "runtime fetch hints must target the same package version"
+    }
+  ],
   "$defs": {
     "sha256Hex": {
       "type": "string",

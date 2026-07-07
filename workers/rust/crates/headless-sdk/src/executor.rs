@@ -1,7 +1,7 @@
 use crate::{
     HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
     HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport, find_action_contract,
-    is_operator_task_execute_action, is_operator_task_prepare_action,
+    is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
     prepare_operator_task_payload, preview_operator_task_execute_payload, validate_batch,
 };
 use serde::{Deserialize, Serialize};
@@ -161,10 +161,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                         risk: step.risk,
                         status: "failed".to_string(),
                         payload,
-                        result_preview: Value::Object(Map::from_iter([(
-                            "error".to_string(),
-                            Value::from(message),
-                        )])),
+                        result_preview: operator_task_error_preview(message),
                         requires_confirmation,
                     });
                     break;
@@ -283,20 +280,12 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
             );
         }
         "operator_task_prepare" => {
-            return prepare_operator_task_payload(payload).unwrap_or_else(|message| {
-                Value::Object(Map::from_iter([(
-                    "error".to_string(),
-                    Value::from(message),
-                )]))
-            });
+            return prepare_operator_task_payload(payload)
+                .unwrap_or_else(operator_task_error_preview);
         }
         "operator_task_execute" => {
-            return preview_operator_task_execute_payload(payload).unwrap_or_else(|message| {
-                Value::Object(Map::from_iter([(
-                    "error".to_string(),
-                    Value::from(message),
-                )]))
-            });
+            return preview_operator_task_execute_payload(payload)
+                .unwrap_or_else(operator_task_error_preview);
         }
         "job_wait" | "job_fetch" => {
             map.insert(
@@ -423,4 +412,117 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
         _ => {}
     }
     Value::Object(map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MockHeadlessExecutor, execute_batch_with_executor};
+    use crate::{HeadlessExecutionBatch, HeadlessExecutionBatchStep, HeadlessRisk};
+    use kyuubiki_protocol::compute_operator_task_digest;
+    use serde_json::{Value, json};
+
+    #[test]
+    fn mock_executor_reports_structured_operator_task_mirror_error() {
+        let mut task = golden_task_fixture();
+        task["runtime_hints"]["operator_kind"] = json!("solver");
+        task["integrity"]["task_digest"] =
+            json!(compute_operator_task_digest(&task).expect("changed task should digest"));
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "operator-task-fixture".to_string(),
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "operator_task_prepare".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: json!({ "task": task }),
+            }],
+            warnings: vec![],
+        };
+        let mut executor = MockHeadlessExecutor;
+
+        let report = execute_batch_with_executor(&batch, &mut executor, false, false);
+
+        assert_eq!(report.status, "failed");
+        assert_eq!(report.steps[0].status, "failed");
+        assert_eq!(
+            report.steps[0].result_preview["error_code"],
+            "operator_task_mirror_mismatch"
+        );
+    }
+
+    fn golden_task_fixture() -> Value {
+        json!({
+            "schema_version": "kyuubiki.operator-task-ir/v1",
+            "task_id": "fixture-task",
+            "operator": {
+                "id": "transform.fixture",
+                "family": "fixture",
+                "kind": "transform",
+                "execution": {
+                    "package_ref": "orchestra://operator-package/transform.fixture"
+                }
+            },
+            "descriptor_authoring": {
+                "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+                "mode": "rust_native",
+                "runtime": "rust",
+                "source": "fixture",
+                "hot_reloadable": false,
+                "execution_language": "language_neutral"
+            },
+            "node": {},
+            "input_artifact": { "x": 1 },
+            "config": { "alpha": true },
+            "execution_program": {
+                "schema_version": "kyuubiki.operator-execution-program/v1",
+                "program_id": "transform.fixture",
+                "program_family": "fixture",
+                "program_kind": "transform",
+                "operator_category_id": null,
+                "package_ref": "orchestra://operator-package/transform.fixture",
+                "package_version": "library-managed",
+                "package_integrity": null,
+                "runtime_protocol": "kyuubiki.operator-execution/v1",
+                "abi": {
+                    "kind": "operator_task",
+                    "input_encoding": "json",
+                    "output_encoding": "json"
+                },
+                "entrypoint": {
+                    "kind": "operator_id",
+                    "name": "transform.fixture",
+                    "operator_kind": "transform"
+                },
+                "bindings": {
+                    "input_artifact": "task.input_artifact",
+                    "config": "task.config",
+                    "output_artifact": "task.output_artifact"
+                },
+                "node_binding": {
+                    "node_id": null,
+                    "input_ports": [],
+                    "output_ports": []
+                }
+            },
+            "dataset_contract": {},
+            "orchestration_context": {},
+            "runtime_hints": {
+                "authority_mode": "central_operator_library",
+                "execution_mode": "orchestra_fetch",
+                "source_ref": null,
+                "package_ref": "orchestra://operator-package/transform.fixture",
+                "package_version": "library-managed",
+                "placement_tags": [],
+                "required_capabilities": [],
+                "cache_scope": "job",
+                "agent_fetchable": true,
+                "operator_kind": "transform"
+            },
+            "integrity": {
+                "task_digest": "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
+            }
+        })
+    }
 }

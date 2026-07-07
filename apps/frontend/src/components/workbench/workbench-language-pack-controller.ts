@@ -34,7 +34,7 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     language,
     targetSurface: "workbench",
     name: `${t.languages[language as keyof typeof t.languages] ?? language.toUpperCase()} custom pack`,
-    version: "1.15.0",
+    version: "1.16.0",
     versionLine: WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
     targetAppVersion: WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION,
     source: "imported",
@@ -131,7 +131,7 @@ export function installWorkbenchLanguagePackPayload(params: {
     language: raw.language,
     targetSurface: "workbench",
     name: raw.name,
-    version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.15.0",
+    version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.16.0",
     versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,
     targetAppVersion:
       typeof raw.targetAppVersion === "string" && raw.targetAppVersion.trim() ? raw.targetAppVersion.trim() : undefined,

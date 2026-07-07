@@ -93,10 +93,47 @@ pub fn summarize_operator_task_execution(
         required_string(task, &["execution_program", "entrypoint", "kind"])?.to_string();
     let entrypoint_name =
         required_string(task, &["execution_program", "entrypoint", "name"])?.to_string();
+    let package_ref = optional_string(task, &["execution_program", "package_ref"]);
+    let package_version = optional_string(task, &["execution_program", "package_version"]);
+    let authority_mode = optional_string(task, &["runtime_hints", "authority_mode"]);
+    let execution_mode = optional_string(task, &["runtime_hints", "execution_mode"]);
+    let cache_scope = optional_string(task, &["runtime_hints", "cache_scope"]);
+    let agent_fetchable = optional_bool(task, &["runtime_hints", "agent_fetchable"]);
 
     if program_id != operator_id || program_kind != operator_kind {
         return Err("operator task execution program does not match operator".to_string());
     }
+
+    validate_mirror_field(
+        "execution_program.entrypoint.operator_kind",
+        optional_string(task, &["execution_program", "entrypoint", "operator_kind"]).as_deref(),
+        "operator.kind",
+        &operator_kind,
+    )?;
+    validate_mirror_field(
+        "runtime_hints.operator_kind",
+        optional_string(task, &["runtime_hints", "operator_kind"]).as_deref(),
+        "operator.kind",
+        &operator_kind,
+    )?;
+    validate_optional_mirror_field(
+        "operator.execution.package_ref",
+        optional_string(task, &["operator", "execution", "package_ref"]).as_deref(),
+        "execution_program.package_ref",
+        package_ref.as_deref(),
+    )?;
+    validate_optional_mirror_field(
+        "runtime_hints.package_ref",
+        optional_string(task, &["runtime_hints", "package_ref"]).as_deref(),
+        "execution_program.package_ref",
+        package_ref.as_deref(),
+    )?;
+    validate_optional_mirror_field(
+        "runtime_hints.package_version",
+        optional_string(task, &["runtime_hints", "package_version"]).as_deref(),
+        "execution_program.package_version",
+        package_version.as_deref(),
+    )?;
 
     validate_execution_abi(
         &program_kind,
@@ -120,12 +157,12 @@ pub fn summarize_operator_task_execution(
         abi_kind,
         entrypoint_kind,
         entrypoint_name,
-        package_ref: optional_string(task, &["execution_program", "package_ref"]),
-        package_version: optional_string(task, &["execution_program", "package_version"]),
-        authority_mode: optional_string(task, &["runtime_hints", "authority_mode"]),
-        execution_mode: optional_string(task, &["runtime_hints", "execution_mode"]),
-        cache_scope: optional_string(task, &["runtime_hints", "cache_scope"]),
-        agent_fetchable: optional_bool(task, &["runtime_hints", "agent_fetchable"]),
+        package_ref,
+        package_version,
+        authority_mode,
+        execution_mode,
+        cache_scope,
+        agent_fetchable,
     })
 }
 
@@ -216,6 +253,40 @@ fn validate_execution_abi(
         return Err(format!(
             "{} has inconsistent runtime protocol, abi, or entrypoint",
             expected.3
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_mirror_field(
+    mirror_name: &str,
+    mirror_value: Option<&str>,
+    source_name: &str,
+    source_value: &str,
+) -> Result<(), String> {
+    if let Some(value) = mirror_value
+        && value != source_value
+    {
+        return Err(format!(
+            "operator task {mirror_name} must match {source_name}"
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_optional_mirror_field(
+    mirror_name: &str,
+    mirror_value: Option<&str>,
+    source_name: &str,
+    source_value: Option<&str>,
+) -> Result<(), String> {
+    if let (Some(mirror), Some(source)) = (mirror_value, source_value)
+        && mirror != source
+    {
+        return Err(format!(
+            "operator task {mirror_name} must match {source_name}"
         ));
     }
 

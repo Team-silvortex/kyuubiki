@@ -53,6 +53,7 @@ help:
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language support packs"
 	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
 	@echo "  make check-version-line Verify release, package, docs, and language-pack version contracts"
+	@echo "  make check-operator-task-ir-contract Verify TaskIR mirror constraints and examples"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
 	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"
 	@echo "  make build-operator-qualification-readiness Write operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"

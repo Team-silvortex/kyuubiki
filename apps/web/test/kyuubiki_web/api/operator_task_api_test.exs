@@ -41,7 +41,9 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
       |> Router.call(@opts)
 
     assert conn.status == 422
-    assert Jason.decode!(conn.resp_body)["error"] =~ "operator_task_digest_mismatch"
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["error"] =~ "operator_task_digest_mismatch"
+    assert payload["error_code"] == "operator_task_digest_mismatch"
   end
 
   test "rejects operator task IR envelopes with mismatched execution ABI" do
@@ -57,7 +59,27 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
       |> Router.call(@opts)
 
     assert conn.status == 422
-    assert Jason.decode!(conn.resp_body)["error"] =~ "operator_task_execution_abi_mismatch"
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["error"] =~ "operator_task_execution_abi_mismatch"
+    assert payload["error_code"] == "operator_task_execution_abi_mismatch"
+  end
+
+  test "rejects operator task IR envelopes with digest-valid mirrored identity mismatch" do
+    task =
+      fixture_task!()
+      |> put_in(["runtime_hints", "package_ref"], "orchestra://operator-package/wrong")
+      |> refresh_task_digest()
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/prepare", Jason.encode!(%{"task" => task}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 422
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["error"] =~ "operator_task_mirror_mismatch"
+    assert payload["error_code"] == "operator_task_mirror_mismatch"
   end
 
   test "executes an operator task IR envelope through the service API" do
@@ -120,6 +142,37 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert Enum.map(payload["summaries"], & &1["case_id"]) == ["batch-case-a", "batch-case-b"]
     assert hd(payload["summaries"])["status"] == "verified"
     assert hd(payload["summaries"])["operator_id"] == "transform.evaluate_material_thermal_shock"
+  end
+
+  test "operator task batch preparation exposes per-case error codes" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    bad_task =
+      task_a
+      |> put_in(["runtime_hints", "operator_kind"], "solver")
+      |> refresh_task_digest()
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => bad_task}
+      ]
+    }
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/prepare-batch", Jason.encode!(%{"batch" => batch}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["status"] == "verified"
+    assert payload["verified_count"] == 0
+    assert payload["error_count"] == 1
+    assert payload["error_codes"] == ["operator_task_mirror_mismatch"]
+    assert payload["error_code_counts"] == %{"operator_task_mirror_mismatch" => 1}
+    assert hd(payload["summaries"])["error_code"] == "operator_task_mirror_mismatch"
   end
 
   test "executes an operator task batch through the service API" do

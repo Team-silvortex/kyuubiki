@@ -71,6 +71,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         |> Enum.map(fn {entry, index} -> prepare_batch_entry(entry, index) end)
 
       verified_count = Enum.count(summaries, &(&1["status"] == "verified"))
+      error_code_counts = error_code_counts(summaries)
 
       result = %{
         "operator_task_batch_preparation_contract" =>
@@ -79,6 +80,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         "task_count" => length(tasks),
         "verified_count" => verified_count,
         "error_count" => length(summaries) - verified_count,
+        "error_codes" => Map.keys(error_code_counts),
+        "error_code_counts" => error_code_counts,
         "summaries" => summaries
       }
 
@@ -159,12 +162,45 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
       "operator_id" => get_in(task_ir, ["operator", "id"]),
       "status" => "error",
-      "error" => inspect(reason)
+      "error" => inspect(reason),
+      "error_code" => error_code(reason)
     }
   end
 
+  defp error_code({:operator_task_digest_mismatch, _mismatch}),
+    do: "operator_task_digest_mismatch"
+
+  defp error_code({:operator_task_mirror_mismatch, _mismatch}),
+    do: "operator_task_mirror_mismatch"
+
+  defp error_code(:missing_operator_task_digest), do: "operator_task_digest_missing"
+
+  defp error_code(:operator_task_execution_abi_mismatch),
+    do: "operator_task_execution_abi_mismatch"
+
+  defp error_code(:operator_task_program_mismatch), do: "operator_task_program_mismatch"
+  defp error_code(:operator_task_entrypoint_mismatch), do: "operator_task_entrypoint_mismatch"
+
+  defp error_code({:operator_task_batch_entry_mismatch, _field, _actual, _expected}),
+    do: "operator_task_batch_entry_mismatch"
+
+  defp error_code(:operator_task_batch_entry_rpc_mirror_mismatch),
+    do: "operator_task_batch_entry_rpc_mirror_mismatch"
+
+  defp error_code(:operator_task_batch_entry_rpc_missing_task_ir),
+    do: "operator_task_batch_entry_rpc_missing_task_ir"
+
+  defp error_code({:operator_task_batch_entry_rpc_method_mismatch, _method}),
+    do: "operator_task_batch_entry_rpc_method_mismatch"
+
+  defp error_code(:missing_task_ir), do: "operator_task_batch_entry_missing_task_ir"
+  defp error_code(:invalid_task_entry), do: "operator_task_batch_entry_invalid"
+  defp error_code(reason) when is_atom(reason), do: Atom.to_string(reason)
+  defp error_code(_reason), do: "operator_task_batch_entry_error"
+
   defp batch_result({results, ok_count}, tasks, run, opts) do
     results = Enum.reverse(results)
+    error_code_counts = error_code_counts(results)
 
     result = %{
       "operator_task_batch_execution_contract" => @batch_execution_contract,
@@ -172,6 +208,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "executed_count" => length(results),
       "ok_count" => ok_count,
       "error_count" => length(results) - ok_count,
+      "error_codes" => Map.keys(error_code_counts),
+      "error_code_counts" => error_code_counts,
       "failed_case_ids" => failed_case_ids(results),
       "results" => results
     }
@@ -184,6 +222,18 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     |> Enum.filter(&(&1["status"] == "error"))
     |> Enum.map(&Map.get(&1, "case_id"))
     |> Enum.filter(&(is_binary(&1) and &1 != ""))
+  end
+
+  defp error_code_counts(entries) do
+    entries
+    |> Enum.reduce(%{}, fn entry, counts ->
+      case Map.get(entry, "error_code") do
+        code when is_binary(code) and code != "" -> Map.update(counts, code, 1, &(&1 + 1))
+        _code -> counts
+      end
+    end)
+    |> Enum.sort()
+    |> Map.new()
   end
 
   defp input_artifact(%{"input_artifact" => input}) when is_map(input), do: {:ok, input}

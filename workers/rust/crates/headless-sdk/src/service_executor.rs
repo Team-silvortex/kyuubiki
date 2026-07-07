@@ -454,10 +454,21 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
     };
     if !(200..300).contains(&status_code) {
         return Err(HeadlessExecutorError {
-            message: format!("service request failed {status_code}: {path}: {payload}"),
+            message: service_error_message(status_code, path, &payload),
         });
     }
     Ok(payload)
+}
+
+fn service_error_message(status_code: u16, path: &str, payload: &Value) -> String {
+    let Some(error_code) = payload.get("error_code").and_then(Value::as_str) else {
+        return format!("service request failed {status_code}: {path}: {payload}");
+    };
+    let error = payload
+        .get("error")
+        .map(Value::to_string)
+        .unwrap_or_else(|| payload.to_string());
+    format!("service request failed {status_code}: {path}: {error_code}: {error}")
 }
 
 fn normalize_base_url(base_url: &str) -> String {

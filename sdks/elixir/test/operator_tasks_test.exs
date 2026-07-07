@@ -54,6 +54,8 @@ defmodule KyuubikiSdk.OperatorTasksTest do
 
     assert result["status"] == "executed"
     assert result["ok_count"] == 1
+    assert result["error_codes"] == []
+    assert result["error_code_counts"] == %{}
 
     assert get_in(result, ["results", Access.at(0), "result", "material_thermal_shock_status"]) ==
              "pass"
@@ -84,6 +86,8 @@ defmodule KyuubikiSdk.OperatorTasksTest do
 
     assert result["status"] == "verified"
     assert result["verified_count"] == 1
+    assert result["error_codes"] == []
+    assert result["error_code_counts"] == %{}
     assert get_in(result, ["summaries", Access.at(0), "case_id"]) == "case-a"
 
     assert_receive {:request, request}
@@ -208,6 +212,8 @@ defmodule KyuubikiSdk.OperatorTasksTest do
           "task_count" => 1,
           "verified_count" => 1,
           "error_count" => 0,
+          "error_codes" => [],
+          "error_code_counts" => %{},
           "summaries" => [%{"case_id" => "case-a", "status" => "verified"}]
         }
 
@@ -247,6 +253,8 @@ defmodule KyuubikiSdk.OperatorTasksTest do
           "task_count" => 1,
           "ok_count" => 1,
           "error_count" => 0,
+          "error_codes" => [],
+          "error_code_counts" => %{},
           "results" => [
             %{
               "case_id" => "case-a",

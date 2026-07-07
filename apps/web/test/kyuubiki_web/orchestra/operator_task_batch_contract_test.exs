@@ -79,25 +79,34 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
       |> Jason.decode!()
       |> Map.fetch!("required")
 
-    assert {:ok, batch} =
-             WorkflowOperatorRuntime.run_transform_operator(
-               "transform.compose_quality_execution_batch",
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.evaluate_material_thermal_shock",
                %{
-                 "cases" => [
-                   %{
-                     "id" => "quality_case_a",
-                     "parameters" => %{"thermal_load" => 12.0},
-                     "model" => heat_model(12.0)
-                   }
-                 ]
+                 "temperature_delta" => 120.0,
+                 "thermal_expansion" => 1.2e-5,
+                 "youngs_modulus" => 70.0e9,
+                 "poisson_ratio" => 0.33,
+                 "yield_strength" => 320.0e6
                },
-               %{
-                 "operator_id" => "solve.heat_plane_quad_2d",
-                 "task_id_prefix" => "quality-contract",
-                 "dataset_contract" => %{"id" => "kyuubiki.dataset.quality_contract/v1"},
-                 "required_capabilities" => ["solver:thermal"]
-               }
+               %{"constraint_factor" => 0.7},
+               task_id: "quality-contract-quality_case_a"
              )
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "operator_id" => "transform.evaluate_material_thermal_shock",
+      "task_count" => 1,
+      "tasks" => [
+        %{
+          "case_id" => "quality_case_a",
+          "operator_id" => "transform.evaluate_material_thermal_shock",
+          "task_id" => task["task_id"],
+          "task_digest" => get_in(task, ["integrity", "task_digest"]),
+          "task_ir" => task
+        }
+      ]
+    }
 
     assert {:ok, preparation} = OperatorTaskExecutor.prepare_batch(batch)
 
@@ -148,6 +157,95 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["task_count"] == length(example["summaries"])
     assert example["verified_count"] + example["error_count"] == example["task_count"]
     assert hd(example["summaries"])["status"] == "verified"
+  end
+
+  test "batch execution output matches the shared execution contract shape" do
+    required_fields =
+      schema_path("operator-task-batch-execution.schema.json")
+      |> File.read!()
+      |> Jason.decode!()
+      |> Map.fetch!("required")
+
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "transform.evaluate_material_thermal_shock",
+               %{
+                 "temperature_delta" => 120.0,
+                 "thermal_expansion" => 1.2e-5,
+                 "youngs_modulus" => 70.0e9,
+                 "poisson_ratio" => 0.33,
+                 "yield_strength" => 320.0e6
+               },
+               %{"constraint_factor" => 0.7},
+               task_id: "quality-contract-quality_case_a"
+             )
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "operator_id" => "transform.evaluate_material_thermal_shock",
+      "task_count" => 1,
+      "tasks" => [
+        %{
+          "case_id" => "quality_case_a",
+          "operator_id" => "transform.evaluate_material_thermal_shock",
+          "task_id" => task["task_id"],
+          "task_digest" => get_in(task, ["integrity", "task_digest"]),
+          "task_ir" => task
+        }
+      ]
+    }
+
+    assert {:ok, execution} = OperatorTaskExecutor.execute_batch(batch)
+
+    assert Map.take(execution, required_fields) |> map_size() == length(required_fields)
+
+    assert execution["operator_task_batch_execution_contract"] ==
+             "kyuubiki.operator_task_batch_execution/v1"
+
+    assert execution["run_phase"] == "execute"
+    assert execution["run_id"] =~ "operator-task-batch:execute:"
+    assert execution["batch_digest"] =~ ~r/^[a-f0-9]{64}$/
+    assert execution["digest_algorithm"] == "sha256"
+    assert is_binary(execution["started_at"])
+    assert is_binary(execution["finished_at"])
+    assert execution["task_count"] == batch["task_count"]
+    assert execution["executed_count"] == 1
+    assert execution["ok_count"] == 1
+    assert execution["error_count"] == 0
+    assert execution["error_codes"] == []
+    assert execution["error_code_counts"] == %{}
+    assert execution["failed_case_ids"] == []
+
+    [result] = execution["results"]
+    [entry] = batch["tasks"]
+
+    assert result["case_id"] == entry["case_id"]
+    assert result["task_id"] == entry["task_id"]
+    assert result["task_digest"] == entry["task_digest"]
+    assert result["operator_id"] == batch["operator_id"]
+    assert result["status"] == "ok"
+    assert is_map(result["result"])
+  end
+
+  test "operator task batch execution example keeps counters aligned" do
+    example =
+      schema_path("examples.operator-task-batch-execution.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert example["$schema"] == "operator-task-batch-execution.schema.json"
+
+    assert example["operator_task_batch_execution_contract"] ==
+             "kyuubiki.operator_task_batch_execution/v1"
+
+    assert example["run_phase"] == "execute"
+    assert example["run_id"] =~ "operator-task-batch:execute:"
+    assert example["batch_digest"] =~ ~r/^[a-f0-9]{64}$/
+    assert example["digest_algorithm"] == "sha256"
+    assert example["task_count"] == length(example["results"])
+    assert example["ok_count"] + example["error_count"] == example["executed_count"]
+    assert example["executed_count"] <= example["task_count"]
+    assert hd(example["results"])["status"] == "ok"
   end
 
   test "operator task batch checkpoint matches the shared checkpoint contract shape" do

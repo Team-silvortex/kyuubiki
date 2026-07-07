@@ -73,7 +73,7 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "kyuubiki-benchmark"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
@@ -86,7 +86,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-cli"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-headless-sdk",
  "kyuubiki-protocol",
@@ -97,14 +97,14 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-deploy-server"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-platform",
  "serde",
@@ -112,7 +112,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-engine"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -125,7 +125,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-headless-sdk"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-protocol",
  "serde",
@@ -134,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-platform",
@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -154,11 +154,11 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "1.15.0"
+version = "1.16.0"
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -167,14 +167,14 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-script-runner"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-solver"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

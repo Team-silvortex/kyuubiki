@@ -33,7 +33,11 @@ README.
   SDK, orchestra, or agent execution.
 - `operator-task-batch-preparation.schema.json` is for non-executing
   `prepare-batch` responses that validate batch manifests and expose per-task
-  dispatch summaries before agent placement or execution.
+  dispatch summaries plus top-level `error_codes` / `error_code_counts` before
+  agent placement or execution.
+- `operator-task-batch-execution.schema.json` is for `execute-batch` responses
+  that bind batch run metadata, per-case execution results, failed case IDs, and
+  top-level `error_codes` / `error_code_counts` for large-run diagnostics.
 - `operator-task-batch-checkpoint.schema.json` is for resumable batch-run
   manifests that bind a batch digest to preparation/execution summaries and a
   visible resume policy.
@@ -80,6 +84,9 @@ README.
 - `examples.operator-task-batch-preparation.json` is the matching
   `POST /api/v1/operator-tasks/prepare-batch` response sample for SDK and
   agent preflight tooling
+- `examples.operator-task-batch-execution.json` is the matching
+  `POST /api/v1/operator-tasks/execute-batch` response sample for SDK and agent
+  execution tooling
 - `examples.operator-task-batch-checkpoint.json` is the matching resumable
   checkpoint sample for preserving batch-run state between distributed attempts
 - `examples.operator-task-batch-resume-plan.json` is the matching recovery

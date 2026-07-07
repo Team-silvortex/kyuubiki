@@ -366,6 +366,27 @@ fn operator_task_runtime_rejects_unknown_mode() {
 }
 
 #[test]
+fn operator_task_runtime_rejects_digest_valid_inconsistent_package_mirrors() {
+    let mut task_ir = golden_operator_task_ir();
+    task_ir["runtime_hints"]["package_ref"] =
+        serde_json::json!("orchestra://operator-package/wrong");
+    let digest = compute_operator_task_digest(&task_ir).expect("changed task should digest");
+    task_ir["integrity"] = serde_json::json!({ "task_digest": digest });
+
+    let error = run_operator_task_ir(&serde_json::json!({
+        "task_ir": task_ir
+    }))
+    .expect_err("runtime should reject package mirror mismatch after digest verification");
+
+    assert_eq!(error.code, "operator_task_invalid");
+    assert!(
+        error
+            .message
+            .contains("runtime_hints.package_ref must match execution_program.package_ref")
+    );
+}
+
+#[test]
 fn rejects_operator_task_ir_rpc_requests_with_tampered_digest() {
     let mut task_ir = golden_operator_task_ir();
     task_ir["config"]["alpha"] = serde_json::json!(false);

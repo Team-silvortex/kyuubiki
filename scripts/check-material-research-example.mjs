@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultInput = "tmp/material-research-example.json";
@@ -92,6 +93,103 @@ function validateCommand(command, manifest) {
   assertFiniteNumber(command.duration_ms, "command.duration_ms");
 }
 
+function validateNextRoundCommand(inputPath, manifest) {
+  const absoluteInputPath = path.resolve(repoRoot, inputPath);
+  const command = materialExploreCommand(
+    manifest.next_round_command,
+    "--plan-next",
+    absoluteInputPath,
+  );
+  for (const expected of manifest.next_round_command.argv_contains) {
+    if (!command.argv.includes(expected)) {
+      fail(`next_round_command.argv missing ${expected}`);
+    }
+  }
+  const result = spawnSync(command.argv[0], command.argv.slice(1), {
+    cwd: path.join(repoRoot, command.cwd),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    fail(result.stderr.trim() || "next round execution plan command failed");
+  }
+  let plan;
+  try {
+    plan = JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`next round execution plan did not emit JSON: ${error.message}`);
+  }
+  assertEquals(
+    plan.schema_version,
+    manifest.expected.next_round_execution_schema_version,
+    "next round execution schema",
+  );
+  if (!Array.isArray(plan.steps) || plan.steps.length === 0) {
+    fail("next round execution plan must include runnable steps");
+  }
+  assertFiniteNumber(plan.runnable_step_count, "next_round_execution.runnable_step_count");
+  assertEquals(plan.runnable_step_count, plan.steps.length, "next round runnable step count");
+}
+
+function validateRunNextCommand(inputPath, manifest) {
+  const absoluteInputPath = path.resolve(repoRoot, inputPath);
+  const command = materialExploreCommand(
+    manifest.run_next_command,
+    "--run-next",
+    absoluteInputPath,
+  );
+  for (const expected of manifest.run_next_command.argv_contains) {
+    if (!command.argv.includes(expected)) {
+      fail(`run_next_command.argv missing ${expected}`);
+    }
+  }
+  const result = spawnSync(command.argv[0], command.argv.slice(1), {
+    cwd: path.join(repoRoot, command.cwd),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    fail(result.stderr.trim() || "run-next command failed");
+  }
+  let exploration;
+  try {
+    exploration = JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`run-next did not emit JSON: ${error.message}`);
+  }
+  assertEquals(
+    exploration.schema_version,
+    manifest.expected.exploration_schema_version,
+    "run-next exploration schema",
+  );
+  assertEquals(exploration.mode, "local_solver_next_round", "run-next mode");
+  assertEquals(
+    exploration.candidate_count,
+    manifest.expected.candidate_count,
+    "run-next candidate count",
+  );
+  validateNextRound(exploration.next_round, manifest);
+}
+
+function materialExploreCommand(commandManifest, mode, inputPath) {
+  return {
+    ...commandManifest,
+    argv: [
+      "cargo",
+      "run",
+      "-q",
+      "-p",
+      "kyuubiki-cli",
+      "--bin",
+      "kyuubiki-material-explore",
+      "--",
+      mode,
+      inputPath,
+      "--json",
+    ],
+  };
+}
+
 function validateReport(report, manifest) {
   const expected = manifest.expected;
   assertEquals(report?.schema_version, expected.report_schema_version, "report schema");
@@ -168,6 +266,39 @@ function validateExploration(exploration, manifest) {
     }
   }
   validateReport(exploration.report, manifest);
+  validateNextRound(exploration.next_round, manifest);
+}
+
+function validateNextRound(nextRound, manifest) {
+  if (nextRound == null || typeof nextRound !== "object") {
+    fail("exploration.next_round must be present");
+  }
+  const expected = manifest.expected;
+  assertEquals(
+    nextRound?.schema_version,
+    expected.next_round_schema_version,
+    "next_round schema",
+  );
+  for (const section of manifest.required_next_round_sections) {
+    if (nextRound[section] == null) {
+      fail(`next_round missing section ${section}`);
+    }
+  }
+  if (!manifest.allowed_next_round_decisions.includes(nextRound.decision)) {
+    fail(`next_round.decision is not allowed: ${nextRound.decision}`);
+  }
+  if (!Number.isInteger(nextRound.iteration) || nextRound.iteration < 2) {
+    fail("next_round.iteration must point at a future iteration");
+  }
+  if (!Array.isArray(nextRound.focus_candidate_ids) || nextRound.focus_candidate_ids.length === 0) {
+    fail("next_round.focus_candidate_ids must name at least one candidate");
+  }
+  if (!Array.isArray(nextRound.actions) || nextRound.actions.length === 0) {
+    fail("next_round.actions must include at least one action");
+  }
+  if (!Array.isArray(nextRound.rationale) || nextRound.rationale.length === 0) {
+    fail("next_round.rationale must explain the decision");
+  }
 }
 
 function validateDocumentation(manifest) {
@@ -177,6 +308,7 @@ function validateDocumentation(manifest) {
   requireMarkdownContains(markdown, manifest.expected.winner_candidate_id, "expected winner");
   requireMarkdownContains(markdown, manifest.expected.optimization_id, "optimization id");
   requireMarkdownContains(markdown, manifest.expected.reliability_posture, "reliability posture");
+  requireMarkdownContains(markdown, manifest.expected.next_round_schema_version, "next round schema");
 }
 
 function validateEvidence(evidence, manifest) {
@@ -199,4 +331,6 @@ const args = parseArgs(process.argv);
 const manifest = readRepoJson(manifestPath);
 validateDocumentation(manifest);
 validateEvidence(readEvidence(args.input), manifest);
+validateNextRoundCommand(args.input, manifest);
+validateRunNextCommand(args.input, manifest);
 console.log(`material research example ok: ${args.input}`);

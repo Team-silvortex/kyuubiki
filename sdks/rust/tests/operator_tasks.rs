@@ -36,6 +36,8 @@ fn control_plane_executes_operator_task_batch() {
             "task_count": 1,
             "ok_count": 1,
             "error_count": 0,
+            "error_codes": [],
+            "error_code_counts": {},
             "results": [
                 {
                     "case_id": "case-a",
@@ -77,6 +79,11 @@ fn control_plane_executes_operator_task_batch() {
 
     assert_eq!(result["status"].as_str(), Some("executed"));
     assert_eq!(result["ok_count"].as_u64(), Some(1));
+    assert_eq!(result["error_codes"].as_array().map(Vec::len), Some(0));
+    assert_eq!(
+        result["error_code_counts"].as_object().map(|counts| counts.len()),
+        Some(0)
+    );
     assert_eq!(
         result["results"][0]["result"]["material_thermal_shock_status"].as_str(),
         Some("pass")
@@ -115,6 +122,8 @@ fn control_plane_prepares_operator_task_batch() {
             "task_count": 1,
             "verified_count": 1,
             "error_count": 0,
+            "error_codes": [],
+            "error_code_counts": {},
             "summaries": [{"case_id": "case-a", "status": "verified"}]
         })
         .to_string();
@@ -141,6 +150,11 @@ fn control_plane_prepares_operator_task_batch() {
 
     assert_eq!(result["status"].as_str(), Some("verified"));
     assert_eq!(result["verified_count"].as_u64(), Some(1));
+    assert_eq!(result["error_codes"].as_array().map(Vec::len), Some(0));
+    assert_eq!(
+        result["error_code_counts"].as_object().map(|counts| counts.len()),
+        Some(0)
+    );
     assert_eq!(result["summaries"][0]["case_id"].as_str(), Some("case-a"));
 
     server.join().expect("server thread");

@@ -81,6 +81,25 @@ Current fields:
 
 `integrity` itself is not included, avoiding self-referential digests.
 
+## Mirror constraints
+
+TaskIR intentionally repeats a few identity fields because different runtimes
+need them at different layers: descriptor authoring, execution dispatch, and
+agent package fetch. Repetition is allowed only when the values mirror each
+other:
+
+- `operator.kind` mirrors `execution_program.program_kind`
+- `operator.kind` mirrors `execution_program.entrypoint.operator_kind`
+- `operator.kind` mirrors `runtime_hints.operator_kind`
+- `operator.execution.package_ref` mirrors `execution_program.package_ref`
+- `execution_program.package_ref` mirrors `runtime_hints.package_ref`
+- `execution_program.package_version` mirrors `runtime_hints.package_version`
+
+The Rust protocol layer rejects digest-valid tasks when these mirrors disagree.
+The JSON schema carries the same rule as `x-kyuubiki-mirror_constraints`, and
+`make check-operator-task-ir-contract` keeps the schema extension and examples
+aligned.
+
 ## Golden fixtures
 
 The basic cross-language fixture used by tests is:

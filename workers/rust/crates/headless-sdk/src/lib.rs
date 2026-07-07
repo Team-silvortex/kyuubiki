@@ -51,7 +51,10 @@ pub use material_dielectric::{
     dielectric_screening_metric_specs,
 };
 pub use material_exploration::{
-    MATERIAL_EXPLORATION_SCHEMA_VERSION, MaterialExplorationRun, build_material_exploration_run,
+    MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION, MATERIAL_EXPLORATION_SCHEMA_VERSION,
+    MaterialExplorationNextRoundExecutionPlan, MaterialExplorationNextRoundPlan,
+    MaterialExplorationRun, build_material_exploration_next_round_execution_plan,
+    build_material_exploration_next_round_plan, build_material_exploration_run,
     material_exploration_steps,
 };
 pub use material_optimization::{
@@ -93,7 +96,7 @@ pub use material_workflows::{
 };
 pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
-    is_operator_task_prepare_action, prepare_operator_task_payload,
+    is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,
     preview_operator_task_execute_payload,
 };
 pub use plan::{

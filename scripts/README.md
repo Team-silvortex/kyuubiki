@@ -67,6 +67,11 @@ This directory contains host-native operational entry points.
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and
   the component implementation anchors used by wasm-python and UI smoke tests.
   Use `--self-test` when changing selector coverage.
+- `check-operator-task-ir-contract.mjs`
+  Verify the language-neutral TaskIR schema extension and shipped TaskIR
+  examples. It checks that mirrored fields such as operator kind, package ref,
+  and package version stay consistent across descriptor, execution program, and
+  runtime hints before agent or SDK tests need to run.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,

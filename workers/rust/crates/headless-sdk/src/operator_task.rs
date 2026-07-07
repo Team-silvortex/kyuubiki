@@ -80,8 +80,35 @@ pub fn preview_operator_task_execute_payload(payload: &Value) -> Result<Value, S
     })
 }
 
+pub fn operator_task_error_preview(message: impl AsRef<str>) -> Value {
+    let message = message.as_ref();
+    Value::Object(Map::from_iter([
+        ("error".to_string(), Value::from(message.to_string())),
+        (
+            "error_code".to_string(),
+            Value::from(operator_task_error_code(message)),
+        ),
+    ]))
+}
+
 fn json_string(value: Option<String>) -> Value {
     value.map(Value::from).unwrap_or(Value::Null)
+}
+
+fn operator_task_error_code(message: &str) -> &'static str {
+    if message.contains("digest mismatch") {
+        return "operator_task_digest_mismatch";
+    }
+    if message.contains("digest is missing") {
+        return "operator_task_digest_missing";
+    }
+    if message.contains("requires task") {
+        return "operator_task_invalid_params";
+    }
+    if message.contains("must match") {
+        return "operator_task_mirror_mismatch";
+    }
+    "operator_task_invalid"
 }
 
 fn format_digest_error(error: OperatorTaskDigestError) -> String {
@@ -98,8 +125,12 @@ fn format_digest_error(error: OperatorTaskDigestError) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{prepare_operator_task_payload, preview_operator_task_execute_payload};
+    use super::{
+        operator_task_error_preview, prepare_operator_task_payload,
+        preview_operator_task_execute_payload,
+    };
     use crate::{HeadlessExecutionBatch, HeadlessExecutionBatchStep, run_batch_dry};
+    use kyuubiki_protocol::compute_operator_task_digest;
     use serde_json::{Value, json};
 
     #[test]
@@ -129,6 +160,27 @@ mod tests {
     }
 
     #[test]
+    fn prepare_operator_task_payload_rejects_digest_valid_mirror_mismatch() {
+        let mut task = golden_task_fixture(false);
+        task["runtime_hints"]["package_ref"] = json!("orchestra://operator-package/wrong");
+        task["integrity"]["task_digest"] =
+            json!(compute_operator_task_digest(&task).expect("changed task should digest"));
+
+        let error = prepare_operator_task_payload(&json!({
+            "task": task
+        }))
+        .expect_err("mirror mismatch should fail");
+
+        assert!(
+            error.contains("runtime_hints.package_ref must match execution_program.package_ref")
+        );
+        assert_eq!(
+            operator_task_error_preview(error)["error_code"],
+            "operator_task_mirror_mismatch"
+        );
+    }
+
+    #[test]
     fn operator_task_prepare_runs_as_headless_dry_step() {
         let batch = HeadlessExecutionBatch {
             schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
@@ -149,6 +201,36 @@ mod tests {
         assert_eq!(report.status, "ok");
         assert_eq!(report.executed_step_count, 1);
         assert_eq!(report.steps[0].result_preview["status"], "verified");
+    }
+
+    #[test]
+    fn operator_task_prepare_dry_run_reports_structured_mirror_error() {
+        let mut task = golden_task_fixture(false);
+        task["runtime_hints"]["operator_kind"] = json!("solver");
+        task["integrity"]["task_digest"] =
+            json!(compute_operator_task_digest(&task).expect("changed task should digest"));
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "operator-task-fixture".to_string(),
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "operator_task_prepare".to_string(),
+                risk: crate::HeadlessRisk::Normal,
+                payload: json!({ "task": task }),
+            }],
+            warnings: vec![],
+        };
+
+        let report = run_batch_dry(&batch, false, false);
+
+        assert_eq!(report.status, "failed");
+        assert_eq!(report.steps[0].status, "failed");
+        assert_eq!(
+            report.steps[0].result_preview["error_code"],
+            "operator_task_mirror_mismatch"
+        );
     }
 
     #[test]

@@ -220,10 +220,20 @@ fn operator_task_prepare_round_trips_against_local_http_server() {
 
 #[test]
 fn non_success_response_includes_json_error_payload() {
-    let response = "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n{\"error\":\"operator_task_digest_mismatch\"}";
+    let response = "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n{\"error\":\"operator_task_digest_mismatch\",\"error_code\":\"operator_task_digest_mismatch\"}";
     let error = parse_json_response(response, "/api/v1/operator-tasks/prepare")
         .expect_err("422 should be an error");
 
     assert!(error.message.contains("422"));
     assert!(error.message.contains("operator_task_digest_mismatch"));
+}
+
+#[test]
+fn non_success_response_promotes_operator_task_error_code() {
+    let response = "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n{\"error\":\"{:operator_task_mirror_mismatch, %{}}\",\"error_code\":\"operator_task_mirror_mismatch\"}";
+    let error = parse_json_response(response, "/api/v1/operator-tasks/prepare")
+        .expect_err("422 should be an error");
+
+    assert!(error.message.contains("operator_task_mirror_mismatch"));
+    assert!(error.message.contains("/api/v1/operator-tasks/prepare"));
 }

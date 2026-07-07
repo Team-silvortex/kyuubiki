@@ -116,6 +116,60 @@ fn operator_task_execution_summary_rejects_inconsistent_abi() {
     assert!(error.contains("inconsistent runtime protocol, abi, or entrypoint"));
 }
 
+#[test]
+fn operator_task_execution_summary_rejects_inconsistent_operator_kind_mirrors() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["runtime_hints"]["operator_kind"] = json!("solver");
+
+    let error = summarize_operator_task_execution(&task).expect_err("kind mirror should fail");
+
+    assert!(error.contains("runtime_hints.operator_kind must match operator.kind"));
+}
+
+#[test]
+fn operator_task_execution_summary_rejects_inconsistent_entrypoint_kind_mirror() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["execution_program"]["entrypoint"]["operator_kind"] = json!("export");
+
+    let error =
+        summarize_operator_task_execution(&task).expect_err("entrypoint kind mirror should fail");
+
+    assert!(error.contains("execution_program.entrypoint.operator_kind must match operator.kind"));
+}
+
+#[test]
+fn operator_task_execution_summary_rejects_inconsistent_package_ref_mirrors() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["runtime_hints"]["package_ref"] = json!("orchestra://operator-package/wrong");
+
+    let error =
+        summarize_operator_task_execution(&task).expect_err("package ref mirror should fail");
+
+    assert!(error.contains("runtime_hints.package_ref must match execution_program.package_ref"));
+}
+
+#[test]
+fn operator_task_execution_summary_rejects_inconsistent_package_version_mirror() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["runtime_hints"]["package_version"] = json!("1.0.0");
+
+    let error =
+        summarize_operator_task_execution(&task).expect_err("package version mirror should fail");
+
+    assert!(
+        error
+            .contains("runtime_hints.package_version must match execution_program.package_version")
+    );
+}
+
 fn golden_task_fixture(task_digest: Option<&str>) -> Value {
     let mut task = json!({
         "schema_version": OPERATOR_TASK_IR_SCHEMA,

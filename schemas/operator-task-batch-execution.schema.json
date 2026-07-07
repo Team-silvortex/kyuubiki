@@ -1,12 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "kyuubiki.operator-task-batch-preparation.schema.json",
-  "title": "Kyuubiki operator task batch preparation result",
+  "$id": "kyuubiki.operator-task-batch-execution.schema.json",
+  "title": "Kyuubiki operator task batch execution result",
   "type": "object",
   "additionalProperties": true,
   "required": [
-    "operator_task_batch_preparation_contract",
-    "quality_execution_batch_contract",
+    "operator_task_batch_execution_contract",
     "run_id",
     "run_phase",
     "batch_digest",
@@ -14,29 +13,28 @@
     "started_at",
     "finished_at",
     "task_count",
-    "verified_count",
+    "executed_count",
+    "ok_count",
     "error_count",
     "error_codes",
     "error_code_counts",
-    "summaries"
+    "failed_case_ids",
+    "results"
   ],
   "properties": {
-    "operator_task_batch_preparation_contract": {
-      "const": "kyuubiki.operator_task_batch_preparation/v1"
-    },
-    "quality_execution_batch_contract": {
-      "const": "kyuubiki.quality_execution_batch/v1"
+    "operator_task_batch_execution_contract": {
+      "const": "kyuubiki.operator_task_batch_execution/v1"
     },
     "status": {
       "type": "string",
-      "enum": ["verified"]
+      "enum": ["executed"]
     },
     "run_id": {
       "type": "string",
       "minLength": 1
     },
     "run_phase": {
-      "const": "prepare"
+      "const": "execute"
     },
     "batch_digest": {
       "type": "string",
@@ -57,7 +55,11 @@
       "type": "integer",
       "minimum": 0
     },
-    "verified_count": {
+    "executed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ok_count": {
       "type": "integer",
       "minimum": 0
     },
@@ -80,7 +82,14 @@
         "minimum": 1
       }
     },
-    "summaries": {
+    "failed_case_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "results": {
       "type": "array",
       "items": {
         "type": "object",
@@ -103,55 +112,12 @@
             "type": "string",
             "minLength": 1
           },
-          "operator_kind": {
-            "type": "string",
-            "minLength": 1
-          },
-          "program_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "program_kind": {
-            "type": "string",
-            "minLength": 1
-          },
-          "runtime_protocol": {
-            "type": "string",
-            "minLength": 1
-          },
-          "abi_kind": {
-            "type": "string",
-            "minLength": 1
-          },
-          "entrypoint_kind": {
-            "type": "string",
-            "minLength": 1
-          },
-          "entrypoint_name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "package_ref": {
-            "type": "string"
-          },
-          "package_version": {
-            "type": "string"
-          },
-          "authority_mode": {
-            "type": "string"
-          },
-          "execution_mode": {
-            "type": "string"
-          },
-          "cache_scope": {
-            "type": "string"
-          },
-          "agent_fetchable": {
-            "type": "boolean"
-          },
           "status": {
             "type": "string",
-            "enum": ["verified", "error"]
+            "enum": ["ok", "error"]
+          },
+          "result": {
+            "type": "object"
           },
           "error": {
             "type": "string"
