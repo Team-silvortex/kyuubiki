@@ -17,8 +17,9 @@ pub use auth::KyuubikiAuth;
 pub use control_plane::ControlPlaneClient;
 pub use error::{SdkError, SdkResult};
 pub use material_workflows::{
-    MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, material_study_envelope_catalog_request,
-    material_study_envelope_input_artifacts, material_workflow_catalog,
+    MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
+    material_study_envelope_catalog_request, material_study_envelope_input_artifacts,
+    material_study_execution_plan_example, material_workflow_catalog,
 };
 pub use session::{JobRequest, JobWaitOutcome, KyuubikiSession};
 pub use solver_rpc::{RpcCallOutcome, SolverRpcClient};

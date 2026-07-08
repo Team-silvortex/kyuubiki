@@ -14,6 +14,12 @@ defmodule KyuubikiSdk do
   def describe_material_study(study), do: MaterialReports.describe_material_study(study)
   def material_workflow_catalog, do: MaterialWorkflows.material_workflow_catalog()
 
+  def material_study_execution_plan_schema_version,
+    do: MaterialWorkflows.material_study_execution_plan_schema_version()
+
+  def material_study_execution_plan_example,
+    do: MaterialWorkflows.material_study_execution_plan_example()
+
   def material_envelope_catalog_workflow_id,
     do: MaterialWorkflows.material_envelope_catalog_workflow_id()
 

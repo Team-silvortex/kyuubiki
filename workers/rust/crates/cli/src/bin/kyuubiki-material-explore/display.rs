@@ -55,6 +55,92 @@ pub(crate) fn print_summary(exploration: &Value) {
     }
 }
 
+pub(crate) fn print_catalog_summary(catalog: &Value) {
+    println!(
+        "Material study catalog: {} studies",
+        catalog
+            .get("study_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+    );
+    if let Some(studies) = catalog.get("studies").and_then(Value::as_array) {
+        for study in studies {
+            println!(
+                "- {} [{}]: {}",
+                study.get("id").and_then(Value::as_str).unwrap_or("--"),
+                study.get("domain").and_then(Value::as_str).unwrap_or("--"),
+                study
+                    .get("objective")
+                    .and_then(Value::as_str)
+                    .unwrap_or("--")
+            );
+        }
+    }
+}
+
+pub(crate) fn print_study_summary(study: &Value) {
+    println!(
+        "Material study: {}",
+        study.get("id").and_then(Value::as_str).unwrap_or("--")
+    );
+    println!(
+        "Domain: {}",
+        study.get("domain").and_then(Value::as_str).unwrap_or("--")
+    );
+    println!(
+        "Template: {}",
+        study
+            .get("template_id")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
+    );
+    println!(
+        "Schema: {}",
+        study
+            .get("report_schema_version")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
+    );
+    println!(
+        "Metrics: {}",
+        study
+            .get("metric_specs")
+            .and_then(Value::as_array)
+            .map(Vec::len)
+            .unwrap_or(0)
+    );
+}
+
+pub(crate) fn print_study_plan_summary(plan: &Value) {
+    println!(
+        "Material study plan: {}",
+        plan.get("study_id").and_then(Value::as_str).unwrap_or("--")
+    );
+    println!(
+        "Steps: {} total, {} solve",
+        plan.get("step_count").and_then(Value::as_u64).unwrap_or(0),
+        plan.get("solve_step_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+    );
+    if let Some(candidate_ids) = plan.get("candidate_ids").and_then(Value::as_array) {
+        let candidates = candidate_ids
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>()
+            .join(", ");
+        if !candidates.is_empty() {
+            println!("Candidates: {candidates}");
+        }
+    }
+    println!(
+        "Run: {}",
+        plan.get("recommended_command")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
+    );
+}
+
 pub(crate) fn print_next_round_plan_summary(plan: &Value) {
     println!(
         "Material next round: {}",

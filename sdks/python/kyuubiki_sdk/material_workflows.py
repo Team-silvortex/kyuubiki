@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID = "workflow.material-study-envelope-ranking-json"
+MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION = "kyuubiki.material-study-execution-plan/v1"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_MATERIAL_STUDY_EXECUTION_PLAN_EXAMPLE = (
+    _REPO_ROOT / "schemas" / "examples.material-study-execution-plan.json"
+)
 
 
 def material_study_envelope_input_artifacts() -> dict[str, Any]:
@@ -76,3 +83,7 @@ def material_workflow_catalog() -> list[dict[str, Any]]:
             ],
         },
     ]
+
+
+def material_study_execution_plan_example() -> dict[str, Any]:
+    return deepcopy(json.loads(_MATERIAL_STUDY_EXECUTION_PLAN_EXAMPLE.read_text(encoding="utf-8")))

@@ -1,6 +1,7 @@
 use kyuubiki_headless_sdk::{
-    MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, material_study_envelope_catalog_request,
-    material_study_envelope_input_artifacts, material_workflow_catalog,
+    MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
+    material_study_envelope_catalog_request, material_study_envelope_input_artifacts,
+    material_study_execution_plan_example, material_workflow_catalog,
 };
 use serde_json::json;
 
@@ -63,4 +64,31 @@ fn input_artifacts_can_be_mutated_without_global_state() {
     let second = material_study_envelope_input_artifacts();
 
     assert_eq!(second["material_rows"]["rows"][0]["case_id"], "cool_stiff");
+}
+
+#[test]
+fn material_study_execution_plan_example_matches_shared_contract() {
+    let plan = material_study_execution_plan_example();
+
+    assert_eq!(
+        plan["schema_version"],
+        json!(MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION)
+    );
+    assert_eq!(plan["study_id"], "material_heat_spreader_screening");
+    assert_eq!(plan["step_count"], plan["steps"].as_array().unwrap().len());
+    assert_eq!(plan["solve_step_count"], 3);
+    assert_eq!(plan["candidate_count"], 3);
+    assert!(
+        plan["candidate_ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|candidate| candidate == "copper_c110")
+    );
+    assert!(
+        plan["recommended_command"]
+            .as_str()
+            .unwrap()
+            .contains("heat-spreader")
+    );
 }

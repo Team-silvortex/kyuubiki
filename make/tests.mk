@@ -31,6 +31,7 @@ workflow-preflight:
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke
+	@$(MAKE) check-material-study-sdk-examples
 
 test-agent-capability-smoke:
 	@$(ENTRYPOINT) agent-capability-smoke --host $${AGENT_HOST:-127.0.0.1} --port $${AGENT_PORT:-5001} --profile $${AGENT_SMOKE_PROFILE:-advertised} --output $${OUTPUT:-tmp/agent-capability-smoke.json} $${AGENT_SMOKE_ARGS:-}

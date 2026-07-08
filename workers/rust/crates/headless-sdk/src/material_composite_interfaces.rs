@@ -1,4 +1,4 @@
-use crate::material_composite::CompositePanelCandidate;
+use crate::material_composite_candidates::CompositePanelCandidate;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -2,6 +2,8 @@ use serde_json::{Value, json};
 
 pub const MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID: &str =
     "workflow.material-study-envelope-ranking-json";
+pub const MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION: &str =
+    "kyuubiki.material-study-execution-plan/v1";
 
 pub fn material_study_envelope_input_artifacts() -> Value {
     json!({
@@ -63,4 +65,11 @@ pub fn material_workflow_catalog() -> Value {
             "aliases": ["material-envelope", "material_envelope", "material.pareto_ranking.v1"]
         }
     ])
+}
+
+pub fn material_study_execution_plan_example() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../schemas/examples.material-study-execution-plan.json"
+    ))
+    .expect("bundled material study execution plan example should be valid JSON")
 }

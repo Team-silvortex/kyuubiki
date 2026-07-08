@@ -2,6 +2,7 @@ mod capabilities;
 #[cfg(test)]
 mod contract_tests;
 mod contracts;
+mod contracts_types;
 mod direct_fem;
 mod executor;
 mod hybrid_executor;
@@ -11,6 +12,7 @@ mod material_candidate_materialization;
 mod material_candidate_materialization_tests;
 mod material_candidate_review;
 mod material_composite;
+mod material_composite_candidates;
 mod material_composite_interfaces;
 mod material_composite_materialization;
 #[cfg(test)]
@@ -28,9 +30,11 @@ mod material_optimization;
 mod material_reliability;
 mod material_reports;
 mod material_research;
+mod material_research_candidates;
 #[cfg(test)]
 mod material_research_tests;
 mod material_structural;
+mod material_study_execution_plan;
 mod material_thermo;
 mod material_workflows;
 mod operator_task;
@@ -47,9 +51,9 @@ mod workflow_batch;
 pub use capabilities::{
     HeadlessActionCapability, action_capability_manifest, find_action_capability,
 };
-pub use contracts::{
+pub use contracts::{all_action_contracts, find_action_contract};
+pub use contracts_types::{
     HeadlessActionContract, HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle,
-    all_action_contracts, find_action_contract,
 };
 pub use direct_fem::{
     DirectFemCapability, DirectFemRoute, all_direct_fem_routes, direct_fem_capability_manifest,
@@ -65,10 +69,10 @@ pub use material_candidate_review::{
     apply_material_candidate_review_decision, build_material_candidate_materialization_request,
 };
 pub use material_composite::{
-    CompositePanelCandidate, CompositePanelCandidateReport, CompositePanelReport,
-    build_composite_panel_report, build_composite_panel_steps, composite_panel_candidates,
-    composite_panel_metric_specs,
+    CompositePanelCandidateReport, CompositePanelReport, build_composite_panel_report,
+    build_composite_panel_steps, composite_panel_metric_specs,
 };
+pub use material_composite_candidates::{CompositePanelCandidate, composite_panel_candidates};
 pub use material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, composite_material_regions,
 };
@@ -107,16 +111,22 @@ pub use material_reports::{
     find_material_study, material_study_catalog, material_study_descriptors,
 };
 pub use material_research::{
-    MaterialResearchCandidate, MaterialResearchCandidateReport, MaterialResearchMetricSpec,
-    MaterialResearchReport, build_heat_spreader_screening_report,
-    build_heat_spreader_screening_report_with_optimization, build_heat_spreader_screening_steps,
-    heat_spreader_screening_candidates, heat_spreader_screening_metric_specs,
+    MaterialResearchCandidateReport, MaterialResearchMetricSpec, MaterialResearchReport,
+    build_heat_spreader_screening_report, build_heat_spreader_screening_report_with_optimization,
+    build_heat_spreader_screening_steps, heat_spreader_screening_metric_specs,
+};
+pub use material_research_candidates::{
+    MaterialResearchCandidate, heat_spreader_screening_candidates,
 };
 pub use material_structural::{
     StructuralMaterialCandidate, StructuralMaterialCandidateReport, StructuralMaterialReport,
     build_structural_panel_screening_report,
     build_structural_panel_screening_report_with_optimization,
     build_structural_panel_screening_steps, structural_panel_screening_candidates,
+};
+pub use material_study_execution_plan::{
+    MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION, MaterialStudyExecutionPlan,
+    build_material_study_execution_plan,
 };
 pub use material_thermo::{
     ThermoMaterialCandidate, ThermoMaterialCandidateReport, ThermoMaterialReport,

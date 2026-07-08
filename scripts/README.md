@@ -77,6 +77,10 @@ This directory contains host-native operational entry points.
   and SDK documentation links. It keeps reviewed agent/lab materialization
   output aligned with the solver-rerun runner contract before SDK parity work
   consumes the same artifact.
+- `check-material-study-execution-plan-contract.mjs`
+  Verify the shared non-executing material study execution plan schema,
+  fixture, and SDK documentation links. It keeps `--plan-study` output aligned
+  with headless SDK and remote scheduler expectations before solver dispatch.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,

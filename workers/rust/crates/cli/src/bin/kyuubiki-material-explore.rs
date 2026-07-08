@@ -18,7 +18,8 @@ mod tests;
 use kyuubiki_headless_sdk::{
     HeadlessWorkflowStep, build_material_exploration_next_round_execution_plan,
     build_material_exploration_run, build_material_exploration_run_for_iteration,
-    material_exploration_steps,
+    build_material_study_execution_plan, describe_material_study, material_exploration_steps,
+    material_study_catalog,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -32,7 +33,10 @@ use serde::Serialize;
 use serde_json::Value;
 
 use chain::chain_next_rounds_from_initial;
-use display::{print_chain_summary, print_next_round_plan_summary, print_summary};
+use display::{
+    print_catalog_summary, print_chain_summary, print_next_round_plan_summary,
+    print_study_plan_summary, print_study_summary, print_summary,
+};
 use flags::Flags;
 use materialization::{
     approve_review_template, materialize_reviewed_candidates, print_materialization_summary,
@@ -49,6 +53,42 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let flags = Flags::parse(std::env::args().skip(1).collect::<Vec<_>>())?;
+    if flags.catalog {
+        let catalog = material_catalog_payload()?;
+        if let Some(out) = &flags.out {
+            write_json(out, &catalog)?;
+        }
+        if flags.json {
+            print_json(&catalog)?;
+        } else {
+            print_catalog_summary(&catalog);
+        }
+        return Ok(());
+    }
+    if let Some(study) = &flags.describe_study {
+        let payload = material_study_payload(study)?;
+        if let Some(out) = &flags.out {
+            write_json(out, &payload)?;
+        }
+        if flags.json {
+            print_json(&payload)?;
+        } else {
+            print_study_summary(&payload);
+        }
+        return Ok(());
+    }
+    if let Some(study) = &flags.plan_study {
+        let payload = material_study_plan_payload(study)?;
+        if let Some(out) = &flags.out {
+            write_json(out, &payload)?;
+        }
+        if flags.json {
+            print_json(&payload)?;
+        } else {
+            print_study_plan_summary(&payload);
+        }
+        return Ok(());
+    }
     if let Some(path) = &flags.run_next {
         let exploration = run_next_round(path)?;
         if let Some(out) = &flags.out {
@@ -159,6 +199,48 @@ fn run() -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn material_catalog_payload() -> Result<Value, String> {
+    let studies = material_study_catalog();
+    Ok(serde_json::json!({
+        "schema_version": "kyuubiki.material-study-catalog/v1",
+        "study_count": studies.len(),
+        "studies": studies,
+        "next_steps": [
+            "choose a study id or alias",
+            "run kyuubiki-material-explore <study>",
+            "inspect next_round decision",
+            "use --plan-next, --review-template, --materialize-reviewed, and --run-materialized for the closed loop"
+        ]
+    }))
+}
+
+fn material_study_payload(study: &str) -> Result<Value, String> {
+    let descriptor = describe_material_study(study)
+        .ok_or_else(|| format!("unsupported material study: {study}"))?;
+    Ok(serde_json::json!({
+        "schema_version": "kyuubiki.material-study-description/v1",
+        "study": descriptor,
+        "id": descriptor.id,
+        "domain": descriptor.domain,
+        "template_id": descriptor.template_id,
+        "report_schema_version": descriptor.schema_version,
+        "metric_count": descriptor.metric_specs.len(),
+        "metric_specs": descriptor.metric_specs,
+        "recommended_flow": [
+            "run the study with local solver kernels",
+            "review report.winner_candidate_id and report.reliability.quality_gates",
+            "plan the next round with --plan-next",
+            "materialize reviewed candidates only after review approval",
+            "rerun materialized candidates with --run-materialized"
+        ]
+    }))
+}
+
+fn material_study_plan_payload(study: &str) -> Result<Value, String> {
+    serde_json::to_value(build_material_study_execution_plan(study)?)
+        .map_err(|error| error.to_string())
 }
 
 fn plan_next_round(path: &str) -> Result<Value, String> {

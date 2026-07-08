@@ -27,6 +27,10 @@ README.
 - `material-candidate-materialization-plan.schema.json` is for reviewed
   material candidate specs that have been materialized by an agent or lab
   wrapper and are ready for solver rerun by any headless runner
+- `material-study-execution-plan.schema.json` is for non-executing material
+  study plans emitted before solver dispatch, including action order, solve
+  step counts, candidate IDs, and concrete workflow steps shared by CLI, SDK,
+  and remote scheduling layers
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
@@ -83,6 +87,9 @@ README.
 - `examples.material-candidate-materialization-plan.json` is the shared
   materialization fixture for passing reviewed composite-material candidates
   from an agent or custom wrapper into a solver rerun stage
+- `examples.material-study-execution-plan.json` is the shared material study
+  execution-plan fixture for validating `--plan-study` output before solver
+  dispatch or remote agent scheduling
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
 - `examples.operator-task-batch.json` is the matching batch wrapper sample for

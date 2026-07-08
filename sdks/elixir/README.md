@@ -39,6 +39,7 @@ session =
 {:ok, workflow_run} = KyuubikiSdk.AgentClient.run_workflow_catalog(session, "workflow.heat-to-thermo-quad-2d", %{"thermal_case" => %{"loadcase" => "baseline"}}, timeout: 60_000)
 workflow_runtime = workflow_run.workflow_runtime
 material_envelope = KyuubikiSdk.material_study_envelope_catalog_request()
+material_plan = KyuubikiSdk.material_study_execution_plan_example()
 {:ok, material_envelope_job} =
   KyuubikiSdk.ControlPlaneClient.submit_workflow_catalog_job(
     client,
@@ -124,11 +125,14 @@ Highlights:
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
+- shared material-study execution-plan contract helper for cross-SDK automation
 - BEAM-friendly thin wrapper over the public protocol
 
 Example:
 
 - Run from [run_study.exs](examples/run_study.exs)
+- Material study execution plan example:
+  [plan_material_study.exs](examples/plan_material_study.exs)
 - Material envelope workflow example:
   [run_material_envelope.exs](examples/run_material_envelope.exs)
 - Advanced solver example: [run_advanced_solvers.exs](examples/run_advanced_solvers.exs)
@@ -136,5 +140,7 @@ Example:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
 - Material envelope invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_material_envelope.exs`
+- Material execution-plan invocation:
+  `cd sdks/elixir && mix run examples/plan_material_study.exs`
 - Smoke test:
   `cd sdks/elixir && mix test`

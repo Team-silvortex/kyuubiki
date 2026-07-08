@@ -1,0 +1,133 @@
+{
+  "schema_version": "kyuubiki.material-study-execution-plan/v1",
+  "study_id": "material_heat_spreader_screening",
+  "step_count": 9,
+  "solve_step_count": 3,
+  "candidate_count": 3,
+  "candidate_ids": [
+    "aluminum_6061",
+    "copper_c110",
+    "pyrolytic_graphite_in_plane"
+  ],
+  "actions": [
+    "solve_heat_plane_quad_2d",
+    "job_wait",
+    "result_fetch",
+    "solve_heat_plane_quad_2d",
+    "job_wait",
+    "result_fetch",
+    "solve_heat_plane_quad_2d",
+    "job_wait",
+    "result_fetch"
+  ],
+  "steps": [
+    {
+      "action": "solve_heat_plane_quad_2d",
+      "payload": {
+        "research": {
+          "study": "material.heat_spreader_screening.v1",
+          "candidate_id": "aluminum_6061",
+          "candidate_label": "Aluminum 6061"
+        },
+        "model": {
+          "nodes": [],
+          "elements": [
+            {
+              "id": "spread_aluminum_6061",
+              "conductivity": 167.0,
+              "thickness": 0.0015
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "job_wait",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}",
+        "interval_ms": 1000,
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "action": "result_fetch",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}"
+      }
+    },
+    {
+      "action": "solve_heat_plane_quad_2d",
+      "payload": {
+        "research": {
+          "study": "material.heat_spreader_screening.v1",
+          "candidate_id": "copper_c110",
+          "candidate_label": "Copper C110"
+        },
+        "model": {
+          "nodes": [],
+          "elements": [
+            {
+              "id": "spread_copper_c110",
+              "conductivity": 385.0,
+              "thickness": 0.0015
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "job_wait",
+      "payload": {
+        "job_id": "{{steps.4.result.job_id}}",
+        "interval_ms": 1000,
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "action": "result_fetch",
+      "payload": {
+        "job_id": "{{steps.4.result.job_id}}"
+      }
+    },
+    {
+      "action": "solve_heat_plane_quad_2d",
+      "payload": {
+        "research": {
+          "study": "material.heat_spreader_screening.v1",
+          "candidate_id": "pyrolytic_graphite_in_plane",
+          "candidate_label": "Pyrolytic graphite, in-plane"
+        },
+        "model": {
+          "nodes": [],
+          "elements": [
+            {
+              "id": "spread_pyrolytic_graphite_in_plane",
+              "conductivity": 1500.0,
+              "thickness": 0.0015
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "job_wait",
+      "payload": {
+        "job_id": "{{steps.7.result.job_id}}",
+        "interval_ms": 1000,
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "action": "result_fetch",
+      "payload": {
+        "job_id": "{{steps.7.result.job_id}}"
+      }
+    }
+  ],
+  "recommended_command": "kyuubiki-material-explore heat-spreader",
+  "dispatch_notes": [
+    "this plan does not execute solver kernels",
+    "service/headless dispatchers may schedule solve_* steps before job_wait/result_fetch steps",
+    "candidate ids are extracted from step.payload.research.candidate_id"
+  ]
+}

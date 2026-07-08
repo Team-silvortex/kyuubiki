@@ -2,8 +2,22 @@ defmodule KyuubikiSdk.MaterialWorkflows do
   @moduledoc "Material workflow request helpers for headless catalog execution."
 
   @material_envelope_catalog_workflow_id "workflow.material-study-envelope-ranking-json"
+  @material_study_execution_plan_schema_version "kyuubiki.material-study-execution-plan/v1"
+  @material_study_execution_plan_example_path Path.expand(
+                                                "../../../../schemas/examples.material-study-execution-plan.json",
+                                                __DIR__
+                                              )
 
   def material_envelope_catalog_workflow_id, do: @material_envelope_catalog_workflow_id
+
+  def material_study_execution_plan_schema_version,
+    do: @material_study_execution_plan_schema_version
+
+  def material_study_execution_plan_example do
+    @material_study_execution_plan_example_path
+    |> File.read!()
+    |> Jason.decode!()
+  end
 
   def material_study_envelope_input_artifacts(attrs \\ %{}) do
     rows =

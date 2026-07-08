@@ -1,4 +1,4 @@
-use crate::CompositePanelCandidate;
+use crate::material_composite_candidates::CompositePanelCandidate;
 use serde_json::{Value, json};
 
 pub(crate) fn composite_research_metadata(candidate: &CompositePanelCandidate) -> Value {

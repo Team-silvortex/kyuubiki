@@ -29,6 +29,9 @@ Minimal runnable examples now live at:
 - [sdks/python/examples/run_material_envelope.py](python/examples/run_material_envelope.py)
 - [sdks/elixir/examples/run_material_envelope.exs](elixir/examples/run_material_envelope.exs)
 - [sdks/rust/examples/run_material_envelope.rs](rust/examples/run_material_envelope.rs)
+- [sdks/python/examples/plan_material_study.py](python/examples/plan_material_study.py)
+- [sdks/elixir/examples/plan_material_study.exs](elixir/examples/plan_material_study.exs)
+- [sdks/rust/examples/plan_material_study.rs](rust/examples/plan_material_study.rs)
 - [sdks/python/examples/execute_operator_task_batch.py](python/examples/execute_operator_task_batch.py)
 - [sdks/elixir/examples/execute_operator_task_batch.exs](elixir/examples/execute_operator_task_batch.exs)
 - [sdks/rust/examples/execute_operator_task_batch.rs](rust/examples/execute_operator_task_batch.rs)
@@ -174,6 +177,12 @@ candidate specs and `requires_solver_rerun` status. The shared schema is
 [schemas/material-candidate-materialization-plan.schema.json](../schemas/material-candidate-materialization-plan.schema.json),
 with a concrete fixture in
 [schemas/examples.material-candidate-materialization-plan.json](../schemas/examples.material-candidate-materialization-plan.json).
+Before executing solver kernels, SDK and CLI users can also request a
+non-executing material study plan through `--plan-study` or the Rust SDK
+`build_material_study_execution_plan` helper. That output is governed by
+[schemas/material-study-execution-plan.schema.json](../schemas/material-study-execution-plan.schema.json),
+with a concrete fixture in
+[schemas/examples.material-study-execution-plan.json](../schemas/examples.material-study-execution-plan.json).
 Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected

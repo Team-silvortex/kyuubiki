@@ -3,6 +3,9 @@ pub(crate) struct Flags {
     pub(crate) study: String,
     pub(crate) out: Option<String>,
     pub(crate) json: bool,
+    pub(crate) catalog: bool,
+    pub(crate) describe_study: Option<String>,
+    pub(crate) plan_study: Option<String>,
     pub(crate) plan_next: Option<String>,
     pub(crate) run_next: Option<String>,
     pub(crate) review_template: Option<String>,
@@ -26,6 +29,9 @@ impl Flags {
         let mut study = args[0].clone();
         let mut out = None;
         let mut json = false;
+        let mut catalog = false;
+        let mut describe_study = None;
+        let mut plan_study = None;
         let mut plan_next = None;
         let mut run_next = None;
         let mut review_template = None;
@@ -49,6 +55,8 @@ impl Flags {
                 | "--materialize-reviewed"
                 | "--run-materialized"
                 | "--chain-next"
+                | "--describe-study"
+                | "--plan-study"
         ) {
             let option = study.clone();
             let Some(path) = args.get(1) else {
@@ -69,16 +77,29 @@ impl Flags {
                 materialize_reviewed = Some(path.clone());
             } else if option == "--run-materialized" {
                 run_materialized = Some(path.clone());
+            } else if option == "--describe-study" {
+                describe_study = Some(path.clone());
+            } else if option == "--plan-study" {
+                plan_study = Some(path.clone());
             } else {
                 chain_next = Some(path.clone());
             }
             study = "from-previous-exploration".to_string();
             index = 2;
+        } else if study == "--catalog" {
+            catalog = true;
+            study = "catalog".to_string();
+            index = 1;
         }
         while index < args.len() {
             match args[index].as_str() {
                 "--json" => json = true,
                 "--out" => out = Some(take_value(&args, &mut index, "--out")?),
+                "--catalog" => catalog = true,
+                "--describe-study" => {
+                    describe_study = Some(take_value(&args, &mut index, "--describe-study")?)
+                }
+                "--plan-study" => plan_study = Some(take_value(&args, &mut index, "--plan-study")?),
                 "--plan-next" => plan_next = Some(take_value(&args, &mut index, "--plan-next")?),
                 "--run-next" => run_next = Some(take_value(&args, &mut index, "--run-next")?),
                 "--review-template" => {
@@ -116,6 +137,9 @@ impl Flags {
             study,
             out,
             json,
+            catalog,
+            describe_study,
+            plan_study,
             plan_next,
             run_next,
             review_template,
@@ -158,7 +182,7 @@ fn parse_rounds(value: String) -> Result<usize, String> {
 }
 
 fn usage() -> String {
-    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --review-template next-round.json [--out decision-template.json] [--json]\nkyuubiki-material-explore --approve-review-template decision-template.json --reviewer-id id --reason text --decided-at timestamp [--out decision.json] [--json]\nkyuubiki-material-explore --materialize-reviewed next-round.json --review-decision decision.json [--out materialization-plan.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --run-materialized materialization-plan.json [--out rerun.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
+    "kyuubiki-material-explore <heat-spreader|dielectric-screening|thermo-shield|structural-panel|composite-thermo-electric-panel> [--out exploration.json] [--json]\nkyuubiki-material-explore --catalog [--out catalog.json] [--json]\nkyuubiki-material-explore --describe-study <study> [--out study.json] [--json]\nkyuubiki-material-explore --plan-study <study> [--out plan.json] [--json]\nkyuubiki-material-explore --plan-next previous-exploration.json [--out next-round.json] [--json]\nkyuubiki-material-explore --review-template next-round.json [--out decision-template.json] [--json]\nkyuubiki-material-explore --approve-review-template decision-template.json --reviewer-id id --reason text --decided-at timestamp [--out decision.json] [--json]\nkyuubiki-material-explore --materialize-reviewed next-round.json --review-decision decision.json [--out materialization-plan.json] [--json]\nkyuubiki-material-explore --run-next previous-exploration.json [--out next-exploration.json] [--json]\nkyuubiki-material-explore --run-materialized materialization-plan.json [--out rerun.json] [--json]\nkyuubiki-material-explore --chain-next previous-exploration.json [--rounds 2] [--out chain.json] [--json]\n\nRuns candidate material studies locally through real solver kernels and builds a ranked material report.".to_string()
 }
 
 #[cfg(test)]
@@ -172,6 +196,23 @@ mod tests {
         assert_eq!(flags.study, "from-previous-exploration");
         assert_eq!(flags.review_template.as_deref(), Some("next-round.json"));
         assert!(flags.json);
+    }
+
+    #[test]
+    fn parses_catalog_and_describe_study() {
+        let catalog = parse(["--catalog", "--json"]);
+        let describe = parse(["--describe-study", "heat-spreader", "--out", "study.json"]);
+        let plan = parse(["--plan-study", "composite-thermo-electric-panel"]);
+
+        assert!(catalog.catalog);
+        assert!(catalog.json);
+        assert_eq!(describe.study, "from-previous-exploration");
+        assert_eq!(describe.describe_study.as_deref(), Some("heat-spreader"));
+        assert_eq!(describe.out.as_deref(), Some("study.json"));
+        assert_eq!(
+            plan.plan_study.as_deref(),
+            Some("composite-thermo-electric-panel")
+        );
     }
 
     #[test]

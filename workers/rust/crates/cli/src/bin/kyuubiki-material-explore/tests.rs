@@ -40,6 +40,86 @@ fn explores_all_material_studies_with_real_solver_results() {
 }
 
 #[test]
+fn material_catalog_exposes_study_entrypoints() {
+    let catalog = material_catalog_payload().expect("catalog");
+
+    assert_eq!(
+        catalog["schema_version"].as_str(),
+        Some("kyuubiki.material-study-catalog/v1")
+    );
+    assert_eq!(catalog["study_count"].as_u64(), Some(5));
+    assert!(
+        catalog["studies"]
+            .as_array()
+            .is_some_and(|studies| studies.iter().any(|study| {
+                study["id"].as_str() == Some("material_composite_thermo_electric_panel")
+            }))
+    );
+    assert!(
+        catalog["next_steps"]
+            .as_array()
+            .is_some_and(|steps| !steps.is_empty())
+    );
+}
+
+#[test]
+fn material_study_description_resolves_aliases_and_metrics() {
+    let study = material_study_payload("heat-spreader").expect("study");
+
+    assert_eq!(
+        study["schema_version"].as_str(),
+        Some("kyuubiki.material-study-description/v1")
+    );
+    assert_eq!(
+        study["id"].as_str(),
+        Some("material_heat_spreader_screening")
+    );
+    assert_eq!(
+        study["report_schema_version"].as_str(),
+        Some("kyuubiki.material-research-report/v1")
+    );
+    assert_eq!(study["metric_count"].as_u64(), Some(4));
+    assert!(
+        study["recommended_flow"]
+            .as_array()
+            .is_some_and(|steps| steps.iter().any(|step| {
+                step.as_str()
+                    .is_some_and(|text| text.contains("--plan-next"))
+            }))
+    );
+}
+
+#[test]
+fn material_study_plan_previews_steps_without_running_solver() {
+    let plan = material_study_plan_payload("composite-thermo-electric-panel").expect("plan");
+
+    assert_eq!(
+        plan["schema_version"].as_str(),
+        Some("kyuubiki.material-study-execution-plan/v1")
+    );
+    assert_eq!(
+        plan["study_id"].as_str(),
+        Some("material_composite_thermo_electric_panel")
+    );
+    assert_eq!(plan["solve_step_count"].as_u64(), Some(3));
+    assert_eq!(plan["candidate_count"].as_u64(), Some(3));
+    assert!(plan["candidate_ids"].as_array().is_some_and(|ids| {
+        ids.iter()
+            .any(|id| id.as_str() == Some("copper_ptfe_glass_epoxy"))
+    }));
+    assert!(
+        plan["actions"]
+            .as_array()
+            .is_some_and(|actions| actions.iter().all(|action| action.is_string()))
+    );
+    assert!(
+        plan["recommended_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("composite-thermo-electric-panel"))
+    );
+}
+
+#[test]
 fn explores_composite_panel_with_coupled_local_solver_results() {
     let exploration =
         run_material_exploration("composite-thermo-electric-panel").expect("exploration");

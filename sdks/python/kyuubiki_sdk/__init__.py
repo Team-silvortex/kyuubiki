@@ -23,8 +23,10 @@ from .material_reports import (
 )
 from .material_workflows import (
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID,
+    MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
     material_study_envelope_catalog_request,
     material_study_envelope_input_artifacts,
+    material_study_execution_plan_example,
     material_workflow_catalog,
 )
 from .advanced_solver_workflows import (
@@ -73,8 +75,10 @@ __all__ = [
     "extract_material_result_payloads",
     "material_study_catalog",
     "MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID",
+    "MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION",
     "material_study_envelope_catalog_request",
     "material_study_envelope_input_artifacts",
+    "material_study_execution_plan_example",
     "material_workflow_catalog",
     "build_contact_gap_1d_workflow",
     "build_magnetostatic_plane_quad_2d_workflow",

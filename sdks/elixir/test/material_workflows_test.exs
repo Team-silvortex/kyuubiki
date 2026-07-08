@@ -28,6 +28,33 @@ defmodule KyuubikiSdk.MaterialWorkflowsTest do
              "cool_stiff"
   end
 
+  test "execution plan helper exposes the shared contract fixture" do
+    plan = MaterialWorkflows.material_study_execution_plan_example()
+
+    assert MaterialWorkflows.material_study_execution_plan_schema_version() ==
+             "kyuubiki.material-study-execution-plan/v1"
+
+    assert plan["schema_version"] ==
+             MaterialWorkflows.material_study_execution_plan_schema_version()
+
+    assert plan["study_id"] == "material_heat_spreader_screening"
+    assert plan["step_count"] == length(plan["steps"])
+    assert plan["solve_step_count"] == 3
+    assert plan["candidate_count"] == 3
+    assert "copper_c110" in plan["candidate_ids"]
+    assert plan["recommended_command"] =~ "heat-spreader"
+  end
+
+  test "execution plan helper returns a fresh decoded payload" do
+    first = MaterialWorkflows.material_study_execution_plan_example()
+    second = MaterialWorkflows.material_study_execution_plan_example()
+
+    first = put_in(first, ["steps"], [])
+
+    assert first["steps"] == []
+    assert length(second["steps"]) == second["step_count"]
+  end
+
   test "input artifacts accept explicit candidate rows" do
     artifacts =
       MaterialWorkflows.material_study_envelope_input_artifacts(%{
@@ -47,5 +74,7 @@ defmodule KyuubikiSdk.MaterialWorkflowsTest do
              "workflow.material-study-envelope-ranking-json"
 
     assert hd(KyuubikiSdk.material_workflow_catalog())["id"] == "material_study_envelope_catalog"
+    assert KyuubikiSdk.material_study_execution_plan_example()["study_id"] ==
+             "material_heat_spreader_screening"
   end
 end

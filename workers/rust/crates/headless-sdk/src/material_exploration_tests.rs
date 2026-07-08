@@ -1,9 +1,11 @@
 use crate::{
     HeadlessWorkflowStep, MATERIAL_EXPLORATION_NEXT_ROUND_EXECUTION_SCHEMA_VERSION,
     MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION, MATERIAL_EXPLORATION_SCHEMA_VERSION,
+    MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
     build_material_exploration_next_round_execution_plan,
     build_material_exploration_next_round_plan, build_material_exploration_run,
-    build_material_exploration_run_for_iteration, material_exploration_steps,
+    build_material_exploration_run_for_iteration, build_material_study_execution_plan,
+    material_exploration_steps,
 };
 use serde_json::{Value, json};
 
@@ -23,6 +25,35 @@ fn exposes_candidate_solve_steps_for_each_material_study() {
             .count();
         assert_eq!(solve_count, 3);
     }
+}
+
+#[test]
+fn builds_material_study_execution_plan_without_running_solver() {
+    let plan =
+        build_material_study_execution_plan("composite-thermo-electric-panel").expect("plan");
+
+    assert_eq!(
+        plan.schema_version,
+        MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION
+    );
+    assert_eq!(plan.study_id, "material_composite_thermo_electric_panel");
+    assert_eq!(plan.step_count, 3);
+    assert_eq!(plan.solve_step_count, 3);
+    assert_eq!(plan.candidate_count, 3);
+    assert!(
+        plan.candidate_ids
+            .contains(&"copper_ptfe_glass_epoxy".to_string())
+    );
+    assert!(
+        plan.actions
+            .iter()
+            .all(|action| action == "solve_composite_thermo_electric_panel")
+    );
+    assert!(
+        plan.recommended_command
+            .contains("composite-thermo-electric-panel")
+    );
+    assert_eq!(plan.steps.len(), plan.step_count);
 }
 
 #[test]
