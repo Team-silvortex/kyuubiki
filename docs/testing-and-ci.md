@@ -35,16 +35,22 @@ The repository now keeps validation split by responsibility.
   installer `tests.rs` as a module index. The Make target runs the audit
   script self-test before scanning the repository.
 - `make architecture-check`
-  Lightweight new-architecture guard for the `1.15.x` line. It runs the
+  Lightweight new-architecture guard for the `1.16.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
-  contract checks, materialization plan contract checks, TaskIR mirror and
-  digest contract checks, dependency audits, external operator package
-  preflight, docs book manifest validation, focused Operator TaskIR
-  control-plane tests, and the Rust live operator task path.
+  contract checks, materialization plan contract checks, material exploration
+  chain contract checks, TaskIR mirror and digest contract checks, dependency
+  audits, external operator package preflight, docs book manifest validation,
+  focused Operator TaskIR control-plane tests, and the Rust live operator task
+  path.
 - `make check-materialization-plan-contract`
   Shared materialized-candidate contract guard. It checks the materialization
   plan schema, fixture, and SDK documentation links before agent/lab output is
   treated as a solver-rerun input.
+- `make check-material-exploration-chain-contract`
+  Shared repeated-run material research guard. It checks the chain schema,
+  fixture, convergence assessment, optimization trace, summary/run alignment,
+  and documentation links before `--chain-next` output is treated as a stable
+  SDK or agent-facing contract.
 - `make check-ui-automation-contract`
   Product-owned Workbench UI selector contract guard. It compares
   `docs/ui-automation-contract.json`, frontend TS selector constants, and the
@@ -52,14 +58,15 @@ The repository now keeps validation split by responsibility.
   tests.
 - `make check-version-line`
   Shipping-version contract guard. It checks the release index, package
-  metadata, generated docs mirrors, update catalogs, and shipped language-pack
-  catalog against the current release line.
+  metadata, generated docs mirrors, update catalogs, shipped language-pack
+  catalog, and hand-maintained version-line docs against the current release
+  line.
 - `make check-operator-reliability`
   Operator reliability evidence guard. It verifies that every `physics-coverage`
   solve operator has a machine-readable manifest shard entry with benchmark
   coverage, headless workflow support, evidence files, trust level, and visible
   limits. It also runs a checker self-test and enforces the manifest's
-  `minimum_coverage_level`, currently `review` for the `tamamono 1.15.x`
+  `minimum_coverage_level`, currently `review` for the `tamamono 1.16.x`
   physics-coverage gate.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
@@ -274,9 +281,9 @@ Use these entrypoints:
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
 - `make benchmark-physics-coverage`
-  Run the `1.15.x` broad physics smoke matrix across every built-in benchmark
+  Run the `1.16.x` broad physics smoke matrix across every built-in benchmark
   template. This is the quickest product-level check that the main physics
-  families still have real solver execution paths before `1.15.x` and `1.16.x`
+  families still have real solver execution paths before `1.16.x` and `1.17.x`
   contract work hardens engine/task formats.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression

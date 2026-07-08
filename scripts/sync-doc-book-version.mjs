@@ -50,6 +50,7 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const shippingVersion = args.version ?? readJson(updateChannelsPath).shipping_version;
 const versionLine = args.line ?? `tamamono ${shippingVersion}`;
+const minorLine = shippingVersion.split(".").slice(0, 2).join(".");
 
 const replacements = [
   {
@@ -57,11 +58,16 @@ const replacements = [
     rules: [
       [/One book for tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `One book for ${versionLine}`],
       [/Version line: tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `Version line: ${versionLine}`],
+      [/Shipping version: [0-9]+\.[0-9]+\.[0-9]+/g, `Shipping version: ${shippingVersion}`],
+      [/Current prep: [0-9]+\.[0-9]+\.x/g, `Current prep: ${minorLine}.x`],
     ],
   },
   {
     file: "docs/book-manifest.json",
-    rules: [[/"version_line": "tamamono [0-9]+\.[0-9]+\.[0-9]+"/g, `"version_line": "${versionLine}"`]],
+    rules: [
+      [/"version_line": "tamamono [0-9]+\.[0-9]+\.[0-9]+"/g, `"version_line": "${versionLine}"`],
+      [/"shipping_version": "[0-9]+\.[0-9]+\.[0-9]+"/g, `"shipping_version": "${shippingVersion}"`],
+    ],
   },
   {
     file: "apps/hub-gui/ui/docs/index.html",

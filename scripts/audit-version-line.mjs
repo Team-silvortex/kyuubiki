@@ -21,6 +21,7 @@ function parseArgs(argv) {
     next: null,
     codename: "tamamono",
     json: false,
+    selfTest: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -33,6 +34,11 @@ function parseArgs(argv) {
 
     if (value === "--json") {
       options.json = true;
+      continue;
+    }
+
+    if (value === "--self-test") {
+      options.selfTest = true;
       continue;
     }
 
@@ -85,6 +91,20 @@ function versionDisplay(codename, version) {
   return `${codename} ${version}`;
 }
 
+function textIncludesCheck(file, field, expected) {
+  return textIncludesCheckWithReader(file, field, expected, readText);
+}
+
+function textIncludesCheckWithReader(file, field, expected, reader) {
+  return {
+    kind: "text_includes",
+    file,
+    field,
+    expected,
+    actual: reader(file).includes(expected) ? expected : null,
+  };
+}
+
 function walk(relativePath, results = []) {
   const absolutePath = path.join(rootDir, relativePath);
   const entries = fs.readdirSync(absolutePath, { withFileTypes: true });
@@ -115,6 +135,8 @@ function walk(relativePath, results = []) {
 
 function exactChecks(expectedVersion) {
   const expectedMinorLine = versionMinorLine(expectedVersion);
+  const expectedDisplayVersion = versionDisplay("tamamono", expectedVersion);
+  const expectedDisplayMinorLine = versionDisplay("tamamono", expectedMinorLine);
   const files = [
     "apps/frontend/package.json",
     "apps/hub-gui/package.json",
@@ -271,6 +293,8 @@ function exactChecks(expectedVersion) {
     });
   }
 
+  checks.push(...markdownFactChecks(expectedVersion, "tamamono", readText));
+
   const currentSnapshots = (releaseIndex.snapshots ?? [])
     .filter((snapshot) => snapshot.status === "current")
     .map((snapshot) => snapshot.version);
@@ -298,6 +322,44 @@ function exactChecks(expectedVersion) {
     ...check,
     ok: check.actual === check.expected,
   }));
+}
+
+function markdownFactChecks(expectedVersion, codename, reader) {
+  const expectedMinorLine = versionMinorLine(expectedVersion);
+  const expectedDisplayVersion = versionDisplay(codename, expectedVersion);
+  const expectedDisplayMinorLine = versionDisplay(codename, expectedMinorLine);
+  return [
+    textIncludesCheckWithReader(
+      "docs/version-line.md",
+      "current shipping version",
+      `current shipping version: \`${expectedDisplayVersion}\``,
+      reader,
+    ),
+    textIncludesCheckWithReader(
+      "docs/version-line.md",
+      "current documentation target",
+      `current documentation target: \`${expectedDisplayMinorLine}\` active line`,
+      reader,
+    ),
+    textIncludesCheckWithReader(
+      "docs/current-line.md",
+      "published release snapshot",
+      `current published release snapshot in this line is \`${expectedDisplayVersion}\``,
+      reader,
+    ),
+    textIncludesCheckWithReader(
+      "docs/installer-remote-control.md",
+      "preparation line",
+      `\`${expectedDisplayMinorLine}\` preparation line`,
+      reader,
+    ),
+    textIncludesCheckWithReader(
+      "docs/desktop-release-checklist.md",
+      "workspace-prep line",
+      `current \`${expectedVersion}\` workspace-prep line`,
+      reader,
+    ),
+  ];
 }
 
 function searchInventory(expectedVersion, codename) {
@@ -435,8 +497,36 @@ function printHumanReport(report) {
   }
 }
 
+function runSelfTest() {
+  const checks = markdownFactChecks("1.16.0", "tamamono", (file) => {
+    if (file === "docs/version-line.md") {
+      return "current shipping version: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` active line";
+    }
+    if (file === "docs/current-line.md") {
+      return "The current published release snapshot in this line is `tamamono 1.15.0`.";
+    }
+    if (file === "docs/installer-remote-control.md") {
+      return "remote runtime control surface in the `tamamono 1.15.x` preparation line.";
+    }
+    if (file === "docs/desktop-release-checklist.md") {
+      return "Examples for the current `1.15.0` workspace-prep line:";
+    }
+    return "";
+  });
+  const failed = checks.filter((check) => check.actual !== check.expected);
+  if (failed.length !== checks.length) {
+    console.error("Version line audit self-test failed: stale Markdown facts were not rejected");
+    process.exit(1);
+  }
+  console.log("version line audit self-test passed");
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.selfTest) {
+    runSelfTest();
+    return;
+  }
   const expectedVersion = options.expected ?? currentReleaseVersion();
   const report = {
     codename: options.codename,

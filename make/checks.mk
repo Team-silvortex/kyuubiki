@@ -34,6 +34,7 @@ check-ui-automation-contract:
 	@node ./scripts/check-ui-automation-contract.mjs
 
 check-version-line:
+	@node ./scripts/audit-version-line.mjs --self-test
 	@node ./scripts/audit-version-line.mjs
 
 check-material-score-contract:

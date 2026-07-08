@@ -31,7 +31,7 @@ Read these first, in order:
 12. `installer-remote-control.md`
 13. `minimal-industrial-closure.md`
 
-For the current `1.15.x` hardening path, keep four threads mentally linked:
+For the current `1.16.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
@@ -119,8 +119,8 @@ Then branch by intent:
   Cross-runtime result contract for material candidate scoring, including
   criteria, ranges, feasibility policy, ranking semantics, and stable errors.
 - `physics-coverage-map.md`
-  `1.15.x` coverage map for broad solver-family execution coverage and the
-  review-level reliability gate before the `1.15.x` and `1.16.x`
+  `1.16.x` coverage map for broad solver-family execution coverage and the
+  review-level reliability gate before the `1.16.x` and `1.17.x`
   engine/task-format contract freeze.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
@@ -128,7 +128,7 @@ Then branch by intent:
   ONNX-like cross-operator data contract for workflow-carried values.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the `1.15.x` preparation line.
+  control-surface note for the `1.16.x` preparation line.
 - `remote-deployment-roadmap.html`
   Maturity roadmap for moving Installer remote deployment from policy-bounded
   SSH transport to a deployment service with plans, journals, artifact
@@ -176,7 +176,7 @@ Then branch by intent:
 - `repository-structure.md`
   Directory ownership, generated-path boundaries, and source-of-truth rules.
 - `project-architecture-organization.md`
-  Current `1.15.x` architecture organization map for Hub, Workbench,
+  Current `1.16.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and 600-line cleanup
   boundaries.
 - `minimal-industrial-closure.md`
@@ -226,7 +226,7 @@ Then branch by intent:
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `1.15.x` trust-hardening and asset-formalization path.
+  inside the `1.16.x` trust-hardening and asset-formalization path.
 - `component-integrity-protocol.html`
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.

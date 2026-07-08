@@ -27,7 +27,9 @@ This directory contains host-native operational entry points.
   Audit repository-wide version contracts and inventory visible version
   references before advancing a shipping line such as `tamamono 1.7.0`. The
   exact-contract lane includes release metadata, package metadata, generated
-  docs mirrors, update catalogs, and shipped language-pack catalog versions.
+  docs mirrors, update catalogs, shipped language-pack catalog versions, and
+  hand-maintained Markdown facts such as `current-line.md` and
+  `version-line.md`.
 - `audit-rust-line-counts.mjs`
   Enforce the Rust source line-count ceiling, currently `600` lines per file,
   so crate and test modules stay split before they become hard to review.
@@ -141,7 +143,8 @@ This directory contains host-native operational entry points.
   against its Markdown gate, including gate count, evidence links, supported
   state values, and the shared exit statement.
 - `sync-doc-book-version.mjs`
-  Update the hand-maintained book entry pages to the current shipping version
+  Update the hand-maintained book entry pages to the current shipping version,
+  shipping-version chip, current-prep chip, and book manifest shipping version
   without touching the generated installation or update-catalog pages.
 - `release-metadata.mjs`
   Shared release-path, JSON, artifact, and shipping-version helpers used by the
@@ -189,9 +192,10 @@ Useful checks:
   documented selector contract. Run this before changing rail, library,
   runtime, viewport, control-window, or shell DOM structure.
 - `make check-version-line`
-  Check that release metadata, package metadata, generated docs mirrors, update
-  catalogs, and shipped language-pack catalog entries all match the current
-  shipping version.
+  Run the version-line checker self-test, then check that release metadata,
+  package metadata, generated docs mirrors, update catalogs, shipped
+  language-pack catalog entries, and hand-maintained version-line docs all
+  match the current shipping version.
 - `make check-operator-reliability`
   Check that every `physics-coverage` solve operator has a reliability manifest
   entry with benchmark, headless workflow, evidence, visible limitations, and a
@@ -260,7 +264,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.15.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.16.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.
