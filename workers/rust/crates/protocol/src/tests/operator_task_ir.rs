@@ -59,6 +59,22 @@ fn operator_task_digest_matches_elixir_float_golden_fixture() {
 }
 
 #[test]
+fn operator_task_digest_matches_fractional_schema_fixture() {
+    let task: Value = serde_json::from_str(include_str!(
+        "../../../../../../schemas/examples.operator-task-ir-float.json"
+    ))
+    .expect("fractional fixture should parse");
+
+    assert_eq!(
+        compute_operator_task_digest(&task).expect("digest should compute"),
+        task["integrity"]["task_digest"]
+            .as_str()
+            .expect("fixture should carry task digest")
+    );
+    verify_operator_task_digest(&task).expect("fixture digest should verify");
+}
+
+#[test]
 fn operator_task_digest_verifier_rejects_tampering() {
     let mut task = golden_task_fixture(Some(
         "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
@@ -114,6 +130,27 @@ fn operator_task_execution_summary_rejects_inconsistent_abi() {
     let error = summarize_operator_task_execution(&task).expect_err("abi should be rejected");
 
     assert!(error.contains("inconsistent runtime protocol, abi, or entrypoint"));
+}
+
+#[test]
+fn checked_operator_task_summary_reports_structured_error_codes() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["execution_program"]["abi"]["kind"] = json!("solver_rpc");
+
+    let error =
+        summarize_operator_task_execution_checked(&task).expect_err("abi should be rejected");
+
+    assert_eq!(
+        error.code,
+        OperatorTaskSummaryErrorCode::ExecutionAbiMismatch
+    );
+    assert!(
+        error
+            .message
+            .contains("inconsistent runtime protocol, abi, or entrypoint")
+    );
 }
 
 #[test]

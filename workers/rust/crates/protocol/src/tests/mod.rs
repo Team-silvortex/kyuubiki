@@ -22,7 +22,8 @@ mod prelude {
         MagnetostaticBar1dNodeInput, OPERATOR_TASK_IR_SCHEMA, OperatorArtifactRef,
         OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
         OperatorRunContext, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
-        OperatorTaskDigestError, OperatorValidationProfile, OperatorValidationStatus,
+        OperatorTaskDigestError, OperatorTaskSummaryErrorCode, OperatorValidationProfile,
+        OperatorValidationStatus,
         PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
         RpcResponse, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
         SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
@@ -51,6 +52,6 @@ mod prelude {
         WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
         WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, canonical_json,
         compute_operator_task_digest, summarize_operator_task_execution,
-        verify_operator_task_digest,
+        summarize_operator_task_execution_checked, verify_operator_task_digest,
     };
 }

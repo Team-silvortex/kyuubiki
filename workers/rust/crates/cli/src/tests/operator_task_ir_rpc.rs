@@ -378,11 +378,45 @@ fn operator_task_runtime_rejects_digest_valid_inconsistent_package_mirrors() {
     }))
     .expect_err("runtime should reject package mirror mismatch after digest verification");
 
-    assert_eq!(error.code, "operator_task_invalid");
+    assert_eq!(error.code, "operator_task_mirror_mismatch");
     assert!(
         error
             .message
             .contains("runtime_hints.package_ref must match execution_program.package_ref")
+    );
+}
+
+#[test]
+fn operator_task_runtime_reports_missing_digest() {
+    let mut task_ir = golden_operator_task_ir();
+    task_ir["integrity"] = serde_json::json!({});
+
+    let error = run_operator_task_ir(&serde_json::json!({
+        "task_ir": task_ir
+    }))
+    .expect_err("runtime should reject missing task digest");
+
+    assert_eq!(error.code, "operator_task_digest_missing");
+    assert_eq!(error.message, "missing operator task digest");
+}
+
+#[test]
+fn operator_task_runtime_reports_execution_abi_mismatch() {
+    let mut task_ir = golden_operator_task_ir();
+    task_ir["execution_program"]["abi"]["kind"] = serde_json::json!("solver_rpc");
+    let digest = compute_operator_task_digest(&task_ir).expect("changed task should digest");
+    task_ir["integrity"] = serde_json::json!({ "task_digest": digest });
+
+    let error = run_operator_task_ir(&serde_json::json!({
+        "task_ir": task_ir
+    }))
+    .expect_err("runtime should reject inconsistent ABI after digest verification");
+
+    assert_eq!(error.code, "operator_task_execution_abi_mismatch");
+    assert!(
+        error
+            .message
+            .contains("inconsistent runtime protocol, abi, or entrypoint")
     );
 }
 
@@ -405,6 +439,6 @@ fn rejects_operator_task_ir_rpc_requests_with_tampered_digest() {
     assert!(!final_response.ok);
     assert_eq!(
         final_response.error.expect("operator task error").code,
-        "operator_task_digest_invalid"
+        "operator_task_digest_mismatch"
     );
 }

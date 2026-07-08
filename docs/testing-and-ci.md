@@ -37,9 +37,10 @@ The repository now keeps validation split by responsibility.
 - `make architecture-check`
   Lightweight new-architecture guard for the `1.15.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
-  contract checks, materialization plan contract checks, dependency audits,
-  external operator package preflight, docs book manifest validation, focused
-  Operator TaskIR control-plane tests, and the Rust live operator task path.
+  contract checks, materialization plan contract checks, TaskIR mirror and
+  digest contract checks, dependency audits, external operator package
+  preflight, docs book manifest validation, focused Operator TaskIR
+  control-plane tests, and the Rust live operator task path.
 - `make check-materialization-plan-contract`
   Shared materialized-candidate contract guard. It checks the materialization
   plan schema, fixture, and SDK documentation links before agent/lab output is

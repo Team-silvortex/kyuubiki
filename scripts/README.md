@@ -71,7 +71,9 @@ This directory contains host-native operational entry points.
   Verify the language-neutral TaskIR schema extension and shipped TaskIR
   examples. It checks that mirrored fields such as operator kind, package ref,
   and package version stay consistent across descriptor, execution program, and
-  runtime hints before agent or SDK tests need to run.
+  runtime hints, and recomputes canonical `descriptor_digest` and `task_digest`
+  values, including a fractional-number fixture, before agent or SDK tests need
+  to run.
 - `check-materialization-plan-contract.mjs`
   Verify the shared material candidate materialization plan schema, fixture,
   and SDK documentation links. It keeps reviewed agent/lab materialization

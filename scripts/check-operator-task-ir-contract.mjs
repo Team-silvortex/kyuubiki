@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -6,7 +7,21 @@ const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const schemaPath = "schemas/operator-task-ir.schema.json";
 const examplePaths = [
   "schemas/examples.operator-task-ir.json",
+  "schemas/examples.operator-task-ir-float.json",
   "schemas/examples.operator-task-batch.json",
+];
+const requiredDigestFields = [
+  "schema_version",
+  "task_id",
+  "operator",
+  "descriptor_authoring",
+  "node",
+  "input_artifact",
+  "config",
+  "execution_program",
+  "dataset_contract",
+  "orchestration_context",
+  "runtime_hints",
 ];
 
 function fail(message) {
@@ -70,10 +85,86 @@ function validateDigestFieldCoverage(task, context) {
   if (!Array.isArray(fields)) {
     fail(`${context}: integrity.task_digest_fields must be an array`);
   }
-  for (const field of ["operator", "execution_program", "runtime_hints"]) {
-    if (!fields.includes(field)) {
-      fail(`${context}: task digest must cover ${field}`);
+  if (fields.join("\n") !== requiredDigestFields.join("\n")) {
+    fail(`${context}: integrity.task_digest_fields must match the canonical field order`);
+  }
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
+  }
+  if (typeof value === "number") {
+    return canonicalNumber(value);
+  }
+  return JSON.stringify(value);
+}
+
+function canonicalNumber(value) {
+  if (!Number.isFinite(value)) {
+    fail("canonical JSON cannot encode non-finite numbers");
+  }
+  if (Number.isInteger(value)) {
+    return `${value}`;
+  }
+  let encoded = value.toFixed(15);
+  while (encoded.endsWith("0")) {
+    encoded = encoded.slice(0, -1);
+  }
+  if (encoded.endsWith(".")) {
+    encoded += "0";
+  }
+  return encoded;
+}
+
+function computeTaskDigest(task) {
+  const digestPayload = {};
+  for (const field of requiredDigestFields) {
+    if (Object.hasOwn(task, field)) {
+      digestPayload[field] = task[field];
     }
+  }
+  return sha256Canonical(digestPayload);
+}
+
+function computeDescriptorDigest(task) {
+  if (!task.operator || typeof task.operator !== "object" || Array.isArray(task.operator)) {
+    fail("operator task descriptor digest requires an operator object");
+  }
+  return sha256Canonical(task.operator);
+}
+
+function sha256Canonical(value) {
+  return crypto.createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
+}
+
+function validateDescriptorDigest(task, context) {
+  const expected = task.integrity?.descriptor_digest;
+  if (typeof expected !== "string" || expected.length === 0) {
+    fail(`${context}: integrity.descriptor_digest must be a non-empty string`);
+  }
+  const actual = computeDescriptorDigest(task);
+  if (expected !== actual) {
+    fail(
+      `${context}: integrity.descriptor_digest mismatch; expected ${expected}, computed ${actual}`,
+    );
+  }
+}
+
+function validateTaskDigest(task, context) {
+  const expected = task.integrity?.task_digest;
+  if (typeof expected !== "string" || expected.length === 0) {
+    fail(`${context}: integrity.task_digest must be a non-empty string`);
+  }
+  const actual = computeTaskDigest(task);
+  if (expected !== actual) {
+    fail(`${context}: integrity.task_digest mismatch; expected ${expected}, computed ${actual}`);
   }
 }
 
@@ -101,6 +192,8 @@ function checkContracts() {
       const context = `${examplePath}#task-${index + 1}`;
       validateMirrorConstraints(task, constraints, context);
       validateDigestFieldCoverage(task, context);
+      validateDescriptorDigest(task, context);
+      validateTaskDigest(task, context);
       taskCount += 1;
     });
   }
@@ -139,7 +232,61 @@ function runSelfTest() {
   if (!failed) {
     fail("self-test did not reject a mirror mismatch");
   }
+  runDigestSelfTest();
   console.log("operator task IR contract check self-test passed");
+}
+
+function runDigestSelfTest() {
+  const task = readJson(examplePaths[0]);
+  task.integrity.task_digest = "0".repeat(64);
+  const originalExit = process.exit;
+  const originalError = console.error;
+  let failed = false;
+  console.error = () => {};
+  process.exit = () => {
+    failed = true;
+    throw new Error("self-test-fail");
+  };
+  try {
+    validateTaskDigest(task, "self-digest");
+  } catch (error) {
+    if (error.message !== "self-test-fail") {
+      throw error;
+    }
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  if (!failed) {
+    fail("self-test did not reject a digest mismatch");
+  }
+  runDescriptorDigestSelfTest();
+}
+
+function runDescriptorDigestSelfTest() {
+  const task = readJson(examplePaths[0]);
+  task.integrity.descriptor_digest = "0".repeat(64);
+  const originalExit = process.exit;
+  const originalError = console.error;
+  let failed = false;
+  console.error = () => {};
+  process.exit = () => {
+    failed = true;
+    throw new Error("self-test-fail");
+  };
+  try {
+    validateDescriptorDigest(task, "self-descriptor-digest");
+  } catch (error) {
+    if (error.message !== "self-test-fail") {
+      throw error;
+    }
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  if (!failed) {
+    fail("self-test did not reject a descriptor digest mismatch");
+  }
 }
 
 if (process.argv.includes("--self-test")) {

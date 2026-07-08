@@ -97,8 +97,9 @@ other:
 
 The Rust protocol layer rejects digest-valid tasks when these mirrors disagree.
 The JSON schema carries the same rule as `x-kyuubiki-mirror_constraints`, and
-`make check-operator-task-ir-contract` keeps the schema extension and examples
-aligned.
+`make check-operator-task-ir-contract` keeps the schema extension, mirror
+constraints, digest field order, and example `descriptor_digest` /
+`task_digest` values aligned.
 
 ## Golden fixtures
 

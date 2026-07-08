@@ -7,7 +7,9 @@ use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
 };
 use kyuubiki_protocol::{
-    OperatorTaskExecutionSummary, summarize_operator_task_execution, verify_operator_task_digest,
+    OperatorTaskDigestError, OperatorTaskExecutionSummary, OperatorTaskSummaryError,
+    OperatorTaskSummaryErrorCode, summarize_operator_task_execution_checked,
+    verify_operator_task_digest,
 };
 
 pub(crate) const OPERATOR_TASK_STATUS_VERIFIED_PENDING: &str = "verified_pending_engine_execution";
@@ -132,12 +134,10 @@ pub(crate) fn run_operator_task_ir_with_runtime(
         .get("task_ir")
         .ok_or_else(|| OperatorTaskRuntimeError::new("invalid_params", "missing task_ir"))?;
 
-    verify_operator_task_digest(task_ir).map_err(|error| {
-        OperatorTaskRuntimeError::new("operator_task_digest_invalid", format!("{error:?}"))
-    })?;
+    verify_operator_task_digest(task_ir).map_err(classify_digest_error)?;
 
-    let summary = summarize_operator_task_execution(task_ir)
-        .map_err(|error| OperatorTaskRuntimeError::new("operator_task_invalid", error))?;
+    let summary = summarize_operator_task_execution_checked(task_ir)
+        .map_err(classify_operator_task_error)?;
 
     if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
     {
@@ -153,6 +153,37 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     }
 
     Ok(build_preflight_payload(summary, mode, package_runtime))
+}
+
+fn classify_digest_error(error: OperatorTaskDigestError) -> OperatorTaskRuntimeError {
+    match error {
+        OperatorTaskDigestError::Missing => OperatorTaskRuntimeError::new(
+            "operator_task_digest_missing",
+            "missing operator task digest",
+        ),
+        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskRuntimeError::new(
+            "operator_task_digest_mismatch",
+            format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+        ),
+        OperatorTaskDigestError::InvalidTask(message) => {
+            OperatorTaskRuntimeError::new("operator_task_digest_invalid", message)
+        }
+    }
+}
+
+fn classify_operator_task_error(error: OperatorTaskSummaryError) -> OperatorTaskRuntimeError {
+    let code = match error.code {
+        OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
+        OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
+            "operator_task_execution_abi_mismatch"
+        }
+        OperatorTaskSummaryErrorCode::ProgramMismatch => "operator_task_program_mismatch",
+        OperatorTaskSummaryErrorCode::EntrypointMismatch => "operator_task_entrypoint_mismatch",
+        OperatorTaskSummaryErrorCode::MissingField | OperatorTaskSummaryErrorCode::Invalid => {
+            "operator_task_invalid"
+        }
+    };
+    OperatorTaskRuntimeError::new(code, error.message)
 }
 
 fn runtime_binding() -> &'static Mutex<OperatorPackageRuntimeBinding> {

@@ -101,6 +101,16 @@ Rust agents expose packaged operator submissions through
 TaskIR validation, digest checking, and summary construction belong to
 `workers/rust/crates/cli/src/operator_task_runtime.rs` so package fetching and
 dispatch can attach without reshaping the solver RPC surface.
+The shared Rust protocol crate exposes a checked summary API for this path so
+runtime callers receive structured pre-execution error codes instead of parsing
+human-readable strings.
+
+Pre-execution failures are classified before package fetch or solver dispatch:
+`operator_task_digest_missing`, `operator_task_digest_mismatch`,
+`operator_task_digest_invalid`, `operator_task_mirror_mismatch`,
+`operator_task_execution_abi_mismatch`, `operator_task_program_mismatch`, and
+`operator_task_entrypoint_mismatch`. These are task/contract failures, not
+solver-kernel failures.
 
 Task description is dual-mode:
 

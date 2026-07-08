@@ -1,0 +1,94 @@
+{
+  "$schema": "operator-task-ir.schema.json",
+  "schema_version": "kyuubiki.operator-task-ir/v1",
+  "task_id": "fractional-fixture-task",
+  "operator": {
+    "id": "transform.fractional_fixture",
+    "family": "fixture",
+    "kind": "transform",
+    "execution": {
+      "package_ref": "orchestra://operator-package/transform.fractional_fixture"
+    }
+  },
+  "descriptor_authoring": {
+    "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+    "mode": "rust_native",
+    "runtime": "rust",
+    "source": "fractional_fixture",
+    "hot_reloadable": false,
+    "execution_language": "language_neutral"
+  },
+  "node": {},
+  "input_artifact": {
+    "temperature_delta": 160.5,
+    "thermal_expansion": 0.000012,
+    "poisson_ratio": 0.33
+  },
+  "config": {
+    "constraint_factor": 0.7
+  },
+  "execution_program": {
+    "schema_version": "kyuubiki.operator-execution-program/v1",
+    "program_id": "transform.fractional_fixture",
+    "program_family": "fixture",
+    "program_kind": "transform",
+    "operator_category_id": null,
+    "package_ref": "orchestra://operator-package/transform.fractional_fixture",
+    "package_version": "library-managed",
+    "package_integrity": null,
+    "runtime_protocol": "kyuubiki.operator-execution/v1",
+    "abi": {
+      "kind": "operator_task",
+      "input_encoding": "json",
+      "output_encoding": "json"
+    },
+    "entrypoint": {
+      "kind": "operator_id",
+      "name": "transform.fractional_fixture",
+      "operator_kind": "transform"
+    },
+    "bindings": {
+      "input_artifact": "task.input_artifact",
+      "config": "task.config",
+      "output_artifact": "task.output_artifact"
+    },
+    "node_binding": {
+      "node_id": null,
+      "input_ports": [],
+      "output_ports": []
+    }
+  },
+  "dataset_contract": {},
+  "orchestration_context": {},
+  "runtime_hints": {
+    "authority_mode": "central_operator_library",
+    "execution_mode": "orchestra_fetch",
+    "source_ref": null,
+    "package_ref": "orchestra://operator-package/transform.fractional_fixture",
+    "package_version": "library-managed",
+    "placement_tags": [],
+    "required_capabilities": [],
+    "cache_scope": "job",
+    "agent_fetchable": true,
+    "operator_kind": "transform"
+  },
+  "integrity": {
+    "operator_integrity": null,
+    "descriptor_digest": "5473bf5ee7f3f01eaaf596c83f0ded9cf07c67c45277f6f77cd1cedc2f553d10",
+    "task_digest": "77e991c9a4023bbb7c486ad3efc3726381e57671d0d33a4ae22cc6dbc0c849da",
+    "task_digest_fields": [
+      "schema_version",
+      "task_id",
+      "operator",
+      "descriptor_authoring",
+      "node",
+      "input_artifact",
+      "config",
+      "execution_program",
+      "dataset_contract",
+      "orchestration_context",
+      "runtime_hints"
+    ],
+    "digest_algorithm": "sha256"
+  }
+}

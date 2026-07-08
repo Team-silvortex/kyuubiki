@@ -56,7 +56,7 @@ help:
 	@echo "  make check-materialization-plan-contract Verify materialized candidate schema/example contracts"
 	@echo "  make check-material-study-execution-plan-contract Verify non-executing material study plan schema/example contracts"
 	@echo "  make check-material-study-sdk-examples Run Rust/Python/Elixir material study plan SDK examples"
-	@echo "  make check-operator-task-ir-contract Verify TaskIR mirror constraints and examples"
+	@echo "  make check-operator-task-ir-contract Verify TaskIR mirrors, digests, and examples"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
 	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"
 	@echo "  make build-operator-qualification-readiness Write operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"

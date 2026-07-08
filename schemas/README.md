@@ -92,6 +92,8 @@ README.
   dispatch or remote agent scheduling
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
+- `examples.operator-task-ir-float.json` is the fractional-number TaskIR sample
+  that keeps canonical JSON digest behavior aligned across JS and Rust checks
 - `examples.operator-task-batch.json` is the matching batch wrapper sample for
   `POST /api/v1/operator-tasks/execute-batch` and SDK batch execution examples
 - `examples.operator-task-batch-preparation.json` is the matching

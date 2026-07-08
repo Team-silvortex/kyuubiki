@@ -74,14 +74,21 @@ pub fn verify_operator_task_digest(task: &Value) -> Result<(), OperatorTaskDiges
 pub fn summarize_operator_task_execution(
     task: &Value,
 ) -> Result<OperatorTaskExecutionSummary, String> {
+    summarize_operator_task_execution_checked(task).map_err(|error| error.message)
+}
+
+pub fn summarize_operator_task_execution_checked(
+    task: &Value,
+) -> Result<OperatorTaskExecutionSummary, OperatorTaskSummaryError> {
     let schema_version = required_string(task, &["schema_version"])?;
     if schema_version != OPERATOR_TASK_IR_SCHEMA {
-        return Err(format!(
-            "operator task schema_version must be {OPERATOR_TASK_IR_SCHEMA}"
-        ));
+        return Err(OperatorTaskSummaryError::invalid(format!(
+            "operator task schema_version must be {OPERATOR_TASK_IR_SCHEMA}",
+        )));
     }
 
-    let task_digest = compute_operator_task_digest(task)?;
+    let task_digest =
+        compute_operator_task_digest(task).map_err(OperatorTaskSummaryError::invalid)?;
     let operator_id = required_string(task, &["operator", "id"])?.to_string();
     let operator_kind = required_string(task, &["operator", "kind"])?.to_string();
     let program_id = required_string(task, &["execution_program", "program_id"])?.to_string();
@@ -101,7 +108,10 @@ pub fn summarize_operator_task_execution(
     let agent_fetchable = optional_bool(task, &["runtime_hints", "agent_fetchable"]);
 
     if program_id != operator_id || program_kind != operator_kind {
-        return Err("operator task execution program does not match operator".to_string());
+        return Err(OperatorTaskSummaryError::new(
+            OperatorTaskSummaryErrorCode::ProgramMismatch,
+            "operator task execution program does not match operator",
+        ));
     }
 
     validate_mirror_field(
@@ -143,7 +153,10 @@ pub fn summarize_operator_task_execution(
     )?;
 
     if program_kind != "solver" && entrypoint_name != operator_id {
-        return Err("operator task entrypoint does not match operator id".to_string());
+        return Err(OperatorTaskSummaryError::new(
+            OperatorTaskSummaryErrorCode::EntrypointMismatch,
+            "operator task entrypoint does not match operator id",
+        ));
     }
 
     Ok(OperatorTaskExecutionSummary {
@@ -171,6 +184,35 @@ pub enum OperatorTaskDigestError {
     Missing,
     InvalidTask(String),
     Mismatch { expected: String, actual: String },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperatorTaskSummaryErrorCode {
+    Invalid,
+    MissingField,
+    MirrorMismatch,
+    ExecutionAbiMismatch,
+    ProgramMismatch,
+    EntrypointMismatch,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperatorTaskSummaryError {
+    pub code: OperatorTaskSummaryErrorCode,
+    pub message: String,
+}
+
+impl OperatorTaskSummaryError {
+    fn new(code: OperatorTaskSummaryErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn invalid(message: impl Into<String>) -> Self {
+        Self::new(OperatorTaskSummaryErrorCode::Invalid, message)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,7 +274,7 @@ fn validate_execution_abi(
     runtime_protocol: &str,
     abi_kind: &str,
     entrypoint_kind: &str,
-) -> Result<(), String> {
+) -> Result<(), OperatorTaskSummaryError> {
     let expected = if program_kind == "solver" {
         (
             "kyuubiki.solver-rpc/v1",
@@ -250,9 +292,12 @@ fn validate_execution_abi(
     };
 
     if runtime_protocol != expected.0 || abi_kind != expected.1 || entrypoint_kind != expected.2 {
-        return Err(format!(
-            "{} has inconsistent runtime protocol, abi, or entrypoint",
-            expected.3
+        return Err(OperatorTaskSummaryError::new(
+            OperatorTaskSummaryErrorCode::ExecutionAbiMismatch,
+            format!(
+                "{} has inconsistent runtime protocol, abi, or entrypoint",
+                expected.3
+            ),
         ));
     }
 
@@ -264,12 +309,13 @@ fn validate_mirror_field(
     mirror_value: Option<&str>,
     source_name: &str,
     source_value: &str,
-) -> Result<(), String> {
+) -> Result<(), OperatorTaskSummaryError> {
     if let Some(value) = mirror_value
         && value != source_value
     {
-        return Err(format!(
-            "operator task {mirror_name} must match {source_name}"
+        return Err(OperatorTaskSummaryError::new(
+            OperatorTaskSummaryErrorCode::MirrorMismatch,
+            format!("operator task {mirror_name} must match {source_name}"),
         ));
     }
 
@@ -281,24 +327,33 @@ fn validate_optional_mirror_field(
     mirror_value: Option<&str>,
     source_name: &str,
     source_value: Option<&str>,
-) -> Result<(), String> {
+) -> Result<(), OperatorTaskSummaryError> {
     if let (Some(mirror), Some(source)) = (mirror_value, source_value)
         && mirror != source
     {
-        return Err(format!(
-            "operator task {mirror_name} must match {source_name}"
+        return Err(OperatorTaskSummaryError::new(
+            OperatorTaskSummaryErrorCode::MirrorMismatch,
+            format!("operator task {mirror_name} must match {source_name}"),
         ));
     }
 
     Ok(())
 }
 
-fn required_string<'a>(value: &'a Value, path: &[&str]) -> Result<&'a str, String> {
+fn required_string<'a>(
+    value: &'a Value,
+    path: &[&str],
+) -> Result<&'a str, OperatorTaskSummaryError> {
     value
         .pointer(&format!("/{}", path.join("/")))
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| format!("operator task missing {}", path.join(".")))
+        .ok_or_else(|| {
+            OperatorTaskSummaryError::new(
+                OperatorTaskSummaryErrorCode::MissingField,
+                format!("operator task missing {}", path.join(".")),
+            )
+        })
 }
 
 fn optional_string(value: &Value, path: &[&str]) -> Option<String> {
