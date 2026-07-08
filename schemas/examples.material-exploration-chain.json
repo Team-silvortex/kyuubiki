@@ -1,0 +1,118 @@
+{
+  "$schema": "material-exploration-chain.schema.json",
+  "schema_version": "kyuubiki.material-exploration-chain/v1",
+  "source_schema_version": "kyuubiki.material-exploration-run/v1",
+  "round_count": 1,
+  "stop_reason": "risk_mitigation_required",
+  "all_winners_stable": true,
+  "convergence_assessment": {
+    "schema_version": "kyuubiki.material-chain-convergence-assessment/v1",
+    "state": "blocked_by_quality_gates",
+    "winner_stable": true,
+    "winner_score_delta": 0.0,
+    "score_stable_threshold": 0.001,
+    "repair_required": true,
+    "recommendation": "repair or mitigate quality gates before declaring convergence"
+  },
+  "decision_counts": {
+    "mitigate_design_risk": 1
+  },
+  "optimization_trace": [
+    {
+      "iteration": 2,
+      "decision": "mitigate_design_risk",
+      "mode": "risk_constrained_search",
+      "winner_candidate_id": "pyrolytic_graphite_in_plane",
+      "primary_metric_ids": [
+        "peak_temperature_c",
+        "areal_mass_kg_m2",
+        "conductivity_density_ratio"
+      ],
+      "violated_quality_gate_ids": [
+        "gate.screening_only"
+      ]
+    }
+  ],
+  "repair_summary": {
+    "required": true,
+    "warning_count": 0,
+    "violated_gate_ids": [
+      "gate.screening_only"
+    ],
+    "focus_candidate_ids": [
+      "pyrolytic_graphite_in_plane"
+    ]
+  },
+  "repair_plan": {
+    "required": true,
+    "priority": "before_expansion",
+    "actions": [
+      {
+        "id": "inspect_violated_quality_gates",
+        "target_gate_ids": [
+          "gate.screening_only"
+        ]
+      },
+      {
+        "id": "generate_lower_risk_neighbor_candidates",
+        "target_candidate_ids": [
+          "pyrolytic_graphite_in_plane"
+        ]
+      },
+      {
+        "id": "rerun_focused_candidates",
+        "target_candidate_ids": [
+          "pyrolytic_graphite_in_plane"
+        ]
+      }
+    ]
+  },
+  "final_iteration": 2,
+  "final_winner_candidate_id": "pyrolytic_graphite_in_plane",
+  "summaries": [
+    {
+      "iteration": 2,
+      "mode": "local_solver_next_round",
+      "winner_candidate_id": "pyrolytic_graphite_in_plane",
+      "winner_score": 0.872,
+      "lineage_schema_version": "kyuubiki.material-next-round-lineage/v1",
+      "source_iteration": 1,
+      "next_round_iteration": 3,
+      "next_round_decision": "mitigate_design_risk",
+      "optimization_objectives": {
+        "schema_version": "kyuubiki.material-next-round-optimization-objectives/v1",
+        "mode": "risk_constrained_search",
+        "decision": "mitigate_design_risk",
+        "winner_candidate_id": "pyrolytic_graphite_in_plane",
+        "focus_candidate_ids": [
+          "pyrolytic_graphite_in_plane"
+        ],
+        "violated_quality_gate_ids": [
+          "gate.screening_only"
+        ],
+        "metric_objectives": [
+          {
+            "metric_id": "peak_temperature_c",
+            "label": "Peak temperature",
+            "objective": "minimize",
+            "weight": 0.55,
+            "unit": "degC"
+          }
+        ],
+        "primary_metric_ids": [
+          "peak_temperature_c",
+          "areal_mass_kg_m2",
+          "conductivity_density_ratio"
+        ],
+        "guidance": "generate conservative neighbors that preserve score while reducing quality-gate risk"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "schema_version": "kyuubiki.material-exploration-run/v1",
+      "iteration": 2,
+      "study": "material_heat_spreader_screening"
+    }
+  ]
+}

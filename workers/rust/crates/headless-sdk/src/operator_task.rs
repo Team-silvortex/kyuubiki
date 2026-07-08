@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
-    OperatorTaskDigestError, summarize_operator_task_execution, verify_operator_task_digest,
+    OperatorTaskDigestError, OperatorTaskSummaryError, OperatorTaskSummaryErrorCode,
+    summarize_operator_task_execution_checked, verify_operator_task_digest,
 };
 use serde_json::{Map, Value};
 
@@ -15,12 +16,22 @@ pub fn is_operator_task_execute_action(action: &str) -> bool {
 }
 
 pub fn prepare_operator_task_payload(payload: &Value) -> Result<Value, String> {
-    let task = payload
-        .get("task")
-        .ok_or_else(|| "operator_task_prepare requires task".to_string())?;
+    prepare_operator_task_payload_checked(payload).map_err(|error| error.message)
+}
 
-    verify_operator_task_digest(task).map_err(format_digest_error)?;
-    let summary = summarize_operator_task_execution(task)?;
+fn prepare_operator_task_payload_checked(
+    payload: &Value,
+) -> Result<Value, OperatorTaskPreviewError> {
+    let task = payload.get("task").ok_or_else(|| {
+        OperatorTaskPreviewError::new(
+            "operator_task_invalid_params",
+            "operator_task_prepare requires task",
+        )
+    })?;
+
+    verify_operator_task_digest(task).map_err(classify_digest_error)?;
+    let summary =
+        summarize_operator_task_execution_checked(task).map_err(classify_summary_error)?;
 
     Ok(Value::Object(Map::from_iter([
         ("status".to_string(), Value::from("verified")),
@@ -108,19 +119,83 @@ fn operator_task_error_code(message: &str) -> &'static str {
     if message.contains("must match") {
         return "operator_task_mirror_mismatch";
     }
+    if message.contains("inconsistent runtime protocol, abi, or entrypoint") {
+        return "operator_task_execution_abi_mismatch";
+    }
+    if message.contains("execution program does not match operator") {
+        return "operator_task_program_mismatch";
+    }
+    if message.contains("entrypoint does not match operator id") {
+        return "operator_task_entrypoint_mismatch";
+    }
     "operator_task_invalid"
 }
 
-fn format_digest_error(error: OperatorTaskDigestError) -> String {
-    match error {
-        OperatorTaskDigestError::Missing => "operator task digest is missing".to_string(),
-        OperatorTaskDigestError::InvalidTask(message) => {
-            format!("operator task is invalid: {message}")
-        }
-        OperatorTaskDigestError::Mismatch { expected, actual } => {
-            format!("operator task digest mismatch: expected {expected}, actual {actual}")
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct OperatorTaskPreviewError {
+    code: &'static str,
+    message: String,
+}
+
+impl OperatorTaskPreviewError {
+    fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
         }
     }
+}
+
+fn classify_digest_error(error: OperatorTaskDigestError) -> OperatorTaskPreviewError {
+    match error {
+        OperatorTaskDigestError::Missing => OperatorTaskPreviewError::new(
+            "operator_task_digest_missing",
+            "operator task digest is missing",
+        ),
+        OperatorTaskDigestError::InvalidTask(message) => OperatorTaskPreviewError::new(
+            "operator_task_digest_invalid",
+            format!("operator task is invalid: {message}"),
+        ),
+        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskPreviewError::new(
+            "operator_task_digest_mismatch",
+            format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+        ),
+    }
+}
+
+fn classify_summary_error(error: OperatorTaskSummaryError) -> OperatorTaskPreviewError {
+    let code = match error.code {
+        OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
+        OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
+            "operator_task_execution_abi_mismatch"
+        }
+        OperatorTaskSummaryErrorCode::ProgramMismatch => "operator_task_program_mismatch",
+        OperatorTaskSummaryErrorCode::EntrypointMismatch => "operator_task_entrypoint_mismatch",
+        OperatorTaskSummaryErrorCode::MissingField | OperatorTaskSummaryErrorCode::Invalid => {
+            "operator_task_invalid"
+        }
+    };
+    OperatorTaskPreviewError::new(code, error.message)
+}
+
+fn operator_task_error_preview_checked(error: OperatorTaskPreviewError) -> Value {
+    Value::Object(Map::from_iter([
+        ("error".to_string(), Value::from(error.message)),
+        ("error_code".to_string(), Value::from(error.code)),
+    ]))
+}
+
+pub(crate) fn prepare_operator_task_error_preview(payload: &Value) -> Option<Value> {
+    prepare_operator_task_payload_checked(payload)
+        .err()
+        .map(operator_task_error_preview_checked)
+}
+
+pub(crate) fn operator_task_prepare_preview_or_error(payload: &Value) -> Value {
+    prepare_operator_task_payload(payload).unwrap_or_else(|message| {
+        prepare_operator_task_error_preview(payload)
+            .unwrap_or_else(|| operator_task_error_preview(message))
+    })
 }
 
 #[cfg(test)]
@@ -209,27 +284,44 @@ mod tests {
         task["runtime_hints"]["operator_kind"] = json!("solver");
         task["integrity"]["task_digest"] =
             json!(compute_operator_task_digest(&task).expect("changed task should digest"));
-        let batch = HeadlessExecutionBatch {
-            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
-            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
-            language: "en".to_string(),
-            workflow_id: "operator-task-fixture".to_string(),
-            steps: vec![HeadlessExecutionBatchStep {
-                index: 1,
-                action: "operator_task_prepare".to_string(),
-                risk: crate::HeadlessRisk::Normal,
-                payload: json!({ "task": task }),
-            }],
-            warnings: vec![],
-        };
 
-        let report = run_batch_dry(&batch, false, false);
+        let report = run_batch_dry(&operator_task_batch(task), false, false);
 
         assert_eq!(report.status, "failed");
         assert_eq!(report.steps[0].status, "failed");
         assert_eq!(
             report.steps[0].result_preview["error_code"],
             "operator_task_mirror_mismatch"
+        );
+    }
+
+    #[test]
+    fn operator_task_prepare_dry_run_reports_missing_digest() {
+        let mut task = golden_task_fixture(false);
+        task["integrity"] = json!({});
+
+        let report = run_batch_dry(&operator_task_batch(task), false, false);
+
+        assert_eq!(report.status, "failed");
+        assert_eq!(
+            report.steps[0].result_preview["error_code"],
+            "operator_task_digest_missing"
+        );
+    }
+
+    #[test]
+    fn operator_task_prepare_dry_run_reports_execution_abi_mismatch() {
+        let mut task = golden_task_fixture(false);
+        task["execution_program"]["abi"]["kind"] = json!("solver_rpc");
+        task["integrity"]["task_digest"] =
+            json!(compute_operator_task_digest(&task).expect("changed task should digest"));
+
+        let report = run_batch_dry(&operator_task_batch(task), false, false);
+
+        assert_eq!(report.status, "failed");
+        assert_eq!(
+            report.steps[0].result_preview["error_code"],
+            "operator_task_execution_abi_mismatch"
         );
     }
 
@@ -242,6 +334,22 @@ mod tests {
 
         assert_eq!(preview["status"], "verified_pending_execution");
         assert_eq!(preview["operator_id"], "transform.fixture");
+    }
+
+    fn operator_task_batch(task: Value) -> HeadlessExecutionBatch {
+        HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "operator-task-fixture".to_string(),
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "operator_task_prepare".to_string(),
+                risk: crate::HeadlessRisk::Normal,
+                payload: json!({ "task": task }),
+            }],
+            warnings: vec![],
+        }
     }
 
     fn golden_task_fixture(tampered: bool) -> Value {

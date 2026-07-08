@@ -206,6 +206,68 @@ fn next_round_execution_plan_filters_repair_reruns_to_focus_candidates() {
 }
 
 #[test]
+fn next_round_execution_plan_exports_machine_readable_optimization_objectives() {
+    let exploration = json!({
+        "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,
+        "study": "material_dielectric_screening",
+        "report": {
+            "winner_candidate_id": "polyimide_film",
+            "metric_specs": [
+                {
+                    "id": "max_electric_field",
+                    "label": "Max electric field",
+                    "unit": "V/m",
+                    "objective": "minimize",
+                    "weight": 0.5
+                },
+                {
+                    "id": "max_flux_density",
+                    "label": "Max flux density",
+                    "unit": "Wb/m^2",
+                    "objective": "observe",
+                    "weight": 0.0
+                }
+            ],
+            "reliability": {
+                "quality_gates": [
+                    { "id": "gate.breakdown_margin", "status": "violate" }
+                ]
+            }
+        },
+        "next_round": {
+            "iteration": 2,
+            "decision": "mitigate_design_risk",
+            "focus_candidate_ids": ["polyimide_film"],
+            "actions": ["generate_lower_risk_neighbor_candidates"]
+        }
+    });
+
+    let plan =
+        build_material_exploration_next_round_execution_plan(&exploration).expect("next plan");
+
+    assert_eq!(
+        plan.optimization_objectives["schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
+    assert_eq!(
+        plan.optimization_objectives["mode"].as_str(),
+        Some("risk_constrained_search")
+    );
+    assert_eq!(
+        plan.optimization_objectives["winner_candidate_id"].as_str(),
+        Some("polyimide_film")
+    );
+    assert_eq!(
+        plan.optimization_objectives["primary_metric_ids"][0].as_str(),
+        Some("max_electric_field")
+    );
+    assert_eq!(
+        plan.optimization_objectives["violated_quality_gate_ids"][0].as_str(),
+        Some("gate.breakdown_margin")
+    );
+}
+
+#[test]
 fn next_round_execution_plan_expands_with_full_study_steps() {
     let exploration = json!({
         "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,

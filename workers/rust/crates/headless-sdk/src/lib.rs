@@ -24,6 +24,7 @@ mod material_composite_tests;
 mod material_dielectric;
 mod material_envelope_workflow;
 mod material_exploration;
+mod material_exploration_objectives;
 #[cfg(test)]
 mod material_exploration_tests;
 mod material_optimization;

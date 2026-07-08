@@ -62,8 +62,12 @@
     "next_run_next_round_iteration": 3,
     "chain_round_count": 2,
     "chain_final_iteration": 3,
-    "chain_stop_reason": "repair_required",
+    "chain_stop_reason": "risk_mitigation_required",
     "chain_all_winners_stable": true,
+    "chain_convergence_schema_version": "kyuubiki.material-chain-convergence-assessment/v1",
+    "chain_convergence_state": "blocked_by_quality_gates",
+    "next_round_optimization_objectives_schema_version": "kyuubiki.material-next-round-optimization-objectives/v1",
+    "next_round_lineage_schema_version": "kyuubiki.material-next-round-lineage/v1",
     "candidate_count": 3,
     "result_payload_count": 3,
     "winner_candidate_id": "pyrolytic_graphite_in_plane",
@@ -72,7 +76,8 @@
   },
   "allowed_next_round_decisions": [
     "expand_around_winner",
-    "repair_or_rerun"
+    "repair_or_rerun",
+    "mitigate_design_risk"
   ],
   "required_next_round_sections": [
     "decision",

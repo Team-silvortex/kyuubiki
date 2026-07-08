@@ -219,6 +219,12 @@ Useful checks:
   `schemas/material-candidate-materialization-plan.schema.json`,
   `schemas/examples.material-candidate-materialization-plan.json`, or the SDK
   materialization documentation.
+- `make check-material-exploration-chain-contract`
+  Run the zero-dependency material exploration chain contract check and its
+  self-test. Use this after changing
+  `schemas/material-exploration-chain.schema.json`,
+  `schemas/examples.material-exploration-chain.json`, chain convergence
+  fields, optimization trace fields, or SDK chain documentation.
 - `make build-operator-qualification-readiness`
   Write a generated readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

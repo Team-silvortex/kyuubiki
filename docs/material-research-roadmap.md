@@ -237,13 +237,13 @@ Kyuubiki should use explicit trust labels:
 
 The next practical sequence should be:
 
-1. add reliability envelopes to the remaining material report families
-2. define `schemas/material-card.schema.json`
-3. make heat-spreader use material-card references instead of only inline
+1. make heat-spreader use material-card references instead of only inline
    candidate constants
-4. add one mesh/convergence record for heat-spreader thermal screening
-5. add one external or analytic baseline id into the heat-spreader report
-6. expose reliability envelope summaries in the Workbench material study view
+2. add one mesh/convergence record for heat-spreader thermal screening
+3. add one external or analytic baseline id into the heat-spreader report
+4. expose reliability envelope summaries in the Workbench material study view
+5. use the chain convergence assessment as the first automated stop/repair
+   policy before introducing a heavier optimizer
 
 This keeps progress close to a real end-to-end material workflow instead of
 spreading effort across too many speculative solver families at once.
@@ -252,6 +252,9 @@ Current implementation note:
 
 - `schemas/material-card.schema.json` now defines the first versioned
   material-card contract.
+- `schemas/material-exploration-chain.schema.json` now defines the first
+  repeated-run chain contract, including convergence assessment, optimization
+  trace, repair planning, and retained per-round run artifacts.
 - `transform.validate_material_card` now provides workflow-level preflight for
   material-card provenance, unit expectations, confidence, parameter presence,
   temperature scope, and reliability-envelope output.

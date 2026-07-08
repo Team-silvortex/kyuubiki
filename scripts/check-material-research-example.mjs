@@ -129,6 +129,7 @@ function validateNextRoundCommand(inputPath, manifest) {
   }
   assertFiniteNumber(plan.runnable_step_count, "next_round_execution.runnable_step_count");
   assertEquals(plan.runnable_step_count, plan.steps.length, "next round runnable step count");
+  validateOptimizationObjectives(plan.optimization_objectives, manifest, "next_round_execution");
 }
 
 function validateRunNextCommand(inputPath, manifest) {
@@ -179,6 +180,7 @@ function validateRunNextCommand(inputPath, manifest) {
     manifest.expected.next_run_next_round_iteration,
     "run-next next_round iteration",
   );
+  validateNextRoundLineage(exploration.lineage, manifest);
 }
 
 function validateChainNextCommand(inputPath, manifest) {
@@ -229,8 +231,20 @@ function validateChainNextCommand(inputPath, manifest) {
     manifest.expected.chain_all_winners_stable,
     "chain winner stability",
   );
+  validateConvergenceAssessment(chain.convergence_assessment, manifest);
   if (chain.decision_counts == null || typeof chain.decision_counts !== "object") {
     fail("chain-next must expose decision_counts");
+  }
+  if (
+    !Array.isArray(chain.optimization_trace) ||
+    chain.optimization_trace.length !== manifest.expected.chain_round_count
+  ) {
+    fail("chain-next must expose one optimization_trace entry per requested round");
+  }
+  for (const [index, trace] of chain.optimization_trace.entries()) {
+    if (!Array.isArray(trace.primary_metric_ids) || trace.primary_metric_ids.length === 0) {
+      fail(`optimization_trace[${index}] must expose primary_metric_ids`);
+    }
   }
   if (chain.repair_summary == null || typeof chain.repair_summary !== "object") {
     fail("chain-next must expose repair_summary");
@@ -272,6 +286,57 @@ function validateChainNextCommand(inputPath, manifest) {
     manifest.expected.chain_final_iteration,
     "chain final summary iteration",
   );
+  for (const [index, summary] of chain.summaries.entries()) {
+    validateOptimizationObjectives(
+      summary.optimization_objectives,
+      manifest,
+      `chain.summaries[${index}]`,
+    );
+    assertFiniteNumber(summary.winner_score, `chain.summaries[${index}].winner_score`);
+  }
+}
+
+function validateOptimizationObjectives(objectives, manifest, context) {
+  assertEquals(
+    objectives?.schema_version,
+    manifest.expected.next_round_optimization_objectives_schema_version,
+    `${context}.optimization_objectives schema`,
+  );
+  if (!Array.isArray(objectives.primary_metric_ids) || objectives.primary_metric_ids.length === 0) {
+    fail(`${context}.optimization_objectives must expose primary_metric_ids`);
+  }
+  if (!Array.isArray(objectives.metric_objectives) || objectives.metric_objectives.length === 0) {
+    fail(`${context}.optimization_objectives must expose metric_objectives`);
+  }
+}
+
+function validateNextRoundLineage(lineage, manifest) {
+  assertEquals(
+    lineage?.schema_version,
+    manifest.expected.next_round_lineage_schema_version,
+    "run-next lineage schema",
+  );
+  assertEquals(lineage.source_iteration, manifest.expected.initial_iteration, "lineage source_iteration");
+  assertEquals(lineage.planned_iteration, manifest.expected.next_run_iteration, "lineage planned_iteration");
+  validateOptimizationObjectives(lineage.optimization_objectives, manifest, "run-next.lineage");
+}
+
+function validateConvergenceAssessment(assessment, manifest) {
+  assertEquals(
+    assessment?.schema_version,
+    manifest.expected.chain_convergence_schema_version,
+    "chain convergence schema",
+  );
+  assertEquals(
+    assessment.state,
+    manifest.expected.chain_convergence_state,
+    "chain convergence state",
+  );
+  assertEquals(assessment.winner_stable, true, "chain convergence winner_stable");
+  assertFiniteNumber(assessment.winner_score_delta, "chain convergence winner_score_delta");
+  if (typeof assessment.recommendation !== "string" || assessment.recommendation.length === 0) {
+    fail("chain convergence assessment must expose recommendation");
+  }
 }
 
 function materialExploreCommand(commandManifest, mode, inputPath) {

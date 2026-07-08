@@ -1,3 +1,4 @@
+use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::{
     HeadlessExecutionBatch, HeadlessRisk, HeadlessValidationReport,
     is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
@@ -81,15 +82,16 @@ pub fn run_batch_dry(
                         requires_confirmation,
                     });
                 }
-                Err(message) => {
+                Err(_) => {
                     status = "failed".to_string();
+                    let result_preview = operator_task_prepare_preview_or_error(&payload);
                     steps.push(HeadlessExecutionStepReport {
                         index: step.index,
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "failed".to_string(),
                         payload,
-                        result_preview: operator_task_error_preview(message),
+                        result_preview,
                         requires_confirmation,
                     });
                     break;
@@ -199,8 +201,7 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
             );
         }
         "operator_task_prepare" => {
-            return prepare_operator_task_payload(payload)
-                .unwrap_or_else(operator_task_error_preview);
+            return operator_task_prepare_preview_or_error(payload);
         }
         "operator_task_execute" => {
             return preview_operator_task_execute_payload(payload)

@@ -91,6 +91,11 @@ For `repair_or_rerun`, the plan emits only focused candidate solve steps. For
 candidate generator as the next executable batch shape; future iterations can
 replace that generator with DOE or Bayesian neighbor generation.
 
+The next-round plan also carries `optimization_objectives`, which records the
+optimization mode, incumbent winner, primary metric IDs, and violated quality
+gates. This lets a headless harness decide whether it is repairing data,
+mitigating risk, or expanding around the winner without parsing prose.
+
 The CLI can also execute that next-round plan locally and emit a fresh
 exploration artifact:
 
@@ -100,7 +105,9 @@ kyuubiki-material-explore --run-next tmp/material-research-example.json --json
 
 This keeps the current prototype honest: the closed-loop block is not only a
 recommendation for an agent, it can already drive the next solver batch through
-the same material exploration contract.
+the same material exploration contract. The emitted next exploration carries
+`lineage`, recording the source iteration, source winner, decision, focused
+candidates, runnable step count, and optimization objectives behind the rerun.
 
 For smoke-testing a continuous loop, the CLI can chain several next-round runs:
 
@@ -117,11 +124,16 @@ kyuubiki.material-exploration-chain/v1
 It contains one full exploration artifact per requested round plus a final
 iteration, final winner, decision counts, a `stop_reason`, winner stability,
 one compact summary per round, and a `repair_summary` that lifts violated
-quality gates and focus candidates to the top level. When repair is required,
-`repair_plan` lists concrete actions such as inspecting failed gates, rerunning
-focused candidates, resolving warnings, and rebuilding the report before
-expansion. This is intentionally still small: it gives agents and CI a stable
-lineage envelope before a heavier optimizer is added.
+quality gates and focus candidates to the top level. Each summary carries its
+next-round `optimization_objectives`, while `optimization_trace` lifts the
+per-round mode, primary metrics, winner, and violated gates into a compact
+lineage view. `convergence_assessment` compares winner stability, winner score
+drift, and repair state so a stable but gate-blocked candidate is not mistaken
+for validation. When repair is required, `repair_plan` lists concrete actions
+such as inspecting failed gates, rerunning focused candidates, resolving
+warnings, and rebuilding the report before expansion. This is intentionally
+still small: it gives agents and CI a stable lineage envelope before a heavier
+optimizer is added.
 
 ## Remote Lab Run
 

@@ -113,7 +113,8 @@ Then branch by intent:
   reproducible screening, review, and eventual qualification workflows.
 - `automated-material-research-example.md`
   First executable heat-spreader material research loop with real solver
-  outputs, optimization metrics, and a machine-checkable evidence artifact.
+  outputs, optimization metrics, chain convergence assessment, and a
+  machine-checkable evidence artifact.
 - `material-score-contract.md`
   Cross-runtime result contract for material candidate scoring, including
   criteria, ranges, feasibility policy, ranking semantics, and stable errors.

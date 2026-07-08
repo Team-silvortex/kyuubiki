@@ -166,6 +166,28 @@ pub(crate) fn print_next_round_plan_summary(plan: &Value) {
             println!("Focus: {focus_list}");
         }
     }
+    if let Some(objectives) = plan.get("optimization_objectives") {
+        println!(
+            "Optimization mode: {}",
+            objectives
+                .get("mode")
+                .and_then(Value::as_str)
+                .unwrap_or("--")
+        );
+        if let Some(metrics) = objectives
+            .get("primary_metric_ids")
+            .and_then(Value::as_array)
+        {
+            let metric_list = metrics
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(", ");
+            if !metric_list.is_empty() {
+                println!("Primary metrics: {metric_list}");
+            }
+        }
+    }
 }
 
 pub(crate) fn print_chain_summary(chain: &Value) {
@@ -190,4 +212,20 @@ pub(crate) fn print_chain_summary(chain: &Value) {
             .and_then(Value::as_str)
             .unwrap_or("--")
     );
+    if let Some(assessment) = chain.get("convergence_assessment") {
+        println!(
+            "Convergence: {}",
+            assessment
+                .get("state")
+                .and_then(Value::as_str)
+                .unwrap_or("--")
+        );
+        println!(
+            "Recommendation: {}",
+            assessment
+                .get("recommendation")
+                .and_then(Value::as_str)
+                .unwrap_or("--")
+        );
+    }
 }

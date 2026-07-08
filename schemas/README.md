@@ -31,6 +31,10 @@ README.
   study plans emitted before solver dispatch, including action order, solve
   step counts, candidate IDs, and concrete workflow steps shared by CLI, SDK,
   and remote scheduling layers
+- `material-exploration-chain.schema.json` is for repeated material
+  exploration runs, including convergence assessment, optimization trace,
+  repair planning, compact summaries, and retained per-round exploration
+  artifacts
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
@@ -90,6 +94,9 @@ README.
 - `examples.material-study-execution-plan.json` is the shared material study
   execution-plan fixture for validating `--plan-study` output before solver
   dispatch or remote agent scheduling
+- `examples.material-exploration-chain.json` is the shared chain fixture for
+  validating `--chain-next` output, convergence assessment, optimization trace,
+  and summary/run count alignment
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
 - `examples.operator-task-ir-float.json` is the fractional-number TaskIR sample

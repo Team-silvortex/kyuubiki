@@ -136,8 +136,8 @@ pub(crate) fn run_operator_task_ir_with_runtime(
 
     verify_operator_task_digest(task_ir).map_err(classify_digest_error)?;
 
-    let summary = summarize_operator_task_execution_checked(task_ir)
-        .map_err(classify_operator_task_error)?;
+    let summary =
+        summarize_operator_task_execution_checked(task_ir).map_err(classify_operator_task_error)?;
 
     if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
     {

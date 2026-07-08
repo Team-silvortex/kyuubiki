@@ -1,7 +1,7 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
 .PHONY: check-make-modules
 .PHONY: check-language-packs check-ui-automation-contract check-version-line
-.PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-study-sdk-examples check-operator-task-ir-contract
+.PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
@@ -46,6 +46,10 @@ check-materialization-plan-contract:
 check-material-study-execution-plan-contract:
 	@node ./scripts/check-material-study-execution-plan-contract.mjs --self-test
 	@node ./scripts/check-material-study-execution-plan-contract.mjs
+
+check-material-exploration-chain-contract:
+	@node ./scripts/check-material-exploration-chain-contract.mjs --self-test
+	@node ./scripts/check-material-exploration-chain-contract.mjs
 
 check-material-study-sdk-examples:
 	@node ./scripts/check-material-study-sdk-examples.mjs --self-test
@@ -119,6 +123,7 @@ architecture-check:
 	@$(MAKE) check-material-score-contract
 	@$(MAKE) check-materialization-plan-contract
 	@$(MAKE) check-material-study-execution-plan-contract
+	@$(MAKE) check-material-exploration-chain-contract
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-reliability

@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.material-exploration-chain.schema.json",
+  "title": "Kyuubiki material exploration chain",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "round_count",
+    "stop_reason",
+    "all_winners_stable",
+    "convergence_assessment",
+    "decision_counts",
+    "optimization_trace",
+    "repair_summary",
+    "repair_plan",
+    "final_iteration",
+    "final_winner_candidate_id",
+    "summaries",
+    "runs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "kyuubiki.material-exploration-chain/v1"
+    },
+    "round_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stop_reason": {
+      "enum": [
+        "repair_required",
+        "risk_mitigation_required",
+        "round_budget_exhausted",
+        "chain_incomplete"
+      ]
+    },
+    "all_winners_stable": {
+      "type": "boolean"
+    },
+    "convergence_assessment": {
+      "$ref": "#/$defs/convergenceAssessment"
+    },
+    "decision_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "optimization_trace": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/optimizationTraceEntry"
+      }
+    },
+    "repair_summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "repair_plan": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "final_iteration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "final_winner_candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/summary"
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "$defs": {
+    "convergenceAssessment": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "state",
+        "winner_stable",
+        "winner_score_delta",
+        "score_stable_threshold",
+        "repair_required",
+        "recommendation"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-chain-convergence-assessment/v1"
+        },
+        "state": {
+          "enum": [
+            "blocked_by_quality_gates",
+            "stable_candidate",
+            "winner_stable_score_moving",
+            "winner_changed"
+          ]
+        },
+        "winner_stable": {
+          "type": "boolean"
+        },
+        "winner_score_delta": {
+          "type": "number",
+          "minimum": 0
+        },
+        "score_stable_threshold": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "repair_required": {
+          "type": "boolean"
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "optimizationTraceEntry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "iteration",
+        "decision",
+        "mode",
+        "winner_candidate_id",
+        "primary_metric_ids",
+        "violated_quality_gate_ids"
+      ],
+      "properties": {
+        "iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primary_metric_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "violated_quality_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "iteration",
+        "winner_candidate_id",
+        "winner_score",
+        "next_round_iteration",
+        "next_round_decision",
+        "optimization_objectives"
+      ],
+      "properties": {
+        "iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "winner_score": {
+          "type": "number"
+        },
+        "next_round_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "next_round_decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optimization_objectives": {
+          "$ref": "#/$defs/optimizationObjectives"
+        }
+      }
+    },
+    "optimizationObjectives": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "mode",
+        "decision",
+        "winner_candidate_id",
+        "focus_candidate_ids",
+        "violated_quality_gate_ids",
+        "metric_objectives",
+        "primary_metric_ids",
+        "guidance"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-next-round-optimization-objectives/v1"
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "focus_candidate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "violated_quality_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metric_objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object"
+          }
+        },
+        "primary_metric_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "guidance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

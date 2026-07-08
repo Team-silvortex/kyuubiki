@@ -72,8 +72,9 @@ cases into language-neutral TaskIR envelopes.
 
 Rust SDK dry-run and mock execution previews verify TaskIR before dispatch.
 Failures expose both a human-readable `error` and a stable `error_code`, such
-as `operator_task_digest_mismatch` or `operator_task_mirror_mismatch`, so
-automation can branch before contacting an orchestra or solver agent.
+as `operator_task_digest_mismatch`, `operator_task_mirror_mismatch`, or
+`operator_task_execution_abi_mismatch`, so automation can branch before
+contacting an orchestra or solver agent.
 
 SDK-local smoke coverage:
 

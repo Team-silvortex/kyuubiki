@@ -229,6 +229,19 @@ fn runs_next_round_from_previous_exploration_json() {
     assert_eq!(next["next_round"]["iteration"].as_u64(), Some(3));
     assert_eq!(next["candidate_count"].as_u64(), Some(3));
     assert!(next["report"]["winner_candidate_id"].is_string());
+    assert_eq!(
+        next["lineage"]["schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-lineage/v1")
+    );
+    assert_eq!(next["lineage"]["source_iteration"].as_u64(), Some(1));
+    assert_eq!(
+        next["lineage"]["decision"].as_str(),
+        exploration["next_round"]["decision"].as_str()
+    );
+    assert_eq!(
+        next["lineage"]["optimization_objectives"]["schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
     let _ = fs::remove_file(path);
 }
 
@@ -258,6 +271,23 @@ fn chains_next_rounds_from_previous_exploration_json() {
         chain["decision_counts"]["mitigate_design_risk"].as_u64(),
         Some(2)
     );
+    assert_eq!(
+        chain["convergence_assessment"]["schema_version"].as_str(),
+        Some("kyuubiki.material-chain-convergence-assessment/v1")
+    );
+    assert_eq!(
+        chain["convergence_assessment"]["state"].as_str(),
+        Some("blocked_by_quality_gates")
+    );
+    assert_eq!(
+        chain["convergence_assessment"]["winner_stable"].as_bool(),
+        Some(true)
+    );
+    assert!(
+        chain["convergence_assessment"]["winner_score_delta"]
+            .as_f64()
+            .is_some_and(|delta| delta <= 0.001)
+    );
     assert_eq!(chain["repair_summary"]["required"].as_bool(), Some(true));
     assert!(
         chain["repair_summary"]["violated_gate_ids"]
@@ -284,6 +314,58 @@ fn chains_next_rounds_from_previous_exploration_json() {
     assert_eq!(chain["final_iteration"].as_u64(), Some(3));
     assert_eq!(chain["summaries"].as_array().map(Vec::len), Some(2));
     assert_eq!(chain["summaries"][0]["iteration"].as_u64(), Some(2));
+    assert!(chain["summaries"][0]["winner_score"].is_number());
+    assert_eq!(chain["summaries"][0]["source_iteration"].as_u64(), Some(1));
+    assert_eq!(
+        chain["summaries"][0]["lineage_schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-lineage/v1")
+    );
+    assert_eq!(
+        chain["summaries"][0]["optimization_objectives"]["schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
+    assert_eq!(
+        chain["optimization_trace"].as_array().map(Vec::len),
+        Some(2)
+    );
+    assert_eq!(
+        chain["optimization_trace"][0]["mode"].as_str(),
+        Some("risk_constrained_search")
+    );
+    assert!(
+        chain["optimization_trace"][0]["primary_metric_ids"]
+            .as_array()
+            .is_some_and(|ids| !ids.is_empty())
+    );
     assert_eq!(chain["runs"].as_array().map(Vec::len), Some(2));
     let _ = fs::remove_file(path);
+}
+
+#[test]
+fn shared_chain_schema_fixture_matches_cli_chain_shape() {
+    let fixture: serde_json::Value = serde_json::from_slice(include_bytes!(
+        "../../../../../../../schemas/examples.material-exploration-chain.json"
+    ))
+    .expect("fixture json");
+
+    assert_eq!(
+        fixture["schema_version"].as_str(),
+        Some("kyuubiki.material-exploration-chain/v1")
+    );
+    assert_eq!(
+        fixture["convergence_assessment"]["schema_version"].as_str(),
+        Some("kyuubiki.material-chain-convergence-assessment/v1")
+    );
+    assert_eq!(
+        fixture["summaries"][0]["optimization_objectives"]["schema_version"].as_str(),
+        Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
+    assert_eq!(
+        fixture["optimization_trace"].as_array().map(Vec::len),
+        fixture["summaries"].as_array().map(Vec::len)
+    );
+    assert_eq!(
+        fixture["summaries"].as_array().map(Vec::len),
+        fixture["runs"].as_array().map(Vec::len)
+    );
 }

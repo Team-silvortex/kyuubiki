@@ -294,7 +294,10 @@ fn run_next_round_from_exploration(previous: &Value) -> Result<Value, String> {
         result_payloads,
         iteration,
     )?;
-    serde_json::to_value(run).map_err(|error| error.to_string())
+    let plan_value = serde_json::to_value(&plan).map_err(|error| error.to_string())?;
+    let mut payload = serde_json::to_value(run).map_err(|error| error.to_string())?;
+    attach_next_round_lineage(&mut payload, previous, &plan_value);
+    Ok(payload)
 }
 
 fn read_exploration_input(path: &str) -> Result<Value, String> {
@@ -340,6 +343,31 @@ fn candidate_id_for_step(step: &HeadlessWorkflowStep) -> Option<&str> {
         .get("research")
         .and_then(|research| research.get("candidate_id"))
         .and_then(Value::as_str)
+}
+
+fn attach_next_round_lineage(payload: &mut Value, previous: &Value, plan: &Value) {
+    let lineage = serde_json::json!({
+        "schema_version": "kyuubiki.material-next-round-lineage/v1",
+        "source_schema_version": previous.get("schema_version").and_then(Value::as_str),
+        "source_iteration": previous.get("iteration").and_then(Value::as_u64),
+        "source_winner_candidate_id": previous
+            .get("report")
+            .and_then(|report| report.get("winner_candidate_id"))
+            .and_then(Value::as_str),
+        "plan_schema_version": plan.get("schema_version").and_then(Value::as_str),
+        "planned_iteration": plan.get("iteration").and_then(Value::as_u64),
+        "decision": plan.get("decision").and_then(Value::as_str),
+        "focus_candidate_ids": plan
+            .get("focus_candidate_ids")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!([])),
+        "optimization_objectives": plan
+            .get("optimization_objectives")
+            .cloned()
+            .unwrap_or(Value::Null),
+        "runnable_step_count": plan.get("runnable_step_count").and_then(Value::as_u64),
+    });
+    payload["lineage"] = lineage;
 }
 
 pub(crate) fn run_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String> {

@@ -105,6 +105,8 @@ Recent additions:
 - Operator TaskIR batch prepare/execute responses expose top-level
   `error_codes` and `error_code_counts`, so headless agents and benchmark
   runners can classify failures without scanning every case result
+- Rust headless dry-run previews reuse the same TaskIR digest, mirror, and
+  execution-program error-code family as agent runtime preflight
 
 The same report path is also exposed as a Rust CLI:
 
@@ -143,8 +145,10 @@ current winner. When quality gates fail with complete data, the plan uses
 `mitigate_design_risk` so agents generate lower-risk neighbors instead of
 blindly rerunning the same candidate. The `--plan-next` execution plan also
 includes `risk_mitigation_hints` with focused candidate IDs, violated gates,
-dominant risk drivers, and recommended mitigation moves. It can also emit
-`candidate_drafts` such as compliant-interlayer or lower-CTE dielectric
+dominant risk drivers, and recommended mitigation moves. It also includes
+`optimization_objectives`, a machine-readable block with the next-round mode,
+winner candidate, primary metric IDs, and violated quality gates. It can also
+emit `candidate_drafts` such as compliant-interlayer or lower-CTE dielectric
 variants; these drafts are explicitly marked as requiring solver reruns before
 they can be ranked. Candidate drafts carry `draft_id`, `lineage`, and
 `required_result_schema` fields so agents can deduplicate, preserve provenance,
@@ -183,6 +187,11 @@ non-executing material study plan through `--plan-study` or the Rust SDK
 [schemas/material-study-execution-plan.schema.json](../schemas/material-study-execution-plan.schema.json),
 with a concrete fixture in
 [schemas/examples.material-study-execution-plan.json](../schemas/examples.material-study-execution-plan.json).
+Repeated next-round runs use
+[schemas/material-exploration-chain.schema.json](../schemas/material-exploration-chain.schema.json)
+to pin convergence assessment, optimization trace, repair planning, compact
+summaries, and retained run artifacts. A compact fixture lives at
+[schemas/examples.material-exploration-chain.json](../schemas/examples.material-exploration-chain.json).
 Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected
@@ -235,6 +244,10 @@ To run that next step locally and emit the next exploration artifact:
 kyuubiki-material-explore --run-next exploration.json --out next-exploration.json --json
 ```
 
+The emitted next exploration includes `lineage` with the source iteration,
+source winner, next-round decision, focus candidates, runnable step count, and
+the `optimization_objectives` that drove the local rerun.
+
 For a minimal continuous-loop smoke test, chain repeated next-round execution:
 
 ```bash
@@ -244,10 +257,14 @@ kyuubiki-material-explore --chain-next exploration.json --rounds 2 --out chain.j
 The chain wrapper uses `kyuubiki.material-exploration-chain/v1` and keeps the
 full exploration artifact plus a compact per-round summary for each generated
 round. It also exposes `stop_reason`, decision counts, and winner stability so
-agents can decide whether to continue, repair, or escalate. When repair is
-required, `repair_summary` lifts violated quality gates and focus candidates to
-the chain top level, while `repair_plan` turns that state into concrete
-agent-facing actions.
+agents can decide whether to continue, repair, or escalate. Each summary carries
+the next-round `optimization_objectives`, and `optimization_trace` lifts the
+per-round mode, primary metrics, winner, and violated gates into a compact
+lineage view. `convergence_assessment` compares winner stability, winner score
+drift, and repair state so automation does not confuse a stable but gate-blocked
+candidate with a validated result. When repair is required, `repair_summary`
+lifts violated quality gates and focus candidates to the chain top level, while
+`repair_plan` turns that state into concrete agent-facing actions.
 
 `list` and `describe` expose the machine-readable study contract: aliases,
 template id, report schema, research domain, objective, and metric specs.

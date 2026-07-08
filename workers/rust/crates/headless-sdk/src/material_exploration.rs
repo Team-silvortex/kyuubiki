@@ -1,6 +1,7 @@
 use crate::material_candidate_drafts::{
     material_candidate_draft_batches, material_candidate_draft_summary, material_candidate_drafts,
 };
+use crate::material_exploration_objectives::next_round_optimization_objectives;
 use crate::{
     HeadlessWorkflowStep, build_composite_panel_steps, build_dielectric_screening_steps,
     build_heat_spreader_screening_steps, build_material_report,
@@ -53,6 +54,7 @@ pub struct MaterialExplorationNextRoundExecutionPlan {
     pub runnable_step_count: usize,
     pub steps: Vec<HeadlessWorkflowStep>,
     pub risk_mitigation_hints: Vec<MaterialExplorationRiskMitigationHint>,
+    pub optimization_objectives: Value,
     pub candidate_drafts: Vec<Value>,
     pub candidate_draft_summary: Value,
     pub draft_execution_batches: Vec<Value>,
@@ -201,7 +203,15 @@ pub fn build_material_exploration_next_round_execution_plan(
     };
     let runnable_step_count = steps.len();
 
-    let risk_mitigation_hints = risk_mitigation_hints(&decision, &report, &focus_candidate_ids);
+    let violated_gate_ids = violated_quality_gate_ids(&report);
+    let risk_mitigation_hints =
+        risk_mitigation_hints(&decision, &report, &focus_candidate_ids, &violated_gate_ids);
+    let optimization_objectives = next_round_optimization_objectives(
+        &decision,
+        &report,
+        &focus_candidate_ids,
+        &violated_gate_ids,
+    );
     let candidate_drafts =
         material_candidate_drafts(&decision, study, &report, &focus_candidate_ids);
     let candidate_draft_summary = material_candidate_draft_summary(&candidate_drafts);
@@ -222,6 +232,7 @@ pub fn build_material_exploration_next_round_execution_plan(
         runnable_step_count,
         steps,
         risk_mitigation_hints,
+        optimization_objectives,
         candidate_drafts,
         candidate_draft_summary,
         draft_execution_batches,
@@ -338,11 +349,11 @@ fn risk_mitigation_hints(
     decision: &str,
     report: &Value,
     focus_candidate_ids: &[String],
+    violated_gates: &[String],
 ) -> Vec<MaterialExplorationRiskMitigationHint> {
     if decision != "mitigate_design_risk" {
         return Vec::new();
     }
-    let violated_gates = violated_quality_gate_ids(report);
     let warnings = report_warnings(report);
     report
         .get("candidates")
