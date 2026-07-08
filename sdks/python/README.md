@@ -2,6 +2,13 @@
 
 Headless Python SDK for Kyuubiki public protocols and AI-friendly automation.
 
+## Role
+
+The Python SDK is the research-automation line for scripts, notebooks, lab
+pipelines, data analysis, and optimization loops. It consumes the same headless
+contracts as the Rust and Elixir SDKs, so Python users can build their own
+wrappers without depending on Workbench or Rust reference CLIs.
+
 ```python
 from kyuubiki_sdk import (
     ControlPlaneClient,
@@ -16,9 +23,11 @@ from kyuubiki_sdk import (
     build_nonlinear_spring_1d_workflow,
     build_workflow_dataset_contract,
     build_workflow_dataset_value,
+    build_workflow_defaults,
     build_workflow_edge,
     build_workflow_graph,
     build_workflow_node,
+    build_workflow_operator_fetch_entry,
     build_workflow_output_manifest,
     build_workflow_port,
     material_study_envelope_catalog_request,

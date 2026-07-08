@@ -1,0 +1,56 @@
+{
+  "$schema": "material-candidate-materialization-plan.schema.json",
+  "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+  "source_request_schema_version": "kyuubiki.material-candidate-materialization-request/v1",
+  "required_result_schema": "kyuubiki.material-composite-report/v1",
+  "materialized_candidate_count": 2,
+  "materialized_candidates": [
+    {
+      "schema_version": "kyuubiki.materialized-candidate-spec/v1",
+      "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
+      "source_draft_id": "draft-a",
+      "source_candidate_id": "copper_ptfe_glass_epoxy",
+      "strategy": "add_compliant_interlayer",
+      "study": "material_composite_thermo_electric_panel",
+      "required_result_schema": "kyuubiki.material-composite-report/v1",
+      "changes": [
+        {
+          "field": "dielectric_stack",
+          "operation": "insert_layer",
+          "value": "thin_polyimide_interlayer"
+        }
+      ],
+      "expected_effects": [
+        {
+          "metric": "interface_mismatch_risk",
+          "direction": "decrease"
+        }
+      ],
+      "status": "requires_solver_rerun"
+    },
+    {
+      "schema_version": "kyuubiki.materialized-candidate-spec/v1",
+      "candidate_id": "copper_ptfe_glass_epoxy__replace_high_cte_dielectric",
+      "source_draft_id": "draft-b",
+      "source_candidate_id": "copper_ptfe_glass_epoxy",
+      "strategy": "replace_high_cte_dielectric",
+      "study": "material_composite_thermo_electric_panel",
+      "required_result_schema": "kyuubiki.material-composite-report/v1",
+      "changes": [
+        {
+          "field": "dielectric",
+          "operation": "replace",
+          "value": "polyimide"
+        }
+      ],
+      "expected_effects": [
+        {
+          "metric": "thermal_stress",
+          "direction": "decrease"
+        }
+      ],
+      "status": "requires_solver_rerun"
+    }
+  ],
+  "status": "ready_for_solver_rerun"
+}

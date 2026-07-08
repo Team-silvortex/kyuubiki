@@ -72,6 +72,11 @@ This directory contains host-native operational entry points.
   examples. It checks that mirrored fields such as operator kind, package ref,
   and package version stay consistent across descriptor, execution program, and
   runtime hints before agent or SDK tests need to run.
+- `check-materialization-plan-contract.mjs`
+  Verify the shared material candidate materialization plan schema, fixture,
+  and SDK documentation links. It keeps reviewed agent/lab materialization
+  output aligned with the solver-rerun runner contract before SDK parity work
+  consumes the same artifact.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,
@@ -202,6 +207,12 @@ Useful checks:
   benchmark catalogs, workflow payloads, or evidence files. This covers
   schema-version alignment and required-field presence, not full JSON Schema
   validation.
+- `make check-materialization-plan-contract`
+  Run the zero-dependency materialized candidate plan contract check and its
+  self-test. Use this after changing
+  `schemas/material-candidate-materialization-plan.schema.json`,
+  `schemas/examples.material-candidate-materialization-plan.json`, or the SDK
+  materialization documentation.
 - `make build-operator-qualification-readiness`
   Write a generated readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

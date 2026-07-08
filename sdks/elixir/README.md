@@ -2,6 +2,13 @@
 
 Headless Elixir SDK for Kyuubiki control-plane and solver-rpc protocols.
 
+## Role
+
+The Elixir SDK is the orchestration and workflow-composition line for
+control-plane integrations, hot-iteration operator descriptions, and BEAM-side
+automation. It shares the same headless contracts as the Rust and Python SDKs,
+so orchestration code stays protocol-driven rather than GUI-driven.
+
 ```elixir
 auth = KyuubikiSdk.Auth.access_token("dev-token")
 client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)

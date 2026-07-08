@@ -95,7 +95,9 @@ agent surfaces.
    The first headless reference runner now exists for
    `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
    exposes a first built-in workflow catalog entry for
-   `workflow.heat-to-thermo-quad-2d`.
+   `workflow.heat-to-thermo-quad-2d`. This runner validates the portable graph
+   contract rather than replacing the peer Rust, Python, and Elixir SDK
+   surfaces.
 10. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.

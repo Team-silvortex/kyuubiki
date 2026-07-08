@@ -2,6 +2,13 @@
 
 Protocol-driven Rust SDK for Kyuubiki headless integration.
 
+## Role
+
+The Rust SDK is the native embedding line for agents, solver-side utilities,
+installer tooling, local automation, and high-confidence reference runners. It
+shares the same headless contracts as the Python and Elixir SDKs; Rust CLIs are
+packaged examples over those contracts rather than the only supported entry.
+
 ```rust
 use std::time::Duration;
 

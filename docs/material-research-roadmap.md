@@ -164,8 +164,9 @@ Required work:
 - add uncertainty and sensitivity analysis
 - support repeated runs, failure classification, and partial-result recovery
 - add optimizer provenance, random seeds, sampling strategy, and stop criteria
-- expose optimization runs through Rust headless SDK first, then Python and
-  Elixir parity
+- expose optimization runs through the shared headless contracts, with the Rust
+  reference runner used to harden schemas before Python and Elixir package
+  surfaces consume the same artifacts
 
 Exit criteria:
 

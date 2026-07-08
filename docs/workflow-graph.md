@@ -147,6 +147,8 @@ That means this workflow is no longer only a UI direction:
 - the graph shape has a portable schema
 - the bridge step has a stable built-in operator identity
 - the runtime can already execute the first linear reference path headlessly
+- the runner is a contract demonstrator, not the only supported headless
+  entrypoint
 
 The first generic executor layer now also exists for a small but real node set:
 

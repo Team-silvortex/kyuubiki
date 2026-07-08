@@ -211,9 +211,9 @@ matters; do not move source boundaries just to reduce generated output.
 
 - Keep `node ./scripts/audit-project-organization.mjs` green before adding
   new architecture or workflow files.
-- Run `make architecture-check` after changing TaskIR, orchestration boundary
-  code, external operator package admission contracts, architecture docs, or
-  project organization docs.
+- Run `make architecture-check` after changing TaskIR, materialization plan
+  contracts, orchestration boundary code, external operator package admission
+  contracts, architecture docs, or project organization docs.
 - Run `make check-ui-automation-contract` before changing product-owned
   Workbench shell, rail, library, runtime, viewport, or control-window anchors.
 - Keep Hub static partial smoke coverage aligned with every new shell partial.

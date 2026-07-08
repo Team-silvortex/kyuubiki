@@ -273,6 +273,7 @@ The current guards are:
 - `make audit-project-organization`
 - `make check-make-modules`
 - `make check-material-score-contract`
+- `make check-materialization-plan-contract`
 - `make check-operator-reliability`
 - `make check-ui-automation-contract`
 - `make audit-dependencies`

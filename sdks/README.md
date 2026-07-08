@@ -124,6 +124,11 @@ kyuubiki-material-explore structural-panel
 kyuubiki-material-explore composite-thermo-electric-panel --json
 ```
 
+This CLI is a reference runner on top of the SDK contracts, not the universal
+headless gateway. Rust, Python, and Elixir remain peer official SDK families;
+teams can build their own wrappers and research harnesses around the same
+schemas.
+
 `kyuubiki-material-explore` enumerates the study candidates, runs the generated
 models through local Rust solver kernels, and feeds the real result payloads
 back into the material report ranking layer. The output uses the reusable
@@ -165,13 +170,18 @@ Approved batches can then produce a
 for agent materialization and solver rerun dispatch. Combining that request
 with the candidate draft list produces a
 `kyuubiki.material-candidate-materialization-plan/v1` containing materialized
-candidate specs and `requires_solver_rerun` status. Composite panel materialized
+candidate specs and `requires_solver_rerun` status. The shared schema is
+[schemas/material-candidate-materialization-plan.schema.json](../schemas/material-candidate-materialization-plan.schema.json),
+with a concrete fixture in
+[schemas/examples.material-candidate-materialization-plan.json](../schemas/examples.material-candidate-materialization-plan.json).
+Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected
 strategy to model parameters before rerun instead of only renaming the
 candidate. The CLI can also consume that materialization plan directly and emit
 a `kyuubiki.materialized-candidate-rerun/v1` artifact with rerun results,
-materialized ranking report, and the next-round decision. Each exploration
+materialized candidate IDs, materialized ranking report, source
+materialization schema/status, and the next-round decision. Each exploration
 artifact carries an `iteration`, so repeated runs can preserve lineage instead
 of looking like disconnected one-shot solver batches.
 

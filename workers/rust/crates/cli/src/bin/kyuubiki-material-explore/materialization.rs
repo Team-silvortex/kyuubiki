@@ -95,6 +95,9 @@ pub(crate) fn materialize_reviewed_candidates(
 
 pub(crate) fn run_materialized_candidates(path: &str) -> Result<Value, String> {
     let plan = read_materialization_plan(path)?;
+    ensure_materialization_schema(&plan)?;
+    ensure_materialization_ready(&plan)?;
+    ensure_materialized_candidates(&plan)?;
     let steps = build_composite_materialized_candidate_steps(&plan)?;
     let result_payloads = steps
         .iter()
@@ -104,9 +107,18 @@ pub(crate) fn run_materialized_candidates(path: &str) -> Result<Value, String> {
     let next_round = build_material_exploration_next_round_plan(&report, 1);
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.materialized-candidate-rerun/v1",
+        "source_materialization_schema_version": plan
+            .get("schema_version")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown"),
+        "source_materialization_status": plan
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown"),
         "mode": "local_solver_materialized_rerun",
         "study": "material_composite_thermo_electric_panel",
         "step_count": steps.len(),
+        "materialized_candidate_ids": materialized_candidate_ids(&plan),
         "result_payloads": result_payloads,
         "report": report,
         "next_round": next_round
@@ -114,17 +126,42 @@ pub(crate) fn run_materialized_candidates(path: &str) -> Result<Value, String> {
 }
 
 pub(crate) fn print_materialized_rerun_summary(payload: &Value) {
-    println!(
-        "Materialized rerun: {}",
-        payload["study"].as_str().unwrap_or("unknown")
-    );
-    println!("Steps: {}", payload["step_count"].as_u64().unwrap_or(0));
+    for line in materialized_rerun_summary_lines(payload) {
+        println!("{line}");
+    }
+}
+
+pub(crate) fn materialized_rerun_summary_lines(payload: &Value) -> Vec<String> {
+    let mut lines = vec![
+        format!(
+            "Materialized rerun: {}",
+            payload["study"].as_str().unwrap_or("unknown")
+        ),
+        format!(
+            "Source plan: {} ({})",
+            payload["source_materialization_schema_version"]
+                .as_str()
+                .unwrap_or("unknown"),
+            payload["source_materialization_status"]
+                .as_str()
+                .unwrap_or("unknown")
+        ),
+        format!("Steps: {}", payload["step_count"].as_u64().unwrap_or(0)),
+        format!(
+            "Candidates: {}",
+            payload["materialized_candidate_ids"]
+                .as_array()
+                .map(Vec::len)
+                .unwrap_or(0)
+        ),
+    ];
     if let Some(winner) = payload["report"]["winner_candidate_id"].as_str() {
-        println!("Winner: {winner}");
+        lines.push(format!("Winner: {winner}"));
     }
     if let Some(decision) = payload["next_round"]["decision"].as_str() {
-        println!("Next round: {decision}");
+        lines.push(format!("Next round: {decision}"));
     }
+    lines
 }
 
 pub(crate) fn print_review_template_summary(payload: &Value) {
@@ -197,6 +234,109 @@ fn read_materialization_plan(path: &str) -> Result<Value, String> {
         .cloned()
         .or_else(|| payload.get("plan").cloned())
         .unwrap_or(payload))
+}
+
+fn ensure_materialization_schema(plan: &Value) -> Result<(), String> {
+    let schema = plan
+        .get("schema_version")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    if schema == "kyuubiki.material-candidate-materialization-plan/v1" {
+        Ok(())
+    } else {
+        Err(format!(
+            "materialization plan schema_version must be kyuubiki.material-candidate-materialization-plan/v1, got {schema}"
+        ))
+    }
+}
+
+fn ensure_materialization_ready(plan: &Value) -> Result<(), String> {
+    let status = plan
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    if status == "ready_for_solver_rerun" {
+        Ok(())
+    } else {
+        Err(format!(
+            "materialization plan status must be ready_for_solver_rerun, got {status}"
+        ))
+    }
+}
+
+fn ensure_materialized_candidates(plan: &Value) -> Result<(), String> {
+    let candidates = plan
+        .get("materialized_candidates")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "materialization plan is missing materialized_candidates".to_string())?;
+    let count = candidates.len();
+    if count == 0 {
+        return Err("materialization plan has no materialized candidates".to_string());
+    }
+    let declared_count = plan
+        .get("materialized_candidate_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| {
+            "materialization plan is missing materialized_candidate_count".to_string()
+        })?;
+    if declared_count as usize != count {
+        return Err(format!(
+            "materialization plan materialized_candidate_count must match materialized_candidates length ({declared_count} != {count})"
+        ));
+    }
+    for (index, candidate) in candidates.iter().enumerate() {
+        ensure_materialized_candidate_spec(candidate, index)?;
+    }
+    Ok(())
+}
+
+fn ensure_materialized_candidate_spec(candidate: &Value, index: usize) -> Result<(), String> {
+    let context = format!("materialized_candidates[{index}]");
+    let schema = required_candidate_str(candidate, "schema_version", &context)?;
+    if schema != "kyuubiki.materialized-candidate-spec/v1" {
+        return Err(format!(
+            "{context}.schema_version must be kyuubiki.materialized-candidate-spec/v1, got {schema}"
+        ));
+    }
+    let status = required_candidate_str(candidate, "status", &context)?;
+    if status != "requires_solver_rerun" {
+        return Err(format!(
+            "{context}.status must be requires_solver_rerun, got {status}"
+        ));
+    }
+    for field in [
+        "candidate_id",
+        "source_draft_id",
+        "source_candidate_id",
+        "strategy",
+        "study",
+        "required_result_schema",
+    ] {
+        required_candidate_str(candidate, field, &context)?;
+    }
+    Ok(())
+}
+
+fn required_candidate_str<'a>(
+    candidate: &'a Value,
+    field: &str,
+    context: &str,
+) -> Result<&'a str, String> {
+    candidate
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| format!("{context} is missing {field}"))
+}
+
+fn materialized_candidate_ids(plan: &Value) -> Vec<String> {
+    plan.get("materialized_candidates")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|candidate| candidate.get("candidate_id").and_then(Value::as_str))
+        .map(ToString::to_string)
+        .collect()
 }
 
 fn completed_review_item_ids(template: &Value) -> Value {

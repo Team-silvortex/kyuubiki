@@ -11,6 +11,9 @@ pub fn build_material_candidate_materialization_plan(
         .get("draft_ids")
         .and_then(Value::as_array)
         .ok_or_else(|| "materialization request is missing draft_ids".to_string())?;
+    if draft_ids.is_empty() {
+        return Err("materialization request has no draft_ids".to_string());
+    }
     let mut materialized_candidates = Vec::new();
     for draft_id in draft_ids {
         let draft_id = draft_id
@@ -21,14 +24,8 @@ pub fn build_material_candidate_materialization_plan(
     }
     Ok(json!({
         "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
-        "source_request_schema_version": request
-            .get("schema_version")
-            .and_then(Value::as_str)
-            .unwrap_or("unknown"),
-        "required_result_schema": request
-            .get("required_result_schema")
-            .cloned()
-            .unwrap_or_else(|| json!("unknown")),
+        "source_request_schema_version": required_str(request, "schema_version")?,
+        "required_result_schema": required_str(request, "required_result_schema")?,
         "materialized_candidate_count": materialized_candidates.len(),
         "materialized_candidates": materialized_candidates,
         "status": "ready_for_solver_rerun",
@@ -52,11 +49,8 @@ fn materialized_candidate_spec(draft: &Value) -> Result<Value, String> {
         "source_draft_id": draft_id,
         "source_candidate_id": source_candidate_id,
         "strategy": strategy,
-        "study": draft.get("study").cloned().unwrap_or_else(|| json!("unknown")),
-        "required_result_schema": draft
-            .get("required_result_schema")
-            .cloned()
-            .unwrap_or_else(|| json!("unknown")),
+        "study": required_str(draft, "study")?,
+        "required_result_schema": required_str(draft, "required_result_schema")?,
         "changes": draft.get("changes").cloned().unwrap_or_else(|| json!([])),
         "expected_effects": draft
             .get("expected_effects")
@@ -70,5 +64,6 @@ fn required_str<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value
         .get(key)
         .and_then(Value::as_str)
-        .ok_or_else(|| format!("draft is missing {key}"))
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| format!("materialization input is missing {key}"))
 }

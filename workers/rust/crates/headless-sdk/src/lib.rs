@@ -7,6 +7,8 @@ mod executor;
 mod hybrid_executor;
 mod material_candidate_drafts;
 mod material_candidate_materialization;
+#[cfg(test)]
+mod material_candidate_materialization_tests;
 mod material_candidate_review;
 mod material_composite;
 mod material_composite_interfaces;

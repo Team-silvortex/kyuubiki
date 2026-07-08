@@ -19,10 +19,12 @@ The headless SDK layer gives them a cleaner tool surface:
 - build a machine-readable Rust execution plan before running a workflow
 - start concrete material-research examples without opening the workbench
 
-The SDKs are peer clients of the backend service contract. They do not depend
-on Workbench state, WebView lifecycle, or GUI automation hooks. The GUI uses the
-same backend HTTP contract through a configurable transport target, so a feature
-is considered headless-ready only when it is reachable without clicking a UI.
+Headless SDK is a product philosophy and contract layer, not one executable,
+one CLI, or one language binding. The SDKs are peer clients of the backend
+service contract. They do not depend on Workbench state, WebView lifecycle, or
+GUI automation hooks. The GUI uses the same backend HTTP contract through a
+configurable transport target, so a feature is considered headless-ready only
+when it is reachable without clicking a UI.
 
 The Workbench TypeScript client follows the same rule internally. Its API core
 can run outside a full browser `window`, resolves backend targets explicitly,
@@ -32,9 +34,26 @@ SDKs depend on.
 
 ## Language targets
 
-- Rust
-- Elixir
-- Python
+The official SDK families are expected to stay peer implementations over the
+same protocol and data contracts:
+
+- Rust: distributed as native crates and `cargo install` tools for engine-side
+  embedding, solver agents, installers, local automation, and high-confidence
+  reference runners.
+- Elixir: distributed through Mix for orchestration, workflow composition,
+  control-plane integrations, and fast functional iteration around operator
+  descriptions.
+- Python: distributed through pip for research scripts, notebooks, data
+  analysis, optimization loops, and lab automation.
+
+Domain CLIs such as `kyuubiki-material-explore` are reference runners built on
+top of the SDK contracts. They are intentionally not the universal headless
+gateway. External users should be free to write their own wrappers, pipelines,
+build systems, and research harnesses on top of the same schemas.
+
+The stable headless surface is the contract set: task and workflow envelopes,
+operator descriptors, result bundles, report schemas, review records,
+materialization plans, lineage metadata, and execution status semantics.
 
 Minimal end-to-end examples:
 

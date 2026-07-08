@@ -46,9 +46,13 @@ By default both commands use:
 
 - output: `tmp/material-research-example.json`
 - study: `heat-spreader`
-- runner: `workers/rust` `kyuubiki-material-explore`
+- runner: `workers/rust` `kyuubiki-material-explore` reference runner
 
 The output is intentionally under `tmp/` and should not be committed directly.
+The runner is only the first packaged executable for this example. The durable
+interface is the material exploration contract, so Python, Elixir, remote
+agent, mesh, or custom lab wrappers can reproduce the same loop without using
+this exact CLI.
 
 ## Closed-Loop Step
 

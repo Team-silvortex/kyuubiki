@@ -36,6 +36,13 @@ pub fn build_material_candidate_materialization_request(
     {
         return Err("draft batch review is still blocking".to_string());
     }
+    let draft_ids = approved_batch
+        .get("draft_ids")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "approved draft batch is missing draft_ids".to_string())?;
+    if draft_ids.is_empty() {
+        return Err("approved draft batch has no draft_ids".to_string());
+    }
     Ok(json!({
         "schema_version": "kyuubiki.material-candidate-materialization-request/v1",
         "source_batch_schema_version": approved_batch
@@ -46,10 +53,7 @@ pub fn build_material_candidate_materialization_request(
             .get("required_result_schema")
             .cloned()
             .unwrap_or_else(|| json!("unknown")),
-        "draft_ids": approved_batch
-            .get("draft_ids")
-            .cloned()
-            .unwrap_or_else(|| json!([])),
+        "draft_ids": draft_ids,
         "dispatch_action": approved_batch
             .get("dispatch_action")
             .cloned()
@@ -63,6 +67,7 @@ pub fn build_material_candidate_materialization_request(
 }
 
 fn validate_review_decision(batch: &Value, decision: &Value) -> Result<(), String> {
+    validate_review_batch_ids(batch, decision)?;
     let action = required_str(decision, "action")?;
     if !matches!(
         action,
@@ -84,6 +89,21 @@ fn validate_review_decision(batch: &Value, decision: &Value) -> Result<(), Strin
     }
     if action == "approve_for_materialization" {
         validate_completed_review_items(batch, decision)?;
+    }
+    Ok(())
+}
+
+fn validate_review_batch_ids(batch: &Value, decision: &Value) -> Result<(), String> {
+    let batch_ids = batch
+        .get("draft_ids")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "draft batch is missing draft_ids".to_string())?;
+    let decision_ids = decision
+        .get("batch_draft_ids")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "review decision is missing batch_draft_ids".to_string())?;
+    if decision_ids != batch_ids {
+        return Err("review decision batch_draft_ids do not match draft batch".to_string());
     }
     Ok(())
 }

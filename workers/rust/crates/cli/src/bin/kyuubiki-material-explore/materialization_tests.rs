@@ -1,4 +1,5 @@
 use super::*;
+use crate::materialization::materialized_rerun_summary_lines;
 
 #[test]
 fn runs_materialized_candidates_from_materialization_plan_json() {
@@ -10,6 +11,7 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
     let plan = serde_json::json!({
         "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
         "status": "ready_for_solver_rerun",
+        "materialized_candidate_count": 1,
         "materialized_candidates": [{
             "schema_version": "kyuubiki.materialized-candidate-spec/v1",
             "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
@@ -29,7 +31,19 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         rerun["schema_version"].as_str(),
         Some("kyuubiki.materialized-candidate-rerun/v1")
     );
+    assert_eq!(
+        rerun["source_materialization_schema_version"].as_str(),
+        Some("kyuubiki.material-candidate-materialization-plan/v1")
+    );
+    assert_eq!(
+        rerun["source_materialization_status"].as_str(),
+        Some("ready_for_solver_rerun")
+    );
     assert_eq!(rerun["step_count"].as_u64(), Some(1));
+    assert_eq!(
+        rerun["materialized_candidate_ids"][0].as_str(),
+        Some("copper_ptfe_glass_epoxy__add_compliant_interlayer")
+    );
     assert_eq!(
         rerun["report"]["schema_version"].as_str(),
         Some("kyuubiki.composite-materialized-candidate-report/v1")
@@ -40,6 +54,231 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
     );
     assert!(rerun["next_round"]["decision"].is_string());
     let _ = fs::remove_file(path);
+}
+
+#[test]
+fn runs_materialized_candidates_from_shared_schema_fixture() {
+    let path = temp_path("kyuubiki-materialized-schema-fixture");
+    fs::write(
+        &path,
+        include_bytes!(
+            "../../../../../../../schemas/examples.material-candidate-materialization-plan.json"
+        ),
+    )
+    .expect("write fixture");
+
+    let rerun = run_materialized_candidates(path.to_str().expect("utf8 path")).expect("rerun");
+
+    assert_eq!(
+        rerun["source_materialization_schema_version"].as_str(),
+        Some("kyuubiki.material-candidate-materialization-plan/v1")
+    );
+    assert_eq!(
+        rerun["materialized_candidate_ids"].as_array().map(Vec::len),
+        Some(2)
+    );
+
+    fs::remove_file(path).ok();
+}
+
+#[test]
+fn run_materialized_rejects_missing_candidate_list() {
+    let path = temp_path("kyuubiki-materialized-missing-list");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "ready_for_solver_rerun"
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("missing materialized_candidates"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_wrong_plan_schema() {
+    let path = temp_path("kyuubiki-materialized-wrong-schema");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
+            "status": "ready_for_solver_rerun",
+            "materialized_candidate_count": 0,
+            "materialized_candidates": []
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("schema_version must be"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_empty_candidate_list() {
+    let path = temp_path("kyuubiki-materialized-empty-list");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "ready_for_solver_rerun",
+            "materialized_candidate_count": 0,
+            "materialized_candidates": []
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("no materialized candidates"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_unready_plan_status() {
+    let path = temp_path("kyuubiki-materialized-unready-status");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "pending_agent_materialization",
+            "materialized_candidate_count": 1,
+            "materialized_candidates": [{
+                "schema_version": "kyuubiki.materialized-candidate-spec/v1",
+                "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
+                "source_draft_id": "draft-a",
+                "source_candidate_id": "copper_ptfe_glass_epoxy",
+                "strategy": "add_compliant_interlayer",
+                "study": "material_composite_thermo_electric_panel",
+                "status": "requires_solver_rerun"
+            }]
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("status must be ready_for_solver_rerun"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_candidate_count_mismatch() {
+    let path = temp_path("kyuubiki-materialized-count-mismatch");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "ready_for_solver_rerun",
+            "materialized_candidate_count": 2,
+            "materialized_candidates": [{
+                "schema_version": "kyuubiki.materialized-candidate-spec/v1",
+                "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
+                "source_draft_id": "draft-a",
+                "source_candidate_id": "copper_ptfe_glass_epoxy",
+                "strategy": "add_compliant_interlayer",
+                "study": "material_composite_thermo_electric_panel",
+                "status": "requires_solver_rerun"
+            }]
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("materialized_candidate_count must match"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_candidate_missing_required_result_schema() {
+    let path = temp_path("kyuubiki-materialized-missing-result-schema");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "ready_for_solver_rerun",
+            "materialized_candidate_count": 1,
+            "materialized_candidates": [{
+                "schema_version": "kyuubiki.materialized-candidate-spec/v1",
+                "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
+                "source_draft_id": "draft-a",
+                "source_candidate_id": "copper_ptfe_glass_epoxy",
+                "strategy": "add_compliant_interlayer",
+                "study": "material_composite_thermo_electric_panel",
+                "status": "requires_solver_rerun"
+            }]
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("missing required_result_schema"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_materialized_rejects_wrong_candidate_spec_schema() {
+    let path = temp_path("kyuubiki-materialized-wrong-spec-schema");
+    fs::write(
+        &path,
+        serde_json::to_vec(&serde_json::json!({
+            "schema_version": "kyuubiki.material-candidate-materialization-plan/v1",
+            "status": "ready_for_solver_rerun",
+            "materialized_candidate_count": 1,
+            "materialized_candidates": [{
+                "schema_version": "kyuubiki.material-candidate-draft/v1",
+                "candidate_id": "copper_ptfe_glass_epoxy__add_compliant_interlayer",
+                "source_draft_id": "draft-a",
+                "source_candidate_id": "copper_ptfe_glass_epoxy",
+                "strategy": "add_compliant_interlayer",
+                "study": "material_composite_thermo_electric_panel",
+                "required_result_schema": "kyuubiki.composite-thermo-electric-panel-result/v1",
+                "status": "requires_solver_rerun"
+            }]
+        }))
+        .expect("json"),
+    )
+    .expect("write");
+
+    let error = run_materialized_candidates(path.to_str().expect("utf8 path")).unwrap_err();
+
+    assert!(error.contains("schema_version must be kyuubiki.materialized-candidate-spec/v1"));
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn materialized_rerun_summary_shows_source_and_candidate_count() {
+    let payload = serde_json::json!({
+        "study": "material_composite_thermo_electric_panel",
+        "source_materialization_schema_version": "schema.v1",
+        "source_materialization_status": "ready_for_solver_rerun",
+        "step_count": 2,
+        "materialized_candidate_ids": ["a", "b"],
+        "report": { "winner_candidate_id": "a" },
+        "next_round": { "decision": "expand_around_winner" }
+    });
+
+    let lines = materialized_rerun_summary_lines(&payload);
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "Source plan: schema.v1 (ready_for_solver_rerun)")
+    );
+    assert!(lines.iter().any(|line| line == "Candidates: 2"));
 }
 
 #[test]
@@ -231,6 +470,11 @@ fn runs_full_reviewed_materialization_smoke_chain() {
     assert_eq!(
         rerun["schema_version"].as_str(),
         Some("kyuubiki.materialized-candidate-rerun/v1")
+    );
+    assert!(
+        rerun["materialized_candidate_ids"]
+            .as_array()
+            .is_some_and(|candidate_ids| !candidate_ids.is_empty())
     );
     assert!(rerun["report"]["winner_candidate_id"].is_string());
     assert!(
