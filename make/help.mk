@@ -80,6 +80,7 @@ help:
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
 	@echo "  make audit-dependencies Run npm production and RustSec lockfile dependency audits"
+	@echo "  make fuzz-smoke Run deterministic protocol and package security fuzz-smoke tests"
 	@echo "  make architecture-check Run the lightweight new-architecture organization and TaskIR contract check"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"

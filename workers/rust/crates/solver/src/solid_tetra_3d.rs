@@ -83,6 +83,14 @@ pub fn solve_solid_tetra_3d(
             .iter()
             .map(|element| element.von_mises_stress)
             .fold(0.0_f64, f64::max),
+        total_strain_energy: elements
+            .iter()
+            .map(|element| element.strain_energy_density * element.volume)
+            .sum(),
+        max_strain_energy_density: elements
+            .iter()
+            .map(|element| element.strain_energy_density.abs())
+            .fold(0.0_f64, f64::max),
         nodes,
         elements,
     })
@@ -106,6 +114,7 @@ fn element_result(
     let strain = multiply_6x12_12(&geometry.b, &ue);
     let stress = multiply_6x6_6(&d, &strain);
     let von_mises = von_mises_stress(&stress);
+    let strain_energy_density = strain_energy_density(&stress, &strain);
 
     Ok(SolidTetra3dElementResult {
         index,
@@ -128,6 +137,7 @@ fn element_result(
         shear_yz: stress[4],
         shear_zx: stress[5],
         von_mises_stress: von_mises,
+        strain_energy_density,
     })
 }
 
@@ -245,6 +255,12 @@ fn von_mises_stress(stress: &[f64; 6]) -> f64 {
     (0.5 * ((sx - sy).powi(2) + (sy - sz).powi(2) + (sz - sx).powi(2))
         + 3.0 * (txy * txy + tyz * tyz + tzx * tzx))
         .sqrt()
+}
+
+fn strain_energy_density(stress: &[f64; 6], strain: &[f64; 6]) -> f64 {
+    0.5 * (0..6)
+        .map(|index| stress[index] * strain[index])
+        .sum::<f64>()
 }
 
 fn element_nodes(

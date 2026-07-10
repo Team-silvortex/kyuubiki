@@ -3,6 +3,7 @@ use crate::frame_2d_math::{
     frame_thermal_uniform_vector, frame_transform, multiply_matrix_vector_6x6, subtract_vector_6,
     transform_frame_stiffness, transpose_6x6,
 };
+use crate::frame_energy::{frame_strain_energy_6, thermal_frame2d_strain_energy};
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
 use kyuubiki_protocol::{
     Frame2dElementResult, Frame2dNodeResult, SolveFrame2dRequest, SolveFrame2dResult,
@@ -133,6 +134,7 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
             ];
             let local_displacements = multiply_matrix_vector_6x6(&transform, &global_displacements);
             let local_forces = multiply_matrix_vector_6x6(&local_stiffness, &local_displacements);
+            let strain_energy = frame_strain_energy_6(&local_forces, &local_displacements);
             let axial_stress = local_forces[0].abs().max(local_forces[3].abs()) / element.area;
             let bending_stress =
                 local_forces[2].abs().max(local_forces[5].abs()) / element.section_modulus;
@@ -153,6 +155,7 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
                 axial_stress,
                 max_bending_stress: bending_stress,
                 max_combined_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -173,6 +176,7 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
         .iter()
         .map(|element| element.max_combined_stress)
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveFrame2dResult {
         input: request.clone(),
@@ -182,6 +186,7 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
         max_rotation,
         max_moment,
         max_stress,
+        total_strain_energy,
     })
 }
 
@@ -353,6 +358,17 @@ pub fn solve_thermal_frame_2d(
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let total_strain = (local_displacements[3] - local_displacements[0]) / length;
             let mechanical_strain = total_strain - thermal_strain;
+            let thermal_curvature =
+                element.thermal_expansion * element.temperature_gradient_y / element.section_depth;
+            let strain_energy = thermal_frame2d_strain_energy(
+                element.youngs_modulus,
+                element.area,
+                element.moment_of_inertia,
+                length,
+                &local_displacements,
+                mechanical_strain,
+                thermal_curvature,
+            );
             let axial_stress = local_forces[0].abs().max(local_forces[3].abs()) / element.area;
             let bending_stress =
                 local_forces[2].abs().max(local_forces[5].abs()) / element.section_modulus;
@@ -369,8 +385,7 @@ pub fn solve_thermal_frame_2d(
                 mechanical_strain,
                 total_strain,
                 temperature_gradient_y: element.temperature_gradient_y,
-                thermal_curvature: element.thermal_expansion * element.temperature_gradient_y
-                    / element.section_depth,
+                thermal_curvature,
                 axial_force_i: local_forces[0],
                 shear_force_i: local_forces[1],
                 moment_i: local_forces[2],
@@ -380,6 +395,7 @@ pub fn solve_thermal_frame_2d(
                 axial_stress,
                 max_bending_stress: bending_stress,
                 max_combined_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -412,6 +428,7 @@ pub fn solve_thermal_frame_2d(
         .iter()
         .map(|element| element.temperature_gradient_y.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveThermalFrame2dResult {
         input: request.clone(),
@@ -424,6 +441,7 @@ pub fn solve_thermal_frame_2d(
         max_axial_force,
         max_temperature_delta,
         max_temperature_gradient,
+        total_strain_energy,
     })
 }
 

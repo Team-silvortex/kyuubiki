@@ -1,6 +1,8 @@
 mod builder;
 mod loader;
 mod manifest;
+#[cfg(test)]
+mod manifest_fuzz;
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
 };

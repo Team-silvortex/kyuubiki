@@ -1,8 +1,13 @@
 use crate::{Platform, UpdateArtifactRef, unified_update_plan};
+use serde::{Deserialize, Serialize};
 
 const REMOTE_ARTIFACT_SCHEMA_VERSION: &str = "kyuubiki.remote-artifact-delivery/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(test)]
+#[path = "remote_deployment_artifacts_fuzz.rs"]
+mod remote_deployment_artifacts_fuzz;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteArtifactDeliveryManifest {
     pub schema_version: String,
     pub channel: String,
@@ -12,7 +17,7 @@ pub struct RemoteArtifactDeliveryManifest {
     pub artifacts: Vec<RemoteArtifactDeliveryRef>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteArtifactDeliveryRef {
     pub product: String,
     pub kind: String,

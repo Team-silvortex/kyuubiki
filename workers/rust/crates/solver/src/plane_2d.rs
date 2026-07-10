@@ -10,6 +10,11 @@ use crate::plane_2d_profile::{
     PlaneProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
     profile_plane_displacements_with_options, push_plane_profile_stage,
 };
+use crate::plane_2d_summary::{
+    max_plane_displacement, max_quad_strain_energy_density, max_quad_stress,
+    max_triangle_strain_energy_density, max_triangle_stress, quad_total_strain_energy,
+    triangle_total_strain_energy,
+};
 use kyuubiki_protocol::{
     PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
@@ -140,25 +145,15 @@ fn solve_plane_triangle_2d_internal(
             }
         })
         .collect::<Vec<_>>();
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let total_strain_energy = triangle_total_strain_energy(&elements, &request.elements);
+    let max_strain_energy_density = max_triangle_strain_energy_density(&elements);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneTriangleProfile {
         result: SolvePlaneTriangle2dResult {
             input: request.clone(),
             max_displacement: max_plane_displacement(&nodes),
-            max_stress: elements
-                .iter()
-                .map(|element| element.von_mises.abs())
-                .fold(0.0_f64, f64::max),
+            max_stress: max_triangle_stress(&elements),
             total_strain_energy,
             max_strain_energy_density,
             nodes,
@@ -274,25 +269,15 @@ fn solve_plane_quad_2d_internal(
     stage_started = Instant::now();
     let nodes = build_plane_nodes(&triangle_request, &displacements);
     let elements = build_plane_quad_elements(request, &computed_elements, &displacements);
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let total_strain_energy = quad_total_strain_energy(&elements, &request.elements);
+    let max_strain_energy_density = max_quad_strain_energy_density(&elements);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneQuadProfile {
         result: SolvePlaneQuad2dResult {
             input: request.clone(),
             max_displacement: max_plane_displacement(&nodes),
-            max_stress: elements
-                .iter()
-                .map(|element| element.von_mises.abs())
-                .fold(0.0_f64, f64::max),
+            max_stress: max_quad_stress(&elements),
             total_strain_energy,
             max_strain_energy_density,
             nodes,
@@ -564,13 +549,6 @@ fn triangle_displacements(
 ) -> [f64; 6] {
     let map = triangle_dof_map(node_i, node_j, node_k);
     std::array::from_fn(|index| displacements[map[index]])
-}
-
-fn max_plane_displacement(nodes: &[PlaneNodeResult]) -> f64 {
-    nodes
-        .iter()
-        .map(|node| node.displacement_magnitude)
-        .fold(0.0_f64, f64::max)
 }
 
 fn validate_positive_triangle_area(

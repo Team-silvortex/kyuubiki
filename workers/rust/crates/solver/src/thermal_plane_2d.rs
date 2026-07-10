@@ -13,7 +13,10 @@ use crate::thermal_plane_2d_profile::{
 };
 use crate::thermal_plane_2d_results::{
     build_thermal_plane_nodes, max_temperature_delta, max_thermal_plane_displacement,
-    thermal_plane_triangle_state,
+    max_thermal_quad_strain_energy_density, max_thermal_quad_stress,
+    max_thermal_triangle_strain_energy_density, max_thermal_triangle_stress,
+    thermal_plane_triangle_state, thermal_quad_total_strain_energy,
+    thermal_triangle_total_strain_energy,
 };
 use crate::thermal_plane_2d_util::{
     build_force_vector, build_quad_force_vector, to_plane_nodes, to_triangle_request,
@@ -121,15 +124,8 @@ fn solve_thermal_plane_triangle_2d_internal(
     let displacements = solved.displacements;
     let nodes = build_thermal_plane_nodes(request, &displacements);
     let elements = build_thermal_triangle_elements(request, &computed_elements, &displacements);
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let total_strain_energy = thermal_triangle_total_strain_energy(request, &elements);
+    let max_strain_energy_density = max_thermal_triangle_strain_energy_density(&elements);
     push_thermal_plane_stage(
         &mut stages,
         collect_stages,
@@ -141,10 +137,7 @@ fn solve_thermal_plane_triangle_2d_internal(
         result: SolveThermalPlaneTriangle2dResult {
             input: request.clone(),
             max_displacement: max_thermal_plane_displacement(&nodes),
-            max_stress: elements
-                .iter()
-                .map(|element| element.von_mises.abs())
-                .fold(0.0_f64, f64::max),
+            max_stress: max_thermal_triangle_stress(&elements),
             max_temperature_delta: max_temperature_delta(&nodes),
             total_strain_energy,
             max_strain_energy_density,
@@ -249,15 +242,8 @@ fn solve_thermal_plane_quad_2d_internal(
     let displacements = solved.displacements;
     let nodes = build_thermal_plane_nodes(&triangle_request, &displacements);
     let elements = build_thermal_quad_elements(request, &computed_elements, &displacements);
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let total_strain_energy = thermal_quad_total_strain_energy(request, &elements);
+    let max_strain_energy_density = max_thermal_quad_strain_energy_density(&elements);
     push_thermal_plane_stage(
         &mut stages,
         collect_stages,
@@ -269,10 +255,7 @@ fn solve_thermal_plane_quad_2d_internal(
         result: SolveThermalPlaneQuad2dResult {
             input: request.clone(),
             max_displacement: max_thermal_plane_displacement(&nodes),
-            max_stress: elements
-                .iter()
-                .map(|element| element.von_mises.abs())
-                .fold(0.0_f64, f64::max),
+            max_stress: max_thermal_quad_stress(&elements),
             max_temperature_delta: max_temperature_delta(&nodes),
             total_strain_energy,
             max_strain_energy_density,

@@ -5,6 +5,12 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::truss_summary::{
+    max_truss_2d_displacement, max_truss_3d_displacement, max_truss_3d_strain_energy_density,
+    max_truss_3d_stress, max_truss_strain_energy_density, max_truss_stress,
+    total_truss_2d_strain_energy, total_truss_3d_strain_energy, validate_small_displacement_truss,
+    validate_small_displacement_truss_3d,
+};
 use kyuubiki_protocol::{
     SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult,
     Truss3dElementResult, Truss3dNodeResult, TrussElementResult, TrussNodeResult,
@@ -207,23 +213,10 @@ fn solve_truss_2d_internal(
         })
         .collect::<Vec<_>>();
 
-    let max_displacement = nodes
-        .iter()
-        .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
-        .fold(0.0_f64, f64::max);
-    let max_stress = elements
-        .iter()
-        .map(|element| element.stress.abs())
-        .fold(0.0_f64, f64::max);
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let max_displacement = max_truss_2d_displacement(&nodes);
+    let max_stress = max_truss_stress(&elements);
+    let total_strain_energy = total_truss_2d_strain_energy(request, &elements);
+    let max_strain_energy_density = max_truss_strain_energy_density(&elements);
 
     validate_small_displacement_truss(request, max_displacement)?;
     push_truss_2d_stage(
@@ -434,37 +427,12 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
         })
         .collect::<Vec<_>>();
 
-    let max_displacement = nodes
-        .iter()
-        .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
-        .fold(0.0_f64, f64::max);
-    let max_stress = elements
-        .iter()
-        .map(|element| element.stress.abs())
-        .fold(0.0_f64, f64::max);
-    let total_strain_energy = elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
-        .sum();
-    let max_strain_energy_density = elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max);
+    let max_displacement = max_truss_3d_displacement(&nodes);
+    let max_stress = max_truss_3d_stress(&elements);
+    let total_strain_energy = total_truss_3d_strain_energy(request, &elements);
+    let max_strain_energy_density = max_truss_3d_strain_energy_density(&elements);
 
-    let characteristic_length = get_spatial_bounds(
-        &request
-            .nodes
-            .iter()
-            .map(|node| (node.x, node.y, node.z))
-            .collect::<Vec<_>>(),
-    );
-    if max_displacement > characteristic_length * 0.25 {
-        return Err(
-            "3d truss response exceeds the small-deformation limit; check supports or connectivity"
-                .to_string(),
-        );
-    }
+    validate_small_displacement_truss_3d(request, max_displacement)?;
 
     Ok(SolveTruss3dResult {
         input: request.clone(),
@@ -545,47 +513,4 @@ fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String
     }
 
     Ok(())
-}
-
-fn validate_small_displacement_truss(
-    request: &SolveTruss2dRequest,
-    max_displacement: f64,
-) -> Result<(), String> {
-    let bounds = get_planar_bounds(
-        &request
-            .nodes
-            .iter()
-            .map(|node| (node.x, node.y))
-            .collect::<Vec<_>>(),
-    );
-    let characteristic_length = bounds.0.max(bounds.1).max(1.0e-9);
-
-    if max_displacement > characteristic_length * 0.25 {
-        return Err(
-            "truss response exceeds the small-deformation limit; check supports or connectivity"
-                .to_string(),
-        );
-    }
-
-    Ok(())
-}
-
-fn get_planar_bounds(points: &[(f64, f64)]) -> (f64, f64) {
-    let min_x = points.iter().map(|point| point.0).fold(0.0_f64, f64::min);
-    let max_x = points.iter().map(|point| point.0).fold(1.0_f64, f64::max);
-    let min_y = points.iter().map(|point| point.1).fold(0.0_f64, f64::min);
-    let max_y = points.iter().map(|point| point.1).fold(1.0_f64, f64::max);
-
-    (max_x - min_x, max_y - min_y)
-}
-
-fn get_spatial_bounds(points: &[(f64, f64, f64)]) -> f64 {
-    let min_x = points.iter().map(|point| point.0).fold(0.0_f64, f64::min);
-    let max_x = points.iter().map(|point| point.0).fold(1.0_f64, f64::max);
-    let min_y = points.iter().map(|point| point.1).fold(0.0_f64, f64::min);
-    let max_y = points.iter().map(|point| point.1).fold(1.0_f64, f64::max);
-    let min_z = points.iter().map(|point| point.2).fold(0.0_f64, f64::min);
-    let max_z = points.iter().map(|point| point.2).fold(1.0_f64, f64::max);
-
-    (max_x - min_x).max(max_y - min_y).max(max_z - min_z)
 }

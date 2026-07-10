@@ -3,7 +3,10 @@ use crate::plane_2d_math::{
     strain_energy_density, subtract_vector_3,
 };
 use crate::thermal_plane_2d::ThermalPlaneTriangleComputed;
-use kyuubiki_protocol::{SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeResult};
+use kyuubiki_protocol::{
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeResult,
+    ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementResult,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ThermalPlaneTriangleState {
@@ -79,5 +82,59 @@ pub(crate) fn max_temperature_delta(nodes: &[ThermalPlaneNodeResult]) -> f64 {
     nodes
         .iter()
         .map(|node| node.temperature_delta.abs())
+        .fold(0.0_f64, f64::max)
+}
+
+pub(crate) fn max_thermal_triangle_stress(elements: &[ThermalPlaneTriangleElementResult]) -> f64 {
+    elements
+        .iter()
+        .map(|element| element.von_mises.abs())
+        .fold(0.0_f64, f64::max)
+}
+
+pub(crate) fn max_thermal_quad_stress(elements: &[ThermalPlaneQuadElementResult]) -> f64 {
+    elements
+        .iter()
+        .map(|element| element.von_mises.abs())
+        .fold(0.0_f64, f64::max)
+}
+
+pub(crate) fn thermal_triangle_total_strain_energy(
+    request: &SolveThermalPlaneTriangle2dRequest,
+    elements: &[ThermalPlaneTriangleElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
+        .sum()
+}
+
+pub(crate) fn thermal_quad_total_strain_energy(
+    request: &SolveThermalPlaneQuad2dRequest,
+    elements: &[ThermalPlaneQuadElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
+        .sum()
+}
+
+pub(crate) fn max_thermal_triangle_strain_energy_density(
+    elements: &[ThermalPlaneTriangleElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max)
+}
+
+pub(crate) fn max_thermal_quad_strain_energy_density(
+    elements: &[ThermalPlaneQuadElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max)
 }

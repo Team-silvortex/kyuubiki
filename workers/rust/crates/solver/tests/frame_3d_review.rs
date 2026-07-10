@@ -32,10 +32,11 @@ fn frame_3d_review_bundle_checks_cantilever_boundaries_moment_and_stress_diagnos
     })
     .expect("review 3d frame should solve");
 
-    let expected_tip_uy = -0.001_587_301_587_301_587_3;
+    let expected_tip_uy: f64 = -0.001_587_301_587_301_587_3;
     let expected_tip_rz = -0.001_190_476_190_476_190_6;
     let expected_moment = 2000.0;
     let expected_stress = 12_500_000.0;
+    let expected_strain_energy = 0.5 * 1000.0 * expected_tip_uy.abs();
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
@@ -55,6 +56,7 @@ fn frame_3d_review_bundle_checks_cantilever_boundaries_moment_and_stress_diagnos
     assert_close(result.max_rotation, expected_tip_rz.abs());
     assert_close(result.max_moment, expected_moment);
     assert_close(result.max_stress, expected_stress);
+    assert_close(result.total_strain_energy, expected_strain_energy);
 
     let element = &result.elements[0];
     assert_close(element.length, 2.0);
@@ -73,6 +75,7 @@ fn frame_3d_review_bundle_checks_cantilever_boundaries_moment_and_stress_diagnos
     assert_close(element.axial_stress, 0.0);
     assert_close(element.max_bending_stress, expected_stress);
     assert_close(element.max_combined_stress, expected_stress);
+    assert_close(element.strain_energy, expected_strain_energy);
 }
 
 #[allow(clippy::too_many_arguments)]

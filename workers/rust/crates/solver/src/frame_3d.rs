@@ -124,6 +124,7 @@ pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResul
             let local_displacements =
                 multiply_matrix_vector_12x12(&transform, &global_displacements);
             let local_forces = multiply_matrix_vector_12x12(&local_stiffness, &local_displacements);
+            let strain_energy = frame3d_strain_energy(&local_forces, &local_displacements);
             let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
             let bending_stress_y =
                 local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
@@ -153,6 +154,7 @@ pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResul
                 axial_stress,
                 max_bending_stress,
                 max_combined_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -182,6 +184,7 @@ pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResul
             .iter()
             .map(|element| element.max_combined_stress)
             .fold(0.0_f64, f64::max),
+        total_strain_energy: elements.iter().map(|element| element.strain_energy).sum(),
         nodes,
         elements,
     })
@@ -278,4 +281,10 @@ fn validate_frame_3d_element(
     frame3d_rotation(dx, dy, dz, length)?;
 
     Ok(())
+}
+
+fn frame3d_strain_energy(local_forces: &[f64; 12], local_displacements: &[f64; 12]) -> f64 {
+    0.5 * (0..12)
+        .map(|index| local_forces[index] * local_displacements[index])
+        .sum::<f64>()
 }

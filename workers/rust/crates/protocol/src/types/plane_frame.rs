@@ -260,6 +260,7 @@ pub struct Frame2dElementResult {
     pub axial_stress: f64,
     pub max_bending_stress: f64,
     pub max_combined_stress: f64,
+    pub strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -271,6 +272,7 @@ pub struct SolveFrame2dResult {
     pub max_rotation: f64,
     pub max_moment: f64,
     pub max_stress: f64,
+    pub total_strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -329,6 +331,7 @@ pub struct ThermalFrame2dElementResult {
     pub axial_stress: f64,
     pub max_bending_stress: f64,
     pub max_combined_stress: f64,
+    pub strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -343,6 +346,7 @@ pub struct SolveThermalFrame2dResult {
     pub max_axial_force: f64,
     pub max_temperature_delta: f64,
     pub max_temperature_gradient: f64,
+    pub total_strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -393,6 +397,7 @@ pub struct ThermalFrame3dElementResult {
     pub axial_stress: f64,
     pub max_bending_stress: f64,
     pub max_combined_stress: f64,
+    pub strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -407,4 +412,5 @@ pub struct SolveThermalFrame3dResult {
     pub max_axial_force: f64,
     pub max_temperature_delta: f64,
     pub max_temperature_gradient: f64,
+    pub total_strain_energy: f64,
 }

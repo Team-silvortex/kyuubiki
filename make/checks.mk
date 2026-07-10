@@ -10,7 +10,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies architecture-check verify
+.PHONY: audit-dependencies fuzz-smoke architecture-check verify
 
 check-doc-book:
 	@node ./scripts/check-doc-book.mjs
@@ -150,6 +150,16 @@ audit-project-organization:
 audit-dependencies:
 	@node ./scripts/audit-dependencies.mjs --self-test
 	@node ./scripts/audit-dependencies.mjs
+
+fuzz-smoke:
+	@cd workers/rust && cargo test -p kyuubiki-engine workflow_security_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol operator_task_ir_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol rpc_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-operator-sdk operator_package_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer installer_update_catalog_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer remote_artifact_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture
 
 architecture-check:
 	@$(MAKE) audit-project-organization

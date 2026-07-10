@@ -1,10 +1,15 @@
 use std::path::{Path, PathBuf};
 
 use crate::workspace_root;
+use serde::{Deserialize, Serialize};
 
 const CREDENTIAL_STORAGE_SCHEMA_VERSION: &str = "kyuubiki.credential-storage/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(test)]
+#[path = "credential_storage_fuzz.rs"]
+mod credential_storage_fuzz;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CredentialStorageContract {
     pub schema_version: String,
     pub sandbox_root: String,
@@ -14,7 +19,7 @@ pub struct CredentialStorageContract {
     pub requirements: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CredentialPlatformBackend {
     pub platform: String,
     pub backend: String,
@@ -22,7 +27,7 @@ pub struct CredentialPlatformBackend {
     pub notes: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CredentialClassRule {
     pub class_id: String,
     pub storage_path: String,

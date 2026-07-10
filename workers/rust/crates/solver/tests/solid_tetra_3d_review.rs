@@ -13,6 +13,8 @@ fn solid_tetra_3d_review_checks_restrained_tip_load_response() {
     assert_close(result.total_volume, 1.0 / 6.0);
     assert!(result.max_displacement > 0.0);
     assert!(result.max_von_mises_stress > 0.0);
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 
     for index in 0..3 {
         assert_close(result.nodes[index].ux, 0.0);
@@ -37,6 +39,14 @@ fn solid_tetra_3d_review_checks_restrained_tip_load_response() {
     );
     assert!(element.von_mises_stress > 0.0);
     assert!(element.von_mises_stress.is_finite());
+    assert_close(
+        element.strain_energy_density,
+        element_energy_density(element),
+    );
+    assert_close(
+        result.total_strain_energy,
+        element.strain_energy_density * element.volume,
+    );
 }
 
 #[test]
@@ -100,4 +110,13 @@ fn assert_close(actual: f64, expected: f64) {
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
     );
+}
+
+fn element_energy_density(element: &kyuubiki_protocol::SolidTetra3dElementResult) -> f64 {
+    0.5 * ((element.stress_x * element.strain_x)
+        + (element.stress_y * element.strain_y)
+        + (element.stress_z * element.strain_z)
+        + (element.shear_xy * element.gamma_xy)
+        + (element.shear_yz * element.gamma_yz)
+        + (element.shear_zx * element.gamma_zx))
 }

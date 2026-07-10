@@ -1,6 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 const REMOTE_HOST_TRUST_SCHEMA_VERSION: &str = "kyuubiki.remote-host-trust/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(test)]
+#[path = "remote_host_trust_fuzz.rs"]
+mod remote_host_trust_fuzz;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteHostTrustPlan {
     pub schema_version: String,
     pub current_mode: String,
@@ -12,7 +18,7 @@ pub struct RemoteHostTrustPlan {
     pub notes: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteHostTrustOption {
     pub phase: String,
     pub key: String,

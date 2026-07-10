@@ -10,6 +10,10 @@ use crate::{
     update_source::current_update_catalog_path, workspace_root,
 };
 
+#[cfg(test)]
+#[path = "update_catalog_fuzz.rs"]
+mod update_catalog_fuzz;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UpdateArtifactRef {
     pub product: String,

@@ -9,6 +9,7 @@ mod frame_2d;
 mod frame_2d_math;
 mod frame_3d;
 mod frame_3d_math;
+mod frame_energy;
 mod harmonic_spring_1d;
 mod heat_plane_2d;
 mod heat_plane_2d_validation;
@@ -25,6 +26,7 @@ mod nonlinear_spring_1d;
 mod plane_2d;
 mod plane_2d_math;
 mod plane_2d_profile;
+mod plane_2d_summary;
 mod solid_tetra_3d;
 mod spring;
 mod stokes_flow_plane_2d;
@@ -41,6 +43,7 @@ mod transient_heat_bar_1d;
 mod transient_spring_1d;
 mod transport_bar_1d;
 mod truss;
+mod truss_summary;
 
 pub use acoustic_bar_1d::solve_acoustic_bar_1d;
 pub use bar_1d::{

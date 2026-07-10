@@ -73,6 +73,77 @@ The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
 desktop, SDK, and Rust workspace surfaces must stay reproducible. Do not remove
 lockfiles from review just because the source package manifests look small.
 
+### Fuzz-smoke guard
+
+Kyuubiki now has a deterministic fuzz-smoke lane for workflow, operator task,
+RPC, operator package, update metadata, and remote deployment metadata security
+boundaries, plus credential storage contracts:
+
+```bash
+make fuzz-smoke
+```
+
+This is not a replacement for future long-running `cargo-fuzz` / libFuzzer
+campaigns. It is the CI-friendly baseline that can run on every developer
+machine without extra tool installation. The current lane covers these
+boundaries:
+
+- typed graph execution, with mutated schema versions, node and edge IDs, port
+  shapes, operator IDs, graph topology, and JSON input artifacts
+- JSON decode ingress, where malformed request-shaped values and arbitrary JSON
+  are decoded before the engine accepts or rejects each case
+- JSON byte ingress, where request-shaped payload bytes and arbitrary byte
+  streams exercise the same decode-to-execute boundary that future native
+  fuzzers should target
+- operator Task IR ingress, where mutated request-shaped JSON and raw byte
+  payloads exercise digest computation, digest verification, and execution
+  summary construction without running an operator
+- RPC ingress, where mutated request-shaped JSON and raw byte payloads exercise
+  request decode, method classification, and safe lightweight parameter parsing
+  without dispatching solver execution
+- operator package manifest ingress, where mutated manifest-shaped JSON and raw
+  byte payloads exercise file read, JSON decode, and package manifest validation
+  without loading native libraries
+- installer update catalog ingress, where mutated channel metadata and raw byte
+  payloads exercise channel selection, visible-rule parsing, artifact reference
+  parsing, and version comparison without downloading or applying updates
+- remote artifact manifest ingress, where mutated delivery metadata and raw byte
+  payloads exercise manifest decode, re-encode, and rendering without SSH,
+  remote mutation, or native execution
+- credential storage contract ingress, where mutated sandbox ownership metadata
+  and raw byte payloads exercise contract decode, re-encode, and rendering
+  without reading, writing, or exporting secret material
+- remote host trust plan ingress, where mutated SSH trust metadata and raw byte
+  payloads exercise trust-plan decode, re-encode, and rendering without writing
+  known_hosts or opening SSH sessions
+
+These checks verify that protocol boundaries do not panic while accepting or
+rejecting each case.
+
+Run it when changing:
+
+- `workers/rust/crates/engine/src/workflow_security.rs`
+- workflow graph execution or validation code
+- `kyuubiki_protocol` workflow graph structs
+- operator Task IR digest, summary, verifier, or protocol decode code
+- RPC request, method, descriptor, or parameter decode code
+- operator package manifest, package discovery, or package preflight code
+- installer update catalog, update source, channel selection, or artifact
+  metadata parsing code
+- remote deployment artifact manifest, dry-run, or metadata rendering code
+- credential storage contract, mobile credential handle, or sandbox ownership
+  metadata code
+- remote host trust, known-host pinning metadata, or SSH trust-mode planning code
+- JSON budget limits, artifact parsing, protocol decode, or graph import/export
+  paths
+
+Future native fuzzing should reuse the byte ingress boundary first: untrusted
+graph, artifact, Task IR, RPC, package, and update metadata bytes enter through
+protocol decode, then the workflow security guard, Task IR verifier, RPC
+dispatcher, package manifest validator, or update planner must reject malformed
+or over-budget inputs before execution, native library loading, SSH, secret
+access, known-host mutation, download, or apply.
+
 ### Control plane
 
 The orchestrator can now enforce an API token for:
@@ -478,5 +549,10 @@ Before changing any critical or high-sensitivity module:
    wrong-token failure when the behavior is externally reachable.
 5. Run `make audit-dependencies` when dependency manifests, lockfiles, desktop
    shells, SDK dependencies, or CI dependency-audit behavior changes.
-6. Keep `docs/security.md` synchronized with actual route enforcement and
+6. Run `make fuzz-smoke` when workflow graph validation, protocol workflow
+   structs, operator Task IR validation, RPC decode, artifact budgets, protocol
+   decode, package manifest validation, update catalog parsing, remote artifact
+   metadata, credential storage contracts, remote host trust metadata, or graph
+   import/export behavior changes.
+7. Keep `docs/security.md` synchronized with actual route enforcement and
    deployment behavior.

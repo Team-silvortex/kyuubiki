@@ -205,6 +205,7 @@ pub struct Frame3dElementResult {
     pub axial_stress: f64,
     pub max_bending_stress: f64,
     pub max_combined_stress: f64,
+    pub strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -216,6 +217,7 @@ pub struct SolveFrame3dResult {
     pub max_rotation: f64,
     pub max_moment: f64,
     pub max_stress: f64,
+    pub total_strain_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -284,6 +286,7 @@ pub struct SolidTetra3dElementResult {
     pub shear_yz: f64,
     pub shear_zx: f64,
     pub von_mises_stress: f64,
+    pub strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -294,6 +297,8 @@ pub struct SolveSolidTetra3dResult {
     pub total_volume: f64,
     pub max_displacement: f64,
     pub max_von_mises_stress: f64,
+    pub total_strain_energy: f64,
+    pub max_strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

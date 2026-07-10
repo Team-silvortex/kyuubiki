@@ -56,6 +56,12 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
     let expected_bending_stress =
         expected_moment_y / section_modulus_y + expected_moment_z / section_modulus_z;
     let expected_combined_stress = expected_axial_stress + expected_bending_stress;
+    let expected_strain_energy = 0.5
+        * youngs_modulus
+        * (area * expected_thermal_strain.powi(2)
+            + inertia_z * expected_curvature_y.powi(2)
+            + inertia_y * expected_curvature_z.powi(2))
+        * 2.0;
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
@@ -96,6 +102,7 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
     assert_close(element.axial_stress, expected_axial_stress);
     assert_close(element.max_bending_stress, expected_bending_stress);
     assert_close(element.max_combined_stress, expected_combined_stress);
+    assert_close(element.strain_energy, expected_strain_energy);
 
     assert_close(result.max_displacement, 0.0);
     assert_close(result.max_rotation, 0.0);
@@ -104,6 +111,7 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
     assert_close(result.max_stress, expected_combined_stress);
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_temperature_gradient, gradient_y);
+    assert_close(result.total_strain_energy, expected_strain_energy);
 }
 
 fn node(id: &str, x: f64, y: f64, z: f64, temperature_delta: f64) -> ThermalFrame3dNodeInput {

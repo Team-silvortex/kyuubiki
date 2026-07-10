@@ -3,6 +3,7 @@ use crate::frame_3d_math::{
     frame3d_thermal_gradient_vector, frame3d_thermal_uniform_vector, frame3d_transform,
     multiply_matrix_vector_12x12, subtract_vector_12, transform_frame3d_stiffness, transpose_12x12,
 };
+use crate::frame_energy::thermal_frame3d_strain_energy;
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
 use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dElementResult,
@@ -111,6 +112,7 @@ pub fn solve_thermal_frame_3d(
                 ]
             })
             .fold(0.0_f64, f64::max),
+        total_strain_energy: elements.iter().map(|element| element.strain_energy).sum(),
         nodes,
         elements,
     })
@@ -184,6 +186,24 @@ fn build_thermal_frame_3d_elements(
                 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let total_strain = (local_displacements[6] - local_displacements[0]) / length;
+            let thermal_curvature_y = element.thermal_expansion * element.temperature_gradient_y
+                / element.section_depth_y;
+            let thermal_curvature_z = element.thermal_expansion * element.temperature_gradient_z
+                / element.section_depth_z;
+            let mechanical_strain = total_strain - thermal_strain;
+            let strain_energy = thermal_frame3d_strain_energy(
+                element.youngs_modulus,
+                element.shear_modulus,
+                element.area,
+                element.torsion_constant,
+                element.moment_of_inertia_y,
+                element.moment_of_inertia_z,
+                length,
+                &local_displacements,
+                mechanical_strain,
+                thermal_curvature_y,
+                thermal_curvature_z,
+            );
             let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
             let bending_stress_y =
                 local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
@@ -199,14 +219,12 @@ fn build_thermal_frame_3d_elements(
                 length,
                 average_temperature_delta,
                 thermal_strain,
-                mechanical_strain: total_strain - thermal_strain,
+                mechanical_strain,
                 total_strain,
                 temperature_gradient_y: element.temperature_gradient_y,
                 temperature_gradient_z: element.temperature_gradient_z,
-                thermal_curvature_y: element.thermal_expansion * element.temperature_gradient_y
-                    / element.section_depth_y,
-                thermal_curvature_z: element.thermal_expansion * element.temperature_gradient_z
-                    / element.section_depth_z,
+                thermal_curvature_y,
+                thermal_curvature_z,
                 axial_force_i: local_forces[0],
                 shear_force_y_i: local_forces[1],
                 shear_force_z_i: local_forces[2],
@@ -222,6 +240,7 @@ fn build_thermal_frame_3d_elements(
                 axial_stress,
                 max_bending_stress,
                 max_combined_stress: axial_stress + max_bending_stress,
+                strain_energy,
             }
         })
         .collect()

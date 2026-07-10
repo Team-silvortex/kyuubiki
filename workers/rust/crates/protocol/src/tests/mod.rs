@@ -3,6 +3,8 @@ mod core;
 mod field_rpc;
 mod frame_beam_rpc;
 mod operator_task_ir;
+mod operator_task_ir_fuzz;
+mod rpc_fuzz;
 mod spring_control_rpc;
 mod thermal_plane_rpc;
 mod workflows;

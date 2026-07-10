@@ -43,6 +43,7 @@ mod workflow_quality_ranking;
 mod workflow_quality_sweep_plan;
 mod workflow_recovery;
 mod workflow_security;
+mod workflow_security_fuzz;
 mod workflow_solver_extended;
 mod workflow_solver_structural;
 mod workflow_solver_templates;
