@@ -1,4 +1,6 @@
 import type { PayloadObject } from "@/components/workbench/workbench-headless-workflow-contract";
+import type { HeadlessHandoffReceipt, HeadlessHandoffSnapshot } from "@/lib/api/headless-handoff-client";
+import type { HeadlessExecutionRunResult } from "@/lib/scripting/workbench-headless-execution";
 import type { WorkbenchRecordedMacroDraft } from "@/lib/scripting/workbench-script-runtime";
 
 export type FrontendMacroAssetRecord = {
@@ -49,4 +51,23 @@ export function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
   const [item] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, item);
   return next;
+}
+
+export function upsertLatestHeadlessHandoffReceipt(
+  history: HeadlessHandoffReceipt[],
+  receipt: HeadlessHandoffReceipt,
+) {
+  return [receipt, ...history.filter((item) => item.handoff_id !== receipt.handoff_id)];
+}
+
+export function formatHeadlessExecutionResultLogs(result: HeadlessExecutionRunResult) {
+  return result.steps.map((step) => `[result] step ${step.index} ${step.action}: ${JSON.stringify(step.result)}`);
+}
+
+export function formatHeadlessHandoffStatusLog(status: unknown) {
+  return `[handoff-status] ${JSON.stringify(status)}`;
+}
+
+export function formatHeadlessHandoffSnapshotLog(snapshot: HeadlessHandoffSnapshot) {
+  return `[handoff-snapshot] ${snapshot.handoff_id}`;
 }

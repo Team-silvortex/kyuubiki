@@ -172,6 +172,14 @@ Shell migration rule:
 - Keep `scripts/kyuubiki` as a tiny launcher only.
 - Prefer Rust native commands for new cross-platform operations.
 - Use `./scripts/kyuubiki native-script-audit` to list remaining shell wrappers.
+- Treat the audit's `host tool boundary` section as the self-hosting backlog:
+  those tools should eventually be provided by installer-managed runtimes,
+  narrow native binaries, or explicit remote services rather than ad hoc shell
+  assumptions.
+- Keep remote transfer and command execution behind
+  `workers/rust/crates/script-runner/src/remote_host.rs` so the project can
+  replace host `ssh`/`scp`/`rsync` with an installer-managed or embedded
+  implementation without touching every benchmark runner.
 - Existing `.sh` files are migration targets unless they are generated,
   third-party, or platform package payloads.
 
@@ -385,13 +393,15 @@ Useful smoke wrappers:
   remote workflow catalog benchmark on `kyuubiki-lab`, copies the resulting
   summary back into the local workspace, and compares it against the checked-in
   baseline with per-case regression thresholds.
-- `./scripts/run-workflow-mesh-regression.sh`
-  Compatibility shim for the native
-  `./scripts/kyuubiki workflow-mesh-regression` command. It runs the current
+- `./scripts/kyuubiki workflow-mesh-regression`
+  Native runner command for the local workflow mesh regression. It runs the current
   three-test distributed workflow mesh regression trio in strict sequence on
   the local machine so the shared local orchestrator port does not collide
   across tests. This emits `run.log`, `summary.json`, and `README.md` under
   `tmp/workflow-mesh-regression/<slug>/`.
+- `./scripts/run-workflow-mesh-regression.sh`
+  Compatibility shim for the native command above. Prefer the native command
+  or `make test-integration-workflow-mesh` for new automation.
 - `./scripts/run-workflow-mesh-regression-remote.sh`
   Compatibility shim for
   `./scripts/kyuubiki workflow-mesh-regression-remote`. It syncs the mesh
@@ -405,7 +415,8 @@ Useful smoke wrappers:
   Rebuild the retained workflow mesh run index and emit `index.json`,
   `README.md`, and `index.html` under `tmp/workflow-mesh-regression/`.
 - `make test-integration-workflow-mesh`
-  Makefile entry for the local distributed workflow mesh regression trio.
+  Makefile entry for the local distributed workflow mesh regression trio. This
+  delegates directly to the native runner instead of invoking the shell shim.
 - `make test-integration-workflow-mesh-nightly`
   Makefile entry for the remote `kyuubiki-lab` workflow mesh regression flow.
 - `make test-integration-workflow-catalog-nightly`

@@ -24,7 +24,10 @@ const projectLibraryServicePath = "apps/frontend/src/lib/workbench/project-libra
 const headlessExecutionPath = "apps/frontend/src/lib/scripting/workbench-headless-execution.ts";
 const headlessWorkflowPanelPath = "apps/frontend/src/components/workbench/workbench-headless-workflow-panel.tsx";
 const headlessWorkflowPanelActionsPath = "apps/frontend/src/components/workbench/workbench-headless-workflow-panel-actions.ts";
+const headlessWorkflowPanelControlsPath = "apps/frontend/src/components/workbench/workbench-headless-workflow-panel-controls.tsx";
+const headlessWorkflowPanelLibraryPath = "apps/frontend/src/components/workbench/workbench-headless-workflow-panel-library.tsx";
 const headlessWorkflowPanelStatePath = "apps/frontend/src/components/workbench/workbench-headless-workflow-panel-state.ts";
+const headlessWorkflowStepListPath = "apps/frontend/src/components/workbench/workbench-headless-workflow-step-list.tsx";
 const headlessWorkflowBackendServicePath = "apps/frontend/src/lib/workbench/headless-workflow-backend-service.ts";
 const resultBackendServicePath = "apps/frontend/src/lib/workbench/result-backend-service.ts";
 const securityEventBackendServicePath = "apps/frontend/src/lib/workbench/security-event-backend-service.ts";
@@ -225,7 +228,10 @@ function checkRuntimeClientBoundary() {
   const headlessExecution = readText(headlessExecutionPath);
   const headlessWorkflowPanel = readText(headlessWorkflowPanelPath);
   const headlessWorkflowPanelActions = readText(headlessWorkflowPanelActionsPath);
+  const headlessWorkflowPanelControls = readText(headlessWorkflowPanelControlsPath);
+  const headlessWorkflowPanelLibrary = readText(headlessWorkflowPanelLibraryPath);
   const headlessWorkflowPanelState = readText(headlessWorkflowPanelStatePath);
+  const headlessWorkflowStepList = readText(headlessWorkflowStepListPath);
   const headlessWorkflowBackendService = readText(headlessWorkflowBackendServicePath);
   const resultService = readText(resultBackendServicePath);
   const securityEventService = readText(securityEventBackendServicePath);
@@ -254,13 +260,23 @@ function checkRuntimeClientBoundary() {
   requireContains(headlessWorkflowBackendService, "defaultRuntimeApiClient", headlessWorkflowBackendServicePath);
   requireContains(headlessWorkflowPanel, "defaultWorkbenchHeadlessWorkflowBackendService", headlessWorkflowPanelPath);
   requireContains(headlessWorkflowPanel, "workbench-headless-workflow-panel-actions", headlessWorkflowPanelPath);
+  requireContains(headlessWorkflowPanel, "workbench-headless-workflow-panel-controls", headlessWorkflowPanelPath);
+  requireContains(headlessWorkflowPanel, "workbench-headless-workflow-panel-library", headlessWorkflowPanelPath);
+  requireContains(headlessWorkflowPanel, "workbench-headless-workflow-step-list", headlessWorkflowPanelPath);
   requireContains(headlessWorkflowPanelActions, "buildHeadlessAgentDispatchPlanFromBackend", headlessWorkflowPanelActionsPath);
   requireContains(headlessWorkflowPanelActions, "buildHeadlessOrchestraHandoffFromBackend", headlessWorkflowPanelActionsPath);
   requireContains(headlessWorkflowPanelActions, "submitHeadlessOrchestraHandoffFromBackend", headlessWorkflowPanelActionsPath);
+  requireContains(headlessWorkflowPanelControls, "WorkbenchHeadlessWorkflowPanelControls", headlessWorkflowPanelControlsPath);
+  requireContains(headlessWorkflowPanelControls, "executionLog", headlessWorkflowPanelControlsPath);
+  requireContains(headlessWorkflowPanelLibrary, "WorkbenchHeadlessFrontendAssetCatalog", headlessWorkflowPanelLibraryPath);
+  requireContains(headlessWorkflowPanelLibrary, "WorkbenchHeadlessTemplateCatalog", headlessWorkflowPanelLibraryPath);
+  requireContains(headlessWorkflowPanelLibrary, "WorkbenchHeadlessActionButtons", headlessWorkflowPanelLibraryPath);
   requireContains(headlessWorkflowPanel, "workbench-headless-workflow-panel-state", headlessWorkflowPanelPath);
   requireContains(headlessWorkflowPanelState, "buildFrontendMacroBridgePayload", headlessWorkflowPanelStatePath);
   requireContains(headlessWorkflowPanelState, "parseFrontendMacroBridgePayload", headlessWorkflowPanelStatePath);
   requireContains(headlessWorkflowPanelState, "moveItem", headlessWorkflowPanelStatePath);
+  requireContains(headlessWorkflowStepList, "WorkbenchHeadlessWorkflowStepList", headlessWorkflowStepListPath);
+  requireContains(headlessWorkflowStepList, "WorkbenchHeadlessWorkflowStepEditor", headlessWorkflowStepListPath);
   requireContains(resultService, "defaultSecurityResultsApiClient", resultBackendServicePath);
   requireContains(securityEventService, "defaultSecurityResultsApiClient", securityEventBackendServicePath);
 

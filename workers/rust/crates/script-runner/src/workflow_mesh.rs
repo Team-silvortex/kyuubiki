@@ -1,3 +1,4 @@
+use crate::native_time::utc_timestamp_slug;
 use std::env;
 use std::ffi::OsString;
 use std::fs::OpenOptions;
@@ -9,12 +10,8 @@ type RunnerResult<T> = Result<T, String>;
 
 pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
     let node_bin = env::var("NODE_BIN").unwrap_or_else(|_| "node".to_string());
-    let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
-        format!(
-            "workflow-mesh-{}",
-            fallback_timestamp_slug().unwrap_or_else(|| "manual".to_string())
-        )
-    });
+    let output_slug = env::var("OUTPUT_SLUG")
+        .unwrap_or_else(|_| format!("workflow-mesh-{}", utc_timestamp_slug()));
     let output_dir = env_path_or(
         "OUTPUT_DIR",
         root.join("tmp/workflow-mesh-regression").join(output_slug),
@@ -123,15 +120,4 @@ fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
 fn log_line(log: &mut std::fs::File, line: &str) -> RunnerResult<()> {
     println!("{line}");
     writeln!(log, "{line}").map_err(|error| format!("failed to write log: {error}"))
-}
-
-fn fallback_timestamp_slug() -> Option<String> {
-    let output = Command::new("date")
-        .args(["-u", "+%Y%m%dT%H%M%SZ"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

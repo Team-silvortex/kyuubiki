@@ -1,3 +1,5 @@
+use crate::native_time::utc_timestamp_slug;
+use crate::remote_host::{remote_shell_path, rsync_to, scp_from, shell_escape, ssh_status};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -43,14 +45,7 @@ pub(crate) fn run_workflow_mesh_remote(root: &Path, args: Vec<OsString>) -> Runn
     }
     sync_workflow_mesh_tests(root, &options)?;
 
-    let status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(remote_command(&options)),
-        ],
-        root,
-    )?;
+    let status = ssh_status(root, &options.remote_host, remote_command(&options))?;
     if status != 0 {
         return Ok(status);
     }
@@ -121,12 +116,8 @@ pub(crate) fn run_workflow_mesh_remote(root: &Path, args: Vec<OsString>) -> Runn
 impl Options {
     fn from_env(root: &Path) -> RunnerResult<Self> {
         let toolchain = toolchain_env(root)?;
-        let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
-            format!(
-                "workflow-mesh-{}",
-                timestamp_slug().unwrap_or_else(|| "manual".to_string())
-            )
-        });
+        let output_slug = env::var("OUTPUT_SLUG")
+            .unwrap_or_else(|_| format!("workflow-mesh-{}", utc_timestamp_slug()));
         let remote_dir =
             env::var("KYUUBIKI_LAB_WORKFLOW_MESH_DIR").unwrap_or_else(|_| "~/kyuubiki".to_string());
         let remote_output_dir = env::var("REMOTE_OUTPUT_DIR")
@@ -307,14 +298,7 @@ fn rsync(
     sources: &[PathBuf],
     destination: &str,
 ) -> RunnerResult<u8> {
-    let mut args = vec![OsString::from("-az")];
-    for exclude in excludes {
-        args.push(OsString::from("--exclude"));
-        args.push(OsString::from(exclude));
-    }
-    args.extend(sources.iter().map(|path| path.clone().into_os_string()));
-    args.push(OsString::from(destination));
-    run_status("rsync", args, root)
+    rsync_to(root, excludes, sources, destination)
 }
 
 fn copy_remote(
@@ -327,14 +311,7 @@ fn copy_remote(
         std::fs::create_dir_all(parent)
             .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
     }
-    run_status(
-        "scp",
-        [
-            OsString::from(format!("{}:{remote_path}", options.remote_host)),
-            local_path.to_path_buf().into_os_string(),
-        ],
-        root,
-    )
+    scp_from(root, &options.remote_host, remote_path, local_path)
 }
 
 fn run_node(root: &Path, script: &str, args: Vec<OsString>) -> RunnerResult<u8> {
@@ -371,10 +348,6 @@ fn json_string_value(json: &str, key: &str) -> Option<String> {
     Some(value.to_string())
 }
 
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
 fn shell_double_fragment(value: &str) -> String {
     value
         .replace('\\', "\\\\")
@@ -383,29 +356,11 @@ fn shell_double_fragment(value: &str) -> String {
         .replace('`', "\\`")
 }
 
-fn remote_shell_path(value: &str) -> String {
-    value
-        .strip_prefix("~/")
-        .map(|rest| format!("$HOME/{}", shell_escape(rest)))
-        .unwrap_or_else(|| shell_escape(value))
-}
-
 fn remote_log_shell_path(value: &str) -> String {
     if let Some(rest) = value.strip_prefix("~/") {
         return format!("$HOME/{}", shell_escape(rest));
     }
     shell_escape(value)
-}
-
-fn timestamp_slug() -> Option<String> {
-    let output = Command::new("date")
-        .args(["-u", "+%Y%m%dT%H%M%SZ"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn print_usage() {

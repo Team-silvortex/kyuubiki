@@ -1,8 +1,9 @@
 use crate::benchmark_profile_remote_summary::write_profile_outputs;
+use crate::native_time::utc_timestamp_slug;
+use crate::remote_host::{rsync_to, scp_from, shell_escape, ssh_status};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -59,28 +60,16 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
         sync_benchmark_sources(root, &options)?;
     }
 
-    let status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(remote_command(&options)),
-        ],
-        root,
-    )?;
+    let status = ssh_status(root, &options.remote_host, remote_command(&options))?;
     if status != 0 {
         return Ok(status);
     }
 
-    let scp_status = run_status(
-        "scp",
-        [
-            OsString::from(format!(
-                "{}:{}",
-                options.remote_host, options.remote_json_path
-            )),
-            options.local_json_path.clone().into_os_string(),
-        ],
+    let scp_status = scp_from(
         root,
+        &options.remote_host,
+        &options.remote_json_path,
+        &options.local_json_path,
     )?;
     if scp_status != 0 {
         return Ok(scp_status);
@@ -110,12 +99,8 @@ impl Options {
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty());
         let output_name = output_name(&matrix, &profile, case_filter.as_deref());
-        let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
-            format!(
-                "benchmark-profile-{}",
-                timestamp_slug().unwrap_or_else(|| "manual".to_string())
-            )
-        });
+        let output_slug = env::var("OUTPUT_SLUG")
+            .unwrap_or_else(|_| format!("benchmark-profile-{}", utc_timestamp_slug()));
         let remote_dir = env::var("KYUUBIKI_LAB_BENCH_DIR")
             .unwrap_or_else(|_| "/tmp/kyuubiki-server-test".to_string());
         let remote_output_dir = env::var("REMOTE_OUTPUT_DIR")
@@ -158,8 +143,9 @@ impl Options {
 
 fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
     ensure_remote_sync_dirs(root, options)?;
-    let status = rsync(
+    let status = rsync_to(
         root,
+        &["target/"],
         &[root.join("workers/rust/")],
         &format!(
             "{}:{}/workers/rust/",
@@ -173,16 +159,13 @@ fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
 }
 
 fn ensure_remote_sync_dirs(root: &Path, options: &Options) -> RunnerResult<()> {
-    let status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(format!(
-                "mkdir -p {}",
-                shell_escape(&format!("{}/workers", options.remote_dir))
-            )),
-        ],
+    let status = ssh_status(
         root,
+        &options.remote_host,
+        format!(
+            "mkdir -p {}",
+            shell_escape(&format!("{}/workers", options.remote_dir))
+        ),
     )?;
     if status != 0 {
         return Err(format!("remote mkdir failed with status {status}"));
@@ -208,29 +191,6 @@ fn remote_command(options: &Options) -> String {
         case_arg,
         shell_escape(&options.remote_json_path)
     )
-}
-
-fn rsync(root: &Path, sources: &[PathBuf], destination: &str) -> RunnerResult<u8> {
-    run_status(
-        "rsync",
-        [OsString::from("-az"), OsString::from("--exclude=target/")]
-            .into_iter()
-            .chain(sources.iter().map(|path| path.clone().into_os_string()))
-            .chain([OsString::from(destination)]),
-        root,
-    )
-}
-
-fn run_status<I>(program: &str, args: I, cwd: &Path) -> RunnerResult<u8>
-where
-    I: IntoIterator<Item = OsString>,
-{
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .map_err(|error| format!("failed to run {program}: {error}"))?;
-    Ok(status.code().unwrap_or(1) as u8)
 }
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
@@ -261,21 +221,6 @@ fn dirname(path: &str) -> String {
     path.rsplit_once('/')
         .map(|(dir, _)| dir.to_string())
         .unwrap_or_else(|| ".".to_string())
-}
-
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn timestamp_slug() -> Option<String> {
-    let output = Command::new("date")
-        .args(["-u", "+%Y%m%dT%H%M%SZ"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn print_usage() {

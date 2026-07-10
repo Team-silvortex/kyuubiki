@@ -1,7 +1,11 @@
+use crate::native_time::utc_timestamp_slug;
+use crate::remote_host::{
+    remote_shell_path, scp_from, shell_escape, ssh_output, ssh_status, ssh_success_quiet,
+};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -46,7 +50,7 @@ pub(crate) fn run_direct_mesh_benchmark_regression(
             .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
     }
 
-    if !remote_wrapper_has_passwordless_sudo(&options)? {
+    if !remote_wrapper_has_passwordless_sudo(root, &options)? {
         eprintln!(
             "passwordless sudo is not configured for {} on {}",
             options.benchmark_wrapper, options.remote_host
@@ -57,26 +61,21 @@ pub(crate) fn run_direct_mesh_benchmark_regression(
         return Ok(1);
     }
 
-    let status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(remote_benchmark_command(&options)),
-        ],
+    let status = ssh_status(
         root,
+        &options.remote_host,
+        remote_benchmark_command(&options),
     )?;
     if status != 0 {
         return Ok(status);
     }
 
     let remote_summary_path = find_remote_summary(&options, root)?;
-    let scp_status = run_status(
-        "scp",
-        [
-            OsString::from(format!("{}:{remote_summary_path}", options.remote_host)),
-            options.current_summary_local.clone().into_os_string(),
-        ],
+    let scp_status = scp_from(
         root,
+        &options.remote_host,
+        &remote_summary_path,
+        &options.current_summary_local,
     )?;
     if scp_status != 0 {
         return Ok(scp_status);
@@ -117,12 +116,8 @@ pub(crate) fn run_direct_mesh_benchmark_regression(
 
 impl Options {
     fn from_env(root: &Path) -> Self {
-        let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
-            format!(
-                "nightly-{}",
-                timestamp_slug().unwrap_or_else(|| "manual".to_string())
-            )
-        });
+        let output_slug =
+            env::var("OUTPUT_SLUG").unwrap_or_else(|_| format!("nightly-{}", utc_timestamp_slug()));
         let remote_dir = env::var("KYUUBIKI_LAB_BENCH_DIR")
             .unwrap_or_else(|_| "~/kyuubiki-bench-709b8c9".to_string());
         Self {
@@ -194,20 +189,15 @@ impl Proxy {
     }
 }
 
-fn remote_wrapper_has_passwordless_sudo(options: &Options) -> RunnerResult<bool> {
-    let status = Command::new("ssh")
-        .args([
-            OsString::from(&options.remote_host),
-            OsString::from(format!(
-                "sudo -n {} --help",
-                shell_escape(&options.benchmark_wrapper)
-            )),
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map_err(|error| format!("failed to run ssh: {error}"))?;
-    Ok(status.success())
+fn remote_wrapper_has_passwordless_sudo(root: &Path, options: &Options) -> RunnerResult<bool> {
+    ssh_success_quiet(
+        root,
+        &options.remote_host,
+        format!(
+            "sudo -n {} --help",
+            shell_escape(&options.benchmark_wrapper)
+        ),
+    )
 }
 
 fn remote_benchmark_command(options: &Options) -> String {
@@ -260,18 +250,12 @@ fn find_remote_summary(options: &Options, root: &Path) -> RunnerResult<String> {
     let script = format!(
         "set -e\nfor candidate in {candidate_words}; do\n  resolved_candidate=$(eval printf '%s' \"$candidate\")\n  if [ -f \"$resolved_candidate\" ]; then\n    printf '%s\\n' \"$resolved_candidate\"\n    exit 0\n  fi\ndone\nexit 1\n"
     );
-    let output = Command::new("ssh")
-        .args([OsString::from(&options.remote_host), OsString::from(script)])
-        .current_dir(root)
-        .output()
-        .map_err(|error| format!("failed to run ssh: {error}"))?;
-    if !output.status.success() {
-        return Err(format!(
+    ssh_output(root, &options.remote_host, script).map_err(|_| {
+        format!(
             "failed to locate remote summary.json under {} on {}",
             options.output_dir_remote, options.remote_host
-        ));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        )
+    })
 }
 
 fn run_compare(root: &Path, options: &Options) -> RunnerResult<u8> {
@@ -323,28 +307,6 @@ fn env_nonempty(name: &str) -> Option<String> {
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
     env::var_os(name).map(PathBuf::from).unwrap_or(fallback)
-}
-
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn remote_shell_path(value: &str) -> String {
-    value
-        .strip_prefix("~/")
-        .map(|rest| format!("$HOME/{}", shell_escape(rest)))
-        .unwrap_or_else(|| shell_escape(value))
-}
-
-fn timestamp_slug() -> Option<String> {
-    let output = Command::new("date")
-        .args(["-u", "+%Y%m%dT%H%M%SZ"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn print_usage() {

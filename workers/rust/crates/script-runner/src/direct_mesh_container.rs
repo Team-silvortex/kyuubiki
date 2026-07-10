@@ -1,3 +1,4 @@
+use crate::native_time::{utc_iso_timestamp, utc_timestamp_slug};
 use std::env;
 use std::ffi::OsString;
 use std::fs::{File, OpenOptions};
@@ -84,7 +85,7 @@ pub(crate) fn run_direct_mesh_benchmark_container(
 }
 
 fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<Options> {
-    let timestamp = timestamp_slug().unwrap_or_else(|| "manual".to_string());
+    let timestamp = utc_timestamp_slug();
     let mut options = Options {
         base_image: env::var("BASE_IMAGE").unwrap_or_else(|_| "elixir:1.19".to_string()),
         docker_build_network: env_nonempty("DOCKER_BUILD_NETWORK"),
@@ -155,7 +156,7 @@ fn run_container_benchmark(run_index: usize, options: &Options) -> RunnerResult<
     args.extend([OsString::from("run"), OsString::from("--name")]);
     args.push(OsString::from(format!(
         "kyuubiki-direct-mesh-bench-{}-{run_index}",
-        timestamp_slug().unwrap_or_else(|| "manual".to_string())
+        utc_timestamp_slug()
     )));
     if !options.keep_containers {
         args.push(OsString::from("--rm"));
@@ -250,7 +251,7 @@ fn write_summary_json(
     let mut output = File::create(options.output_dir.join("summary.json"))
         .map_err(|error| format!("failed to create root summary: {error}"))?;
     write_line!(output, "{{");
-    write_line!(output, "  \"generated_at\": \"{}\",", iso_timestamp());
+    write_line!(output, "  \"generated_at\": \"{}\",", utc_iso_timestamp());
     write_line!(output, "  \"git_sha\": \"{}\",", json_escape(git_sha));
     write_line!(
         output,
@@ -500,14 +501,6 @@ fn env_nonempty(name: &str) -> Option<String> {
 
 fn json_escape(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
-}
-
-fn timestamp_slug() -> Option<String> {
-    command_output("date", ["-u", "+%Y%m%dT%H%M%SZ"])
-}
-
-fn iso_timestamp() -> String {
-    command_output("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"]).unwrap_or_else(|| "unknown".to_string())
 }
 
 fn command_output<const N: usize>(program: &str, args: [&str; N]) -> Option<String> {

@@ -1,7 +1,7 @@
+use crate::remote_host::{remote_shell_path, rsync_to, shell_escape, ssh_status};
 use std::env;
 use std::ffi::OsString;
 use std::path::Path;
-use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -39,14 +39,7 @@ pub(crate) fn run_desktop_linux_remote(root: &Path, args: Vec<OsString>) -> Runn
         RemoteLinuxAction::Preflight => remote_preflight_command(&options),
     };
 
-    let status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(command),
-        ],
-        root,
-    )?;
+    let status = ssh_status(root, &options.remote_host, command)?;
     if status != 0 {
         return Ok(status);
     }
@@ -101,13 +94,10 @@ impl Options {
 }
 
 fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
-    let mkdir_status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(format!("mkdir -p {}", shell_escape(&options.remote_dir))),
-        ],
+    let mkdir_status = ssh_status(
         root,
+        &options.remote_host,
+        format!("mkdir -p {}", shell_escape(&options.remote_dir)),
     )?;
     if mkdir_status != 0 {
         return Err(format!("remote mkdir failed with status {mkdir_status}"));
@@ -115,20 +105,11 @@ fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
 
     let source = root.join(".");
     let destination = format!("{}:{}/", options.remote_host, options.remote_dir);
-    let status = run_status(
-        "rsync",
-        [
-            OsString::from("-az"),
-            OsString::from("--delete"),
-            OsString::from("--exclude=.git/"),
-            OsString::from("--exclude=node_modules/"),
-            OsString::from("--exclude=target/"),
-            OsString::from("--exclude=dist/"),
-            OsString::from("--exclude=tmp/"),
-            source.into_os_string(),
-            OsString::from(destination),
-        ],
+    let status = rsync_to(
         root,
+        &[".git/", "node_modules/", "target/", "dist/", "tmp/"],
+        &[source],
+        &destination,
     )?;
     if status != 0 {
         return Err(format!("rsync failed with status {status}"));
@@ -199,36 +180,6 @@ fn remote_env_prefix() -> String {
     } else {
         format!("{}; ", exports.join("; "))
     }
-}
-
-fn remote_shell_path(path: &str) -> String {
-    if let Some(rest) = path.strip_prefix("~/") {
-        format!("$HOME/{}", shell_escape(rest))
-    } else {
-        shell_escape(path)
-    }
-}
-
-fn shell_escape(value: &str) -> String {
-    if value.chars().all(|character| {
-        character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | '.' | '/' | ':' | '=')
-    }) {
-        value.to_string()
-    } else {
-        format!("'{}'", value.replace('\'', "'\\''"))
-    }
-}
-
-fn run_status<I>(program: &str, args: I, cwd: &Path) -> RunnerResult<u8>
-where
-    I: IntoIterator<Item = OsString>,
-{
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .map_err(|error| format!("failed to run {program}: {error}"))?;
-    Ok(status.code().unwrap_or(1) as u8)
 }
 
 fn print_usage() {

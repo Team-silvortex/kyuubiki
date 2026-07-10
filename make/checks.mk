@@ -1,5 +1,5 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
-.PHONY: check-make-modules
+.PHONY: check-make-modules check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
@@ -26,6 +26,9 @@ check-elixir-self-host:
 
 check-make-modules:
 	@node ./scripts/check-make-modules.mjs
+
+check-native-script-audit:
+	@$(ENTRYPOINT) native-script-audit --self-test
 
 check-language-packs:
 	@node ./scripts/validate-language-packs.mjs
@@ -144,6 +147,7 @@ audit-dependencies:
 architecture-check:
 	@$(MAKE) audit-project-organization
 	@$(MAKE) check-make-modules
+	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
 	@$(MAKE) check-material-score-contract
 	@$(MAKE) check-materialization-plan-contract
@@ -166,6 +170,7 @@ architecture-check:
 verify:
 	@$(MAKE) check-toolchains
 	@$(MAKE) check-elixir-self-host
+	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-language-packs
 	@$(MAKE) check-version-line
 	@$(MAKE) check-operator-reliability

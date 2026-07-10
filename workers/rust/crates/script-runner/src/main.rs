@@ -9,6 +9,9 @@ mod desktop;
 mod desktop_linux_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
+mod native_script_audit;
+mod native_time;
+mod remote_host;
 mod standard_benchmark_remote;
 mod workflow_catalog_remote;
 mod workflow_mesh;
@@ -56,7 +59,11 @@ fn run() -> RunnerResult<u8> {
             print_help();
             Ok(0)
         }
-        "native-script-audit" => print_native_script_audit(&paths),
+        "native-script-audit" => native_script_audit::run_native_script_audit(
+            &paths.root,
+            host_platform().as_str(),
+            rest,
+        ),
         "status"
         | "start"
         | "start-local"
@@ -356,58 +363,6 @@ fn cargo_run(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsStrin
 
 fn prepend(value: &str, rest: Vec<OsString>) -> Vec<OsString> {
     std::iter::once(OsString::from(value)).chain(rest).collect()
-}
-
-fn print_native_script_audit(paths: &RepoPaths) -> RunnerResult<u8> {
-    println!("native script migration audit");
-    println!("  host: {}", host_platform().as_str());
-    println!("  root: {}", paths.root.display());
-    println!("  native runner: kyuubiki-script-runner");
-    println!("  remaining shell scripts and shims:");
-    for entry in ["deploy", "dist", "scripts"] {
-        let root = paths.root.join(entry);
-        if root.exists() {
-            list_shell_scripts(&root, &paths.root)?;
-        }
-    }
-    Ok(0)
-}
-
-fn list_shell_scripts(dir: &Path, root: &Path) -> RunnerResult<()> {
-    for entry in std::fs::read_dir(dir)
-        .map_err(|error| format!("failed to scan {}: {error}", dir.display()))?
-    {
-        let path = entry
-            .map_err(|error| format!("failed to read directory entry: {error}"))?
-            .path();
-        if path.is_dir() {
-            list_shell_scripts(&path, root)?;
-        } else if matches!(
-            path.extension().and_then(|value| value.to_str()),
-            Some("sh" | "bash" | "zsh")
-        ) {
-            let relative = path.strip_prefix(root).unwrap_or(&path);
-            if is_native_shim(relative) {
-                println!("  - {} (native shim)", relative.display());
-            } else {
-                println!("  - {}", relative.display());
-            }
-        }
-    }
-    Ok(())
-}
-
-fn is_native_shim(relative: &Path) -> bool {
-    matches!(
-        relative.to_str(),
-        Some("scripts/run-direct-mesh-benchmark-container.sh")
-            | Some("scripts/run-direct-mesh-benchmark-regression.sh")
-            | Some("scripts/run-benchmark-profile-remote.sh")
-            | Some("scripts/run-standard-benchmark-regression.sh")
-            | Some("scripts/run-workflow-catalog-benchmark-regression.sh")
-            | Some("scripts/run-workflow-mesh-regression-remote.sh")
-            | Some("scripts/run-workflow-mesh-regression.sh")
-    )
 }
 
 fn print_help() {

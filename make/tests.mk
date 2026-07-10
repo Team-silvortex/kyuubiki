@@ -82,7 +82,7 @@ test-integration-direct-mesh-docker-nightly:
 	@$(ENTRYPOINT) direct-mesh-benchmark-regression
 
 test-integration-workflow-mesh:
-	@bash ./scripts/run-workflow-mesh-regression.sh
+	@$(ENTRYPOINT) workflow-mesh-regression
 
 test-integration-workflow-mesh-nightly:
 	@$(ENTRYPOINT) workflow-mesh-regression-remote

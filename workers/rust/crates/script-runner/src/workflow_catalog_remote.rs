@@ -1,3 +1,5 @@
+use crate::native_time::utc_timestamp_slug;
+use crate::remote_host::{remote_shell_path, scp_from, shell_escape, ssh_status};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -41,29 +43,16 @@ pub(crate) fn run_workflow_catalog_remote(root: &Path, args: Vec<OsString>) -> R
         shell_escape(&options.repeat),
         shell_escape(&options.output_path_remote)
     );
-    let ssh_status = run_status(
-        "ssh",
-        [
-            OsString::from(&options.remote_host),
-            OsString::from(remote_command),
-        ],
-        root,
-    )?;
+    let ssh_status = ssh_status(root, &options.remote_host, remote_command)?;
     if ssh_status != 0 {
         return Ok(ssh_status);
     }
 
-    let remote_summary = format!(
-        "{}:{}/{}",
-        options.remote_host, options.remote_dir, options.output_path_remote
-    );
-    let scp_status = run_status(
-        "scp",
-        [
-            OsString::from(remote_summary),
-            options.current_summary_local.clone().into_os_string(),
-        ],
+    let scp_status = scp_from(
         root,
+        &options.remote_host,
+        &format!("{}/{}", options.remote_dir, options.output_path_remote),
+        &options.current_summary_local,
     )?;
     if scp_status != 0 {
         return Ok(scp_status);
@@ -103,12 +92,8 @@ pub(crate) fn run_workflow_catalog_remote(root: &Path, args: Vec<OsString>) -> R
 
 impl Options {
     fn from_env(root: &Path) -> Self {
-        let output_slug = env::var("OUTPUT_SLUG").unwrap_or_else(|_| {
-            format!(
-                "workflow-catalog-{}",
-                timestamp_slug().unwrap_or_else(|| "manual".to_string())
-            )
-        });
+        let output_slug = env::var("OUTPUT_SLUG")
+            .unwrap_or_else(|_| format!("workflow-catalog-{}", utc_timestamp_slug()));
         Self {
             baseline_path: env_path_or(
                 "BASELINE_PATH",
@@ -192,28 +177,6 @@ where
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
     env::var_os(name).map(PathBuf::from).unwrap_or(fallback)
-}
-
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn remote_shell_path(value: &str) -> String {
-    value
-        .strip_prefix("~/")
-        .map(|rest| format!("$HOME/{}", shell_escape(rest)))
-        .unwrap_or_else(|| shell_escape(value))
-}
-
-fn timestamp_slug() -> Option<String> {
-    let output = Command::new("date")
-        .args(["-u", "+%Y%m%dT%H%M%SZ"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn print_usage() {

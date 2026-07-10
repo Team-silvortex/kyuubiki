@@ -50,6 +50,7 @@ help:
 	@echo "  make sync-doc-book-version Sync hand-maintained book entry pages to the current shipping version"
 	@echo "  make check-toolchains Verify Docker, Mix, Node, Rust, and lab defaults against config/toolchains.json"
 	@echo "  make check-elixir-self-host Verify Elixir/Mix/OTP and self-host orchestrator env contracts"
+	@echo "  make check-native-script-audit Verify native runner shell-migration audit logic"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language support packs"
 	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
 	@echo "  make check-gui-runtime-capability-contract Verify GUI-to-runtime capability manifests stay decoupled from backend implementations"
