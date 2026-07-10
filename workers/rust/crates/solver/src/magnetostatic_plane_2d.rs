@@ -105,11 +105,9 @@ pub fn solve_magnetostatic_plane_triangle_2d(
                 * magnetic_flux_density_x
                 + magnetic_flux_density_y * magnetic_flux_density_y)
                 .sqrt();
-            let stored_energy = 0.5
-                * magnetic_flux_density_magnitude
-                * magnetic_field_strength_magnitude
-                * computed.area
-                * element.thickness;
+            let magnetic_energy_density =
+                0.5 * magnetic_flux_density_magnitude * magnetic_field_strength_magnitude;
+            let stored_energy = magnetic_energy_density * computed.area * element.thickness;
 
             MagnetostaticPlaneTriangleElementResult {
                 index,
@@ -127,6 +125,7 @@ pub fn solve_magnetostatic_plane_triangle_2d(
                 magnetic_flux_density_x,
                 magnetic_flux_density_y,
                 magnetic_flux_density_magnitude,
+                magnetic_energy_density,
                 stored_energy,
             }
         })
@@ -145,6 +144,10 @@ pub fn solve_magnetostatic_plane_triangle_2d(
         max_flux_density: elements
             .iter()
             .map(|element| element.magnetic_flux_density_magnitude)
+            .fold(0.0_f64, f64::max),
+        max_magnetic_energy_density: elements
+            .iter()
+            .map(|element| element.magnetic_energy_density)
             .fold(0.0_f64, f64::max),
         total_stored_energy: elements.iter().map(|element| element.stored_energy).sum(),
         nodes,
@@ -262,11 +265,9 @@ pub fn solve_magnetostatic_plane_quad_2d(
                 * magnetic_flux_density_x
                 + magnetic_flux_density_y * magnetic_flux_density_y)
                 .sqrt();
-            let stored_energy = 0.5
-                * magnetic_flux_density_magnitude
-                * magnetic_field_strength_magnitude
-                * total_area
-                * element.thickness;
+            let magnetic_energy_density =
+                0.5 * magnetic_flux_density_magnitude * magnetic_field_strength_magnitude;
+            let stored_energy = magnetic_energy_density * total_area * element.thickness;
 
             MagnetostaticPlaneQuadElementResult {
                 index,
@@ -289,6 +290,7 @@ pub fn solve_magnetostatic_plane_quad_2d(
                 magnetic_flux_density_x,
                 magnetic_flux_density_y,
                 magnetic_flux_density_magnitude,
+                magnetic_energy_density,
                 stored_energy,
             }
         })
@@ -307,6 +309,10 @@ pub fn solve_magnetostatic_plane_quad_2d(
         max_flux_density: elements
             .iter()
             .map(|element| element.magnetic_flux_density_magnitude)
+            .fold(0.0_f64, f64::max),
+        max_magnetic_energy_density: elements
+            .iter()
+            .map(|element| element.magnetic_energy_density)
             .fold(0.0_f64, f64::max),
         total_stored_energy: elements.iter().map(|element| element.stored_energy).sum(),
         nodes,

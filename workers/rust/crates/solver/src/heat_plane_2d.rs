@@ -93,6 +93,8 @@ pub fn solve_heat_plane_triangle_2d(
             );
             let heat_flux_x = -element.conductivity * gradient[0];
             let heat_flux_y = -element.conductivity * gradient[1];
+            let heat_flux_magnitude =
+                (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
 
             HeatPlaneTriangleElementResult {
                 index,
@@ -106,7 +108,8 @@ pub fn solve_heat_plane_triangle_2d(
                 temperature_gradient_y: gradient[1],
                 heat_flux_x,
                 heat_flux_y,
-                heat_flux_magnitude: (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt(),
+                heat_flux_magnitude,
+                heat_flow_rate: heat_flux_magnitude * computed.area * element.thickness,
             }
         })
         .collect::<Vec<_>>();
@@ -119,6 +122,10 @@ pub fn solve_heat_plane_triangle_2d(
         .iter()
         .map(|element| element.heat_flux_magnitude.abs())
         .fold(0.0_f64, f64::max);
+    let total_abs_heat_flow_rate = elements
+        .iter()
+        .map(|element| element.heat_flow_rate.abs())
+        .sum();
 
     Ok(SolveHeatPlaneTriangle2dResult {
         input: request.clone(),
@@ -126,6 +133,7 @@ pub fn solve_heat_plane_triangle_2d(
         elements,
         max_temperature,
         max_heat_flux,
+        total_abs_heat_flow_rate,
     })
 }
 
@@ -271,6 +279,8 @@ fn solve_heat_plane_quad_2d_internal(
                 -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
             let heat_flux_y =
                 -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
+            let heat_flux_magnitude =
+                (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
 
             HeatPlaneQuadElementResult {
                 index,
@@ -289,7 +299,8 @@ fn solve_heat_plane_quad_2d_internal(
                 temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
                 heat_flux_x,
                 heat_flux_y,
-                heat_flux_magnitude: (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt(),
+                heat_flux_magnitude,
+                heat_flow_rate: heat_flux_magnitude * total_area * element.thickness,
             }
         })
         .collect::<Vec<_>>();
@@ -302,6 +313,10 @@ fn solve_heat_plane_quad_2d_internal(
         .iter()
         .map(|element| element.heat_flux_magnitude.abs())
         .fold(0.0_f64, f64::max);
+    let total_abs_heat_flow_rate = elements
+        .iter()
+        .map(|element| element.heat_flow_rate.abs())
+        .sum();
 
     push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "assemble");
 
@@ -312,6 +327,7 @@ fn solve_heat_plane_quad_2d_internal(
             elements,
             max_temperature,
             max_heat_flux,
+            total_abs_heat_flow_rate,
         },
         memory_stages,
     })

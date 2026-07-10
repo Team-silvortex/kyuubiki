@@ -30,6 +30,8 @@ pub struct StokesFlowPlaneQuadElementResult {
     pub average_pressure: f64,
     pub velocity_gradient_x: f64,
     pub velocity_gradient_y: f64,
+    pub shear_rate: f64,
+    pub max_viscous_shear_stress: f64,
     pub divergence_error: f64,
     pub reynolds_number: f64,
     pub viscous_dissipation: f64,
@@ -42,6 +44,9 @@ pub struct SolveStokesFlowPlaneQuad2dResult {
     pub elements: Vec<StokesFlowPlaneQuadElementResult>,
     pub max_velocity: f64,
     pub max_pressure: f64,
+    pub pressure_drop: f64,
     pub max_divergence_error: f64,
     pub max_reynolds_number: f64,
+    pub max_shear_rate: f64,
+    pub max_viscous_shear_stress: f64,
 }

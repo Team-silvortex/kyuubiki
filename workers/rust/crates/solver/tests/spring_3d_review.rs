@@ -38,6 +38,7 @@ fn spring_3d_review_bundle_checks_cage_supports_top_displacement_and_member_forc
     assert_close(top.uz, -0.031_322_703_837_618_61);
     assert_close(result.max_displacement, 0.059_558_686_265_212_11);
     assert_close(result.max_force, 803.010_827_379_611_9);
+    assert!(result.total_strain_energy > 0.0);
 
     let leg_a = &result.elements[0];
     let leg_b = &result.elements[1];
@@ -48,6 +49,17 @@ fn spring_3d_review_bundle_checks_cage_supports_top_displacement_and_member_forc
     assert_close(leg_a.extension, leg_a.force / 18_000.0);
     assert_close(leg_b.extension, leg_b.force / 22_000.0);
     assert_close(leg_c.extension, leg_c.force / 16_000.0);
+    assert_element_energy(leg_a);
+    assert_element_energy(leg_b);
+    assert_element_energy(leg_c);
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum(),
+    );
     assert!(leg_a.length > 1.0);
     assert!(leg_b.length > 1.0);
     assert!(leg_c.length > 1.0);
@@ -94,5 +106,12 @@ fn assert_close(actual: f64, expected: f64) {
     assert!(
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
+    );
+}
+
+fn assert_element_energy(element: &kyuubiki_protocol::Spring3dElementResult) {
+    assert_close(
+        element.strain_energy,
+        0.5 * element.force * element.extension,
     );
 }

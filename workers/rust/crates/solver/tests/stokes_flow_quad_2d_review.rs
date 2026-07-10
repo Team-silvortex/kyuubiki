@@ -51,6 +51,8 @@ fn stokes_flow_quad_2d_review_bundle_checks_velocity_pressure_divergence_reynold
     let dv_dy = 0.125;
     let velocity_gradient_x = 0.125;
     let velocity_gradient_y = 0.0;
+    let shear_rate = f64::sqrt(2.0 * du_dx * du_dx + 2.0 * dv_dy * dv_dy + 0.125 * 0.125);
+    let max_viscous_shear_stress = viscosity * 2.0;
     let divergence_error = du_dx + dv_dy;
     let reynolds_number = density * average_velocity_magnitude / viscosity;
     let viscous_dissipation = viscosity
@@ -71,13 +73,18 @@ fn stokes_flow_quad_2d_review_bundle_checks_velocity_pressure_divergence_reynold
     assert_close(element.average_pressure, average_pressure);
     assert_close(element.velocity_gradient_x, velocity_gradient_x);
     assert_close(element.velocity_gradient_y, velocity_gradient_y);
+    assert_close(element.shear_rate, shear_rate);
+    assert_close(element.max_viscous_shear_stress, max_viscous_shear_stress);
     assert_close(element.divergence_error, divergence_error);
     assert_close(element.reynolds_number, reynolds_number);
     assert_close(element.viscous_dissipation, viscous_dissipation);
     assert_close(result.max_velocity, f64::sqrt(1.0 * 1.0 + 0.25 * 0.25));
     assert_close(result.max_pressure, 2.5);
+    assert_close(result.pressure_drop, 3.5);
     assert_close(result.max_divergence_error, divergence_error);
     assert_close(result.max_reynolds_number, reynolds_number);
+    assert_close(result.max_shear_rate, shear_rate);
+    assert_close(result.max_viscous_shear_stress, max_viscous_shear_stress);
 }
 
 #[allow(clippy::too_many_arguments)]

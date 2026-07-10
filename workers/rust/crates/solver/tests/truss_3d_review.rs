@@ -44,13 +44,25 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
         1.0e-12,
     );
     assert_close(result.max_stress, 74_386.378_681_404_68, 1.0e-9);
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 
     for element in &result.elements {
         assert!(element.length > 0.0);
         assert!(element.strain.is_finite());
         assert!(element.stress.is_finite());
         assert!(element.axial_force.is_finite());
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.strain,
+            1.0e-12,
+        );
     }
+    assert_close(
+        result.total_strain_energy,
+        total_strain_energy(&request, &result.elements),
+        TOL,
+    );
     for base_element in &result.elements[0..3] {
         assert_close(base_element.strain, 0.0, 1.0e-12);
         assert_close(base_element.stress, 0.0, 1.0e-12);
@@ -65,6 +77,14 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
     assert_close(internal_x + request.nodes[3].load_x, 0.0, TOL);
     assert_close(internal_y + request.nodes[3].load_y, 0.0, TOL);
     assert_close(internal_z + request.nodes[3].load_z, 0.0, TOL);
+}
+
+fn total_strain_energy(request: &SolveTruss3dRequest, elements: &[Truss3dElementResult]) -> f64 {
+    elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum()
 }
 
 fn loaded_node_internal_force(

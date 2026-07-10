@@ -28,6 +28,7 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
     .expect("review magnetostatic quad should solve");
 
     let expected_vector_potential = 0.000_125_663_706_143_591_7;
+    let expected_energy_density = 0.006_283_185_307_179_585;
     let expected_energy = 0.000_628_318_530_717_958_5;
 
     assert_eq!(result.nodes.len(), 4);
@@ -39,6 +40,7 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
     assert_close(result.max_vector_potential, expected_vector_potential);
     assert_close(result.max_magnetic_field_strength, 100.0);
     assert_close(result.max_flux_density, expected_vector_potential);
+    assert_close(result.max_magnetic_energy_density, expected_energy_density);
     assert_close(result.total_stored_energy, expected_energy);
 
     let element = &result.elements[0];
@@ -56,6 +58,7 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
     assert_close(element.magnetic_flux_density_y, 0.0);
     assert_close(element.magnetic_field_strength_x, 100.0);
     assert_close(element.magnetic_field_strength_y, 0.0);
+    assert_close(element.magnetic_energy_density, expected_energy_density);
     assert_close(element.stored_energy, expected_energy);
 }
 

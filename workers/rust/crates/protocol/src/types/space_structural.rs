@@ -46,6 +46,7 @@ pub struct TrussElementResult {
     pub strain: f64,
     pub stress: f64,
     pub axial_force: f64,
+    pub strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -55,6 +56,8 @@ pub struct SolveTruss2dResult {
     pub elements: Vec<TrussElementResult>,
     pub max_displacement: f64,
     pub max_stress: f64,
+    pub total_strain_energy: f64,
+    pub max_strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -108,6 +111,7 @@ pub struct Truss3dElementResult {
     pub strain: f64,
     pub stress: f64,
     pub axial_force: f64,
+    pub strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -117,6 +121,8 @@ pub struct SolveTruss3dResult {
     pub elements: Vec<Truss3dElementResult>,
     pub max_displacement: f64,
     pub max_stress: f64,
+    pub total_strain_energy: f64,
+    pub max_strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

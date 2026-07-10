@@ -21,6 +21,8 @@ fn spring_1d_review_bundle_checks_series_chain_boundaries_extensions_and_member_
     let expected_left_extension = 1200.0 / 35_000.0;
     let expected_right_extension = 1200.0 / 20_000.0;
     let expected_tip_displacement = expected_left_extension + expected_right_extension;
+    let expected_left_energy = 0.5 * 1200.0 * expected_left_extension;
+    let expected_right_energy = 0.5 * 1200.0 * expected_right_extension;
 
     assert_eq!(result.nodes.len(), 3);
     assert_eq!(result.elements.len(), 2);
@@ -29,6 +31,10 @@ fn spring_1d_review_bundle_checks_series_chain_boundaries_extensions_and_member_
     assert_close(result.nodes[2].ux, expected_tip_displacement);
     assert_close(result.max_displacement, expected_tip_displacement);
     assert_close(result.max_force, 1200.0);
+    assert_close(
+        result.total_strain_energy,
+        expected_left_energy + expected_right_energy,
+    );
 
     let left = &result.elements[0];
     let right = &result.elements[1];
@@ -38,6 +44,8 @@ fn spring_1d_review_bundle_checks_series_chain_boundaries_extensions_and_member_
     assert_close(right.extension, expected_right_extension);
     assert_close(left.force, 1200.0);
     assert_close(right.force, 1200.0);
+    assert_close(left.strain_energy, expected_left_energy);
+    assert_close(right.strain_energy, expected_right_energy);
 
     let equivalent_stiffness = 1.0 / (1.0 / 35_000.0 + 1.0 / 20_000.0);
     assert_close(equivalent_stiffness * result.nodes[2].ux, 1200.0);

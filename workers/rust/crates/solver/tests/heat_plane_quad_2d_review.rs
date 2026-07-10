@@ -45,7 +45,12 @@ fn heat_plane_quad_2d_review_bundle_checks_boundary_field_and_flux_diagnostics()
         element.heat_flux_magnitude,
         f64::sqrt(900.0 * 900.0 + 2700.0 * 2700.0),
     );
+    assert_close(
+        element.heat_flow_rate,
+        element.heat_flux_magnitude * 1.0 * 0.02,
+    );
     assert_close(result.max_heat_flux, element.heat_flux_magnitude);
+    assert_close(result.total_abs_heat_flow_rate, element.heat_flow_rate);
 }
 
 fn node(id: &str, x: f64, y: f64, fix_temperature: bool, temperature: f64) -> HeatPlaneNodeInput {

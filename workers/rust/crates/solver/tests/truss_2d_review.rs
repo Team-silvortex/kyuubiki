@@ -28,17 +28,40 @@ fn truss_2d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
     assert!(result.nodes[2].uy < 0.0, "loaded apex should move downward");
     assert!(result.max_displacement > 0.0);
     assert!(result.max_stress > 0.0);
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 
     for element in &result.elements {
         assert!(element.length > 0.0);
         assert!(element.strain.is_finite());
         assert!(element.stress.is_finite());
         assert!(element.axial_force.is_finite());
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.strain,
+            1.0e-12,
+        );
     }
+    assert_close(
+        result.total_strain_energy,
+        total_strain_energy(&request, &result.elements),
+        TOL,
+    );
 
     let (internal_x, internal_y) = loaded_node_internal_force(&request, &result.elements, 2);
     assert_close(internal_x + request.nodes[2].load_x, 0.0, TOL);
     assert_close(internal_y + request.nodes[2].load_y, 0.0, TOL);
+}
+
+fn total_strain_energy(
+    request: &SolveTruss2dRequest,
+    elements: &[kyuubiki_protocol::TrussElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum()
 }
 
 fn loaded_node_internal_force(

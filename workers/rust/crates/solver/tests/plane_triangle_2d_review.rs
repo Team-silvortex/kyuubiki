@@ -20,11 +20,14 @@ fn plane_triangle_2d_review_bundle_checks_panel_boundaries_stress_and_strain_dia
     assert!(result.nodes[3].uy < 0.0);
     assert_close(result.max_displacement, 1.504_347_441_414_315e-6, 1.0e-12);
     assert_close(result.max_stress, 100_000.0, 1.0e-10);
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 
     for element in &result.elements {
         assert_close(element.area, 0.5, 1.0e-12);
         assert_finite_plane_stress_state(element);
         assert!(element.von_mises >= 0.0);
+        assert!(element.strain_energy_density >= 0.0);
         assert!(element.max_in_plane_shear >= 0.0);
         assert!(
             element.principal_stress_1 >= element.principal_stress_2,
@@ -90,6 +93,7 @@ fn assert_finite_plane_stress_state(element: &PlaneTriangleElementResult) {
         element.principal_stress_2,
         element.max_in_plane_shear,
         element.von_mises,
+        element.strain_energy_density,
     ] {
         assert!(value.is_finite());
     }

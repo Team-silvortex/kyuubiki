@@ -56,6 +56,15 @@ pub(crate) fn build_thermal_bar_1d_result(
         .iter()
         .map(|node| node.temperature_delta.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
 
     SolveThermalBar1dResult {
         input: request.clone(),
@@ -65,6 +74,8 @@ pub(crate) fn build_thermal_bar_1d_result(
         max_stress,
         max_axial_force,
         max_temperature_delta,
+        total_strain_energy,
+        max_strain_energy_density,
     }
 }
 
@@ -220,6 +231,7 @@ fn build_element_result(
     let mechanical_strain = total_strain - thermal_strain;
     let stress = element.youngs_modulus * mechanical_strain;
     let axial_force = stress * element.area;
+    let strain_energy_density = 0.5 * stress * mechanical_strain;
 
     ThermalBar1dElementResult {
         index,
@@ -233,5 +245,6 @@ fn build_element_result(
         total_strain,
         stress,
         axial_force,
+        strain_energy_density,
     }
 }

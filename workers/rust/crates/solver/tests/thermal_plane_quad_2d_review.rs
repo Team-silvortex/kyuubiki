@@ -55,9 +55,12 @@ fn thermal_plane_quad_2d_review_bundle_checks_restrained_thermal_stress_diagnost
     assert_close(element.stress_y, expected_stress);
     assert_close(element.tau_xy, 0.0);
     assert!(element.von_mises >= 0.0);
+    assert!(element.strain_energy_density > 0.0);
     assert_close(result.max_displacement, 0.0);
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_stress, expected_stress.abs());
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 }
 
 fn node(id: &str, x: f64, y: f64, temperature_delta: f64) -> ThermalPlaneNodeInput {

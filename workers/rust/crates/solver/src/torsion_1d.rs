@@ -73,6 +73,7 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
             let twist = rotations[element.node_j] - rotations[element.node_i];
             let torque = element.shear_modulus * element.polar_moment * twist / length;
             let shear_stress = torque.abs() / element.section_modulus;
+            let strain_energy = 0.5 * torque * twist;
 
             Torsion1dElementResult {
                 index,
@@ -83,6 +84,7 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
                 twist,
                 torque,
                 shear_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -99,6 +101,7 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
         .iter()
         .map(|element| element.shear_stress)
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveTorsion1dResult {
         input: request.clone(),
@@ -107,6 +110,7 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
         max_rotation,
         max_torque,
         max_stress,
+        total_strain_energy,
     })
 }
 

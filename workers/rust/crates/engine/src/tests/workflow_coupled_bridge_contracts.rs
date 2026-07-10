@@ -349,6 +349,7 @@ fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {
                 heat_flux_x: 5.0,
                 heat_flux_y: 0.0,
                 heat_flux_magnitude: 5.0,
+                heat_flow_rate: 0.1,
             },
             HeatPlaneTriangleElementResult {
                 index: 1,
@@ -363,10 +364,12 @@ fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {
                 heat_flux_x: 12.0,
                 heat_flux_y: 0.0,
                 heat_flux_magnitude: 12.0,
+                heat_flow_rate: 0.48,
             },
         ],
         max_temperature: 90.0,
         max_heat_flux: 12.0,
+        total_abs_heat_flow_rate: 0.58,
     }
 }
 

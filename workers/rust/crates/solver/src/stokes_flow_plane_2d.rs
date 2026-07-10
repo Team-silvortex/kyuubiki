@@ -60,6 +60,14 @@ pub fn solve_stokes_flow_plane_quad_2d(
         .iter()
         .map(|node| node.pressure.abs())
         .fold(0.0_f64, f64::max);
+    let min_pressure = nodes
+        .iter()
+        .map(|node| node.pressure)
+        .fold(f64::INFINITY, f64::min);
+    let max_signed_pressure = nodes
+        .iter()
+        .map(|node| node.pressure)
+        .fold(f64::NEG_INFINITY, f64::max);
     let max_divergence_error = elements
         .iter()
         .map(|element| element.divergence_error.abs())
@@ -68,6 +76,14 @@ pub fn solve_stokes_flow_plane_quad_2d(
         .iter()
         .map(|element| element.reynolds_number)
         .fold(0.0_f64, f64::max);
+    let max_shear_rate = elements
+        .iter()
+        .map(|element| element.shear_rate)
+        .fold(0.0_f64, f64::max);
+    let max_viscous_shear_stress = elements
+        .iter()
+        .map(|element| element.max_viscous_shear_stress)
+        .fold(0.0_f64, f64::max);
 
     Ok(SolveStokesFlowPlaneQuad2dResult {
         input: request.clone(),
@@ -75,8 +91,11 @@ pub fn solve_stokes_flow_plane_quad_2d(
         elements,
         max_velocity,
         max_pressure,
+        pressure_drop: max_signed_pressure - min_pressure,
         max_divergence_error,
         max_reynolds_number,
+        max_shear_rate,
+        max_viscous_shear_stress,
     })
 }
 
@@ -215,6 +234,15 @@ fn element_result(
     let characteristic_length = area.sqrt();
     let reynolds_number =
         element.density * average_velocity_magnitude * characteristic_length / element.viscosity;
+    let engineering_shear_rate = velocity_gradient_x + velocity_gradient_y;
+    let shear_rate = (2.0 * du_dx * du_dx
+        + 2.0 * dv_dy * dv_dy
+        + engineering_shear_rate * engineering_shear_rate)
+        .sqrt();
+    let max_viscous_shear_stress = element.viscosity
+        * (2.0 * du_dx.abs())
+            .max(2.0 * dv_dy.abs())
+            .max(engineering_shear_rate.abs());
     let viscous_dissipation = element.viscosity
         * (du_dx * du_dx
             + dv_dy * dv_dy
@@ -237,6 +265,8 @@ fn element_result(
         average_pressure,
         velocity_gradient_x,
         velocity_gradient_y,
+        shear_rate,
+        max_viscous_shear_stress,
         divergence_error: (du_dx + dv_dy).abs(),
         reynolds_number,
         viscous_dissipation,

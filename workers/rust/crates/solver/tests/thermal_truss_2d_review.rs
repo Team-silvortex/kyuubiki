@@ -34,6 +34,8 @@ fn thermal_truss_2d_review_bundle_checks_mixed_temperature_load_and_node_balance
     assert_close(result.max_axial_force, 235.849_528_301_435_58, 1.0e-9);
     assert_close(result.max_stress, 23_584.952_830_143_557, 1.0e-9);
     assert_close(result.max_temperature_delta, 40.0, 1.0e-12);
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 
     assert_close(result.elements[0].average_temperature_delta, 32.5, 1.0e-12);
     assert_close(result.elements[1].average_temperature_delta, 32.5, 1.0e-12);
@@ -51,11 +53,32 @@ fn thermal_truss_2d_review_bundle_checks_mixed_temperature_load_and_node_balance
             1.0e-12,
         );
         assert_close(element.stress, 70.0e9 * element.mechanical_strain, 1.0e-12);
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.mechanical_strain,
+            1.0e-12,
+        );
     }
+    assert_close(
+        result.total_strain_energy,
+        total_strain_energy(&request, &result.elements),
+        TOL,
+    );
 
     let (internal_x, internal_y) = loaded_node_internal_force(&request, &result.elements, 2);
     assert_close(internal_x + request.nodes[2].load_x, 0.0, TOL);
     assert_close(internal_y + request.nodes[2].load_y, 0.0, TOL);
+}
+
+fn total_strain_energy(
+    request: &SolveThermalTruss2dRequest,
+    elements: &[ThermalTruss2dElementResult],
+) -> f64 {
+    elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum()
 }
 
 fn loaded_node_internal_force(

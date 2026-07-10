@@ -30,6 +30,7 @@ fn electrostatic_plane_triangle_2d_review_bundle_checks_patch_gradient_flux_and_
     assert_close(result.max_potential, 12.0);
     assert_close(result.max_electric_field, 8.0);
     assert_close(result.max_flux_density, 24.0);
+    assert_close(result.max_electric_energy_density, 96.0);
     assert_close(result.total_stored_energy, 4.8);
 
     let element = &result.elements[0];
@@ -41,6 +42,7 @@ fn electrostatic_plane_triangle_2d_review_bundle_checks_patch_gradient_flux_and_
     assert_close(element.electric_field_y, 0.0);
     assert_close(element.electric_flux_density_x, 24.0);
     assert_close(element.electric_flux_density_y, 0.0);
+    assert_close(element.electric_energy_density, 96.0);
     assert_close(element.stored_energy, 4.8);
 }
 

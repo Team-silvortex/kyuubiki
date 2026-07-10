@@ -16,6 +16,7 @@ pub(super) struct PlaneTriangleState {
     pub(super) principal_stress_2: f64,
     pub(super) max_in_plane_shear: f64,
     pub(super) von_mises: f64,
+    pub(super) strain_energy_density: f64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -61,7 +62,12 @@ pub(super) fn plane_triangle_state(
         principal_stress_2: derived.principal_stress_2,
         max_in_plane_shear: derived.max_in_plane_shear,
         von_mises: derived.von_mises,
+        strain_energy_density: strain_energy_density(&stress, &strain),
     }
+}
+
+pub(crate) fn strain_energy_density(stress: &[f64; 3], strain: &[f64; 3]) -> f64 {
+    0.5 * ((stress[0] * strain[0]) + (stress[1] * strain[1]) + (stress[2] * strain[2]))
 }
 
 pub(super) fn signed_triangle_area(

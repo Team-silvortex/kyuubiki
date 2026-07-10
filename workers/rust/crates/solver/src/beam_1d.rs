@@ -112,6 +112,7 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
                 &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
                 &equivalent_load,
             );
+            let strain_energy = beam_strain_energy(&local_forces, &local_displacements);
             let max_bending_stress =
                 local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
 
@@ -126,6 +127,7 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
                 shear_force_j: local_forces[2],
                 moment_j: local_forces[3],
                 max_bending_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -146,6 +148,7 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
         .iter()
         .map(|element| element.max_bending_stress)
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveBeam1dResult {
         input: request.clone(),
@@ -155,6 +158,7 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
         max_rotation,
         max_moment,
         max_stress,
+        total_strain_energy,
     })
 }
 
@@ -285,6 +289,7 @@ pub fn solve_thermal_beam_1d(
                 &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
                 &equivalent_load,
             );
+            let strain_energy = beam_strain_energy(&local_forces, &local_displacements);
             let max_bending_stress =
                 local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
 
@@ -302,6 +307,7 @@ pub fn solve_thermal_beam_1d(
                 shear_force_j: local_forces[2],
                 moment_j: local_forces[3],
                 max_bending_stress,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -326,6 +332,7 @@ pub fn solve_thermal_beam_1d(
         .iter()
         .map(|element| element.temperature_gradient_y.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveThermalBeam1dResult {
         input: request.clone(),
@@ -336,6 +343,7 @@ pub fn solve_thermal_beam_1d(
         max_moment,
         max_stress,
         max_temperature_gradient,
+        total_strain_energy,
     })
 }
 
@@ -515,6 +523,12 @@ fn subtract_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
         output[index] = lhs[index] - rhs[index];
     }
     output
+}
+
+fn beam_strain_energy(local_forces: &[f64; 4], local_displacements: &[f64; 4]) -> f64 {
+    0.5 * (0..4)
+        .map(|index| local_forces[index] * local_displacements[index])
+        .sum::<f64>()
 }
 
 fn add_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {

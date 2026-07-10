@@ -118,6 +118,7 @@ fn triangle_result() -> SolveElectrostaticPlaneTriangle2dResult {
                 electric_flux_density_x: 0.0,
                 electric_flux_density_y: 0.0,
                 electric_flux_density_magnitude: 0.0,
+                electric_energy_density: 0.0,
                 stored_energy: 0.0,
             },
             ElectrostaticPlaneTriangleElementResult {
@@ -136,12 +137,14 @@ fn triangle_result() -> SolveElectrostaticPlaneTriangle2dResult {
                 electric_flux_density_x: 0.0,
                 electric_flux_density_y: 0.0,
                 electric_flux_density_magnitude: 0.0,
+                electric_energy_density: 0.0,
                 stored_energy: 0.0,
             },
         ],
         max_potential: 6.0,
         max_electric_field: 8.0,
         max_flux_density: 0.0,
+        max_electric_energy_density: 0.0,
         total_stored_energy: 0.0,
     }
 }

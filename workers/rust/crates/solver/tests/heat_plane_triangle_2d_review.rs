@@ -37,6 +37,7 @@ fn heat_plane_triangle_2d_review_bundle_checks_boundary_field_and_flux_diagnosti
         lower.heat_flux_magnitude,
         f64::sqrt(1800.0 * 1800.0 + 1800.0 * 1800.0),
     );
+    assert_close(lower.heat_flow_rate, lower.heat_flux_magnitude * 0.5 * 0.02);
 
     let upper = &result.elements[1];
     assert_close(upper.area, 0.5);
@@ -46,7 +47,12 @@ fn heat_plane_triangle_2d_review_bundle_checks_boundary_field_and_flux_diagnosti
     assert_close(upper.heat_flux_x, 0.0);
     assert_close(upper.heat_flux_y, 3600.0);
     assert_close(upper.heat_flux_magnitude, 3600.0);
+    assert_close(upper.heat_flow_rate, 3600.0 * 0.5 * 0.02);
     assert_close(result.max_heat_flux, upper.heat_flux_magnitude);
+    assert_close(
+        result.total_abs_heat_flow_rate,
+        lower.heat_flow_rate + upper.heat_flow_rate,
+    );
 }
 
 fn node(id: &str, x: f64, y: f64, fix_temperature: bool, temperature: f64) -> HeatPlaneNodeInput {

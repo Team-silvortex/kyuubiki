@@ -8,6 +8,7 @@ mod types {
     pub mod acoustic;
     pub mod acoustic_results;
     pub mod dynamic_results;
+    pub mod electrostatic_plane_results;
     pub mod field;
     pub mod field_results;
     pub mod fluid_results;
@@ -15,6 +16,7 @@ mod types {
     pub mod linear_structural;
     pub mod nonlinear_structural;
     pub mod plane_frame;
+    pub mod plane_results;
     pub mod rpc;
     pub mod rpc_descriptor;
     pub mod space_structural;
@@ -40,6 +42,7 @@ pub use operator_task_ir::{
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;
 pub use types::dynamic_results::*;
+pub use types::electrostatic_plane_results::*;
 pub use types::field::*;
 pub use types::field_results::*;
 pub use types::fluid_results::*;
@@ -47,6 +50,7 @@ pub use types::linear_results::*;
 pub use types::linear_structural::*;
 pub use types::nonlinear_structural::*;
 pub use types::plane_frame::*;
+pub use types::plane_results::*;
 pub use types::rpc::*;
 pub use types::space_structural::*;
 pub use types::transport_results::*;

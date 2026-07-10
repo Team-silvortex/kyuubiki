@@ -26,6 +26,8 @@ fn thermal_bar_1d_review_bundle_checks_restrained_uniform_rise_strain_and_force_
     let expected_thermal_strain: f64 = 12.0e-6 * 40.0;
     let expected_stress: f64 = -210.0e9 * expected_thermal_strain;
     let expected_axial_force: f64 = expected_stress * 0.01;
+    let expected_energy_density: f64 = 0.5 * expected_stress * -expected_thermal_strain;
+    let expected_total_energy: f64 = expected_energy_density * 0.01;
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
@@ -35,6 +37,8 @@ fn thermal_bar_1d_review_bundle_checks_restrained_uniform_rise_strain_and_force_
     assert_close(result.max_temperature_delta, 40.0);
     assert_close(result.max_stress, expected_stress.abs());
     assert_close(result.max_axial_force, expected_axial_force.abs());
+    assert_close(result.max_strain_energy_density, expected_energy_density);
+    assert_close(result.total_strain_energy, expected_total_energy);
 
     let element = &result.elements[0];
     assert_close(element.length, 1.0);
@@ -44,6 +48,7 @@ fn thermal_bar_1d_review_bundle_checks_restrained_uniform_rise_strain_and_force_
     assert_close(element.total_strain, 0.0);
     assert_close(element.stress, expected_stress);
     assert_close(element.axial_force, expected_axial_force);
+    assert_close(element.strain_energy_density, expected_energy_density);
     assert!(element.stress < 0.0);
 }
 

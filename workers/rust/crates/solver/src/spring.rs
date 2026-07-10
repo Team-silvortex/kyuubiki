@@ -72,6 +72,7 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
             let node_j = &request.nodes[element.node_j];
             let extension = displacements[element.node_j] - displacements[element.node_i];
             let force = element.stiffness * extension;
+            let strain_energy = 0.5 * force * extension;
 
             Spring1dElementResult {
                 index,
@@ -81,6 +82,7 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
                 length: (node_j.x - node_i.x).abs(),
                 extension,
                 force,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -93,6 +95,7 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
         .iter()
         .map(|element| element.force.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring1dResult {
         input: request.clone(),
@@ -100,6 +103,7 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
         elements,
         max_displacement,
         max_force,
+        total_strain_energy,
     })
 }
 
@@ -209,6 +213,7 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
             let uy_j = displacements[element.node_j * 2 + 1];
             let extension = (ux_j - ux_i) * c + (uy_j - uy_i) * s;
             let force = element.stiffness * extension;
+            let strain_energy = 0.5 * force * extension;
 
             Spring2dElementResult {
                 index,
@@ -218,6 +223,7 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
                 length,
                 extension,
                 force,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -230,6 +236,7 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
         .iter()
         .map(|element| element.force.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring2dResult {
         input: request.clone(),
@@ -237,6 +244,7 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
         elements,
         max_displacement,
         max_force,
+        total_strain_energy,
     })
 }
 
@@ -362,6 +370,7 @@ pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dRe
             let uz_j = displacements[element.node_j * 3 + 2];
             let extension = (ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n;
             let force = element.stiffness * extension;
+            let strain_energy = 0.5 * force * extension;
 
             Spring3dElementResult {
                 index,
@@ -371,6 +380,7 @@ pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dRe
                 length,
                 extension,
                 force,
+                strain_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -383,6 +393,7 @@ pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dRe
         .iter()
         .map(|element| element.force.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring3dResult {
         input: request.clone(),
@@ -390,6 +401,7 @@ pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dRe
         elements,
         max_displacement,
         max_force,
+        total_strain_energy,
     })
 }
 

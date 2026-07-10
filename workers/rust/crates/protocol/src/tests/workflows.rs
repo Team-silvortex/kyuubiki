@@ -100,9 +100,11 @@ fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
                 heat_flux_x: 1800.0,
                 heat_flux_y: 0.0,
                 heat_flux_magnitude: 1800.0,
+                heat_flow_rate: 36.0,
             }],
             max_temperature: 100.0,
             max_heat_flux: 1800.0,
+            total_abs_heat_flow_rate: 36.0,
         },
         bridged_model: decoded.thermo_seed_model.clone(),
         thermo_result: SolveThermalPlaneQuad2dResult {
@@ -139,10 +141,13 @@ fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
                 principal_stress_2: -1.0,
                 max_in_plane_shear: 0.0,
                 von_mises: 1.0,
+                strain_energy_density: 0.0,
             }],
             max_displacement: 0.0,
             max_stress: 1.0,
             max_temperature_delta: 80.0,
+            total_strain_energy: 0.0,
+            max_strain_energy_density: 0.0,
         },
     };
 
@@ -268,9 +273,11 @@ fn serializes_heat_to_thermo_plane_triangle_workflow_round_trip() {
                 heat_flux_x: 3600.0,
                 heat_flux_y: 2700.0,
                 heat_flux_magnitude: 4500.0,
+                heat_flow_rate: 45.0,
             }],
             max_temperature: 100.0,
             max_heat_flux: 4500.0,
+            total_abs_heat_flow_rate: 45.0,
         },
         bridged_model: decoded.thermo_seed_model.clone(),
         thermo_result: SolveThermalPlaneTriangle2dResult {
@@ -306,10 +313,13 @@ fn serializes_heat_to_thermo_plane_triangle_workflow_round_trip() {
                 principal_stress_2: -1.0,
                 max_in_plane_shear: 0.0,
                 von_mises: 1.0,
+                strain_energy_density: 0.0,
             }],
             max_displacement: 0.0,
             max_stress: 1.0,
             max_temperature_delta: 80.0,
+            total_strain_energy: 0.0,
+            max_strain_energy_density: 0.0,
         },
     };
 

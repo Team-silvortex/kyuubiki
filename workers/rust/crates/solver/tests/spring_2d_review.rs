@@ -33,6 +33,7 @@ fn spring_2d_review_bundle_checks_grid_supports_member_extensions_and_diagonal_f
     assert_close(loaded.uy, -0.037_735_849_056_603_77);
     assert_close(result.max_displacement, 0.063_397_349_495_892_24);
     assert_close(result.max_force, 1120.754_716_981_132);
+    assert!(result.total_strain_energy > 0.0);
 
     let right = &result.elements[1];
     let top = &result.elements[2];
@@ -46,6 +47,17 @@ fn spring_2d_review_bundle_checks_grid_supports_member_extensions_and_diagonal_f
     assert_close(right.extension, right.force / 18_000.0);
     assert_close(top.extension, top.force / 22_000.0);
     assert_close(diagonal.extension, diagonal.force / 12_000.0);
+    assert_element_energy(right);
+    assert_element_energy(top);
+    assert_element_energy(diagonal);
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum(),
+    );
 }
 
 fn node(
@@ -82,5 +94,12 @@ fn assert_close(actual: f64, expected: f64) {
     assert!(
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
+    );
+}
+
+fn assert_element_energy(element: &kyuubiki_protocol::Spring2dElementResult) {
+    assert_close(
+        element.strain_energy,
+        0.5 * element.force * element.extension,
     );
 }

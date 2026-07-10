@@ -103,12 +103,9 @@ pub fn solve_electrostatic_plane_triangle_2d(
                 * electric_flux_density_x
                 + electric_flux_density_y * electric_flux_density_y)
                 .sqrt();
-            let stored_energy = 0.5
-                * element.permittivity
-                * electric_field_magnitude
-                * electric_field_magnitude
-                * computed.area
-                * element.thickness;
+            let electric_energy_density =
+                0.5 * element.permittivity * electric_field_magnitude * electric_field_magnitude;
+            let stored_energy = electric_energy_density * computed.area * element.thickness;
 
             ElectrostaticPlaneTriangleElementResult {
                 index,
@@ -126,6 +123,7 @@ pub fn solve_electrostatic_plane_triangle_2d(
                 electric_flux_density_x,
                 electric_flux_density_y,
                 electric_flux_density_magnitude,
+                electric_energy_density,
                 stored_energy,
             }
         })
@@ -144,6 +142,10 @@ pub fn solve_electrostatic_plane_triangle_2d(
         .map(|element| element.electric_flux_density_magnitude.abs())
         .fold(0.0_f64, f64::max);
     let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
+    let max_electric_energy_density = elements
+        .iter()
+        .map(|element| element.electric_energy_density)
+        .fold(0.0_f64, f64::max);
 
     Ok(SolveElectrostaticPlaneTriangle2dResult {
         input: request.clone(),
@@ -152,6 +154,7 @@ pub fn solve_electrostatic_plane_triangle_2d(
         max_potential,
         max_electric_field,
         max_flux_density,
+        max_electric_energy_density,
         total_stored_energy,
     })
 }
@@ -276,12 +279,9 @@ pub fn solve_electrostatic_plane_quad_2d(
                 * electric_flux_density_x
                 + electric_flux_density_y * electric_flux_density_y)
                 .sqrt();
-            let stored_energy = 0.5
-                * element.permittivity
-                * electric_field_magnitude
-                * electric_field_magnitude
-                * total_area
-                * element.thickness;
+            let electric_energy_density =
+                0.5 * element.permittivity * electric_field_magnitude * electric_field_magnitude;
+            let stored_energy = electric_energy_density * total_area * element.thickness;
 
             ElectrostaticPlaneQuadElementResult {
                 index,
@@ -304,6 +304,7 @@ pub fn solve_electrostatic_plane_quad_2d(
                 electric_flux_density_x,
                 electric_flux_density_y,
                 electric_flux_density_magnitude,
+                electric_energy_density,
                 stored_energy,
             }
         })
@@ -322,6 +323,10 @@ pub fn solve_electrostatic_plane_quad_2d(
         .map(|element| element.electric_flux_density_magnitude.abs())
         .fold(0.0_f64, f64::max);
     let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
+    let max_electric_energy_density = elements
+        .iter()
+        .map(|element| element.electric_energy_density)
+        .fold(0.0_f64, f64::max);
 
     Ok(SolveElectrostaticPlaneQuad2dResult {
         input: request.clone(),
@@ -330,6 +335,7 @@ pub fn solve_electrostatic_plane_quad_2d(
         max_potential,
         max_electric_field,
         max_flux_density,
+        max_electric_energy_density,
         total_stored_energy,
     })
 }

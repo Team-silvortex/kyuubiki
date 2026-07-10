@@ -24,6 +24,7 @@ fn torsion_1d_review_bundle_checks_fixed_root_tip_torque_and_shear_stress_diagno
     let expected_tip_rotation = 0.026_371_308_016_877_638;
     let expected_torque = 2500.0;
     let expected_shear_stress = 20_833_333.333_333_332;
+    let expected_strain_energy = 0.5 * expected_torque * expected_tip_rotation;
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
@@ -32,12 +33,14 @@ fn torsion_1d_review_bundle_checks_fixed_root_tip_torque_and_shear_stress_diagno
     assert_close(result.max_rotation, expected_tip_rotation);
     assert_close(result.max_torque, expected_torque);
     assert_close(result.max_stress, expected_shear_stress);
+    assert_close(result.total_strain_energy, expected_strain_energy);
 
     let element = &result.elements[0];
     assert_close(element.length, 1.5);
     assert_close(element.twist, expected_tip_rotation);
     assert_close(element.torque, expected_torque);
     assert_close(element.shear_stress, expected_shear_stress);
+    assert_close(element.strain_energy, expected_strain_energy);
 
     let twist_rate = element.twist / element.length;
     assert_close(twist_rate, expected_tip_rotation / 1.5);

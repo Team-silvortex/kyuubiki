@@ -38,6 +38,7 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
             let right = &nodes[index + 1];
             let strain = (right.displacement - left.displacement) / element_length;
             let stress = request.youngs_modulus * strain;
+            let strain_energy_density = 0.5 * stress * strain;
 
             ElementResult {
                 index,
@@ -46,6 +47,7 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
                 strain,
                 stress,
                 axial_force: stress * request.area,
+                strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
@@ -58,6 +60,14 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         .iter()
         .map(|element| element.stress.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .map(|element| element.strain_energy_density * request.area * element_length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
 
     Ok(SolveBarResult {
         input: request.clone(),
@@ -67,6 +77,8 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         reaction_force: -request.tip_force,
         max_displacement,
         max_stress,
+        total_strain_energy,
+        max_strain_energy_density,
     })
 }
 

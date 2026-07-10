@@ -50,10 +50,13 @@ fn thermal_plane_triangle_2d_review_bundle_checks_restrained_thermal_stress_diag
         assert!(element.principal_stress_1 >= element.principal_stress_2);
         assert!(element.max_in_plane_shear >= 0.0);
         assert!(element.von_mises >= 0.0);
+        assert!(element.strain_energy_density > 0.0);
     }
     assert_close(result.max_displacement, 0.0);
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_stress, expected_stress.abs());
+    assert!(result.total_strain_energy > 0.0);
+    assert!(result.max_strain_energy_density > 0.0);
 }
 
 fn node(id: &str, x: f64, y: f64, temperature_delta: f64) -> ThermalPlaneNodeInput {

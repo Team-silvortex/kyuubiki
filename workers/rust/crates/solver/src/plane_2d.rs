@@ -136,9 +136,19 @@ fn solve_plane_triangle_2d_internal(
                 principal_stress_2: state.principal_stress_2,
                 max_in_plane_shear: state.max_in_plane_shear,
                 von_mises: state.von_mises,
+                strain_energy_density: state.strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneTriangleProfile {
@@ -149,6 +159,8 @@ fn solve_plane_triangle_2d_internal(
                 .iter()
                 .map(|element| element.von_mises.abs())
                 .fold(0.0_f64, f64::max),
+            total_strain_energy,
+            max_strain_energy_density,
             nodes,
             elements,
         },
@@ -262,6 +274,15 @@ fn solve_plane_quad_2d_internal(
     stage_started = Instant::now();
     let nodes = build_plane_nodes(&triangle_request, &displacements);
     let elements = build_plane_quad_elements(request, &computed_elements, &displacements);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneQuadProfile {
@@ -272,6 +293,8 @@ fn solve_plane_quad_2d_internal(
                 .iter()
                 .map(|element| element.von_mises.abs())
                 .fold(0.0_f64, f64::max),
+            total_strain_energy,
+            max_strain_energy_density,
             nodes,
             elements,
         },
@@ -343,6 +366,10 @@ fn build_plane_quad_elements(
                     second_state.max_in_plane_shear,
                 ),
                 von_mises: weighted(first_state.von_mises, second_state.von_mises),
+                strain_energy_density: weighted(
+                    first_state.strain_energy_density,
+                    second_state.strain_energy_density,
+                ),
             }
         })
         .collect()

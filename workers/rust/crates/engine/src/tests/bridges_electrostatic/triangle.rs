@@ -262,6 +262,7 @@ fn bridges_electrostatic_triangle_area_weighted_mean_into_heat_model() {
                     electric_flux_density_x: 1.0,
                     electric_flux_density_y: 0.0,
                     electric_flux_density_magnitude: 1.0,
+                    electric_energy_density: 0.0,
                     stored_energy: 0.0,
                 },
                 kyuubiki_protocol::ElectrostaticPlaneTriangleElementResult {
@@ -280,12 +281,14 @@ fn bridges_electrostatic_triangle_area_weighted_mean_into_heat_model() {
                     electric_flux_density_x: 5.0,
                     electric_flux_density_y: 0.0,
                     electric_flux_density_magnitude: 5.0,
+                    electric_energy_density: 0.0,
                     stored_energy: 0.0,
                 },
             ],
             max_potential: 10.0,
             max_electric_field: 10.0,
             max_flux_density: 5.0,
+            max_electric_energy_density: 0.0,
             total_stored_energy: 0.0,
         },
         &triangle_heat_seed_model(),
@@ -322,6 +325,7 @@ fn bridges_electrostatic_triangle_stored_energy_into_heat_model() {
         max_potential: 10.0,
         max_electric_field: 0.0,
         max_flux_density: 0.0,
+        max_electric_energy_density: 0.0,
         total_stored_energy: 9.0,
     };
     result.input.elements = result
@@ -378,6 +382,7 @@ fn energy_element(
         electric_flux_density_x: 0.0,
         electric_flux_density_y: 0.0,
         electric_flux_density_magnitude: 0.0,
+        electric_energy_density: 0.0,
         stored_energy,
     }
 }

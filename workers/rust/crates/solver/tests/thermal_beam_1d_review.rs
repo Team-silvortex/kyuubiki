@@ -45,6 +45,7 @@ fn thermal_beam_1d_review_bundle_checks_free_thermal_curvature_response() {
     assert_close(result.max_temperature_gradient, temperature_gradient_y);
     assert_close(result.max_moment, 7.275_957_614_183_426e-12);
     assert_close(result.max_stress, 6.614_506_921_984_932e-9);
+    assert!(result.total_strain_energy.abs() < 1.0e-12);
 
     let element = &result.elements[0];
     assert_close(element.length, 2.4);
@@ -55,6 +56,7 @@ fn thermal_beam_1d_review_bundle_checks_free_thermal_curvature_response() {
     assert_close(element.moment_i, 0.0);
     assert_close(element.moment_j, 7.275_957_614_183_426e-12);
     assert_close(element.max_bending_stress, 6.614_506_921_984_932e-9);
+    assert!(element.strain_energy.abs() < 1.0e-12);
 }
 
 fn node(id: &str, x: f64, fix_y: bool, fix_rz: bool) -> ThermalBeam1dNodeInput {

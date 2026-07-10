@@ -131,6 +131,7 @@ pub fn solve_thermal_truss_2d(
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let mechanical_strain = total_strain - thermal_strain;
             let stress = element.youngs_modulus * mechanical_strain;
+            let strain_energy_density = 0.5 * stress * mechanical_strain;
 
             ThermalTruss2dElementResult {
                 index,
@@ -144,6 +145,7 @@ pub fn solve_thermal_truss_2d(
                 total_strain,
                 stress,
                 axial_force: stress * element.area,
+                strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
@@ -164,6 +166,15 @@ pub fn solve_thermal_truss_2d(
         .iter()
         .map(|node| node.temperature_delta.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
 
     validate_small_displacement_thermal_truss_2d(request, max_displacement)?;
 
@@ -175,6 +186,8 @@ pub fn solve_thermal_truss_2d(
         max_stress,
         max_axial_force,
         max_temperature_delta,
+        total_strain_energy,
+        max_strain_energy_density,
     })
 }
 
@@ -322,6 +335,7 @@ pub fn solve_thermal_truss_3d(
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let mechanical_strain = total_strain - thermal_strain;
             let stress = element.youngs_modulus * mechanical_strain;
+            let strain_energy_density = 0.5 * stress * mechanical_strain;
 
             ThermalTruss3dElementResult {
                 index,
@@ -335,6 +349,7 @@ pub fn solve_thermal_truss_3d(
                 total_strain,
                 stress,
                 axial_force: stress * element.area,
+                strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
@@ -355,6 +370,15 @@ pub fn solve_thermal_truss_3d(
         .iter()
         .map(|node| node.temperature_delta.abs())
         .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
+        .fold(0.0_f64, f64::max);
 
     validate_small_displacement_thermal_truss_3d(request, max_displacement)?;
 
@@ -366,6 +390,8 @@ pub fn solve_thermal_truss_3d(
         max_stress,
         max_axial_force,
         max_temperature_delta,
+        total_strain_energy,
+        max_strain_energy_density,
     })
 }
 

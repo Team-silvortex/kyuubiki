@@ -191,6 +191,7 @@ fn solve_truss_2d_internal(
             let axial_extension = (ux_j - ux_i) * c + (uy_j - uy_i) * s;
             let strain = axial_extension / length;
             let stress = element.youngs_modulus * strain;
+            let strain_energy_density = 0.5 * stress * strain;
 
             TrussElementResult {
                 index,
@@ -201,6 +202,7 @@ fn solve_truss_2d_internal(
                 strain,
                 stress,
                 axial_force: stress * element.area,
+                strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
@@ -212,6 +214,15 @@ fn solve_truss_2d_internal(
     let max_stress = elements
         .iter()
         .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max);
 
     validate_small_displacement_truss(request, max_displacement)?;
@@ -229,6 +240,8 @@ fn solve_truss_2d_internal(
             elements,
             max_displacement,
             max_stress,
+            total_strain_energy,
+            max_strain_energy_density,
         },
         stages,
         solver_iterations,
@@ -405,6 +418,7 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
             let axial_extension = (ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n;
             let strain = axial_extension / length;
             let stress = element.youngs_modulus * strain;
+            let strain_energy_density = 0.5 * stress * strain;
 
             Truss3dElementResult {
                 index,
@@ -415,6 +429,7 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
                 strain,
                 stress,
                 axial_force: stress * element.area,
+                strain_energy_density,
             }
         })
         .collect::<Vec<_>>();
@@ -426,6 +441,15 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
     let max_stress = elements
         .iter()
         .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+    let total_strain_energy = elements
+        .iter()
+        .zip(request.elements.iter())
+        .map(|(element, input)| element.strain_energy_density * input.area * element.length)
+        .sum();
+    let max_strain_energy_density = elements
+        .iter()
+        .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max);
 
     let characteristic_length = get_spatial_bounds(
@@ -448,6 +472,8 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
         elements,
         max_displacement,
         max_stress,
+        total_strain_energy,
+        max_strain_energy_density,
     })
 }
 

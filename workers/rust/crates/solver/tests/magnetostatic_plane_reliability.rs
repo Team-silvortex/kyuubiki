@@ -15,11 +15,13 @@ fn solves_magnetostatic_plane_triangle_field() {
     assert!(result.max_vector_potential > 0.0);
     assert!(result.max_magnetic_field_strength > 0.0);
     assert!(result.max_flux_density > 0.0);
+    assert!(result.max_magnetic_energy_density > 0.0);
     assert!(result.total_stored_energy > 0.0);
     let element = &result.elements[0];
     assert!(element.area > 0.0);
     assert!(element.magnetic_flux_density_magnitude.is_finite());
     assert!(element.magnetic_field_strength_magnitude.is_finite());
+    assert!(element.magnetic_energy_density.is_finite());
 }
 
 #[test]
@@ -32,8 +34,10 @@ fn solves_magnetostatic_plane_quad_field() {
     assert!(result.max_vector_potential > 0.0);
     assert!(result.max_magnetic_field_strength > 0.0);
     assert!(result.max_flux_density > 0.0);
+    assert!(result.max_magnetic_energy_density > 0.0);
     assert!(result.total_stored_energy > 0.0);
     assert!(result.elements[0].area > 0.0);
+    assert!(result.elements[0].magnetic_energy_density.is_finite());
 }
 
 fn request() -> SolveMagnetostaticPlaneTriangle2dRequest {

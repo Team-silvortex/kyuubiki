@@ -1,6 +1,6 @@
 use crate::plane_2d_math::{
     derive_planar_stress_metrics, multiply_matrix_vector_3x3, multiply_matrix_vector_3x6,
-    subtract_vector_3,
+    strain_energy_density, subtract_vector_3,
 };
 use crate::thermal_plane_2d::ThermalPlaneTriangleComputed;
 use kyuubiki_protocol::{SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeResult};
@@ -15,6 +15,7 @@ pub(crate) struct ThermalPlaneTriangleState {
     pub(crate) principal_stress_2: f64,
     pub(crate) max_in_plane_shear: f64,
     pub(crate) von_mises: f64,
+    pub(crate) strain_energy_density: f64,
 }
 
 pub(crate) fn thermal_plane_triangle_state(
@@ -38,6 +39,7 @@ pub(crate) fn thermal_plane_triangle_state(
         principal_stress_2: derived.principal_stress_2,
         max_in_plane_shear: derived.max_in_plane_shear,
         von_mises: derived.von_mises,
+        strain_energy_density: strain_energy_density(&stress, &mechanical_strain),
     }
 }
 

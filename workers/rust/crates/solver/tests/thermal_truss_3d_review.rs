@@ -28,6 +28,7 @@ fn thermal_truss_3d_review_bundle_checks_restrained_uniform_temperature_response
     let expected_thermal_strain = thermal_expansion * temperature_delta;
     let expected_stress = -youngs_modulus * expected_thermal_strain;
     let expected_axial_force = expected_stress * area;
+    let expected_energy_density = 0.5 * expected_stress * -expected_thermal_strain;
 
     assert_eq!(result.nodes.len(), 3);
     assert_eq!(result.elements.len(), 3);
@@ -48,12 +49,18 @@ fn thermal_truss_3d_review_bundle_checks_restrained_uniform_temperature_response
         assert_close(element.total_strain, 0.0);
         assert_close(element.stress, expected_stress);
         assert_close(element.axial_force, expected_axial_force);
+        assert_close(element.strain_energy_density, expected_energy_density);
     }
 
     assert_close(result.max_displacement, 0.0);
     assert_close(result.max_stress, expected_stress.abs());
     assert_close(result.max_axial_force, expected_axial_force.abs());
     assert_close(result.max_temperature_delta, temperature_delta);
+    assert_close(result.max_strain_energy_density, expected_energy_density);
+    assert_close(
+        result.total_strain_energy,
+        total_strain_energy(&result.elements, area),
+    );
 }
 
 fn node(id: &str, x: f64, y: f64, z: f64, temperature_delta: f64) -> ThermalTruss3dNodeInput {
@@ -96,4 +103,14 @@ fn assert_close(actual: f64, expected: f64) {
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
     );
+}
+
+fn total_strain_energy(
+    elements: &[kyuubiki_protocol::ThermalTruss3dElementResult],
+    area: f64,
+) -> f64 {
+    elements
+        .iter()
+        .map(|element| element.strain_energy_density * area * element.length)
+        .sum()
 }
