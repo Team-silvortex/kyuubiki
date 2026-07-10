@@ -117,13 +117,18 @@ fn classify_shell_script(relative_path: &str) -> ShellScriptKind {
 fn is_native_shim(relative_path: &str) -> bool {
     matches!(
         relative_path,
-        "scripts/run-direct-mesh-benchmark-container.sh"
+        "deploy/kyuubiki-agent-registry-sync.sh"
+            | "scripts/generate_desktop_icon_variants"
+            | "scripts/run-direct-mesh-benchmark-container.sh"
             | "scripts/run-direct-mesh-benchmark-regression.sh"
             | "scripts/run-benchmark-profile-remote.sh"
+            | "scripts/kyuubiki-lab"
+            | "scripts/run-remote-ssh-fixture.sh"
             | "scripts/run-standard-benchmark-regression.sh"
             | "scripts/run-workflow-catalog-benchmark-regression.sh"
             | "scripts/run-workflow-mesh-regression-remote.sh"
             | "scripts/run-workflow-mesh-regression.sh"
+            | "scripts/upload-desktop-release-remote.sh"
     )
 }
 
@@ -158,7 +163,20 @@ fn print_report(root: &Path, host_label: &str, records: &[ShellScriptRecord]) {
 
 fn host_tool_boundary() -> &'static [&'static str] {
     &[
-        "cargo", "docker", "mix", "node", "npm", "python3", "rsync", "scp", "ssh",
+        "cargo",
+        "curl",
+        "docker",
+        "iconutil",
+        "mix",
+        "node",
+        "npm",
+        "python3",
+        "rsync",
+        "scp",
+        "ssh",
+        "ssh-keygen",
+        "swift",
+        "sips",
     ]
 }
 
@@ -180,11 +198,35 @@ fn run_self_test() {
         ShellScriptKind::TinyLauncher
     );
     assert_eq!(
+        classify_shell_script("scripts/run-remote-ssh-fixture.sh"),
+        ShellScriptKind::NativeShim
+    );
+    assert_eq!(
+        classify_shell_script("scripts/kyuubiki-lab"),
+        ShellScriptKind::NativeShim
+    );
+    assert_eq!(
+        classify_shell_script("scripts/upload-desktop-release-remote.sh"),
+        ShellScriptKind::NativeShim
+    );
+    assert_eq!(
+        classify_shell_script("deploy/kyuubiki-agent-registry-sync.sh"),
+        ShellScriptKind::NativeShim
+    );
+    assert_eq!(
+        classify_shell_script("scripts/generate_desktop_icon_variants"),
+        ShellScriptKind::NativeShim
+    );
+    assert_eq!(
         classify_shell_script("deploy/legacy-sync.sh"),
         ShellScriptKind::MigrationTarget
     );
     assert!(host_tool_boundary().contains(&"ssh"));
+    assert!(host_tool_boundary().contains(&"ssh-keygen"));
+    assert!(host_tool_boundary().contains(&"curl"));
     assert!(host_tool_boundary().contains(&"docker"));
+    assert!(host_tool_boundary().contains(&"swift"));
+    assert!(host_tool_boundary().contains(&"sips"));
 }
 
 #[cfg(test)]
@@ -196,6 +238,14 @@ mod tests {
     fn classifies_native_shims_and_migration_targets() {
         assert_eq!(
             classify_shell_script("scripts/run-benchmark-profile-remote.sh"),
+            ShellScriptKind::NativeShim
+        );
+        assert_eq!(
+            classify_shell_script("scripts/kyuubiki-lab"),
+            ShellScriptKind::NativeShim
+        );
+        assert_eq!(
+            classify_shell_script("scripts/generate_desktop_icon_variants"),
             ShellScriptKind::NativeShim
         );
         assert_eq!(
@@ -231,7 +281,20 @@ mod tests {
         assert_eq!(
             host_tool_boundary(),
             &[
-                "cargo", "docker", "mix", "node", "npm", "python3", "rsync", "scp", "ssh",
+                "cargo",
+                "curl",
+                "docker",
+                "iconutil",
+                "mix",
+                "node",
+                "npm",
+                "python3",
+                "rsync",
+                "scp",
+                "ssh",
+                "ssh-keygen",
+                "swift",
+                "sips",
             ]
         );
     }

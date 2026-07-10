@@ -69,6 +69,77 @@ prevents operators from drifting into the wrong qualification group.
 summarizes which roadmap artifacts are present, command-backed, missing, or not
 started.
 
+## CFD Stokes Screening Scope
+
+`solve.stokes_flow_quad_2d` is a Stokes-only screening operator. It is meant to
+exercise low-Reynolds-number velocity, pressure, divergence, and viscous
+dissipation plumbing through the same headless workflow path as the other
+physics operators. It is not a general Navier-Stokes solver, turbulence model,
+compressible-flow solver, or industrial CFD validation claim.
+
+The current review evidence is limited to compact rectangular quad fixtures:
+one body-force response and one lid-driven shear boundary response. That is
+enough to catch shape, boundary, diagnostic, and non-finite input regressions,
+but not enough to claim mesh-converged CFD accuracy.
+
+## CFD Stokes Divergence Tolerance
+
+The screening divergence gate is `1e-10` for the current compact Stokes
+fixtures. This tolerance is a regression guard for the single-quad arithmetic
+path and boundary assembly, not a reusable engineering qualification tolerance.
+If the operator graduates beyond screening, the tolerance must be replaced or
+backed by retained convergence evidence, solver-version provenance, and a
+documented scope of validity.
+
+## Electromagnetic Plane Review Scope
+
+The 2D electrostatic and magnetostatic plane operators are review-grade
+single-patch field checks. They verify that triangle and quad elements can
+report gradients, field strength, flux density, and stored energy through the
+same headless workflow contract. They do not yet claim mesh convergence,
+rotated-patch orientation invariance, coupled high-frequency electromagnetics,
+or production qualification.
+
+The near-term qualification blocker is orientation evidence: the same field,
+flux, and stored-energy checks must pass across at least two patch
+orientations before these operators can graduate beyond review.
+
+## Electromagnetic Plane Material And Energy Notes
+
+The current fixtures assume positive scalar linear material parameters.
+Electrostatic plane elements use permittivity; magnetostatic plane elements use
+permeability. The stored energy diagnostics are regression evidence for this
+linear material path, not a broad material-card validation claim.
+
+Before qualification, these operators need material-card provenance for the
+permittivity or permeability values and an energy-density tolerance derivation
+that explains where the stored-energy comparison is valid.
+
+## Thermal Plane Review Scope
+
+The 2D heat-plane and thermoelastic-plane operators are review-grade compact
+patch checks. Heat-plane fixtures exercise steady temperature gradients and
+heat-flux diagnostics. Thermoelastic-plane fixtures exercise restrained
+thermal strain, mechanical strain, stress, and von Mises diagnostics. They are
+not yet mesh convergence, mixed-boundary coverage, or qualification evidence.
+
+The `thermal-plane-patch` roadmap candidate must stay below qualification
+until mesh convergence and boundary coverage artifacts are linked from the
+operator reliability entry.
+
+## Thermal Plane Material And Boundary Notes
+
+The current thermal fixtures assume linear material behavior. Heat-plane
+elements use positive scalar conductivity. Thermoelastic-plane elements use
+linear plane stress plus positive elastic constants and thermal expansion
+coefficients. These material values are fixture parameters, not material-card
+provenance.
+
+Before qualification, the thermal plane group needs material-card linked
+benchmark fixtures, a boundary-condition coverage report, and a mesh
+refinement report that explains where the conductivity, thermal expansion, and
+stress tolerances are valid.
+
 ## Current State
 
 The first `tamamono 1.15.x` manifest covers all 37 solve operators in the

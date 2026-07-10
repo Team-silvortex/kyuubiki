@@ -149,9 +149,9 @@ Current source-side posture:
   `apps/hub-gui/ui/hub-static-partials.js` before `app.js` starts. Any new
   static Hub section should follow that boundary instead of growing
   `apps/hub-gui/ui/index.html`.
-- Legacy shell behavior is split across `scripts/kyuubiki-legacy-*.zsh`
-  modules. Keep new shell-only behavior in the narrow module that owns it, and
-  prefer native Rust or Node utilities for new long-lived commands.
+- The old `scripts/kyuubiki-legacy-*.zsh` shell modules have been removed.
+  Long-lived command behavior belongs in the native Rust script runner or a
+  narrow Node utility when JavaScript ecosystem integration is required.
 - Workflow templates should split entry metadata, graph assembly, graph nodes,
   and runtime helpers into separate modules once a file starts mixing those
   responsibilities.

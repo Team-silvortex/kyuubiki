@@ -117,7 +117,9 @@ function projectFiles() {
       ...gitFileList(["ls-files"]),
       ...gitFileList(["ls-files", "--others", "--exclude-standard"]),
     ]),
-  ].sort();
+  ]
+    .filter((relativePath) => existsSync(path.join(ROOT, relativePath)))
+    .sort();
 }
 
 function shouldCheck(relativePath) {

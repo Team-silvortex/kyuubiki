@@ -114,6 +114,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
         }
       },
@@ -154,6 +160,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
         }
       },
@@ -194,6 +206,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
         }
       },
@@ -235,6 +253,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
         }
       },

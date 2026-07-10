@@ -41,6 +41,17 @@ Before `2.0`, every item below should be classified as one of:
 
 No `blocker` item should remain open at the `2.0` boundary freeze.
 
+The manifest also tracks each gate's current `readiness_state`:
+
+- `ready`: sufficient for the current `2.0` trust line
+- `partial`: present but still needs closure work before boundary freeze
+- `watch`: high-risk area that needs deliberate attention before `2.0`
+- `blocked`: cannot ship as `2.0` until resolved
+
+For the current `1.x` industrialization line, `partial` and `watch` are
+acceptable planning states. `blocked` is not acceptable at the final `2.0`
+freeze.
+
 ## 1. Numerical Trust
 
 Required:

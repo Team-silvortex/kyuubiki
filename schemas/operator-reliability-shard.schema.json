@@ -70,6 +70,24 @@
                     "items": { "type": "string", "minLength": 1 },
                     "minItems": 1,
                     "uniqueItems": true
+                  },
+                  "scope_notes": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "tolerance_notes": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "material_notes": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "minItems": 1,
+                    "uniqueItems": true
                   }
                 }
               },

@@ -74,6 +74,22 @@ function ensureFileContains(relativePath, needle, context) {
   }
 }
 
+function evidenceReferencePath(reference) {
+  return reference.split("#")[0];
+}
+
+function validateEvidenceReferences(references, requiredNeedles, context, fieldName) {
+  if (!Array.isArray(references) || references.length === 0) {
+    fail(`${context}: evidence.review.${fieldName} must be non-empty`);
+  }
+  for (const reference of references) {
+    const relativePath = evidenceReferencePath(reference);
+    for (const needle of requiredNeedles) {
+      ensureFileContains(relativePath, needle, context);
+    }
+  }
+}
+
 function makeTargetSources() {
   const sources = [fs.readFileSync(path.join(repoRoot, "Makefile"), "utf8")];
   const makeDir = path.join(repoRoot, "make");
@@ -99,6 +115,92 @@ function validateReviewEvidence(entry, context) {
   }
   for (const testPath of review.tests) {
     ensureFileContains(testPath, null, context);
+  }
+}
+
+function validateStokesReviewEvidence(entry, context) {
+  if (entry.operator_id !== "solve.stokes_flow_quad_2d") {
+    return;
+  }
+  const review = entry.evidence.review;
+  validateEvidenceReferences(
+    review.scope_notes,
+    ["CFD Stokes Screening Scope", "Stokes-only", "screening", "Navier-Stokes"],
+    context,
+    "scope_notes"
+  );
+  validateEvidenceReferences(
+    review.tolerance_notes,
+    ["CFD Stokes Divergence Tolerance", "1e-10", "divergence"],
+    context,
+    "tolerance_notes"
+  );
+  for (const requiredLimit of ["stokes_only", "screening_only", "screening_divergence_tolerance_1e-10"]) {
+    if (!entry.limits.includes(requiredLimit)) {
+      fail(`${context}: limits must include ${requiredLimit}`);
+    }
+  }
+}
+
+function validateElectromagneticPlaneReviewEvidence(entry, context) {
+  const planeOperators = new Set([
+    "solve.electrostatic_plane_triangle_2d",
+    "solve.electrostatic_plane_quad_2d",
+    "solve.magnetostatic_plane_triangle_2d",
+    "solve.magnetostatic_plane_quad_2d",
+  ]);
+  if (!planeOperators.has(entry.operator_id)) {
+    return;
+  }
+  const review = entry.evidence.review;
+  validateEvidenceReferences(
+    review.scope_notes,
+    ["Electromagnetic Plane Review Scope", "single-patch", "orientation", "qualification"],
+    context,
+    "scope_notes"
+  );
+  validateEvidenceReferences(
+    review.material_notes,
+    ["Electromagnetic Plane Material", "linear material", "permittivity", "permeability", "stored energy"],
+    context,
+    "material_notes"
+  );
+  for (const requiredLimit of ["linear_material", "two_dimensional"]) {
+    if (!entry.limits.includes(requiredLimit)) {
+      fail(`${context}: limits must include ${requiredLimit}`);
+    }
+  }
+}
+
+function validateThermalPlaneReviewEvidence(entry, context) {
+  const planeOperators = new Set([
+    "solve.heat_plane_triangle_2d",
+    "solve.heat_plane_quad_2d",
+    "solve.thermal_plane_triangle_2d",
+    "solve.thermal_plane_quad_2d",
+  ]);
+  if (!planeOperators.has(entry.operator_id)) {
+    return;
+  }
+  const review = entry.evidence.review;
+  validateEvidenceReferences(
+    review.scope_notes,
+    ["Thermal Plane Review Scope", "mesh convergence", "boundary coverage", "qualification"],
+    context,
+    "scope_notes"
+  );
+  validateEvidenceReferences(
+    review.material_notes,
+    ["Thermal Plane Material", "linear", "conductivity", "thermal expansion", "material-card"],
+    context,
+    "material_notes"
+  );
+  const requiredLimits =
+    entry.domain === "thermal" ? ["steady_state", "linear_conductivity"] : ["linear_plane_stress"];
+  for (const requiredLimit of requiredLimits) {
+    if (!entry.limits.includes(requiredLimit)) {
+      fail(`${context}: limits must include ${requiredLimit}`);
+    }
   }
 }
 
@@ -259,6 +361,9 @@ function validate() {
     }
     if (entry.coverage_level === "review" || entry.coverage_level === "qualification") {
       validateReviewEvidence(entry, context);
+      validateStokesReviewEvidence(entry, context);
+      validateElectromagneticPlaneReviewEvidence(entry, context);
+      validateThermalPlaneReviewEvidence(entry, context);
     }
     if (entry.coverage_level === "qualification") {
       validateQualificationEvidence(entry, context);

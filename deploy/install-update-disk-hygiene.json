@@ -1,0 +1,50 @@
+{
+  "schema_version": "kyuubiki.install-update-disk-hygiene/v1",
+  "shipping_version": "1.16.0",
+  "source_contracts": {
+    "installation_integrity": "deploy/installation-integrity-contract.json",
+    "update_channels": "deploy/update-channels.json",
+    "packaging_docs": "docs/packaging-and-deployment.md"
+  },
+  "remote_artifact_policy": {
+    "authority": "remote_download_server",
+    "required_command": "./scripts/kyuubiki desktop-upload-remote",
+    "remote_root_env": "KYUUBIKI_RELEASE_REMOTE_DIR",
+    "remote_host_env": "KYUUBIKI_RELEASE_REMOTE_HOST",
+    "version_env": "KYUUBIKI_RELEASE_VERSION",
+    "password_env": "KYUUBIKI_RELEASE_REMOTE_PASSWORD",
+    "password_policy": "temporary_compatibility_only"
+  },
+  "local_retention_policy": {
+    "default": "metadata_and_source_only",
+    "purge_after_remote_upload_env": "PURGE_LOCAL",
+    "purge_after_remote_upload_value": "1",
+    "removable_roots": [
+      "dist/macos",
+      "dist/linux",
+      "dist/windows",
+      "apps/hub-gui/src-tauri/target/release/bundle",
+      "apps/installer-gui/src-tauri/target/release/bundle",
+      "apps/workbench-gui/src-tauri/target/release/bundle"
+    ],
+    "protected_roots": [
+      "tmp/data",
+      "releases/snapshots",
+      "apps/hub-gui",
+      "apps/installer-gui",
+      "apps/workbench-gui"
+    ]
+  },
+  "update_visibility_policy": {
+    "required_channel": "stable",
+    "required_cleanup_policy": "allowlisted",
+    "required_rollback": "same-channel reinstall",
+    "requires_integrity_contract": "deploy/installation-integrity-contract.json"
+  },
+  "operator_visible_rules": [
+    "remote artifacts are the release source of truth",
+    "local generated bundles may be purged only after successful remote upload",
+    "automatic cleanup is limited to installation-integrity allowlists",
+    "rollback stays explicit through same-channel reinstall"
+  ]
+}

@@ -7,7 +7,8 @@ Wants=network-online.target
 Type=simple
 User={{KYUUBIKI_SERVICE_USER}}
 Environment=KYUUBIKI_HOME={{KYUUBIKI_INSTALL_ROOT}}
-ExecStart=/bin/sh -lc 'cd "$KYUUBIKI_HOME"; exec ./deploy/kyuubiki-agent-registry-sync.sh'
+WorkingDirectory={{KYUUBIKI_INSTALL_ROOT}}
+ExecStart={{KYUUBIKI_INSTALL_ROOT}}/scripts/kyuubiki agent-registry-sync
 Restart=always
 RestartSec=2
 

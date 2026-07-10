@@ -19,6 +19,7 @@ const expectedClassifications = [
   "defer to 2.x",
   "blocker",
 ];
+const expectedGateStates = ["ready", "partial", "watch", "blocked"];
 
 if (manifest.schema_version !== "kyuubiki.commercial-readiness/v1") {
   issues.push(`${manifestRelativePath}: unexpected schema_version`);
@@ -55,6 +56,11 @@ for (const [index, gate] of (manifest.gates ?? []).entries()) {
   gateIds.add(gate?.id);
 
   requireText(gate.title, `${label}: missing title`);
+  requireText(gate.readiness_state, `${label}: missing readiness_state`);
+  if (!expectedGateStates.includes(gate.readiness_state)) {
+    issues.push(`${label}: unknown readiness_state ${gate.readiness_state}`);
+  }
+  requireNonEmptyArray(gate.next_1x_focus, `${label}: missing next_1x_focus items`);
   requireNonEmptyArray(gate.required, `${label}: missing required items`);
   requireNonEmptyArray(
     gate.acceptable_limitations,

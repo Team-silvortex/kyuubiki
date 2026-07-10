@@ -8,8 +8,7 @@ if [ ! -s "${AUTHORIZED_KEYS}" ]; then
   exit 64
 fi
 
-chown -R kyuubiki-fixture:kyuubiki-fixture /home/kyuubiki-fixture/.ssh
+chown kyuubiki-fixture:kyuubiki-fixture /home/kyuubiki-fixture/.ssh
 chmod 700 /home/kyuubiki-fixture/.ssh
-chmod 600 "${AUTHORIZED_KEYS}"
 
 exec /usr/sbin/sshd -D -e -p 2222

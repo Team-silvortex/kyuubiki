@@ -13,6 +13,11 @@
     {
       "id": "numerical_trust",
       "title": "Numerical Trust",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "promote the first qualification candidates with retained release evidence",
+        "keep broad physics coverage explicitly below qualification where evidence is review-only"
+      ],
       "required": [
         "core solver families have benchmark-backed baselines",
         "benchmark docs include reference values, tolerances, and automation status",
@@ -34,6 +39,11 @@
     {
       "id": "workflow_asset_durability",
       "title": "Workflow And Asset Durability",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "tighten workflow graph, dataset, report, and snapshot lineage into one durable asset story",
+        "make cleanup and replay behavior visible across workbench and headless SDK paths"
+      ],
       "required": [
         "workflow graphs and dataset contracts are stable enough to export, import, replay, and explain",
         "results can be traced back to model inputs, material data, workflow version, operator version, runtime path, and agent context",
@@ -55,6 +65,11 @@
     {
       "id": "headless_sdk_credibility",
       "title": "Headless SDK Credibility",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "keep Rust SDK as the reference implementation for material research workflows",
+        "document and narrow Python and Elixir parity gaps without blocking Rust-led proof"
+      ],
       "required": [
         "Rust headless SDK supports real workflow initialization, plan, run, and report paths",
         "material research examples include optimization profiles and candidate-level score explanations",
@@ -75,6 +90,11 @@
     {
       "id": "installer_update_disk_hygiene",
       "title": "Installer, Update, And Disk Hygiene",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "wire the disk hygiene check into installer apply and rollback dry-runs",
+        "surface remote artifact retention and local purge state in the installer UI"
+      ],
       "required": [
         "standard install paths are documented for supported platforms",
         "update source, download, staging, apply, rollback, and cleanup behavior are visible",
@@ -96,6 +116,11 @@
     {
       "id": "agent_mesh_runtime_authority",
       "title": "Agent, Mesh, And Runtime Authority",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "harden one-orchestrator authority and offline mesh mode as product contracts",
+        "make operator pull, cache, and cleanup behavior auditable from runtime logs"
+      ],
       "required": [
         "agent authority rules are explicit",
         "one agent cannot be ambiguously controlled by multiple orchestrators",
@@ -118,6 +143,11 @@
     {
       "id": "security_audit",
       "title": "Security And Audit",
+      "readiness_state": "watch",
+      "next_1x_focus": [
+        "finish credential, certificate, and remote-control storage boundaries before 2.0 freeze",
+        "turn privileged deployment and update actions into visible audit events"
+      ],
       "required": [
         "certificate, token, and remote-control behavior is documented",
         "sensitive configuration is not committed into project data",
@@ -139,6 +169,11 @@
     {
       "id": "workbench_ux_stability",
       "title": "Workbench And UX Stability",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "keep workbench flows aligned with SDK/runtime concepts rather than private UI state",
+        "protect supported resolutions and UI automation selectors as product contracts"
+      ],
       "required": [
         "core UI flows avoid overlapping or unusable layouts at supported resolutions",
         "workbench and SDK use the same concepts for workflows, materials, results, and reports",
@@ -161,6 +196,11 @@
     {
       "id": "documentation_infrastructure",
       "title": "Documentation As Product Infrastructure",
+      "readiness_state": "partial",
+      "next_1x_focus": [
+        "keep the docs book, navigation matrix, release posture, and troubleshooting paths aligned",
+        "document capability limits near the feature that exposes each limit"
+      ],
       "required": [
         "the central docs book is coherent enough for humans and large-model agents",
         "release posture, architecture boundaries, SDK paths, installer behavior, and troubleshooting are findable from the docs map",

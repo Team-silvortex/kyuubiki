@@ -1,4 +1,4 @@
-.PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
+.PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
 .PHONY: check-make-modules check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
@@ -23,6 +23,13 @@ check-toolchains:
 
 check-elixir-self-host:
 	@node ./scripts/check-elixir-self-host.mjs
+
+check-commercial-readiness:
+	@node ./scripts/validate-commercial-readiness.mjs
+
+check-install-update-disk-hygiene:
+	@node ./scripts/check-install-update-disk-hygiene.mjs --self-test
+	@node ./scripts/check-install-update-disk-hygiene.mjs
 
 check-make-modules:
 	@node ./scripts/check-make-modules.mjs
@@ -157,6 +164,8 @@ architecture-check:
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-reliability
+	@$(MAKE) check-commercial-readiness
+	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-ui-automation-contract
 	@$(MAKE) check-gui-runtime-capability-contract
 	@$(MAKE) audit-dependencies
@@ -174,6 +183,8 @@ verify:
 	@$(MAKE) check-language-packs
 	@$(MAKE) check-version-line
 	@$(MAKE) check-operator-reliability
+	@$(MAKE) check-commercial-readiness
+	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test

@@ -73,6 +73,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#thermal-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#thermal-plane-material-and-boundary-notes"
           ]
         }
       },
@@ -113,6 +119,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#thermal-plane-review-scope"
+          ],
+          "material_notes": [
+            "docs/operator-reliability.md#thermal-plane-material-and-boundary-notes"
           ]
         }
       },

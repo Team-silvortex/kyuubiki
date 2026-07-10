@@ -3,15 +3,20 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+mod agent_registry_sync;
 mod benchmark_profile_remote;
 mod benchmark_profile_remote_summary;
 mod desktop;
+mod desktop_icon_variants;
 mod desktop_linux_remote;
+mod desktop_release_upload_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
+mod lab;
 mod native_script_audit;
 mod native_time;
 mod remote_host;
+mod remote_ssh_fixture;
 mod standard_benchmark_remote;
 mod workflow_catalog_remote;
 mod workflow_mesh;
@@ -138,6 +143,15 @@ fn run() -> RunnerResult<u8> {
         "desktop-release" => run_desktop_release(&paths, rest),
         "desktop-verify" => run_desktop_verify(&paths, rest),
         "desktop-linux-remote" => desktop_linux_remote::run_desktop_linux_remote(&paths.root, rest),
+        "desktop-upload-remote" | "desktop-release-upload-remote" => {
+            desktop_release_upload_remote::run_desktop_release_upload_remote(&paths.root, rest)
+        }
+        "generate-desktop-icon-variants" => {
+            desktop_icon_variants::run_generate_desktop_icon_variants(&paths.root, rest)
+        }
+        "agent-registry-sync" => agent_registry_sync::run_agent_registry_sync(&paths.root, rest),
+        "lab" => lab::run_lab(&paths.root, rest),
+        "remote-ssh-fixture" => remote_ssh_fixture::run_remote_ssh_fixture(&paths.root, rest),
         "web-test" => run_command(&paths.web, "mix", prepend("test", rest)),
         "rust-test" => {
             let status = run_command(&paths.rust, "cargo", prepend("test", rest.clone()))?;
@@ -377,6 +391,9 @@ build-hub-gui build-installer-gui build-workbench-gui\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
 desktop-release desktop-verify\n  \
 desktop-linux-remote\n  \
+desktop-upload-remote desktop-release-upload-remote\n  \
+generate-desktop-icon-variants\n  \
+lab remote-ssh-fixture\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   benchmark-profile-remote\n  \

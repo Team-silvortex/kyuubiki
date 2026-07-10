@@ -210,6 +210,16 @@ Environment overrides:
 This keeps the release source-of-truth on the remote server while preserving
 the local repository as the place where metadata is authored and generated.
 
+The machine-readable disk hygiene contract is:
+
+- `deploy/install-update-disk-hygiene.json`
+- `make check-install-update-disk-hygiene`
+
+That check binds together the installation integrity contract, update channel
+policy, native remote upload runner, and this document. It rejects absolute or
+traversing cleanup roots, requires `PURGE_LOCAL=1` to be explicit, and keeps
+rollback on the visible same-channel reinstall path.
+
 ## Output boundaries
 
 ### Source-owned paths

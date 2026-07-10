@@ -38,6 +38,12 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#cfd-stokes-screening-scope"
+          ],
+          "tolerance_notes": [
+            "docs/operator-reliability.md#cfd-stokes-divergence-tolerance"
           ]
         }
       },
