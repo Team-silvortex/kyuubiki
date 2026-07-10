@@ -32,6 +32,21 @@ const examples = [
   },
 ];
 
+const reportExamples = [
+  {
+    name: "python-report",
+    command: "python3",
+    args: ["sdks/python/examples/run_material_report.py"],
+    env: { PYTHONPATH: path.join(repoRoot, "sdks/python") },
+  },
+  {
+    name: "elixir-report",
+    command: "mix",
+    args: ["run", "examples/run_material_report.exs"],
+    cwd: path.join(repoRoot, "sdks/elixir"),
+  },
+];
+
 function fail(message) {
   console.error(`material study SDK example check failed: ${message}`);
   process.exit(1);
@@ -80,6 +95,36 @@ function checkPlan(name, plan) {
   }
 }
 
+function parseKeyValueOutput(name, output) {
+  const pairs = Object.fromEntries(
+    output
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => line.includes("="))
+      .map((line) => {
+        const separator = line.indexOf("=");
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      }),
+  );
+  if (!pairs.study || !pairs.winner || !pairs.reliability) {
+    fail(`${name}: expected study, winner, and reliability key-value lines`);
+  }
+  return pairs;
+}
+
+function checkReportExample(name, report) {
+  if (report.study !== "material.composite_thermo_electric_panel.v1") {
+    fail(`${name}: unexpected study ${report.study}`);
+  }
+  if (report.winner !== "copper_polyimide_aluminum") {
+    fail(`${name}: unexpected winner ${report.winner}`);
+  }
+  if (!["ready_for_next_round", "blocked_by_quality_gates"].includes(report.reliability)) {
+    fail(`${name}: unexpected reliability decision ${report.reliability}`);
+  }
+}
+
 function runSelfTest() {
   const badOutput = "compiled\n{\"schema_version\":\"wrong\",\"steps\":[],\"step_count\":0}";
   const plan = parseJsonOutput("self-test", badOutput);
@@ -104,6 +149,29 @@ function runSelfTest() {
   if (!failed) {
     fail("self-test did not reject an invalid schema version");
   }
+  const report = parseKeyValueOutput(
+    "self-test-report",
+    "study=wrong\nwinner=copper_polyimide_aluminum\nreliability=ready_for_next_round\n",
+  );
+  failed = false;
+  console.error = () => {};
+  process.exit = () => {
+    failed = true;
+    throw new Error("self-test-report-fail");
+  };
+  try {
+    checkReportExample("self-test-report", report);
+  } catch (error) {
+    if (error.message !== "self-test-report-fail") {
+      throw error;
+    }
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  if (!failed) {
+    fail("self-test did not reject an invalid report example");
+  }
   console.log("material study SDK example check self-test passed");
 }
 
@@ -111,6 +179,10 @@ function checkExamples() {
   for (const example of examples) {
     const output = runExample(example);
     checkPlan(example.name, parseJsonOutput(example.name, output));
+  }
+  for (const example of reportExamples) {
+    const output = runExample(example);
+    checkReportExample(example.name, parseKeyValueOutput(example.name, output));
   }
   console.log("material study SDK example check passed");
 }

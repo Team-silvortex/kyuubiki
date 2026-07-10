@@ -85,6 +85,15 @@ This directory contains host-native operational entry points.
   Verify the shared non-executing material study execution plan schema,
   fixture, and SDK documentation links. It keeps `--plan-study` output aligned
   with headless SDK and remote scheduler expectations before solver dispatch.
+- `build-material-research-bundle.mjs`, `check-material-research-bundle.mjs`,
+  and `check-material-research-bundle-contract.mjs`
+  Build and verify the first retained material research bundle. The bundle
+  captures initial exploration, next-round execution planning, a rerun,
+  chained rounds, artifact checksums, and repo-relative reproduction commands
+  under `kyuubiki.material-research-bundle/v1`. The lightweight contract check
+  keeps `schemas/material-research-bundle.schema.json`,
+  `schemas/examples.material-research-bundle.json`, and documentation links in
+  sync without running the solver.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,
@@ -229,6 +238,11 @@ Useful checks:
   `schemas/material-exploration-chain.schema.json`,
   `schemas/examples.material-exploration-chain.json`, chain convergence
   fields, optimization trace fields, or SDK chain documentation.
+- `make check-material-research-bundle-contract`
+  Run the zero-dependency retained material research bundle contract check and
+  its self-test. Use this after changing
+  `schemas/material-research-bundle.schema.json`,
+  `schemas/examples.material-research-bundle.json`, or bundle documentation.
 - `make build-operator-qualification-readiness`
   Write a generated readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

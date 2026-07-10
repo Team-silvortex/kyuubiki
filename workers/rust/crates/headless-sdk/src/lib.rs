@@ -103,7 +103,8 @@ pub use material_optimization::{
 };
 pub use material_reliability::{
     MaterialEvidenceRef, MaterialModelAssumption, MaterialQualityGate, MaterialReliabilityEnvelope,
-    gate_status, material_evidence_ref, material_model_assumption, material_quality_gate,
+    MaterialReliabilitySummary, gate_status, material_evidence_ref, material_model_assumption,
+    material_quality_gate, material_reliability_summary,
 };
 pub use material_reports::{
     MaterialStudyCatalogEntry, MaterialStudyDescriptor, build_material_report,

@@ -135,6 +135,8 @@ Example:
   [plan_material_study.exs](examples/plan_material_study.exs)
 - Material envelope workflow example:
   [run_material_envelope.exs](examples/run_material_envelope.exs)
+- Material report example:
+  [run_material_report.exs](examples/run_material_report.exs)
 - Advanced solver example: [run_advanced_solvers.exs](examples/run_advanced_solvers.exs)
 - Typical invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
@@ -142,5 +144,7 @@ Example:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_material_envelope.exs`
 - Material execution-plan invocation:
   `cd sdks/elixir && mix run examples/plan_material_study.exs`
+- Material report invocation:
+  `cd sdks/elixir && mix run examples/run_material_report.exs`
 - Smoke test:
   `cd sdks/elixir && mix test`

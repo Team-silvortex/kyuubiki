@@ -32,6 +32,8 @@ Minimal runnable examples now live at:
 - [sdks/python/examples/plan_material_study.py](python/examples/plan_material_study.py)
 - [sdks/elixir/examples/plan_material_study.exs](elixir/examples/plan_material_study.exs)
 - [sdks/rust/examples/plan_material_study.rs](rust/examples/plan_material_study.rs)
+- [sdks/python/examples/run_material_report.py](python/examples/run_material_report.py)
+- [sdks/elixir/examples/run_material_report.exs](elixir/examples/run_material_report.exs)
 - [sdks/python/examples/execute_operator_task_batch.py](python/examples/execute_operator_task_batch.py)
 - [sdks/elixir/examples/execute_operator_task_batch.exs](elixir/examples/execute_operator_task_batch.exs)
 - [sdks/rust/examples/execute_operator_task_batch.rs](rust/examples/execute_operator_task_batch.rs)
@@ -76,13 +78,14 @@ Recent additions:
   request without embedding the workflow graph inline
 - headless workflow plans now expose runtime style, engine mix, step bindings,
   and required confirmation flags before live execution
-- the Rust headless SDK now includes a concrete material-research template,
+- the Rust headless SDK includes a concrete material-research template,
   `material_heat_spreader_screening`, for comparing thermal heat-spreader
   candidates through solve/wait/result chains
-- the Rust headless SDK also includes `material_dielectric_screening`, an
+- the official SDK material-report helpers include `material_dielectric_screening`, an
   electrostatic dielectric material study that ranks breakdown margin, field
   intensity, dielectric loss proxy, and mass
-- `material_composite_thermo_electric_panel` is the first mixed-material
+- `material_composite_thermo_electric_panel` is available through the Rust,
+  Python, and Elixir material-report helpers as the first mixed-material
   sequential multiphysics prototype, running electrostatic, heat, and
   thermo-mechanical solves for conductor/dielectric/substrate panel stacks,
   with screening-level interface mismatch risk in the ranked report
@@ -91,9 +94,9 @@ Recent additions:
 - material reports include first-class optimization profiles so downstream
   agents can inspect score formulas, constraints, normalized scores, and
   weighted metric contributions
-- heat-spreader reports now include a reliability envelope with material-card
-  provenance, unit-system metadata, model assumptions, quality gates, and
-  explicit screening-only limitations
+- material reports expose reliability envelopes with quality gates, summarized
+  gate decisions, and blocking gate IDs so automated next-round planning can
+  distinguish repair, mitigation, and expansion across Rust, Python, and Elixir
 - Rust, Python, and Elixir SDK callers can now use one material-report dispatch surface to extract
   successful `result_fetch` payloads from a headless run and build the matching
   heat-spreader, dielectric, thermo-shield, or structural-panel report
@@ -192,6 +195,11 @@ Repeated next-round runs use
 to pin convergence assessment, optimization trace, repair planning, compact
 summaries, and retained run artifacts. A compact fixture lives at
 [schemas/examples.material-exploration-chain.json](../schemas/examples.material-exploration-chain.json).
+The retained research bundle wraps the initial exploration, next-round
+execution plan, rerun, chain, checksums, and reproduction commands under
+[schemas/material-research-bundle.schema.json](../schemas/material-research-bundle.schema.json),
+with a compact fixture at
+[schemas/examples.material-research-bundle.json](../schemas/examples.material-research-bundle.json).
 Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected

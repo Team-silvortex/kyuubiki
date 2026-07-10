@@ -42,9 +42,18 @@ Run both steps as one regression target:
 make verify-material-research-example
 ```
 
+Build a retained research bundle with the initial exploration, next-round
+execution plan, next exploration, chained rounds, checksums, and reproducible
+commands:
+
+```sh
+make verify-material-research-bundle
+```
+
 By default both commands use:
 
 - output: `tmp/material-research-example.json`
+- bundle output: `tmp/material-research-bundle.json`
 - study: `heat-spreader`
 - runner: `workers/rust` `kyuubiki-material-explore` reference runner
 
@@ -53,6 +62,37 @@ The runner is only the first packaged executable for this example. The durable
 interface is the material exploration contract, so Python, Elixir, remote
 agent, mesh, or custom lab wrappers can reproduce the same loop without using
 this exact CLI.
+
+## Research Bundle
+
+The bundle uses:
+
+```text
+kyuubiki.material-research-bundle/v1
+```
+
+The shared contract lives at
+[schemas/material-research-bundle.schema.json](../schemas/material-research-bundle.schema.json),
+with a compact fixture in
+[schemas/examples.material-research-bundle.json](../schemas/examples.material-research-bundle.json).
+Run `make check-material-research-bundle-contract` when changing the retained
+bundle shape without regenerating solver output.
+
+It is the first compact research-prototype artifact meant to be handed to an
+agent, CI lane, or human reviewer. It contains:
+
+- `initial_exploration`
+- `next_round_execution_plan`
+- `next_exploration`
+- `chain`
+- SHA-256 checksums for each retained artifact
+- command templates for reproducing the same loop
+- a summary with winner, reliability decision, next-round decision, chain stop
+  reason, and convergence state
+
+The checker rejects local absolute repository paths and checksum drift. This is
+still a screening artifact, not a qualification package, but it is now a single
+file that captures the whole minimal research story.
 
 ## Closed-Loop Step
 

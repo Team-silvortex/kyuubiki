@@ -12,7 +12,7 @@ use crate::{
     MaterialReliabilityEnvelope, MaterialResearchMetricSpec, material_evidence_ref,
     material_model_assumption, material_optimization_constraint, material_optimization_profile,
     material_optimization_term, material_optimization_weight, material_quality_gate,
-    profile_weight,
+    material_reliability_summary, profile_weight,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -333,6 +333,7 @@ fn composite_optimization_profile() -> MaterialOptimizationProfile {
 fn composite_reliability_envelope(
     rows: &[CompositePanelCandidateReport],
 ) -> MaterialReliabilityEnvelope {
+    let quality_gates = composite_quality_gates(rows);
     MaterialReliabilityEnvelope {
         schema_version: "kyuubiki.material-reliability-envelope/v1".to_string(),
         posture: "prototype_screening_only".to_string(),
@@ -340,7 +341,8 @@ fn composite_reliability_envelope(
         unit_system: "SI".to_string(),
         evidence_refs: composite_evidence_refs(),
         model_assumptions: composite_model_assumptions(),
-        quality_gates: composite_quality_gates(rows),
+        summary: material_reliability_summary(&quality_gates),
+        quality_gates,
         limitations: vec![
             "Sequential coupling maps electrostatic, heat, and thermal stress through fixed synthetic fixtures rather than a monolithic coupled matrix.".to_string(),
             "Material regions are scalar and isotropic; anisotropy, temperature-dependent curves, and delamination propagation are not modeled yet.".to_string(),

@@ -6,7 +6,7 @@ use crate::{
     MaterialReliabilityEnvelope, less_equal_status, material_evidence_ref,
     material_model_assumption, material_optimization_constraint, material_optimization_profile,
     material_optimization_term, material_optimization_weight, material_quality_gate,
-    profile_weight,
+    material_reliability_summary, profile_weight,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -347,6 +347,40 @@ fn build_heat_spreader_reliability_envelope(
             Some(current.map_or(value, |max| max.max(value)))
         });
 
+    let quality_gates = vec![
+        material_quality_gate(
+            "gate.peak_temperature.warning",
+            "Peak temperature warning gate",
+            "peak_temperature_c",
+            "<=",
+            70.0,
+            max_temperature,
+            "At least one candidate should keep the screening peak at or below the warning limit.",
+        ),
+        material_quality_gate(
+            "gate.areal_mass.warning",
+            "Areal mass warning gate",
+            "areal_mass_kg_m2",
+            "<=",
+            8.0,
+            max_areal_mass,
+            "Screening candidates should remain light enough for thin spreader use.",
+        ),
+        material_quality_gate(
+            "gate.result_completeness",
+            "Result payload completeness",
+            "peak_temperature_c",
+            ">=",
+            rows.len() as f64,
+            Some(
+                rows.iter()
+                    .filter(|row| row.peak_temperature_c.is_some())
+                    .count() as f64,
+            ),
+            "Every candidate should expose a peak-temperature result before ranking is trusted.",
+        ),
+    ];
+
     MaterialReliabilityEnvelope {
         schema_version: "kyuubiki.material-reliability-envelope/v1".to_string(),
         posture: "screening_only".to_string(),
@@ -354,39 +388,8 @@ fn build_heat_spreader_reliability_envelope(
         unit_system: "SI".to_string(),
         evidence_refs: heat_spreader_evidence_refs(),
         model_assumptions: heat_spreader_model_assumptions(),
-        quality_gates: vec![
-            material_quality_gate(
-                "gate.peak_temperature.warning",
-                "Peak temperature warning gate",
-                "peak_temperature_c",
-                "<=",
-                70.0,
-                max_temperature,
-                "At least one candidate should keep the screening peak at or below the warning limit.",
-            ),
-            material_quality_gate(
-                "gate.areal_mass.warning",
-                "Areal mass warning gate",
-                "areal_mass_kg_m2",
-                "<=",
-                8.0,
-                max_areal_mass,
-                "Screening candidates should remain light enough for thin spreader use.",
-            ),
-            material_quality_gate(
-                "gate.result_completeness",
-                "Result payload completeness",
-                "peak_temperature_c",
-                ">=",
-                rows.len() as f64,
-                Some(
-                    rows.iter()
-                        .filter(|row| row.peak_temperature_c.is_some())
-                        .count() as f64,
-                ),
-                "Every candidate should expose a peak-temperature result before ranking is trusted.",
-            ),
-        ],
+        summary: material_reliability_summary(&quality_gates),
+        quality_gates,
         limitations: vec![
             "Current material cards use scalar room-temperature screening values, not temperature-dependent material curves.".to_string(),
             "Pyrolytic graphite is represented by its in-plane conductivity only; through-plane anisotropy is not resolved in this first-pass model.".to_string(),

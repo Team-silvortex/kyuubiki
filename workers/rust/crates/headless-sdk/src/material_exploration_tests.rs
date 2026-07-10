@@ -177,6 +177,42 @@ fn next_round_plan_mitigates_design_risk_without_missing_metrics() {
 }
 
 #[test]
+fn next_round_plan_prefers_reliability_summary_blocking_gate_ids() {
+    let report = json!({
+        "winner_candidate_id": "candidate-a",
+        "warnings": [],
+        "candidates": [
+            { "candidate_id": "candidate-a", "rank": 1, "score": 0.8 }
+        ],
+        "reliability": {
+            "summary": {
+                "decision": "blocked_by_quality_gates",
+                "blocking_gate_ids": ["gate.interface_risk.prototype"]
+            },
+            "quality_gates": [
+                { "id": "gate.result_completeness", "status": "observe" },
+                { "id": "gate.interface_risk.prototype", "status": "violate" }
+            ]
+        }
+    });
+
+    let plan = build_material_exploration_next_round_plan(&report, 1);
+
+    assert_eq!(plan.decision, "mitigate_design_risk");
+    assert!(
+        plan.rationale
+            .iter()
+            .any(|line| line.contains("gate.interface_risk.prototype"))
+    );
+    assert!(
+        !plan
+            .rationale
+            .iter()
+            .any(|line| line.contains("gate.result_completeness"))
+    );
+}
+
+#[test]
 fn next_round_execution_plan_filters_repair_reruns_to_focus_candidates() {
     let exploration = json!({
         "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,

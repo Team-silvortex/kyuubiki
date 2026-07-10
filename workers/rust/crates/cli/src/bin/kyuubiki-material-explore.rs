@@ -230,7 +230,7 @@ fn material_study_payload(study: &str) -> Result<Value, String> {
         "metric_specs": descriptor.metric_specs,
         "recommended_flow": [
             "run the study with local solver kernels",
-            "review report.winner_candidate_id and report.reliability.quality_gates",
+            "review report.winner_candidate_id and report.reliability.summary",
             "plan the next round with --plan-next",
             "materialize reviewed candidates only after review approval",
             "rerun materialized candidates with --run-materialized"

@@ -158,20 +158,8 @@ fn repair_summary(runs: &[Value]) -> Value {
             .map(|warnings| warnings.len() as u64)
             .unwrap_or(0);
 
-        for gate in run
-            .get("report")
-            .and_then(|report| report.get("reliability"))
-            .and_then(|reliability| reliability.get("quality_gates"))
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
-            if gate.get("status").and_then(Value::as_str) != Some("pass") {
-                push_unique_string(
-                    &mut violated_gate_ids,
-                    gate.get("id").and_then(Value::as_str),
-                );
-            }
+        for gate_id in blocking_gate_ids(run) {
+            push_unique_string(&mut violated_gate_ids, Some(&gate_id));
         }
 
         if run
@@ -199,6 +187,35 @@ fn repair_summary(runs: &[Value]) -> Value {
         "violated_gate_ids": violated_gate_ids,
         "focus_candidate_ids": focus_candidate_ids,
     })
+}
+
+fn blocking_gate_ids(run: &Value) -> Vec<String> {
+    let summary_ids = run
+        .get("report")
+        .and_then(|report| report.get("reliability"))
+        .and_then(|reliability| reliability.get("summary"))
+        .and_then(|summary| summary.get("blocking_gate_ids"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+
+    if !summary_ids.is_empty() {
+        return summary_ids;
+    }
+
+    run.get("report")
+        .and_then(|report| report.get("reliability"))
+        .and_then(|reliability| reliability.get("quality_gates"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|gate| gate.get("status").and_then(Value::as_str) != Some("pass"))
+        .filter_map(|gate| gate.get("id").and_then(Value::as_str))
+        .map(ToString::to_string)
+        .collect()
 }
 
 fn is_attention_decision(decision: &str) -> bool {

@@ -36,6 +36,12 @@ The target state is a reproducible material-study run bundle:
 
 `material card + model + workflow + solve results + reliability envelope + report`
 
+The first retained bundle contract is now
+`kyuubiki.material-research-bundle/v1`, built by
+`make verify-material-research-bundle`. It keeps initial exploration,
+next-round planning, rerun output, chained iterations, checksums, and
+reproduction commands in one screening-level artifact.
+
 ## Phase 1. Screening Studies Become Honest
 
 Status:

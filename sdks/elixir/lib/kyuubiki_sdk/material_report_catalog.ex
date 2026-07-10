@@ -6,13 +6,15 @@ defmodule KyuubikiSdk.MaterialReportCatalog do
     material_dielectric_screening
     material_thermo_shield_screening
     material_structural_panel_screening
+    material_composite_thermo_electric_panel
   )
 
   @study_aliases %{
     "material_heat_spreader_screening" => "material.heat_spreader_screening.v1",
     "material_dielectric_screening" => "material.dielectric_screening.v1",
     "material_thermo_shield_screening" => "material.thermo_shield_screening.v1",
-    "material_structural_panel_screening" => "material.structural_panel_screening.v1"
+    "material_structural_panel_screening" => "material.structural_panel_screening.v1",
+    "material_composite_thermo_electric_panel" => "material.composite_thermo_electric_panel.v1"
   }
 
   @descriptors %{
@@ -63,6 +65,20 @@ defmodule KyuubikiSdk.MaterialReportCatalog do
       ],
       "schema_version" => "kyuubiki.structural-material-report/v1",
       "template_id" => "material_structural_panel_screening"
+    },
+    "material_composite_thermo_electric_panel" => %{
+      "id" => "material_composite_thermo_electric_panel",
+      "title" => "Composite Thermo-Electric Panel",
+      "domain" => "multiphysics_materials",
+      "objective" =>
+        "rank mixed-material panel stacks across electric field, heat, thermal stress, interface risk, and mass",
+      "aliases" => [
+        "composite-thermo-electric-panel",
+        "composite_thermo_electric_panel",
+        "material.composite_thermo_electric_panel.v1"
+      ],
+      "schema_version" => "kyuubiki.composite-panel-report/v1",
+      "template_id" => "material_composite_thermo_electric_panel"
     }
   }
 
@@ -245,6 +261,59 @@ defmodule KyuubikiSdk.MaterialReportCatalog do
     ]
   end
 
+  def metric_specs("material_composite_thermo_electric_panel") do
+    [
+      metric(
+        "max_electric_field_v_m",
+        "Max electric field",
+        "V/m",
+        "minimize",
+        0.23,
+        "electrostatic.max_electric_field"
+      ),
+      metric(
+        "max_temperature_c",
+        "Max temperature",
+        "C",
+        "minimize",
+        0.23,
+        "heat.max_temperature"
+      ),
+      metric(
+        "max_thermal_stress_pa",
+        "Max thermal stress",
+        "Pa",
+        "minimize",
+        0.22,
+        "thermal.max_stress"
+      ),
+      metric(
+        "breakdown_safety_factor",
+        "Breakdown safety factor",
+        "ratio",
+        "maximize",
+        0.15,
+        "candidate.breakdown_field / electrostatic.max_electric_field"
+      ),
+      metric(
+        "interface_risk_score",
+        "Interface risk score",
+        "0..1",
+        "minimize",
+        0.12,
+        "candidate.interface_compatibility"
+      ),
+      metric(
+        "areal_mass_kg_m2",
+        "Areal mass",
+        "kg/m^2",
+        "minimize",
+        0.05,
+        "candidate.stack_areal_mass"
+      )
+    ]
+  end
+
   def candidates("material_heat_spreader_screening") do
     [
       %{
@@ -342,6 +411,32 @@ defmodule KyuubikiSdk.MaterialReportCatalog do
         "density_kg_m3" => 1600.0,
         "youngs_modulus_pa" => 70.0e9,
         "yield_strength_pa" => 600.0e6
+      }
+    ]
+  end
+
+  def candidates("material_composite_thermo_electric_panel") do
+    [
+      %{
+        "id" => "copper_polyimide_aluminum",
+        "label" => "Copper / Polyimide / Aluminum",
+        "breakdown_field_v_m" => 300.0e6,
+        "areal_mass_kg_m2" => 2.85,
+        "interface_risk_score" => 0.63
+      },
+      %{
+        "id" => "aluminum_alumina_aluminum",
+        "label" => "Aluminum / Alumina / Aluminum",
+        "breakdown_field_v_m" => 130.0e6,
+        "areal_mass_kg_m2" => 3.7,
+        "interface_risk_score" => 0.42
+      },
+      %{
+        "id" => "copper_ptfe_glass_epoxy",
+        "label" => "Copper / PTFE / Glass epoxy",
+        "breakdown_field_v_m" => 60.0e6,
+        "areal_mass_kg_m2" => 2.25,
+        "interface_risk_score" => 0.91
       }
     ]
   end

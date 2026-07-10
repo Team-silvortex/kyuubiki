@@ -35,6 +35,10 @@ README.
   exploration runs, including convergence assessment, optimization trace,
   repair planning, compact summaries, and retained per-round exploration
   artifacts
+- `material-research-bundle.schema.json` is for the first retained automated
+  material research artifact, tying an initial exploration, next-round
+  execution plan, rerun, chained rounds, artifact checksums, and reproducible
+  commands into one screening-level review bundle
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
@@ -97,6 +101,9 @@ README.
 - `examples.material-exploration-chain.json` is the shared chain fixture for
   validating `--chain-next` output, convergence assessment, optimization trace,
   and summary/run count alignment
+- `examples.material-research-bundle.json` is the shared retained research
+  bundle fixture for validating artifact checksums, reproduction command
+  arrays, and the top-level screening research summary
 - `examples.operator-task-ir.json` is the language-neutral golden TaskIR sample
   shared by schema readers, SDK smoke tests, and agent engine bring-up
 - `examples.operator-task-ir-float.json` is the fractional-number TaskIR sample

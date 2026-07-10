@@ -210,6 +210,8 @@ Example:
   [run_material_envelope.py](examples/run_material_envelope.py)
 - Material study execution-plan example:
   [plan_material_study.py](examples/plan_material_study.py)
+- Material report example:
+  [run_material_report.py](examples/run_material_report.py)
 - Advanced solver example: [run_advanced_solvers.py](examples/run_advanced_solvers.py)
 - Typical invocation:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_study.py`
@@ -217,5 +219,7 @@ Example:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_material_envelope.py`
 - Material study plan invocation:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/plan_material_study.py`
+- Material report invocation:
+  `PYTHONPATH=sdks/python python3 sdks/python/examples/run_material_report.py`
 - Smoke test:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`

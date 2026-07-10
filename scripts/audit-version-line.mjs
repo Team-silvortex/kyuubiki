@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { rootDir } from "./release-metadata.mjs";
+import { markdownFactChecks } from "./version-line-markdown-facts.mjs";
 
 function usage() {
   console.log(`Usage:
@@ -89,20 +90,6 @@ function versionMinorLine(version) {
 
 function versionDisplay(codename, version) {
   return `${codename} ${version}`;
-}
-
-function textIncludesCheck(file, field, expected) {
-  return textIncludesCheckWithReader(file, field, expected, readText);
-}
-
-function textIncludesCheckWithReader(file, field, expected, reader) {
-  return {
-    kind: "text_includes",
-    file,
-    field,
-    expected,
-    actual: reader(file).includes(expected) ? expected : null,
-  };
 }
 
 function walk(relativePath, results = []) {
@@ -322,44 +309,6 @@ function exactChecks(expectedVersion) {
     ...check,
     ok: check.actual === check.expected,
   }));
-}
-
-function markdownFactChecks(expectedVersion, codename, reader) {
-  const expectedMinorLine = versionMinorLine(expectedVersion);
-  const expectedDisplayVersion = versionDisplay(codename, expectedVersion);
-  const expectedDisplayMinorLine = versionDisplay(codename, expectedMinorLine);
-  return [
-    textIncludesCheckWithReader(
-      "docs/version-line.md",
-      "current shipping version",
-      `current shipping version: \`${expectedDisplayVersion}\``,
-      reader,
-    ),
-    textIncludesCheckWithReader(
-      "docs/version-line.md",
-      "current documentation target",
-      `current documentation target: \`${expectedDisplayMinorLine}\` active line`,
-      reader,
-    ),
-    textIncludesCheckWithReader(
-      "docs/current-line.md",
-      "published release snapshot",
-      `current published release snapshot in this line is \`${expectedDisplayVersion}\``,
-      reader,
-    ),
-    textIncludesCheckWithReader(
-      "docs/installer-remote-control.md",
-      "preparation line",
-      `\`${expectedDisplayMinorLine}\` preparation line`,
-      reader,
-    ),
-    textIncludesCheckWithReader(
-      "docs/desktop-release-checklist.md",
-      "workspace-prep line",
-      `current \`${expectedVersion}\` workspace-prep line`,
-      reader,
-    ),
-  ];
 }
 
 function searchInventory(expectedVersion, codename) {

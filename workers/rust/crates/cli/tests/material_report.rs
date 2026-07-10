@@ -79,6 +79,38 @@ fn material_report_cli_builds_ranked_heat_spreader_report() {
 }
 
 #[test]
+fn material_report_cli_text_summary_shows_reliability_decision() {
+    let input = write_temp_json(
+        "results-text",
+        &json!({
+            "results": [
+                { "result": { "max_temperature": 82.0, "max_heat_flux": 900.0 } },
+                { "result": { "result": { "max_temperature": 64.0, "max_heat_flux": 1400.0 } } },
+                { "max_temperature": 58.0, "max_heat_flux": 1800.0 }
+            ]
+        }),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args([
+            "heat-spreader",
+            "--results",
+            input.to_str().expect("input path"),
+        ])
+        .output()
+        .expect("run material report");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Reliability: blocked_by_quality_gates"));
+    assert!(stdout.contains("gate.areal_mass.warning"));
+}
+
+#[test]
 fn material_report_cli_lists_study_catalog() {
     let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
         .args(["list", "--json"])
@@ -96,7 +128,7 @@ fn material_report_cli_lists_study_catalog() {
         payload["schema_version"].as_str(),
         Some("kyuubiki.material-study-catalog/v1")
     );
-    assert_eq!(payload["study_count"].as_u64(), Some(4));
+    assert_eq!(payload["study_count"].as_u64(), Some(5));
     assert!(payload["studies"].as_array().is_some_and(|studies| {
         studies.iter().any(|study| {
             study["id"] == "material_dielectric_screening"

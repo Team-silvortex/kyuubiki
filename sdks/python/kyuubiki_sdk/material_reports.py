@@ -81,6 +81,7 @@ def build_material_report(
         "study": _STUDY_ALIASES[study_id],
         "objective": descriptor["objective"],
         "optimization": profile,
+        "reliability": _reliability_envelope(study_id, rows),
         "metric_specs": deepcopy(_METRICS[study_id]),
         "candidates": rows,
         "winner_candidate_id": rows[0]["candidate_id"] if rows else None,
@@ -152,6 +153,67 @@ def _candidate_report(
     }
 
 
+def _reliability_envelope(study_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    gates = [_result_completeness_gate(study_id, rows)]
+    return {
+        "schema_version": "kyuubiki.material-reliability-envelope/v1",
+        "posture": "screening_only",
+        "material_card_version": f"kyuubiki.material-cards.{study_id}.v1",
+        "unit_system": "SI",
+        "quality_gates": gates,
+        "summary": _reliability_summary(gates),
+        "limitations": [
+            "Python SDK material reports use screening fixtures and should be rerun through solver-backed studies before qualification.",
+        ],
+    }
+
+
+def _result_completeness_gate(
+    study_id: str,
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    complete_count = sum(1 for row in rows if not row["missing_metrics"])
+    expected_count = len(rows)
+    status = "pass" if complete_count >= expected_count else "violate"
+    return {
+        "id": "gate.result_completeness",
+        "label": "Result payload completeness",
+        "metric_id": "complete_candidate_count",
+        "operator": ">=",
+        "limit": expected_count,
+        "actual_value": complete_count,
+        "status": status,
+        "description": f"Every {study_id} candidate should expose required result metrics before ranking is trusted.",
+    }
+
+
+def _reliability_summary(gates: list[dict[str, Any]]) -> dict[str, Any]:
+    pass_count = sum(1 for gate in gates if gate["status"] == "pass")
+    violation_count = sum(1 for gate in gates if gate["status"] == "violate")
+    unknown_count = sum(1 for gate in gates if gate["status"] == "unknown")
+    observe_count = len(gates) - pass_count - violation_count - unknown_count
+    blocking_gate_ids = [
+        gate["id"] for gate in gates if gate["status"] == "violate"
+    ]
+    if violation_count:
+        decision = "blocked_by_quality_gates"
+    elif unknown_count:
+        decision = "needs_more_evidence"
+    elif observe_count:
+        decision = "review_observations"
+    else:
+        decision = "ready_for_next_round"
+    return {
+        "decision": decision,
+        "total_gate_count": len(gates),
+        "pass_count": pass_count,
+        "violation_count": violation_count,
+        "unknown_count": unknown_count,
+        "observe_count": observe_count,
+        "blocking_gate_ids": blocking_gate_ids,
+    }
+
+
 def _descend_result_payload(payload: dict[str, Any]) -> dict[str, Any]:
     result = payload.get("result")
     return result if isinstance(result, dict) else payload
@@ -190,6 +252,18 @@ def _study_metrics(
             "areal_mass_kg_m2": candidate["density_kg_m3"] * thickness,
             "max_temperature_delta_k": _float(result.get("max_temperature_delta")),
             "thermal_expansion_1_k": candidate["thermal_expansion_1_k"],
+        }
+    if study_id == "material_composite_thermo_electric_panel":
+        field = _path_float(result, "electrostatic", "max_electric_field")
+        return {
+            "max_electric_field_v_m": field,
+            "max_temperature_c": _path_float(result, "heat", "max_temperature"),
+            "max_thermal_stress_pa": _path_float(result, "thermal", "max_stress"),
+            "breakdown_safety_factor": candidate["breakdown_field_v_m"] / field
+            if field and field > 0
+            else None,
+            "interface_risk_score": candidate["interface_risk_score"],
+            "areal_mass_kg_m2": candidate["areal_mass_kg_m2"],
         }
     stress = _float(result.get("max_stress"))
     return {
@@ -277,11 +351,21 @@ def _float(value: Any) -> float | None:
         return None
 
 
+def _path_float(payload: dict[str, Any], *path: str) -> float | None:
+    value: Any = payload
+    for key in path:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return _float(value)
+
+
 _STUDY_ORDER = [
     "material_heat_spreader_screening",
     "material_dielectric_screening",
     "material_thermo_shield_screening",
     "material_structural_panel_screening",
+    "material_composite_thermo_electric_panel",
 ]
 
 _STUDY_ALIASES = {
@@ -289,6 +373,7 @@ _STUDY_ALIASES = {
     "material_dielectric_screening": "material.dielectric_screening.v1",
     "material_thermo_shield_screening": "material.thermo_shield_screening.v1",
     "material_structural_panel_screening": "material.structural_panel_screening.v1",
+    "material_composite_thermo_electric_panel": "material.composite_thermo_electric_panel.v1",
 }
 
 _DESCRIPTORS = {
@@ -328,6 +413,15 @@ _DESCRIPTORS = {
         "schema_version": "kyuubiki.structural-material-report/v1",
         "template_id": "material_structural_panel_screening",
     },
+    "material_composite_thermo_electric_panel": {
+        "id": "material_composite_thermo_electric_panel",
+        "title": "Composite Thermo-Electric Panel",
+        "domain": "multiphysics_materials",
+        "objective": "rank mixed-material panel stacks across electric field, heat, thermal stress, interface risk, and mass",
+        "aliases": ["composite-thermo-electric-panel", "composite_thermo_electric_panel", _STUDY_ALIASES["material_composite_thermo_electric_panel"]],
+        "schema_version": "kyuubiki.composite-panel-report/v1",
+        "template_id": "material_composite_thermo_electric_panel",
+    },
 }
 
 _METRICS = {
@@ -358,6 +452,14 @@ _METRICS = {
         _metric("specific_stiffness_m2_s2", "Specific stiffness", "m^2/s^2", "maximize", 0.15, "candidate.youngs_modulus_pa / candidate.density_kg_m3"),
         _metric("yield_safety_factor", "Yield safety factor", "ratio", "maximize", 0.1, "candidate.yield_strength_pa / solver.result.max_stress"),
     ],
+    "material_composite_thermo_electric_panel": [
+        _metric("max_electric_field_v_m", "Max electric field", "V/m", "minimize", 0.23, "electrostatic.max_electric_field"),
+        _metric("max_temperature_c", "Max temperature", "C", "minimize", 0.23, "heat.max_temperature"),
+        _metric("max_thermal_stress_pa", "Max thermal stress", "Pa", "minimize", 0.22, "thermal.max_stress"),
+        _metric("breakdown_safety_factor", "Breakdown safety factor", "ratio", "maximize", 0.15, "candidate.breakdown_field / electrostatic.max_electric_field"),
+        _metric("interface_risk_score", "Interface risk score", "0..1", "minimize", 0.12, "candidate.interface_compatibility"),
+        _metric("areal_mass_kg_m2", "Areal mass", "kg/m^2", "minimize", 0.05, "candidate.stack_areal_mass"),
+    ],
 }
 
 _CANDIDATES = {
@@ -380,5 +482,10 @@ _CANDIDATES = {
         {"id": "aluminum_7075_t6", "label": "Aluminum 7075-T6", "density_kg_m3": 2810.0, "youngs_modulus_pa": 71.7e9, "yield_strength_pa": 503.0e6},
         {"id": "steel_4130_normalized", "label": "Steel 4130 normalized", "density_kg_m3": 7850.0, "youngs_modulus_pa": 205.0e9, "yield_strength_pa": 435.0e6},
         {"id": "carbon_fiber_quasi_iso", "label": "Carbon fiber quasi-isotropic", "density_kg_m3": 1600.0, "youngs_modulus_pa": 70.0e9, "yield_strength_pa": 600.0e6},
+    ],
+    "material_composite_thermo_electric_panel": [
+        {"id": "copper_polyimide_aluminum", "label": "Copper / Polyimide / Aluminum", "breakdown_field_v_m": 300.0e6, "areal_mass_kg_m2": 2.85, "interface_risk_score": 0.63},
+        {"id": "aluminum_alumina_aluminum", "label": "Aluminum / Alumina / Aluminum", "breakdown_field_v_m": 130.0e6, "areal_mass_kg_m2": 3.7, "interface_risk_score": 0.42},
+        {"id": "copper_ptfe_glass_epoxy", "label": "Copper / PTFE / Glass epoxy", "breakdown_field_v_m": 60.0e6, "areal_mass_kg_m2": 2.25, "interface_risk_score": 0.91},
     ],
 }

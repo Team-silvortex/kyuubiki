@@ -231,6 +231,7 @@ fn print_report(report: &Value) {
             .and_then(Value::as_str)
             .unwrap_or("--")
     );
+    print_reliability_summary(report);
     let candidates = report
         .get("candidates")
         .and_then(Value::as_array)
@@ -266,6 +267,51 @@ fn print_report(report: &Value) {
         for warning in warnings {
             println!(" - {warning}");
         }
+    }
+}
+
+fn print_reliability_summary(report: &Value) {
+    let Some(summary) = report
+        .get("reliability")
+        .and_then(|reliability| reliability.get("summary"))
+    else {
+        return;
+    };
+    println!(
+        "Reliability: {}",
+        summary
+            .get("decision")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
+    );
+    println!(
+        "Quality gates: pass={} violate={} unknown={} observe={}",
+        summary
+            .get("pass_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        summary
+            .get("violation_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        summary
+            .get("unknown_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        summary
+            .get("observe_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+    );
+    let blocking_gate_ids = summary
+        .get("blocking_gate_ids")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>();
+    if !blocking_gate_ids.is_empty() {
+        println!("Blocking gates: {}", blocking_gate_ids.join(", "));
     }
 }
 

@@ -295,6 +295,13 @@ fn chains_next_rounds_from_previous_exploration_json() {
             .is_some_and(|ids| !ids.is_empty())
     );
     assert!(
+        chain["repair_summary"]["violated_gate_ids"]
+            .as_array()
+            .is_some_and(|ids| ids
+                .iter()
+                .any(|id| id.as_str() == Some("gate.areal_mass.warning")))
+    );
+    assert!(
         chain["repair_summary"]["focus_candidate_ids"]
             .as_array()
             .is_some_and(|ids| !ids.is_empty())

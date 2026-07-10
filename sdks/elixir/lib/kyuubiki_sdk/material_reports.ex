@@ -103,6 +103,7 @@ defmodule KyuubikiSdk.MaterialReports do
          "study" => MaterialReportCatalog.study_alias(study_id),
          "objective" => descriptor["objective"],
          "optimization" => profile,
+         "reliability" => reliability_envelope(study_id, rows),
          "metric_specs" => metrics,
          "candidates" => rows,
          "winner_candidate_id" => rows |> List.first() |> then(&(&1 && &1["candidate_id"])),
@@ -181,6 +182,70 @@ defmodule KyuubikiSdk.MaterialReports do
     }
   end
 
+  defp reliability_envelope(study_id, rows) do
+    gates = [result_completeness_gate(study_id, rows)]
+
+    %{
+      "schema_version" => "kyuubiki.material-reliability-envelope/v1",
+      "posture" => "screening_only",
+      "material_card_version" => "kyuubiki.material-cards.#{study_id}.v1",
+      "unit_system" => "SI",
+      "quality_gates" => gates,
+      "summary" => reliability_summary(gates),
+      "limitations" => [
+        "Elixir SDK material reports use screening fixtures and should be rerun through solver-backed studies before qualification."
+      ]
+    }
+  end
+
+  defp result_completeness_gate(study_id, rows) do
+    complete_count = Enum.count(rows, &(&1["missing_metrics"] == []))
+    expected_count = length(rows)
+    status = if complete_count >= expected_count, do: "pass", else: "violate"
+
+    %{
+      "id" => "gate.result_completeness",
+      "label" => "Result payload completeness",
+      "metric_id" => "complete_candidate_count",
+      "operator" => ">=",
+      "limit" => expected_count,
+      "actual_value" => complete_count,
+      "status" => status,
+      "description" =>
+        "Every #{study_id} candidate should expose required result metrics before ranking is trusted."
+    }
+  end
+
+  defp reliability_summary(gates) do
+    pass_count = Enum.count(gates, &(&1["status"] == "pass"))
+    violation_count = Enum.count(gates, &(&1["status"] == "violate"))
+    unknown_count = Enum.count(gates, &(&1["status"] == "unknown"))
+    observe_count = length(gates) - pass_count - violation_count - unknown_count
+
+    blocking_gate_ids =
+      gates
+      |> Enum.filter(&(&1["status"] == "violate"))
+      |> Enum.map(& &1["id"])
+
+    decision =
+      cond do
+        violation_count > 0 -> "blocked_by_quality_gates"
+        unknown_count > 0 -> "needs_more_evidence"
+        observe_count > 0 -> "review_observations"
+        true -> "ready_for_next_round"
+      end
+
+    %{
+      "decision" => decision,
+      "total_gate_count" => length(gates),
+      "pass_count" => pass_count,
+      "violation_count" => violation_count,
+      "unknown_count" => unknown_count,
+      "observe_count" => observe_count,
+      "blocking_gate_ids" => blocking_gate_ids
+    }
+  end
+
   defp descend_result_payload(%{"result" => result}) when is_map(result), do: result
   defp descend_result_payload(payload), do: payload
 
@@ -218,6 +283,20 @@ defmodule KyuubikiSdk.MaterialReports do
       "areal_mass_kg_m2" => candidate["density_kg_m3"] * thickness(result),
       "max_temperature_delta_k" => float(result["max_temperature_delta"]),
       "thermal_expansion_1_k" => candidate["thermal_expansion_1_k"]
+    }
+  end
+
+  defp study_metrics("material_composite_thermo_electric_panel", candidate, result) do
+    field = path_float(result, ["electrostatic", "max_electric_field"])
+
+    %{
+      "max_electric_field_v_m" => field,
+      "max_temperature_c" => path_float(result, ["heat", "max_temperature"]),
+      "max_thermal_stress_pa" => path_float(result, ["thermal", "max_stress"]),
+      "breakdown_safety_factor" =>
+        if(is_number(field) and field > 0, do: candidate["breakdown_field_v_m"] / field),
+      "interface_risk_score" => candidate["interface_risk_score"],
+      "areal_mass_kg_m2" => candidate["areal_mass_kg_m2"]
     }
   end
 
@@ -286,4 +365,13 @@ defmodule KyuubikiSdk.MaterialReports do
   end
 
   defp float(_value), do: nil
+
+  defp path_float(payload, path) do
+    path
+    |> Enum.reduce(payload, fn
+      key, value when is_map(value) -> Map.get(value, key)
+      _key, _value -> nil
+    end)
+    |> float()
+  end
 end

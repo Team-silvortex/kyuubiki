@@ -1,0 +1,110 @@
+{
+  "$schema": "material-research-bundle.schema.json",
+  "schema_version": "kyuubiki.material-research-bundle/v1",
+  "bundle_id": "material.heat_spreader_screening.reproducible_bundle.v1",
+  "generated_at_utc": "2026-07-10T00:00:00.000Z",
+  "posture": "screening_research_bundle",
+  "study": "heat-spreader",
+  "artifact_checksums": {
+    "initial_exploration_sha256": "fb5c6122aa297ea495e8165acbec836cb4c5389174193c2c79e3766aaa2dca3a",
+    "next_round_execution_plan_sha256": "5f2837cb895db967eb3ae106cdfc809646a9d8cdb84bcf13123f1cff7de1e34d",
+    "next_exploration_sha256": "74dee0bc47918a39ef5efdf1bc2e58eeef8f2995b2c113adb398d9ade3e11c65",
+    "chain_sha256": "2473d62b25f520b5688b5ed1d81535c4f629dedee57c8fa78de9090beec6f21e"
+  },
+  "reproducibility": {
+    "workspace": "workers/rust",
+    "initial_command": [
+      "cargo",
+      "run",
+      "-q",
+      "-p",
+      "kyuubiki-cli",
+      "--bin",
+      "kyuubiki-material-explore",
+      "--",
+      "heat-spreader",
+      "--json"
+    ],
+    "plan_next_command_template": [
+      "cargo",
+      "run",
+      "-q",
+      "-p",
+      "kyuubiki-cli",
+      "--bin",
+      "kyuubiki-material-explore",
+      "--",
+      "--plan-next",
+      "<initial-exploration.json>",
+      "--json"
+    ],
+    "run_next_command_template": [
+      "cargo",
+      "run",
+      "-q",
+      "-p",
+      "kyuubiki-cli",
+      "--bin",
+      "kyuubiki-material-explore",
+      "--",
+      "--run-next",
+      "<initial-exploration.json>",
+      "--json"
+    ],
+    "chain_next_command_template": [
+      "cargo",
+      "run",
+      "-q",
+      "-p",
+      "kyuubiki-cli",
+      "--bin",
+      "kyuubiki-material-explore",
+      "--",
+      "--chain-next",
+      "<initial-exploration.json>",
+      "--rounds",
+      "2",
+      "--json"
+    ],
+    "transient_work_files": [
+      "tmp/material-research-bundle-work/example/initial-exploration.json",
+      "tmp/material-research-bundle-work/example/next-exploration.json"
+    ]
+  },
+  "execution_trace": {
+    "initial_duration_ms": 1,
+    "plan_next_duration_ms": 1,
+    "run_next_duration_ms": 1,
+    "chain_next_duration_ms": 1
+  },
+  "summary": {
+    "winner_candidate_id": "pyrolytic_graphite_in_plane",
+    "reliability_decision": "blocked_by_quality_gates",
+    "next_round_decision": "mitigate_design_risk",
+    "runnable_next_step_count": 3,
+    "next_iteration": 2,
+    "chain_stop_reason": "risk_mitigation_required",
+    "chain_convergence_state": "blocked_by_quality_gates",
+    "chain_round_count": 1
+  },
+  "initial_exploration": {
+    "schema_version": "kyuubiki.material-exploration-run/v1",
+    "iteration": 1,
+    "study": "material_heat_spreader_screening"
+  },
+  "next_round_execution_plan": {
+    "schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
+    "source_schema_version": "kyuubiki.material-exploration-run/v1",
+    "runnable_step_count": 3
+  },
+  "next_exploration": {
+    "schema_version": "kyuubiki.material-exploration-run/v1",
+    "iteration": 2,
+    "study": "material_heat_spreader_screening"
+  },
+  "chain": {
+    "schema_version": "kyuubiki.material-exploration-chain/v1",
+    "round_count": 1,
+    "stop_reason": "risk_mitigation_required"
+  }
+}

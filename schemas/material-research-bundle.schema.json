@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/material-research-bundle.schema.json",
+  "title": "Kyuubiki Material Research Bundle",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "generated_at_utc",
+    "posture",
+    "study",
+    "artifact_checksums",
+    "reproducibility",
+    "execution_trace",
+    "summary",
+    "initial_exploration",
+    "next_round_execution_plan",
+    "next_exploration",
+    "chain"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "kyuubiki.material-research-bundle/v1"
+    },
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "posture": {
+      "const": "screening_research_bundle"
+    },
+    "study": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_checksums": {
+      "$ref": "#/$defs/artifactChecksums"
+    },
+    "reproducibility": {
+      "$ref": "#/$defs/reproducibility"
+    },
+    "execution_trace": {
+      "$ref": "#/$defs/executionTrace"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "initial_exploration": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-exploration-run/v1"
+        }
+      }
+    },
+    "next_round_execution_plan": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-exploration-next-round-execution/v1"
+        }
+      }
+    },
+    "next_exploration": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-exploration-run/v1"
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-exploration-chain/v1"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "artifactChecksums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial_exploration_sha256",
+        "next_round_execution_plan_sha256",
+        "next_exploration_sha256",
+        "chain_sha256"
+      ],
+      "properties": {
+        "initial_exploration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "next_round_execution_plan_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "next_exploration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chain_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "workspace",
+        "initial_command",
+        "plan_next_command_template",
+        "run_next_command_template",
+        "chain_next_command_template"
+      ],
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "initial_command": {
+          "$ref": "#/$defs/argv"
+        },
+        "plan_next_command_template": {
+          "$ref": "#/$defs/argv"
+        },
+        "run_next_command_template": {
+          "$ref": "#/$defs/argv"
+        },
+        "chain_next_command_template": {
+          "$ref": "#/$defs/argv"
+        },
+        "transient_work_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "executionTrace": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "initial_duration_ms",
+        "plan_next_duration_ms",
+        "run_next_duration_ms",
+        "chain_next_duration_ms"
+      ],
+      "properties": {
+        "initial_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "plan_next_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "run_next_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chain_next_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "winner_candidate_id",
+        "reliability_decision",
+        "next_round_decision",
+        "chain_stop_reason"
+      ],
+      "properties": {
+        "winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reliability_decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_round_decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chain_stop_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

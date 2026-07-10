@@ -30,6 +30,17 @@ pub struct MaterialQualityGate {
     pub description: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialReliabilitySummary {
+    pub decision: String,
+    pub total_gate_count: usize,
+    pub pass_count: usize,
+    pub violation_count: usize,
+    pub unknown_count: usize,
+    pub observe_count: usize,
+    pub blocking_gate_ids: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialReliabilityEnvelope {
     pub schema_version: String,
@@ -39,6 +50,7 @@ pub struct MaterialReliabilityEnvelope {
     pub evidence_refs: Vec<MaterialEvidenceRef>,
     pub model_assumptions: Vec<MaterialModelAssumption>,
     pub quality_gates: Vec<MaterialQualityGate>,
+    pub summary: MaterialReliabilitySummary,
     pub limitations: Vec<String>,
 }
 
@@ -103,5 +115,47 @@ pub fn gate_status(value: Option<f64>, operator: &str, limit: f64) -> String {
         (Some(_), ">=") => "violate".to_string(),
         (Some(_), _) => "observe".to_string(),
         (None, _) => "unknown".to_string(),
+    }
+}
+
+pub fn material_reliability_summary(
+    quality_gates: &[MaterialQualityGate],
+) -> MaterialReliabilitySummary {
+    let mut pass_count = 0;
+    let mut violation_count = 0;
+    let mut unknown_count = 0;
+    let mut observe_count = 0;
+    let mut blocking_gate_ids = Vec::new();
+
+    for gate in quality_gates {
+        match gate.status.as_str() {
+            "pass" => pass_count += 1,
+            "violate" => {
+                violation_count += 1;
+                blocking_gate_ids.push(gate.id.clone());
+            }
+            "unknown" => unknown_count += 1,
+            _ => observe_count += 1,
+        }
+    }
+
+    let decision = if violation_count > 0 {
+        "blocked_by_quality_gates"
+    } else if unknown_count > 0 {
+        "needs_more_evidence"
+    } else if observe_count > 0 {
+        "review_observations"
+    } else {
+        "ready_for_next_round"
+    };
+
+    MaterialReliabilitySummary {
+        decision: decision.to_string(),
+        total_gate_count: quality_gates.len(),
+        pass_count,
+        violation_count,
+        unknown_count,
+        observe_count,
+        blocking_gate_ids,
     }
 }

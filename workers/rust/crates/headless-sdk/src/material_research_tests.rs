@@ -43,6 +43,21 @@ fn heat_spreader_report_ranks_by_result_and_material_metrics() {
             .iter()
             .any(|gate| gate.id == "gate.result_completeness" && gate.status == "pass")
     );
+    assert_eq!(
+        report.reliability.summary.decision,
+        "blocked_by_quality_gates"
+    );
+    assert_eq!(report.reliability.summary.total_gate_count, 3);
+    assert!(report.reliability.summary.pass_count >= 1);
+    assert!(report.reliability.summary.violation_count >= 1);
+    assert!(
+        report
+            .reliability
+            .summary
+            .blocking_gate_ids
+            .iter()
+            .any(|id| id == "gate.areal_mass.warning")
+    );
     assert!(
         report
             .optimization
@@ -88,6 +103,18 @@ fn heat_spreader_report_keeps_missing_metric_warnings_visible() {
             .quality_gates
             .iter()
             .any(|gate| gate.id == "gate.result_completeness" && gate.status == "violate")
+    );
+    assert_eq!(
+        report.reliability.summary.decision,
+        "blocked_by_quality_gates"
+    );
+    assert!(
+        report
+            .reliability
+            .summary
+            .blocking_gate_ids
+            .iter()
+            .any(|id| id == "gate.result_completeness")
     );
 }
 

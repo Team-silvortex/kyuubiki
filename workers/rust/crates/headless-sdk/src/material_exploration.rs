@@ -333,6 +333,21 @@ fn focus_candidate_ids(report: &Value) -> Vec<String> {
 }
 
 fn violated_quality_gate_ids(report: &Value) -> Vec<String> {
+    let summary_gate_ids = report
+        .get("reliability")
+        .and_then(|reliability| reliability.get("summary"))
+        .and_then(|summary| summary.get("blocking_gate_ids"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+
+    if !summary_gate_ids.is_empty() {
+        return summary_gate_ids;
+    }
+
     report
         .get("reliability")
         .and_then(|reliability| reliability.get("quality_gates"))
