@@ -57,7 +57,7 @@ help:
 	@echo "  make check-material-study-execution-plan-contract Verify non-executing material study plan schema/example contracts"
 	@echo "  make check-material-research-bundle-contract Verify retained material research bundle schema/example contracts"
 	@echo "  make check-material-study-sdk-examples Run Rust/Python/Elixir material study plan SDK examples"
-	@echo "  make verify-material-research-bundle Build and check the retained material research bundle"
+	@echo "  make verify-material-research-bundle Build and check the retained material research bundle (STUDY=heat-spreader|composite-thermo-electric-panel)"
 	@echo "  make check-operator-task-ir-contract Verify TaskIR mirrors, digests, and examples"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
 	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"

@@ -2,6 +2,7 @@ mod agent_client;
 mod auth;
 mod control_plane;
 mod error;
+mod material_research_bundle;
 mod material_workflows;
 mod session;
 mod solver_rpc;
@@ -16,6 +17,11 @@ pub use agent_client::{
 pub use auth::KyuubikiAuth;
 pub use control_plane::ControlPlaneClient;
 pub use error::{SdkError, SdkResult};
+pub use material_research_bundle::{
+    MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MaterialResearchBundle,
+    MaterialResearchBundleArtifactChecksums, MaterialResearchBundleReproducibility,
+    MaterialResearchBundleSummary, validate_material_research_bundle,
+};
 pub use material_workflows::{
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
     material_study_envelope_catalog_request, material_study_envelope_input_artifacts,

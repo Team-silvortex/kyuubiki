@@ -32,6 +32,7 @@ from kyuubiki_sdk import (
     build_workflow_port,
     material_study_envelope_catalog_request,
     material_study_execution_plan_example,
+    validate_material_research_bundle,
     validate_workflow_dataset_contract,
     validate_workflow_graph,
     validate_workflow_result_against_graph,
@@ -175,6 +176,7 @@ material_report = build_material_report_from_payload(
         ]
     },
 )
+retained_bundle = validate_material_research_bundle(bundle_payload)
 ```
 
 Highlights:
@@ -193,6 +195,7 @@ Highlights:
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
+- retained material research bundle validation for CI, notebooks, and agents
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
 - advanced solver workflow templates for modal frame, nonlinear spring, and
@@ -212,6 +215,8 @@ Example:
   [plan_material_study.py](examples/plan_material_study.py)
 - Material report example:
   [run_material_report.py](examples/run_material_report.py)
+- Material research bundle validation example:
+  [validate_material_research_bundle.py](examples/validate_material_research_bundle.py)
 - Advanced solver example: [run_advanced_solvers.py](examples/run_advanced_solvers.py)
 - Typical invocation:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_study.py`
@@ -221,5 +226,7 @@ Example:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/plan_material_study.py`
 - Material report invocation:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/run_material_report.py`
+- Material research bundle invocation:
+  `PYTHONPATH=sdks/python python3 sdks/python/examples/validate_material_research_bundle.py`
 - Smoke test:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`

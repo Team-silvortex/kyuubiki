@@ -34,6 +34,9 @@ Minimal runnable examples now live at:
 - [sdks/rust/examples/plan_material_study.rs](rust/examples/plan_material_study.rs)
 - [sdks/python/examples/run_material_report.py](python/examples/run_material_report.py)
 - [sdks/elixir/examples/run_material_report.exs](elixir/examples/run_material_report.exs)
+- [sdks/rust/examples/validate_material_research_bundle.rs](rust/examples/validate_material_research_bundle.rs)
+- [sdks/python/examples/validate_material_research_bundle.py](python/examples/validate_material_research_bundle.py)
+- [sdks/elixir/examples/validate_material_research_bundle.exs](elixir/examples/validate_material_research_bundle.exs)
 - [sdks/python/examples/execute_operator_task_batch.py](python/examples/execute_operator_task_batch.py)
 - [sdks/elixir/examples/execute_operator_task_batch.exs](elixir/examples/execute_operator_task_batch.exs)
 - [sdks/rust/examples/execute_operator_task_batch.rs](rust/examples/execute_operator_task_batch.rs)
@@ -200,6 +203,10 @@ execution plan, rerun, chain, checksums, and reproduction commands under
 [schemas/material-research-bundle.schema.json](../schemas/material-research-bundle.schema.json),
 with a compact fixture at
 [schemas/examples.material-research-bundle.json](../schemas/examples.material-research-bundle.json).
+Rust SDK callers can decode that artifact with `MaterialResearchBundle`, while
+Python and Elixir expose `validate_material_research_bundle` helpers for the
+same fixture and generated bundle shape before passing retained artifacts to a
+custom review, CI, notebook, or agent harness.
 Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected

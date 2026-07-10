@@ -21,6 +21,10 @@ from .material_reports import (
     extract_material_result_payloads,
     material_study_catalog,
 )
+from .material_research_bundle import (
+    MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION,
+    validate_material_research_bundle,
+)
 from .material_workflows import (
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID,
     MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
@@ -74,6 +78,8 @@ __all__ = [
     "describe_material_study",
     "extract_material_result_payloads",
     "material_study_catalog",
+    "MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION",
+    "validate_material_research_bundle",
     "MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID",
     "MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION",
     "material_study_envelope_catalog_request",

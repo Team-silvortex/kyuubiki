@@ -175,6 +175,7 @@ fn run() -> RunnerResult<u8> {
             ]
             .map(OsString::from),
         ),
+        "sdk-smoke" => run_sdk_smoke(&paths),
         "workflow-preflight" => run_command(
             &paths.frontend,
             "npm",
@@ -299,6 +300,33 @@ fn run_python_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerRe
     )
 }
 
+fn run_sdk_smoke(paths: &RepoPaths) -> RunnerResult<u8> {
+    let python = run_with_env(
+        &paths.root,
+        "python3",
+        ["-m", "unittest", "discover", "-s", "sdks/python/tests"].map(OsString::from),
+        &[("PYTHONPATH", "sdks/python")],
+    )?;
+    if python != 0 {
+        return Ok(python);
+    }
+
+    let elixir = run_command(
+        &paths.root.join("sdks/elixir"),
+        "mix",
+        ["test"].map(OsString::from),
+    )?;
+    if elixir != 0 {
+        return Ok(elixir);
+    }
+
+    run_command(
+        &paths.root,
+        "cargo",
+        ["test", "--manifest-path", "sdks/rust/Cargo.toml"].map(OsString::from),
+    )
+}
+
 fn run_command<I>(cwd: &Path, program: &str, args: I) -> RunnerResult<u8>
 where
     I: IntoIterator<Item = OsString>,
@@ -395,7 +423,7 @@ package-desktop desktop-status desktop-stage desktop-build-host\n  \
 desktop-release desktop-verify\n  \
 desktop-linux-remote\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
-  headless-live-test headless-rust-live-test workflow-preflight\n  \
+  headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   benchmark-profile-remote\n  \
   direct-mesh-benchmark-container\n  \
   direct-mesh-benchmark-regression\n  \

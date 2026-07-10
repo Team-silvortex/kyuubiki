@@ -5,6 +5,7 @@ import path from "node:path";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultInput = "tmp/material-research-bundle.json";
+const supportedStudies = new Set(["heat-spreader", "composite-thermo-electric-panel"]);
 
 function fail(message) {
   console.error(`material research bundle check failed: ${message}`);
@@ -80,7 +81,9 @@ function validateBundle(bundle) {
     "schema_version",
   );
   assertEquals(bundle.posture, "screening_research_bundle", "posture");
-  assertEquals(bundle.study, "heat-spreader", "study");
+  if (!supportedStudies.has(bundle.study)) {
+    fail(`study: unsupported retained bundle study ${JSON.stringify(bundle.study)}`);
+  }
   assertNoAbsoluteRepoPath(bundle, "bundle");
   assertChecksum(bundle, "initial_exploration_sha256", "initial_exploration");
   assertChecksum(bundle, "next_round_execution_plan_sha256", "next_round_execution_plan");
@@ -95,6 +98,11 @@ function validateBundle(bundle) {
     bundle.next_round_execution_plan?.schema_version,
     "kyuubiki.material-exploration-next-round-execution/v1",
     "next round execution schema",
+  );
+  assertEquals(
+    bundle.next_exploration?.schema_version,
+    "kyuubiki.material-exploration-run/v1",
+    "next exploration schema",
   );
   assertEquals(
     bundle.chain?.schema_version,
@@ -114,7 +122,7 @@ function runSelfTest() {
   const badBundle = {
     schema_version: "kyuubiki.material-research-bundle/v1",
     posture: "screening_research_bundle",
-    study: "heat-spreader",
+    study: "unsupported-study",
     artifact_checksums: {
       initial_exploration_sha256: "bad",
     },

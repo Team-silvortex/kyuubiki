@@ -98,7 +98,7 @@ verify-material-research-example:
 	@$(MAKE) check-material-research-example IN=$${OUT:-tmp/material-research-example.json}
 
 build-material-research-bundle:
-	@node ./scripts/build-material-research-bundle.mjs --out $${OUT:-tmp/material-research-bundle.json}
+	@node ./scripts/build-material-research-bundle.mjs --study $${STUDY:-heat-spreader} --out $${OUT:-tmp/material-research-bundle.json}
 
 check-material-research-bundle:
 	@node ./scripts/check-material-research-bundle.mjs --self-test

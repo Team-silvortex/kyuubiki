@@ -15,7 +15,7 @@ use std::time::Duration;
 use kyuubiki_headless_sdk::{
     build_workflow_output_manifest, validate_workflow_result_against_graph, ControlPlaneClient, KyuubikiAgentClient, KyuubikiAuth,
     KyuubikiSession, RetryPolicy, SolverRpcClient, material_study_envelope_catalog_request,
-    material_study_execution_plan_example,
+    material_study_execution_plan_example, MaterialResearchBundle,
     WorkflowDatasetContract, WorkflowGraphDefinition, workflow_dataset_contract, workflow_dataset_value, workflow_defaults,
     workflow_edge, workflow_graph, workflow_node, workflow_operator_fetch_entry, workflow_port,
 };
@@ -39,6 +39,9 @@ assert_eq!(
     material_plan["schema_version"],
     "kyuubiki.material-study-execution-plan/v1"
 );
+let retained_bundle: MaterialResearchBundle =
+    serde_json::from_str(include_str!("../../../schemas/examples.material-research-bundle.json"))?;
+retained_bundle.validate()?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
@@ -151,6 +154,7 @@ Highlights:
 - material envelope catalog workflow helper for Rust automation clients
 - material study execution plan contract fixture for schedulers that need to
   inspect `--plan-study`-style output before solver dispatch
+- retained material research bundle validation for native CI, agents, and CLIs
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, and electrostatic study families
 - workflow graph and dataset contract typed structs with validation
@@ -172,12 +176,16 @@ Example:
   [run_material_envelope.rs](examples/run_material_envelope.rs)
 - Material study execution-plan example:
   [plan_material_study.rs](examples/plan_material_study.rs)
+- Material research bundle validation example:
+  [validate_material_research_bundle.rs](examples/validate_material_research_bundle.rs)
 - Typical invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example run_study`
 - Material envelope invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example run_material_envelope`
 - Material study plan invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example plan_material_study`
+- Material research bundle invocation:
+  `cargo run --manifest-path sdks/rust/Cargo.toml --example validate_material_research_bundle`
 - Smoke test:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test smoke`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`

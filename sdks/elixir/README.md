@@ -103,6 +103,7 @@ contact_graph = KyuubikiSdk.contact_gap_1d_workflow()
       %{"result" => %{"max_electric_field" => 48.0e6, "max_flux_density" => 0.9e-3}}
     ]
   })
+{:ok, retained_bundle} = KyuubikiSdk.validate_material_research_bundle(bundle_payload)
 ```
 
 Highlights:
@@ -125,6 +126,7 @@ Highlights:
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
+- retained material research bundle validation for CI, notebooks, and agents
 - shared material-study execution-plan contract helper for cross-SDK automation
 - BEAM-friendly thin wrapper over the public protocol
 
@@ -137,6 +139,8 @@ Example:
   [run_material_envelope.exs](examples/run_material_envelope.exs)
 - Material report example:
   [run_material_report.exs](examples/run_material_report.exs)
+- Material research bundle validation example:
+  [validate_material_research_bundle.exs](examples/validate_material_research_bundle.exs)
 - Advanced solver example: [run_advanced_solvers.exs](examples/run_advanced_solvers.exs)
 - Typical invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
@@ -146,5 +150,7 @@ Example:
   `cd sdks/elixir && mix run examples/plan_material_study.exs`
 - Material report invocation:
   `cd sdks/elixir && mix run examples/run_material_report.exs`
+- Material research bundle invocation:
+  `cd sdks/elixir && mix run examples/validate_material_research_bundle.exs`
 - Smoke test:
   `cd sdks/elixir && mix test`

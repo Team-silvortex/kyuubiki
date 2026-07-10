@@ -47,6 +47,33 @@ const reportExamples = [
   },
 ];
 
+const bundleExamples = [
+  {
+    name: "rust-bundle",
+    command: "cargo",
+    args: [
+      "run",
+      "--quiet",
+      "--manifest-path",
+      "sdks/rust/Cargo.toml",
+      "--example",
+      "validate_material_research_bundle",
+    ],
+  },
+  {
+    name: "python-bundle",
+    command: "python3",
+    args: ["sdks/python/examples/validate_material_research_bundle.py"],
+    env: { PYTHONPATH: path.join(repoRoot, "sdks/python") },
+  },
+  {
+    name: "elixir-bundle",
+    command: "mix",
+    args: ["run", "examples/validate_material_research_bundle.exs"],
+    cwd: path.join(repoRoot, "sdks/elixir"),
+  },
+];
+
 function fail(message) {
   console.error(`material study SDK example check failed: ${message}`);
   process.exit(1);
@@ -125,6 +152,21 @@ function checkReportExample(name, report) {
   }
 }
 
+function checkBundleExample(name, bundle) {
+  if (bundle.schema !== "kyuubiki.material-research-bundle/v1") {
+    fail(`${name}: unexpected schema ${bundle.schema}`);
+  }
+  if (bundle.study !== "heat-spreader") {
+    fail(`${name}: unexpected study ${bundle.study}`);
+  }
+  if (bundle.winner !== "pyrolytic_graphite_in_plane") {
+    fail(`${name}: unexpected winner ${bundle.winner}`);
+  }
+  if (bundle.reliability !== "blocked_by_quality_gates") {
+    fail(`${name}: unexpected reliability decision ${bundle.reliability}`);
+  }
+}
+
 function runSelfTest() {
   const badOutput = "compiled\n{\"schema_version\":\"wrong\",\"steps\":[],\"step_count\":0}";
   const plan = parseJsonOutput("self-test", badOutput);
@@ -172,6 +214,29 @@ function runSelfTest() {
   if (!failed) {
     fail("self-test did not reject an invalid report example");
   }
+  const bundle = parseKeyValueOutput(
+    "self-test-bundle",
+    "schema=wrong\nstudy=heat-spreader\nwinner=pyrolytic_graphite_in_plane\nreliability=blocked_by_quality_gates\n",
+  );
+  failed = false;
+  console.error = () => {};
+  process.exit = () => {
+    failed = true;
+    throw new Error("self-test-bundle-fail");
+  };
+  try {
+    checkBundleExample("self-test-bundle", bundle);
+  } catch (error) {
+    if (error.message !== "self-test-bundle-fail") {
+      throw error;
+    }
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  if (!failed) {
+    fail("self-test did not reject an invalid bundle example");
+  }
   console.log("material study SDK example check self-test passed");
 }
 
@@ -183,6 +248,10 @@ function checkExamples() {
   for (const example of reportExamples) {
     const output = runExample(example);
     checkReportExample(example.name, parseKeyValueOutput(example.name, output));
+  }
+  for (const example of bundleExamples) {
+    const output = runExample(example);
+    checkBundleExample(example.name, parseKeyValueOutput(example.name, output));
   }
   console.log("material study SDK example check passed");
 }

@@ -6,6 +6,22 @@ import { spawnSync } from "node:child_process";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultOut = "tmp/material-research-bundle.json";
+const supportedStudies = new Map([
+  [
+    "heat-spreader",
+    {
+      bundleId: "material.heat_spreader_screening.reproducible_bundle.v1",
+      workSlug: "heat-spreader",
+    },
+  ],
+  [
+    "composite-thermo-electric-panel",
+    {
+      bundleId: "material.composite_thermo_electric_panel.reproducible_bundle.v1",
+      workSlug: "composite-thermo-electric-panel",
+    },
+  ],
+]);
 
 function fail(message) {
   console.error(`material research bundle failed: ${message}`);
@@ -26,8 +42,8 @@ function parseArgs(argv) {
       fail(`unknown argument ${flag}`);
     }
   }
-  if (args.study !== "heat-spreader") {
-    fail("the first reproducible research bundle is intentionally fixed to heat-spreader");
+  if (!supportedStudies.has(args.study)) {
+    fail(`unsupported retained research bundle study: ${args.study}`);
   }
   if (!Number.isInteger(args.rounds) || args.rounds < 1) {
     fail("--rounds must be a positive integer");
@@ -93,7 +109,8 @@ function sha256(payload) {
 }
 
 function buildBundle(options) {
-  const workRoot = `tmp/material-research-bundle-work/${process.pid}`;
+  const profile = supportedStudies.get(options.study);
+  const workRoot = `tmp/material-research-bundle-work/${profile.workSlug}/${process.pid}`;
   const initial = runMaterialExplore([options.study]);
   const initialPath = writeJson(`${workRoot}/initial-exploration.json`, initial.payload);
   const initialInput = path.relative(path.join(repoRoot, "workers/rust"), path.join(repoRoot, initialPath));
@@ -103,7 +120,7 @@ function buildBundle(options) {
   const chain = runMaterialExplore(["--chain-next", initialInput, "--rounds", String(options.rounds)]);
   return {
     schema_version: "kyuubiki.material-research-bundle/v1",
-    bundle_id: "material.heat_spreader_screening.reproducible_bundle.v1",
+    bundle_id: profile.bundleId,
     generated_at_utc: new Date().toISOString(),
     posture: "screening_research_bundle",
     study: options.study,

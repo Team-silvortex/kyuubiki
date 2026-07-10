@@ -90,8 +90,10 @@ This directory contains host-native operational entry points.
   Build and verify the first retained material research bundle. The bundle
   captures initial exploration, next-round execution planning, a rerun,
   chained rounds, artifact checksums, and repo-relative reproduction commands
-  under `kyuubiki.material-research-bundle/v1`. The lightweight contract check
-  keeps `schemas/material-research-bundle.schema.json`,
+  under `kyuubiki.material-research-bundle/v1`. Override `STUDY=` through Make
+  to build the heat-spreader or composite thermo-electric panel retained
+  profile. The lightweight contract check keeps
+  `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
   sync without running the solver.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`

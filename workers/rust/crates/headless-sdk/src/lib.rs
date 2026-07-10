@@ -31,6 +31,7 @@ mod material_optimization;
 mod material_reliability;
 mod material_reports;
 mod material_research;
+mod material_research_bundle;
 mod material_research_candidates;
 #[cfg(test)]
 mod material_research_tests;
@@ -116,6 +117,11 @@ pub use material_research::{
     MaterialResearchCandidateReport, MaterialResearchMetricSpec, MaterialResearchReport,
     build_heat_spreader_screening_report, build_heat_spreader_screening_report_with_optimization,
     build_heat_spreader_screening_steps, heat_spreader_screening_metric_specs,
+};
+pub use material_research_bundle::{
+    MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MaterialResearchBundle,
+    MaterialResearchBundleArtifactChecksums, MaterialResearchBundleReproducibility,
+    MaterialResearchBundleSummary, validate_material_research_bundle,
 };
 pub use material_research_candidates::{
     MaterialResearchCandidate, heat_spreader_screening_candidates,

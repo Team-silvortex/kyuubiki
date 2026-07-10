@@ -6,6 +6,7 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.WorkflowBuilders
   alias KyuubikiSdk.WorkflowResults
   alias KyuubikiSdk.MaterialReports
+  alias KyuubikiSdk.MaterialResearchBundle
   alias KyuubikiSdk.MaterialWorkflows
   alias KyuubikiSdk.AdvancedSolverWorkflows
 
@@ -54,6 +55,11 @@ defmodule KyuubikiSdk do
 
   def build_material_report_from_payload(study, payload, opts \\ []),
     do: MaterialReports.build_material_report_from_payload(study, payload, opts)
+
+  def material_research_bundle_schema_version, do: MaterialResearchBundle.schema_version()
+
+  def validate_material_research_bundle(bundle),
+    do: MaterialResearchBundle.validate(bundle)
 
   def validate_workflow_dataset_contract(contract),
     do: WorkflowContracts.validate_dataset_contract(contract)

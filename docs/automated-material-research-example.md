@@ -54,7 +54,8 @@ By default both commands use:
 
 - output: `tmp/material-research-example.json`
 - bundle output: `tmp/material-research-bundle.json`
-- study: `heat-spreader`
+- study: `heat-spreader`; bundle generation also supports
+  `STUDY=composite-thermo-electric-panel`
 - runner: `workers/rust` `kyuubiki-material-explore` reference runner
 
 The output is intentionally under `tmp/` and should not be committed directly.
@@ -93,6 +94,13 @@ agent, CI lane, or human reviewer. It contains:
 The checker rejects local absolute repository paths and checksum drift. This is
 still a screening artifact, not a qualification package, but it is now a single
 file that captures the whole minimal research story.
+
+To build the second retained bundle profile for the electric-thermal-structural
+composite panel loop:
+
+```sh
+STUDY=composite-thermo-electric-panel OUT=tmp/material-research-bundle-composite.json make verify-material-research-bundle
+```
 
 ## Closed-Loop Step
 
