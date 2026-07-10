@@ -1,6 +1,7 @@
 export * from "./workflow-types.ts";
 export * from "./job-status.ts";
 export * from "./backend-target.ts";
+export * from "./auth-context.ts";
 export * from "./gui-runtime-capabilities.ts";
 export * from "./project-types.ts";
 export * from "./runtime-types.ts";

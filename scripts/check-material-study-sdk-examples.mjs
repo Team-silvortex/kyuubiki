@@ -73,6 +73,13 @@ const bundleExamples = [
     cwd: path.join(repoRoot, "sdks/elixir"),
   },
 ];
+const compositeBundlePath = "tmp/material-research-bundle-composite.json";
+const compositeBundleAbsolutePath = path.join(repoRoot, compositeBundlePath);
+const compositeBundleExamples = bundleExamples.map((example) => ({
+  ...example,
+  name: example.name.replace("-bundle", "-composite-bundle"),
+  args: [...example.args, compositeBundleAbsolutePath],
+}));
 
 function fail(message) {
   console.error(`material study SDK example check failed: ${message}`);
@@ -152,17 +159,31 @@ function checkReportExample(name, report) {
   }
 }
 
-function checkBundleExample(name, bundle) {
+function ensureCompositeBundle() {
+  runExample({
+    name: "composite-bundle-builder",
+    command: "node",
+    args: [
+      "scripts/build-material-research-bundle.mjs",
+      "--study",
+      "composite-thermo-electric-panel",
+      "--out",
+      compositeBundlePath,
+    ],
+  });
+}
+
+function checkBundleExample(name, bundle, expected) {
   if (bundle.schema !== "kyuubiki.material-research-bundle/v1") {
     fail(`${name}: unexpected schema ${bundle.schema}`);
   }
-  if (bundle.study !== "heat-spreader") {
+  if (bundle.study !== expected.study) {
     fail(`${name}: unexpected study ${bundle.study}`);
   }
-  if (bundle.winner !== "pyrolytic_graphite_in_plane") {
+  if (bundle.winner !== expected.winner) {
     fail(`${name}: unexpected winner ${bundle.winner}`);
   }
-  if (bundle.reliability !== "blocked_by_quality_gates") {
+  if (bundle.reliability !== expected.reliability) {
     fail(`${name}: unexpected reliability decision ${bundle.reliability}`);
   }
 }
@@ -225,7 +246,11 @@ function runSelfTest() {
     throw new Error("self-test-bundle-fail");
   };
   try {
-    checkBundleExample("self-test-bundle", bundle);
+    checkBundleExample("self-test-bundle", bundle, {
+      study: "heat-spreader",
+      winner: "pyrolytic_graphite_in_plane",
+      reliability: "blocked_by_quality_gates",
+    });
   } catch (error) {
     if (error.message !== "self-test-bundle-fail") {
       throw error;
@@ -251,7 +276,20 @@ function checkExamples() {
   }
   for (const example of bundleExamples) {
     const output = runExample(example);
-    checkBundleExample(example.name, parseKeyValueOutput(example.name, output));
+    checkBundleExample(example.name, parseKeyValueOutput(example.name, output), {
+      study: "heat-spreader",
+      winner: "pyrolytic_graphite_in_plane",
+      reliability: "blocked_by_quality_gates",
+    });
+  }
+  ensureCompositeBundle();
+  for (const example of compositeBundleExamples) {
+    const output = runExample(example);
+    checkBundleExample(example.name, parseKeyValueOutput(example.name, output), {
+      study: "composite-thermo-electric-panel",
+      winner: "copper_ptfe_glass_epoxy",
+      reliability: "blocked_by_quality_gates",
+    });
   }
   console.log("material study SDK example check passed");
 }

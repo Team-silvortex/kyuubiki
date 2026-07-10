@@ -8,42 +8,31 @@ import { WorkbenchShellFrame } from "@/components/workbench/workbench-shell-fram
 import { WorkbenchSidebarPanel } from "@/components/workbench/workbench-sidebar-panel";
 import {
   cancelJob,
-  createModel,
-  createModelVersion,
-  createProject,
-  deleteModel,
-  deleteModelVersion,
-  deleteProject,
-  fetchModel,
-  fetchModelVersion,
-  fetchModelVersions,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
-  updateModel,
-  updateModelVersion,
-  updateProject,
 } from "@/lib/api";
 import { downloadTextFile } from "@/components/workbench/workbench-file-helpers";
+import { workbenchProjectLibraryBackendService } from "@/lib/workbench/project-library-backend-service";
 
 export function Workbench() {
   const rootState = useWorkbenchRootState();
 
   const { sidebarMountProps, mainShellMountProps } = useWorkbenchCoreComposition({
     rootState,
-    createProject,
-    createModel,
-    createModelVersion,
-    updateModelVersion,
-    fetchModel,
-    fetchModelVersion,
-    updateProject,
-    deleteProject,
-    updateModel,
-    deleteModel,
-    deleteModelVersion,
-    fetchModelVersions,
+    createProject: workbenchProjectLibraryBackendService.createProject,
+    createModel: workbenchProjectLibraryBackendService.createModel,
+    createModelVersion: workbenchProjectLibraryBackendService.createModelVersion,
+    updateModelVersion: workbenchProjectLibraryBackendService.updateModelVersion,
+    fetchModel: workbenchProjectLibraryBackendService.fetchModel,
+    fetchModelVersion: workbenchProjectLibraryBackendService.fetchModelVersion,
+    updateProject: workbenchProjectLibraryBackendService.updateProject,
+    deleteProject: workbenchProjectLibraryBackendService.deleteProject,
+    updateModel: workbenchProjectLibraryBackendService.updateModel,
+    deleteModel: workbenchProjectLibraryBackendService.deleteModel,
+    deleteModelVersion: workbenchProjectLibraryBackendService.deleteModelVersion,
+    fetchModelVersions: workbenchProjectLibraryBackendService.fetchModelVersions,
     cancelJob,
     resolveTruss2dJobInput,
     resolveTruss3dJobInput,

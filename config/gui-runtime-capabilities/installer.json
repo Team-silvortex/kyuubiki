@@ -1,0 +1,65 @@
+{
+  "schema_version": "kyuubiki.gui-runtime-capability-manifest/v1",
+  "surface_id": "installer.default",
+  "surface_kind": "installer",
+  "ui_ownership": "product_owned_static_ui",
+  "automation_contract": {
+    "selector_contract_id": "kyuubiki.installer-ui-automation/v1",
+    "wasm_python_stability_required": true,
+    "user_extensible_ui_allowed": false
+  },
+  "runtime_bindings": [
+    {
+      "binding_id": "local-installation-plan",
+      "target_kind": "installer_runtime",
+      "binding_mode": "installer_plan",
+      "required_capabilities": [
+        "install.plan",
+        "integrity.verify",
+        "residue.cleanup"
+      ],
+      "optional_capabilities": [
+        "update.catalog.read",
+        "desktop.package.stage",
+        "runtime.repair"
+      ],
+      "headless_sdk_parity_required": true,
+      "mobile_supported": false,
+      "credential_surface": "user_keychain",
+      "notes": "Desktop installer path for visible local deployment and cleanup actions."
+    },
+    {
+      "binding_id": "remote-deployment-control",
+      "target_kind": "orchestra",
+      "binding_mode": "http_control_plane",
+      "required_capabilities": [
+        "deployment.plan.submit",
+        "runtime.target.observe"
+      ],
+      "optional_capabilities": [
+        "agent.bootstrap.request",
+        "update.status.read"
+      ],
+      "headless_sdk_parity_required": true,
+      "mobile_supported": true,
+      "credential_surface": "session_token",
+      "notes": "Remote deployment should be mediated by a backend service rather than by WebView-local shell execution."
+    }
+  ],
+  "degraded_modes": [
+    {
+      "mode": "diagnostics_only",
+      "trigger": "Installer runtime or authorized deployment backend is unavailable.",
+      "allowed_actions": [
+        "inspect install state",
+        "export install diagnostics",
+        "open update catalog"
+      ],
+      "blocked_actions": [
+        "install runtime",
+        "remove runtime",
+        "write credential material"
+      ]
+    }
+  ]
+}

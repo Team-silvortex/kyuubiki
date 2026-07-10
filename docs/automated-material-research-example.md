@@ -102,6 +102,16 @@ composite panel loop:
 STUDY=composite-thermo-electric-panel OUT=tmp/material-research-bundle-composite.json make verify-material-research-bundle
 ```
 
+To build both retained bundle profiles and a compact index for agents or CI:
+
+```sh
+make material-research-bundle-index
+```
+
+The index is written under `tmp/material-research-bundles/index.json` with a
+matching `README.md` summary. It is a local generated artifact and should stay
+out of Git unless a release explicitly promotes it.
+
 ## Closed-Loop Step
 
 The captured exploration includes:

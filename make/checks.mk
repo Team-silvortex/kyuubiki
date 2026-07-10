@@ -1,13 +1,13 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host
 .PHONY: check-make-modules
-.PHONY: check-language-packs check-ui-automation-contract check-version-line
+.PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
-.PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle
+.PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
 .PHONY: audit-dependencies architecture-check verify
@@ -33,6 +33,10 @@ check-language-packs:
 check-ui-automation-contract:
 	@node ./scripts/check-ui-automation-contract.mjs --self-test
 	@node ./scripts/check-ui-automation-contract.mjs
+
+check-gui-runtime-capability-contract:
+	@node ./scripts/check-gui-runtime-capability-contract.mjs --self-test
+	@node ./scripts/check-gui-runtime-capability-contract.mjs
 
 check-version-line:
 	@node ./scripts/audit-version-line.mjs --self-test
@@ -108,6 +112,10 @@ verify-material-research-bundle:
 	@$(MAKE) build-material-research-bundle OUT=$${OUT:-tmp/material-research-bundle.json}
 	@$(MAKE) check-material-research-bundle IN=$${OUT:-tmp/material-research-bundle.json}
 
+material-research-bundle-index:
+	@node ./scripts/build-material-research-bundle-index.mjs --self-test
+	@node ./scripts/build-material-research-bundle-index.mjs --ensure-bundles --out-dir $${OUT_DIR:-tmp/material-research-bundles}
+
 remote-material-research-example:
 	@node ./scripts/run-remote-material-research-example.mjs --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
 
@@ -146,6 +154,7 @@ architecture-check:
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-ui-automation-contract
+	@$(MAKE) check-gui-runtime-capability-contract
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
 	@jq empty docs/book-manifest.json

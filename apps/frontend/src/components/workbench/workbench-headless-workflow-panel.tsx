@@ -14,28 +14,30 @@ import {
   buildHeadlessWorkflowPanelCopy,
   readStoredWorkbenchAuth,
 } from "@/components/workbench/workbench-headless-workflow-panel-helpers";
+import {
+  buildHeadlessAgentDispatchPlanFromBackend,
+  buildHeadlessOrchestraHandoffFromBackend,
+  describeHeadlessHandoffReceiptForLog,
+  submitHeadlessOrchestraHandoffFromBackend,
+} from "@/components/workbench/workbench-headless-workflow-panel-actions";
+import {
+  buildFrontendMacroBridgePayload,
+  type FrontendMacroAssetRecord,
+  moveItem,
+  parseFrontendMacroBridgePayload,
+} from "@/components/workbench/workbench-headless-workflow-panel-state";
 import { buildReferenceTokens, buildStepFromTemplate, HEADLESS_ACTIONS, HEADLESS_WORKFLOW_TEMPLATES, localizeWorkflowText } from "@/components/workbench/workbench-headless-workflow-registry";
 import { WorkbenchHeadlessWorkflowStepEditor } from "@/components/workbench/workbench-headless-workflow-step-editor";
 import { downloadHtmlArtifact, downloadJsonArtifact, slugifyWorkflowAssetName } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import {
-  fetchHeadlessOrchestraHandoffHistory,
-  fetchHeadlessOrchestraHandoffSnapshot,
-  fetchHeadlessOrchestraHandoffStatus,
-  fetchProtocolAgents,
-  submitHeadlessOrchestraHandoff,
-} from "@/lib/api";
-import type { HeadlessHandoffReceipt, HeadlessHandoffSnapshot } from "@/lib/api";
-import { buildHeadlessAgentDispatchPlan } from "@/lib/scripting/workbench-headless-agent-dispatch";
+  type HeadlessHandoffReceipt,
+  type HeadlessHandoffSnapshot,
+} from "@/lib/api/headless-handoff-client";
 import { runHeadlessExecutionBatch } from "@/lib/scripting/workbench-headless-execution";
-import { buildHeadlessOrchestraHandoffEnvelope } from "@/lib/scripting/workbench-headless-orchestra-handoff";
 import type { WorkbenchRecordedMacroDraft, WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
+import { defaultWorkbenchHeadlessWorkflowBackendService } from "@/lib/workbench/headless-workflow-backend-service";
 
-export type FrontendMacroAssetRecord = {
-  assetId: string;
-  draft: WorkbenchRecordedMacroDraft;
-  source: "timeline_selection" | "bridge_restore" | "snapshot_derived";
-  updatedAt: string;
-};
+export type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel-state";
 
 type WorkbenchHeadlessWorkflowPanelProps = {
   frontendMacroAssets: FrontendMacroAssetRecord[];
@@ -44,48 +46,6 @@ type WorkbenchHeadlessWorkflowPanelProps = {
   onInsertMacroDraft: (draft: WorkbenchRecordedMacroDraft) => void;
   onRestoreFrontendMacro: (draft: WorkbenchRecordedMacroDraft) => void;
 };
-
-function buildFrontendMacroBridgePayload(draft: WorkbenchRecordedMacroDraft): PayloadObject {
-  return {
-    macro_id: draft.id,
-    replay_mode: "bridge",
-    step_count: draft.steps.length,
-    steps: draft.steps.map((step) => ({
-      action: step.action,
-      payload: step.payload ?? {},
-    })),
-  };
-}
-
-function parseFrontendMacroBridgePayload(payload: PayloadObject | null): WorkbenchRecordedMacroDraft | null {
-  if (!payload) return null;
-  const macroId = typeof payload.macro_id === "string" && payload.macro_id.trim() ? payload.macro_id : "macro/frontend-bridge-restored";
-  const steps = Array.isArray(payload.steps)
-    ? payload.steps.flatMap((step) => {
-        if (!step || typeof step !== "object") return [];
-        const candidate = step as { action?: unknown; payload?: unknown };
-        if (typeof candidate.action !== "string") return [];
-        return [
-          {
-            action: candidate.action,
-            ...(candidate.payload && typeof candidate.payload === "object" && !Array.isArray(candidate.payload)
-              ? { payload: candidate.payload as Record<string, unknown> }
-              : {}),
-          },
-        ];
-      })
-    : [];
-  return steps.length > 0 ? { id: macroId, steps } : null;
-}
-
-
-function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
-  if (toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) return items;
-  const next = [...items];
-  const [item] = next.splice(fromIndex, 1);
-  next.splice(toIndex, 0, item);
-  return next;
-}
 
 export function WorkbenchHeadlessWorkflowPanel({
   frontendMacroAssets,
@@ -179,8 +139,10 @@ export function WorkbenchHeadlessWorkflowPanel({
     }
     try {
       const batch = buildHeadlessWorkflowExecutionBatch({ actionMap, draft, language });
-      const payload = await fetchProtocolAgents();
-      const plan = buildHeadlessAgentDispatchPlan({ batch, protocolAgents: payload.agents });
+      const plan = await buildHeadlessAgentDispatchPlanFromBackend({
+        backendService: defaultWorkbenchHeadlessWorkflowBackendService,
+        batch,
+      });
       downloadJsonArtifact(`${slugifyWorkflowAssetName(draft.id)}.headless-agent-dispatch.json`, plan);
       setError(null);
     } catch (dispatchError) {
@@ -195,16 +157,10 @@ export function WorkbenchHeadlessWorkflowPanel({
     }
     try {
       const batch = buildHeadlessWorkflowExecutionBatch({ actionMap, draft, language });
-      const payload = await fetchProtocolAgents();
-      const auth = readStoredWorkbenchAuth();
-      const handoff = buildHeadlessOrchestraHandoffEnvelope({
+      const handoff = await buildHeadlessOrchestraHandoffFromBackend({
+        auth: readStoredWorkbenchAuth(),
+        backendService: defaultWorkbenchHeadlessWorkflowBackendService,
         batch,
-        protocolAgents: payload.agents,
-        frontendRuntimeMode: auth.frontendRuntimeMode,
-        directMeshEndpointsText: auth.directMeshEndpointsText,
-        controlPlaneApiToken: auth.controlPlaneApiToken,
-        clusterApiToken: auth.clusterApiToken,
-        directMeshApiToken: auth.directMeshApiToken,
       });
       downloadJsonArtifact(`${slugifyWorkflowAssetName(draft.id)}.headless-orchestra-handoff.json`, handoff);
       setError(null);
@@ -220,21 +176,14 @@ export function WorkbenchHeadlessWorkflowPanel({
     }
     try {
       const batch = buildHeadlessWorkflowExecutionBatch({ actionMap, draft, language });
-      const payload = await fetchProtocolAgents();
-      const auth = readStoredWorkbenchAuth();
-      const handoff = buildHeadlessOrchestraHandoffEnvelope({
+      const { receipt } = await submitHeadlessOrchestraHandoffFromBackend({
+        backendService: defaultWorkbenchHeadlessWorkflowBackendService,
+        buildAuthSnapshot: readStoredWorkbenchAuth,
         batch,
-        protocolAgents: payload.agents,
-        frontendRuntimeMode: auth.frontendRuntimeMode,
-        directMeshEndpointsText: auth.directMeshEndpointsText,
-        controlPlaneApiToken: auth.controlPlaneApiToken,
-        clusterApiToken: auth.clusterApiToken,
-        directMeshApiToken: auth.directMeshApiToken,
       });
-      const receipt = await submitHeadlessOrchestraHandoff(handoff);
       setLatestHandoffId(receipt.handoff_id);
       setHandoffHistory((current) => [receipt, ...current.filter((item) => item.handoff_id !== receipt.handoff_id)]);
-      setExecutionLog((current) => [...current, `[handoff] ${JSON.stringify(receipt)}`]);
+      setExecutionLog((current) => [...current, describeHeadlessHandoffReceiptForLog(receipt)]);
       setError(ui.handoffSubmitted);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : String(submitError));
@@ -247,7 +196,7 @@ export function WorkbenchHeadlessWorkflowPanel({
       return;
     }
     try {
-      const status = await fetchHeadlessOrchestraHandoffStatus(latestHandoffId);
+      const status = await defaultWorkbenchHeadlessWorkflowBackendService.fetchHandoffStatus(latestHandoffId);
       setExecutionLog((current) => [...current, `[handoff-status] ${JSON.stringify(status)}`]);
       setError(ui.handoffRefreshed);
     } catch (statusError) {
@@ -257,7 +206,7 @@ export function WorkbenchHeadlessWorkflowPanel({
 
   const refreshHandoffHistory = async () => {
     try {
-      const payload = await fetchHeadlessOrchestraHandoffHistory();
+      const payload = await defaultWorkbenchHeadlessWorkflowBackendService.fetchHandoffHistory();
       setHandoffHistory(payload.handoffs);
       setError(ui.historyRefreshed);
     } catch (historyError) {
@@ -267,7 +216,7 @@ export function WorkbenchHeadlessWorkflowPanel({
 
   const inspectHandoffSnapshot = async (handoffId: string) => {
     try {
-      const snapshot = await fetchHeadlessOrchestraHandoffSnapshot(handoffId);
+      const snapshot = await defaultWorkbenchHeadlessWorkflowBackendService.fetchHandoffSnapshot(handoffId);
       setSelectedHandoffSnapshot(snapshot);
       setLatestHandoffId(snapshot.handoff_id);
       setExecutionLog((current) => [...current, `[handoff-snapshot] ${snapshot.handoff_id}`]);

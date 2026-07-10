@@ -228,5 +228,7 @@ Example:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/run_material_report.py`
 - Material research bundle invocation:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/validate_material_research_bundle.py`
+- Validate a generated bundle:
+  `PYTHONPATH=sdks/python python3 sdks/python/examples/validate_material_research_bundle.py tmp/material-research-bundle-composite.json`
 - Smoke test:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`

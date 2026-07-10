@@ -1,0 +1,79 @@
+{
+  "schema_version": "kyuubiki.gui-runtime-capability-manifest/v1",
+  "surface_id": "workbench.default",
+  "surface_kind": "workbench",
+  "ui_ownership": "product_owned_static_ui",
+  "automation_contract": {
+    "selector_contract_id": "kyuubiki.workbench-ui-automation/v1",
+    "wasm_python_stability_required": true,
+    "user_extensible_ui_allowed": false
+  },
+  "runtime_bindings": [
+    {
+      "binding_id": "orchestrated-workflow",
+      "target_kind": "orchestra",
+      "binding_mode": "http_control_plane",
+      "required_capabilities": [
+        "workflow.submit",
+        "job.poll",
+        "result.chunk.read"
+      ],
+      "optional_capabilities": [
+        "operator.catalog.search",
+        "agent.registry.observe"
+      ],
+      "headless_sdk_parity_required": true,
+      "mobile_supported": true,
+      "credential_surface": "session_token",
+      "notes": "Default project workflow path; GUI sends intent while the control plane owns scheduling."
+    },
+    {
+      "binding_id": "direct-mesh-solver",
+      "target_kind": "mesh",
+      "binding_mode": "direct_mesh",
+      "required_capabilities": [
+        "agent.describe",
+        "solver.submit",
+        "result.chunk.read"
+      ],
+      "optional_capabilities": [
+        "agent.peer.discover"
+      ],
+      "headless_sdk_parity_required": true,
+      "mobile_supported": false,
+      "credential_surface": "app_sandbox_vault",
+      "notes": "Desktop-only direct mesh route for trusted LAN/runtime development."
+    },
+    {
+      "binding_id": "offline-bundle-inspection",
+      "target_kind": "offline_bundle",
+      "binding_mode": "read_only",
+      "required_capabilities": [
+        "bundle.open",
+        "result.inspect"
+      ],
+      "optional_capabilities": [
+        "provenance.verify"
+      ],
+      "headless_sdk_parity_required": true,
+      "mobile_supported": true,
+      "credential_surface": "none",
+      "notes": "Read-only project and result inspection when no runtime target is reachable."
+    }
+  ],
+  "degraded_modes": [
+    {
+      "mode": "read_only_no_runtime",
+      "trigger": "No compatible runtime binding is reachable.",
+      "allowed_actions": [
+        "open project",
+        "inspect cached results",
+        "export diagnostics"
+      ],
+      "blocked_actions": [
+        "submit solver job",
+        "modify agent binding"
+      ]
+    }
+  ]
+}

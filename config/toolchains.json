@@ -36,7 +36,7 @@
   "node": {
     "minimum": "20.19.2",
     "preferred": "20.19.2",
-    "package_engine": ">=20.19.2 <21"
+    "package_engine": ">=20.19.2 <25"
   },
   "docker": {
     "headless_live_test_image": "kyuubiki/headless-live-test",

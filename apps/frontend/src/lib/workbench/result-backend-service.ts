@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  fetchDirectMeshResultChunk,
-  fetchResultChunk,
-  type FrontendRuntimeMode,
-} from "@/lib/api";
+import { defaultSecurityResultsApiClient, type FrontendRuntimeMode } from "@/lib/api";
 import {
   createResultBackendService,
   type WorkbenchResultBackendService,
@@ -21,12 +17,12 @@ export {
 
 export const orchestratedResultBackendService = createResultBackendService({
   backendId: "orchestrated_gui",
-  fetchChunk: fetchResultChunk,
+  fetchChunk: defaultSecurityResultsApiClient.fetchResultChunk,
 });
 
 export const directMeshResultBackendService = createResultBackendService({
   backendId: "direct_mesh_gui",
-  fetchChunk: fetchDirectMeshResultChunk,
+  fetchChunk: defaultSecurityResultsApiClient.fetchDirectMeshResultChunk,
 });
 
 export function resolveResultBackendService(

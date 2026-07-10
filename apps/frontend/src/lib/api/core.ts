@@ -1,51 +1,21 @@
-import { buildWorkbenchGovernedAuthHeaders } from "@/lib/workbench/governance";
+import { buildWorkbenchApiAuthHeaders } from "@/lib/api/auth-context";
 import {
   createHttpWorkbenchRequestError,
   normalizeWorkbenchRequestError,
 } from "@/lib/api/request-errors";
 import { resolveWorkbenchApiUrl } from "@/lib/api/backend-target";
-import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets";
-
-const SETTINGS_KEY = "kyuubiki-workbench-settings";
-
-function authHeadersFor(url: string) {
-  if (typeof window === "undefined") return {};
-
-  try {
-    const rawSettings = window.localStorage.getItem(SETTINGS_KEY);
-    const parsedSecrets = readInMemoryWorkbenchSecrets();
-    if (Object.keys(parsedSecrets).length === 0 && !rawSettings) return {};
-
-    const parsedLegacySettings = rawSettings
-      ? (JSON.parse(rawSettings) as {
-          frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
-        })
-      : {};
-
-    const parsed = {
-      controlPlaneApiToken: parsedSecrets.controlPlaneApiToken,
-      clusterApiToken: parsedSecrets.clusterApiToken,
-      directMeshApiToken: parsedSecrets.directMeshApiToken,
-    } as {
-      controlPlaneApiToken?: string;
-      clusterApiToken?: string;
-      directMeshApiToken?: string;
-    };
-
-    return buildWorkbenchGovernedAuthHeaders({
-      url,
-      frontendRuntimeMode:
-        parsedLegacySettings.frontendRuntimeMode === "direct_mesh_gui"
-          ? "direct_mesh_gui"
-          : "orchestrated_gui",
-      secrets: parsed,
-    });
-  } catch {
-    return {};
-  }
-}
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+
+export type WorkbenchApiRequestContext = {
+  resolveUrl(url: string): string;
+  buildAuthHeaders(url: string): Record<string, string | undefined>;
+};
+
+const defaultWorkbenchApiRequestContext: WorkbenchApiRequestContext = {
+  resolveUrl: resolveWorkbenchApiUrl,
+  buildAuthHeaders: buildWorkbenchApiAuthHeaders,
+};
 
 function isAbortLikeError(error: unknown): boolean {
   return error instanceof DOMException
@@ -113,9 +83,18 @@ async function readResponsePayload(response: Response) {
 }
 
 export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
-  const requestUrl = resolveWorkbenchApiUrl(url);
+  return requestJsonWithContext<T>(defaultWorkbenchApiRequestContext, url, init, timeoutMs);
+}
+
+export async function requestJsonWithContext<T>(
+  context: WorkbenchApiRequestContext,
+  url: string,
+  init?: RequestInit,
+  timeoutMs?: number,
+): Promise<T> {
+  const requestUrl = context.resolveUrl(url);
   const headers = new Headers(init?.headers);
-  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
+  Object.entries(context.buildAuthHeaders(url)).forEach(([key, value]) => {
     if (value) headers.set(key, value);
   });
 
@@ -163,9 +142,18 @@ export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?
 }
 
 export async function requestText(url: string, init?: RequestInit, timeoutMs?: number): Promise<string> {
-  const requestUrl = resolveWorkbenchApiUrl(url);
+  return requestTextWithContext(defaultWorkbenchApiRequestContext, url, init, timeoutMs);
+}
+
+export async function requestTextWithContext(
+  context: WorkbenchApiRequestContext,
+  url: string,
+  init?: RequestInit,
+  timeoutMs?: number,
+): Promise<string> {
+  const requestUrl = context.resolveUrl(url);
   const headers = new Headers(init?.headers);
-  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
+  Object.entries(context.buildAuthHeaders(url)).forEach(([key, value]) => {
     if (value) headers.set(key, value);
   });
 

@@ -186,6 +186,8 @@ Example:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example plan_material_study`
 - Material research bundle invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example validate_material_research_bundle`
+- Validate a generated bundle:
+  `cargo run --manifest-path sdks/rust/Cargo.toml --example validate_material_research_bundle -- tmp/material-research-bundle-composite.json`
 - Smoke test:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test smoke`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`

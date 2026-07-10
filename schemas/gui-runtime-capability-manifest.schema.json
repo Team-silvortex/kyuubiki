@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/gui-runtime-capability-manifest.schema.json",
+  "title": "Kyuubiki GUI Runtime Capability Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "surface_id",
+    "surface_kind",
+    "ui_ownership",
+    "automation_contract",
+    "runtime_bindings",
+    "degraded_modes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.gui-runtime-capability-manifest/v1"
+    },
+    "surface_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "surface_kind": {
+      "enum": [
+        "hub",
+        "workbench",
+        "installer",
+        "mobile_webview",
+        "browser_webview"
+      ]
+    },
+    "ui_ownership": {
+      "const": "product_owned_static_ui"
+    },
+    "automation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selector_contract_id",
+        "wasm_python_stability_required",
+        "user_extensible_ui_allowed"
+      ],
+      "properties": {
+        "selector_contract_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wasm_python_stability_required": {
+          "const": true
+        },
+        "user_extensible_ui_allowed": {
+          "const": false
+        }
+      }
+    },
+    "runtime_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/runtimeBinding"
+      }
+    },
+    "degraded_modes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/degradedMode"
+      }
+    }
+  },
+  "$defs": {
+    "runtimeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "target_kind",
+        "binding_mode",
+        "required_capabilities",
+        "optional_capabilities",
+        "headless_sdk_parity_required",
+        "mobile_supported",
+        "credential_surface",
+        "notes"
+      ],
+      "properties": {
+        "binding_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_kind": {
+          "enum": [
+            "orchestra",
+            "agent",
+            "mesh",
+            "direct_runtime",
+            "installer_runtime",
+            "offline_bundle"
+          ]
+        },
+        "binding_mode": {
+          "enum": [
+            "http_control_plane",
+            "solver_rpc",
+            "direct_mesh",
+            "installer_plan",
+            "local_bundle",
+            "read_only"
+          ]
+        },
+        "required_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "optional_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "headless_sdk_parity_required": {
+          "type": "boolean"
+        },
+        "mobile_supported": {
+          "type": "boolean"
+        },
+        "credential_surface": {
+          "enum": [
+            "none",
+            "user_keychain",
+            "app_sandbox_vault",
+            "session_token",
+            "device_keystore"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "degradedMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "trigger",
+        "allowed_actions",
+        "blocked_actions"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocked_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

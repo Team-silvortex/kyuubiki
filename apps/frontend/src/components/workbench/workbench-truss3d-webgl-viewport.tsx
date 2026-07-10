@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { lineInsideViewport, pointInsideViewport, projectTruss3dPoint, type CameraState, type DisplayTruss3dElement, type DisplayTruss3dNode, type ProjectionMode, type ViewPreset, VIEWPORT_CLIP } from "@/components/workbench/workbench-viewport-core";
-import { buildTruss3dSceneBuffers, resolveDeformationScale as resolveTruss3dDeformationScale, type DeformationViewMode } from "@/components/workbench/workbench-truss3d-webgl-scene";
+import { buildTruss3dSceneBuffers, computeTruss3dSceneBounds, resolveDeformationScale as resolveTruss3dDeformationScale, type DeformationViewMode } from "@/components/workbench/workbench-truss3d-webgl-scene";
 import { buildElementReadout, buildNodeReadout, buildSelectionSummary, type Truss3dReadout, type Truss3dReadoutStudyKind } from "@/components/workbench/workbench-truss3d-readout";
 
 type Props = {
@@ -246,6 +246,8 @@ export function WorkbenchTruss3dWebglViewport(props: Props) {
     () => props.selectedTruss3dNodeIndices.map((index) => props.displayTruss3dNodes[index]).filter((node): node is DisplayTruss3dNode => Boolean(node)),
     [props.displayTruss3dNodes, props.selectedTruss3dNodeIndices],
   );
+  const sceneBounds = useMemo(() => computeTruss3dSceneBounds(props.visibleTruss3dNodes), [props.visibleTruss3dNodes]);
+  const spatialSummary = `span ${sceneBounds.spanX.toFixed(2)} x ${sceneBounds.spanY.toFixed(2)} x ${sceneBounds.spanZ.toFixed(2)} · diag ${sceneBounds.diagonal.toFixed(2)}`;
   const persistentReadout =
     selectedElementData ? buildElementReadout(props.studyKind, selectedElementData) : selectedNodeGroup.length > 1 ? buildSelectionSummary(props.studyKind, selectedNodeGroup) : props.selected3dNodeData ? buildNodeReadout(props.studyKind, props.selected3dNodeData) : null;
   const activeReadout = persistentReadout ?? hoverReadout;
@@ -316,6 +318,7 @@ export function WorkbenchTruss3dWebglViewport(props: Props) {
         <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
         <text x="48" y="58" className="svg-title">{props.truss3dTitle}</text>
         {props.truss3dLegend ? <text x="48" y="78" className="svg-copy svg-copy--muted">{props.truss3dLegend}</text> : null}
+        <text x="48" y={props.truss3dLegend ? 98 : 78} className="svg-copy svg-copy--muted">{spatialSummary}</text>
         <text x={props.immersiveViewport ? 660 : 790} y="58" className="legend-label">{props.workspaceBadge}</text>
         <text x={props.immersiveViewport ? 560 : 640} y="58" className="legend-label">{props.projectionMode === "ortho" ? "ORTHO" : "PERSP"}</text>
         <g clipPath="url(#viewportClipTruss3dWebgl)">

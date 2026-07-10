@@ -61,7 +61,7 @@ import {
   resolveThermalTruss3dJobInput,
   resolveTruss3dJobInput,
 } from "@/lib/api/fem-3d";
-import { createDirectMeshSolve, fetchJobStatus } from "@/lib/api/runtime-client";
+import { defaultRuntimeApiClient, type RuntimeApiClient } from "@/lib/api/runtime-client";
 import {
   type JobEnvelope,
 } from "@/lib/api/fem-shared";
@@ -110,20 +110,32 @@ function adaptSubmitter<TInput, TResult extends WorkbenchStudyResult>(
     submitter(input as TInput) as Promise<JobEnvelope<WorkbenchStudyResult>>;
 }
 
-const studyRunTransport: WorkbenchStudyRunTransport = {
-  resolveStudyPayload,
-  fetchJob(jobId) {
-    return fetchJobStatus<WorkbenchStudyResult>(jobId);
-  },
-  submitDirectMesh(studyKind, input, endpoints, selectionMode) {
-    return createDirectMeshSolve<WorkbenchStudyResult>(studyKind, input, endpoints, selectionMode);
-  },
-  async submitOrchestrated(studyKind, input) {
-    return orchestratedSubmitters[studyKind](input) as ReturnType<WorkbenchStudyRunTransport["submitOrchestrated"]>;
-  },
-};
+function createStudyRunTransport(runtimeClient: RuntimeApiClient): WorkbenchStudyRunTransport {
+  return {
+    resolveStudyPayload,
+    fetchJob(jobId) {
+      return runtimeClient.fetchJobStatus<WorkbenchStudyResult>(jobId);
+    },
+    submitDirectMesh(studyKind, input, endpoints, selectionMode) {
+      return runtimeClient.createDirectMeshSolve<WorkbenchStudyResult>(
+        studyKind,
+        input,
+        endpoints,
+        selectionMode,
+      );
+    },
+    async submitOrchestrated(studyKind, input) {
+      return orchestratedSubmitters[studyKind](input) as ReturnType<WorkbenchStudyRunTransport["submitOrchestrated"]>;
+    },
+  };
+}
 
-export const workbenchStudyRunBackendService = createStudyRunBackendService(studyRunTransport);
+export function createStudyRunBackendServiceFromRuntimeClient(runtimeClient: RuntimeApiClient) {
+  return createStudyRunBackendService(createStudyRunTransport(runtimeClient));
+}
+
+export const workbenchStudyRunBackendService =
+  createStudyRunBackendServiceFromRuntimeClient(defaultRuntimeApiClient);
 
 function resolveStudyPayload(input: WorkbenchStudyRunInput): Record<string, unknown> {
   switch (input.studyKind) {

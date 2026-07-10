@@ -36,6 +36,20 @@ export type SceneBufferSet = {
   deformationScale: number;
 };
 
+export type Truss3dSceneBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  minZ: number;
+  maxZ: number;
+  spanX: number;
+  spanY: number;
+  spanZ: number;
+  diagonal: number;
+  center: { x: number; y: number; z: number };
+};
+
 function parseCssColor(input: string, fallback: [number, number, number, number]): [number, number, number, number] {
   if (typeof document === "undefined") return fallback;
   const parser = document.createElement("canvas").getContext("2d");
@@ -52,6 +66,46 @@ function parseCssColor(input: string, fallback: [number, number, number, number]
 
 function withAlpha(color: [number, number, number, number], alpha: number): [number, number, number, number] {
   return [color[0], color[1], color[2], alpha];
+}
+
+export function computeTruss3dSceneBounds(nodes: Array<{ x: number; y: number; z: number }>): Truss3dSceneBounds {
+  if (nodes.length === 0) {
+    return {
+      minX: 0,
+      maxX: 0,
+      minY: 0,
+      maxY: 0,
+      minZ: 0,
+      maxZ: 0,
+      spanX: 0,
+      spanY: 0,
+      spanZ: 0,
+      diagonal: 0,
+      center: { x: 0, y: 0, z: 0 },
+    };
+  }
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const maxX = Math.max(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxY = Math.max(...nodes.map((node) => node.y));
+  const minZ = Math.min(...nodes.map((node) => node.z));
+  const maxZ = Math.max(...nodes.map((node) => node.z));
+  const spanX = maxX - minX;
+  const spanY = maxY - minY;
+  const spanZ = maxZ - minZ;
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    minZ,
+    maxZ,
+    spanX,
+    spanY,
+    spanZ,
+    diagonal: Math.hypot(spanX, spanY, spanZ),
+    center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 },
+  };
 }
 
 export function resolveDeformationScale(nodes: DisplayTruss3dNode[], enabled: boolean) {
@@ -76,6 +130,37 @@ function pushSegment(
   colors.push(...color, ...color);
 }
 
+function pushBoundingBox(positions: number[], colors: number[], bounds: Truss3dSceneBounds, color: [number, number, number, number]) {
+  if (bounds.diagonal <= 1.0e-9) return;
+  const { minX, maxX, minY, maxY, minZ, maxZ } = bounds;
+  const corners = [
+    { x: minX, y: minY, z: minZ },
+    { x: maxX, y: minY, z: minZ },
+    { x: maxX, y: maxY, z: minZ },
+    { x: minX, y: maxY, z: minZ },
+    { x: minX, y: minY, z: maxZ },
+    { x: maxX, y: minY, z: maxZ },
+    { x: maxX, y: maxY, z: maxZ },
+    { x: minX, y: maxY, z: maxZ },
+  ];
+  for (const [startIndex, endIndex] of [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7],
+  ] as const) {
+    pushSegment(positions, colors, corners[startIndex], corners[endIndex], color);
+  }
+}
+
 export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBufferSet {
   const linePositions: number[] = [];
   const lineColors: number[] = [];
@@ -87,6 +172,7 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
   const deformedNodePositions: number[] = [];
   const deformedNodeColors: number[] = [];
   const gridColor = parseCssColor("rgba(132, 146, 166, 0.22)", [0.52, 0.57, 0.65, 0.22]);
+  const boundsColor = parseCssColor("rgba(93, 217, 255, 0.18)", [0.36, 0.85, 1, 0.18]);
   const selectedColor = parseCssColor("rgba(255, 184, 77, 1)", [1, 0.72, 0.3, 1]);
   const draftColor = parseCssColor("rgba(93, 217, 255, 1)", [0.36, 0.85, 1, 1]);
   const nodeColor = parseCssColor("rgba(222, 229, 239, 0.95)", [0.87, 0.9, 0.94, 0.95]);
@@ -101,6 +187,7 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
       pushSegment(linePositions, lineColors, { x: -args.gridExtent, y: value, z: 0 }, { x: args.gridExtent, y: value, z: 0 }, gridColor);
       pushSegment(linePositions, lineColors, { x: value, y: -args.gridExtent, z: 0 }, { x: value, y: args.gridExtent, z: 0 }, gridColor);
     }
+    pushBoundingBox(linePositions, lineColors, computeTruss3dSceneBounds(args.visibleTruss3dNodes), boundsColor);
   }
 
   args.visibleTruss3dElements.forEach((element) => {

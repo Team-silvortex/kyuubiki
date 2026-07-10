@@ -22,6 +22,38 @@ export type WorkbenchGuiBackendTargetDecision = {
   reason?: "invalid_url" | "unsupported_scheme" | "localhost_forbidden";
 };
 
+export type GuiRuntimeCapabilityManifestBinding = {
+  binding_id: string;
+  target_kind:
+    | "orchestra"
+    | "agent"
+    | "mesh"
+    | "direct_runtime"
+    | "installer_runtime"
+    | "offline_bundle";
+  binding_mode:
+    | "http_control_plane"
+    | "solver_rpc"
+    | "direct_mesh"
+    | "installer_plan"
+    | "local_bundle"
+    | "read_only";
+  required_capabilities?: readonly string[];
+  optional_capabilities?: readonly string[];
+  mobile_supported: boolean;
+};
+
+export type GuiRuntimeCapabilityManifest = {
+  schema_version: "kyuubiki.gui-runtime-capability-manifest/v1";
+  surface_kind: "hub" | "workbench" | "installer" | "mobile_webview" | "browser_webview";
+  runtime_bindings: readonly GuiRuntimeCapabilityManifestBinding[];
+};
+
+export type GuiRuntimeCapabilityBindingQuery = {
+  hostKind?: WorkbenchGuiHostKind;
+  includeOptional?: boolean;
+};
+
 export function resolveWorkbenchGuiRuntimeCapability(
   hostKind: WorkbenchGuiHostKind,
 ): WorkbenchGuiRuntimeCapability {
@@ -49,6 +81,79 @@ export function resolveWorkbenchGuiRuntimeCapability(
     canInstallRuntime: hostKind === "desktop_webview",
     canUseLocalhostBackend: true,
     posture: "local_workstation",
+  };
+}
+
+export function listGuiRuntimeManifestCapabilities(
+  manifest: GuiRuntimeCapabilityManifest,
+  options: { includeOptional?: boolean } = {},
+) {
+  const capabilities = new Set<string>();
+  for (const binding of manifest.runtime_bindings) {
+    for (const capability of binding.required_capabilities ?? []) capabilities.add(capability);
+    if (options.includeOptional === true) {
+      for (const capability of binding.optional_capabilities ?? []) capabilities.add(capability);
+    }
+  }
+  return [...capabilities].sort();
+}
+
+export function hasGuiRuntimeManifestCapability(
+  manifest: GuiRuntimeCapabilityManifest,
+  capability: string,
+  options: GuiRuntimeCapabilityBindingQuery = {},
+) {
+  return selectGuiRuntimeManifestBindings(manifest, capability, options).length > 0;
+}
+
+export function selectGuiRuntimeManifestBindings(
+  manifest: GuiRuntimeCapabilityManifest,
+  capability: string,
+  options: GuiRuntimeCapabilityBindingQuery = {},
+) {
+  return manifest.runtime_bindings.filter((binding) => {
+    if (options.hostKind === "mobile_webview" && binding.mobile_supported !== true) return false;
+    if ((binding.required_capabilities ?? []).includes(capability)) return true;
+    return options.includeOptional === true && (binding.optional_capabilities ?? []).includes(capability);
+  });
+}
+
+export function resolveWorkbenchGuiRuntimeCapabilityFromManifest(
+  hostKind: WorkbenchGuiHostKind,
+  manifest: GuiRuntimeCapabilityManifest,
+): WorkbenchGuiRuntimeCapability {
+  const base = resolveWorkbenchGuiRuntimeCapability(hostKind);
+  const localBackendTargets = new Set(["agent", "mesh", "direct_runtime", "installer_runtime"]);
+  const hasLocalBackendBinding = manifest.runtime_bindings.some((binding) =>
+    localBackendTargets.has(binding.target_kind),
+  );
+  const hasInstallerBinding = manifest.runtime_bindings.some(
+    (binding) => binding.target_kind === "installer_runtime" || binding.binding_mode === "installer_plan",
+  );
+  const capabilities = new Set(
+    manifest.runtime_bindings.flatMap((binding) => [
+      ...(binding.required_capabilities ?? []),
+      ...(binding.optional_capabilities ?? []),
+    ]),
+  );
+
+  if (hostKind === "mobile_webview" || manifest.surface_kind === "mobile_webview") {
+    return {
+      ...base,
+      canHostOrchestra: false,
+      canHostAgent: false,
+      canInstallRuntime: false,
+      canUseLocalhostBackend: false,
+      posture: "remote_control",
+    };
+  }
+
+  return {
+    ...base,
+    canHostOrchestra: base.canHostOrchestra && capabilities.has("orchestra.host"),
+    canHostAgent: base.canHostAgent && capabilities.has("agent.host"),
+    canInstallRuntime: base.canInstallRuntime && hasInstallerBinding,
+    canUseLocalhostBackend: base.canUseLocalhostBackend && hasLocalBackendBinding,
   };
 }
 

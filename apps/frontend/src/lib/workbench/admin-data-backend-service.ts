@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  deleteJobRecord,
-  fetchJobStatus,
-  updateJobRecord,
-} from "@/lib/api/runtime-client";
-import {
-  deleteResultRecord,
-  fetchResults,
-  updateResultRecord,
-} from "@/lib/api/security-results-client";
+import { defaultWorkbenchRuntimeBackedBackendServices } from "@/lib/workbench/backend-service-composer";
 import {
   createAdminDataBackendService,
   type WorkbenchAdminDataBackendService,
@@ -30,11 +21,5 @@ export {
   type WorkbenchResultRecordEnvelope,
 };
 
-export const workbenchAdminDataBackendService = createAdminDataBackendService({
-  deleteJob: deleteJobRecord,
-  deleteResult: deleteResultRecord,
-  fetchJob: fetchJobStatus,
-  fetchResults,
-  updateJob: updateJobRecord,
-  updateResult: updateResultRecord,
-});
+export const workbenchAdminDataBackendService =
+  defaultWorkbenchRuntimeBackedBackendServices.adminData;

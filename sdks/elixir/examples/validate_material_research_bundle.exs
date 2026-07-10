@@ -1,9 +1,11 @@
 alias KyuubikiSdk.MaterialResearchBundle
 
-fixture =
+default_fixture =
   __DIR__
   |> Path.join("../../../schemas/examples.material-research-bundle.json")
   |> Path.expand()
+
+fixture = System.argv() |> List.first() |> Kernel.||(default_fixture)
 
 {:ok, bundle} =
   fixture

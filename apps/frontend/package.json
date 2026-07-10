@@ -7,7 +7,7 @@
     "kyuubiki": "./scripts/kyuubiki-cli.mjs"
   },
   "engines": {
-    "node": ">=20.19.2 <21"
+    "node": ">=20.19.2 <25"
   },
   "scripts": {
     "cli": "node ./scripts/kyuubiki-cli.mjs",

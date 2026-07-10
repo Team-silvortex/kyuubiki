@@ -41,6 +41,19 @@ Run `make audit-dependencies` after changing dependency-audit lanes.
 
 Run `make check-elixir-self-host` after changing the toolchain contract.
 
+## GUI Runtime Capabilities
+
+- `config/gui-runtime-capabilities/*.json`
+  Product-owned GUI-to-runtime capability manifests for Hub, Workbench,
+  Installer, and mobile WebView surfaces. They use
+  `kyuubiki.gui-runtime-capability-manifest/v1` and
+  `schemas/gui-runtime-capability-manifest.schema.json` to keep GUI surfaces
+  decoupled from orchestra, agent, mesh, installer runtime, and offline bundle
+  implementations. The reference example is
+  `schemas/examples.gui-runtime-capability-manifest.json`.
+
+Run `make check-gui-runtime-capability-contract` after changing these manifests.
+
 ## Rules
 
 - Keep paths repository-relative.

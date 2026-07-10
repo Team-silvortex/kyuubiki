@@ -1,20 +1,6 @@
 "use client";
 
-import {
-  createModel,
-  createModelVersion,
-  createProject,
-  deleteModel,
-  deleteModelVersion,
-  deleteProject,
-  fetchModel,
-  fetchModelVersion,
-  fetchModelVersions,
-  fetchProjects,
-  updateModel,
-  updateModelVersion,
-  updateProject,
-} from "@/lib/api/project-client";
+import { defaultProjectApiClient } from "@/lib/api/project-client";
 import {
   createProjectLibraryBackendService,
   type WorkbenchProjectCreateInput,
@@ -30,17 +16,17 @@ export {
 };
 
 export const workbenchProjectLibraryBackendService = createProjectLibraryBackendService({
-  createModel,
-  createModelVersion,
-  createProject,
-  deleteModel,
-  deleteModelVersion,
-  deleteProject,
-  fetchModel,
-  fetchModelVersion,
-  fetchModelVersions,
-  fetchProjects,
-  updateModel,
-  updateModelVersion,
-  updateProject,
+  createModel: defaultProjectApiClient.createModel,
+  createModelVersion: defaultProjectApiClient.createModelVersion,
+  createProject: defaultProjectApiClient.createProject,
+  deleteModel: defaultProjectApiClient.deleteModel,
+  deleteModelVersion: defaultProjectApiClient.deleteModelVersion,
+  deleteProject: defaultProjectApiClient.deleteProject,
+  fetchModel: defaultProjectApiClient.fetchModel,
+  fetchModelVersion: defaultProjectApiClient.fetchModelVersion,
+  fetchModelVersions: defaultProjectApiClient.fetchModelVersions,
+  fetchProjects: defaultProjectApiClient.fetchProjects,
+  updateModel: defaultProjectApiClient.updateModel,
+  updateModelVersion: defaultProjectApiClient.updateModelVersion,
+  updateProject: defaultProjectApiClient.updateProject,
 });

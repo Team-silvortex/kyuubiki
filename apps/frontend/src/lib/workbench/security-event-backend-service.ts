@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  createSecurityEvent,
-  fetchSecurityEvents,
-} from "@/lib/api/security-results-client";
+import { defaultSecurityResultsApiClient } from "@/lib/api/security-results-client";
 import {
   createSecurityEventBackendService,
   type WorkbenchSecurityEventBackendService,
@@ -21,6 +18,6 @@ export {
 };
 
 export const workbenchSecurityEventBackendService = createSecurityEventBackendService({
-  createEvent: createSecurityEvent,
-  fetchEvents: fetchSecurityEvents,
+  createEvent: defaultSecurityResultsApiClient.createSecurityEvent,
+  fetchEvents: defaultSecurityResultsApiClient.fetchSecurityEvents,
 });

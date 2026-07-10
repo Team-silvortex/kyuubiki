@@ -90,8 +90,10 @@ Use these commands when building deployable layouts:
   Runs the installer-declared apt dependency install on the lab host with
   `sudo -n`; it fails rather than prompting or storing a password.
 - `make desktop-linux-remote-preflight`
-  Checks the Ubuntu lab host for Node 20.19.x, npm, Cargo/Rust, Make, and the
-  Linux Tauri system packages before running the heavier remote bundle build.
+  Checks the Ubuntu lab host for a Node version compatible with
+  `config/toolchains.json` (installer default: Node 20.19.x), npm, Cargo/Rust,
+  Make, and the Linux Tauri system packages before running the heavier remote
+  bundle build.
 
 The Linux remote preflight currently expects these Ubuntu packages to be
 installer-managed on `kyuubiki-lab`:

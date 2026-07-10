@@ -1,24 +1,20 @@
 "use client";
 
 import {
-  createDirectMeshSolve,
-  createModel,
-  createModelVersion,
-  createProject,
-  fetchDirectMeshResultRecord,
-  fetchHealth,
-  fetchJobStatus,
-  fetchModelVersion,
-  fetchResultRecord,
   isWorkflowRunTerminalStatus,
   resolveJobStatusDetailLabel,
-  compactWorkflowResponseOptions,
-  submitWorkflowCatalogJob,
-  submitWorkflowGraphJob,
-  type DirectMeshSelectionMode,
-  type WorkflowGraphDefinition,
-} from "@/lib/api";
+} from "@/lib/api/job-status";
+import type { DirectMeshSelectionMode } from "@/lib/api/runtime-types";
+import type { WorkflowGraphDefinition } from "@/lib/api/workflow-types";
 import type { HeadlessExecutionValue, HeadlessWorkflowExecutionBatch } from "@/components/workbench/workbench-headless-workflow-export";
+import { defaultHeadlessResultsApiClient, type HeadlessResultsApiClient } from "@/lib/api/headless-results-client";
+import { defaultProjectApiClient, type ProjectApiClient } from "@/lib/api/project-client";
+import {
+  compactWorkflowResponseOptions,
+  defaultRuntimeApiClient,
+  type DirectMeshStudyKind,
+  type RuntimeApiClient,
+} from "@/lib/api/runtime-client";
 
 export type HeadlessExecutionEvent = {
   message: string;
@@ -33,6 +29,28 @@ type HeadlessExecutionStepResult = {
 export type HeadlessExecutionRunResult = {
   steps: HeadlessExecutionStepResult[];
 };
+
+export type HeadlessExecutionBackendClients = {
+  headlessResultsClient?: HeadlessResultsApiClient;
+  projectClient?: ProjectApiClient;
+  runtimeClient?: RuntimeApiClient;
+};
+
+type ResolvedHeadlessExecutionBackendClients = {
+  headlessResultsClient: HeadlessResultsApiClient;
+  projectClient: ProjectApiClient;
+  runtimeClient: RuntimeApiClient;
+};
+
+function resolveBackendClients(
+  clients: HeadlessExecutionBackendClients = {},
+): ResolvedHeadlessExecutionBackendClients {
+  return {
+    headlessResultsClient: clients.headlessResultsClient ?? defaultHeadlessResultsApiClient,
+    projectClient: clients.projectClient ?? defaultProjectApiClient,
+    runtimeClient: clients.runtimeClient ?? defaultRuntimeApiClient,
+  };
+}
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -60,10 +78,16 @@ function resolveExecutionValue(value: HeadlessExecutionValue, results: Map<numbe
   return stepResult[value.source.output];
 }
 
-async function waitForJob(jobId: string, intervalMs: number, timeoutMs: number, onEvent?: (event: HeadlessExecutionEvent) => void) {
+async function waitForJob(
+  runtimeClient: RuntimeApiClient,
+  jobId: string,
+  intervalMs: number,
+  timeoutMs: number,
+  onEvent?: (event: HeadlessExecutionEvent) => void,
+) {
   const startedAt = Date.now();
   while (Date.now() - startedAt <= timeoutMs) {
-    const envelope = await fetchJobStatus(jobId);
+    const envelope = await runtimeClient.fetchJobStatus(jobId);
     const detailLabel = resolveJobStatusDetailLabel(envelope.job.status_detail);
     onEvent?.({ message: `[job_wait] ${jobId} -> ${envelope.job.status}${detailLabel ? ` (${detailLabel})` : ""}` });
     if (isWorkflowRunTerminalStatus(envelope.job.status)) return envelope;
@@ -72,20 +96,26 @@ async function waitForJob(jobId: string, intervalMs: number, timeoutMs: number, 
   throw new Error(`Timed out while waiting for job ${jobId}.`);
 }
 
-async function runExecutionAction(action: string, payload: Record<string, unknown>, onEvent?: (event: HeadlessExecutionEvent) => void) {
+async function runExecutionAction(
+  clients: ResolvedHeadlessExecutionBackendClients,
+  action: string,
+  payload: Record<string, unknown>,
+  onEvent?: (event: HeadlessExecutionEvent) => void,
+) {
+  const { headlessResultsClient, projectClient, runtimeClient } = clients;
   if (action === "service_health") {
-    const response = await fetchHealth();
+    const response = await runtimeClient.fetchHealth();
     return { service: response.service, status: response.status };
   }
   if (action === "project_create") {
-    const response = await createProject({
+    const response = await projectClient.createProject({
       name: String(payload.name ?? "Headless Project"),
       ...(typeof payload.description === "string" ? { description: payload.description } : {}),
     });
     return { project_id: response.project.project_id, name: response.project.name };
   }
   if (action === "model_create") {
-    const response = await createModel(String(payload.project_id ?? ""), {
+    const response = await projectClient.createModel(String(payload.project_id ?? ""), {
       name: String(payload.name ?? "model"),
       kind: String(payload.kind ?? "truss_3d"),
       payload: asRecord(payload.payload),
@@ -95,7 +125,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     return { model_id: response.model.model_id, kind: response.model.kind };
   }
   if (action === "model_version_create") {
-    const response = await createModelVersion(String(payload.model_id ?? ""), {
+    const response = await projectClient.createModelVersion(String(payload.model_id ?? ""), {
       payload: asRecord(payload.payload),
       ...(typeof payload.name === "string" ? { name: payload.name } : {}),
       ...(typeof payload.kind === "string" ? { kind: payload.kind } : {}),
@@ -105,7 +135,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     return { model_version_id: response.version.version_id, kind: response.version.kind };
   }
   if (action === "workflow_submit_catalog") {
-    const response = await submitWorkflowCatalogJob(
+    const response = await runtimeClient.submitWorkflowCatalogJob(
       String(payload.workflow_id ?? ""),
       asRecord(payload.input_artifacts),
       compactWorkflowResponseOptions(),
@@ -113,7 +143,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "workflow_submit_graph") {
-    const response = await submitWorkflowGraphJob(
+    const response = await runtimeClient.submitWorkflowGraphJob(
       payload.graph as WorkflowGraphDefinition,
       asRecord(payload.input_artifacts),
       compactWorkflowResponseOptions(),
@@ -121,7 +151,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "job_fetch") {
-    const response = await fetchJobStatus(String(payload.job_id ?? ""));
+    const response = await runtimeClient.fetchJobStatus(String(payload.job_id ?? ""));
     return {
       job_id: response.job.job_id,
       status: response.job.status,
@@ -131,6 +161,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
   }
   if (action === "job_wait") {
     const response = await waitForJob(
+      runtimeClient,
       String(payload.job_id ?? ""),
       typeof payload.interval_ms === "number" ? payload.interval_ms : 1000,
       typeof payload.timeout_ms === "number" ? payload.timeout_ms : 60_000,
@@ -146,15 +177,17 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
   if (action === "result_fetch") {
     const jobId = String(payload.job_id ?? "");
     if (payload.prefer_job_result) {
-      const envelope = await fetchJobStatus(jobId);
+      const envelope = await runtimeClient.fetchJobStatus(jobId);
       if (envelope.result && typeof envelope.result === "object") return { job_id: jobId, result: envelope.result as Record<string, unknown> };
     }
-    const response = payload.direct_mesh ? await fetchDirectMeshResultRecord(jobId) : await fetchResultRecord(jobId);
+    const response = payload.direct_mesh
+      ? await headlessResultsClient.fetchDirectMeshResultRecord(jobId)
+      : await headlessResultsClient.fetchResultRecord(jobId);
     return { job_id: response.job_id, result: response.result };
   }
   if (action === "direct_mesh_solve") {
-    const response = await createDirectMeshSolve(
-      String(payload.study_kind ?? "truss_3d") as Parameters<typeof createDirectMeshSolve>[0],
+    const response = await runtimeClient.createDirectMeshSolve(
+      String(payload.study_kind ?? "truss_3d") as DirectMeshStudyKind,
       asRecord(payload.input && typeof payload.input === "object" ? payload.input : payload.model_payload),
       asStringList(payload.endpoints),
       asSelectionMode(payload.selection_mode),
@@ -167,9 +200,9 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     };
   }
   if (action === "solve_from_model_version" || action === "solve_and_wait_from_model_version") {
-    const version = await fetchModelVersion(String(payload.model_version_id ?? ""));
-    const solve = await createDirectMeshSolve(
-      version.version.kind as Parameters<typeof createDirectMeshSolve>[0],
+    const version = await projectClient.fetchModelVersion(String(payload.model_version_id ?? ""));
+    const solve = await runtimeClient.createDirectMeshSolve(
+      version.version.kind as DirectMeshStudyKind,
       version.version.payload,
       asStringList(payload.endpoints),
       asSelectionMode(payload.selection_mode),
@@ -183,12 +216,15 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     };
     if (action === "solve_from_model_version") return baseResult;
     const waited = await waitForJob(
+      runtimeClient,
       solve.job.job_id,
       typeof payload.interval_ms === "number" ? payload.interval_ms : 1000,
       typeof payload.timeout_ms === "number" ? payload.timeout_ms : 60_000,
       onEvent,
     );
-    const resultRecord = payload.direct_mesh ? await fetchDirectMeshResultRecord(solve.job.job_id) : await fetchResultRecord(solve.job.job_id);
+    const resultRecord = payload.direct_mesh
+      ? await headlessResultsClient.fetchDirectMeshResultRecord(solve.job.job_id)
+      : await headlessResultsClient.fetchResultRecord(solve.job.job_id);
     return {
       ...baseResult,
       status: waited.job.status,
@@ -202,13 +238,15 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
 export async function runHeadlessExecutionBatch(
   batch: HeadlessWorkflowExecutionBatch,
   onEvent?: (event: HeadlessExecutionEvent) => void,
+  clients: HeadlessExecutionBackendClients = {},
 ): Promise<HeadlessExecutionRunResult> {
+  const resolvedClients = resolveBackendClients(clients);
   const results = new Map<number, Record<string, unknown>>();
   const completed: HeadlessExecutionStepResult[] = [];
   for (const step of batch.steps) {
     onEvent?.({ message: `[step ${step.index}] start ${step.action}` });
     const payload = asRecord(resolveExecutionValue(step.payload, results));
-    const result = await runExecutionAction(step.action, payload, onEvent);
+    const result = await runExecutionAction(resolvedClients, step.action, payload, onEvent);
     results.set(step.index, result);
     completed.push({ index: step.index, action: step.action, result });
     onEvent?.({ message: `[step ${step.index}] done ${step.action}` });

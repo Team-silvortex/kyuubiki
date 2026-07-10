@@ -10,8 +10,9 @@ The contract separates compatibility from bootstrap defaults:
   on local machines, lab nodes, containers, and installer-managed runtimes.
 - Elixir uses a Mix constraint plus lab defaults because patch/minor releases
   can move while the application contract remains `~> 1.19`.
-- Node uses an engine range plus a preferred installer version so UI shells and
-  docs tooling do not silently drift.
+- Node uses a compatibility engine range plus a preferred installer version so
+  UI shells and docs tooling can run on current local Node releases while
+  installer-managed runtimes still have a stable default.
 
 Run `make check-toolchains` before changing any Dockerfile, package manifest,
 remote lab script, or language runtime version. The installer should read the

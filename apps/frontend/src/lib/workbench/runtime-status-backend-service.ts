@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  fetchDirectMeshAgents,
-  fetchHealth,
-  fetchProtocolAgents,
-  fetchRegisteredAgents,
-} from "@/lib/api/runtime-client";
+import { defaultWorkbenchRuntimeBackedBackendServices } from "@/lib/workbench/backend-service-composer";
 import {
   createRuntimeStatusBackendService,
   type WorkbenchRuntimeStatusBackendService,
@@ -22,9 +17,5 @@ export {
   type WorkbenchRuntimeStatusTransport,
 };
 
-export const workbenchRuntimeStatusBackendService = createRuntimeStatusBackendService({
-  fetchDirectMeshAgents,
-  fetchHealth,
-  fetchProtocolAgents,
-  fetchRegisteredAgents,
-});
+export const workbenchRuntimeStatusBackendService =
+  defaultWorkbenchRuntimeBackedBackendServices.runtimeStatus;

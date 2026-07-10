@@ -21,6 +21,10 @@ README.
 - `workflow-dataset.schema.json` is for ONNX-like cross-operator data
   contracts, including named values, shape semantics, encoding, and stable
   schema references shared across workflow nodes
+- `schemas/gui-runtime-capability-manifest.schema.json` is for GUI-to-runtime
+  capability manifests that keep Hub, Workbench, Installer, browser WebView,
+  and mobile WebView surfaces decoupled from orchestra, agent, mesh, direct
+  runtime, and offline-bundle implementations
 - `material-envelope-catalog-request.schema.json` is for cross-SDK material
   envelope catalog job requests that keep the built-in workflow graph owned by
   the central workflow catalog
@@ -89,6 +93,13 @@ README.
   `heat -> thermo_mechanical` graph wiring
 - `examples.workflow-dataset.json` is the matching reference dataset contract
   for that workflow's cross-operator payloads
+- `schemas/examples.gui-runtime-capability-manifest.json` is the matching
+  reference manifest for `kyuubiki.gui-runtime-capability-manifest/v1`, showing
+  orchestrated, direct-mesh, and offline read-only GUI bindings without making
+  the GUI own the runtime
+- `config/gui-runtime-capabilities/*.json` contains the product-owned Hub,
+  Workbench, Installer, and mobile WebView manifests validated against that
+  GUI-to-runtime contract
 - `examples.material-envelope-catalog-request.json` is the shared SDK fixture
   for submitting the built-in material envelope ranking workflow through the
   workflow catalog without embedding its graph inline

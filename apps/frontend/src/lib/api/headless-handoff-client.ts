@@ -3,6 +3,8 @@
 import { requestJson } from "./core.ts";
 import type { HeadlessOrchestraHandoffEnvelope } from "@/lib/scripting/workbench-headless-orchestra-handoff";
 
+type HeadlessHandoffRequestJson = <T>(url: string, init?: RequestInit, timeoutMs?: number) => Promise<T>;
+
 export type HeadlessHandoffReceipt = {
   accepted: boolean;
   handoff_id: string;
@@ -32,21 +34,44 @@ export type HeadlessHandoffSnapshot = HeadlessHandoffReceipt & {
 };
 
 export function submitHeadlessOrchestraHandoff(input: HeadlessOrchestraHandoffEnvelope) {
-  return requestJson<HeadlessHandoffReceipt>("/api/v1/headless/handoff", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  return defaultHeadlessHandoffApiClient.submitHeadlessOrchestraHandoff(input);
 }
 
 export function fetchHeadlessOrchestraHandoffStatus(handoffId: string) {
-  return requestJson<HeadlessHandoffReceipt>(`/api/v1/headless/handoff/${encodeURIComponent(handoffId)}`);
+  return defaultHeadlessHandoffApiClient.fetchHeadlessOrchestraHandoffStatus(handoffId);
 }
 
 export function fetchHeadlessOrchestraHandoffHistory() {
-  return requestJson<HeadlessHandoffHistoryPayload>("/api/v1/headless/handoff");
+  return defaultHeadlessHandoffApiClient.fetchHeadlessOrchestraHandoffHistory();
 }
 
 export function fetchHeadlessOrchestraHandoffSnapshot(handoffId: string) {
-  return requestJson<HeadlessHandoffSnapshot>(`/api/v1/headless/handoff/${encodeURIComponent(handoffId)}/snapshot`);
+  return defaultHeadlessHandoffApiClient.fetchHeadlessOrchestraHandoffSnapshot(handoffId);
 }
+
+export function createHeadlessHandoffApiClient(request: HeadlessHandoffRequestJson) {
+  return {
+    submitHeadlessOrchestraHandoff(input: HeadlessOrchestraHandoffEnvelope) {
+      return request<HeadlessHandoffReceipt>("/api/v1/headless/handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+    },
+    fetchHeadlessOrchestraHandoffStatus(handoffId: string) {
+      return request<HeadlessHandoffReceipt>(`/api/v1/headless/handoff/${encodeURIComponent(handoffId)}`);
+    },
+    fetchHeadlessOrchestraHandoffHistory() {
+      return request<HeadlessHandoffHistoryPayload>("/api/v1/headless/handoff");
+    },
+    fetchHeadlessOrchestraHandoffSnapshot(handoffId: string) {
+      return request<HeadlessHandoffSnapshot>(
+        `/api/v1/headless/handoff/${encodeURIComponent(handoffId)}/snapshot`,
+      );
+    },
+  };
+}
+
+export type HeadlessHandoffApiClient = ReturnType<typeof createHeadlessHandoffApiClient>;
+
+export const defaultHeadlessHandoffApiClient = createHeadlessHandoffApiClient(requestJson);

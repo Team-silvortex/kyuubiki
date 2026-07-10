@@ -138,10 +138,42 @@ All of those paths still speak the same public HTTP contract. A GUI can point at
 an orchestrator, a mesh gateway, or another compatible service, and a headless
 SDK can use the same routes without importing GUI internals.
 
+GUI surfaces publish their runtime-facing capability expectations through
+[`schemas/gui-runtime-capability-manifest.schema.json`](../schemas/gui-runtime-capability-manifest.schema.json).
+The reference manifest is
+[`schemas/examples.gui-runtime-capability-manifest.json`](../schemas/examples.gui-runtime-capability-manifest.json)
+and uses `kyuubiki.gui-runtime-capability-manifest/v1`.
+Product manifests live under
+[`config/gui-runtime-capabilities`](../config/gui-runtime-capabilities).
+
+That manifest records:
+
+- which product-owned surface is speaking (`Hub`, `Workbench`, `Installer`,
+  browser WebView, or mobile WebView)
+- which runtime target kinds it can bind to (`orchestra`, `agent`, `mesh`,
+  `direct_runtime`, `installer_runtime`, or `offline_bundle`)
+- whether a surface is only binding to a runtime or is allowed to host/manage
+  one; those are intentionally different capabilities
+- whether each binding has headless SDK parity
+- whether the same binding is safe for mobile WebView control clients
+- which credential surface is allowed for that binding
+- which degraded modes remain legal when no compatible runtime is reachable
+
+The manifest is intentionally not an implementation registry. It is the
+GUI-side capability contract that lets a surface choose a backend without
+embedding backend topology in React, Tauri, or mobile WebView code.
+GUI code should select bindings by declared capability such as
+`workflow.submit`, `solver.submit`, or `result.chunk.read`; component code
+should not branch directly on `orchestra`, `mesh`, or `installer_runtime`
+unless it is implementing the shared binding adapter itself.
+
 The browser-side API client must stay thin:
 
 - `apps/frontend/src/lib/api/core.ts` owns request transport, timeout, response
-  parsing, backend target resolution, and token header attachment
+  parsing, default backend target resolution, and injectable
+  `WorkbenchApiRequestContext` request wiring
+- `apps/frontend/src/lib/api/auth-context.ts` owns GUI runtime-mode and
+  in-memory secret projection into governed auth headers
 - `apps/frontend/src/lib/api/backend-target.ts` owns GUI-to-backend target
   selection and validation
 - `apps/frontend/src/lib/api/*-types.ts` files own public data contracts for
@@ -156,6 +188,32 @@ The browser-side API client must stay thin:
 
 That split keeps the TypeScript API client usable in tests, WebView shells, and
 future adapter layers without dragging the whole Workbench UI graph with it.
+Non-default shells should provide their own request context instead of changing
+the transport core.
+- `apps/frontend/src/lib/api/runtime-client.ts` exposes
+  `createRuntimeApiClient(request)` so runtime/workflow/status callers can keep
+  the same API shape while using a shell-specific request context
+- `apps/frontend/src/lib/api/security-results-client.ts` exposes
+  `createSecurityResultsApiClient({ requestJson, requestText })` so security,
+  export, and result-chunk callers can share the same injectable transport
+  shape without importing UI code
+- `apps/frontend/src/lib/api/project-client.ts` exposes
+  `createProjectApiClient(request)` so project, model, and model-version
+  persistence can use the same replaceable transport boundary as remote GUI and
+  headless callers
+- `apps/frontend/src/lib/api/headless-results-client.ts` exposes
+  `createHeadlessResultsApiClient(request)` for headless result-record fetches
+  that should not depend on Workbench component state
+- `apps/frontend/src/lib/api/headless-handoff-client.ts` exposes
+  `createHeadlessHandoffApiClient(request)` for orchestra handoff submit,
+  status, history, and snapshot reads
+- Workbench backend-service bindings use the runtime client instance
+  (`defaultRuntimeApiClient` by default) instead of importing individual runtime
+  request functions, so an alternate shell can swap the client composition point
+- `apps/frontend/src/lib/workbench/backend-service-composer.ts` is the default
+  composition point for runtime-backed Workbench services; alternate shells
+  should create their service set from supplied runtime and result/security
+  client instances
 
 Workflow execution has one additional seam:
 
@@ -236,7 +294,10 @@ Project library paths are also backend-service owned:
 - `apps/frontend/src/lib/workbench/project-library-backend-service-core.ts`
   defines the GUI-facing project, model, and model-version CRUD contract
 - `apps/frontend/src/lib/workbench/project-library-backend-service.ts` binds
-  that contract to the default HTTP project/model APIs
+  that contract to the default `ProjectApiClient`
+- `apps/frontend/src/components/workbench/workbench.tsx` receives project
+  actions from the project library backend service instead of importing project
+  HTTP API functions directly
 - data refresh controllers consume the service contract instead of importing
   project runtime clients directly
 - project storage controllers consume the same service for bundle export
@@ -280,6 +341,16 @@ The boundary rule is strict:
 - backend services own execution, scheduling, mesh membership, and agent state
 - SDKs call backend contracts directly rather than driving Workbench controls
 - no backend service may require Workbench component structure to be present
+
+Headless execution follows the same rule. The browser-side runner in
+`apps/frontend/src/lib/scripting/workbench-headless-execution.ts` accepts
+`HeadlessExecutionBackendClients` so generated scripts, tests, and future SDK
+bridges can supply runtime, project, and result clients without importing the
+Workbench UI tree.
+The Workbench headless workflow panel also talks through
+`apps/frontend/src/lib/workbench/headless-workflow-backend-service.ts` so agent
+discovery and orchestra handoff management stay behind replaceable runtime and
+handoff clients.
 
 ## Architectural Consequences
 

@@ -86,13 +86,16 @@ This directory contains host-native operational entry points.
   fixture, and SDK documentation links. It keeps `--plan-study` output aligned
   with headless SDK and remote scheduler expectations before solver dispatch.
 - `build-material-research-bundle.mjs`, `check-material-research-bundle.mjs`,
-  and `check-material-research-bundle-contract.mjs`
+  `build-material-research-bundle-index.mjs`, and
+  `check-material-research-bundle-contract.mjs`
   Build and verify the first retained material research bundle. The bundle
   captures initial exploration, next-round execution planning, a rerun,
   chained rounds, artifact checksums, and repo-relative reproduction commands
   under `kyuubiki.material-research-bundle/v1`. Override `STUDY=` through Make
   to build the heat-spreader or composite thermo-electric panel retained
-  profile. The lightweight contract check keeps
+  profile. The bundle index builder writes a compact multi-study overview under
+  `tmp/material-research-bundles/` for CI, agents, and release notes. The
+  lightweight contract check keeps
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
   sync without running the solver.
@@ -245,6 +248,10 @@ Useful checks:
   its self-test. Use this after changing
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, or bundle documentation.
+- `make material-research-bundle-index`
+  Build the retained heat-spreader and composite thermo-electric panel bundles,
+  validate them, and write `tmp/material-research-bundles/index.json` plus a
+  human-readable `README.md` summary.
 - `make build-operator-qualification-readiness`
   Write a generated readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

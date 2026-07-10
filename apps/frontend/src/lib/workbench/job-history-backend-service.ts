@@ -1,6 +1,6 @@
 "use client";
 
-import { cancelJob, fetchJobHistory } from "@/lib/api/runtime-client";
+import { defaultWorkbenchRuntimeBackedBackendServices } from "@/lib/workbench/backend-service-composer";
 import {
   createJobHistoryBackendService,
   type WorkbenchJobHistoryBackendService,
@@ -13,7 +13,5 @@ export {
   type WorkbenchJobHistoryBackendTransport,
 };
 
-export const workbenchJobHistoryBackendService = createJobHistoryBackendService({
-  cancelJob,
-  fetchJobHistory,
-});
+export const workbenchJobHistoryBackendService =
+  defaultWorkbenchRuntimeBackedBackendServices.jobHistory;

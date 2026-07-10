@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  fetchJobStatus,
-  fetchWorkflowCatalog,
-  fetchWorkflowOperators,
-  submitWorkflowCatalogJob,
-  submitWorkflowGraphJob,
-} from "@/lib/api/runtime-client";
+import { defaultWorkbenchRuntimeBackedBackendServices } from "@/lib/workbench/backend-service-composer";
 import {
   createWorkflowBackendService,
   type WorkbenchWorkflowBackendService,
@@ -21,10 +15,5 @@ export {
   type WorkbenchWorkflowSubmitInput,
 };
 
-export const orchestratedWorkflowBackendService = createWorkflowBackendService({
-  fetchCatalog: fetchWorkflowCatalog,
-  fetchOperators: fetchWorkflowOperators,
-  fetchJob: fetchJobStatus,
-  submitCatalogJob: submitWorkflowCatalogJob,
-  submitGraphJob: submitWorkflowGraphJob,
-});
+export const orchestratedWorkflowBackendService =
+  defaultWorkbenchRuntimeBackedBackendServices.workflow;

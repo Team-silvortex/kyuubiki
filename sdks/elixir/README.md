@@ -152,5 +152,7 @@ Example:
   `cd sdks/elixir && mix run examples/run_material_report.exs`
 - Material research bundle invocation:
   `cd sdks/elixir && mix run examples/validate_material_research_bundle.exs`
+- Validate a generated bundle:
+  `cd sdks/elixir && mix run examples/validate_material_research_bundle.exs ../../tmp/material-research-bundle-composite.json`
 - Smoke test:
   `cd sdks/elixir && mix test`
