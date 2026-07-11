@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "1.17.8",
+  "shipping_version": "1.18.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "channels": [
@@ -8,12 +8,12 @@
       "id": "stable",
       "label": "Stable",
       "tag": "tamamono:stable",
-      "version": "1.17.8",
+      "version": "1.18.0",
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.17",
-        "tamamono:1.17.8"
+        "tamamono:1.18",
+        "tamamono:1.18.0"
       ],
       "notes": [
         "Primary operator-facing update track for the current pre-moxi development line.",

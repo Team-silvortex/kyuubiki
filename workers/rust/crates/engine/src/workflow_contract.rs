@@ -1,10 +1,12 @@
 use kyuubiki_protocol::WorkflowGraph;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), String> {
     let Some(contract) = graph.dataset_contract.as_ref() else {
         return Ok(());
     };
+
+    validate_dataset_value_ids(graph.id.as_str(), contract)?;
 
     let value_map = contract
         .values
@@ -136,5 +138,96 @@ pub fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), S
         }
     }
 
+    Ok(())
+}
+
+fn validate_dataset_value_ids(
+    graph_id: &str,
+    contract: &kyuubiki_protocol::WorkflowDatasetContract,
+) -> Result<(), String> {
+    let mut value_ids = HashSet::new();
+    for value in &contract.values {
+        if value.id.trim().is_empty() {
+            return Err(format!(
+                "workflow {graph_id} dataset contract contains an empty dataset value id"
+            ));
+        }
+        if !value_ids.insert(value.id.as_str()) {
+            return Err(format!(
+                "workflow {graph_id} dataset contract contains duplicate dataset value id {}",
+                value.id
+            ));
+        }
+        validate_dataset_value_metadata(graph_id, value)?;
+    }
+    Ok(())
+}
+
+fn validate_dataset_value_metadata(
+    graph_id: &str,
+    value: &kyuubiki_protocol::WorkflowDatasetValueInfo,
+) -> Result<(), String> {
+    if !kyuubiki_protocol::WORKFLOW_DATASET_DATA_CLASSES.contains(&value.data_class.as_str()) {
+        return Err(format!(
+            "workflow {graph_id} dataset value {} uses unsupported data_class {}",
+            value.id, value.data_class
+        ));
+    }
+    if value.element_type.trim().is_empty() {
+        return Err(format!(
+            "workflow {graph_id} dataset value {} has an empty element_type",
+            value.id
+        ));
+    }
+    if value
+        .semantic_type
+        .as_deref()
+        .is_some_and(|semantic_type| semantic_type.trim().is_empty())
+    {
+        return Err(format!(
+            "workflow {graph_id} dataset value {} has an empty semantic_type",
+            value.id
+        ));
+    }
+    if value
+        .unit
+        .as_deref()
+        .is_some_and(|unit| unit.trim().is_empty())
+    {
+        return Err(format!(
+            "workflow {graph_id} dataset value {} has an empty unit",
+            value.id
+        ));
+    }
+    if let Some(schema_ref) = &value.schema_ref {
+        if schema_ref.schema.trim().is_empty() || schema_ref.version.trim().is_empty() {
+            return Err(format!(
+                "workflow {graph_id} dataset value {} has an empty schema_ref",
+                value.id
+            ));
+        }
+    }
+    validate_dataset_shape(graph_id, value)
+}
+
+fn validate_dataset_shape(
+    graph_id: &str,
+    value: &kyuubiki_protocol::WorkflowDatasetValueInfo,
+) -> Result<(), String> {
+    let mut axis_ids = HashSet::new();
+    for axis in &value.shape.axes {
+        if axis.id.trim().is_empty() {
+            return Err(format!(
+                "workflow {graph_id} dataset value {} has an empty shape axis id",
+                value.id
+            ));
+        }
+        if !axis_ids.insert(axis.id.as_str()) {
+            return Err(format!(
+                "workflow {graph_id} dataset value {} has duplicate shape axis id {}",
+                value.id, axis.id
+            ));
+        }
+    }
     Ok(())
 }

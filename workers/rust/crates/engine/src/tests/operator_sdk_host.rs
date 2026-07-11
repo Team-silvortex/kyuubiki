@@ -336,7 +336,7 @@ fn host_policy_accepts_package_when_host_version_satisfies_minimum() {
 
     let (registry, report) = built_in_registry_with_external_packages(
         &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root)
-            .with_host_version("1.17.8"),
+            .with_host_version("1.18.0"),
         &TestActivator,
     )
     .expect("host version should satisfy package minimum");

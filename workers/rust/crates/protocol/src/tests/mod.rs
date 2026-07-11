@@ -7,6 +7,7 @@ mod operator_task_ir_fuzz;
 mod rpc_fuzz;
 mod spring_control_rpc;
 mod thermal_plane_rpc;
+mod workflow_dataset_contract;
 mod workflows;
 
 mod prelude {
@@ -47,8 +48,8 @@ mod prelude {
         ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
         ThermalPlaneTriangleElementResult, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
         Torsion1dElementInput, Torsion1dNodeInput, TransientHeatBar1dElementInput,
-        TransientSpring1dElementInput, TransientSpring1dNodeInput, WorkflowCachePolicy,
-        WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding,
+        TransientSpring1dElementInput, TransientSpring1dNodeInput, WORKFLOW_DATASET_DATA_CLASSES,
+        WorkflowCachePolicy, WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding,
         WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge,
         WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
         WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, canonical_json,

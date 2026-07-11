@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-platform",
  "serde",
@@ -1683,7 +1683,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-engine"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -1696,7 +1696,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-platform",
@@ -1706,7 +1706,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer-gui"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
@@ -1718,7 +1718,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -1728,11 +1728,11 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "1.17.8"
+version = "1.18.0"
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "1.17.8"
+version = "1.18.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

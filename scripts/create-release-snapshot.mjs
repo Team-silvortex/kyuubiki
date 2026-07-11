@@ -23,6 +23,23 @@ import {
   writeJson,
 } from "./release-metadata.mjs";
 
+const CURRENT_SOURCE_VERSION_FILES = [
+  { kind: "package", path: "apps/frontend/package.json", field: "version" },
+  { kind: "package", path: "apps/hub-gui/package.json", field: "version" },
+  { kind: "cargo", path: "apps/hub-gui/src-tauri/Cargo.toml", field: "version" },
+  { kind: "json", path: "apps/hub-gui/src-tauri/tauri.conf.json", field: "version" },
+  { kind: "json", path: "apps/hub-gui/ui/assets/brand.json", field: "releaseVersion" },
+  { kind: "package", path: "apps/workbench-gui/package.json", field: "version" },
+  { kind: "cargo", path: "apps/workbench-gui/src-tauri/Cargo.toml", field: "version" },
+  { kind: "json", path: "apps/workbench-gui/src-tauri/tauri.conf.json", field: "version" },
+  { kind: "json", path: "apps/workbench-gui/ui/assets/brand.json", field: "releaseVersion" },
+  { kind: "package", path: "apps/installer-gui/package.json", field: "version" },
+  { kind: "cargo", path: "apps/installer-gui/src-tauri/Cargo.toml", field: "version" },
+  { kind: "json", path: "apps/installer-gui/src-tauri/tauri.conf.json", field: "version" },
+  { kind: "json", path: "apps/installer-gui/ui/assets/brand.json", field: "releaseVersion" },
+  { kind: "cargo", path: "workers/rust/Cargo.toml", field: "version" },
+];
+
 const RELEASE_FRONTEND_CHECKS = [
   "npm run typecheck",
   "npm run build",
@@ -103,7 +120,69 @@ function runSelfTest() {
   assert(RELEASE_REPO_CHECKS.includes("make operator-package-preflight"));
   assert(RELEASE_REPO_CHECKS.includes("make architecture-check"));
   assert.equal(new Set(RELEASE_REPO_CHECKS).size, RELEASE_REPO_CHECKS.length);
+  assert.deepEqual(
+    collectSourceVersionIssues("1.18.0", [
+      { path: "ok.json", field: "version", actual: "1.18.0" },
+      { path: "stale.json", field: "version", actual: "1.17.8" },
+    ]),
+    [{ path: "stale.json", field: "version", actual: "1.17.8", expected: "1.18.0" }],
+  );
   console.log("release snapshot self-test passed");
+}
+
+function readRepoJson(relativePath) {
+  return readJson(path.join(rootDir, relativePath));
+}
+
+function readRepoText(relativePath) {
+  return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
+}
+
+function readCargoVersion(relativePath) {
+  return readRepoText(relativePath).match(/^version\s*=\s*"([^"]+)"/mu)?.[1] ?? null;
+}
+
+function sourceVersionRows() {
+  return CURRENT_SOURCE_VERSION_FILES.map((entry) => {
+    const actual =
+      entry.kind === "cargo"
+        ? readCargoVersion(entry.path)
+        : readRepoJson(entry.path)[entry.field] ?? null;
+
+    return {
+      path: entry.path,
+      field: entry.field,
+      actual,
+    };
+  });
+}
+
+function collectSourceVersionIssues(version, rows = sourceVersionRows()) {
+  return rows
+    .filter((row) => row.actual !== version)
+    .map((row) => ({ ...row, expected: version }));
+}
+
+function assertCurrentSourceVersions(version, status) {
+  if (status !== "current") {
+    return;
+  }
+
+  const issues = collectSourceVersionIssues(version);
+  if (issues.length === 0) {
+    return;
+  }
+
+  const details = issues
+    .map((issue) => `- ${issue.path} :: ${issue.field} expected ${issue.expected} but found ${issue.actual}`)
+    .join("\n");
+  throw new Error(
+    [
+      `Cannot create a current release snapshot for ${version} before source versions are aligned.`,
+      "Update package, Tauri, brand, and Rust workspace versions first, then rerun the snapshot command.",
+      details,
+    ].join("\n"),
+  );
 }
 
 function buildSnapshot(version, options) {
@@ -251,6 +330,8 @@ function main() {
   if (fs.existsSync(snapshotPath) && !options.force) {
     throw new Error(`Snapshot already exists at ${path.relative(rootDir, snapshotPath)}. Use --force to overwrite.`);
   }
+
+  assertCurrentSourceVersions(options.version, options.status);
 
   const snapshot = buildSnapshot(options.version, options);
   const nextIndex = updateIndex(options.version, options);

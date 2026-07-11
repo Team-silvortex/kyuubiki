@@ -189,7 +189,7 @@ function runSelfTest() {
   issues.length = 0;
   const sample = {
     schema_version: expectedSchema,
-    shipping_version: "1.17.8",
+    shipping_version: "1.18.0",
     source_contracts: {
       installation_integrity: "deploy/installation-integrity-contract.json",
       update_channels: "deploy/update-channels.json",
@@ -222,9 +222,9 @@ function runSelfTest() {
 
   validateContract(
     sample,
-    { shipping_version: "1.17.8", protected_paths: ["tmp/data"] },
+    { shipping_version: "1.18.0", protected_paths: ["tmp/data"] },
     {
-      shipping_version: "1.17.8",
+      shipping_version: "1.18.0",
       channels: [
         {
           id: "stable",
@@ -246,8 +246,8 @@ function runSelfTest() {
 
   issues.length = 0;
   sample.local_retention_policy.removable_roots = ["/tmp/unsafe"];
-  validateContract(sample, { shipping_version: "1.17.8", protected_paths: ["tmp/data"] }, {
-    shipping_version: "1.17.8",
+  validateContract(sample, { shipping_version: "1.18.0", protected_paths: ["tmp/data"] }, {
+    shipping_version: "1.18.0",
     channels: [],
   }, "", "");
 

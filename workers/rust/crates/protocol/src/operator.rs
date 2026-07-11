@@ -2,6 +2,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+pub const WORKFLOW_DATASET_DATA_CLASSES: &[&str] = &[
+    "study_model",
+    "result",
+    "field",
+    "table",
+    "report",
+    "export",
+    "scalar",
+    "metadata",
+];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OperatorKind {

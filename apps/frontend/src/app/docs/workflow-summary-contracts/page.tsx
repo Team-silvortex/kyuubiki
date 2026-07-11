@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
 export const metadata: Metadata = {
-  title: "Workflow Summary Contracts | tamamono 1.17.8",
+  title: "Workflow Summary Contracts | tamamono 1.18.0",
   description: "Summary artifact contract reference for cross-operator workflow extracts and transforms.",
 };
 
@@ -35,7 +35,7 @@ export default function WorkflowSummaryContractsPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.17.8</p>
+        <p style={eyebrowStyle}>tamamono 1.18.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Summary Contracts
         </h1>

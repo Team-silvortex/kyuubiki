@@ -1,7 +1,7 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
 .PHONY: check-make-modules check-module-topology check-module-function-matrix build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
-.PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
+.PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
@@ -60,8 +60,13 @@ check-gui-runtime-capability-contract:
 	@node ./scripts/check-gui-runtime-capability-contract.mjs
 
 check-version-line:
+	@node ./scripts/create-release-snapshot.mjs --self-test
 	@node ./scripts/audit-version-line.mjs --self-test
 	@node ./scripts/audit-version-line.mjs
+
+check-workflow-dataset-contract:
+	@node ./scripts/check-workflow-dataset-contract.mjs --self-test
+	@node ./scripts/check-workflow-dataset-contract.mjs
 
 check-material-score-contract:
 	@node ./scripts/validate-material-score-contract.mjs
@@ -191,6 +196,7 @@ architecture-check:
 	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
+	@$(MAKE) check-workflow-dataset-contract
 	@$(MAKE) check-material-score-contract
 	@$(MAKE) check-materialization-plan-contract
 	@$(MAKE) check-material-study-execution-plan-contract

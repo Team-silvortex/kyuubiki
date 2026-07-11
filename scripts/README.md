@@ -12,7 +12,10 @@ This directory contains host-native operational entry points.
 - `create-release-snapshot.mjs`
   Scaffold a new lightweight release snapshot manifest and update the release
   index. When a snapshot is marked `current`, it also advances the shared
-  shipping-version contracts.
+  shipping-version contracts. Current snapshots require package, Tauri, brand,
+  and Rust workspace source versions to match the requested version before the
+  snapshot is written, so release metadata cannot capture stale product-surface
+  versions.
 - `build-update-catalog.mjs`
   Generate the shared update catalog JSON plus HTML docs from release snapshots
   and the human-owned channel contract.
@@ -76,6 +79,12 @@ This directory contains host-native operational entry points.
   runtime hints, and recomputes canonical `descriptor_digest` and `task_digest`
   values, including a fractional-number fixture, before agent or SDK tests need
   to run.
+- `check-workflow-dataset-contract.mjs`
+  Verify the ONNX-like workflow dataset schema, standalone example, workflow
+  graph embedded dataset contract, graph port/edge dataset references, and the
+  runtime rule documentation. It mirrors the Rust engine's dataset-contract
+  validation so broken cross-operator value metadata is caught before workflow
+  execution.
 - `check-materialization-plan-contract.mjs`
   Verify the shared material candidate materialization plan schema, fixture,
   and SDK documentation links. It keeps reviewed agent/lab materialization
@@ -302,7 +311,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.17.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.18.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.

@@ -8,7 +8,7 @@ test("applyAllWorkflowValidationFixes repairs a simple edge artifact mismatch", 
     schema_version: "kyuubiki.workflow-graph/v1",
     id: "workflow.validation-fix",
     name: "workflow validation fix",
-    version: "1.17.8",
+    version: "1.18.0",
     nodes: [
       {
         id: "input_node",

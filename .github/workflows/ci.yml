@@ -120,6 +120,7 @@ jobs:
       - run: make check-ui-automation-contract
       - run: make check-language-packs
       - run: make check-version-line
+      - run: make check-workflow-dataset-contract
       - run: make check-operator-reliability
       - run: make check-material-research-bundle-contract
       - run: make check-toolchains

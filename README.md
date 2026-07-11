@@ -9,10 +9,9 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 
 `tamamono 1.x` is the active repository-wide version line.
 
-The latest broadly documented shipping snapshot is `tamamono 1.15.0`, while
-the current documentation posture is being aligned for the `1.15.x`
-preparation window inside the wider `1.15.x` to `1.20.x` industrialization
-range.
+The current repository-wide development snapshot is `tamamono 1.18.0`, while
+the documentation posture is aligned for the `1.18.x` preparation window
+inside the wider pre-`moxi` industrialization range.
 
 It also now has an explicit deployment split:
 

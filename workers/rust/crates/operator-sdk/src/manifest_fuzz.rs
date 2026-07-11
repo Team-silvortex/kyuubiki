@@ -75,7 +75,7 @@ fn manifest_fixture(rng: &mut FuzzRng, case_index: usize) -> Value {
         },
         "package_id": format!("operator.fuzz.{case_index}"),
         "package_version": "0.1.0",
-        "minimum_host_version": "1.17.8",
+        "minimum_host_version": "1.18.0",
         "validation_status": pick_validation_status(rng),
         "validation_notes": "Deterministic manifest fuzz-smoke fixture.",
         "runtime": pick_runtime(rng),
