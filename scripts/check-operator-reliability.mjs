@@ -130,8 +130,14 @@ function validateStokesReviewEvidence(entry, context) {
     "scope_notes"
   );
   validateEvidenceReferences(
-    review.tolerance_notes,
+    review.tolerance_notes.filter((reference) => reference.endsWith(".md#cfd-stokes-divergence-tolerance")),
     ["CFD Stokes Divergence Tolerance", "1e-10", "divergence"],
+    context,
+    "tolerance_notes"
+  );
+  validateEvidenceReferences(
+    review.tolerance_notes.filter((reference) => reference.endsWith(".json")),
+    ["stokes_screening_divergence", "1e-10", "Navier-Stokes", "mesh-convergence"],
     context,
     "tolerance_notes"
   );

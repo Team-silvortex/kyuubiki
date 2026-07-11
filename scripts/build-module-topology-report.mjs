@@ -38,6 +38,7 @@ function readTopology(topologyPath) {
 function laneIndex(topology, field, descriptions) {
   return Object.fromEntries(
     Object.entries(descriptions).map(([laneId, description]) => {
+      const planGroup = field === "benchmark_lanes" ? "benchmark" : "security";
       const modules = topology.modules
         .filter((module) => module[field].includes(laneId))
         .map((module) => ({
@@ -46,7 +47,14 @@ function laneIndex(topology, field, descriptions) {
           owned_paths: module.owned_paths,
           risk_tags: module.risk_tags,
         }));
-      return [laneId, { description, modules }];
+      return [
+        laneId,
+        {
+          description,
+          modules,
+          test_plan: topology.lane_test_plan?.[planGroup]?.[laneId] ?? [],
+        },
+      ];
     }),
   );
 }
@@ -95,6 +103,12 @@ function renderLaneMarkdown(title, lanes) {
       lines.push(
         `| \`${module.id}\` | \`${module.layer}\` | ${module.risk_tags.map((tag) => `\`${tag}\``).join(", ")} |`,
       );
+    }
+    lines.push("");
+    lines.push("Suggested commands:");
+    lines.push("");
+    for (const entry of lane.test_plan) {
+      lines.push(`- \`${entry.command}\` (${entry.scope}, ${entry.id})`);
     }
     lines.push("");
   }

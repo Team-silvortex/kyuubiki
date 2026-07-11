@@ -12,6 +12,7 @@ pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value,
     let mut terms = Vec::new();
     let mut total = 0.0;
     let mut missing_metric_count = 0u64;
+    let mut watch_count = 0u64;
     let mut blocked_term_count = 0u64;
     for (source_id, summary) in entries {
         let term = quality_term(
@@ -23,10 +24,11 @@ pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value,
         )?;
         total += term.contribution;
         missing_metric_count += term.missing_metric_count;
+        watch_count += term.watch_count;
         if !term.ready {
             blocked_term_count += 1;
         }
-        terms.push(term.into_value());
+        terms.push(term);
     }
 
     if terms.is_empty() {
@@ -36,18 +38,27 @@ pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value,
     }
 
     let grade = composite_grade(total, blocked_term_count, max_ready_score);
+    let dominant_term = dominant_composite_term(&terms);
+    let blocking_terms = composite_blocking_terms(&terms);
+    let term_values = terms
+        .into_iter()
+        .map(QualityTerm::into_value)
+        .collect::<Vec<_>>();
     Ok(serde_json::json!({
         "composite_quality_contract": "kyuubiki.composite_quality_objective/v1",
         "composite_quality_score": total,
         "composite_quality_grade": grade,
         "composite_quality_ready": grade != "block",
-        "composite_quality_term_count": terms.len(),
+        "composite_quality_term_count": term_values.len(),
         "composite_quality_missing_metric_count": missing_metric_count,
+        "composite_quality_watch_count": watch_count,
         "composite_quality_blocked_term_count": blocked_term_count,
         "composite_quality_max_ready_score": max_ready_score,
-        "composite_quality_terms": terms,
+        "composite_quality_dominant_term": dominant_term,
+        "composite_quality_blocking_terms": blocking_terms,
+        "composite_quality_terms": term_values,
         "composite_quality_summary": format!(
-            "Composite quality {grade}: score={total:.4}, blocked_terms={blocked_term_count}, missing_metrics={missing_metric_count}."
+            "Composite quality {grade}: score={total:.4}, blocked_terms={blocked_term_count}, missing_metrics={missing_metric_count}, watch={watch_count}."
         ),
     }))
 }
@@ -151,6 +162,24 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         .unwrap_or(false);
     let target_score = config_number(&config, "target_score", 3.0);
     let action = next_round_action(ready, score, target_score, &config);
+    let selected_dominant_term = selected
+        .get("dominant_term")
+        .or_else(|| {
+            selected
+                .get("objective")
+                .and_then(|objective| objective.get("composite_quality_dominant_term"))
+        })
+        .cloned()
+        .unwrap_or(Value::Null);
+    let selected_blocking_terms = selected
+        .get("blocking_terms")
+        .or_else(|| {
+            selected
+                .get("objective")
+                .and_then(|objective| objective.get("composite_quality_blocking_terms"))
+        })
+        .cloned()
+        .unwrap_or_else(|| Value::Array(Vec::new()));
 
     Ok(serde_json::json!({
         "quality_next_round_contract": "kyuubiki.quality_next_round_request/v1",
@@ -158,6 +187,8 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         "selected_candidate_id": candidate_id,
         "selected_candidate_score": score,
         "selected_candidate_ready": ready,
+        "selected_dominant_term": selected_dominant_term,
+        "selected_blocking_terms": selected_blocking_terms,
         "target_score": target_score,
         "source_ranking_contract": payload.get("quality_candidate_ranking_contract").cloned().unwrap_or(Value::Null),
         "request_payload": {
@@ -177,6 +208,7 @@ struct QualityTerm {
     value: Value,
     contribution: f64,
     missing_metric_count: u64,
+    watch_count: u64,
     ready: bool,
 }
 
@@ -219,6 +251,16 @@ impl CandidateRank {
             .get("composite_quality_blocked_term_count")
             .cloned()
             .unwrap_or(Value::Null);
+        let dominant_term = self
+            .objective
+            .get("composite_quality_dominant_term")
+            .cloned()
+            .unwrap_or(Value::Null);
+        let blocking_terms = self
+            .objective
+            .get("composite_quality_blocking_terms")
+            .cloned()
+            .unwrap_or_else(|| Value::Array(Vec::new()));
 
         serde_json::json!({
             "rank": rank,
@@ -230,6 +272,8 @@ impl CandidateRank {
             "term_count": term_count,
             "missing_metric_count": missing_metric_count,
             "blocked_term_count": blocked_term_count,
+            "dominant_term": dominant_term,
+            "blocking_terms": blocking_terms,
             "objective": self.objective,
         })
     }
@@ -314,7 +358,14 @@ fn quality_term(
     let ready = find_bool_suffix(summary, "_quality_ready").unwrap_or(false);
     let missing_metric_count =
         find_u64_suffix(summary, "_quality_missing_metric_count").unwrap_or(0);
+    let watch_count = find_u64_suffix(summary, "_quality_watch_count").unwrap_or(0);
     let grade = find_string_suffix(summary, "_quality_grade").unwrap_or("unknown");
+    let dominant_term = find_value_suffix(summary, "_quality_dominant_term")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let blocking_terms = find_value_suffix(summary, "_quality_blocking_terms")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(Vec::new()));
     let weight = quality_weight(config, source_id, &domain);
     let weighted_score = score * weight;
     let missing_penalty = missing_metric_count as f64 * missing_metric_penalty;
@@ -324,6 +375,7 @@ fn quality_term(
     Ok(QualityTerm {
         contribution,
         missing_metric_count,
+        watch_count,
         ready,
         value: serde_json::json!({
             "source": source_id,
@@ -335,10 +387,63 @@ fn quality_term(
             "ready": ready,
             "grade": grade,
             "missing_metric_count": missing_metric_count,
+            "watch_count": watch_count,
             "missing_metric_penalty": missing_penalty,
             "readiness_penalty": readiness_penalty,
             "contribution": contribution,
+            "dominant_term": dominant_term,
+            "blocking_terms": blocking_terms,
         }),
+    })
+}
+
+fn dominant_composite_term(terms: &[QualityTerm]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| left.contribution.total_cmp(&right.contribution))
+        .map(|term| compact_composite_term(&term.value))
+        .unwrap_or(Value::Null)
+}
+
+fn composite_blocking_terms(terms: &[QualityTerm]) -> Vec<Value> {
+    terms
+        .iter()
+        .filter_map(|term| {
+            let source_blocking_terms = term
+                .value
+                .get("blocking_terms")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let ready = term
+                .value
+                .get("ready")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            if ready && source_blocking_terms.is_empty() {
+                None
+            } else {
+                let mut compact = compact_composite_term(&term.value);
+                if let Some(object) = compact.as_object_mut() {
+                    object.insert(
+                        "source_blocking_terms".to_string(),
+                        Value::Array(source_blocking_terms),
+                    );
+                }
+                Some(compact)
+            }
+        })
+        .collect()
+}
+
+fn compact_composite_term(term: &Value) -> Value {
+    serde_json::json!({
+        "source": term.get("source").cloned().unwrap_or(Value::Null),
+        "domain": term.get("domain").cloned().unwrap_or(Value::Null),
+        "grade": term.get("grade").cloned().unwrap_or(Value::Null),
+        "ready": term.get("ready").cloned().unwrap_or(Value::Null),
+        "contribution": term.get("contribution").cloned().unwrap_or(Value::Null),
+        "dominant_term": term.get("dominant_term").cloned().unwrap_or(Value::Null),
     })
 }
 
@@ -409,6 +514,12 @@ fn find_string_suffix<'a>(summary: &'a Map<String, Value>, suffix: &str) -> Opti
             None
         }
     })
+}
+
+fn find_value_suffix<'a>(summary: &'a Map<String, Value>, suffix: &str) -> Option<&'a Value> {
+    summary
+        .iter()
+        .find_map(|(key, value)| key.ends_with(suffix).then_some(value))
 }
 
 fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {

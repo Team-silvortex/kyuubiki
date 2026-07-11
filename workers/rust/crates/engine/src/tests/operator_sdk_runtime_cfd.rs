@@ -106,6 +106,21 @@ fn scores_cfd_quality_objective_through_sdk_registry() {
     );
     assert_eq!(quality["cfd_quality_score"].as_f64(), Some(5.0));
     assert_eq!(quality["cfd_quality_grade"].as_str(), Some("good"));
+    assert_eq!(quality["cfd_quality_watch_count"].as_u64(), Some(1));
+    assert_eq!(
+        quality["cfd_quality_dominant_term"]["field"].as_str(),
+        Some("cfd_divergence_error_peak")
+    );
+    assert_eq!(
+        quality["cfd_quality_dominant_term"]["penalty"].as_f64(),
+        Some(2.0)
+    );
+    assert_eq!(
+        quality["cfd_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
 }
 
 #[test]
@@ -124,5 +139,17 @@ fn blocks_cfd_quality_when_required_metrics_are_missing() {
             .as_u64()
             .unwrap_or_default()
             > 0
+    );
+    assert_eq!(
+        quality["cfd_quality_dominant_term"]["field"].as_str(),
+        Some("cfd_divergence_error_peak")
+    );
+    let blocking_terms = quality["cfd_quality_blocking_terms"]
+        .as_array()
+        .expect("blocking terms should be an array");
+    assert!(
+        blocking_terms
+            .iter()
+            .any(|term| term["field"].as_str() == Some("cfd_reynolds_number_peak"))
     );
 }

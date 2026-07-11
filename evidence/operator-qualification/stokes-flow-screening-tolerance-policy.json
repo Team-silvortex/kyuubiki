@@ -1,0 +1,45 @@
+{
+  "schema_version": "kyuubiki.operator-screening-tolerance-policy/v1",
+  "version_line": "tamamono 1.16.x",
+  "candidate_id": "screening-cfd-boundary",
+  "operator_id": "solve.stokes_flow_quad_2d",
+  "status": "collecting",
+  "artifact_profile": "stokes_screening_divergence",
+  "source_tests": [
+    "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+    "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs"
+  ],
+  "scope": {
+    "allowed": [
+      "single rectangular quad Stokes screening fixtures",
+      "linear low-Reynolds-number diagnostic plumbing",
+      "velocity, pressure, divergence, Reynolds, and dissipation regression checks",
+      "boundary-response smoke and review fixtures"
+    ],
+    "not_allowed": [
+      "general Navier-Stokes validation",
+      "turbulence or compressible-flow claims",
+      "mesh-convergence claims",
+      "production CFD design tolerances",
+      "geometry families outside the compact rectangular screening patch"
+    ]
+  },
+  "policy": {
+    "divergence_regression_tolerance": {
+      "kind": "absolute",
+      "value": 1e-10,
+      "applies_to": [
+        "closed arithmetic comparison between stored element divergence_error and recomputed fixture divergence",
+        "result max_divergence_error equality for the same compact fixture"
+      ],
+      "rationale": "The current Stokes screening fixtures compute divergence directly from the same compact quad arithmetic path. The 1e-10 gate catches implementation drift without implying incompressible CFD convergence."
+    },
+    "boundary_response_status": {
+      "kind": "review_fixture",
+      "value": "collecting",
+      "rationale": "The lid-driven shear boundary response adds review coverage, but it is still a compact regression fixture rather than validation evidence."
+    }
+  },
+  "promotion_rule": "Do not promote solve.stokes_flow_quad_2d beyond review until a mesh refinement or reference-tool comparison replaces this screening-only divergence policy.",
+  "remaining_gate": "Attach convergence or external-reference evidence before any qualification claim."
+}

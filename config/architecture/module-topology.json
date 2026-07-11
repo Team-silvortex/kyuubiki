@@ -19,6 +19,82 @@
     "remote_deploy": "Remote installer, SSH deployment, host trust, cleanup, and residual policy.",
     "data_contract": "Schemas, workflow datasets, result contracts, language packs, and import/export validation."
   },
+  "lane_test_plan": {
+    "benchmark": {
+      "ui_startup": [
+        { "id": "ui-layout", "command": "cd apps/frontend && npm run check:ui-layout", "scope": "local" },
+        { "id": "ui-mechanical-smoke", "command": "make test-integration-ui-mechanical", "scope": "integration" },
+        { "id": "ui-thermal-smoke", "command": "make test-integration-ui-thermal", "scope": "integration" }
+      ],
+      "workflow_catalog": [
+        { "id": "workflow-preflight", "command": "make workflow-preflight", "scope": "local" },
+        { "id": "workflow-catalog-report", "command": "make test-integration-workflow-catalog-report", "scope": "integration" },
+        { "id": "workflow-catalog-nightly", "command": "make test-integration-workflow-catalog-nightly", "scope": "remote" }
+      ],
+      "control_plane": [
+        { "id": "web-tests", "command": "make test-web", "scope": "local" },
+        { "id": "api-smoke", "command": "make test-integration-api", "scope": "integration" },
+        { "id": "cluster-smoke", "command": "make test-integration-cluster", "scope": "integration" }
+      ],
+      "runtime_solver": [
+        { "id": "rust-tests", "command": "make test-rust", "scope": "local" },
+        { "id": "physics-coverage", "command": "make benchmark-physics-coverage", "scope": "benchmark" },
+        { "id": "standard-compare", "command": "make benchmark-standard-compare", "scope": "benchmark" }
+      ],
+      "mesh": [
+        { "id": "direct-mesh-smoke", "command": "make test-integration-direct-mesh", "scope": "integration" },
+        { "id": "direct-mesh-docker-report", "command": "make test-integration-direct-mesh-docker-report", "scope": "benchmark" },
+        { "id": "workflow-mesh", "command": "make test-integration-workflow-mesh", "scope": "integration" }
+      ],
+      "sdk_headless": [
+        { "id": "sdk-smoke", "command": "make test-sdk", "scope": "local" },
+        { "id": "material-sdk-examples", "command": "make check-material-study-sdk-examples", "scope": "local" },
+        { "id": "material-research-example", "command": "make verify-material-research-example", "scope": "integration" }
+      ],
+      "installer_release": [
+        { "id": "install-disk-hygiene", "command": "make check-install-update-disk-hygiene", "scope": "local" },
+        { "id": "operator-package-preflight", "command": "make operator-package-preflight", "scope": "local" },
+        { "id": "remote-ssh-fixture", "command": "make test-integration-remote-ssh-fixture", "scope": "integration" }
+      ]
+    },
+    "security": {
+      "ui_boundary": [
+        { "id": "ui-automation-contract", "command": "make check-ui-automation-contract", "scope": "local" },
+        { "id": "gui-runtime-capability", "command": "make check-gui-runtime-capability-contract", "scope": "local" },
+        { "id": "frontend-storage-security", "command": "cd apps/frontend && npm run check:storage-security", "scope": "local" }
+      ],
+      "api_auth": [
+        { "id": "web-auth-tests", "command": "make test-web", "scope": "local" },
+        { "id": "cluster-smoke", "command": "make test-integration-cluster", "scope": "integration" },
+        { "id": "direct-mesh-smoke", "command": "make test-integration-direct-mesh", "scope": "integration" }
+      ],
+      "runtime_sandbox": [
+        { "id": "fuzz-smoke", "command": "make fuzz-smoke", "scope": "local" },
+        { "id": "operator-task-ir", "command": "make check-operator-task-ir-contract", "scope": "local" },
+        { "id": "operator-reliability", "command": "make check-operator-reliability", "scope": "local" }
+      ],
+      "supply_chain": [
+        { "id": "dependency-audit", "command": "make audit-dependencies", "scope": "local" },
+        { "id": "version-line", "command": "make check-version-line", "scope": "local" },
+        { "id": "update-disk-hygiene", "command": "make check-install-update-disk-hygiene", "scope": "local" }
+      ],
+      "credential_storage": [
+        { "id": "frontend-storage-security", "command": "cd apps/frontend && npm run check:storage-security", "scope": "local" },
+        { "id": "installer-credential-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture", "scope": "local" },
+        { "id": "remote-host-trust-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture", "scope": "local" }
+      ],
+      "remote_deploy": [
+        { "id": "remote-ssh-fixture", "command": "make test-integration-remote-ssh-fixture", "scope": "integration" },
+        { "id": "remote-deploy-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture", "scope": "local" },
+        { "id": "deploy-server-tests", "command": "cd workers/rust && cargo test -p kyuubiki-deploy-server -- --nocapture", "scope": "local" }
+      ],
+      "data_contract": [
+        { "id": "architecture-check", "command": "make architecture-check", "scope": "release" },
+        { "id": "doc-book", "command": "make check-doc-book", "scope": "local" },
+        { "id": "local-path-audit", "command": "node scripts/audit-local-paths.mjs", "scope": "local" }
+      ]
+    }
+  },
   "modules": [
     {
       "id": "contracts",

@@ -1,0 +1,137 @@
+{
+  "schema_version": "kyuubiki.module-function-coverage-matrix/v1",
+  "version_line": "tamamono 1.16.x",
+  "topology": "config/architecture/module-topology.json",
+  "paradigms": {
+    "product_surface": "User-facing shell, navigation, UX, and stable UI automation anchors.",
+    "runtime_api": "Backend service, protocol, or adapter API used by GUI or SDK clients.",
+    "solver_execution": "Numerical execution, TaskIR execution, agent execution, or solver kernel behavior.",
+    "workflow_composition": "Workflow graph, operator chains, templates, package flows, or task lowering.",
+    "validation": "Operator validation, local invariants, cross-checks, schemas, or reliability evidence.",
+    "benchmark": "Performance profile, regression lane, retained summary, or benchmark comparison.",
+    "security": "Authentication, sandboxing, credential handling, package admission, or audit behavior.",
+    "persistence_provenance": "Database, snapshot, result bundle, lineage, report, or release evidence retention.",
+    "deployment_update": "Install, update, repair, remote deployment, package staging, or cleanup behavior.",
+    "sdk_headless": "Rust, Python, Elixir, or protocol-first headless automation access."
+  },
+  "required_by_module": {
+    "contracts": ["validation", "security", "persistence_provenance"],
+    "hub-shell": ["product_surface", "security", "deployment_update"],
+    "workbench-shell": ["product_surface", "workflow_composition", "validation", "sdk_headless"],
+    "installer-shell": ["product_surface", "deployment_update", "security", "persistence_provenance"],
+    "orchestra-control-plane": ["runtime_api", "workflow_composition", "security", "persistence_provenance"],
+    "runtime-protocol": ["runtime_api", "solver_execution", "validation", "security"],
+    "runtime-engine-solver": ["solver_execution", "validation", "benchmark", "security"],
+    "runtime-agent-cli": ["runtime_api", "solver_execution", "benchmark", "security", "deployment_update"],
+    "runtime-installer": ["deployment_update", "security", "validation", "persistence_provenance"],
+    "sdk-headless": ["runtime_api", "workflow_composition", "validation", "sdk_headless"],
+    "verification-evidence": ["validation", "benchmark", "security", "persistence_provenance"]
+  },
+  "cells": {
+    "contracts": {
+      "runtime_api": "partial",
+      "workflow_composition": "covered",
+      "validation": "covered",
+      "benchmark": "partial",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "sdk_headless": "partial"
+    },
+    "hub-shell": {
+      "product_surface": "covered",
+      "runtime_api": "partial",
+      "security": "covered",
+      "persistence_provenance": "partial",
+      "deployment_update": "covered"
+    },
+    "workbench-shell": {
+      "product_surface": "covered",
+      "runtime_api": "partial",
+      "workflow_composition": "covered",
+      "validation": "partial",
+      "benchmark": "partial",
+      "security": "covered",
+      "persistence_provenance": "partial",
+      "sdk_headless": "partial"
+    },
+    "installer-shell": {
+      "product_surface": "covered",
+      "runtime_api": "partial",
+      "validation": "partial",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "deployment_update": "covered"
+    },
+    "orchestra-control-plane": {
+      "runtime_api": "covered",
+      "solver_execution": "partial",
+      "workflow_composition": "covered",
+      "validation": "partial",
+      "benchmark": "partial",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "sdk_headless": "partial"
+    },
+    "runtime-protocol": {
+      "runtime_api": "covered",
+      "solver_execution": "partial",
+      "workflow_composition": "covered",
+      "validation": "covered",
+      "benchmark": "partial",
+      "security": "covered",
+      "sdk_headless": "covered"
+    },
+    "runtime-engine-solver": {
+      "runtime_api": "partial",
+      "solver_execution": "covered",
+      "workflow_composition": "covered",
+      "validation": "covered",
+      "benchmark": "covered",
+      "security": "covered",
+      "persistence_provenance": "partial",
+      "sdk_headless": "partial"
+    },
+    "runtime-agent-cli": {
+      "runtime_api": "covered",
+      "solver_execution": "covered",
+      "workflow_composition": "partial",
+      "validation": "partial",
+      "benchmark": "covered",
+      "security": "covered",
+      "persistence_provenance": "partial",
+      "deployment_update": "partial",
+      "sdk_headless": "partial"
+    },
+    "runtime-installer": {
+      "runtime_api": "partial",
+      "workflow_composition": "partial",
+      "validation": "covered",
+      "benchmark": "partial",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "deployment_update": "covered",
+      "sdk_headless": "partial"
+    },
+    "sdk-headless": {
+      "runtime_api": "covered",
+      "solver_execution": "partial",
+      "workflow_composition": "covered",
+      "validation": "partial",
+      "benchmark": "partial",
+      "security": "partial",
+      "persistence_provenance": "partial",
+      "sdk_headless": "covered"
+    },
+    "verification-evidence": {
+      "runtime_api": "partial",
+      "solver_execution": "partial",
+      "workflow_composition": "partial",
+      "validation": "covered",
+      "benchmark": "covered",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "deployment_update": "partial",
+      "sdk_headless": "partial"
+    }
+  }
+}

@@ -123,15 +123,15 @@
       ],
       "rationale": "The Stokes operator is intentionally screening-grade; it now has a second boundary response but still needs explicit scope and qualification evidence before higher trust.",
       "evidence_gaps": [
-        "documented divergence tolerance provenance",
-        "scope note explaining Stokes-only limits"
+        "mesh-convergence or external-reference evidence",
+        "scope note explaining Stokes-only limits beyond screening fixtures"
       ],
       "required_artifacts": [
         "alternate boundary response regression",
-        "divergence tolerance note",
+        "screening divergence tolerance policy",
         "screening-scope documentation"
       ],
-      "graduation_gate": "do not qualify until the Stokes-only screening scope and divergence tolerance provenance are documented"
+      "graduation_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence"
     }
   ]
 }

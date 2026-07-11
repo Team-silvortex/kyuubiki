@@ -14,6 +14,10 @@ contributors and automation.
   Per-domain solve-operator reliability shards. Each entry maps one
   `physics-coverage` benchmark template to one exported solve operator plus
   evidence, limits, and the current trust level.
+- `operator-validation-profiles.json`
+  Operator Validation Harness profile contract. It groups operators into
+  executable validation profiles with analytic checks, local formal
+  invariants, cross-check commands, and evidence paths.
 - `operator-qualification-roadmap.json`
   Planning queue for the first review-level operators that should be hardened
   toward `qualification`. It does not by itself upgrade any operator.
@@ -22,7 +26,9 @@ contributors and automation.
   A kit describes what must be collected before real `evidence.qualification`
   can be added to the reliability shards.
 
-Run `make check-operator-reliability` after changing any of these files.
+Run `make check-operator-reliability` and `make check-operator-validation`
+after changing any of these files. Use `make verify-operator-validation` when
+the profile commands themselves should be executed.
 
 ## Benchmark And Audit Inputs
 
@@ -31,12 +37,18 @@ Run `make check-operator-reliability` after changing any of these files.
   SDKs, contracts, and verification gates onto benchmark and security lanes.
   This is the machine-readable architecture map for targeted performance and
   safety testing.
+- `architecture/module-function-coverage-matrix.json`
+  Module x function-paradigm coverage matrix. It checks that each architecture
+  module has explicit coverage status across product surface, runtime API,
+  solver execution, workflow composition, validation, benchmark, security,
+  persistence, deployment, and headless SDK paradigms.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
 - `dependency-audit-lockfiles.json`
   Security-audit lane contract for npm and Rust lockfile checks.
 
-Run `make check-module-topology` after changing architecture topology.
+Run `make check-module-topology` after changing architecture topology. Run
+`make check-module-function-matrix` after changing module/function coverage.
 Run `make audit-dependencies` after changing dependency-audit lanes.
 
 ## Toolchains

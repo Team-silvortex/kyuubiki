@@ -102,21 +102,26 @@ contact, or stiffness metrics against visible rules, while
 `transform.benchmark_structural_pair` compares structural candidates and
 `transform.score_structural_quality` turns a single displacement/stress/mass
 response into an optimization-ready quality score before a material-study
-workflow promotes one design.
+workflow promotes one design. The score result also exposes
+`structural_quality_dominant_term`, `structural_quality_watch_count`, and
+`structural_quality_blocking_terms`, so headless studies can explain why a
+candidate needs another iteration without parsing every term manually.
 
 The thermal line has guard, pairwise benchmark, and single-candidate quality
 coverage through `transform.evaluate_thermal_guard`,
 `transform.benchmark_coupled_heat_pair`, and
 `transform.score_thermal_quality`, so heat and thermo-mechanical branches can
 gate, compare, or rank designs by temperature, flux, temperature-delta, and
-stress objectives.
+stress objectives. Thermal scores now include dominant, watch-count, and
+blocking-term fields for automated recovery and next-step selection.
 
 The electrostatic line now mirrors that optimization shape:
 `transform.evaluate_electrostatic_guard`,
 `transform.benchmark_electrostatic_pair`, and
 `transform.score_electrostatic_quality` cover peak field, energy-density, and
 potential-span objectives before downstream heat or material branches consume
-the result.
+the result. Electrostatic quality results expose the same dominant, watch, and
+blocking explanation fields used by the other workflow-facing quality scorers.
 
 The magnetostatic line follows the same contract through
 `transform.evaluate_magnetostatic_guard`,
@@ -139,7 +144,11 @@ is promoted.
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That
 gives material exploration flows a stable loss-like scalar while preserving
-per-domain ready state, missing metrics, and contribution breakdowns.
+per-domain ready state, missing metrics, watch counts, dominant risk terms, and
+blocking explanations. `transform.rank_quality_candidates` and
+`transform.prepare_quality_next_round_request` carry those explanation fields
+forward, so an automated study can select the best candidate and still know
+which physics metric should drive the next iteration.
 The Rust engine and Web/Elixir workflow runtime both expose these domain
 quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.

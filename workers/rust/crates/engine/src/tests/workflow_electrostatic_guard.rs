@@ -147,6 +147,20 @@ fn scores_electrostatic_quality_with_field_energy_and_potential_terms() {
         quality["electrostatic_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(
+        quality["electrostatic_quality_watch_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        quality["electrostatic_quality_dominant_term"]["field"].as_str(),
+        Some("electrostatic_field_peak_magnitude")
+    );
+    assert_eq!(
+        quality["electrostatic_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
     approx_eq(quality["electrostatic_quality_score"].as_f64(), 5.0);
 }
 
@@ -205,6 +219,12 @@ fn blocks_electrostatic_quality_when_required_metrics_are_missing() {
         quality["electrostatic_quality_missing_metric_count"].as_u64(),
         Some(2)
     );
+    assert_eq!(
+        quality["electrostatic_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(2)
+    );
 }
 
 #[test]
@@ -230,6 +250,11 @@ fn runs_electrostatic_quality_through_transform_executor() {
     assert_eq!(
         quality["electrostatic_quality_term_count"].as_u64(),
         Some(3)
+    );
+    assert!(
+        quality["electrostatic_quality_summary"]
+            .as_str()
+            .is_some_and(|summary| summary.contains("watch=0"))
     );
 }
 

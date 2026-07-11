@@ -11,6 +11,9 @@ belongs.
 The strict, machine-readable source of truth is
 `config/architecture/module-topology.json`. This document explains that
 topology; the topology file drives benchmark and security-test grouping.
+The companion coverage matrix is
+`config/architecture/module-function-coverage-matrix.json`; it checks whether
+each module is covered across the main function paradigms.
 
 ## Architecture Principle
 
@@ -42,6 +45,15 @@ Every top-level module must declare:
 - `security_lanes`: security lanes that should include this module
 - `risk_tags`: short labels for targeted review and future dashboards
 
+The same topology file also carries `lane_test_plan`. That plan maps each
+benchmark and security lane to suggested commands with a scope:
+
+- `local`: safe local gate
+- `integration`: cross-process or service-level test
+- `benchmark`: performance comparison or profile run
+- `remote`: lab/self-hosted runner path
+- `release`: broad release-style gate
+
 The checker in `scripts/check-module-topology.mjs` enforces:
 
 - the topology schema version
@@ -50,11 +62,13 @@ The checker in `scripts/check-module-topology.mjs` enforces:
 - every dependency points at a declared module
 - the dependency graph is acyclic
 - all benchmark and security lanes are declared centrally
+- every lane has at least one suggested test command
 - all required architecture layers are represented
 
 This gives us a stable topology spine for later automation. A benchmark runner
-can select modules by `benchmark_lanes`; a security audit can select modules by
-`security_lanes`; a release report can show risk coverage by `risk_tags`.
+can select modules and commands by `benchmark_lanes`; a security audit can
+select modules and commands by `security_lanes`; a release report can show
+risk coverage by `risk_tags`.
 
 Run `make build-module-topology-report` to write the consumed view to
 `tmp/module-topology/`. The generated report includes:
@@ -63,6 +77,28 @@ Run `make build-module-topology-report` to write the consumed view to
   index
 - `README.md`: human-readable lane tables for review
 - `index.html`: lightweight browser view for release/nightly artifacts
+
+## Module Function Matrix
+
+The module topology answers "what owns what". The module function matrix
+answers "which module participates in which functional paradigm". This is the
+coverage view for avoiding silent gaps across:
+
+- product surfaces
+- runtime APIs
+- solver execution
+- workflow composition
+- validation
+- benchmark
+- security
+- persistence/provenance
+- deployment/update
+- headless SDK access
+
+Run `make check-module-function-matrix` to validate the matrix and write
+`tmp/module-function-matrix-report.json` plus a Markdown table. Required
+module/paradigm cells cannot be missing, and all rows must match declared
+module topology IDs.
 
 ## Product Shells
 
@@ -353,6 +389,7 @@ The current guards are:
 - `make audit-project-organization`
 - `make check-make-modules`
 - `make check-module-topology`
+- `make check-module-function-matrix`
 - `make build-module-topology-report`
 - `make check-material-score-contract`
 - `make check-materialization-plan-contract`

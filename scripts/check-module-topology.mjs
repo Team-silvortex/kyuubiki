@@ -14,6 +14,14 @@ const REQUIRED_LAYERS = new Set([
   "contract",
   "verification",
 ]);
+const ALLOWED_PLAN_SCOPES = new Set(["local", "integration", "benchmark", "remote", "release"]);
+const ALLOWED_COMMAND_PREFIXES = [
+  "make ",
+  "node ",
+  "cd apps/frontend && npm run ",
+  "cd apps/web && mix ",
+  "cd workers/rust && cargo ",
+];
 
 if (process.argv.includes("--self-test")) {
   runSelfTest();
@@ -67,6 +75,60 @@ function checkLaneReferences(module, lanes, field, context) {
   }
 }
 
+function checkPlanCommand(command, context) {
+  if (!ALLOWED_COMMAND_PREFIXES.some((prefix) => command.startsWith(prefix))) {
+    throw new Error(`${context}: unsupported command prefix: ${command}`);
+  }
+  if (command.includes("..") || command.includes(";") || command.includes("&& rm ")) {
+    throw new Error(`${context}: command must not contain path traversal or destructive shell chaining`);
+  }
+}
+
+function checkLaneTestPlan(topology, benchmarkLanes, securityLanes, context) {
+  const plan = topology.lane_test_plan;
+  if (!plan || typeof plan !== "object") {
+    throw new Error(`${context}: lane_test_plan must be defined`);
+  }
+
+  for (const [group, lanes] of [
+    ["benchmark", benchmarkLanes],
+    ["security", securityLanes],
+  ]) {
+    const groupPlan = plan[group];
+    if (!groupPlan || typeof groupPlan !== "object" || Array.isArray(groupPlan)) {
+      throw new Error(`${context}: lane_test_plan.${group} must be an object`);
+    }
+
+    for (const lane of lanes) {
+      const entries = groupPlan[lane];
+      if (!Array.isArray(entries) || entries.length === 0) {
+        throw new Error(`${context}: lane_test_plan.${group}.${lane} must not be empty`);
+      }
+      const ids = new Set();
+      entries.forEach((entry, index) => {
+        const entryContext = `${context}#lane_test_plan/${group}/${lane}/${index}`;
+        requireNonEmptyString(entry.id, "id", entryContext);
+        requireNonEmptyString(entry.command, "command", entryContext);
+        requireNonEmptyString(entry.scope, "scope", entryContext);
+        if (ids.has(entry.id)) {
+          throw new Error(`${entryContext}: duplicate test plan id ${entry.id}`);
+        }
+        if (!ALLOWED_PLAN_SCOPES.has(entry.scope)) {
+          throw new Error(`${entryContext}: unknown scope ${entry.scope}`);
+        }
+        ids.add(entry.id);
+        checkPlanCommand(entry.command, entryContext);
+      });
+    }
+
+    for (const lane of Object.keys(groupPlan)) {
+      if (!lanes.has(lane)) {
+        throw new Error(`${context}: lane_test_plan.${group}.${lane} references unknown lane`);
+      }
+    }
+  }
+}
+
 function checkAcyclicDependencyGraph(modulesById) {
   const visiting = new Set();
   const visited = new Set();
@@ -102,6 +164,7 @@ function checkTopology(topology, context) {
   if (!Array.isArray(topology.modules) || topology.modules.length === 0) {
     throw new Error(`${context}: modules must not be empty`);
   }
+  checkLaneTestPlan(topology, benchmarkLanes, securityLanes, context);
 
   const modulesById = new Map();
   const seenPaths = new Map();
@@ -163,6 +226,14 @@ function runSelfTest() {
     version_line: "tamamono test",
     benchmark_lanes: { ui_startup: "test lane" },
     security_lanes: { ui_boundary: "test lane" },
+    lane_test_plan: {
+      benchmark: {
+        ui_startup: [{ id: "smoke", command: "make smoke", scope: "local" }],
+      },
+      security: {
+        ui_boundary: [{ id: "audit", command: "node scripts/audit-local-paths.mjs", scope: "local" }],
+      },
+    },
     modules: [
       {
         id: "contracts",

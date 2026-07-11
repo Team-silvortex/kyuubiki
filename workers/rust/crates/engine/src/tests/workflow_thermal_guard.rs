@@ -131,6 +131,17 @@ fn scores_thermal_quality_with_temperature_flux_and_stress_terms() {
         quality["thermal_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(quality["thermal_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["thermal_quality_dominant_term"]["field"].as_str(),
+        Some("thermal_temperature_max")
+    );
+    assert_eq!(
+        quality["thermal_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
     approx_eq(quality["thermal_quality_score"].as_f64(), 5.1);
 }
 
@@ -184,6 +195,13 @@ fn blocks_thermal_quality_when_required_metrics_are_missing() {
         quality["thermal_quality_missing_metric_count"].as_u64(),
         Some(3)
     );
+    assert_eq!(quality["thermal_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["thermal_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(3)
+    );
 }
 
 #[test]
@@ -205,6 +223,11 @@ fn runs_thermal_quality_through_transform_executor() {
     assert_eq!(quality["thermal_quality_ready"].as_bool(), Some(true));
     assert_eq!(quality["thermal_quality_grade"].as_str(), Some("excellent"));
     assert_eq!(quality["thermal_quality_term_count"].as_u64(), Some(4));
+    assert!(
+        quality["thermal_quality_summary"]
+            .as_str()
+            .is_some_and(|summary| summary.contains("watch=0"))
+    );
 }
 
 #[test]

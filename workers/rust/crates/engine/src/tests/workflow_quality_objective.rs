@@ -26,7 +26,14 @@ fn composes_weighted_multiphysics_quality_objective() {
                     "thermal_quality_score": 2.5,
                     "thermal_quality_grade": "excellent",
                     "thermal_quality_ready": true,
-                    "thermal_quality_missing_metric_count": 0
+                    "thermal_quality_missing_metric_count": 0,
+                    "thermal_quality_watch_count": 1,
+                    "thermal_quality_dominant_term": {
+                        "field": "thermal_temperature_max",
+                        "status": "watch",
+                        "penalty": 2.5
+                    },
+                    "thermal_quality_blocking_terms": []
                 },
                 "transport": {
                     "transport_quality_contract": "kyuubiki.transport_quality_score/v1",
@@ -54,6 +61,15 @@ fn composes_weighted_multiphysics_quality_objective() {
     assert_eq!(objective["composite_quality_ready"].as_bool(), Some(true));
     assert_eq!(objective["composite_quality_grade"].as_str(), Some("good"));
     assert_eq!(objective["composite_quality_term_count"].as_u64(), Some(2));
+    assert_eq!(objective["composite_quality_watch_count"].as_u64(), Some(1));
+    assert_eq!(
+        objective["composite_quality_dominant_term"]["domain"].as_str(),
+        Some("thermal")
+    );
+    assert_eq!(
+        objective["composite_quality_dominant_term"]["dominant_term"]["field"].as_str(),
+        Some("thermal_temperature_max")
+    );
     approx_eq(objective["composite_quality_score"].as_f64(), 7.0);
 }
 
@@ -70,7 +86,11 @@ fn blocks_composite_objective_when_a_domain_quality_is_not_ready() {
                 "magnetostatic_quality_score": 3.0,
                 "magnetostatic_quality_ready": false,
                 "magnetostatic_quality_grade": "block",
-                "magnetostatic_quality_missing_metric_count": 2
+                "magnetostatic_quality_missing_metric_count": 2,
+                "magnetostatic_quality_blocking_terms": [{
+                    "field": "magnetostatic_flux_peak_magnitude",
+                    "status": "missing"
+                }]
             }
         }),
         serde_json::json!({
@@ -90,6 +110,17 @@ fn blocks_composite_objective_when_a_domain_quality_is_not_ready() {
     assert_eq!(
         objective["composite_quality_blocked_term_count"].as_u64(),
         Some(1)
+    );
+    assert_eq!(
+        objective["composite_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(1)
+    );
+    assert_eq!(
+        objective["composite_quality_blocking_terms"][0]["source_blocking_terms"][0]["field"]
+            .as_str(),
+        Some("magnetostatic_flux_peak_magnitude")
     );
     approx_eq(objective["composite_quality_score"].as_f64(), 32.0);
 }

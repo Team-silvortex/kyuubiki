@@ -1,11 +1,11 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
-.PHONY: check-make-modules check-module-topology build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
-.PHONY: check-operator-reliability-rules check-operator-reliability-schemas
+.PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
 .PHONY: remote-material-research-example remote-material-research-summary
@@ -37,6 +37,10 @@ check-make-modules:
 check-module-topology:
 	@node ./scripts/check-module-topology.mjs --self-test
 	@node ./scripts/check-module-topology.mjs
+
+check-module-function-matrix:
+	@node ./scripts/check-module-function-matrix.mjs --self-test
+	@node ./scripts/check-module-function-matrix.mjs
 
 build-module-topology-report:
 	@node ./scripts/build-module-topology-report.mjs --out-dir $${OUT_DIR:-tmp/module-topology}
@@ -92,6 +96,14 @@ check-operator-reliability-rules:
 check-operator-reliability-schemas:
 	@node ./scripts/check-operator-reliability-schemas.mjs --self-test
 	@node ./scripts/check-operator-reliability-schemas.mjs
+
+check-operator-validation:
+	@node ./scripts/check-operator-validation.mjs --self-test
+	@node ./scripts/check-operator-validation.mjs
+
+verify-operator-validation:
+	@node ./scripts/check-operator-validation.mjs --self-test
+	@node ./scripts/check-operator-validation.mjs --execute
 
 build-operator-qualification-readiness:
 	@node ./scripts/build-operator-qualification-readiness.mjs --out $${OUT:-tmp/operator-qualification-readiness.json}
@@ -174,6 +186,7 @@ architecture-check:
 	@$(MAKE) audit-project-organization
 	@$(MAKE) check-make-modules
 	@$(MAKE) check-module-topology
+	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
 	@$(MAKE) check-material-score-contract
@@ -184,6 +197,7 @@ architecture-check:
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-reliability
+	@$(MAKE) check-operator-validation
 	@$(MAKE) check-commercial-readiness
 	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-ui-automation-contract

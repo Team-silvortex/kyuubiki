@@ -32,6 +32,9 @@
             "divergence_error",
             "reynolds_number",
             "viscous_dissipation",
+            "quality_dominant_term",
+            "quality_watch_count",
+            "quality_blocking_terms",
             "divergence_tolerance_policy",
             "non_finite_input_rejection",
             "non_finite_material_input_rejection"
@@ -43,7 +46,8 @@
             "docs/operator-reliability.md#cfd-stokes-screening-scope"
           ],
           "tolerance_notes": [
-            "docs/operator-reliability.md#cfd-stokes-divergence-tolerance"
+            "docs/operator-reliability.md#cfd-stokes-divergence-tolerance",
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
           ]
         }
       },

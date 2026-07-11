@@ -1,0 +1,169 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "tamamono 1.16.x",
+  "profiles": [
+    {
+      "profile_id": "line-field-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.bar_1d",
+        "solve.thermal_bar_1d",
+        "solve.heat_bar_1d",
+        "solve.electrostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "analytic_closed_form",
+        "local_formal_invariant",
+        "tolerance_policy_check"
+      ],
+      "formal_invariants": [
+        "reaction_force_balance",
+        "linear_temperature_gradient",
+        "linear_potential_gradient",
+        "sign_checked_restrained_thermal_stress"
+      ],
+      "evidence_paths": [
+        "evidence/operator-qualification/line-field-closed-form-baseline.json",
+        "evidence/operator-qualification/line-field-closed-form-derivation.md",
+        "evidence/operator-qualification/line-field-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+      ],
+      "commands": [
+        {
+          "id": "baseline-policy",
+          "kind": "analytic",
+          "command": "make check-line-field-closed-form-baseline"
+        },
+        {
+          "id": "solver-baseline",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test accuracy_baselines line_1d -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "stokes-flow-screening",
+      "trust_goal": "review_screening",
+      "operators": ["solve.stokes_flow_quad_2d"],
+      "validation_methods": [
+        "boundary_response_cross_check",
+        "local_diagnostic_invariant",
+        "screening_tolerance_policy_check"
+      ],
+      "formal_invariants": [
+        "finite_velocity_pressure_fields",
+        "non_negative_divergence_error",
+        "non_negative_reynolds_number",
+        "non_negative_viscous_dissipation",
+        "explicit_non_navier_stokes_scope"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/cfd.json",
+        "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "stokes-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "reliability-contract",
+          "kind": "contract",
+          "command": "make check-operator-reliability"
+        }
+      ]
+    },
+    {
+      "profile_id": "electrostatic-plane-patch",
+      "trust_goal": "review_cross_check",
+      "operators": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "constant_gradient_patch",
+        "triangle_quad_cross_check",
+        "stored_energy_invariant"
+      ],
+      "formal_invariants": [
+        "fixed_nodal_potentials",
+        "uniform_x_potential_gradient",
+        "zero_y_potential_gradient",
+        "electric_field_equals_negative_potential_gradient",
+        "flux_density_scales_with_permittivity",
+        "stored_energy_scales_with_element_area"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "field-2d-baseline",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test accuracy_baselines field_2d -- --nocapture"
+        },
+        {
+          "id": "electrostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "electrostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "heat-plane-patch",
+      "trust_goal": "review_cross_check",
+      "operators": [
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "thermal_patch_gradient",
+        "triangle_quad_cross_check",
+        "heat_flux_invariant"
+      ],
+      "formal_invariants": [
+        "fixed_hot_and_cold_boundaries",
+        "free_node_temperature_resolution",
+        "temperature_gradient_drives_heat_flux",
+        "total_abs_heat_flow_rate_matches_element_sum",
+        "linear_conductivity_scope"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal.json",
+        "docs/operator-reliability.md",
+        "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs",
+        "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "field-2d-baseline",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test accuracy_baselines field_2d -- --nocapture"
+        },
+        {
+          "id": "heat-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "heat-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

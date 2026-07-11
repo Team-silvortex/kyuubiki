@@ -156,6 +156,17 @@ fn scores_structural_quality_with_serviceability_stress_and_mass_terms() {
         quality["structural_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(quality["structural_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["structural_quality_dominant_term"]["field"].as_str(),
+        Some("max_stress")
+    );
+    assert_eq!(
+        quality["structural_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
     approx_eq(quality["structural_quality_score"].as_f64(), 5.56);
 }
 
@@ -202,6 +213,12 @@ fn blocks_structural_quality_when_required_metrics_are_missing() {
         quality["structural_quality_missing_metric_count"].as_u64(),
         Some(3)
     );
+    assert_eq!(
+        quality["structural_quality_blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(3)
+    );
 }
 
 #[test]
@@ -226,6 +243,11 @@ fn runs_structural_quality_through_transform_executor() {
         Some("excellent")
     );
     assert_eq!(quality["structural_quality_term_count"].as_u64(), Some(4));
+    assert!(
+        quality["structural_quality_summary"]
+            .as_str()
+            .is_some_and(|summary| summary.contains("watch=0"))
+    );
 }
 
 #[test]

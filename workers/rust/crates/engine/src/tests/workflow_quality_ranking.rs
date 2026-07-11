@@ -41,7 +41,13 @@ fn ranks_quality_candidates_by_readiness_and_score() {
                         "thermal": {
                             "thermal_quality_score": 1.0,
                             "thermal_quality_ready": true,
-                            "thermal_quality_missing_metric_count": 0
+                            "thermal_quality_missing_metric_count": 0,
+                            "thermal_quality_dominant_term": {
+                                "field": "thermal_flux_peak_magnitude",
+                                "status": "ok",
+                                "penalty": 1.0
+                            },
+                            "thermal_quality_blocking_terms": []
                         },
                         "cfd": {
                             "cfd_quality_score": 1.5,
@@ -79,6 +85,16 @@ fn ranks_quality_candidates_by_readiness_and_score() {
     assert_eq!(ranking["best_candidate_id"].as_str(), Some("candidate_b"));
     assert_eq!(ranking["best_candidate_ready"].as_bool(), Some(true));
     assert_eq!(ranking["ranking"][0]["rank"].as_u64(), Some(1));
+    assert_eq!(
+        ranking["ranking"][0]["dominant_term"]["domain"].as_str(),
+        Some("cfd")
+    );
+    assert_eq!(
+        ranking["ranking"][0]["blocking_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
 }
 
 #[test]
@@ -119,6 +135,11 @@ fn prepares_quality_next_round_request_from_ranking() {
                 "candidate_id": "candidate_b",
                 "score": 2.5,
                 "ready": true,
+                "dominant_term": {
+                    "domain": "thermal",
+                    "dominant_term": {"field": "thermal_temperature_max"}
+                },
+                "blocking_terms": [],
                 "objective": {"composite_quality_score": 2.5}
             }]
         }),
@@ -138,6 +159,10 @@ fn prepares_quality_next_round_request_from_ranking() {
     assert_eq!(
         request["selected_candidate_id"].as_str(),
         Some("candidate_b")
+    );
+    assert_eq!(
+        request["selected_dominant_term"]["domain"].as_str(),
+        Some("thermal")
     );
     approx_eq(request["request_payload"]["max_candidates"].as_f64(), 12.0);
 }

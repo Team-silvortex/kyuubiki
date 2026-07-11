@@ -7,6 +7,7 @@ The source of truth is:
 
 - `config/operator-reliability-manifest.json`
 - `config/operator-reliability/*.json`
+- `config/operator-validation-profiles.json`
 - `config/operator-qualification-roadmap.json`
 - `config/operator-qualification-evidence-kits.json`
 - `schemas/operator-reliability-manifest.schema.json`
@@ -14,6 +15,8 @@ The source of truth is:
 - `schemas/operator-qualification-roadmap.schema.json`
 - `schemas/operator-qualification-evidence-kits.schema.json`
 - `make check-operator-reliability`
+- `make check-operator-validation`
+- `make verify-operator-validation`
 
 The manifest index maps release-level metadata to per-domain shards. Each shard
 maps its `physics-coverage` solve operators to:
@@ -24,6 +27,30 @@ maps its `physics-coverage` solve operators to:
 - its headless workflow evidence
 - its test or accuracy-baseline evidence
 - its explicit limitations
+
+`config/operator-validation-profiles.json` is the first Operator Validation
+Harness contract. It groups operators into validation profiles and records:
+
+- analytic or cross-check methods
+- local formal invariants
+- evidence paths that must remain repo-relative
+- commands that can execute the validation profile
+
+`make check-operator-validation` validates the profile contract and writes
+`tmp/operator-validation-report.json` without running heavy commands.
+`make verify-operator-validation` executes the declared commands and writes the
+same report with command status and output tails. This is not a whole-system
+formal proof; it is a practical lane for accumulating executable local
+invariants and cross-validation evidence per operator family.
+
+The first validation profiles cover:
+
+- `line-field-closed-form`: 1D analytic closed-form checks and tolerance policy
+- `stokes-flow-screening`: CFD Stokes screening boundary and tolerance checks
+- `electrostatic-plane-patch`: triangle/quad constant-gradient electric field
+  and stored-energy patch checks
+- `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
+  checks
 
 For `tamamono 1.15.x`, the manifest also declares
 `minimum_coverage_level: review`. `make check-operator-reliability` treats this
@@ -90,6 +117,19 @@ path and boundary assembly, not a reusable engineering qualification tolerance.
 If the operator graduates beyond screening, the tolerance must be replaced or
 backed by retained convergence evidence, solver-version provenance, and a
 documented scope of validity.
+
+The machine-readable screening policy lives at
+`evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json`.
+That artifact pins the current regression scope and explicitly blocks using
+the same tolerance for Navier-Stokes, turbulence, compressible-flow, or
+mesh-convergence claims.
+
+The CFD quality transform also exposes review-facing explanation fields:
+`cfd_quality_dominant_term`, `cfd_quality_watch_count`, and
+`cfd_quality_blocking_terms`. These fields make headless material or flow
+screening runs explainable: a candidate does not only receive a score, it also
+reports which diagnostic term dominated the penalty and which missing or
+out-of-target terms caused a block.
 
 ## Electromagnetic Plane Review Scope
 
@@ -161,8 +201,9 @@ The CFD-facing Stokes quad operator is still `screening_only`, but it now has
 two review fixtures: the original body-force response and a lid-driven shear
 boundary response. That moves the `screening-cfd-boundary` evidence kit into
 `collecting`, not `qualification`. The test suite now encodes a screening
-divergence tolerance, but the operator still needs tolerance provenance and an
-explicit Stokes-only scope note before any stronger claim.
+divergence tolerance and the retained screening policy documents its current
+scope, but the operator still needs mesh-convergence or external-reference
+evidence before any stronger claim.
 
 The first qualification evidence collection track is now active for
 `line-field-closed-form`. Its versioned baseline artifact lives at
@@ -233,7 +274,8 @@ The most useful next upgrades are:
   qualification packet with derivation and provenance notes
 - add mesh, boundary, and material-assumption evidence where review coverage is
   still based on compact screening fixtures
-- expand Stokes-flow screening evidence from the second boundary-response
-  fixture into documented divergence tolerance provenance and scope limits
+- expand Stokes-flow screening evidence beyond the second boundary-response
+  fixture and screening tolerance policy into convergence or reference-tool
+  evidence
 - keep `qualification` empty until external, convergence, or literature
   evidence exists

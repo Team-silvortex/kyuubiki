@@ -13,12 +13,31 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
         .iter()
         .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
         .count();
+    let watch_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
+        .count();
     let score = score_terms
         .iter()
         .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
         .sum::<f64>();
     let max_ready_score = config_number(&config, "max_ready_score", 8.0);
     let grade = quality_grade(score, missing_count, max_ready_score);
+    let dominant_term = dominant_quality_term(&score_terms);
+    let blocking_terms = if grade == "block" {
+        score_terms
+            .iter()
+            .filter(|term| {
+                matches!(
+                    term.get("status").and_then(Value::as_str),
+                    Some("missing" | "watch")
+                )
+            })
+            .map(compact_quality_term)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     Ok(serde_json::json!({
         "thermal_quality_contract": "kyuubiki.thermal_quality_score/v1",
@@ -26,14 +45,17 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
         "thermal_quality_grade": grade,
         "thermal_quality_ready": grade != "block",
         "thermal_quality_missing_metric_count": missing_count,
+        "thermal_quality_watch_count": watch_count,
         "thermal_quality_term_count": score_terms.len(),
         "thermal_quality_max_ready_score": max_ready_score,
         "thermal_quality_max_temperature": numeric_field(object, "thermal_temperature_max"),
         "thermal_quality_peak_flux_magnitude": numeric_field(object, "thermal_flux_peak_magnitude"),
         "thermal_quality_total_energy": numeric_field(object, "thermal_total_energy"),
+        "thermal_quality_dominant_term": dominant_term,
+        "thermal_quality_blocking_terms": blocking_terms,
         "thermal_quality_terms": score_terms,
         "thermal_quality_summary": format!(
-            "Thermal quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+            "Thermal quality {grade}: score={score:.4}, missing={missing_count}, watch={watch_count}, ready_limit={max_ready_score:.4}."
         ),
     }))
 }
@@ -148,6 +170,29 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "status": "missing",
         }),
     }
+}
+
+fn dominant_quality_term(terms: &[Value]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| {
+            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            left_penalty
+                .partial_cmp(&right_penalty)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(compact_quality_term)
+        .unwrap_or(Value::Null)
+}
+
+fn compact_quality_term(term: &Value) -> Value {
+    serde_json::json!({
+        "field": term.get("field").cloned().unwrap_or(Value::Null),
+        "label": term.get("label").cloned().unwrap_or(Value::Null),
+        "status": term.get("status").cloned().unwrap_or(Value::Null),
+        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
+    })
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {

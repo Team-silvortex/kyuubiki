@@ -161,6 +161,13 @@
           "gate": "state Stokes-only limits, divergence tolerance, and non-Navier-Stokes scope",
           "artifact_path": "docs/operator-reliability.md",
           "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "stokes-divergence-tolerance-policy",
+          "kind": "tolerance_policy",
+          "gate": "pin the screening divergence tolerance scope and explicitly block Navier-Stokes or mesh-convergence claims",
+          "artifact_path": "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+          "path_policy": "repo-relative-required-before-qualification"
         }
       ]
     }
