@@ -59,7 +59,7 @@ fn manifest_fixture(case_index: usize) -> Value {
     json!({
         "schema_version": "kyuubiki.remote-artifact-delivery/v1",
         "channel": "stable",
-        "target_version": "1.16.0",
+        "target_version": "1.17.8",
         "platform": "linux",
         "delivery_mode": "remote-pull-from-installer-source",
         "artifacts": [

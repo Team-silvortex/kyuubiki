@@ -28,20 +28,20 @@ export function markdownFactChecks(expectedVersion, codename, reader) {
   return [
     textIncludesCheck(
       "docs/version-line.md",
-      "current shipping version",
-      `current shipping version: \`${expectedDisplayVersion}\``,
+      "current development point",
+      `current development point: \`${expectedDisplayVersion}\``,
       reader,
     ),
     textIncludesCheck(
       "docs/version-line.md",
       "current documentation target",
-      `current documentation target: \`${expectedDisplayMinorLine}\` active line`,
+      `current documentation target: \`${expectedDisplayMinorLine}\` pre-\`moxi\` line`,
       reader,
     ),
     textIncludesCheck(
       "docs/current-line.md",
-      "published release snapshot",
-      `current published release snapshot in this line is \`${expectedDisplayVersion}\``,
+      "current development point",
+      `current development point in this line is \`${expectedDisplayVersion}\``,
       reader,
     ),
     textIncludesCheck(

@@ -183,7 +183,7 @@ Focus:
 - keep headless SDK usage and frontend wasm Python responsibilities clearly
   split while ensuring solver paths do not depend on hidden frontend behavior
 - collect enough varied physics examples to design `1.15.x` operator SDK
-  contracts and `1.16.x` executable task files without overfitting to one
+  contracts and `1.17.x` executable task files without overfitting to one
   solver family
 
 What should be true before moving on:
@@ -227,7 +227,7 @@ What not to optimize for here:
 
 - hidden internal-only operator pathways that the ecosystem can never follow
 
-### 1.16.x
+### 1.17.x
 
 Primary theme:
 executable task files and post-processing depth

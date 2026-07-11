@@ -154,6 +154,14 @@ pub(crate) fn quality_term(
     missing_metric_penalty: f64,
     not_ready_penalty: f64,
 ) -> Result<QualityTerm, String> {
+    if summary
+        .get("validation_contract")
+        .and_then(Value::as_str)
+        .is_some_and(|contract| contract == "kyuubiki.summary_tolerance_validation/v1")
+    {
+        return validation_quality_term(source_id, summary, config, not_ready_penalty);
+    }
+
     let (score_field, score) = find_number_suffix(summary, "_quality_score").ok_or_else(|| {
         format!("transform.compose_quality_objective missing quality score for {source_id}")
     })?;
@@ -198,6 +206,99 @@ pub(crate) fn quality_term(
             "blocking_terms": blocking_terms,
         }),
     })
+}
+
+fn validation_quality_term(
+    source_id: &str,
+    summary: &Map<String, Value>,
+    config: &Value,
+    not_ready_penalty: f64,
+) -> Result<QualityTerm, String> {
+    let ready = summary
+        .get("validation_passed")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let failed_count = summary
+        .get("validation_failed_field_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let missing_count = summary
+        .get("validation_missing_field_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let score = validation_score(summary);
+    let weight = quality_weight(config, source_id, "validation");
+    let weighted_score = score * weight;
+    let readiness_penalty = if ready { 0.0 } else { not_ready_penalty };
+    let contribution = weighted_score + readiness_penalty;
+    let blocking_terms = validation_blocking_terms(summary);
+
+    Ok(QualityTerm {
+        contribution,
+        missing_metric_count: missing_count,
+        watch_count: failed_count,
+        ready,
+        value: serde_json::json!({
+            "source": source_id,
+            "domain": "validation",
+            "score_field": "validation_max_relative_error",
+            "score": score,
+            "weight": weight,
+            "weighted_score": weighted_score,
+            "ready": ready,
+            "grade": if ready { "pass" } else { "block" },
+            "missing_metric_count": missing_count,
+            "watch_count": failed_count,
+            "missing_metric_penalty": 0.0,
+            "readiness_penalty": readiness_penalty,
+            "contribution": contribution,
+            "dominant_term": {
+                "field": "validation_max_relative_error",
+                "status": if ready { "pass" } else { "block" },
+                "absolute_error": summary.get("validation_max_absolute_error").cloned().unwrap_or(Value::Null),
+                "relative_error": summary.get("validation_max_relative_error").cloned().unwrap_or(Value::Null),
+            },
+            "blocking_terms": blocking_terms,
+        }),
+    })
+}
+
+fn validation_score(summary: &Map<String, Value>) -> f64 {
+    let relative_error = summary
+        .get("validation_max_relative_error")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    let absolute_error = summary
+        .get("validation_max_absolute_error")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    (relative_error * 1000.0).max(absolute_error)
+}
+
+fn validation_blocking_terms(summary: &Map<String, Value>) -> Vec<Value> {
+    let mut terms = Vec::new();
+    if let Some(failures) = summary.get("validation_failures").and_then(Value::as_array) {
+        for failure in failures {
+            terms.push(serde_json::json!({
+                "field": failure.get("field").cloned().unwrap_or(Value::Null),
+                "status": "tolerance_failed",
+                "absolute_error": failure.get("absolute_error").cloned().unwrap_or(Value::Null),
+                "relative_error": failure.get("relative_error").cloned().unwrap_or(Value::Null),
+            }));
+        }
+    }
+    if let Some(missing) = summary
+        .get("validation_missing_fields")
+        .and_then(Value::as_array)
+    {
+        for field in missing {
+            terms.push(serde_json::json!({
+                "field": field,
+                "status": "missing_validation_field",
+            }));
+        }
+    }
+    terms
 }
 
 pub(crate) fn dominant_composite_term(terms: &[QualityTerm]) -> Value {
@@ -282,7 +383,11 @@ pub(crate) fn quality_iteration_hint(dominant_term: &Value, blocking_terms: &Val
             .cloned()
             .unwrap_or(Value::Null);
         return serde_json::json!({
-            "action": "fix_blocking_term",
+            "action": if blocking_term.get("domain").and_then(Value::as_str) == Some("validation") {
+                "fix_validation_failure"
+            } else {
+                "fix_blocking_term"
+            },
             "focus_domain": blocking_term.get("domain").cloned().unwrap_or(Value::Null),
             "focus_source": blocking_term.get("source").cloned().unwrap_or(Value::Null),
             "focus_field": focus_field,

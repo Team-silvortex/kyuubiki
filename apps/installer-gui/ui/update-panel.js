@@ -25,8 +25,8 @@ export function mountUpdatePanel() {
     </div>
     <div class="update-summary-grid">
       <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">State</span><strong id="update-state-headline">Loading unified update plan…</strong><span class="integrity-pill" data-desktop-state="health" id="update-state-pill">unknown</span></article>
-      <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">Current</span><strong id="update-current-version">1.16.0</strong><p>Current installed shipping version from the visible install contract.</p></article>
-      <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">Target</span><strong id="update-target-version">1.16.0</strong><p id="update-target-channel">stable</p></article>
+      <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">Current</span><strong id="update-current-version">1.17.8</strong><p>Current installed development version from the visible install contract.</p></article>
+      <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">Target</span><strong id="update-target-version">1.17.8</strong><p id="update-target-channel">stable</p></article>
       <article class="update-summary-card desktop-shell-surface-card"><span class="section-eyebrow desktop-shell-eyebrow">Artifacts</span><strong id="update-artifact-count">0 references</strong><p>Desktop bundles declared by the selected delivery channel.</p></article>
     </div>
     <div class="integrity-policy-grid">
@@ -227,7 +227,7 @@ export function renderUpdatePreview(preview) {
       : status === "blocked"
         ? "Visible install drift or residue blockers should be cleared before preparing the staged update."
         : status === "noop"
-          ? "The selected channel already matches the current shipping version."
+          ? "The selected channel already matches the current development version."
           : "Refresh the update preview to determine whether staged update preparation is allowed.";
   document.getElementById("update-preview-output").textContent =
     preview?.rendered || "Unified update preview unavailable.";

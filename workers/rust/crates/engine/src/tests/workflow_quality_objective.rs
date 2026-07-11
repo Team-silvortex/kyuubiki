@@ -126,6 +126,99 @@ fn blocks_composite_objective_when_a_domain_quality_is_not_ready() {
 }
 
 #[test]
+fn composes_summary_validation_gate_into_quality_objective() {
+    let objective = compose_quality_objective(
+        serde_json::json!({
+            "qualities": {
+                "thermal": {
+                    "thermal_quality_score": 1.0,
+                    "thermal_quality_ready": true,
+                    "thermal_quality_missing_metric_count": 0
+                },
+                "cross_check": {
+                    "validation_contract": "kyuubiki.summary_tolerance_validation/v1",
+                    "validation_passed": true,
+                    "validation_grade": "pass",
+                    "validation_failed_field_count": 0,
+                    "validation_missing_field_count": 0,
+                    "validation_max_absolute_error": 0.0001,
+                    "validation_max_relative_error": 0.00001,
+                    "validation_failures": [],
+                    "validation_missing_fields": []
+                }
+            }
+        }),
+        serde_json::json!({
+            "weights": {
+                "thermal": 1.0,
+                "validation": 1.0
+            },
+            "max_ready_score": 4.0
+        }),
+    )
+    .expect("validation gate should compose into quality objective");
+
+    assert_eq!(objective["composite_quality_ready"].as_bool(), Some(true));
+    assert_eq!(
+        objective["composite_quality_grade"].as_str(),
+        Some("excellent")
+    );
+    assert_eq!(objective["composite_quality_term_count"].as_u64(), Some(2));
+    let domains = objective["composite_quality_terms"]
+        .as_array()
+        .expect("terms should be an array")
+        .iter()
+        .filter_map(|term| term["domain"].as_str())
+        .collect::<Vec<_>>();
+    assert!(domains.contains(&"validation"));
+}
+
+#[test]
+fn blocks_quality_objective_when_summary_validation_fails() {
+    let objective = compose_quality_objective(
+        serde_json::json!({
+            "cross_check": {
+                "validation_contract": "kyuubiki.summary_tolerance_validation/v1",
+                "validation_passed": false,
+                "validation_grade": "block",
+                "validation_failed_field_count": 1,
+                "validation_missing_field_count": 1,
+                "validation_max_absolute_error": 3.0,
+                "validation_max_relative_error": 0.03,
+                "validation_failures": [{
+                    "field": "max_temperature",
+                    "absolute_error": 3.0,
+                    "relative_error": 0.03
+                }],
+                "validation_missing_fields": ["max_heat_flux"]
+            }
+        }),
+        serde_json::json!({
+            "not_ready_penalty": 20.0,
+            "max_ready_score": 10.0
+        }),
+    )
+    .expect("failed validation gate should produce blocking quality objective");
+
+    assert_eq!(objective["composite_quality_ready"].as_bool(), Some(false));
+    assert_eq!(objective["composite_quality_grade"].as_str(), Some("block"));
+    assert_eq!(
+        objective["composite_quality_blocking_terms"][0]["domain"].as_str(),
+        Some("validation")
+    );
+    assert_eq!(
+        objective["composite_quality_blocking_terms"][0]["source_blocking_terms"][0]["field"]
+            .as_str(),
+        Some("max_temperature")
+    );
+    assert_eq!(
+        objective["composite_quality_blocking_terms"][0]["source_blocking_terms"][1]["field"]
+            .as_str(),
+        Some("max_heat_flux")
+    );
+}
+
+#[test]
 fn runs_quality_objective_through_transform_executor() {
     let objective = run_transform_operator(
         "transform.compose_quality_objective",

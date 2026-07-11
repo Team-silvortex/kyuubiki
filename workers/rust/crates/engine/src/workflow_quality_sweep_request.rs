@@ -38,6 +38,12 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .or_else(|| payload.get("selected_iteration_hint"))
         .and_then(|hint| hint.get("focus_field"))
         .and_then(Value::as_str);
+    let optimization_hint = request
+        .get("optimization_hint")
+        .or_else(|| payload.get("selected_iteration_hint"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let repair_strategy = repair_strategy_from_hint(&optimization_hint);
     let max_axes = config
         .get("max_axes")
         .and_then(Value::as_u64)
@@ -82,11 +88,23 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
             .cloned()
             .unwrap_or(Value::Null),
         "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
-        "optimization_hint": request
-            .get("optimization_hint")
-            .or_else(|| payload.get("selected_iteration_hint"))
-            .cloned()
-            .unwrap_or(Value::Null),
+        "optimization_hint": optimization_hint,
+        "repair_strategy": repair_strategy,
+        "repair_focus": {
+            "field": focus_field.map(Value::from).unwrap_or(Value::Null),
+            "source": request
+                .get("optimization_hint")
+                .or_else(|| payload.get("selected_iteration_hint"))
+                .and_then(|hint| hint.get("focus_source"))
+                .cloned()
+                .unwrap_or(Value::Null),
+            "domain": request
+                .get("optimization_hint")
+                .or_else(|| payload.get("selected_iteration_hint"))
+                .and_then(|hint| hint.get("focus_domain"))
+                .cloned()
+                .unwrap_or(Value::Null),
+        },
         "focused_axis_path": axes.first()
             .and_then(|axis| axis.get("path"))
             .cloned()
@@ -102,6 +120,15 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
             axes.len()
         ),
     }))
+}
+
+fn repair_strategy_from_hint(optimization_hint: &Value) -> &'static str {
+    match optimization_hint.get("action").and_then(Value::as_str) {
+        Some("fix_validation_failure") => "rerun_validation_focused_sweep",
+        Some("fix_blocking_term") => "repair_blocking_term_sweep",
+        Some("reduce_dominant_term") => "reduce_dominant_term_sweep",
+        _ => "general_quality_sweep",
+    }
 }
 
 fn usable_search_space_axis_count(search_space: &Map<String, Value>, samples: usize) -> usize {

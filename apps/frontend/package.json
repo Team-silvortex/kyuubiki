@@ -1,6 +1,6 @@
 {
   "name": "kyuubiki-frontend",
-  "version": "1.16.0",
+  "version": "1.17.8",
   "private": true,
   "type": "module",
   "bin": {

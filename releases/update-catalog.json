@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-07-07T09:11:52.532Z",
-  "shipping_version": "1.16.0",
+  "generated_at": "2026-07-11T11:40:45.010Z",
+  "shipping_version": "1.17.8",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,16 +16,16 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.16",
-        "tamamono:1.16.0"
+        "tamamono:1.17",
+        "tamamono:1.17.8"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.16.0",
-      "summary": "TODO: summarize tamamono 1.16.0.",
-      "date": "2026-07-07",
+      "version": "1.17.8",
+      "summary": "TODO: summarize tamamono 1.17.8.",
+      "date": "2026-07-11",
       "notes": [
-        "Primary operator-facing update track for the current shipping line.",
+        "Primary operator-facing update track for the current pre-moxi development line.",
         "Targets standard installs that follow the visible installation contract."
       ],
       "visible_rules": [
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.16.0.json",
+      "snapshot_path": "releases/snapshots/1.17.8.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,31 +69,31 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.16.0",
+          "version": "1.17.8",
           "notes": [
             "TODO: describe frontend/workbench changes."
           ]
         },
         "hub_gui": {
-          "version": "1.16.0",
+          "version": "1.17.8",
           "notes": [
             "TODO: describe Hub desktop-shell changes."
           ]
         },
         "workbench_gui": {
-          "version": "1.16.0",
+          "version": "1.17.8",
           "notes": [
             "TODO: describe Workbench desktop-shell changes."
           ]
         },
         "installer_gui": {
-          "version": "1.16.0",
+          "version": "1.17.8",
           "notes": [
             "TODO: describe Installer desktop-shell changes."
           ]
         },
         "web_api": {
-          "version": "1.16.0",
+          "version": "1.17.8",
           "notes": [
             "TODO: describe API/control-plane changes."
           ]
@@ -111,7 +111,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.16.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.17.8_aarch64.dmg",
           "exists": false
         },
         {
@@ -119,14 +119,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -146,7 +146,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.16.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.17.8_aarch64.dmg",
           "exists": false
         },
         {
@@ -154,14 +154,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -181,7 +181,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.16.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.17.8_aarch64.dmg",
           "exists": false
         },
         {
@@ -189,14 +189,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -210,12 +210,12 @@
   ],
   "versions": [
     {
-      "version": "1.16.0",
+      "version": "1.17.8",
       "line": "1.x",
       "status": "current",
-      "date": "2026-07-07",
-      "summary": "TODO: summarize tamamono 1.16.0.",
-      "snapshot_path": "releases/snapshots/1.16.0.json",
+      "date": "2026-07-11",
+      "summary": "TODO: summarize tamamono 1.17.8.",
+      "snapshot_path": "releases/snapshots/1.17.8.json",
       "channels": [
         "stable"
       ],
@@ -223,9 +223,158 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.16",
-        "tamamono:1.16.0"
+        "tamamono:1.17",
+        "tamamono:1.17.8"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "1.17.8",
+          "notes": [
+            "TODO: describe frontend/workbench changes."
+          ]
+        },
+        "hub_gui": {
+          "version": "1.17.8",
+          "notes": [
+            "TODO: describe Hub desktop-shell changes."
+          ]
+        },
+        "workbench_gui": {
+          "version": "1.17.8",
+          "notes": [
+            "TODO: describe Workbench desktop-shell changes."
+          ]
+        },
+        "installer_gui": {
+          "version": "1.17.8",
+          "notes": [
+            "TODO: describe Installer desktop-shell changes."
+          ]
+        },
+        "web_api": {
+          "version": "1.17.8",
+          "notes": [
+            "TODO: describe API/control-plane changes."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.17.8_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.17.8_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.17.8_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "exists": false
+        }
+      ]
+    },
+    {
+      "version": "1.16.0",
+      "line": "1.x",
+      "status": "archived",
+      "date": "2026-07-07",
+      "summary": "TODO: summarize tamamono 1.16.0.",
+      "snapshot_path": "releases/snapshots/1.16.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "1.16.0",
@@ -278,14 +427,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -313,14 +462,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -348,14 +497,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -427,14 +576,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -462,14 +611,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -497,14 +646,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -580,14 +729,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -615,14 +764,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -650,14 +799,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -733,14 +882,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -768,14 +917,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -803,14 +952,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -884,14 +1033,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -919,14 +1068,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -954,14 +1103,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -1035,14 +1184,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -1070,14 +1219,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -1105,14 +1254,14 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",

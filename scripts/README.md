@@ -159,7 +159,7 @@ This directory contains host-native operational entry points.
   against its Markdown gate, including gate count, evidence links, supported
   state values, and the shared exit statement.
 - `sync-doc-book-version.mjs`
-  Update the hand-maintained book entry pages to the current shipping version,
+  Update the hand-maintained book entry pages to the current development version,
   shipping-version chip, current-prep chip, and book manifest shipping version
   without touching the generated installation or update-catalog pages.
 - `release-metadata.mjs`
@@ -219,7 +219,7 @@ Useful checks:
   Run the version-line checker self-test, then check that release metadata,
   package metadata, generated docs mirrors, update catalogs, shipped
   language-pack catalog entries, and hand-maintained version-line docs all
-  match the current shipping version.
+  match the current development version.
 - `make check-operator-reliability`
   Check that every `physics-coverage` solve operator has a reliability manifest
   entry with benchmark, headless workflow, evidence, visible limitations, and a
@@ -297,7 +297,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.16.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.17.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.

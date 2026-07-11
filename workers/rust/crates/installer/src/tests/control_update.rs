@@ -64,14 +64,14 @@ fn parses_manifest_agents() {
 fn unified_update_plan_uses_default_channel() {
     let plan = unified_update_plan(None).unwrap();
     assert_eq!(plan.target_channel, "stable");
-    assert_eq!(plan.target_version, "1.16.0");
+    assert_eq!(plan.target_version, "1.17.8");
 }
 
 #[test]
 fn unified_update_preview_reports_noop_for_current_channel() {
     let preview = unified_update_preview(None).unwrap();
     assert_eq!(preview.channel, "stable");
-    assert_eq!(preview.target_version, "1.16.0");
+    assert_eq!(preview.target_version, "1.17.8");
     assert_eq!(preview.overall_status, "noop");
 }
 

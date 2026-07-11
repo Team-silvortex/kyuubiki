@@ -17,6 +17,7 @@ use crate::workflow_summary_transforms::{
     aggregate_summary_collection, compare_summary_pair, normalize_summary_fields,
     select_best_summary,
 };
+use crate::workflow_summary_validation::validate_summary_tolerance;
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
@@ -71,6 +72,10 @@ struct MergeSummaryPairOperator {
 }
 
 struct CompareSummaryPairOperator {
+    descriptor: OperatorDescriptor,
+}
+
+struct ValidateSummaryToleranceOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -251,6 +256,25 @@ impl JsonOperator for CompareSummaryPairOperator {
     }
 }
 
+impl JsonOperator for ValidateSummaryToleranceOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            validate_summary_tolerance(input.payload, input.config),
+        )
+    }
+}
+
 impl JsonOperator for AggregateSummaryCollectionOperator {
     type Input = WorkflowOperatorEnvelope;
 
@@ -422,6 +446,11 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("transform.compare_summary_pair"),
                 })
                 .expect("transform.compare_summary_pair should register");
+            registry
+                .register_json(ValidateSummaryToleranceOperator {
+                    descriptor: descriptor("transform.validate_summary_tolerance"),
+                })
+                .expect("transform.validate_summary_tolerance should register");
             registry
                 .register_json(AggregateSummaryCollectionOperator {
                     descriptor: descriptor("transform.aggregate_summary_collection"),

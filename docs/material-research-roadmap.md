@@ -3,7 +3,7 @@
 This roadmap tracks what Kyuubiki still needs before material research
 workflows can be called reliable rather than merely runnable.
 
-The current `tamamono 1.16.x` baseline already has useful pieces:
+The current `tamamono 1.17.x` baseline already has useful pieces:
 
 - Rust solver coverage across structural, thermal, electrostatic,
   magnetostatic, acoustic, simplified CFD, modal, contact, and nonlinear
@@ -45,7 +45,7 @@ reproduction commands in one screening-level artifact.
 ## Phase 1. Screening Studies Become Honest
 
 Status:
-active for `1.16.x`.
+active for `1.17.x`.
 
 Primary objective:
 make existing material studies transparent about their limits.

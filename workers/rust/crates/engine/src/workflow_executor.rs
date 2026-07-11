@@ -19,6 +19,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.first_available",
     "transform.merge_summary_pair",
     "transform.compare_summary_pair",
+    "transform.validate_summary_tolerance",
     "transform.aggregate_summary_collection",
     "transform.normalize_summary_fields",
     "transform.select_best_summary",
@@ -159,6 +160,7 @@ pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
 pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
     operator_id == "transform.merge_summary_pair"
         || operator_id == "transform.compare_summary_pair"
+        || operator_id == "transform.validate_summary_tolerance"
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
         || operator_id == "transform.compose_quality_objective"
@@ -295,6 +297,7 @@ pub fn run_transform_operator(
         | "bridge.magnetostatic_field_to_heat_quad_2d"
         | "transform.merge_summary_pair"
         | "transform.compare_summary_pair"
+        | "transform.validate_summary_tolerance"
         | "transform.aggregate_summary_collection"
         | "transform.normalize_summary_fields"
         | "transform.select_best_summary"

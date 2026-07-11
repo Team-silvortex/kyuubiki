@@ -1,0 +1,195 @@
+{
+  "version": "1.17.8",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-07-11",
+  "git_commit": "b0895db0896d77fb37ed63431982035bc4a8843f",
+  "summary": "TODO: summarize tamamono 1.17.8.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.17.8",
+      "notes": [
+        "TODO: describe frontend/workbench changes."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.17.8",
+      "notes": [
+        "TODO: describe Hub desktop-shell changes."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.17.8",
+      "notes": [
+        "TODO: describe Workbench desktop-shell changes."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.17.8",
+      "notes": [
+        "TODO: describe Installer desktop-shell changes."
+      ]
+    },
+    "web_api": {
+      "version": "1.17.8",
+      "notes": [
+        "TODO: describe API/control-plane changes."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "operator_sdk": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.17.8_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.17.8_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.17.8_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/public/brand.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-catalog.ts",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
+        " M apps/frontend/test/support/workflow-package-fixtures.ts",
+        " M apps/frontend/test/support/workflow-template-chain-fixtures.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-import.test.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-validation.test.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.lock",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/test/hub-copy-registry.test.mjs",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/README.md",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.lock",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/installer-gui/ui/index.html",
+        " M apps/installer-gui/ui/integrity-panel.js",
+        " M apps/installer-gui/ui/update-panel.js",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.lock",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/ui/index.html",
+        " M deploy/install-update-disk-hygiene.json",
+        " M deploy/installation-integrity-contract.json",
+        " M deploy/update-channels.json",
+        " M docs/README.md",
+        " M docs/book-manifest.json",
+        " M docs/book.html",
+        " M docs/component-integrity-protocol.html",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
+        " M docs/installer-remote-control.md",
+        " M docs/material-research-roadmap.md",
+        " M docs/module-architecture.md",
+        " M docs/navigation-matrix.html",
+        " M docs/physics-coverage-map.md",
+        " M docs/release-prep-1.7.md",
+        " M docs/release-prep-1.8.md",
+        " M docs/release-prep-1.9-to-1.20.md",
+        " M docs/testing-and-ci.md",
+        " M docs/ui-automation-contract.html",
+        " M docs/ui-automation-contract.json",
+        " M docs/update-catalog.html",
+        " M docs/version-line.md",
+        " M language-packs/catalog.json",
+        " M language-packs/hub/fr.json",
+        " M language-packs/hub/ko.json",
+        " M language-packs/workbench/fr.json",
+        " M language-packs/workbench/ko.json",
+        " M scripts/README.md",
+        " M scripts/audit-version-line.mjs",
+        " M scripts/check-install-update-disk-hygiene.mjs",
+        " M scripts/release-metadata.mjs",
+        " M scripts/validate-language-packs.mjs",
+        " M scripts/version-line-markdown-facts.mjs",
+        " M workers/rust/Cargo.lock",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/benchmarks/README.md",
+        " M workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+        " M workers/rust/crates/installer/src/remote_deployment_artifacts_fuzz.rs",
+        " M workers/rust/crates/installer/src/tests/control_update.rs",
+        " M workers/rust/crates/installer/src/update_catalog_fuzz.rs",
+        " M workers/rust/crates/operator-sdk/src/manifest_fuzz.rs"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.17.8",
+      "workbench": "1.17.8",
+      "installer": "1.17.8"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check",
+      "make audit-project-organization",
+      "make operator-package-preflight",
+      "make architecture-check"
+    ]
+  }
+}

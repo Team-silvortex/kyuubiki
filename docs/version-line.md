@@ -9,16 +9,18 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `tamamono`
 - active line: `1.x`
-- current shipping version: `tamamono 1.16.0`
-- current documentation target: `tamamono 1.16.x` active line
+- current development point: `tamamono 1.17.8`
+- current documentation target: `tamamono 1.17.x` pre-`moxi` line
+- formal public release target: `moxi 2.0.0`
 - major-version policy:
-  unless there is a deliberate structural reset later, the major version is
-  expected to remain `1`
+  `tamamono` remains on major version `1`; `moxi 2.0.0` is the intended first
+  formal release handoff after the pre-release industrialization line.
 
 ## What this page is for
 
 - confirming the current formal line name
-- confirming the current shipping point in that line
+- confirming the current development point in that line
+- confirming that formal public release is reserved for `moxi 2.0.0`
 - checking the major-version policy without reading the broader narrative first
 - checking which preparation window the docs are currently being aligned for
 

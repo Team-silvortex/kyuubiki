@@ -43,6 +43,7 @@ mod workflow_reporting;
 mod workflow_security;
 mod workflow_solve_executor;
 mod workflow_summary_transforms;
+mod workflow_summary_validation;
 
 #[cfg(test)]
 mod tests;

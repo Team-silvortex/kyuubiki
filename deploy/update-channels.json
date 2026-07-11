@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "1.16.0",
+  "shipping_version": "1.17.8",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "channels": [
@@ -8,15 +8,15 @@
       "id": "stable",
       "label": "Stable",
       "tag": "tamamono:stable",
-      "version": "1.16.0",
+      "version": "1.17.8",
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.16",
-        "tamamono:1.16.0"
+        "tamamono:1.17",
+        "tamamono:1.17.8"
       ],
       "notes": [
-        "Primary operator-facing update track for the current shipping line.",
+        "Primary operator-facing update track for the current pre-moxi development line.",
         "Targets standard installs that follow the visible installation contract."
       ],
       "visible_rules": [

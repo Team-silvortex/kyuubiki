@@ -36,12 +36,12 @@ function readJson(relativePath) {
 }
 
 function readCurrentReleaseVersion() {
-  const releaseIndexPath = path.join(repoRoot, "releases/index.json");
-  const releaseIndex = JSON.parse(fs.readFileSync(releaseIndexPath, "utf8"));
-  if (typeof releaseIndex.current_version !== "string" || !releaseIndex.current_version.trim()) {
-    throw new Error("releases/index.json must declare current_version for language pack validation");
+  const channelsPath = path.join(repoRoot, "deploy/update-channels.json");
+  const channels = JSON.parse(fs.readFileSync(channelsPath, "utf8"));
+  if (typeof channels.shipping_version !== "string" || !channels.shipping_version.trim()) {
+    throw new Error("deploy/update-channels.json must declare shipping_version for language pack validation");
   }
-  return releaseIndex.current_version;
+  return channels.shipping_version;
 }
 
 function validateString(pack, field, relativePath) {

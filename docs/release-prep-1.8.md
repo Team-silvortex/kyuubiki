@@ -26,7 +26,7 @@ That audit gives us two views:
 
 - exact contract checks
   package manifests, Cargo manifests, Tauri manifests, brand files, and
-  release contracts that should already agree on the current shipping version
+  release contracts that should already agree on the current development version
 - next-version candidates
   textual and UI-facing references that will likely need review during the
   `1.8.0` transition

@@ -229,13 +229,15 @@ function exactChecks(expectedVersion) {
     expected: expectedVersion,
     actual: contract.shipping_version ?? null,
   });
+  const requiredVersionRule = (contract.visible_rules ?? []).find((rule) =>
+    rule.label === "required development version" || rule.label === "required shipping version"
+  );
   checks.push({
-    kind: "required_shipping_version",
+    kind: "required_version",
     file: "deploy/installation-integrity-contract.json",
-    field: "visible_rules[required shipping version].value",
+    field: "visible_rules[required development version].value",
     expected: expectedVersion,
-    actual:
-      (contract.visible_rules ?? []).find((rule) => rule.label === "required shipping version")?.value ?? null,
+    actual: requiredVersionRule?.value ?? null,
   });
   checks.push({
     kind: "current_version",
@@ -419,7 +421,7 @@ function printHumanReport(report) {
   }
 
   if (failedChecks.length === 0) {
-    console.log("- all exact version contracts match the expected shipping version");
+    console.log("- all exact version contracts match the expected development version");
   }
 
   console.log("");
@@ -447,12 +449,12 @@ function printHumanReport(report) {
 }
 
 function runSelfTest() {
-  const checks = markdownFactChecks("1.16.0", "tamamono", (file) => {
+  const checks = markdownFactChecks("1.17.8", "tamamono", (file) => {
     if (file === "docs/version-line.md") {
-      return "current shipping version: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` active line";
+      return "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line";
     }
     if (file === "docs/current-line.md") {
-      return "The current published release snapshot in this line is `tamamono 1.15.0`.";
+      return "The current development point in this line is `tamamono 1.15.0`.";
     }
     if (file === "docs/installer-remote-control.md") {
       return "remote runtime control surface in the `tamamono 1.15.x` preparation line.";

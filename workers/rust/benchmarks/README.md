@@ -82,7 +82,7 @@ thermal frame 2D/3D cases.
 
 The `physics-coverage` matrix is the `1.15.x` broad smoke lane. It intentionally
 pulls every built-in benchmark template into one medium-scale run so the
-project can prepare the `1.15.x` engine/operator SDK contracts and the `1.16.x`
+project can prepare the `1.15.x` engine/operator SDK contracts and the `1.17.x`
 executable task file format against real examples from the major physics
 families.
 

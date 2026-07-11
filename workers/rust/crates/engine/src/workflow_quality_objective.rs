@@ -169,8 +169,6 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         .or_else(|| payload.get("best_candidate_ready"))
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    let target_score = config_number(&config, "target_score", 3.0);
-    let action = next_round_action(ready, score, target_score, &config);
     let selected_dominant_term = selected
         .get("dominant_term")
         .or_else(|| {
@@ -189,6 +187,12 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         })
         .cloned()
         .unwrap_or_else(|| Value::Array(Vec::new()));
+    let target_score = config_number(&config, "target_score", 3.0);
+    let action = if has_validation_blocking_term(&selected_blocking_terms) {
+        "replan"
+    } else {
+        next_round_action(ready, score, target_score, &config)
+    };
     let selected_candidate_metadata = selected.get("metadata").cloned().unwrap_or(Value::Null);
     let iteration_hint = quality_iteration_hint(&selected_dominant_term, &selected_blocking_terms);
 
@@ -217,6 +221,14 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
             "Quality exploration {action}: selected={candidate_id}, score={score}, target={target_score}."
         ),
     }))
+}
+
+fn has_validation_blocking_term(blocking_terms: &Value) -> bool {
+    blocking_terms.as_array().is_some_and(|terms| {
+        terms
+            .iter()
+            .any(|term| term.get("domain").and_then(Value::as_str) == Some("validation"))
+    })
 }
 
 pub fn compose_quality_lineage_report(payload: Value, _config: Value) -> Result<Value, String> {
@@ -280,6 +292,7 @@ pub fn compose_quality_lineage_report(payload: Value, _config: Value) -> Result<
         .cloned()
         .unwrap_or(Value::Null);
     let budget_blocked = expansion_budget_ready.as_bool() == Some(false);
+    let repair_plan = quality_lineage_repair_plan(request, &optimization_hint);
     let missing_fields = quality_lineage_missing_fields(
         &selected_candidate_id,
         &seed_metadata,
@@ -307,6 +320,7 @@ pub fn compose_quality_lineage_report(payload: Value, _config: Value) -> Result<
         "expansion_blocking_reason": expansion_blocking_reason,
         "sweep_budget": sweep_budget,
         "first_case_metadata": first_case_metadata,
+        "repair_plan": repair_plan,
         "lineage_complete": lineage_complete,
         "lineage_missing_fields": missing_fields,
         "lineage_summary": format!(
@@ -317,6 +331,48 @@ pub fn compose_quality_lineage_report(payload: Value, _config: Value) -> Result<
             missing_fields.len()
         ),
     }))
+}
+
+fn quality_lineage_repair_plan(request: &Value, optimization_hint: &Value) -> Value {
+    let action = optimization_hint
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("none");
+    let blocking_terms = request
+        .get("selected_blocking_terms")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let validation_blocker = blocking_terms
+        .iter()
+        .find(|term| term.get("domain").and_then(Value::as_str) == Some("validation"));
+
+    if action == "fix_validation_failure" {
+        let source_terms = validation_blocker
+            .and_then(|term| term.get("source_blocking_terms"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        return serde_json::json!({
+            "repair_action": "fix_validation_failure",
+            "repair_domain": "validation",
+            "focus_field": optimization_hint.get("focus_field").cloned().unwrap_or(Value::Null),
+            "focus_source": optimization_hint.get("focus_source").cloned().unwrap_or(Value::Null),
+            "blocking_count": optimization_hint.get("blocking_count").cloned().unwrap_or(Value::Null),
+            "source_blocking_terms": source_terms,
+            "recommended_next_step": "rerun_cross_validation_or_adjust_candidate_inputs",
+        });
+    }
+
+    serde_json::json!({
+        "repair_action": action,
+        "repair_domain": optimization_hint.get("focus_domain").cloned().unwrap_or(Value::Null),
+        "focus_field": optimization_hint.get("focus_field").cloned().unwrap_or(Value::Null),
+        "focus_source": optimization_hint.get("focus_source").cloned().unwrap_or(Value::Null),
+        "blocking_count": optimization_hint.get("blocking_count").cloned().unwrap_or(Value::Null),
+        "source_blocking_terms": [],
+        "recommended_next_step": if action == "none" { "none" } else { "continue_quality_iteration" },
+    })
 }
 
 fn quality_lineage_missing_fields(

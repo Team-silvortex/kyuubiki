@@ -266,6 +266,183 @@ fn compare_summary_skips_ratio_when_baseline_is_zero() {
     assert!(compared.get("percent_change_max_heat_flux").is_none());
 }
 
+#[test]
+fn validates_summary_pair_against_tolerances() {
+    let validation = crate::workflow_executor::run_transform_operator(
+        "transform.validate_summary_tolerance",
+        serde_json::json!({
+            "left": {
+                "max_temperature": 100.0,
+                "max_displacement": 2.0
+            },
+            "right": {
+                "max_temperature": 100.00002,
+                "max_displacement": 2.004
+            }
+        }),
+        serde_json::json!({
+            "fields": ["max_temperature", "max_displacement"],
+            "absolute_tolerance": 0.01,
+            "relative_tolerance": 0.001
+        }),
+    )
+    .expect("summary tolerance validation should run");
+
+    assert_eq!(validation["validation_passed"].as_bool(), Some(true));
+    assert_eq!(validation["validation_grade"].as_str(), Some("pass"));
+    assert_eq!(
+        validation["validation_checked_field_count"].as_u64(),
+        Some(2)
+    );
+    assert_eq!(
+        validation["validation_failed_field_count"].as_u64(),
+        Some(0)
+    );
+}
+
+#[test]
+fn blocks_summary_pair_when_tolerance_or_required_field_fails() {
+    let validation = crate::workflow_executor::run_transform_operator(
+        "transform.validate_summary_tolerance",
+        serde_json::json!({
+            "left": {
+                "max_temperature": 100.0,
+                "max_displacement": 2.0
+            },
+            "right": {
+                "max_temperature": 103.0
+            }
+        }),
+        serde_json::json!({
+            "fields": ["max_temperature", "max_displacement"],
+            "absolute_tolerance": 0.1,
+            "relative_tolerance": 0.001,
+            "fail_on_missing": true
+        }),
+    )
+    .expect("summary tolerance validation should report failures");
+
+    assert_eq!(validation["validation_passed"].as_bool(), Some(false));
+    assert_eq!(validation["validation_grade"].as_str(), Some("block"));
+    assert_eq!(
+        validation["validation_failed_field_count"].as_u64(),
+        Some(1)
+    );
+    assert_eq!(
+        validation["validation_missing_field_count"].as_u64(),
+        Some(1)
+    );
+    assert_eq!(
+        validation["validation_failures"][0]["field"].as_str(),
+        Some("max_temperature")
+    );
+    assert_eq!(
+        validation["validation_missing_fields"][0].as_str(),
+        Some("max_displacement")
+    );
+}
+
+#[test]
+fn runs_summary_tolerance_validation_workflow_graph() {
+    let graph = WorkflowGraph {
+        schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+        id: "workflow.summary-tolerance-validation".to_string(),
+        name: "Summary tolerance validation".to_string(),
+        version: "1.0.0".to_string(),
+        description: Some(
+            "Validate repeated solver summaries before accepting a result.".to_string(),
+        ),
+        dataset_contract: None,
+        entry_nodes: vec![
+            "reference_summary".to_string(),
+            "candidate_summary".to_string(),
+        ],
+        output_nodes: vec!["validation_output".to_string()],
+        defaults: WorkflowDefaults::default(),
+        nodes: vec![
+            input_node("reference_summary"),
+            input_node("candidate_summary"),
+            WorkflowNode {
+                id: "validate_summary".to_string(),
+                kind: WorkflowNodeKind::Transform,
+                operator_id: Some("transform.validate_summary_tolerance".to_string()),
+                name: Some("Validate summary tolerance".to_string()),
+                description: None,
+                config: Some(serde_json::json!({
+                    "fields": ["max_temperature", "max_heat_flux"],
+                    "absolute_tolerance": 0.05,
+                    "relative_tolerance": 0.001
+                })),
+                cache_policy: None,
+                inputs: vec![
+                    port("left", "artifact/result_summary"),
+                    port("right", "artifact/result_summary"),
+                ],
+                outputs: vec![port("summary", "artifact/result_summary")],
+            },
+            output_node("validation_output"),
+        ],
+        edges: vec![
+            edge(
+                "edge-reference",
+                "reference_summary",
+                "summary",
+                "validate_summary",
+                "left",
+                "artifact/result_summary",
+            ),
+            edge(
+                "edge-candidate",
+                "candidate_summary",
+                "summary",
+                "validate_summary",
+                "right",
+                "artifact/result_summary",
+            ),
+            edge(
+                "edge-validation",
+                "validate_summary",
+                "summary",
+                "validation_output",
+                "summary",
+                "artifact/result_summary",
+            ),
+        ],
+    };
+
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph,
+        input_artifacts: BTreeMap::from([
+            (
+                "reference_summary".to_string(),
+                serde_json::json!({
+                    "max_temperature": 100.0,
+                    "max_heat_flux": 50.0
+                }),
+            ),
+            (
+                "candidate_summary".to_string(),
+                serde_json::json!({
+                    "max_temperature": 100.02,
+                    "max_heat_flux": 49.98
+                }),
+            ),
+        ]),
+    })
+    .expect("summary tolerance validation workflow should run");
+
+    let validation = run
+        .artifacts
+        .get("validation_output.summary")
+        .cloned()
+        .expect("validation output should exist");
+    assert_eq!(
+        validation["validation_contract"].as_str(),
+        Some("kyuubiki.summary_tolerance_validation/v1")
+    );
+    assert_eq!(validation["validation_passed"].as_bool(), Some(true));
+}
+
 fn input_node(id: &str) -> WorkflowNode {
     WorkflowNode {
         id: id.to_string(),

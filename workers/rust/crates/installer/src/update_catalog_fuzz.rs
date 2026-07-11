@@ -47,11 +47,11 @@ fn exercise_update_catalog_boundary(catalog: &Value, requested: Option<&str>) {
         let current = channel
             .get("current_version")
             .and_then(Value::as_str)
-            .unwrap_or("1.16.0");
+            .unwrap_or("1.17.8");
         let target = channel
             .get("version")
             .and_then(Value::as_str)
-            .unwrap_or("1.16.0");
+            .unwrap_or("1.17.8");
         let _ = compare_versions(current, target);
     }
 }
@@ -71,7 +71,7 @@ fn catalog_fixture(rng: &mut FuzzRng, case_index: usize) -> Value {
         "schema_version": "kyuubiki.update-catalog/v1",
         "default_channel": if rng.one_in(8) { "missing" } else { "stable" },
         "channels": [
-            channel_fixture("stable", "1.16.0", case_index),
+            channel_fixture("stable", "1.17.8", case_index),
             channel_fixture("preview", "1.17.0", case_index + 1)
         ]
     })
@@ -82,7 +82,7 @@ fn channel_fixture(id: &str, version: &str, case_index: usize) -> Value {
         "id": id,
         "tag": format!("{id}-tag"),
         "version": version,
-        "current_version": "1.16.0",
+        "current_version": "1.17.8",
         "summary": format!("fuzz channel {case_index}"),
         "aliases": [id, format!("{id}-alias")],
         "visible_rules": [

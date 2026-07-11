@@ -3,7 +3,7 @@
 This document defines the `tamamono 1.15.x` physics-coverage push.
 
 The goal is breadth with honest limits, not final numerical authority. The
-coverage created in this window prepares the `1.15.x` and `1.16.x` work on
+coverage created in this window prepares the `1.15.x` and `1.17.x` work on
 engine boundaries, executable task files, operator descriptors, and durable
 workflow contracts.
 
@@ -60,7 +60,7 @@ The matrix is not a claim that every family is industrial-grade. It is a
 contract that each family has a real execution path that future engine and task
 format work must preserve.
 
-## Why This Comes Before 1.15.x And 1.16.x
+## Why This Comes Before 1.15.x And 1.17.x
 
 The executable task format should not be designed around only one or two
 favorite solvers.
@@ -186,7 +186,7 @@ quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.
 
 That variety is what prevents `1.15.x` operator SDK work from hard-coding a
-single physics family, and it prevents `1.16.x` executable task files from
+single physics family, and it prevents `1.17.x` executable task files from
 becoming too narrow.
 
 ## Coverage Levels
@@ -217,7 +217,7 @@ benchmark, test, validation, and limitation evidence.
 
 ## Exit Criteria
 
-`1.15.x` is ready to hand off to the `1.15.x` and `1.16.x` contract work when:
+`1.15.x` is ready to hand off to the `1.15.x` and `1.17.x` contract work when:
 
 - the `physics-coverage` matrix runs all built-in benchmark templates
 - each `physics-coverage` solver family has a matching headless workflow solve
