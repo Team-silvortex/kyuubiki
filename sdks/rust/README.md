@@ -154,7 +154,8 @@ Highlights:
 - material envelope catalog workflow helper for Rust automation clients
 - material study execution plan contract fixture for schedulers that need to
   inspect `--plan-study`-style output before solver dispatch
-- retained material research bundle validation for native CI, agents, and CLIs
+- retained material research bundle validation for native CI, agents, and CLIs,
+  including summary-to-artifact consistency checks
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, and electrostatic study families
 - workflow graph and dataset contract typed structs with validation

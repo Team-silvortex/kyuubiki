@@ -44,6 +44,13 @@ class MaterialResearchBundleTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "chain_sha256"):
             validate_material_research_bundle(bundle)
 
+    def test_rejects_summary_plan_decision_mismatch(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        bundle["next_round_execution_plan"]["decision"] = "repair_validation"
+
+        with self.assertRaisesRegex(ValueError, "next_round_execution_plan.decision"):
+            validate_material_research_bundle(bundle)
+
 
 if __name__ == "__main__":
     unittest.main()

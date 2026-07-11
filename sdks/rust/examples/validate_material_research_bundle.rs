@@ -14,6 +14,16 @@ fn main() -> SdkResult<()> {
     println!("study={}", bundle.study);
     println!("winner={}", bundle.summary.winner_candidate_id);
     println!("reliability={}", bundle.summary.reliability_decision);
+    println!("next_round={}", bundle.summary.next_round_decision);
+    println!(
+        "next_iteration={}",
+        bundle.summary.next_iteration.unwrap_or_default()
+    );
+    println!(
+        "runnable_next_steps={}",
+        bundle.summary.runnable_next_step_count.unwrap_or_default()
+    );
+    println!("chain_stop={}", bundle.summary.chain_stop_reason);
 
     Ok(())
 }

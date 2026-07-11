@@ -16,6 +16,7 @@ pub(crate) fn next_round_optimization_objectives(
         .collect::<Vec<_>>();
     let mode = match decision {
         "repair_or_rerun" => "data_repair",
+        "repair_validation" => "validation_repair",
         "mitigate_design_risk" => "risk_constrained_search",
         _ => "winner_neighborhood_expansion",
     };
@@ -65,6 +66,12 @@ fn optimization_guidance(decision: &str, violated_gate_ids: &[String]) -> String
     if decision == "repair_or_rerun" {
         return "repair missing metrics before changing candidate geometry or material parameters"
             .to_string();
+    }
+    if decision == "repair_validation" {
+        return format!(
+            "rerun focused candidates and rebuild cross-check validation for gates: {}",
+            violated_gate_ids.join(", ")
+        );
     }
     if decision == "mitigate_design_risk" {
         return format!(

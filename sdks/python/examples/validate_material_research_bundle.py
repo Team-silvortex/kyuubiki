@@ -16,6 +16,10 @@ def main() -> None:
     print(f"study={bundle['study']}")
     print(f"winner={bundle['summary']['winner_candidate_id']}")
     print(f"reliability={bundle['summary']['reliability_decision']}")
+    print(f"next_round={bundle['summary']['next_round_decision']}")
+    print(f"next_iteration={bundle['summary'].get('next_iteration', 0)}")
+    print(f"runnable_next_steps={bundle['summary'].get('runnable_next_step_count', 0)}")
+    print(f"chain_stop={bundle['summary']['chain_stop_reason']}")
 
 
 if __name__ == "__main__":

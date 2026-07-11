@@ -11,6 +11,7 @@ mod material_candidate_materialization;
 #[cfg(test)]
 mod material_candidate_materialization_tests;
 mod material_candidate_review;
+mod material_candidate_review_batches;
 mod material_composite;
 mod material_composite_candidates;
 mod material_composite_interfaces;
@@ -25,16 +26,21 @@ mod material_dielectric;
 mod material_envelope_workflow;
 mod material_exploration;
 mod material_exploration_objectives;
+mod material_exploration_risk;
 #[cfg(test)]
 mod material_exploration_tests;
 mod material_optimization;
 mod material_reliability;
+#[cfg(test)]
+mod material_reliability_tests;
 mod material_reports;
 mod material_research;
 mod material_research_bundle;
 mod material_research_candidates;
 #[cfg(test)]
 mod material_research_tests;
+#[cfg(test)]
+mod material_research_validation_flow_tests;
 mod material_structural;
 mod material_study_execution_plan;
 mod material_thermo;
@@ -105,8 +111,10 @@ pub use material_optimization::{
 };
 pub use material_reliability::{
     MaterialEvidenceRef, MaterialModelAssumption, MaterialQualityGate, MaterialReliabilityEnvelope,
-    MaterialReliabilitySummary, gate_status, material_evidence_ref, material_model_assumption,
-    material_quality_gate, material_reliability_summary,
+    MaterialReliabilitySummary, MaterialRepairHint, SUMMARY_TOLERANCE_VALIDATION_CONTRACT,
+    gate_status, material_evidence_ref, material_model_assumption, material_quality_gate,
+    material_reliability_summary, material_validation_quality_gate,
+    material_validation_repair_hint,
 };
 pub use material_reports::{
     MaterialStudyCatalogEntry, MaterialStudyDescriptor, build_material_report,

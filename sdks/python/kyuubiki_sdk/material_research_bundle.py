@@ -43,11 +43,50 @@ def validate_material_research_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     )
     _require_artifact_schema(bundle.get("chain"), _CHAIN_SCHEMA_VERSION, "chain")
     summary = _require_mapping(bundle.get("summary"), "summary")
+    _validate_summary_artifact_consistency(bundle, summary)
     _require_string(summary.get("winner_candidate_id"), "summary.winner_candidate_id")
     _require_string(summary.get("reliability_decision"), "summary.reliability_decision")
     _require_string(summary.get("next_round_decision"), "summary.next_round_decision")
     _require_string(summary.get("chain_stop_reason"), "summary.chain_stop_reason")
     return bundle
+
+
+def _validate_summary_artifact_consistency(
+    bundle: dict[str, Any], summary: dict[str, Any]
+) -> None:
+    plan = _require_mapping(
+        bundle.get("next_round_execution_plan"),
+        "next_round_execution_plan",
+    )
+    next_exploration = _require_mapping(bundle.get("next_exploration"), "next_exploration")
+    chain = _require_mapping(bundle.get("chain"), "chain")
+    _require_equal(
+        plan.get("decision"),
+        summary.get("next_round_decision"),
+        "next_round_execution_plan.decision",
+    )
+    if "runnable_next_step_count" in summary:
+        _require_equal(
+            plan.get("runnable_step_count"),
+            summary.get("runnable_next_step_count"),
+            "next_round_execution_plan.runnable_step_count",
+        )
+    if "next_iteration" in summary:
+        _require_equal(
+            plan.get("iteration"),
+            summary.get("next_iteration"),
+            "next_round_execution_plan.iteration",
+        )
+        _require_equal(
+            next_exploration.get("iteration"),
+            summary.get("next_iteration"),
+            "next_exploration.iteration",
+        )
+    _require_equal(
+        chain.get("stop_reason"),
+        summary.get("chain_stop_reason"),
+        "chain.stop_reason",
+    )
 
 
 def _validate_checksums(checksums: dict[str, Any]) -> None:

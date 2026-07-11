@@ -195,7 +195,8 @@ Highlights:
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
-- retained material research bundle validation for CI, notebooks, and agents
+- retained material research bundle validation for CI, notebooks, and agents,
+  including summary-to-artifact consistency checks
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
 - advanced solver workflow templates for modal frame, nonlinear spring, and

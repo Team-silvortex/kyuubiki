@@ -82,6 +82,8 @@ export function buildIndex(entries) {
     winner_candidate_id: bundle.summary?.winner_candidate_id ?? null,
     reliability_decision: bundle.summary?.reliability_decision ?? null,
     next_round_decision: bundle.summary?.next_round_decision ?? null,
+    runnable_next_step_count: bundle.summary?.runnable_next_step_count ?? null,
+    next_iteration: bundle.summary?.next_iteration ?? null,
     chain_stop_reason: bundle.summary?.chain_stop_reason ?? null,
     chain_convergence_state: bundle.summary?.chain_convergence_state ?? null,
     chain_round_count: bundle.summary?.chain_round_count ?? null,
@@ -116,11 +118,11 @@ function writeReadme(index, outputPath) {
     "",
     `Bundles: ${index.bundle_count}`,
     "",
-    "| Study | Winner | Reliability | Next round | Chain |",
-    "| --- | --- | --- | --- | --- |",
+    "| Study | Winner | Reliability | Next round | Runnable | Chain |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...index.bundles.map(
       (bundle) =>
-        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.reliability_decision}\` | \`${bundle.next_round_decision}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` |`,
+        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.reliability_decision}\` | \`${bundle.next_round_decision}@${bundle.next_iteration}\` | \`${bundle.runnable_next_step_count}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` |`,
     ),
     "",
   ];
@@ -140,6 +142,8 @@ function runSelfTest() {
           winner_candidate_id: "candidate-a",
           reliability_decision: "blocked_by_quality_gates",
           next_round_decision: "mitigate_design_risk",
+          runnable_next_step_count: 3,
+          next_iteration: 2,
           chain_stop_reason: "risk_mitigation_required",
           chain_convergence_state: "blocked_by_quality_gates",
           chain_round_count: 2,
@@ -149,6 +153,9 @@ function runSelfTest() {
   ]);
   if (index.bundle_count !== 1 || index.reliability_decision_counts.blocked_by_quality_gates !== 1) {
     fail("self-test did not build expected index counts");
+  }
+  if (index.bundles[0].runnable_next_step_count !== 3 || index.bundles[0].next_iteration !== 2) {
+    fail("self-test did not retain next-round execution summary");
   }
   console.log("material research bundle index self-test passed");
 }

@@ -177,6 +177,41 @@ fn next_round_plan_mitigates_design_risk_without_missing_metrics() {
 }
 
 #[test]
+fn next_round_plan_repairs_summary_validation_before_expansion() {
+    let report = json!({
+        "winner_candidate_id": "polyimide_film",
+        "warnings": [],
+        "candidates": [
+            { "candidate_id": "polyimide_film", "rank": 1, "score": 0.8 },
+            { "candidate_id": "alumina_ceramic", "rank": 2, "score": 0.6 }
+        ],
+        "reliability": {
+            "summary": {
+                "decision": "blocked_by_quality_gates",
+                "blocking_gate_ids": ["gate.summary_tolerance_validation"]
+            },
+            "quality_gates": [
+                { "id": "gate.summary_tolerance_validation", "status": "violate" }
+            ]
+        }
+    });
+
+    let plan = build_material_exploration_next_round_plan(&report, 4);
+
+    assert_eq!(plan.iteration, 5);
+    assert_eq!(plan.decision, "repair_validation");
+    assert!(
+        plan.actions
+            .contains(&"rerun_validation_focused_candidates".to_string())
+    );
+    assert!(
+        plan.rationale
+            .iter()
+            .any(|line| line.contains("gate.summary_tolerance_validation"))
+    );
+}
+
+#[test]
 fn next_round_plan_prefers_reliability_summary_blocking_gate_ids() {
     let report = json!({
         "winner_candidate_id": "candidate-a",
@@ -209,6 +244,70 @@ fn next_round_plan_prefers_reliability_summary_blocking_gate_ids() {
             .rationale
             .iter()
             .any(|line| line.contains("gate.result_completeness"))
+    );
+}
+
+#[test]
+fn next_round_execution_plan_exports_validation_repair_objectives() {
+    let exploration = json!({
+        "schema_version": MATERIAL_EXPLORATION_SCHEMA_VERSION,
+        "study": "material_dielectric_screening",
+        "report": {
+            "winner_candidate_id": "polyimide_film",
+            "metric_specs": [
+                {
+                    "id": "max_electric_field",
+                    "label": "Max electric field",
+                    "unit": "V/m",
+                    "objective": "minimize",
+                    "weight": 0.5
+                }
+            ],
+            "reliability": {
+                "summary": {
+                    "blocking_gate_ids": ["gate.summary_tolerance_validation"]
+                },
+                "quality_gates": [
+                    { "id": "gate.summary_tolerance_validation", "status": "violate" }
+                ]
+            }
+        },
+        "next_round": {
+            "iteration": 5,
+            "decision": "repair_validation",
+            "focus_candidate_ids": ["polyimide_film"],
+            "actions": ["rerun_validation_focused_candidates"]
+        }
+    });
+
+    let plan =
+        build_material_exploration_next_round_execution_plan(&exploration).expect("next plan");
+
+    assert_eq!(plan.decision, "repair_validation");
+    assert_eq!(plan.runnable_step_count, 1);
+    assert!(
+        plan.steps
+            .iter()
+            .all(|step| candidate_id_for_step(step) == Some("polyimide_film"))
+    );
+    assert_eq!(
+        plan.optimization_objectives["mode"].as_str(),
+        Some("validation_repair")
+    );
+    assert_eq!(plan.candidate_drafts.len(), 0);
+    assert_eq!(
+        plan.candidate_draft_summary["source_decision"].as_str(),
+        Some("repair_validation")
+    );
+    assert_eq!(
+        plan.candidate_draft_summary["generation_state"].as_str(),
+        Some("blocked_until_validation_passes")
+    );
+    assert_eq!(plan.draft_execution_batches.len(), 0);
+    assert!(
+        plan.notes
+            .iter()
+            .any(|note| note.contains("cross-check validation"))
     );
 }
 

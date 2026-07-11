@@ -113,6 +113,27 @@ function validateBundle(bundle) {
   assertNonEmptyString(bundle.summary?.reliability_decision, "summary.reliability_decision");
   assertNonEmptyString(bundle.summary?.next_round_decision, "summary.next_round_decision");
   assertNonEmptyString(bundle.summary?.chain_stop_reason, "summary.chain_stop_reason");
+  assertEquals(
+    bundle.next_round_execution_plan?.decision,
+    bundle.summary.next_round_decision,
+    "next_round_execution_plan.decision",
+  );
+  assertEquals(
+    bundle.next_round_execution_plan?.runnable_step_count,
+    bundle.summary.runnable_next_step_count,
+    "next_round_execution_plan.runnable_step_count",
+  );
+  assertEquals(
+    bundle.next_round_execution_plan?.iteration,
+    bundle.summary.next_iteration,
+    "next_round_execution_plan.iteration",
+  );
+  assertEquals(
+    bundle.next_exploration?.iteration,
+    bundle.summary.next_iteration,
+    "next_exploration.iteration",
+  );
+  assertEquals(bundle.chain?.stop_reason, bundle.summary.chain_stop_reason, "chain.stop_reason");
   if (!Array.isArray(bundle.reproducibility?.initial_command)) {
     fail("reproducibility.initial_command must be an argv array");
   }
@@ -133,6 +154,49 @@ function runSelfTest() {
     summary: {},
     reproducibility: { initial_command: [] },
   };
+  expectValidateBundleFailure(badBundle, "bad checksum");
+
+  const artifact = { schema_version: "kyuubiki.material-exploration-run/v1", iteration: 2 };
+  const plan = {
+    schema_version: "kyuubiki.material-exploration-next-round-execution/v1",
+    decision: "repair_validation",
+    iteration: 2,
+    runnable_step_count: 1,
+  };
+  const chain = {
+    schema_version: "kyuubiki.material-exploration-chain/v1",
+    stop_reason: "validation_repair_required",
+  };
+  const mismatchBundle = {
+    schema_version: "kyuubiki.material-research-bundle/v1",
+    posture: "screening_research_bundle",
+    study: "heat-spreader",
+    artifact_checksums: {
+      initial_exploration_sha256: sha256(artifact),
+      next_round_execution_plan_sha256: sha256(plan),
+      next_exploration_sha256: sha256(artifact),
+      chain_sha256: sha256(chain),
+    },
+    initial_exploration: artifact,
+    next_round_execution_plan: plan,
+    next_exploration: artifact,
+    chain,
+    summary: {
+      winner_candidate_id: "candidate-a",
+      reliability_decision: "blocked_by_quality_gates",
+      next_round_decision: "mitigate_design_risk",
+      runnable_next_step_count: 1,
+      next_iteration: 2,
+      chain_stop_reason: "validation_repair_required",
+    },
+    reproducibility: { initial_command: ["kyuubiki-material-explore"] },
+  };
+  expectValidateBundleFailure(mismatchBundle, "summary/plan decision mismatch");
+
+  console.log("material research bundle check self-test passed");
+}
+
+function expectValidateBundleFailure(bundle, label) {
   const originalExit = process.exit;
   const originalError = console.error;
   let failed = false;
@@ -142,7 +206,7 @@ function runSelfTest() {
     throw new Error("self-test-fail");
   };
   try {
-    validateBundle(badBundle);
+    validateBundle(bundle);
   } catch (error) {
     if (error.message !== "self-test-fail") {
       throw error;
@@ -152,9 +216,8 @@ function runSelfTest() {
     console.error = originalError;
   }
   if (!failed) {
-    fail("self-test did not reject a bad checksum");
+    fail(`self-test did not reject ${label}`);
   }
-  console.log("material research bundle check self-test passed");
 }
 
 const args = parseArgs(process.argv);

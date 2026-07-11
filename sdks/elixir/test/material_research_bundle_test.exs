@@ -38,4 +38,15 @@ defmodule KyuubikiSdk.MaterialResearchBundleTest do
     assert {:error, error} = MaterialResearchBundle.validate(bundle)
     assert error.message =~ "chain_sha256"
   end
+
+  test "rejects summary and plan decision mismatch" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["next_round_execution_plan", "decision"], "repair_validation")
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "next_round_execution_plan.decision"
+  end
 end

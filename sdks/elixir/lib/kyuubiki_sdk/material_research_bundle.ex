@@ -37,6 +37,7 @@ defmodule KyuubikiSdk.MaterialResearchBundle do
         "next_exploration"
       )
       |> require_artifact_schema(bundle["chain"], @chain_schema_version, "chain")
+      |> validate_summary_artifact_consistency(bundle)
       |> validate_summary(bundle["summary"])
 
     if errors == [], do: {:ok, bundle}, else: {:error, Error.validation(Enum.reverse(errors))}
@@ -92,6 +93,42 @@ defmodule KyuubikiSdk.MaterialResearchBundle do
 
   defp validate_summary(errors, _summary), do: ["summary must be an object" | errors]
 
+  defp validate_summary_artifact_consistency(errors, %{"summary" => %{} = summary} = bundle) do
+    errors
+    |> require_value_equal(
+      bundle["next_round_execution_plan"],
+      "decision",
+      summary["next_round_decision"],
+      "next_round_execution_plan.decision"
+    )
+    |> require_optional_value_equal(
+      bundle["next_round_execution_plan"],
+      "runnable_step_count",
+      summary["runnable_next_step_count"],
+      "next_round_execution_plan.runnable_step_count"
+    )
+    |> require_optional_value_equal(
+      bundle["next_round_execution_plan"],
+      "iteration",
+      summary["next_iteration"],
+      "next_round_execution_plan.iteration"
+    )
+    |> require_optional_value_equal(
+      bundle["next_exploration"],
+      "iteration",
+      summary["next_iteration"],
+      "next_exploration.iteration"
+    )
+    |> require_value_equal(
+      bundle["chain"],
+      "stop_reason",
+      summary["chain_stop_reason"],
+      "chain.stop_reason"
+    )
+  end
+
+  defp validate_summary_artifact_consistency(errors, _bundle), do: errors
+
   defp require_artifact_schema(errors, %{} = artifact, expected, field),
     do: require_equal(errors, artifact["schema_version"], expected, "#{field}.schema_version")
 
@@ -101,6 +138,17 @@ defmodule KyuubikiSdk.MaterialResearchBundle do
   defp require_equal(errors, actual, expected, field) do
     if actual == expected, do: errors, else: ["#{field} must be #{expected}" | errors]
   end
+
+  defp require_value_equal(errors, %{} = artifact, key, expected, field),
+    do: require_equal(errors, artifact[key], expected, field)
+
+  defp require_value_equal(errors, _artifact, _key, _expected, field),
+    do: ["#{field} is required" | errors]
+
+  defp require_optional_value_equal(errors, _artifact, _key, nil, _field), do: errors
+
+  defp require_optional_value_equal(errors, artifact, key, expected, field),
+    do: require_value_equal(errors, artifact, key, expected, field)
 
   defp require_string(errors, value, _field) when is_binary(value) and value != "", do: errors
   defp require_string(errors, _value, field), do: ["#{field} must be a non-empty string" | errors]

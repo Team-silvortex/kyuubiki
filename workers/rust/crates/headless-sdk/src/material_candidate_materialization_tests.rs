@@ -76,6 +76,14 @@ fn next_round_execution_plan_filters_design_risk_steps_to_focus_candidates() {
         Some("kyuubiki.material-candidate-draft-summary/v1")
     );
     assert_eq!(
+        plan.candidate_draft_summary["source_decision"].as_str(),
+        Some("mitigate_design_risk")
+    );
+    assert_eq!(
+        plan.candidate_draft_summary["generation_state"].as_str(),
+        Some("generated")
+    );
+    assert_eq!(
         plan.candidate_draft_summary["draft_count"].as_u64(),
         Some(2)
     );

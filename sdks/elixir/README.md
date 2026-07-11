@@ -126,7 +126,8 @@ Highlights:
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
-- retained material research bundle validation for CI, notebooks, and agents
+- retained material research bundle validation for CI, notebooks, and agents,
+  including summary-to-artifact consistency checks
 - shared material-study execution-plan contract helper for cross-SDK automation
 - BEAM-friendly thin wrapper over the public protocol
 

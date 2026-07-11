@@ -88,6 +88,27 @@ function checkExample(example) {
   requireString(example.summary?.reliability_decision, "summary.reliability_decision", examplePath);
   requireString(example.summary?.next_round_decision, "summary.next_round_decision", examplePath);
   requireString(example.summary?.chain_stop_reason, "summary.chain_stop_reason", examplePath);
+  assertEquals(
+    example.next_round_execution_plan?.decision,
+    example.summary.next_round_decision,
+    "next_round_execution_plan.decision",
+  );
+  assertEquals(
+    example.next_round_execution_plan?.runnable_step_count,
+    example.summary.runnable_next_step_count,
+    "next_round_execution_plan.runnable_step_count",
+  );
+  assertEquals(
+    example.next_round_execution_plan?.iteration,
+    example.summary.next_iteration,
+    "next_round_execution_plan.iteration",
+  );
+  assertEquals(
+    example.next_exploration?.iteration,
+    example.summary.next_iteration,
+    "next_exploration.iteration",
+  );
+  assertEquals(example.chain?.stop_reason, example.summary.chain_stop_reason, "chain.stop_reason");
   assertChecksum(example, "initial_exploration_sha256", "initial_exploration");
   assertChecksum(example, "next_round_execution_plan_sha256", "next_round_execution_plan");
   assertChecksum(example, "next_exploration_sha256", "next_exploration");
@@ -111,6 +132,12 @@ function assertChecksum(example, checksumKey, artifactKey) {
   const expected = sha256(example[artifactKey]);
   if (actual !== expected) {
     fail(`${examplePath}: ${checksumKey} must match ${artifactKey}`);
+  }
+}
+
+function assertEquals(actual, expected, field) {
+  if (actual !== expected) {
+    fail(`${examplePath}: ${field} must be ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
   }
 }
 
@@ -141,6 +168,16 @@ function checkContracts() {
 function runSelfTest() {
   const example = readJson(examplePath);
   example.artifact_checksums.chain_sha256 = "0".repeat(64);
+  expectCheckExampleFailure(example, "bad retained artifact checksum");
+
+  const mismatch = readJson(examplePath);
+  mismatch.next_round_execution_plan.decision = "repair_validation";
+  expectCheckExampleFailure(mismatch, "summary/plan decision mismatch");
+
+  console.log("material research bundle contract check self-test passed");
+}
+
+function expectCheckExampleFailure(example, label) {
   const originalExit = process.exit;
   const originalError = console.error;
   let failed = false;
@@ -160,9 +197,8 @@ function runSelfTest() {
     console.error = originalError;
   }
   if (!failed) {
-    fail("self-test did not reject a bad retained artifact checksum");
+    fail(`self-test did not reject ${label}`);
   }
-  console.log("material research bundle contract check self-test passed");
 }
 
 if (process.argv.includes("--self-test")) {

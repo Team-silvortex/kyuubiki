@@ -49,3 +49,16 @@ fn rejects_bad_checksum_shape() {
 
     assert!(error.contains("chain_sha256"));
 }
+
+#[test]
+fn rejects_summary_plan_decision_mismatch() {
+    let mut bundle = fixture();
+    bundle.next_round_execution_plan["decision"] = Value::String("repair_validation".into());
+
+    let error = bundle
+        .validate()
+        .expect_err("summary and plan decision mismatch should fail")
+        .to_string();
+
+    assert!(error.contains("next_round_execution_plan.decision"));
+}

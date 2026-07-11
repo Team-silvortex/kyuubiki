@@ -206,7 +206,9 @@ with a compact fixture at
 Rust SDK callers can decode that artifact with `MaterialResearchBundle`, while
 Python and Elixir expose `validate_material_research_bundle` helpers for the
 same fixture and generated bundle shape before passing retained artifacts to a
-custom review, CI, notebook, or agent harness.
+custom review, CI, notebook, or agent harness. All three SDKs reject bundles
+where the top-level summary drifts from the embedded next-round execution plan,
+next exploration iteration, or chain stop reason.
 Composite panel materialized
 specs can be converted back into concrete
 `solve_composite_thermo_electric_panel` workflow steps, applying the selected

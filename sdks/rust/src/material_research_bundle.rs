@@ -102,6 +102,7 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Sdk
         "next_exploration",
     );
     require_artifact_schema(&mut errors, &bundle.chain, CHAIN_SCHEMA_VERSION, "chain");
+    validate_summary_artifact_consistency(&mut errors, bundle);
     require_non_empty(
         &mut errors,
         &bundle.summary.winner_candidate_id,
@@ -128,6 +129,51 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Sdk
     } else {
         Err(SdkError::Validation { errors })
     }
+}
+
+fn validate_summary_artifact_consistency(
+    errors: &mut Vec<String>,
+    bundle: &MaterialResearchBundle,
+) {
+    require_value_str_equal(
+        errors,
+        &bundle.next_round_execution_plan,
+        "decision",
+        &bundle.summary.next_round_decision,
+        "next_round_execution_plan.decision",
+    );
+    if let Some(expected) = bundle.summary.runnable_next_step_count {
+        require_value_u64_equal(
+            errors,
+            &bundle.next_round_execution_plan,
+            "runnable_step_count",
+            expected as u64,
+            "next_round_execution_plan.runnable_step_count",
+        );
+    }
+    if let Some(expected) = bundle.summary.next_iteration {
+        require_value_u64_equal(
+            errors,
+            &bundle.next_round_execution_plan,
+            "iteration",
+            expected as u64,
+            "next_round_execution_plan.iteration",
+        );
+        require_value_u64_equal(
+            errors,
+            &bundle.next_exploration,
+            "iteration",
+            expected as u64,
+            "next_exploration.iteration",
+        );
+    }
+    require_value_str_equal(
+        errors,
+        &bundle.chain,
+        "stop_reason",
+        &bundle.summary.chain_stop_reason,
+        "chain.stop_reason",
+    );
 }
 
 fn validate_checksums(
@@ -219,5 +265,32 @@ fn require_sha256(errors: &mut Vec<String>, value: &str, field: &str) {
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
     if !is_sha256 {
         errors.push(format!("{field} must be a lowercase SHA-256 hex digest"));
+    }
+}
+
+fn require_value_str_equal(
+    errors: &mut Vec<String>,
+    value: &Value,
+    key: &str,
+    expected: &str,
+    field: &str,
+) {
+    match value.get(key).and_then(Value::as_str) {
+        Some(actual) => require_equal(errors, actual, expected, field),
+        None => errors.push(format!("{field} is required")),
+    }
+}
+
+fn require_value_u64_equal(
+    errors: &mut Vec<String>,
+    value: &Value,
+    key: &str,
+    expected: u64,
+    field: &str,
+) {
+    match value.get(key).and_then(Value::as_u64) {
+        Some(actual) if actual == expected => {}
+        Some(actual) => errors.push(format!("{field} must be {expected}, got {actual}")),
+        None => errors.push(format!("{field} is required")),
     }
 }

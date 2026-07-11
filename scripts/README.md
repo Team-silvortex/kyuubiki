@@ -91,11 +91,14 @@ This directory contains host-native operational entry points.
   Build and verify the first retained material research bundle. The bundle
   captures initial exploration, next-round execution planning, a rerun,
   chained rounds, artifact checksums, and repo-relative reproduction commands
-  under `kyuubiki.material-research-bundle/v1`. Override `STUDY=` through Make
-  to build the heat-spreader or composite thermo-electric panel retained
-  profile. The bundle index builder writes a compact multi-study overview under
-  `tmp/material-research-bundles/` for CI, agents, and release notes. The
-  lightweight contract check keeps
+  under `kyuubiki.material-research-bundle/v1`. The checker verifies that the
+  top-level summary matches the embedded next-round decision, next iteration,
+  runnable step count, and chain stop reason. Override `STUDY=` through Make to
+  build the heat-spreader or composite thermo-electric panel retained profile.
+  The bundle index builder writes a compact multi-study overview under
+  `tmp/material-research-bundles/` for CI, agents, and release notes, including
+  next iteration and runnable next-step count for scheduling. The lightweight
+  contract check keeps
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
   sync without running the solver.
@@ -257,11 +260,13 @@ Useful checks:
   Run the zero-dependency retained material research bundle contract check and
   its self-test. Use this after changing
   `schemas/material-research-bundle.schema.json`,
-  `schemas/examples.material-research-bundle.json`, or bundle documentation.
+  `schemas/examples.material-research-bundle.json`, retained summary fields,
+  next-round execution-plan fields, or bundle documentation.
 - `make material-research-bundle-index`
   Build the retained heat-spreader and composite thermo-electric panel bundles,
   validate them, and write `tmp/material-research-bundles/index.json` plus a
-  human-readable `README.md` summary.
+  human-readable `README.md` summary with next iteration and runnable next-step
+  counts.
 - `make build-operator-qualification-readiness`
   Write and validate a readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

@@ -66,10 +66,27 @@
     "next_round_execution_plan": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["schema_version"],
+      "required": [
+        "schema_version",
+        "decision",
+        "iteration",
+        "runnable_step_count"
+      ],
       "properties": {
         "schema_version": {
           "const": "kyuubiki.material-exploration-next-round-execution/v1"
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "runnable_step_count": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -203,6 +220,14 @@
         "next_round_decision": {
           "type": "string",
           "minLength": 1
+        },
+        "runnable_next_step_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "next_iteration": {
+          "type": "integer",
+          "minimum": 1
         },
         "chain_stop_reason": {
           "type": "string",

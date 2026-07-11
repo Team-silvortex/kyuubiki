@@ -81,7 +81,9 @@ fn control_plane_executes_operator_task_batch() {
     assert_eq!(result["ok_count"].as_u64(), Some(1));
     assert_eq!(result["error_codes"].as_array().map(Vec::len), Some(0));
     assert_eq!(
-        result["error_code_counts"].as_object().map(|counts| counts.len()),
+        result["error_code_counts"]
+            .as_object()
+            .map(|counts| counts.len()),
         Some(0)
     );
     assert_eq!(
@@ -152,7 +154,9 @@ fn control_plane_prepares_operator_task_batch() {
     assert_eq!(result["verified_count"].as_u64(), Some(1));
     assert_eq!(result["error_codes"].as_array().map(Vec::len), Some(0));
     assert_eq!(
-        result["error_code_counts"].as_object().map(|counts| counts.len()),
+        result["error_code_counts"]
+            .as_object()
+            .map(|counts| counts.len()),
         Some(0)
     );
     assert_eq!(result["summaries"][0]["case_id"].as_str(), Some("case-a"));

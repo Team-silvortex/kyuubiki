@@ -1,4 +1,7 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+pub const SUMMARY_TOLERANCE_VALIDATION_CONTRACT: &str = "kyuubiki.summary_tolerance_validation/v1";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialEvidenceRef {
@@ -28,6 +31,18 @@ pub struct MaterialQualityGate {
     pub actual_value: Option<f64>,
     pub status: String,
     pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialRepairHint {
+    pub schema_version: String,
+    pub action: String,
+    pub strategy: String,
+    pub domain: String,
+    pub focus_field: Option<String>,
+    pub focus_source: String,
+    pub blocking_gate_id: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,6 +122,91 @@ pub fn material_quality_gate(
     }
 }
 
+pub fn material_validation_quality_gate(validation_payload: &Value) -> Option<MaterialQualityGate> {
+    if validation_payload
+        .get("validation_contract")
+        .and_then(Value::as_str)
+        != Some(SUMMARY_TOLERANCE_VALIDATION_CONTRACT)
+    {
+        return None;
+    }
+
+    let failed_count = validation_payload
+        .get("validation_failed_field_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let missing_count = validation_payload
+        .get("validation_missing_field_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let fail_on_missing = validation_payload
+        .get("validation_fail_on_missing")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    let passed = validation_payload
+        .get("validation_passed")
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| failed_count == 0 && (!fail_on_missing || missing_count == 0));
+    let blocking_count = failed_count + if fail_on_missing { missing_count } else { 0 };
+
+    Some(material_quality_gate(
+        "gate.summary_tolerance_validation",
+        "Summary tolerance validation",
+        "summary_validation_blocking_count",
+        "<=",
+        0.0,
+        Some(if passed {
+            0.0
+        } else {
+            blocking_count.max(1) as f64
+        }),
+        "Cross-check summary fields against tolerance before trusting material research ranking.",
+    ))
+}
+
+pub fn material_validation_repair_hint(validation_payload: &Value) -> Option<MaterialRepairHint> {
+    if validation_payload
+        .get("validation_contract")
+        .and_then(Value::as_str)
+        != Some(SUMMARY_TOLERANCE_VALIDATION_CONTRACT)
+        || validation_payload
+            .get("validation_passed")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+    {
+        return None;
+    }
+
+    let focus_field = first_failed_validation_field(validation_payload)
+        .or_else(|| first_missing_validation_field(validation_payload));
+    let missing_focus = focus_field.as_deref().is_some_and(|field| {
+        validation_payload
+            .get("validation_missing_fields")
+            .and_then(Value::as_array)
+            .is_some_and(|fields| fields.iter().any(|value| value.as_str() == Some(field)))
+    });
+    let reason = match focus_field.as_deref() {
+        Some(field) if missing_focus => format!("summary validation is missing field {field}"),
+        Some(field) => format!("summary validation exceeded tolerance for field {field}"),
+        None => "summary validation failed without a specific focus field".to_string(),
+    };
+
+    Some(MaterialRepairHint {
+        schema_version: "kyuubiki.material-repair-hint/v1".to_string(),
+        action: "fix_validation_failure".to_string(),
+        strategy: if missing_focus {
+            "fill_missing_summary_field".to_string()
+        } else {
+            "rerun_validation_focused_sweep".to_string()
+        },
+        domain: "validation".to_string(),
+        focus_field,
+        focus_source: "summary_tolerance_validation".to_string(),
+        blocking_gate_id: "gate.summary_tolerance_validation".to_string(),
+        reason,
+    })
+}
+
 pub fn gate_status(value: Option<f64>, operator: &str, limit: f64) -> String {
     match (value, operator) {
         (Some(actual), "<=") if actual <= limit => "pass".to_string(),
@@ -116,6 +216,25 @@ pub fn gate_status(value: Option<f64>, operator: &str, limit: f64) -> String {
         (Some(_), _) => "observe".to_string(),
         (None, _) => "unknown".to_string(),
     }
+}
+
+fn first_failed_validation_field(validation_payload: &Value) -> Option<String> {
+    validation_payload
+        .get("validation_failures")
+        .and_then(Value::as_array)
+        .and_then(|failures| failures.first())
+        .and_then(|failure| failure.get("field"))
+        .and_then(Value::as_str)
+        .map(ToString::to_string)
+}
+
+fn first_missing_validation_field(validation_payload: &Value) -> Option<String> {
+    validation_payload
+        .get("validation_missing_fields")
+        .and_then(Value::as_array)
+        .and_then(|fields| fields.first())
+        .and_then(Value::as_str)
+        .map(ToString::to_string)
 }
 
 pub fn material_reliability_summary(

@@ -97,6 +97,7 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
         MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION,
         "chain",
     )?;
+    validate_summary_artifact_consistency(bundle)?;
     require_non_empty(
         &bundle.summary.winner_candidate_id,
         "summary.winner_candidate_id",
@@ -114,6 +115,43 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
         "summary.chain_stop_reason",
     )?;
     Ok(())
+}
+
+fn validate_summary_artifact_consistency(bundle: &MaterialResearchBundle) -> Result<(), String> {
+    require_value_str_equal(
+        &bundle.next_round_execution_plan,
+        "decision",
+        &bundle.summary.next_round_decision,
+        "next_round_execution_plan.decision",
+    )?;
+    if let Some(expected) = bundle.summary.runnable_next_step_count {
+        require_value_u64_equal(
+            &bundle.next_round_execution_plan,
+            "runnable_step_count",
+            expected as u64,
+            "next_round_execution_plan.runnable_step_count",
+        )?;
+    }
+    if let Some(expected) = bundle.summary.next_iteration {
+        require_value_u64_equal(
+            &bundle.next_round_execution_plan,
+            "iteration",
+            expected as u64,
+            "next_round_execution_plan.iteration",
+        )?;
+        require_value_u64_equal(
+            &bundle.next_exploration,
+            "iteration",
+            expected as u64,
+            "next_exploration.iteration",
+        )?;
+    }
+    require_value_str_equal(
+        &bundle.chain,
+        "stop_reason",
+        &bundle.summary.chain_stop_reason,
+        "chain.stop_reason",
+    )
 }
 
 fn validate_reproducibility(
@@ -202,6 +240,36 @@ fn require_sha256(value: &str, field: &str) -> Result<(), String> {
     }
 }
 
+fn require_value_str_equal(
+    value: &Value,
+    key: &str,
+    expected: &str,
+    field: &str,
+) -> Result<(), String> {
+    let actual = value
+        .get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("{field} is required"))?;
+    require_equal(actual, expected, field)
+}
+
+fn require_value_u64_equal(
+    value: &Value,
+    key: &str,
+    expected: u64,
+    field: &str,
+) -> Result<(), String> {
+    let actual = value
+        .get(key)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("{field} is required"))?;
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!("{field} must be {expected}, got {actual}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,5 +320,20 @@ mod tests {
             validate_material_research_bundle(&bundle).expect_err("bad checksum should fail");
 
         assert!(error.contains("chain_sha256"));
+    }
+
+    #[test]
+    fn rejects_bundle_summary_plan_decision_mismatch() {
+        let mut bundle: MaterialResearchBundle = serde_json::from_str(include_str!(
+            "../../../../../schemas/examples.material-research-bundle.json"
+        ))
+        .expect("fixture should decode");
+        bundle.next_round_execution_plan["decision"] =
+            Value::String("repair_validation".to_string());
+
+        let error = validate_material_research_bundle(&bundle)
+            .expect_err("summary and plan decision mismatch should fail");
+
+        assert!(error.contains("next_round_execution_plan.decision"));
     }
 }

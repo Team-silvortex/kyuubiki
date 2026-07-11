@@ -176,7 +176,7 @@ function bundleSummary(initial, plan, next, chain) {
   return {
     winner_candidate_id: initial.report?.winner_candidate_id,
     reliability_decision: initial.report?.reliability?.summary?.decision,
-    next_round_decision: initial.next_round?.decision,
+    next_round_decision: plan.decision,
     runnable_next_step_count: plan.runnable_step_count,
     next_iteration: next.iteration,
     chain_stop_reason: chain.stop_reason,

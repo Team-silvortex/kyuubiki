@@ -89,7 +89,13 @@ agent, CI lane, or human reviewer. It contains:
 - SHA-256 checksums for each retained artifact
 - command templates for reproducing the same loop
 - a summary with winner, reliability decision, next-round decision, chain stop
-  reason, and convergence state
+  reason, convergence state, next iteration, and runnable next-step count
+
+The retained bundle checker cross-validates that `summary.next_round_decision`,
+`summary.next_iteration`, `summary.runnable_next_step_count`, and
+`summary.chain_stop_reason` match the embedded execution plan, next exploration,
+and chain artifacts. This keeps the single-file story honest when an agent or
+reviewer reads only the top-level summary first.
 
 The checker rejects local absolute repository paths and checksum drift. This is
 still a screening artifact, not a qualification package, but it is now a single
@@ -109,7 +115,9 @@ make material-research-bundle-index
 ```
 
 The index is written under `tmp/material-research-bundles/index.json` with a
-matching `README.md` summary. It is a local generated artifact and should stay
+matching `README.md` summary. Each index row also carries the next iteration and
+runnable next-step count so CI lanes or agents can choose cheap repair runs
+before expensive exploration. It is a local generated artifact and should stay
 out of Git unless a release explicitly promotes it.
 
 ## Closed-Loop Step
@@ -123,9 +131,10 @@ kyuubiki.material-exploration-next-round/v1
 This `next_round` block is the first closed-loop research contract. If the
 report has missing metrics or violated quality gates, it returns a
 `repair_or_rerun` decision with actions such as `rerun_incomplete_candidates`.
+If summary cross-validation blocks the report, it returns `repair_validation`
+and reruns focused candidates before any new material candidate is generated.
 If the current screening data is complete, it returns `expand_around_winner`
-with actions such as `generate_neighbor_candidates` and
-`run_next_quality_batch`.
+with actions such as `generate_neighbor_candidates` and `run_next_quality_batch`.
 
 Each exploration artifact also carries its current `iteration`. The first
 captured run is iteration `1`, its `next_round.iteration` points to `2`, and a
@@ -144,10 +153,11 @@ The output uses:
 kyuubiki.material-exploration-next-round-execution/v1
 ```
 
-For `repair_or_rerun`, the plan emits only focused candidate solve steps. For
-`expand_around_winner`, the current v1 implementation emits the built-in study
-candidate generator as the next executable batch shape; future iterations can
-replace that generator with DOE or Bayesian neighbor generation.
+For `repair_or_rerun` and `repair_validation`, the plan emits only focused
+candidate solve steps. For `expand_around_winner`, the current v1 implementation
+emits the built-in study candidate generator as the next executable batch
+shape; future iterations can replace that generator with DOE or Bayesian
+neighbor generation.
 
 The next-round plan also carries `optimization_objectives`, which records the
 optimization mode, incumbent winner, primary metric IDs, and violated quality
