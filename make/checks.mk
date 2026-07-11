@@ -1,5 +1,5 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
-.PHONY: check-make-modules check-native-script-audit
+.PHONY: check-make-modules check-module-topology build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
 .PHONY: build-operator-qualification-readiness
@@ -33,6 +33,13 @@ check-install-update-disk-hygiene:
 
 check-make-modules:
 	@node ./scripts/check-make-modules.mjs
+
+check-module-topology:
+	@node ./scripts/check-module-topology.mjs --self-test
+	@node ./scripts/check-module-topology.mjs
+
+build-module-topology-report:
+	@node ./scripts/build-module-topology-report.mjs --out-dir $${OUT_DIR:-tmp/module-topology}
 
 check-native-script-audit:
 	@$(ENTRYPOINT) native-script-audit --self-test
@@ -166,6 +173,7 @@ fuzz-smoke:
 architecture-check:
 	@$(MAKE) audit-project-organization
 	@$(MAKE) check-make-modules
+	@$(MAKE) check-module-topology
 	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
 	@$(MAKE) check-material-score-contract

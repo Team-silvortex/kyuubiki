@@ -20,6 +20,7 @@
     "test:unit:headless-live": "node ./scripts/test-unit.mjs kyuubiki-headless-live",
     "test:unit:workflow": "node ./scripts/test-unit.mjs workflow",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
+    "check:storage-security": "node ./scripts/check-storage-security.mjs",
     "check:ui-layout": "node ./scripts/check-ui-layout.mjs",
     "check:workflow-preflight": "npm run test:unit:workflow && npm run check:workflow-topology && npm run check:workflow-search-layout",
     "check:workflow-search-layout": "node ./scripts/check-workflow-search-layout.mjs",

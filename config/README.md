@@ -26,11 +26,17 @@ Run `make check-operator-reliability` after changing any of these files.
 
 ## Benchmark And Audit Inputs
 
+- `architecture/module-topology.json`
+  Strict module topology used to map product shells, control plane, runtime,
+  SDKs, contracts, and verification gates onto benchmark and security lanes.
+  This is the machine-readable architecture map for targeted performance and
+  safety testing.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
 - `dependency-audit-lockfiles.json`
   Security-audit lane contract for npm and Rust lockfile checks.
 
+Run `make check-module-topology` after changing architecture topology.
 Run `make audit-dependencies` after changing dependency-audit lanes.
 
 ## Toolchains

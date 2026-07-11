@@ -1,12 +1,16 @@
 # Module Architecture
 
-This document is the high-level module map for the `tamamono 1.15.x` line.
+This document is the high-level module map for the `tamamono 1.16.x` line.
 It explains how the current Kyuubiki system is split into product shells,
 control-plane services, runtime engines, SDKs, contracts, and verification
 gates.
 
 Use this as the first architecture map when deciding where a new capability
 belongs.
+
+The strict, machine-readable source of truth is
+`config/architecture/module-topology.json`. This document explains that
+topology; the topology file drives benchmark and security-test grouping.
 
 ## Architecture Principle
 
@@ -23,6 +27,42 @@ It should grow as a set of cooperating modules connected by stable contracts:
 
 The most important rule is that GUI surfaces are clients of runtime
 capabilities, not the runtime itself.
+
+## Strict Module Topology
+
+The topology contract is intentionally stricter than prose architecture notes.
+Every top-level module must declare:
+
+- `id`: stable module identifier used by reports and gates
+- `layer`: one of `product_shell`, `control_plane`, `runtime_data_plane`,
+  `sdk`, `contract`, or `verification`
+- `owned_paths`: repository-relative paths owned by the module
+- `depends_on`: module IDs that must stay contractually upstream
+- `benchmark_lanes`: performance lanes that should include this module
+- `security_lanes`: security lanes that should include this module
+- `risk_tags`: short labels for targeted review and future dashboards
+
+The checker in `scripts/check-module-topology.mjs` enforces:
+
+- the topology schema version
+- all owned paths exist and are repository-relative
+- owned paths are not duplicated between modules
+- every dependency points at a declared module
+- the dependency graph is acyclic
+- all benchmark and security lanes are declared centrally
+- all required architecture layers are represented
+
+This gives us a stable topology spine for later automation. A benchmark runner
+can select modules by `benchmark_lanes`; a security audit can select modules by
+`security_lanes`; a release report can show risk coverage by `risk_tags`.
+
+Run `make build-module-topology-report` to write the consumed view to
+`tmp/module-topology/`. The generated report includes:
+
+- `index.json`: machine-readable module, benchmark-lane, and security-lane
+  index
+- `README.md`: human-readable lane tables for review
+- `index.html`: lightweight browser view for release/nightly artifacts
 
 ## Product Shells
 
@@ -197,6 +237,46 @@ The verification layer is part of the architecture. If a contract matters, it
 should have a gate in `make architecture-check` or a narrower target that can
 be composed into it.
 
+## Benchmark And Security Lanes
+
+The current benchmark lanes are:
+
+- `ui_startup`: WebView, layout, workflow UI, and desktop shell startup/render
+  cost
+- `workflow_catalog`: workflow catalog search, topology, package, and graph
+  authoring cost
+- `control_plane`: Phoenix API, orchestration, persistence, and workflow
+  catalog service cost
+- `runtime_solver`: Rust engine, protocol, solver kernels, TaskIR, and agent
+  execution cost
+- `mesh`: direct mesh, distributed agent, heartbeat, routing, and large-node
+  fanout cost
+- `sdk_headless`: Rust/Python/Elixir headless SDK examples, batch workflows,
+  and research automation
+- `installer_release`: install, update, repair, remote deployment, and disk
+  hygiene cost
+
+The current security lanes are:
+
+- `ui_boundary`: GUI/runtime decoupling, automation selectors, local storage,
+  and WebView trust
+- `api_auth`: control-plane, direct-mesh, token, cluster identity, replay, and
+  export authorization
+- `runtime_sandbox`: TaskIR, workflow JSON budgets, operator package admission,
+  and solver execution guards
+- `supply_chain`: dependency audit, update catalog, package integrity, and
+  release provenance
+- `credential_storage`: credential vault, in-memory secrets, mobile-compatible
+  boundaries, and SSH material
+- `remote_deploy`: remote installer, SSH deployment, host trust, cleanup, and
+  residual policy
+- `data_contract`: schemas, workflow datasets, result contracts, language
+  packs, and import/export validation
+
+When a new benchmark or security gate is added, it should either map to one of
+these lanes or add a lane to `config/architecture/module-topology.json` with a
+clear reason.
+
 ## Data And Control Flow
 
 The normal orchestrated path is:
@@ -272,6 +352,8 @@ The current guards are:
 - `make architecture-check`
 - `make audit-project-organization`
 - `make check-make-modules`
+- `make check-module-topology`
+- `make build-module-topology-report`
 - `make check-material-score-contract`
 - `make check-materialization-plan-contract`
 - `make check-operator-reliability`

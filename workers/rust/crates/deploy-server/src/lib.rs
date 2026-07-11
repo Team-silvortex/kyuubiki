@@ -89,7 +89,7 @@ pub fn print_help() {
         "  KYUUBIKI_DEPLOY_SERVER_CATALOG_PATH\n\n",
         "Notes:\n",
         "  The server is read-only and defaults to loopback-only binding.\n",
-        "  Set a token to protect non-health routes.\n",
+        "  Non-loopback bindings require a token for non-health routes.\n",
     ));
 }
 
@@ -145,8 +145,14 @@ fn parse_cli_args(args: Vec<String>) -> Result<DeployServerConfig, String> {
         index += 2;
     }
 
-    if host.trim().is_empty() {
+    host = host.trim().to_string();
+    let auth_token = auth_token.filter(|value| !value.is_empty());
+
+    if host.is_empty() {
         return Err("host must not be empty".to_string());
+    }
+    if !is_loopback_bind_host(&host) && auth_token.is_none() {
+        return Err("non-loopback deploy server bindings require --token".to_string());
     }
 
     let deploy_root = deploy_root.unwrap_or_else(|| workspace_root.join("deploy"));
@@ -157,7 +163,7 @@ fn parse_cli_args(args: Vec<String>) -> Result<DeployServerConfig, String> {
     Ok(DeployServerConfig {
         host,
         port,
-        auth_token: auth_token.filter(|value| !value.is_empty()),
+        auth_token,
         workspace_root,
         deploy_root,
         artifact_root,
@@ -275,9 +281,32 @@ fn request_is_authorized(config: &DeployServerConfig, request: &Request) -> bool
         return true;
     };
     match request.headers.get("authorization") {
-        Some(value) if value.strip_prefix("Bearer ").map(str::trim) == Some(token) => true,
-        _ => request.headers.get("x-kyuubiki-token").map(String::as_str) == Some(token),
+        Some(value)
+            if value
+                .strip_prefix("Bearer ")
+                .map(str::trim)
+                .is_some_and(|provided| constant_time_eq(provided, token)) =>
+        {
+            true
+        }
+        _ => request
+            .headers
+            .get("x-kyuubiki-token")
+            .is_some_and(|provided| constant_time_eq(provided, token)),
     }
+}
+
+fn constant_time_eq(left: &str, right: &str) -> bool {
+    let left = left.as_bytes();
+    let right = right.as_bytes();
+    let mut diff = left.len() ^ right.len();
+    let max_len = left.len().max(right.len());
+    for index in 0..max_len {
+        let left_byte = left.get(index).copied().unwrap_or(0);
+        let right_byte = right.get(index).copied().unwrap_or(0);
+        diff |= usize::from(left_byte ^ right_byte);
+    }
+    diff == 0
 }
 
 fn root_payload(config: &DeployServerConfig) -> Value {
@@ -393,28 +422,20 @@ fn serve_artifact(config: &DeployServerConfig, path: &str) -> Response {
             content_type: content_type_for(&target).to_string(),
             body,
         },
-        Err(error) => json_response(
-            500,
-            json!({ "error": format!("failed to read {}: {error}", target.display()) }),
-        ),
+        Err(_) => json_response(500, json!({ "error": "artifact_read_failed" })),
     }
 }
 
 fn serve_json_file(path: &Path) -> Response {
     match fs::read(path) {
         Ok(body) => raw_json_response(200, body),
-        Err(error) => json_response(
-            404,
-            json!({ "error": format!("failed to read {}: {error}", path.display()) }),
-        ),
+        Err(_) => json_response(404, json!({ "error": "json_file_not_found" })),
     }
 }
 
 fn read_json_file(path: &Path) -> Result<Value, String> {
-    let contents = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    serde_json::from_str(&contents)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))
+    let contents = fs::read_to_string(path).map_err(|_| "json_file_not_found".to_string())?;
+    serde_json::from_str(&contents).map_err(|_| "json_file_invalid".to_string())
 }
 
 fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
@@ -429,6 +450,10 @@ fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
         }
     }
     Ok(target)
+}
+
+fn is_loopback_bind_host(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "localhost" | "::1")
 }
 
 fn content_type_for(path: &Path) -> &'static str {

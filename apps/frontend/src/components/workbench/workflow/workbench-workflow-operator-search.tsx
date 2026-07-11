@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { WorkflowGraphNode, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
@@ -146,9 +146,10 @@ export function WorkbenchWorkflowOperatorSearch(props: {
   } = props;
   const [recentOperatorIds, setRecentOperatorIds] = useState<string[]>([]);
   const [favoriteOperatorIds, setFavoriteOperatorIds] = useState<string[]>([]);
-  const groupedPresets = groupWorkflowOperatorOptionPresets(
-    filteredPresets,
-    operatorDescriptorMap,
+  const deferredQuery = useDeferredValue(query);
+  const groupedPresets = useMemo(
+    () => groupWorkflowOperatorOptionPresets(filteredPresets, operatorDescriptorMap),
+    [filteredPresets, operatorDescriptorMap],
   );
   const filteredPresetByOperatorId = useMemo(
     () =>
@@ -207,8 +208,8 @@ export function WorkbenchWorkflowOperatorSearch(props: {
     [filteredPresets, operatorDescriptorMap, selectedSourceNode],
   );
   const searchSuggestions = useMemo(
-    () => suggestWorkflowNodeTemplatePresets(filteredPresets, operatorDescriptorMap, query.trim()),
-    [filteredPresets, operatorDescriptorMap, query],
+    () => suggestWorkflowNodeTemplatePresets(filteredPresets, operatorDescriptorMap, deferredQuery.trim()),
+    [deferredQuery, filteredPresets, operatorDescriptorMap],
   );
   const activeFilters = [
     query.trim() ? `${labels.operatorSearchLabel}: ${query.trim()}` : null,
@@ -424,7 +425,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
       ) : null}
       {filteredPresets.length > 0 ? (
         <div className="button-row button-row--adaptive">
-          {(query.trim() ? searchSuggestions.slice(0, 6) : filteredPresets.slice(0, 6).map((preset) => ({
+          {(deferredQuery.trim() ? searchSuggestions.slice(0, 6) : filteredPresets.slice(0, 6).map((preset) => ({
             preset,
             score: 0,
             matchSummary: [],
@@ -448,7 +449,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
                   {favoriteLabel(entry.preset.operatorId!)}
                 </button>
                 </div>
-                {query.trim() ? (
+                {deferredQuery.trim() ? (
                   <span className="card-copy">
                     {labels.operatorSearchScoreLabel}: {entry.score}
                     {entry.matchSummary.length > 0

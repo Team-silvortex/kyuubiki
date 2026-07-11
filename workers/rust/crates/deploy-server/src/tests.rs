@@ -63,6 +63,29 @@ fn config_descriptor_does_not_expose_host_paths() {
 }
 
 #[test]
+fn non_loopback_bind_requires_token() {
+    let error = parse_cli_args(vec![
+        "serve".to_string(),
+        "--host".to_string(),
+        "0.0.0.0".to_string(),
+    ])
+    .unwrap_err();
+
+    assert!(error.contains("require --token"));
+}
+
+#[test]
+fn file_error_responses_do_not_expose_host_paths() {
+    let root = unique_test_root("path-redaction");
+    let response = serve_json_file(&root.join("missing.json"));
+    let body = String::from_utf8(response.body).unwrap();
+
+    assert_eq!(response.status_code, 404);
+    assert!(body.contains("json_file_not_found"));
+    assert!(!body.contains(root.to_string_lossy().as_ref()));
+}
+
+#[test]
 fn local_agent_route_serves_checked_in_example_shape() {
     let root = unique_test_root("local-agent-example");
     fs::create_dir_all(root.join("deploy")).unwrap();
@@ -119,6 +142,36 @@ fn non_health_routes_require_token_when_configured() {
         },
     );
     assert_eq!(authorized.status_code, 200);
+}
+
+#[test]
+fn x_kyuubiki_token_authorizes_with_constant_time_helper() {
+    let root = unique_test_root("auth-header");
+    let mut config = test_config(&root);
+    config.auth_token = Some("secret".to_string());
+
+    let authorized = route_request(
+        &config,
+        &Request {
+            method: "GET".to_string(),
+            path: "/api/v1/server/config".to_string(),
+            headers: iter::once(("x-kyuubiki-token".to_string(), "secret".to_string())).collect(),
+        },
+    );
+    let rejected = route_request(
+        &config,
+        &Request {
+            method: "GET".to_string(),
+            path: "/api/v1/server/config".to_string(),
+            headers: iter::once(("x-kyuubiki-token".to_string(), "secret-extra".to_string()))
+                .collect(),
+        },
+    );
+
+    assert_eq!(authorized.status_code, 200);
+    assert_eq!(rejected.status_code, 401);
+    assert!(constant_time_eq("secret", "secret"));
+    assert!(!constant_time_eq("secret", "secret-extra"));
 }
 
 fn test_config(root: &Path) -> DeployServerConfig {

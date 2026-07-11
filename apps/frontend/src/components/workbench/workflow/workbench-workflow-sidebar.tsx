@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
 import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor, WorkflowOperatorModuleSummary } from "@/lib/api";
@@ -38,6 +38,11 @@ import type {
   WorkflowSidebarLabels,
   WorkflowSurfaceTab,
 } from "@/components/workbench/workflow/workbench-workflow-types";
+import {
+  WORKFLOW_CATALOG_RENDER_LIMIT,
+  WORKFLOW_RUN_RENDER_LIMIT,
+  limitWorkflowCatalogGroups,
+} from "@/components/workbench/workflow/workbench-workflow-render-budget";
 
 type WorkbenchWorkflowSidebarProps = {
   surfaceTab: WorkflowSurfaceTab;
@@ -105,6 +110,7 @@ export function WorkbenchWorkflowSidebar({
   const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
   const [builderBranchFocus, setBuilderBranchFocus] = useState<{ nodeId: string; outputId: string; token: number } | null>(null);
   const [builderDatasetFocus, setBuilderDatasetFocus] = useState<{ nodeId: string; portId: string; token: number } | null>(null);
+  const deferredCatalogQuery = useDeferredValue(catalogQuery);
   const latestRunByWorkflowId = useMemo(() => {
     const next = new Map<string, WorkflowRunRecord>();
     for (const run of workflowRuns) if (!next.has(run.workflowId)) next.set(run.workflowId, run);
@@ -188,7 +194,7 @@ export function WorkbenchWorkflowSidebar({
                   : catalogFilter === "bridge_missing_runtime"
                     ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_missing_runtime")
               : workflowCatalogEntries;
-    const suggestions = suggestWorkflowCatalogEntries(filtered, catalogQuery.trim());
+    const suggestions = suggestWorkflowCatalogEntries(filtered, deferredCatalogQuery.trim());
     const searchScores = new Map(suggestions.map((entry) => [entry.workflow.id, entry.score] as const));
     return suggestions
       .map((entry) => entry.workflow)
@@ -206,10 +212,10 @@ export function WorkbenchWorkflowSidebar({
       if (right.local?.promoted_at) return 1;
       return left.name.localeCompare(right.name);
     });
-  }, [catalogFilter, catalogQuery, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
+  }, [catalogFilter, deferredCatalogQuery, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
   const catalogSearchSuggestions = useMemo(
-    () => new Map(suggestWorkflowCatalogEntries(filteredWorkflowCatalogEntries, catalogQuery.trim()).map((entry) => [entry.workflow.id, entry] as const)),
-    [catalogQuery, filteredWorkflowCatalogEntries],
+    () => new Map(suggestWorkflowCatalogEntries(filteredWorkflowCatalogEntries, deferredCatalogQuery.trim()).map((entry) => [entry.workflow.id, entry] as const)),
+    [deferredCatalogQuery, filteredWorkflowCatalogEntries],
   );
   const groupedWorkflowCatalogEntries = useMemo(
     () => groupWorkflowCatalogEntriesByDomain(filteredWorkflowCatalogEntries),
@@ -236,6 +242,9 @@ export function WorkbenchWorkflowSidebar({
         .filter((group) => group.entries.length > 0),
     [groupedWorkflowCatalogEntries, pinnedWorkflowIdSet],
   );
+  const renderedPinnedWorkflowCatalogEntries = pinnedWorkflowCatalogEntries.slice(0, WORKFLOW_CATALOG_RENDER_LIMIT);
+  const renderedUnpinnedWorkflowGroups = limitWorkflowCatalogGroups(unpinnedWorkflowGroups, renderedPinnedWorkflowCatalogEntries);
+  const renderedWorkflowRuns = filteredWorkflowRuns.slice(0, WORKFLOW_RUN_RENDER_LIMIT);
 
   function renderWorkflowCard(workflow: WorkflowCatalogEntry) {
     const contractHealth = elevateWorkflowContractHealthLabel(
@@ -425,11 +434,11 @@ export function WorkbenchWorkflowSidebar({
                 <strong>{pinnedWorkflowCatalogEntries.length}</strong>
               </div>
               <div className="runtime-overview-grid">
-                {pinnedWorkflowCatalogEntries.map(renderWorkflowCard)}
+                {renderedPinnedWorkflowCatalogEntries.map(renderWorkflowCard)}
               </div>
             </div>
           ) : null}
-          {unpinnedWorkflowGroups.map((group) => (
+          {renderedUnpinnedWorkflowGroups.map((group) => (
             <div className="sidebar-stack" key={group.key}>
               <div className="sidebar-list__row">
                 <span>{group.label}</span>
@@ -440,6 +449,7 @@ export function WorkbenchWorkflowSidebar({
               </div>
             </div>
           ))}
+          {filteredWorkflowCatalogEntries.length > WORKFLOW_CATALOG_RENDER_LIMIT ? <p className="card-copy">Showing {WORKFLOW_CATALOG_RENDER_LIMIT} of {filteredWorkflowCatalogEntries.length} matches. Refine search or filters to narrow the list.</p> : null}
         </section>
       ) : null}
 
@@ -499,7 +509,7 @@ export function WorkbenchWorkflowSidebar({
           </div>
           {filteredWorkflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
-            {filteredWorkflowRuns.map((run) => (
+            {renderedWorkflowRuns.map((run) => (
               <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={run.jobId}>
                 <div className="card-head">
                   <h2>{run.workflowId}</h2>
@@ -573,6 +583,7 @@ export function WorkbenchWorkflowSidebar({
               </section>
             ))}
           </div>
+          {filteredWorkflowRuns.length > WORKFLOW_RUN_RENDER_LIMIT ? <p className="card-copy">Showing {WORKFLOW_RUN_RENDER_LIMIT} of {filteredWorkflowRuns.length} runs. Use bridge filters to narrow the list.</p> : null}
         </section>
       ) : null}
     </div>
