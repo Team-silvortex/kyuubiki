@@ -94,7 +94,10 @@ entries. The checker keeps every kit tied to an existing roadmap candidate and
 prevents operators from drifting into the wrong qualification group.
 `make build-operator-qualification-readiness` writes a local JSON report that
 summarizes which roadmap artifacts are present, command-backed, missing, or not
-started.
+started. The generated report also includes a `next_actions` queue so release
+owners can see the highest-priority evidence collection step without manually
+diffing every candidate kit. The make target validates the generated report so
+the queue stays machine-consumable for release gates and future UI surfaces.
 
 ## CFD Stokes Screening Scope
 

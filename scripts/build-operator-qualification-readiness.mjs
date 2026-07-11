@@ -104,6 +104,63 @@ function readinessFor(candidate, kit) {
   };
 }
 
+function priorityRank(priority) {
+  const ranks = new Map([
+    ["p0", 0],
+    ["p1", 1],
+    ["p2", 2],
+    ["p3", 3],
+  ]);
+  return ranks.get(priority) ?? 99;
+}
+
+function readinessRank(readiness) {
+  const ranks = new Map([
+    ["broken", 0],
+    ["planned", 1],
+    ["partially_collecting", 2],
+    ["collecting_with_entries", 3],
+    ["blocked", 4],
+  ]);
+  return ranks.get(readiness) ?? 99;
+}
+
+function firstActionableArtifact(candidate) {
+  return candidate.artifacts.find((artifact) => artifact.state !== "present") ?? null;
+}
+
+function actionKindForArtifact(artifact) {
+  if (!artifact) return "review";
+  if (artifact.state === "command_available") return "run_command";
+  if (artifact.state === "missing") return "restore_or_generate_artifact";
+  return "collect_artifact";
+}
+
+function buildNextActions(candidates) {
+  return candidates
+    .map((candidate) => {
+      const artifact = firstActionableArtifact(candidate);
+      return {
+        candidate_id: candidate.candidate_id,
+        priority: candidate.priority,
+        readiness: candidate.readiness,
+        action_kind: actionKindForArtifact(artifact),
+        artifact_id: artifact?.artifact_id ?? null,
+        artifact_state: artifact?.state ?? null,
+        artifact_kind: artifact?.kind ?? null,
+        command: artifact?.command ?? null,
+        path: artifact?.path ?? null,
+        gate: artifact?.gate ?? candidate.graduation_gate,
+      };
+    })
+    .filter((action) => action.artifact_id !== null || action.readiness !== "collecting_with_entries")
+    .sort((left, right) =>
+      priorityRank(left.priority) - priorityRank(right.priority)
+      || readinessRank(left.readiness) - readinessRank(right.readiness)
+      || left.candidate_id.localeCompare(right.candidate_id)
+    );
+}
+
 function buildReport() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
   const kits = readJson(operatorReliabilityPaths.evidenceKits);
@@ -111,6 +168,7 @@ function buildReport() {
   const candidates = roadmap.candidates.map((candidate) =>
     readinessFor(candidate, kitByCandidate.get(candidate.candidate_id))
   );
+  const nextActions = buildNextActions(candidates);
   return {
     schema_version: "kyuubiki.operator-qualification-readiness/v1",
     version_line: roadmap.version_line,
@@ -122,7 +180,9 @@ function buildReport() {
       with_entries: candidates.filter((candidate) => candidate.artifact_counts.present > 0 || candidate.artifact_counts.command_available > 0).length,
       not_started: candidates.filter((candidate) => candidate.artifact_counts.not_started === candidate.artifact_counts.total).length,
       broken: candidates.filter((candidate) => candidate.readiness === "broken").length,
+      next_action_count: nextActions.length,
     },
+    next_actions: nextActions,
     candidates,
   };
 }

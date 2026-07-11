@@ -146,9 +146,11 @@ This directory contains host-native operational entry points.
   flags, and absence of local absolute repository paths.
 - `build-operator-qualification-readiness.mjs`
   Build a repo-local JSON readiness report for all qualification roadmap
-  candidates. The report summarizes planned versus collecting status, concrete
-  artifact paths or commands, missing files, not-started artifacts, and the
-  graduation gate for each candidate.
+  candidates, including artifact state, graduation gates, and a sorted
+  `next_actions` queue for the highest-priority evidence collection steps.
+- `check-operator-qualification-readiness.mjs`
+  Validate the generated readiness report and its `next_actions` queue. Use
+  `--self-test` when changing readiness sorting or action-kind requirements.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -261,7 +263,7 @@ Useful checks:
   validate them, and write `tmp/material-research-bundles/index.json` plus a
   human-readable `README.md` summary.
 - `make build-operator-qualification-readiness`
-  Write a generated readiness report for the qualification roadmap. Override
+  Write and validate a readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay
   out of Git unless deliberately retained with a release.
 - `make capture-line-field-qualification-provenance`

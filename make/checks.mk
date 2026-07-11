@@ -106,7 +106,9 @@ verify-operator-validation:
 	@node ./scripts/check-operator-validation.mjs --execute
 
 build-operator-qualification-readiness:
+	@node ./scripts/check-operator-qualification-readiness.mjs --self-test
 	@node ./scripts/build-operator-qualification-readiness.mjs --out $${OUT:-tmp/operator-qualification-readiness.json}
+	@node ./scripts/check-operator-qualification-readiness.mjs --in $${OUT:-tmp/operator-qualification-readiness.json}
 
 capture-line-field-qualification-provenance:
 	@node ./scripts/capture-line-field-qualification-provenance.mjs --out $${OUT:-tmp/line-field-qualification-provenance.json}

@@ -71,7 +71,7 @@ help:
 	@echo "  make check-operator-validation Verify operator validation profiles without executing heavy checks"
 	@echo "  make verify-operator-validation Execute operator validation profile commands and write tmp/operator-validation-report.json"
 	@echo "  make check-commercial-readiness Verify the 2.0 commercial-readiness gate"
-	@echo "  make build-operator-qualification-readiness Write operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"
+	@echo "  make build-operator-qualification-readiness Write and validate operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"
 	@echo "  make capture-line-field-qualification-provenance Write line-field qualification provenance JSON to OUT=tmp/line-field-qualification-provenance.json"
 	@echo "  make capture-line-field-qualification-release-evidence Run and retain line-field qualification evidence output under OUT=tmp/line-field-qualification-release-evidence.json"
 	@echo "  make check-line-field-closed-form-baseline Verify line-field closed-form qualification baseline artifact"
