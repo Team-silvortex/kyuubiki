@@ -3,10 +3,15 @@ use crate::{
     default_remote_deployment_journal, default_remote_deployment_plan,
     installation_integrity_report, remote_artifact_delivery_manifest,
 };
+use serde::{Deserialize, Serialize};
 
 const REMOTE_DRY_RUN_SCHEMA_VERSION: &str = "kyuubiki.remote-deployment-dry-run/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(test)]
+#[path = "remote_deployment_metadata_fuzz.rs"]
+mod remote_deployment_metadata_fuzz;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteDeploymentDryRunReport {
     pub schema_version: String,
     pub status: String,

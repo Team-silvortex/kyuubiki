@@ -203,6 +203,24 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   defp checkpoint_summary(nil), do: nil
 
+  defp checkpoint_summary(%{"run_phase" => "execute"} = result) do
+    Map.take(result, [
+      "run_id",
+      "run_phase",
+      "batch_digest",
+      "started_at",
+      "finished_at",
+      "task_count",
+      "verified_count",
+      "executed_count",
+      "ok_count",
+      "error_count",
+      "failed_case_ids",
+      "readiness_counts"
+    ])
+    |> Map.put("blocked_readiness_case_ids", blocked_readiness_case_ids(result))
+  end
+
   defp checkpoint_summary(result) when is_map(result) do
     Map.take(result, [
       "run_id",
@@ -215,9 +233,26 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "executed_count",
       "ok_count",
       "error_count",
-      "failed_case_ids"
+      "failed_case_ids",
+      "readiness_counts"
     ])
   end
+
+  defp blocked_readiness_case_ids(%{"results" => results}) when is_list(results) do
+    results
+    |> Enum.filter(&(get_in(&1, ["execution_readiness", "status"]) == "blocked"))
+    |> Enum.map(&Map.get(&1, "case_id"))
+    |> normalize_string_list()
+  end
+
+  defp blocked_readiness_case_ids(_result), do: []
+
+  defp resume_policy(_preparation, %{
+         "error_count" => 0,
+         "readiness_counts" => %{"blocked" => blocked_count}
+       })
+       when is_integer(blocked_count) and blocked_count > 0,
+       do: %{"status" => "blocked", "next_action" => "resolve_blocked_cases"}
 
   defp resume_policy(_preparation, %{"error_count" => 0}),
     do: %{"status" => "complete", "next_action" => "archive"}
@@ -274,9 +309,22 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
     |> normalize_string_list()
   end
 
+  defp target_case_ids(_batch, checkpoint, "resolve_blocked_cases") do
+    checkpoint
+    |> get_in(["execution", "blocked_readiness_case_ids"])
+    |> normalize_string_list()
+  end
+
   defp target_case_ids(_batch, _checkpoint, _next_action), do: []
 
   defp blocked_case_ids(batch, _checkpoint, "fix_invalid_cases"), do: all_case_ids(batch)
+
+  defp blocked_case_ids(_batch, checkpoint, "resolve_blocked_cases") do
+    checkpoint
+    |> get_in(["execution", "blocked_readiness_case_ids"])
+    |> normalize_string_list()
+  end
+
   defp blocked_case_ids(_batch, _checkpoint, _next_action), do: []
 
   defp all_case_ids(batch) do

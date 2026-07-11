@@ -68,8 +68,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert result["digest_algorithm"] == "sha256"
     assert is_binary(result["started_at"])
     assert is_binary(result["finished_at"])
+    assert result["readiness_counts"] == %{"executed" => 2}
     assert Enum.map(result["results"], & &1["case_id"]) == ["case-a", "case-b"]
     assert hd(result["results"])["result"]["material_thermal_shock_status"] == "pass"
+    assert hd(result["results"])["execution_readiness"]["status"] == "executed"
+    assert hd(result["results"])["execution_readiness"]["current_stage"] == "serialize_result"
   end
 
   test "prepares a quality task batch with replayable run metadata" do
@@ -176,6 +179,52 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
            }
   end
 
+  test "checkpoint resume policy targets readiness-blocked cases separately from errors" do
+    assert {:ok, task_a} = material_shock_task("case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "case-a", "task_ir" => task_a}
+      ]
+    }
+
+    execution = %{
+      "run_id" => "operator-task-batch:execute:test",
+      "run_phase" => "execute",
+      "batch_digest" => OperatorTaskBatchRun.batch_digest(batch),
+      "started_at" => "2026-01-01T00:00:00Z",
+      "finished_at" => "2026-01-01T00:00:01Z",
+      "task_count" => 1,
+      "executed_count" => 1,
+      "ok_count" => 1,
+      "error_count" => 0,
+      "failed_case_ids" => [],
+      "readiness_counts" => %{"blocked" => 1},
+      "results" => [
+        %{
+          "case_id" => "case-a",
+          "execution_readiness" => %{"status" => "blocked"}
+        }
+      ]
+    }
+
+    checkpoint = OperatorTaskBatchRun.checkpoint(batch, execution: execution)
+
+    assert checkpoint["resume_policy"] == %{
+             "status" => "blocked",
+             "next_action" => "resolve_blocked_cases"
+           }
+
+    assert checkpoint["execution"]["readiness_counts"] == %{"blocked" => 1}
+    assert checkpoint["execution"]["blocked_readiness_case_ids"] == ["case-a"]
+
+    assert {:ok, plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
+    assert plan["next_action"] == "resolve_blocked_cases"
+    assert plan["target_case_ids"] == ["case-a"]
+    assert plan["blocked_case_ids"] == ["case-a"]
+  end
+
   test "builds resume plans from verified checkpoints" do
     assert {:ok, task_a} = material_shock_task("case-a", 120.0)
 
@@ -256,11 +305,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert result["error_count"] == 1
     assert result["error_codes"] == ["operator_task_digest_mismatch"]
     assert result["error_code_counts"] == %{"operator_task_digest_mismatch" => 1}
+    assert result["readiness_counts"] == %{"blocked" => 1, "executed" => 1}
     assert result["failed_case_ids"] == ["case-b"]
     assert List.last(result["results"])["case_id"] == "case-b"
     assert List.last(result["results"])["status"] == "error"
     assert List.last(result["results"])["error"] =~ "operator_task_digest_mismatch"
     assert List.last(result["results"])["error_code"] == "operator_task_digest_mismatch"
+    assert List.last(result["results"])["execution_readiness"]["status"] == "blocked"
+
+    assert List.last(result["results"])["execution_readiness"]["blocking_stage"] ==
+             "local_execute"
   end
 
   test "rejects task batch headers that disagree with the task list" do

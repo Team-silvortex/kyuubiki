@@ -18,6 +18,7 @@
     "error_count",
     "error_codes",
     "error_code_counts",
+    "readiness_counts",
     "failed_case_ids",
     "results"
   ],
@@ -82,6 +83,13 @@
         "minimum": 1
       }
     },
+    "readiness_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
     "failed_case_ids": {
       "type": "array",
       "items": {
@@ -94,7 +102,14 @@
       "items": {
         "type": "object",
         "additionalProperties": true,
-        "required": ["case_id", "task_id", "task_digest", "operator_id", "status"],
+        "required": [
+          "case_id",
+          "task_id",
+          "task_digest",
+          "operator_id",
+          "status",
+          "execution_readiness"
+        ],
         "properties": {
           "case_id": {
             "type": "string",
@@ -125,6 +140,44 @@
           "error_code": {
             "type": "string",
             "minLength": 1
+          },
+          "execution_readiness": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "status",
+              "requested_mode",
+              "ready_to_dispatch",
+              "current_stage",
+              "required_action"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["executed", "blocked", "ready_for_package_resolution"]
+              },
+              "requested_mode": {
+                "type": "string"
+              },
+              "ready_to_dispatch": {
+                "type": "boolean"
+              },
+              "current_stage": {
+                "type": "string"
+              },
+              "blocking_stage": {
+                "type": ["string", "null"]
+              },
+              "blocking_reason": {
+                "type": ["string", "null"]
+              },
+              "blocking_owner": {
+                "type": ["string", "null"]
+              },
+              "required_action": {
+                "type": ["string", "null"]
+              }
+            }
           }
         }
       }

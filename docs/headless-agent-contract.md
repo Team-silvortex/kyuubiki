@@ -224,6 +224,14 @@ attached host reports its host id, package root, and activated package count,
 but execution still waits for package fetch and dispatch wiring. `blocked_stage`
 is `null` in this attached state so callers can distinguish "missing runtime"
 from "runtime ready, next stage pending".
+New callers should prefer the machine-readable `execution_readiness` object for
+automation decisions. It reports `status`, `current_stage`, `blocking_stage`,
+`blocking_reason`, `blocking_owner`, `required_action`, and `ready_to_dispatch`
+without requiring callers to infer control flow from display-oriented text. Each
+`execution_plan` stage also carries a `gate` value such as `passed`, `blocked`,
+`open`, `waiting_for_fetch`, `waiting_for_integrity`, or
+`waiting_for_dispatch`, so UI, SDKs, and orchestration logic can agree on the
+same staged package-backed execution boundary.
 Attachment is local-agent controlled, not request controlled: the agent process
 can be started with `--operator-package-host-id`, `--operator-packages-root`,
 and `--operator-activated-package-count`, or the matching

@@ -216,6 +216,15 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
     assert_eq!(result["requested_mode"], OPERATOR_TASK_MODE_PREFLIGHT);
     assert_eq!(result["blocked_stage"], OPERATOR_TASK_BLOCKED_STAGE);
     assert_eq!(result["operator_package_runtime_ready"], false);
+    assert_eq!(result["execution_readiness"]["status"], "blocked");
+    assert_eq!(
+        result["execution_readiness"]["blocking_reason"],
+        OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
+    );
+    assert_eq!(
+        result["execution_readiness"]["required_action"],
+        "attach_operator_package_runtime"
+    );
     assert_eq!(
         result["package_fetch_request"]["schema_version"],
         "kyuubiki.operator-package-fetch-request/v1"
@@ -259,6 +268,8 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
         result["execution_plan"][2]["requested_mode"],
         OPERATOR_TASK_MODE_PREFLIGHT
     );
+    assert_eq!(result["execution_plan"][2]["gate"], "blocked");
+    assert_eq!(result["execution_plan"][3]["gate"], "waiting_for_fetch");
     assert_eq!(result["operator_id"], "transform.fixture");
     assert_eq!(result["program_id"], "transform.fixture");
     assert_eq!(result["runtime_protocol"], "kyuubiki.operator-execution/v1");
@@ -288,6 +299,12 @@ fn operator_task_runtime_accepts_explicit_execute_mode_as_blocked_dispatch() {
         result["execution_runtime_status"],
         OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
     );
+    assert_eq!(result["execution_readiness"]["status"], "blocked");
+    assert_eq!(
+        result["execution_readiness"]["current_stage"],
+        OPERATOR_TASK_BLOCKED_STAGE
+    );
+    assert_eq!(result["execution_readiness"]["ready_to_dispatch"], false);
 }
 
 #[test]
@@ -308,6 +325,15 @@ fn operator_task_runtime_can_report_attached_package_host_readiness() {
     assert_eq!(result["operator_package_runtime_ready"], true);
     assert!(result["blocked_stage"].is_null());
     assert_eq!(result["next_stage"], OPERATOR_TASK_BLOCKED_STAGE);
+    assert_eq!(
+        result["execution_readiness"]["status"],
+        "ready_for_package_resolution"
+    );
+    assert!(result["execution_readiness"]["blocking_stage"].is_null());
+    assert_eq!(
+        result["execution_readiness"]["required_action"],
+        "resolve_fetch_verify_and_activate_package"
+    );
     assert_eq!(result["operator_package_runtime"]["status"], "attached");
     assert_eq!(
         result["execution_runtime_status"],
@@ -318,6 +344,8 @@ fn operator_task_runtime_can_report_attached_package_host_readiness() {
         result["execution_plan"][2]["reason"],
         "operator_package_runtime_ready_for_fetch"
     );
+    assert_eq!(result["execution_plan"][2]["gate"], "open");
+    assert_eq!(result["execution_plan"][4]["gate"], "waiting_for_integrity");
     assert_eq!(
         result["package_fetch_request"]["request_status"],
         "ready_to_resolve"

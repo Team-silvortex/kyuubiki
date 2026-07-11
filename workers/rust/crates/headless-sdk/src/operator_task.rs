@@ -4,6 +4,11 @@ use kyuubiki_protocol::{
 };
 use serde_json::{Map, Value};
 
+use crate::operator_task_readiness::{
+    OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OPERATOR_TASK_FETCH_STAGE, detached_execution_plan,
+    detached_execution_readiness, package_fetch_request_preview,
+};
+
 pub const OPERATOR_TASK_PREPARE_ACTION: &str = "operator_task_prepare";
 pub const OPERATOR_TASK_EXECUTE_ACTION: &str = "operator_task_execute";
 
@@ -87,6 +92,13 @@ fn prepare_operator_task_payload_checked(
 pub fn preview_operator_task_execute_payload(payload: &Value) -> Result<Value, String> {
     prepare_operator_task_payload(payload).map(|mut preview| {
         preview["status"] = Value::from("verified_pending_execution");
+        preview["execution_runtime_status"] = Value::from(OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED);
+        preview["operator_package_runtime_ready"] = Value::from(false);
+        preview["blocked_stage"] = Value::from(OPERATOR_TASK_FETCH_STAGE);
+        preview["next_stage"] = Value::from(OPERATOR_TASK_FETCH_STAGE);
+        preview["execution_readiness"] = detached_execution_readiness();
+        preview["package_fetch_request"] = package_fetch_request_preview(&preview);
+        preview["execution_plan"] = detached_execution_plan();
         preview
     })
 }
@@ -334,6 +346,46 @@ mod tests {
 
         assert_eq!(preview["status"], "verified_pending_execution");
         assert_eq!(preview["operator_id"], "transform.fixture");
+        assert_eq!(preview["execution_readiness"]["status"], "blocked");
+        assert_eq!(
+            preview["execution_readiness"]["required_action"],
+            "attach_operator_package_runtime"
+        );
+        assert_eq!(
+            preview["package_fetch_request"]["request_status"],
+            "blocked_runtime_not_attached"
+        );
+        assert_eq!(preview["execution_plan"][2]["stage"], "fetch_package");
+        assert_eq!(preview["execution_plan"][2]["gate"], "blocked");
+    }
+
+    #[test]
+    fn operator_task_execute_runs_as_headless_dry_step_with_readiness() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "operator-task-fixture".to_string(),
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "operator_task_execute".to_string(),
+                risk: crate::HeadlessRisk::Normal,
+                payload: json!({ "task": golden_task_fixture(false) }),
+            }],
+            warnings: vec![],
+        };
+
+        let report = run_batch_dry(&batch, false, false);
+
+        assert_eq!(report.status, "ok");
+        assert_eq!(
+            report.steps[0].result_preview["execution_readiness"]["status"],
+            "blocked"
+        );
+        assert_eq!(
+            report.steps[0].result_preview["next_stage"],
+            "fetch_package"
+        );
     }
 
     fn operator_task_batch(task: Value) -> HeadlessExecutionBatch {

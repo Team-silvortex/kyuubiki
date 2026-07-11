@@ -29,7 +29,14 @@
     },
     "next_action": {
       "type": "string",
-      "enum": ["prepare", "execute", "archive", "retry_failed_cases", "fix_invalid_cases"]
+      "enum": [
+        "prepare",
+        "execute",
+        "archive",
+        "retry_failed_cases",
+        "fix_invalid_cases",
+        "resolve_blocked_cases"
+      ]
     },
     "batch_digest": {
       "type": "string",

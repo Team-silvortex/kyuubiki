@@ -8,6 +8,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchRun
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
+  alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.WorkflowOperatorRuntime
 
   @schema_version "kyuubiki.operator-task-ir/v1"
@@ -121,6 +122,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
         "operator_id" => get_in(task_ir, ["operator", "id"]),
         "status" => "ok",
+        "execution_readiness" => OperatorTaskReadiness.local_executed(),
         "result" => result
       }
     else
@@ -163,7 +165,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "operator_id" => get_in(task_ir, ["operator", "id"]),
       "status" => "error",
       "error" => inspect(reason),
-      "error_code" => error_code(reason)
+      "error_code" => error_code(reason),
+      "execution_readiness" => OperatorTaskReadiness.local_failed(reason)
     }
   end
 
@@ -210,6 +213,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "error_count" => length(results) - ok_count,
       "error_codes" => Map.keys(error_code_counts),
       "error_code_counts" => error_code_counts,
+      "readiness_counts" => readiness_counts(results),
       "failed_case_ids" => failed_case_ids(results),
       "results" => results
     }
@@ -230,6 +234,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       case Map.get(entry, "error_code") do
         code when is_binary(code) and code != "" -> Map.update(counts, code, 1, &(&1 + 1))
         _code -> counts
+      end
+    end)
+    |> Enum.sort()
+    |> Map.new()
+  end
+
+  defp readiness_counts(entries) do
+    entries
+    |> Enum.reduce(%{}, fn entry, counts ->
+      case get_in(entry, ["execution_readiness", "status"]) do
+        status when is_binary(status) and status != "" ->
+          Map.update(counts, status, 1, &(&1 + 1))
+
+        _status ->
+          counts
       end
     end)
     |> Enum.sort()

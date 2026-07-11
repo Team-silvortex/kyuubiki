@@ -36,6 +36,9 @@ still need to become one repeatable product path:
 - run provenance, snapshots, credentials, and update behavior must become
   default visible contracts
 - the Workbench must guide users through one obvious main workflow loop
+- batch checkpoints now separate failed-case retry from runtime/package
+  readiness recovery through `resolve_blocked_cases`, but that path still needs
+  persistence-backed UI and remote-agent evidence
 
 ## 1. Executable Task Contract
 

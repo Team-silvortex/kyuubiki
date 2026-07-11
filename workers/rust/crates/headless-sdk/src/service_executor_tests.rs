@@ -219,6 +219,51 @@ fn operator_task_prepare_round_trips_against_local_http_server() {
 }
 
 #[test]
+fn operator_task_execute_preserves_readiness_from_control_plane() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept request");
+        let mut buffer = [0_u8; 4096];
+        let bytes_read = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("POST /api/v1/operator-tasks/execute HTTP/1.1\r\n"));
+        assert!(request.contains("\"task\":"));
+        let body = r#"{"status":"verified_pending_execution","execution_readiness":{"status":"blocked","current_stage":"fetch_package","required_action":"attach_operator_package_runtime"},"package_fetch_request":{"request_status":"blocked_runtime_not_attached"},"execution_plan":[{"stage":"fetch_package","gate":"blocked"}]}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step(
+            "operator_task_execute",
+            1,
+            &json!({ "task": { "schema_version": "kyuubiki.operator-task-ir/v1" } }),
+        )
+        .expect("service request should preserve readiness");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.status, "executed");
+    assert_eq!(outcome.result["execution_readiness"]["status"], "blocked");
+    assert_eq!(
+        outcome.result["execution_readiness"]["required_action"],
+        "attach_operator_package_runtime"
+    );
+    assert_eq!(
+        outcome.result["package_fetch_request"]["request_status"],
+        "blocked_runtime_not_attached"
+    );
+    assert_eq!(outcome.result["execution_plan"][0]["gate"], "blocked");
+}
+
+#[test]
 fn non_success_response_includes_json_error_payload() {
     let response = "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n{\"error\":\"operator_task_digest_mismatch\",\"error_code\":\"operator_task_digest_mismatch\"}";
     let error = parse_json_response(response, "/api/v1/operator-tasks/prepare")

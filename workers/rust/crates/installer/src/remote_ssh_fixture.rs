@@ -1,6 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 const REMOTE_SSH_FIXTURE_SCHEMA_VERSION: &str = "kyuubiki.remote-ssh-fixture/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg(test)]
+#[path = "remote_ssh_fixture_fuzz.rs"]
+mod remote_ssh_fixture_fuzz;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteSshFixtureReport {
     pub schema_version: String,
     pub fixture_target: String,
@@ -8,7 +14,7 @@ pub struct RemoteSshFixtureReport {
     pub checks: Vec<RemoteSshFixtureCheck>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteSshFixturePlan {
     pub schema_version: String,
     pub compose_file: String,
@@ -22,7 +28,7 @@ pub struct RemoteSshFixturePlan {
     pub ignored_runtime_paths: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteSshFixtureCommand {
     pub id: String,
     pub program: String,
@@ -30,7 +36,7 @@ pub struct RemoteSshFixtureCommand {
     pub mutates_remote: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteSshFixtureCheck {
     pub label: String,
     pub ok: bool,

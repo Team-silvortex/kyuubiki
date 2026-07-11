@@ -18,6 +18,9 @@ fn operator_task_runtime_executes_agent_native_material_thermal_shock() {
     assert_eq!(result["execution_plan"][2]["status"], "skipped");
     assert_eq!(result["execution_plan"][4]["stage"], "dispatch_entrypoint");
     assert_eq!(result["execution_plan"][4]["status"], "complete");
+    assert_eq!(result["execution_readiness"]["status"], "executed");
+    assert_eq!(result["execution_readiness"]["ready_to_dispatch"], true);
+    assert!(result["execution_readiness"]["blocking_stage"].is_null());
     assert_eq!(
         result["result"]["material_thermal_shock_candidate_count"],
         2

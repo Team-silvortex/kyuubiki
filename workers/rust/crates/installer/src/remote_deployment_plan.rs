@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 const REMOTE_DEPLOYMENT_PLAN_SCHEMA_VERSION: &str = "kyuubiki.remote-deployment-plan/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteDeploymentPlan {
     pub schema_version: String,
     pub plan_id: String,
@@ -8,7 +10,7 @@ pub struct RemoteDeploymentPlan {
     pub steps: Vec<RemoteDeploymentPlanStep>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteDeploymentPlanStep {
     pub id: String,
     pub title: String,

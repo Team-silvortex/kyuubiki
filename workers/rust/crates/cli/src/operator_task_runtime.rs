@@ -28,6 +28,9 @@ const OPERATOR_PACKAGE_RUNTIME_SDK: &str = "kyuubiki-operator-sdk";
 const OPERATOR_PACKAGE_RUNTIME_STATUS_DETACHED: &str = "not_attached";
 const OPERATOR_PACKAGE_RUNTIME_STATUS_ATTACHED: &str = "attached";
 const OPERATOR_PACKAGE_FETCH_REQUEST_SCHEMA: &str = "kyuubiki.operator-package-fetch-request/v1";
+const OPERATOR_TASK_READINESS_BLOCKED: &str = "blocked";
+const OPERATOR_TASK_READINESS_READY: &str = "ready_for_package_resolution";
+const OPERATOR_TASK_READINESS_EXECUTED: &str = "executed";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct OperatorPackageRuntimeAttachment {
@@ -223,6 +226,7 @@ fn build_preflight_payload(
         "operator_package_runtime_ready": package_runtime.is_attached(),
         "blocked_stage": blocked_stage(&package_runtime),
         "next_stage": OPERATOR_TASK_BLOCKED_STAGE,
+        "execution_readiness": execution_readiness(mode, &package_runtime),
         "execution_plan": execution_plan(mode, &package_runtime),
         "task_digest": summary.task_digest,
         "task_id": summary.task_id,
@@ -257,6 +261,7 @@ fn build_agent_native_execution_payload(
         "operator_package_runtime_ready": package_runtime.is_attached(),
         "blocked_stage": Value::Null,
         "next_stage": "serialize_result",
+        "execution_readiness": agent_native_execution_readiness(),
         "execution_plan": agent_native_execution_plan(),
         "task_digest": summary.task_digest,
         "task_id": summary.task_id,
@@ -380,6 +385,44 @@ fn package_fetch_request_status(binding: &OperatorPackageRuntimeBinding) -> &'st
     }
 }
 
+fn execution_readiness(mode: &str, binding: &OperatorPackageRuntimeBinding) -> Value {
+    match binding {
+        OperatorPackageRuntimeBinding::Detached => serde_json::json!({
+            "status": OPERATOR_TASK_READINESS_BLOCKED,
+            "requested_mode": mode,
+            "ready_to_dispatch": false,
+            "current_stage": OPERATOR_TASK_BLOCKED_STAGE,
+            "blocking_stage": OPERATOR_TASK_BLOCKED_STAGE,
+            "blocking_reason": OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED,
+            "blocking_owner": "operator_package_runtime",
+            "required_action": "attach_operator_package_runtime"
+        }),
+        OperatorPackageRuntimeBinding::Attached(_) => serde_json::json!({
+            "status": OPERATOR_TASK_READINESS_READY,
+            "requested_mode": mode,
+            "ready_to_dispatch": false,
+            "current_stage": OPERATOR_TASK_BLOCKED_STAGE,
+            "blocking_stage": Value::Null,
+            "blocking_reason": Value::Null,
+            "blocking_owner": Value::Null,
+            "required_action": "resolve_fetch_verify_and_activate_package"
+        }),
+    }
+}
+
+fn agent_native_execution_readiness() -> Value {
+    serde_json::json!({
+        "status": OPERATOR_TASK_READINESS_EXECUTED,
+        "requested_mode": OPERATOR_TASK_MODE_EXECUTE,
+        "ready_to_dispatch": true,
+        "current_stage": "serialize_result",
+        "blocking_stage": Value::Null,
+        "blocking_reason": Value::Null,
+        "blocking_owner": Value::Null,
+        "required_action": Value::Null
+    })
+}
+
 fn operator_package_runtime_attachment(binding: &OperatorPackageRuntimeBinding) -> Value {
     match binding {
         OperatorPackageRuntimeBinding::Detached => Value::Null,
@@ -396,35 +439,41 @@ fn agent_native_execution_plan() -> Value {
         {
             "stage": "verify_digest",
             "status": "complete",
-            "owner": "agent_runtime"
+            "owner": "agent_runtime",
+            "gate": "passed"
         },
         {
             "stage": "summarize_execution_program",
             "status": "complete",
-            "owner": "agent_runtime"
+            "owner": "agent_runtime",
+            "gate": "passed"
         },
         {
             "stage": OPERATOR_TASK_BLOCKED_STAGE,
             "status": "skipped",
             "owner": "agent_runtime",
+            "gate": "not_required",
             "reason": "agent_native_builtin"
         },
         {
             "stage": "verify_package_integrity",
             "status": "skipped",
             "owner": "agent_runtime",
+            "gate": "not_required",
             "reason": "agent_native_builtin"
         },
         {
             "stage": "dispatch_entrypoint",
             "status": "complete",
             "owner": "agent_runtime",
+            "gate": "passed",
             "reason": "agent_native_builtin"
         },
         {
             "stage": "serialize_result",
             "status": "complete",
-            "owner": "agent_runtime"
+            "owner": "agent_runtime",
+            "gate": "passed"
         }
     ])
 }
@@ -435,6 +484,7 @@ fn execution_plan(mode: &str, binding: &OperatorPackageRuntimeBinding) -> Value 
             "stage": OPERATOR_TASK_BLOCKED_STAGE,
             "status": "blocked",
             "owner": "operator_package_runtime",
+            "gate": "blocked",
             "requested_mode": mode,
             "reason": OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
         }),
@@ -442,6 +492,7 @@ fn execution_plan(mode: &str, binding: &OperatorPackageRuntimeBinding) -> Value 
             "stage": OPERATOR_TASK_BLOCKED_STAGE,
             "status": "pending",
             "owner": "operator_package_runtime",
+            "gate": "open",
             "requested_mode": mode,
             "reason": OPERATOR_PACKAGE_RUNTIME_READY_FOR_FETCH
         }),
@@ -451,28 +502,33 @@ fn execution_plan(mode: &str, binding: &OperatorPackageRuntimeBinding) -> Value 
         {
             "stage": "verify_digest",
             "status": "complete",
-            "owner": "agent_runtime"
+            "owner": "agent_runtime",
+            "gate": "passed"
         },
         {
             "stage": "summarize_execution_program",
             "status": "complete",
-            "owner": "agent_runtime"
+            "owner": "agent_runtime",
+            "gate": "passed"
         },
         fetch_stage,
         {
             "stage": "verify_package_integrity",
             "status": "pending",
-            "owner": "operator_package_runtime"
+            "owner": "operator_package_runtime",
+            "gate": "waiting_for_fetch"
         },
         {
             "stage": "dispatch_entrypoint",
             "status": "pending",
-            "owner": "operator_package_runtime"
+            "owner": "operator_package_runtime",
+            "gate": "waiting_for_integrity"
         },
         {
             "stage": "serialize_result",
             "status": "pending",
-            "owner": "operator_package_runtime"
+            "owner": "operator_package_runtime",
+            "gate": "waiting_for_dispatch"
         }
     ])
 }

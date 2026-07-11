@@ -214,6 +214,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert execution["error_count"] == 0
     assert execution["error_codes"] == []
     assert execution["error_code_counts"] == %{}
+    assert execution["readiness_counts"] == %{"executed" => 1}
     assert execution["failed_case_ids"] == []
 
     [result] = execution["results"]
@@ -224,6 +225,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert result["task_digest"] == entry["task_digest"]
     assert result["operator_id"] == batch["operator_id"]
     assert result["status"] == "ok"
+    assert result["execution_readiness"]["status"] == "executed"
+    assert result["execution_readiness"]["required_action"] == nil
     assert is_map(result["result"])
   end
 
@@ -245,7 +248,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["task_count"] == length(example["results"])
     assert example["ok_count"] + example["error_count"] == example["executed_count"]
     assert example["executed_count"] <= example["task_count"]
+    assert example["readiness_counts"] == %{"executed" => 1}
     assert hd(example["results"])["status"] == "ok"
+    assert hd(example["results"])["execution_readiness"]["current_stage"] == "serialize_result"
   end
 
   test "operator task batch checkpoint matches the shared checkpoint contract shape" do
@@ -317,8 +322,27 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
              "execute",
              "archive",
              "retry_failed_cases",
-             "fix_invalid_cases"
+             "fix_invalid_cases",
+             "resolve_blocked_cases"
            ]
+  end
+
+  test "operator task batch blocked checkpoint example keeps readiness action aligned" do
+    example =
+      schema_path("examples.operator-task-batch-blocked-checkpoint.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert example["$schema"] == "operator-task-batch-checkpoint.schema.json"
+
+    assert example["resume_policy"] == %{
+             "status" => "blocked",
+             "next_action" => "resolve_blocked_cases"
+           }
+
+    assert example["execution"]["readiness_counts"] == %{"blocked" => 1}
+    assert example["execution"]["blocked_readiness_case_ids"] == ["quality_case_a"]
+    assert example["execution"]["failed_case_ids"] == []
   end
 
   test "operator task batch resume plan matches the shared resume-plan contract shape" do
@@ -377,6 +401,19 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["next_action"] == example["resume_policy"]["next_action"]
     assert is_list(example["target_case_ids"])
     assert is_list(example["blocked_case_ids"])
+  end
+
+  test "operator task batch blocked resume plan example targets blocked cases" do
+    example =
+      schema_path("examples.operator-task-batch-blocked-resume-plan.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert example["$schema"] == "operator-task-batch-resume-plan.schema.json"
+    assert example["status"] == "blocked"
+    assert example["next_action"] == "resolve_blocked_cases"
+    assert example["target_case_ids"] == ["quality_case_a"]
+    assert example["blocked_case_ids"] == ["quality_case_a"]
   end
 
   test "material envelope catalog request example matches the shared request contract" do

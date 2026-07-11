@@ -389,6 +389,8 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert request["method"] == "run_operator_task_ir"
     assert request["params"] == %{"task_ir" => task_ir, "mode" => "execute"}
     assert result["requested_mode"] == "execute"
+    assert result["execution_readiness"]["status"] == "blocked"
+    assert result["execution_readiness"]["required_action"] == "attach_operator_package_runtime"
   end
 
   test "routes operator task IR through runtime hint constraints" do

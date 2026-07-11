@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
+  alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
 
@@ -182,12 +183,15 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       when is_map(task_ir) do
     {opts, progress_handler} = normalize_operator_task_rpc_opts(opts_or_progress, on_progress)
 
-    request(
-      OperatorTaskIR.agent_rpc_method(),
-      OperatorTaskIR.agent_rpc_params(task_ir, opts),
-      progress_handler,
-      operator_task_routing_opts(task_ir, opts)
-    )
+    with {:ok, result} <-
+           request(
+             OperatorTaskIR.agent_rpc_method(),
+             OperatorTaskIR.agent_rpc_params(task_ir, opts),
+             progress_handler,
+             operator_task_routing_opts(task_ir, opts)
+           ) do
+      {:ok, OperatorTaskReadiness.normalize_agent_result(result)}
+    end
   end
 
   @spec ping(AgentPool.endpoint() | nil) :: {:ok, map()} | {:error, term()}

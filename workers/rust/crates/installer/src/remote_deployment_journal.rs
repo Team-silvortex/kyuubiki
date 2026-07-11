@@ -1,8 +1,9 @@
 use crate::{RemoteDeploymentPlan, default_remote_deployment_plan};
+use serde::{Deserialize, Serialize};
 
 const REMOTE_DEPLOYMENT_JOURNAL_SCHEMA_VERSION: &str = "kyuubiki.remote-deployment-journal/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteDeploymentJournal {
     pub schema_version: String,
     pub plan_id: String,
@@ -10,7 +11,7 @@ pub struct RemoteDeploymentJournal {
     pub records: Vec<RemoteDeploymentJournalRecord>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteDeploymentJournalRecord {
     pub step_id: String,
     pub phase: String,

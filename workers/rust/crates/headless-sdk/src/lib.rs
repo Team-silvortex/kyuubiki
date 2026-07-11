@@ -40,6 +40,7 @@ mod material_study_execution_plan;
 mod material_thermo;
 mod material_workflows;
 mod operator_task;
+mod operator_task_readiness;
 mod plan;
 mod run;
 mod service_executor;

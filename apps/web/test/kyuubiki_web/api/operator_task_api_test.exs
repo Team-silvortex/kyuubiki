@@ -346,6 +346,71 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert payload["blocked_case_ids"] == []
   end
 
+  test "builds a readiness-blocked operator task batch resume plan through the service API" do
+    {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "batch-case-a", "task_ir" => task_a}
+      ]
+    }
+
+    execution = %{
+      "run_id" => "operator-task-batch:execute:test",
+      "run_phase" => "execute",
+      "batch_digest" => KyuubikiWeb.Orchestra.OperatorTaskBatchRun.batch_digest(batch),
+      "started_at" => "2026-01-01T00:00:00Z",
+      "finished_at" => "2026-01-01T00:00:01Z",
+      "task_count" => 1,
+      "executed_count" => 1,
+      "ok_count" => 1,
+      "error_count" => 0,
+      "failed_case_ids" => [],
+      "readiness_counts" => %{"blocked" => 1},
+      "results" => [
+        %{
+          "case_id" => "batch-case-a",
+          "execution_readiness" => %{"status" => "blocked"}
+        }
+      ]
+    }
+
+    checkpoint_conn =
+      :post
+      |> conn(
+        "/api/v1/operator-tasks/checkpoint-batch",
+        Jason.encode!(%{"batch" => batch, "execution" => execution})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert checkpoint_conn.status == 200
+    checkpoint = Jason.decode!(checkpoint_conn.resp_body)
+
+    assert checkpoint["resume_policy"] == %{
+             "status" => "blocked",
+             "next_action" => "resolve_blocked_cases"
+           }
+
+    assert checkpoint["execution"]["blocked_readiness_case_ids"] == ["batch-case-a"]
+
+    resume_conn =
+      :post
+      |> conn(
+        "/api/v1/operator-tasks/resume-plan-batch",
+        Jason.encode!(%{"batch" => batch, "checkpoint" => checkpoint})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert resume_conn.status == 200
+    payload = Jason.decode!(resume_conn.resp_body)
+    assert payload["next_action"] == "resolve_blocked_cases"
+    assert payload["target_case_ids"] == ["batch-case-a"]
+    assert payload["blocked_case_ids"] == ["batch-case-a"]
+  end
+
   defp fixture_task! do
     descriptor = %{
       "id" => "transform.api_fixture",

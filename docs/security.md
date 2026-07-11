@@ -116,6 +116,12 @@ boundaries:
 - remote host trust plan ingress, where mutated SSH trust metadata and raw byte
   payloads exercise trust-plan decode, re-encode, and rendering without writing
   known_hosts or opening SSH sessions
+- remote SSH fixture metadata ingress, where mutated fixture plans, command
+  reports, and raw byte payloads exercise decode, re-encode, rendering, and
+  secret-token scanning without executing `ssh`, `scp`, or containers
+- remote deployment metadata ingress, where mutated deployment plans, journals,
+  dry-run reports, and raw byte payloads exercise decode, re-encode, and
+  rendering without remote mutation or agent startup
 
 These checks verify that protocol boundaries do not panic while accepting or
 rejecting each case.
@@ -134,6 +140,9 @@ Run it when changing:
 - credential storage contract, mobile credential handle, or sandbox ownership
   metadata code
 - remote host trust, known-host pinning metadata, or SSH trust-mode planning code
+- remote SSH fixture plan, command-shape report, or local fixture metadata code
+- remote deployment plan, journal, dry-run report, or execution preflight
+  metadata code
 - JSON budget limits, artifact parsing, protocol decode, or graph import/export
   paths
 
@@ -142,7 +151,8 @@ graph, artifact, Task IR, RPC, package, and update metadata bytes enter through
 protocol decode, then the workflow security guard, Task IR verifier, RPC
 dispatcher, package manifest validator, or update planner must reject malformed
 or over-budget inputs before execution, native library loading, SSH, secret
-access, known-host mutation, download, or apply.
+access, known-host mutation, fixture container startup, remote mutation, agent
+startup, download, or apply.
 
 ### Control plane
 
@@ -553,6 +563,7 @@ Before changing any critical or high-sensitivity module:
    structs, operator Task IR validation, RPC decode, artifact budgets, protocol
    decode, package manifest validation, update catalog parsing, remote artifact
    metadata, credential storage contracts, remote host trust metadata, or graph
-   import/export behavior changes.
+   import/export behavior changes. Also run it when remote SSH fixture command
+   metadata or remote deployment preflight metadata changes.
 7. Keep `docs/security.md` synchronized with actual route enforcement and
    deployment behavior.

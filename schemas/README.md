@@ -131,6 +131,10 @@ README.
   checkpoint sample for preserving batch-run state between distributed attempts
 - `examples.operator-task-batch-resume-plan.json` is the matching recovery
   plan sample for turning a checkpoint resume policy into explicit next work
+- `examples.operator-task-batch-blocked-checkpoint.json` and
+  `examples.operator-task-batch-blocked-resume-plan.json` show the package or
+  runtime readiness-blocked recovery path where the next action is
+  `resolve_blocked_cases`, not ordinary failed-case retry
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:
