@@ -32,20 +32,37 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
         .or_else(|| payload.get("max_cases"))
         .and_then(Value::as_f64)
         .unwrap_or(64.0);
+    let sweep_budget = payload.get("sweep_budget").cloned().unwrap_or(Value::Null);
+    let expansion_budget_ready = !sweep_budget
+        .get("case_budget_exceeded")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let expansion_blocking_reason = if expansion_budget_ready {
+        Value::Null
+    } else {
+        Value::from("case_budget_exceeded")
+    };
 
     Ok(serde_json::json!({
         "quality_sweep_expansion_contract": "kyuubiki.quality_sweep_expansion/v1",
         "expansion_enabled": true,
+        "expansion_budget_ready": expansion_budget_ready,
+        "expansion_blocking_reason": expansion_blocking_reason,
         "source_plan_contract": payload.get("quality_parameter_sweep_plan_contract").cloned().unwrap_or(Value::Null),
         "source_candidate_id": payload.get("source_candidate_id").cloned().unwrap_or(Value::Null),
         "case_count_estimate": payload.get("case_count_estimate").cloned().unwrap_or(Value::Null),
+        "sweep_budget": sweep_budget,
         "payload": {
             "base": base,
             "axes": axes,
             "case_metadata": {
                 "source_candidate_id": payload.get("source_candidate_id").cloned().unwrap_or(Value::Null),
+                "seed_metadata": payload.get("seed_metadata").cloned().unwrap_or(Value::Null),
                 "source_plan_contract": payload.get("quality_parameter_sweep_plan_contract").cloned().unwrap_or(Value::Null),
                 "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
+                "optimization_hint": payload.get("optimization_hint").cloned().unwrap_or(Value::Null),
+                "focused_axis_path": payload.get("focused_axis_path").cloned().unwrap_or(Value::Null),
+                "sweep_budget": payload.get("sweep_budget").cloned().unwrap_or(Value::Null),
             },
         },
         "config": {

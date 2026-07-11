@@ -136,6 +136,21 @@ pub(super) fn workflow_summary_transform_descriptors() -> Vec<OperatorDescriptor
             ],
         ),
         built_in_transform_descriptor(
+            "transform.compose_quality_lineage_report",
+            "multi_domain",
+            "compose_quality_lineage_report",
+            "Compose a machine-readable lineage report from quality ranking, next-round request, sweep plan, and expanded cases.",
+            &[
+                "transform",
+                "summary",
+                "lineage",
+                "provenance",
+                "automation",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
             "transform.build_quality_parameter_sweep_plan",
             "multi_domain",
             "build_quality_parameter_sweep_plan",

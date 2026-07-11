@@ -38,6 +38,7 @@ mod workflow_parameter_sweep_results;
 mod workflow_quality_objective;
 mod workflow_quality_sweep_plan;
 mod workflow_quality_sweep_request;
+mod workflow_quality_terms;
 mod workflow_reporting;
 mod workflow_security;
 mod workflow_solve_executor;

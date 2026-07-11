@@ -148,7 +148,39 @@ per-domain ready state, missing metrics, watch counts, dominant risk terms, and
 blocking explanations. `transform.rank_quality_candidates` and
 `transform.prepare_quality_next_round_request` carry those explanation fields
 forward, so an automated study can select the best candidate and still know
-which physics metric should drive the next iteration.
+which physics metric should drive the next iteration. The next-round request
+also emits an `optimization_hint` that normalizes the action into either
+`fix_blocking_term` or `reduce_dominant_term`, with the focus domain and field
+ready for headless SDK search loops. `transform.build_quality_parameter_sweep_plan`
+consumes that hint when ordering sweep axes, and can keep the focused axis when
+`max_axes` is used to cap the next round size. The plan also emits
+`sweep_budget`, making axis truncation and `max_cases` pressure visible before
+the expansion operator has to reject an oversized study. Its recommendation
+field lets SDK callers decide whether to run the planned sweep, reduce axis
+count, reduce samples per axis, or schedule a follow-up axis batch.
+When the plan is materialized, that same hint and focused axis are copied into
+each generated case's metadata, preserving a trace from result quality to the
+next simulated candidate. Materialization also declares `expansion_budget_ready`,
+so UI and SDK callers can stop before expanding an oversized plan while still
+keeping the full recovery context. If a quality sweep still reaches expansion
+while budget-blocked, `transform.expand_parameter_sweep` returns a structured
+empty result with the blocking reason and budget recommendation instead of a
+generic failure. Sweep result scoring maps that metadata back onto quality
+candidates and emits dominant/blocking quality terms from the objective
+breakdown. Candidate ranking and the next-round request preserve the
+selected candidate metadata as `seed_metadata`, so the reason chain remains
+visible after ranking, planning, and expansion. Sweep planning carries that
+`seed_metadata` into the materialized case metadata, so generated candidates can
+be traced back to both the selected seed and the optimization reason.
+`transform.compose_quality_lineage_report` can then summarize ranking, request,
+plan, and expanded case metadata into one machine-readable lineage report for
+headless SDK logs or later recovery. It also emits `lineage_missing_fields`,
+allowing watchdogs, retry loops, and SDK callers to distinguish a complete
+research chain from a recoverable partial chain. Budget-blocked expansion
+results are treated as recoverable complete states when the selected seed,
+optimization hint, and budget recommendation are still present. The
+parameter-sweep result scoring graph now emits that report as a first-class
+output next to the next-round cases.
 The Rust engine and Web/Elixir workflow runtime both expose these domain
 quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.

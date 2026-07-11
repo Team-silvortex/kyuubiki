@@ -18,6 +18,14 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
     {
         return Ok(disabled_quality_sweep_result(&payload));
     }
+    if payload.get("quality_sweep_expansion_contract").is_some()
+        && payload
+            .get("expansion_budget_ready")
+            .and_then(Value::as_bool)
+            == Some(false)
+    {
+        return Ok(budget_blocked_quality_sweep_result(&payload));
+    }
 
     let (payload, config) = normalize_expand_input(payload, config)?;
     let base = payload
@@ -80,6 +88,28 @@ fn disabled_quality_sweep_result(payload: &Value) -> Value {
         "expansion_enabled": false,
         "sweep_action": payload.get("reason").and_then(Value::as_str).unwrap_or("stopped"),
         "sweep_summary": "Quality parameter sweep was skipped because exploration has stopped.",
+    })
+}
+
+fn budget_blocked_quality_sweep_result(payload: &Value) -> Value {
+    let reason = payload
+        .get("expansion_blocking_reason")
+        .and_then(Value::as_str)
+        .unwrap_or("case_budget_exceeded");
+    serde_json::json!({
+        "cases": [],
+        "case_count": 0,
+        "axis_count": 0,
+        "sweep_enabled": true,
+        "expansion_enabled": true,
+        "expansion_budget_ready": false,
+        "expansion_blocking_reason": reason,
+        "source_candidate_id": payload.get("source_candidate_id").cloned().unwrap_or(Value::Null),
+        "case_count_estimate": payload.get("case_count_estimate").cloned().unwrap_or(Value::Null),
+        "sweep_budget": payload.get("sweep_budget").cloned().unwrap_or(Value::Null),
+        "sweep_summary": format!(
+            "Quality parameter sweep expansion was blocked before case generation: {reason}."
+        ),
     })
 }
 

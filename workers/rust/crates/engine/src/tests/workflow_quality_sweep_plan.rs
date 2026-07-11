@@ -27,6 +27,10 @@ fn builds_quality_parameter_sweep_plan_from_next_round_request() {
             "target_score": 2.0,
             "request_payload": {
                 "max_candidates": 12,
+                "seed_metadata": {
+                    "source_candidate_id": "seed_candidate",
+                    "round": "previous"
+                },
                 "search_space": {
                     "elements.0.thickness": {"min": 0.01, "max": 0.03},
                     "material.density": [2700.0, 7800.0]
@@ -47,6 +51,10 @@ fn builds_quality_parameter_sweep_plan_from_next_round_request() {
     );
     assert_eq!(plan["sweep_enabled"].as_bool(), Some(true));
     assert_eq!(plan["source_candidate_id"].as_str(), Some("candidate_b"));
+    assert_eq!(
+        plan["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("seed_candidate")
+    );
     assert_eq!(plan["id_prefix"].as_str(), Some("quality_candidate"));
     assert_eq!(plan["case_count_estimate"].as_u64(), Some(6));
     assert_eq!(plan["axes"].as_array().map(Vec::len), Some(2));
@@ -75,6 +83,48 @@ fn runs_quality_parameter_sweep_plan_through_transform_executor() {
 }
 
 #[test]
+fn prioritizes_quality_sweep_axes_from_optimization_hint() {
+    let plan = build_quality_parameter_sweep_plan(
+        serde_json::json!({
+            "action": "continue",
+            "selected_candidate_id": "candidate_hint",
+            "request_payload": {
+                "optimization_hint": {
+                    "action": "reduce_dominant_term",
+                    "focus_domain": "structural",
+                    "focus_field": "stiffness_margin"
+                },
+                "search_space": {
+                    "material.density": [2700.0, 7800.0],
+                    "model.stiffness_margin": {"values": [1.1, 1.4]},
+                    "elements.0.thickness": [0.01, 0.02]
+                }
+            }
+        }),
+        serde_json::json!({
+            "samples_per_axis": 2,
+            "max_axes": 1
+        }),
+    )
+    .expect("hint-focused quality sweep plan should build");
+
+    assert_eq!(plan["axes"].as_array().map(Vec::len), Some(1));
+    assert_eq!(
+        plan["axes"][0]["path"].as_str(),
+        Some("model.stiffness_margin")
+    );
+    assert_eq!(
+        plan["focused_axis_path"].as_str(),
+        Some("model.stiffness_margin")
+    );
+    assert_eq!(
+        plan["optimization_hint"]["focus_field"].as_str(),
+        Some("stiffness_margin")
+    );
+    assert_eq!(plan["case_count_estimate"].as_u64(), Some(2));
+}
+
+#[test]
 fn materializes_quality_sweep_expansion_payload() {
     let expansion = materialize_quality_sweep_expansion(
         serde_json::json!({
@@ -84,6 +134,15 @@ fn materializes_quality_sweep_expansion_payload() {
             "id_prefix": "quality_candidate",
             "max_cases": 12,
             "case_count_estimate": 2,
+            "optimization_hint": {
+                "action": "reduce_dominant_term",
+                "focus_field": "model.thickness"
+            },
+            "focused_axis_path": "model.thickness",
+            "seed_metadata": {
+                "source_candidate_id": "candidate_a",
+                "round": "seed"
+            },
             "base": {"model": {"thickness": 0.01}},
             "axes": [{
                 "label": "thickness",
@@ -103,6 +162,18 @@ fn materializes_quality_sweep_expansion_payload() {
     assert_eq!(
         expansion["payload"]["axes"][0]["path"].as_str(),
         Some("model.thickness")
+    );
+    assert_eq!(
+        expansion["payload"]["case_metadata"]["optimization_hint"]["focus_field"].as_str(),
+        Some("model.thickness")
+    );
+    assert_eq!(
+        expansion["payload"]["case_metadata"]["focused_axis_path"].as_str(),
+        Some("model.thickness")
+    );
+    assert_eq!(
+        expansion["payload"]["case_metadata"]["seed_metadata"]["round"].as_str(),
+        Some("seed")
     );
     assert_eq!(
         expansion["config"]["id_prefix"].as_str(),
@@ -137,6 +208,15 @@ fn expands_materialized_quality_sweep_through_parameter_sweep_operator() {
             "sweep_enabled": true,
             "id_prefix": "quality_candidate",
             "max_cases": 4,
+            "optimization_hint": {
+                "action": "reduce_dominant_term",
+                "focus_field": "elements.0.thickness"
+            },
+            "focused_axis_path": "elements.0.thickness",
+            "seed_metadata": {
+                "source_candidate_id": "candidate_a",
+                "focused_axis_path": "previous.axis"
+            },
             "base": {
                 "elements": [{"thickness": 0.01}],
                 "material": {"density": 2700.0}
@@ -166,6 +246,82 @@ fn expands_materialized_quality_sweep_through_parameter_sweep_operator() {
     assert_eq!(
         expanded["cases"][3]["model"]["material"]["density"].as_f64(),
         Some(7800.0)
+    );
+    assert_eq!(
+        expanded["cases"][0]["metadata"]["optimization_hint"]["focus_field"].as_str(),
+        Some("elements.0.thickness")
+    );
+    assert_eq!(
+        expanded["cases"][0]["metadata"]["focused_axis_path"].as_str(),
+        Some("elements.0.thickness")
+    );
+    assert_eq!(
+        expanded["cases"][0]["metadata"]["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("candidate_a")
+    );
+}
+
+#[test]
+fn composes_quality_lineage_report_from_request_plan_and_cases() {
+    let report = run_transform_operator(
+        "transform.compose_quality_lineage_report",
+        serde_json::json!({
+            "request": {
+                "quality_next_round_contract": "kyuubiki.quality_next_round_request/v1",
+                "selected_candidate_id": "candidate_b",
+                "selected_candidate_ready": true,
+                "request_payload": {
+                    "seed_metadata": {
+                        "source_candidate_id": "candidate_a",
+                        "round": "previous"
+                    },
+                    "optimization_hint": {
+                        "action": "reduce_dominant_term",
+                        "focus_field": "elements.0.thickness"
+                    }
+                }
+            },
+            "plan": {
+                "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
+                "source_candidate_id": "candidate_b",
+                "focused_axis_path": "elements.0.thickness",
+                "case_count_estimate": 2
+            },
+            "cases": {
+                "case_count": 2,
+                "cases": [{
+                    "id": "quality_candidate_0",
+                    "metadata": {
+                        "source_candidate_id": "candidate_b",
+                        "focused_axis_path": "elements.0.thickness"
+                    }
+                }]
+            }
+        }),
+        serde_json::json!({}),
+    )
+    .expect("quality lineage report should compose");
+
+    assert_eq!(
+        report["quality_lineage_report_contract"].as_str(),
+        Some("kyuubiki.quality_lineage_report/v1")
+    );
+    assert_eq!(report["lineage_complete"].as_bool(), Some(true));
+    assert_eq!(
+        report["selected_candidate_id"].as_str(),
+        Some("candidate_b")
+    );
+    assert_eq!(
+        report["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("candidate_a")
+    );
+    assert_eq!(
+        report["optimization_hint"]["focus_field"].as_str(),
+        Some("elements.0.thickness")
+    );
+    assert_eq!(
+        report["first_case_metadata"]["source_candidate_id"].as_str(),
+        Some("candidate_b")
     );
 }
 

@@ -1,6 +1,7 @@
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::workflow_quality_objective::{
-    compose_quality_objective, prepare_quality_next_round_request, rank_quality_candidates,
+    compose_quality_lineage_report, compose_quality_objective, prepare_quality_next_round_request,
+    rank_quality_candidates,
 };
 use crate::workflow_quality_sweep_plan::materialize_quality_sweep_expansion;
 use crate::workflow_quality_sweep_request::build_quality_parameter_sweep_plan;
@@ -16,6 +17,10 @@ struct RankQualityCandidatesOperator {
 }
 
 struct PrepareQualityNextRoundRequestOperator {
+    descriptor: OperatorDescriptor,
+}
+
+struct ComposeQualityLineageReportOperator {
     descriptor: OperatorDescriptor,
 }
 
@@ -84,6 +89,25 @@ impl JsonOperator for PrepareQualityNextRoundRequestOperator {
     }
 }
 
+impl JsonOperator for ComposeQualityLineageReportOperator {
+    type Input = WorkflowOperatorEnvelope;
+
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            compose_quality_lineage_report(input.payload, input.config),
+        )
+    }
+}
+
 impl JsonOperator for BuildQualityParameterSweepPlanOperator {
     type Input = WorkflowOperatorEnvelope;
 
@@ -141,6 +165,11 @@ pub(crate) fn register_quality_objective_operators(
             descriptor: descriptor("transform.prepare_quality_next_round_request"),
         })
         .expect("transform.prepare_quality_next_round_request should register");
+    registry
+        .register_json(ComposeQualityLineageReportOperator {
+            descriptor: descriptor("transform.compose_quality_lineage_report"),
+        })
+        .expect("transform.compose_quality_lineage_report should register");
     registry
         .register_json(BuildQualityParameterSweepPlanOperator {
             descriptor: descriptor("transform.build_quality_parameter_sweep_plan"),

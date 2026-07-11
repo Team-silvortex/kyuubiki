@@ -66,14 +66,41 @@ fn maps_scored_parameter_sweep_rows_to_quality_candidates() {
                 {
                     "case_id": "balanced",
                     "parameters": { "thickness": 0.02 },
+                    "metadata": {
+                        "optimization_hint": {
+                            "focus_field": "max_stress"
+                        }
+                    },
                     "objective_score": -5.0,
-                    "objective_feasible": true
+                    "objective_feasible": true,
+                    "objective_breakdown": [
+                        {
+                            "field": "mass",
+                            "goal": "min",
+                            "value": 4.8,
+                            "score": -4.8
+                        },
+                        {
+                            "field": "max_stress",
+                            "goal": "min",
+                            "value": 88.0,
+                            "score": -1.76
+                        }
+                    ]
                 },
                 {
                     "case_id": "thin_light",
                     "parameters": { "thickness": 0.01 },
                     "objective_score": -1000000000002.0,
-                    "objective_feasible": false
+                    "objective_feasible": false,
+                    "objective_breakdown": [
+                        {
+                            "field": "max_stress",
+                            "goal": "min",
+                            "value": 140.0,
+                            "score": -2.8
+                        }
+                    ]
                 }
             ]
         }),
@@ -92,10 +119,27 @@ fn maps_scored_parameter_sweep_rows_to_quality_candidates() {
         Some(true)
     );
     assert_eq!(
+        candidates["candidates"]["balanced"]["metadata"]["optimization_hint"]["focus_field"]
+            .as_str(),
+        Some("max_stress")
+    );
+    assert_eq!(
+        candidates["candidates"]["balanced"]["qualities"]["material_sweep"]
+            ["material_sweep_quality_dominant_term"]["field"]
+            .as_str(),
+        Some("mass")
+    );
+    assert_eq!(
         candidates["candidates"]["thin_light"]["qualities"]["material_sweep"]
             ["material_sweep_quality_ready"]
             .as_bool(),
         Some(false)
+    );
+    assert_eq!(
+        candidates["candidates"]["thin_light"]["qualities"]["material_sweep"]
+            ["material_sweep_quality_blocking_terms"][0]["field"]
+            .as_str(),
+        Some("max_stress")
     );
 }
 

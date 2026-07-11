@@ -71,6 +71,16 @@ fn runs_parameter_sweep_result_scoring_workflow_graph() {
             .as_str(),
         Some("baseline")
     );
+    assert_eq!(
+        candidates["candidates"]["material_panel_1"]["metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
+    );
+    assert_eq!(
+        candidates["candidates"]["material_panel_1"]["qualities"]["material_sweep"]
+            ["material_sweep_quality_dominant_term"]["field"]
+            .as_str(),
+        Some("mass")
+    );
 
     let ranking = run
         .artifacts
@@ -81,6 +91,14 @@ fn runs_parameter_sweep_result_scoring_workflow_graph() {
         Some("material_panel_1")
     );
     assert_eq!(ranking["ready_candidate_count"].as_u64(), Some(1));
+    assert_eq!(
+        ranking["ranking"][0]["dominant_term"]["dominant_term"]["field"].as_str(),
+        Some("mass")
+    );
+    assert_eq!(
+        ranking["ranking"][0]["metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
+    );
 
     let request = run
         .artifacts
@@ -90,6 +108,18 @@ fn runs_parameter_sweep_result_scoring_workflow_graph() {
     assert_eq!(
         request["selected_candidate_id"].as_str(),
         Some("material_panel_1")
+    );
+    assert_eq!(
+        request["selected_iteration_hint"]["focus_field"].as_str(),
+        Some("mass")
+    );
+    assert_eq!(
+        request["selected_candidate_metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
+    );
+    assert_eq!(
+        request["request_payload"]["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
     );
 
     let plan = run
@@ -121,9 +151,36 @@ fn runs_parameter_sweep_result_scoring_workflow_graph() {
         Some("material_panel_1")
     );
     assert_eq!(
+        next_cases["cases"][0]["metadata"]["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
+    );
+    assert_eq!(
         next_cases["cases"][0]["metadata"]["source_plan_contract"].as_str(),
         Some("kyuubiki.quality_parameter_sweep_plan/v1")
     );
+
+    let lineage = run
+        .artifacts
+        .get("lineage_output.lineage")
+        .expect("lineage output should exist");
+    assert_eq!(
+        lineage["quality_lineage_report_contract"].as_str(),
+        Some("kyuubiki.quality_lineage_report/v1")
+    );
+    assert_eq!(lineage["lineage_complete"].as_bool(), Some(true));
+    assert_eq!(
+        lineage["selected_candidate_id"].as_str(),
+        Some("material_panel_1")
+    );
+    assert_eq!(
+        lineage["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("baseline")
+    );
+    assert_eq!(
+        lineage["focused_axis_path"].as_str(),
+        Some("elements.0.thickness")
+    );
+    assert_eq!(lineage["case_count"].as_u64(), Some(4));
 }
 
 #[test]

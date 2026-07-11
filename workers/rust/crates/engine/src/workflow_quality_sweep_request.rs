@@ -33,7 +33,25 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}));
     let samples = config_number(&config, "samples_per_axis", 3.0).round() as usize;
-    let axes = search_space_axes(search_space, samples);
+    let focus_field = request
+        .get("optimization_hint")
+        .or_else(|| payload.get("selected_iteration_hint"))
+        .and_then(|hint| hint.get("focus_field"))
+        .and_then(Value::as_str);
+    let max_axes = config
+        .get("max_axes")
+        .and_then(Value::as_u64)
+        .map(|value| value as usize);
+    let max_cases = config_number(
+        &config,
+        "max_cases",
+        request
+            .get("max_candidates")
+            .and_then(Value::as_f64)
+            .unwrap_or(64.0),
+    );
+    let usable_axis_count = usable_search_space_axis_count(search_space, samples);
+    let axes = prioritized_search_space_axes(search_space, samples, focus_field, max_axes);
     if axes.is_empty() {
         return Err(
             "transform.build_quality_parameter_sweep_plan requires usable search_space axes"
@@ -50,22 +68,33 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         })
         .product::<usize>();
 
+    let budget_summary =
+        sweep_budget_summary(usable_axis_count, &axes, case_count_estimate, max_cases);
+
     Ok(serde_json::json!({
         "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
         "sweep_enabled": true,
         "sweep_action": payload.get("action").and_then(Value::as_str).unwrap_or("continue"),
         "source_candidate_id": payload.get("selected_candidate_id").cloned().unwrap_or(Value::Null),
+        "seed_metadata": request
+            .get("seed_metadata")
+            .or_else(|| payload.get("selected_candidate_metadata"))
+            .cloned()
+            .unwrap_or(Value::Null),
         "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
+        "optimization_hint": request
+            .get("optimization_hint")
+            .or_else(|| payload.get("selected_iteration_hint"))
+            .cloned()
+            .unwrap_or(Value::Null),
+        "focused_axis_path": axes.first()
+            .and_then(|axis| axis.get("path"))
+            .cloned()
+            .unwrap_or(Value::Null),
         "id_prefix": config.get("id_prefix").and_then(Value::as_str).unwrap_or("quality_round"),
-        "max_cases": config_number(
-            &config,
-            "max_cases",
-            request
-                .get("max_candidates")
-                .and_then(Value::as_f64)
-                .unwrap_or(64.0),
-        ),
+        "max_cases": max_cases,
         "case_count_estimate": case_count_estimate,
+        "sweep_budget": budget_summary,
         "axes": axes,
         "base": base,
         "plan_summary": format!(
@@ -75,8 +104,20 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
     }))
 }
 
-fn search_space_axes(search_space: &Map<String, Value>, samples: usize) -> Vec<Value> {
+fn usable_search_space_axis_count(search_space: &Map<String, Value>, samples: usize) -> usize {
     search_space
+        .values()
+        .filter(|spec| !axis_values(spec, samples).is_empty())
+        .count()
+}
+
+fn prioritized_search_space_axes(
+    search_space: &Map<String, Value>,
+    samples: usize,
+    focus_field: Option<&str>,
+    max_axes: Option<usize>,
+) -> Vec<Value> {
+    let mut axes = search_space
         .iter()
         .filter_map(|(path, spec)| {
             let values = axis_values(spec, samples);
@@ -90,7 +131,106 @@ fn search_space_axes(search_space: &Map<String, Value>, samples: usize) -> Vec<V
                 }))
             }
         })
-        .collect()
+        .collect::<Vec<_>>();
+    axes.sort_by(|left, right| {
+        let left_path = left.get("path").and_then(Value::as_str).unwrap_or("");
+        let right_path = right.get("path").and_then(Value::as_str).unwrap_or("");
+        focus_rank(left_path, focus_field)
+            .cmp(&focus_rank(right_path, focus_field))
+            .then_with(|| left_path.cmp(right_path))
+    });
+    if let Some(max_axes) = max_axes {
+        axes.truncate(max_axes.max(1));
+    }
+    axes
+}
+
+fn sweep_budget_summary(
+    usable_axis_count: usize,
+    axes: &[Value],
+    case_count_estimate: usize,
+    max_cases: f64,
+) -> Value {
+    let planned_axis_count = axes.len();
+    let case_budget_exceeded = max_cases.is_finite() && case_count_estimate as f64 > max_cases;
+    let axis_budget_truncated = planned_axis_count < usable_axis_count;
+    let planned_axis_paths = axes
+        .iter()
+        .filter_map(|axis| axis.get("path").and_then(Value::as_str))
+        .collect::<Vec<_>>();
+    let recommended_axis_count = recommended_axis_count_for_budget(axes, max_cases);
+    let status = if case_budget_exceeded {
+        "case_budget_exceeded"
+    } else if axis_budget_truncated {
+        "axis_budget_truncated"
+    } else {
+        "ok"
+    };
+    let recommendation = if case_budget_exceeded && recommended_axis_count < planned_axis_count {
+        "reduce_axis_count"
+    } else if case_budget_exceeded {
+        "reduce_samples_per_axis"
+    } else if axis_budget_truncated {
+        "schedule_followup_axis_batch"
+    } else {
+        "run_planned_sweep"
+    };
+
+    serde_json::json!({
+        "status": status,
+        "recommendation": recommendation,
+        "usable_axis_count": usable_axis_count,
+        "planned_axis_count": planned_axis_count,
+        "planned_axis_paths": planned_axis_paths,
+        "recommended_axis_count": recommended_axis_count,
+        "axis_budget_truncated": axis_budget_truncated,
+        "case_count_estimate": case_count_estimate,
+        "max_cases": max_cases,
+        "case_budget_exceeded": case_budget_exceeded,
+    })
+}
+
+fn recommended_axis_count_for_budget(axes: &[Value], max_cases: f64) -> usize {
+    if !max_cases.is_finite() {
+        return axes.len();
+    }
+    let limit = max_cases.floor().max(1.0) as usize;
+    let mut product = 1usize;
+    let mut included = 0usize;
+    for axis in axes {
+        let value_count = axis
+            .get("values")
+            .and_then(Value::as_array)
+            .map(Vec::len)
+            .unwrap_or(0);
+        if value_count == 0 {
+            continue;
+        }
+        let Some(next_product) = product.checked_mul(value_count) else {
+            break;
+        };
+        if next_product > limit {
+            break;
+        }
+        product = next_product;
+        included += 1;
+    }
+    included.max(1).min(axes.len())
+}
+
+fn focus_rank(path: &str, focus_field: Option<&str>) -> u8 {
+    let Some(focus_field) = focus_field else {
+        return 1;
+    };
+    let focus_field = focus_field.trim();
+    if focus_field.is_empty() {
+        return 1;
+    }
+    if path == focus_field || path.ends_with(&format!(".{focus_field}")) {
+        0
+    } else {
+        1
+    }
 }
 
 fn axis_values(spec: &Value, samples: usize) -> Vec<Value> {

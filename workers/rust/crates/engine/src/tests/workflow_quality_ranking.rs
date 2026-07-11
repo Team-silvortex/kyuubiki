@@ -135,6 +135,10 @@ fn prepares_quality_next_round_request_from_ranking() {
                 "candidate_id": "candidate_b",
                 "score": 2.5,
                 "ready": true,
+                "metadata": {
+                    "source_candidate_id": "seed_a",
+                    "focused_axis_path": "model.thickness"
+                },
                 "dominant_term": {
                     "domain": "thermal",
                     "dominant_term": {"field": "thermal_temperature_max"}
@@ -161,10 +165,72 @@ fn prepares_quality_next_round_request_from_ranking() {
         Some("candidate_b")
     );
     assert_eq!(
+        request["selected_candidate_metadata"]["focused_axis_path"].as_str(),
+        Some("model.thickness")
+    );
+    assert_eq!(
+        request["request_payload"]["seed_metadata"]["source_candidate_id"].as_str(),
+        Some("seed_a")
+    );
+    assert_eq!(
         request["selected_dominant_term"]["domain"].as_str(),
         Some("thermal")
     );
+    assert_eq!(
+        request["selected_iteration_hint"]["action"].as_str(),
+        Some("reduce_dominant_term")
+    );
+    assert_eq!(
+        request["request_payload"]["optimization_hint"]["focus_field"].as_str(),
+        Some("thermal_temperature_max")
+    );
     approx_eq(request["request_payload"]["max_candidates"].as_f64(), 12.0);
+}
+
+#[test]
+fn prepares_quality_next_round_request_with_blocking_iteration_hint() {
+    let request = prepare_quality_next_round_request(
+        serde_json::json!({
+            "ranking": [{
+                "rank": 1,
+                "candidate_id": "candidate_blocked",
+                "score": 20.0,
+                "ready": false,
+                "dominant_term": {
+                    "domain": "electrostatic",
+                    "source": "electrostatic",
+                    "dominant_term": {"field": "electrostatic_field_peak_magnitude"}
+                },
+                "blocking_terms": [{
+                    "domain": "electrostatic",
+                    "source": "electrostatic",
+                    "source_blocking_terms": [{
+                        "field": "electrostatic_peak_energy_density",
+                        "status": "missing"
+                    }]
+                }]
+            }]
+        }),
+        serde_json::json!({
+            "require_ready": true,
+            "target_score": 2.0
+        }),
+    )
+    .expect("blocked quality next round request should build");
+
+    assert_eq!(request["action"].as_str(), Some("replan"));
+    assert_eq!(
+        request["selected_iteration_hint"]["action"].as_str(),
+        Some("fix_blocking_term")
+    );
+    assert_eq!(
+        request["selected_iteration_hint"]["focus_field"].as_str(),
+        Some("electrostatic_peak_energy_density")
+    );
+    assert_eq!(
+        request["request_payload"]["optimization_hint"]["blocking_count"].as_u64(),
+        Some(1)
+    );
 }
 
 #[test]

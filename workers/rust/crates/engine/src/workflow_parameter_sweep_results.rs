@@ -203,9 +203,19 @@ pub fn map_parameter_sweep_scores_to_quality_candidates(
             "parameters".to_string(),
             object.get("parameters").cloned().unwrap_or(Value::Null),
         );
+        candidate.insert(
+            "metadata".to_string(),
+            object.get("metadata").cloned().unwrap_or(Value::Null),
+        );
         if include_source_row {
             candidate.insert("source_row".to_string(), row.clone());
         }
+        let dominant_term = sweep_quality_dominant_term(object);
+        let blocking_terms = if ready {
+            Vec::new()
+        } else {
+            vec![dominant_term.clone()]
+        };
         candidate.insert(
             "qualities".to_string(),
             serde_json::json!({
@@ -215,6 +225,9 @@ pub fn map_parameter_sweep_scores_to_quality_candidates(
                     (ready_field.clone()): ready,
                     (missing_field.clone()): 0,
                     (format!("{domain}_quality_grade")): grade,
+                    (format!("{domain}_quality_watch_count")): if ready { 0 } else { 1 },
+                    (format!("{domain}_quality_dominant_term")): dominant_term,
+                    (format!("{domain}_quality_blocking_terms")): blocking_terms,
                     (format!("{domain}_quality_summary")): format!(
                         "Parameter sweep candidate {candidate_id}: quality_score={quality_score:.4}, feasible={ready}."
                     )
@@ -234,6 +247,50 @@ pub fn map_parameter_sweep_scores_to_quality_candidates(
             .unwrap_or(Value::Null),
         "candidates": candidates,
     }))
+}
+
+fn sweep_quality_dominant_term(object: &Map<String, Value>) -> Value {
+    object
+        .get("objective_breakdown")
+        .and_then(Value::as_array)
+        .and_then(|breakdown| {
+            breakdown.iter().max_by(|left, right| {
+                let left_score = left
+                    .get("score")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(f64::NEG_INFINITY)
+                    .abs();
+                let right_score = right
+                    .get("score")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(f64::NEG_INFINITY)
+                    .abs();
+                left_score.total_cmp(&right_score)
+            })
+        })
+        .map(|term| {
+            serde_json::json!({
+                "field": term.get("field").cloned().unwrap_or(Value::Null),
+                "goal": term.get("goal").cloned().unwrap_or(Value::Null),
+                "value": term.get("value").cloned().unwrap_or(Value::Null),
+                "score": term.get("score").cloned().unwrap_or(Value::Null),
+                "status": if object.get("objective_feasible").and_then(Value::as_bool).unwrap_or(true) {
+                    "ok"
+                } else {
+                    "blocked"
+                },
+            })
+        })
+        .unwrap_or_else(|| {
+            serde_json::json!({
+                "field": Value::Null,
+                "status": if object.get("objective_feasible").and_then(Value::as_bool).unwrap_or(true) {
+                    "ok"
+                } else {
+                    "blocked"
+                },
+            })
+        })
 }
 
 fn find_case_result<'a>(results: &'a [Value], case_id: &str, index: usize) -> Option<&'a Value> {

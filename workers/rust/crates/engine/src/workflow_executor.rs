@@ -25,6 +25,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.compose_quality_objective",
     "transform.rank_quality_candidates",
     "transform.prepare_quality_next_round_request",
+    "transform.compose_quality_lineage_report",
     "transform.build_quality_parameter_sweep_plan",
     "transform.materialize_quality_sweep_expansion",
     "transform.expand_parameter_sweep",
@@ -161,6 +162,7 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
         || operator_id == "transform.compose_quality_objective"
+        || operator_id == "transform.compose_quality_lineage_report"
         || operator_id == "transform.join_parameter_sweep_results"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
@@ -299,6 +301,7 @@ pub fn run_transform_operator(
         | "transform.compose_quality_objective"
         | "transform.rank_quality_candidates"
         | "transform.prepare_quality_next_round_request"
+        | "transform.compose_quality_lineage_report"
         | "transform.build_quality_parameter_sweep_plan"
         | "transform.materialize_quality_sweep_expansion"
         | "transform.expand_parameter_sweep"
