@@ -34,6 +34,8 @@ fn operator_package_preflight_json_reports_admission_summary() {
     assert_eq!(payload["safety"]["loads_dynamic_libraries"], false);
     assert_eq!(payload["accepted_package_count"], 1);
     assert_eq!(payload["rejected_package_count"], 1);
+    assert_eq!(payload["readiness_warning_count"], 0);
+    assert_eq!(payload["readiness_error_count"], 0);
     assert_eq!(
         payload["accepted_packages"][0]["package_id"],
         "lab.accepted"
@@ -56,6 +58,33 @@ fn operator_package_preflight_json_reports_admission_summary() {
             .as_str()
             .unwrap()
             .contains("minimum_host_version")
+    );
+
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn operator_package_preflight_outcome_can_gate_readiness_warnings() {
+    let root = unique_temp_dir("operator-package-preflight-readiness");
+    write_operator_package_manifest_with_status(
+        &root,
+        "unverified",
+        "lab.unverified",
+        "1.15.0",
+        "target/liblab_unverified.dylib",
+        "unverified",
+    );
+
+    let outcome = operator_package_preflight(&root).unwrap();
+    assert_eq!(outcome.accepted_package_count, 1);
+    assert_eq!(outcome.rejected_package_count, 0);
+    assert_eq!(outcome.readiness_warning_count, 1);
+    assert_eq!(outcome.readiness_error_count, 0);
+    assert!(
+        outcome
+            .ensure_no_readiness_warnings()
+            .unwrap_err()
+            .contains("1 readiness warning")
     );
 
     let _ = fs::remove_dir_all(root);
@@ -135,6 +164,24 @@ fn write_operator_package_manifest(
     minimum_host_version: &str,
     entrypoint: &str,
 ) {
+    write_operator_package_manifest_with_status(
+        root,
+        directory,
+        package_id,
+        minimum_host_version,
+        entrypoint,
+        "partial",
+    );
+}
+
+fn write_operator_package_manifest_with_status(
+    root: &Path,
+    directory: &str,
+    package_id: &str,
+    minimum_host_version: &str,
+    entrypoint: &str,
+    validation_status: &str,
+) {
     let package_root = root.join(directory);
     fs::create_dir_all(&package_root).unwrap();
     let manifest = format!(
@@ -144,7 +191,7 @@ fn write_operator_package_manifest(
   "package_id": "{package_id}",
   "package_version": "0.1.0",
   "minimum_host_version": "{minimum_host_version}",
-  "validation_status": "partial",
+  "validation_status": "{validation_status}",
   "validation_notes": "fixture package for installer preflight tests",
   "runtime": "rust_crate",
   "entrypoint": "{entrypoint}",

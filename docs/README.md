@@ -30,6 +30,7 @@ Read these first, in order:
 11. `maintenance.md`
 12. `installer-remote-control.md`
 13. `minimal-industrial-closure.md`
+14. `weakness-roadmap.md`
 
 For the current `1.18.x` hardening path, keep four threads mentally linked:
 
@@ -71,6 +72,11 @@ Then branch by intent:
 - `commercial-readiness-2.0.md`
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
+- `weakness-roadmap.md`
+  Current weak-spot roadmap from `tamamono 1.18.x` through the `moxi 2.0.0`
+  trust boundary, covering numerical trust, operator SDK industrialization,
+  agent/orchestra/mesh reliability, TaskIR stability, frontend/runtime
+  consistency, security fuzz coverage, and the flagship material research loop.
 - `commercial-readiness-2.0.manifest.json`
   Machine-readable gate map for the same `2.0` checklist, validated by
   `node ./scripts/validate-commercial-readiness.mjs`.

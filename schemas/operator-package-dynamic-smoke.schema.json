@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-package-dynamic-smoke.schema.json",
+  "title": "Kyuubiki Operator Package Dynamic Smoke Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "ok",
+    "template_manifest",
+    "package_manifest",
+    "preflight_report",
+    "dynamic_library",
+    "stages"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "kyuubiki.operator-package-dynamic-smoke/v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ok": {
+      "const": true
+    },
+    "template_manifest": {
+      "$ref": "#/$defs/repoPath"
+    },
+    "package_manifest": {
+      "$ref": "#/$defs/repoPath"
+    },
+    "preflight_report": {
+      "$ref": "#/$defs/repoPath"
+    },
+    "dynamic_library": {
+      "$ref": "#/$defs/repoPath"
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/templateTestsStage"
+        },
+        {
+          "$ref": "#/$defs/strictPreflightStage"
+        },
+        {
+          "$ref": "#/$defs/templateCdylibBuildStage"
+        },
+        {
+          "$ref": "#/$defs/engineDynamicHostLoadStage"
+        }
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "passingStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "ok"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "const": 0
+        },
+        "ok": {
+          "const": true
+        }
+      }
+    },
+    "templateTestsStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "template_tests"
+            }
+          }
+        }
+      ]
+    },
+    "strictPreflightStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "strict_preflight"
+            }
+          }
+        }
+      ]
+    },
+    "templateCdylibBuildStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "template_cdylib_build"
+            }
+          }
+        }
+      ]
+    },
+    "engineDynamicHostLoadStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "engine_dynamic_host_load"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

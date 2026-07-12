@@ -83,6 +83,10 @@ README.
 - `operator-qualification-evidence-kits.schema.json` is for the planning-grade
   artifact kits attached to qualification roadmap candidates before any of
   those artifacts are promoted into manifest-level `evidence.qualification`
+- `operator-package-dynamic-smoke.schema.json` is for the retained
+  end-to-end external operator package smoke report, including template tests,
+  strict package preflight, template `cdylib` build, and engine dynamic host
+  loading stage evidence
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
@@ -139,6 +143,9 @@ README.
   `examples.operator-task-batch-blocked-resume-plan.json` show the package or
   runtime readiness-blocked recovery path where the next action is
   `resolve_blocked_cases`, not ordinary failed-case retry
+- `examples.operator-package-dynamic-smoke.json` is the retained report fixture
+  for validating external operator package dynamic-smoke stage order and
+  evidence paths
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

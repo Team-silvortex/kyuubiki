@@ -1,0 +1,32 @@
+{
+  "$schema": "operator-package-dynamic-smoke.schema.json",
+  "schema_version": "kyuubiki.operator-package-dynamic-smoke/v1",
+  "generated_at": "2026-07-12T00:00:00Z",
+  "ok": true,
+  "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
+  "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+  "preflight_report": "tmp/operator-package-dynamic-preflight.json",
+  "dynamic_library": "workers/rust/templates/operator-crate-template/target/debug/libkyuubiki_operator_template.dylib",
+  "stages": [
+    {
+      "id": "template_tests",
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "strict_preflight",
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "template_cdylib_build",
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "engine_dynamic_host_load",
+      "status": 0,
+      "ok": true
+    }
+  ]
+}

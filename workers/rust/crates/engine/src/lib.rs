@@ -59,6 +59,7 @@ pub use heat_bridge::{
     bridge_heat_result_to_thermal_plane_quad_model,
     bridge_heat_result_to_thermal_plane_triangle_model,
 };
+pub use kyuubiki_operator_sdk::{OperatorSdkReadinessIssue, OperatorSdkReadinessSeverity};
 pub use operator_sdk_host::{
     DeferredDynamicLoadActivator, DynamicLibraryOperatorActivator, DynamicOperatorHostSession,
     ExternalOperatorHostConfig, ExternalOperatorHostError, ExternalOperatorLoadReport,

@@ -1,7 +1,7 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
 .PHONY: check-make-modules check-module-topology check-module-function-matrix build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
-.PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract
+.PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
@@ -94,6 +94,9 @@ check-material-study-sdk-examples:
 check-operator-task-ir-contract:
 	@node ./scripts/check-operator-task-ir-contract.mjs --self-test
 	@node ./scripts/check-operator-task-ir-contract.mjs
+
+check-operator-package-dynamic-smoke-contract:
+	@node ./scripts/check-operator-package-dynamic-smoke.mjs --self-test
 
 check-operator-reliability-rules:
 	@node ./scripts/test-operator-reliability-rules.mjs
@@ -204,6 +207,7 @@ architecture-check:
 	@$(MAKE) check-material-research-bundle-contract
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
+	@$(MAKE) check-operator-package-dynamic-smoke-contract
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-operator-validation
 	@$(MAKE) check-commercial-readiness
@@ -212,6 +216,7 @@ architecture-check:
 	@$(MAKE) check-gui-runtime-capability-contract
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight
+	@$(MAKE) operator-package-dynamic-smoke
 	@jq empty docs/book-manifest.json
 	@node ./scripts/validate-minimal-industrial-closure.mjs
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs

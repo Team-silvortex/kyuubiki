@@ -322,6 +322,7 @@ The installer exposes the same read-only path as machine-readable JSON:
 cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages
 cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --out tmp/operator-package-preflight.json
 cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --fail-on-rejected
+cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --fail-on-readiness-warnings
 ```
 
 For the repository template package, use the Make target:
@@ -330,11 +331,30 @@ For the repository template package, use the Make target:
 make operator-package-preflight
 make operator-package-preflight OUT=tmp/operator-package-preflight.json
 make operator-package-preflight FAIL_ON_REJECTED=1
+make operator-package-dynamic-smoke
+make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json
 ```
 
 The JSON schema is `kyuubiki.operator-package-preflight/v1` and includes
 accepted package summaries, rejected package reasons, host version, registry
-kind, and a safety block that confirms dynamic libraries were not loaded.
+kind, package readiness issues, readiness warning/error counts, and a safety
+block that confirms dynamic libraries were not loaded. Use
+`--fail-on-readiness-warnings` in CI when a package should be release-ready
+rather than merely discoverable.
+
+`make operator-package-dynamic-smoke` goes one step further for the repository
+template package: it runs the template crate tests, runs strict package
+preflight, builds the template `cdylib`, and executes the engine host dynamic
+loading smoke. It writes
+`tmp/operator-package-dynamic-smoke.json` by default; override with
+`OUT=tmp/custom.json`. Use it when changing the SDK host, package manifest,
+template, or dynamic-library activation path.
+`make check-operator-package-dynamic-smoke` validates the retained report
+schema, stage order, stage success, and repo-local evidence paths. The retained
+report contract is also documented as
+[operator-package-dynamic-smoke.schema.json](../schemas/operator-package-dynamic-smoke.schema.json)
+with a fixture at
+[examples.operator-package-dynamic-smoke.json](../schemas/examples.operator-package-dynamic-smoke.json).
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately

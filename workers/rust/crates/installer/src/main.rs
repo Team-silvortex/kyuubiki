@@ -106,6 +106,7 @@ fn main() {
 struct OperatorPackagePreflightFlags {
     output_path: Option<PathBuf>,
     fail_on_rejected: bool,
+    fail_on_readiness_warnings: bool,
 }
 
 fn parse_operator_package_preflight_flags(
@@ -125,6 +126,10 @@ fn parse_operator_package_preflight_flags(
             }
             "--fail-on-rejected" => {
                 flags.fail_on_rejected = true;
+                index += 1;
+            }
+            "--fail-on-readiness-warnings" => {
+                flags.fail_on_readiness_warnings = true;
                 index += 1;
             }
             other => return Err(format!("unknown operator-package-preflight flag: {other}")),
@@ -148,6 +153,13 @@ fn run_operator_package_preflight_command(
                 Ok(())
             }
         })?;
+        outcome.ensure_no_readiness_warnings().or_else(|error| {
+            if flags.fail_on_readiness_warnings {
+                Err(error)
+            } else {
+                Ok(())
+            }
+        })?;
         return Ok(format!("wrote {}", output_path.display()));
     }
 
@@ -155,6 +167,13 @@ fn run_operator_package_preflight_command(
     let json = outcome.json.clone();
     outcome.ensure_no_rejections().or_else(|error| {
         if flags.fail_on_rejected {
+            Err(error)
+        } else {
+            Ok(())
+        }
+    })?;
+    outcome.ensure_no_readiness_warnings().or_else(|error| {
+        if flags.fail_on_readiness_warnings {
             Err(error)
         } else {
             Ok(())

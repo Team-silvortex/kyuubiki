@@ -39,9 +39,9 @@ The repository now keeps validation split by responsibility.
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
   chain contract checks, TaskIR mirror and digest contract checks, dependency
-  audits, external operator package preflight, docs book manifest validation,
-  focused Operator TaskIR control-plane tests, and the Rust live operator task
-  path.
+  audits, external operator package preflight, external operator dynamic host
+  smoke, docs book manifest validation, focused Operator TaskIR control-plane
+  tests, and the Rust live operator task path.
 - `make check-materialization-plan-contract`
   Shared materialized-candidate contract guard. It checks the materialization
   plan schema, fixture, and SDK documentation links before agent/lab output is
@@ -102,6 +102,9 @@ Installer crate tests are split by installer responsibility instead of growing
 
 - `make test-sdk`
 - `make operator-package-preflight`
+- `make operator-package-dynamic-smoke`
+- `make check-operator-package-dynamic-smoke-contract`
+- `make check-operator-package-dynamic-smoke`
 
 This runs:
 
@@ -118,6 +121,18 @@ Use `make operator-package-preflight OUT=tmp/operator-package-preflight.json`
 when a CI job should retain the JSON report as an artifact.
 Use `FAIL_ON_REJECTED=1` when rejected packages should fail the job instead of
 only appearing in the report.
+
+The dynamic smoke goes beyond read-only admission: it runs the template crate
+tests, strict preflight, template `cdylib` build, and the engine dynamic host
+test that loads and dispatches the template operator. It writes
+`tmp/operator-package-dynamic-smoke.json` by default and accepts
+`OUT=tmp/name.json` when CI should retain a named artifact.
+The checker validates the retained dynamic-smoke report schema, canonical stage
+order, stage success, repo-local evidence paths, and the matching shared schema
+fixture under `schemas/`.
+The contract target runs the same schema/example fixture checks without
+requiring a freshly generated `tmp/` report, so architecture checks can catch
+contract drift before the dynamic host smoke runs.
 
 These tests use small local loopback fixtures and focus on:
 

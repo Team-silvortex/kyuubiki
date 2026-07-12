@@ -11,6 +11,8 @@ pub struct OperatorPackagePreflightOutcome {
     pub json: String,
     pub accepted_package_count: usize,
     pub rejected_package_count: usize,
+    pub readiness_warning_count: usize,
+    pub readiness_error_count: usize,
 }
 
 impl OperatorPackagePreflightOutcome {
@@ -21,6 +23,16 @@ impl OperatorPackagePreflightOutcome {
         Err(format!(
             "operator package preflight rejected {} package(s)",
             self.rejected_package_count
+        ))
+    }
+
+    pub fn ensure_no_readiness_warnings(&self) -> Result<(), String> {
+        if self.readiness_warning_count == 0 && self.readiness_error_count == 0 {
+            return Ok(());
+        }
+        Err(format!(
+            "operator package preflight found {} readiness warning(s) and {} readiness error(s)",
+            self.readiness_warning_count, self.readiness_error_count
         ))
     }
 }
@@ -34,6 +46,28 @@ pub fn operator_package_preflight(
         preflight_external_operator_packages(&config).map_err(|error| error.to_string())?;
     let accepted_package_count = report.accepted_packages.len();
     let rejected_package_count = report.rejected_packages.len();
+    let readiness_warning_count = report
+        .package_readiness
+        .iter()
+        .flat_map(|package| &package.issues)
+        .filter(|issue| {
+            matches!(
+                issue.severity,
+                kyuubiki_engine::OperatorSdkReadinessSeverity::Warning
+            )
+        })
+        .count();
+    let readiness_error_count = report
+        .package_readiness
+        .iter()
+        .flat_map(|package| &package.issues)
+        .filter(|issue| {
+            matches!(
+                issue.severity,
+                kyuubiki_engine::OperatorSdkReadinessSeverity::Error
+            )
+        })
+        .count();
     let payload = json!({
         "schema_version": "kyuubiki.operator-package-preflight/v1",
         "registry_kind": registry_kind_label(report.registry_kind),
@@ -41,6 +75,8 @@ pub fn operator_package_preflight(
         "host_version": report.host_version,
         "accepted_package_count": accepted_package_count,
         "rejected_package_count": rejected_package_count,
+        "readiness_warning_count": readiness_warning_count,
+        "readiness_error_count": readiness_error_count,
         "accepted_packages": report.accepted_packages.into_iter().map(|package| {
             json!({
                 "package_id": package.package_id,
@@ -80,6 +116,8 @@ pub fn operator_package_preflight(
         json,
         accepted_package_count,
         rejected_package_count,
+        readiness_warning_count,
+        readiness_error_count,
     })
 }
 

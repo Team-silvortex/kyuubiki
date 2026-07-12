@@ -50,6 +50,8 @@ const RELEASE_REPO_CHECKS = [
   "git diff --check",
   "make audit-project-organization",
   "make operator-package-preflight",
+  "make check-operator-package-dynamic-smoke-contract",
+  "make operator-package-dynamic-smoke",
   "make architecture-check",
 ];
 
@@ -118,6 +120,8 @@ function runSelfTest() {
   assert(RELEASE_FRONTEND_CHECKS.includes("npm run check:workflow-preflight"));
   assert(RELEASE_REPO_CHECKS.includes("make audit-project-organization"));
   assert(RELEASE_REPO_CHECKS.includes("make operator-package-preflight"));
+  assert(RELEASE_REPO_CHECKS.includes("make check-operator-package-dynamic-smoke-contract"));
+  assert(RELEASE_REPO_CHECKS.includes("make operator-package-dynamic-smoke"));
   assert(RELEASE_REPO_CHECKS.includes("make architecture-check"));
   assert.equal(new Set(RELEASE_REPO_CHECKS).size, RELEASE_REPO_CHECKS.length);
   assert.deepEqual(

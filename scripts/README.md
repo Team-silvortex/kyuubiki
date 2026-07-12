@@ -346,8 +346,8 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki operator-package-preflight ./operator-packages`
   Read-only external operator package admission report. It prints
   `kyuubiki.operator-package-preflight/v1` JSON with accepted packages,
-  rejected package reasons, and a safety block confirming that dynamic
-  libraries were not loaded.
+  rejected package reasons, package readiness issue counts, and a safety block
+  confirming that dynamic libraries were not loaded.
 - `make operator-package-preflight`
   Runs the same admission report against the checked-in Rust operator crate
   template under `workers/rust/templates/`.
@@ -356,6 +356,20 @@ Useful smoke wrappers:
   installer diagnostics.
 - `make operator-package-preflight FAIL_ON_REJECTED=1`
   Turns rejected external operator packages into a non-zero quality gate.
+- `cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --fail-on-readiness-warnings`
+  Turns readiness warnings, such as `unverified` package status, into a
+  non-zero release-readiness gate.
+- `make operator-package-dynamic-smoke`
+  Runs the repository template operator as an end-to-end external package:
+  template tests, strict preflight, `cdylib` build, and engine dynamic host
+  loading smoke. The default report is
+  `tmp/operator-package-dynamic-smoke.json`; override with `OUT=tmp/name.json`.
+- `make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json`
+  Validates the retained dynamic-smoke report schema, stage order, stage
+  success, and repo-local evidence paths.
+- `make check-operator-package-dynamic-smoke-contract`
+  Validates the shared dynamic-smoke schema and fixture without requiring a
+  freshly generated `tmp/` report.
 - `./scripts/kyuubiki desktop-upload-remote macos`
   Upload the current shipping-version desktop release outputs to the remote
   download server. Override the target with
