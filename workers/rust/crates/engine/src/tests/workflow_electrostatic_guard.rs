@@ -169,17 +169,21 @@ fn scores_electrostatic_quality_from_solver_result_aliases() {
     let quality = score_electrostatic_quality(
         serde_json::json!({
             "max_electric_field": 8.0,
-            "max_potential": 10.0,
+            "peak_energy_density": 0.3,
+            "potential_min": -2.0,
+            "potential_max": 8.0,
             "total_stored_energy": 2.5
         }),
         serde_json::json!({
             "enabled_terms": [
                 "electrostatic_field_peak_magnitude",
+                "electrostatic_peak_energy_density",
                 "electrostatic_potential_span",
                 "electrostatic_total_stored_energy"
             ],
             "targets": {
                 "electrostatic_field_peak_magnitude": 10.0,
+                "electrostatic_peak_energy_density": 0.8,
                 "electrostatic_potential_span": 4.0,
                 "electrostatic_total_stored_energy": 5.0
             },
@@ -191,9 +195,17 @@ fn scores_electrostatic_quality_from_solver_result_aliases() {
     assert_eq!(quality["electrostatic_quality_ready"].as_bool(), Some(true));
     assert_eq!(
         quality["electrostatic_quality_term_count"].as_u64(),
-        Some(3)
+        Some(4)
     );
     approx_eq(quality["electrostatic_quality_peak_field"].as_f64(), 8.0);
+    approx_eq(
+        quality["electrostatic_quality_peak_energy_density"].as_f64(),
+        0.3,
+    );
+    approx_eq(
+        quality["electrostatic_quality_potential_span"].as_f64(),
+        10.0,
+    );
     approx_eq(quality["electrostatic_quality_total_energy"].as_f64(), 2.5);
 }
 

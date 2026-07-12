@@ -13,12 +13,31 @@ pub fn score_magnetostatic_quality(payload: Value, config: Value) -> Result<Valu
         .iter()
         .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
         .count();
+    let watch_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
+        .count();
     let score = score_terms
         .iter()
         .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
         .sum::<f64>();
     let max_ready_score = config_number(&config, "max_ready_score", 8.0);
     let grade = quality_grade(score, missing_count, max_ready_score);
+    let dominant_term = dominant_quality_term(&score_terms);
+    let blocking_terms = if grade == "block" {
+        score_terms
+            .iter()
+            .filter(|term| {
+                matches!(
+                    term.get("status").and_then(Value::as_str),
+                    Some("missing" | "watch")
+                )
+            })
+            .map(compact_quality_term)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     Ok(serde_json::json!({
         "magnetostatic_quality_contract": "kyuubiki.magnetostatic_quality_score/v1",
@@ -26,14 +45,19 @@ pub fn score_magnetostatic_quality(payload: Value, config: Value) -> Result<Valu
         "magnetostatic_quality_grade": grade,
         "magnetostatic_quality_ready": grade != "block",
         "magnetostatic_quality_missing_metric_count": missing_count,
+        "magnetostatic_quality_watch_count": watch_count,
         "magnetostatic_quality_term_count": score_terms.len(),
         "magnetostatic_quality_max_ready_score": max_ready_score,
         "magnetostatic_quality_peak_field": numeric_field(object, "magnetostatic_field_peak_magnitude"),
         "magnetostatic_quality_peak_flux": numeric_field(object, "magnetostatic_flux_peak_magnitude"),
+        "magnetostatic_quality_peak_energy_density": numeric_field(object, "magnetostatic_energy_density_peak"),
+        "magnetostatic_quality_current_density_sum": numeric_field(object, "magnetostatic_current_density_sum"),
         "magnetostatic_quality_total_energy": numeric_field(object, "magnetostatic_total_stored_energy"),
+        "magnetostatic_quality_dominant_term": dominant_term,
+        "magnetostatic_quality_blocking_terms": blocking_terms,
         "magnetostatic_quality_terms": score_terms,
         "magnetostatic_quality_summary": format!(
-            "Magnetostatic quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+            "Magnetostatic quality {grade}: score={score:.4}, missing={missing_count}, watch={watch_count}, ready_limit={max_ready_score:.4}."
         ),
     }))
 }
@@ -141,19 +165,82 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
-        .and_then(Value::as_f64)
+        .and_then(finite_number)
         .or_else(|| magnetostatic_alias_field(object, field))
-        .filter(|value| value.is_finite())
 }
 
 fn magnetostatic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    let alias = match field {
-        "magnetostatic_field_peak_magnitude" => "max_magnetic_field_strength",
-        "magnetostatic_flux_peak_magnitude" => "max_flux_density",
-        "magnetostatic_total_stored_energy" => "total_stored_energy",
-        _ => return None,
-    };
-    object.get(alias).and_then(Value::as_f64)
+    match field {
+        "magnetostatic_field_peak_magnitude" => first_alias_number(
+            object,
+            &[
+                "max_magnetic_field_strength",
+                "peak_magnetic_field_strength",
+                "h_peak",
+            ],
+        ),
+        "magnetostatic_flux_peak_magnitude" => {
+            first_alias_number(object, &["max_flux_density", "peak_flux_density", "b_peak"])
+        }
+        "magnetostatic_energy_density_peak" => first_alias_number(
+            object,
+            &[
+                "max_energy_density",
+                "peak_energy_density",
+                "magnetic_energy_density_peak",
+            ],
+        ),
+        "magnetostatic_current_density_sum" => first_alias_number(
+            object,
+            &[
+                "total_current_density",
+                "current_density_total",
+                "sum_current_density",
+            ],
+        ),
+        "magnetostatic_total_stored_energy" => first_alias_number(
+            object,
+            &[
+                "total_stored_energy",
+                "stored_energy_total",
+                "magnetic_total_energy",
+            ],
+        ),
+        _ => None,
+    }
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
+}
+
+fn dominant_quality_term(terms: &[Value]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| {
+            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            left_penalty
+                .partial_cmp(&right_penalty)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(compact_quality_term)
+        .unwrap_or(Value::Null)
+}
+
+fn compact_quality_term(term: &Value) -> Value {
+    serde_json::json!({
+        "field": term.get("field").cloned().unwrap_or(Value::Null),
+        "label": term.get("label").cloned().unwrap_or(Value::Null),
+        "status": term.get("status").cloned().unwrap_or(Value::Null),
+        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
+    })
 }
 
 fn configured_term_number(config: &Value, group: &str, field: &str, default_value: f64) -> f64 {

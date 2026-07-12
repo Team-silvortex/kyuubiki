@@ -102,6 +102,14 @@ fn scores_magnetostatic_quality_with_field_flux_energy_and_current_terms() {
         quality["magnetostatic_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(
+        quality["magnetostatic_quality_watch_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        quality["magnetostatic_quality_dominant_term"]["field"].as_str(),
+        Some("magnetostatic_field_peak_magnitude")
+    );
     approx_eq(quality["magnetostatic_quality_score"].as_f64(), 5.25);
 }
 
@@ -111,17 +119,23 @@ fn scores_magnetostatic_quality_from_solver_result_aliases() {
         serde_json::json!({
             "max_magnetic_field_strength": 9.0,
             "max_flux_density": 12.0,
+            "peak_energy_density": 4.0,
+            "total_current_density": 5.0,
             "total_stored_energy": 2.5
         }),
         serde_json::json!({
             "enabled_terms": [
                 "magnetostatic_field_peak_magnitude",
                 "magnetostatic_flux_peak_magnitude",
+                "magnetostatic_energy_density_peak",
+                "magnetostatic_current_density_sum",
                 "magnetostatic_total_stored_energy"
             ],
             "targets": {
                 "magnetostatic_field_peak_magnitude": 12.0,
                 "magnetostatic_flux_peak_magnitude": 16.0,
+                "magnetostatic_energy_density_peak": 8.0,
+                "magnetostatic_current_density_sum": 10.0,
                 "magnetostatic_total_stored_energy": 5.0
             },
             "max_ready_score": 8.0
@@ -132,10 +146,18 @@ fn scores_magnetostatic_quality_from_solver_result_aliases() {
     assert_eq!(quality["magnetostatic_quality_ready"].as_bool(), Some(true));
     assert_eq!(
         quality["magnetostatic_quality_term_count"].as_u64(),
-        Some(3)
+        Some(5)
     );
     approx_eq(quality["magnetostatic_quality_peak_field"].as_f64(), 9.0);
     approx_eq(quality["magnetostatic_quality_peak_flux"].as_f64(), 12.0);
+    approx_eq(
+        quality["magnetostatic_quality_peak_energy_density"].as_f64(),
+        4.0,
+    );
+    approx_eq(
+        quality["magnetostatic_quality_current_density_sum"].as_f64(),
+        5.0,
+    );
     approx_eq(quality["magnetostatic_quality_total_energy"].as_f64(), 2.5);
 }
 
@@ -160,6 +182,13 @@ fn blocks_magnetostatic_quality_when_required_metrics_are_missing() {
     assert_eq!(
         quality["magnetostatic_quality_missing_metric_count"].as_u64(),
         Some(3)
+    );
+    assert_eq!(
+        quality["magnetostatic_quality_blocking_terms"]
+            .as_array()
+            .expect("blocking terms")
+            .len(),
+        3
     );
 }
 

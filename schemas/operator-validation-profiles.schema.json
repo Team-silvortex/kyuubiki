@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-validation-profiles.schema.json",
+  "title": "Kyuubiki Operator Validation Profiles",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "version_line", "profiles"],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-validation-profiles/v1"
+    },
+    "version_line": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "operatorId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+\\.[a-z0-9_]+$"
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "commandKind": {
+      "enum": ["analytic", "boundary_regression", "contract", "cross_check", "invariant"]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "trust_goal",
+        "operators",
+        "validation_methods",
+        "formal_invariants",
+        "evidence_paths",
+        "commands"
+      ],
+      "properties": {
+        "profile_id": {
+          "$ref": "#/$defs/id"
+        },
+        "trust_goal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operators": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/operatorId"
+          },
+          "uniqueItems": true
+        },
+        "validation_methods": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "formal_invariants": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "evidence_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repoPath"
+          },
+          "uniqueItems": true
+        },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "command"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "$ref": "#/$defs/commandKind"
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(make |cd workers/rust && cargo ).+"
+        }
+      }
+    }
+  }
+}

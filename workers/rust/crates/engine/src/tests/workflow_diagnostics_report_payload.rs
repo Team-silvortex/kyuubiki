@@ -464,11 +464,13 @@ fn executes_focus_bridge_execution_into_bridge_result() {
                         "temperature_gradient_y": -5.0,
                         "heat_flux_x": 30.0,
                         "heat_flux_y": 10.0,
-                        "heat_flux_magnitude": 31.6227766017
+                        "heat_flux_magnitude": 31.6227766017,
+                        "heat_flow_rate": 0.632455532034
                     }
                 ],
                 "max_temperature": 100.0,
-                "max_heat_flux": 31.6227766017
+                "max_heat_flux": 31.6227766017,
+                "total_abs_heat_flow_rate": 0.632455532034
             },
             "bridge_config": {
                 "seed_model": {

@@ -164,72 +164,6 @@ pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Resul
     )
 }
 
-pub fn extract_electrostatic_result_diagnostics(
-    payload: Value,
-    config: Value,
-) -> Result<Value, String> {
-    let object = payload.as_object().ok_or_else(|| {
-        "extract.electrostatic_result_diagnostics expects an object payload".to_string()
-    })?;
-    let nodes = fetch_collection(object, &config, "node_source", "nodes")?;
-    let elements = fetch_collection(object, &config, "element_source", "elements")?;
-    let prefix = normalize_prefix(&config, "output_prefix", "electrostatic");
-
-    let potential_nodes =
-        collect_numeric_entries(nodes, field_name(&config, "potential_field", "potential"));
-    let charge_density_nodes = collect_numeric_entries(
-        nodes,
-        field_name(&config, "charge_density_field", "charge_density"),
-    );
-    let energy_density_peak = peak_scalar_entry(
-        elements,
-        field_name(&config, "energy_density_field", "energy_density"),
-    );
-    let field_peak = peak_vector_entry(
-        elements,
-        field_name(&config, "field_x_field", "electric_field_x"),
-        field_name(&config, "field_y_field", "electric_field_y"),
-        optional_field_name(&config, "field_z_field"),
-        Some(field_name(
-            &config,
-            "field_magnitude_field",
-            "electric_field_magnitude",
-        )),
-    );
-
-    let diagnostics = serde_json::json!({
-        format!("{prefix}_node_count"): count_object_entries(nodes),
-        format!("{prefix}_element_count"): count_object_entries(elements),
-    });
-    let diagnostics = merge_diagnostic_contract(
-        diagnostics,
-        "electrostatic",
-        "electrostatic_result",
-        &prefix,
-        &["potential", "charge_density", "energy_density", "field"],
-    );
-    let diagnostics = merge_distribution_stats(diagnostics, &prefix, "potential", &potential_nodes);
-    let diagnostics = merge_distribution_stats(
-        diagnostics,
-        &prefix,
-        "charge_density",
-        &charge_density_nodes,
-    );
-    let diagnostics = merge_peak_scalar(
-        diagnostics,
-        &prefix,
-        "energy_density",
-        energy_density_peak.as_ref(),
-    );
-    let diagnostics = merge_peak_vector(diagnostics, &prefix, "field", field_peak.as_ref());
-
-    ensure_non_empty_diagnostics(
-        diagnostics,
-        &prefix,
-        "extract.electrostatic_result_diagnostics did not find any diagnostic fields",
-    )
-}
-
 fn fetch_collection<'a>(
     object: &'a serde_json::Map<String, Value>,
     config: &Value,
@@ -292,9 +226,18 @@ fn count_object_entries(entries: &[Value]) -> usize {
 }
 
 fn collect_numeric_entries<'a>(entries: &'a [Value], field: &str) -> Vec<(&'a Value, f64)> {
+    collect_numeric_entries_any(entries, &[field])
+}
+
+fn collect_numeric_entries_any<'a>(entries: &'a [Value], fields: &[&str]) -> Vec<(&'a Value, f64)> {
     entries
         .iter()
-        .filter_map(|entry| Some((entry, entry.get(field)?.as_f64()?)))
+        .filter_map(|entry| {
+            fields
+                .iter()
+                .find_map(|field| entry.get(*field).and_then(Value::as_f64))
+                .map(|value| (entry, value))
+        })
         .collect()
 }
 
@@ -353,14 +296,33 @@ fn peak_vector_entry<'a>(
     z_field: Option<&str>,
     magnitude_field: Option<&str>,
 ) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
+    peak_vector_entry_any(
+        entries,
+        &[x_field],
+        &[y_field],
+        z_field,
+        magnitude_field
+            .map(|field| vec![field])
+            .unwrap_or_default()
+            .as_slice(),
+    )
+}
+
+fn peak_vector_entry_any<'a>(
+    entries: &'a [Value],
+    x_fields: &[&str],
+    y_fields: &[&str],
+    z_field: Option<&str>,
+    magnitude_fields: &[&str],
+) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
     entries
         .iter()
         .filter_map(|entry| {
             let mut components = Vec::new();
-            if let Some(value) = entry.get(x_field).and_then(Value::as_f64) {
+            if let Some(value) = first_entry_number(entry, x_fields) {
                 components.push(("x", value));
             }
-            if let Some(value) = entry.get(y_field).and_then(Value::as_f64) {
+            if let Some(value) = first_entry_number(entry, y_fields) {
                 components.push(("y", value));
             }
             if let Some(field) = z_field {
@@ -369,20 +331,24 @@ fn peak_vector_entry<'a>(
                 }
             }
 
-            let magnitude = magnitude_field
-                .and_then(|field| entry.get(field).and_then(Value::as_f64))
-                .or_else(|| {
-                    (components.len() >= 2).then(|| {
-                        components
-                            .iter()
-                            .map(|(_, value)| value * value)
-                            .sum::<f64>()
-                            .sqrt()
-                    })
-                })?;
+            let magnitude = first_entry_number(entry, magnitude_fields).or_else(|| {
+                (components.len() >= 2).then(|| {
+                    components
+                        .iter()
+                        .map(|(_, value)| value * value)
+                        .sum::<f64>()
+                        .sqrt()
+                })
+            })?;
             Some((entry, magnitude, components))
         })
         .max_by(|left, right| left.1.total_cmp(&right.1))
+}
+
+fn first_entry_number(entry: &Value, fields: &[&str]) -> Option<f64> {
+    fields
+        .iter()
+        .find_map(|field| entry.get(*field).and_then(Value::as_f64))
 }
 
 fn merge_diagnostic_contract(

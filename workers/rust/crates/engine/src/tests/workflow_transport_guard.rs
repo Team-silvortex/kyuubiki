@@ -147,6 +147,15 @@ fn scores_transport_quality_with_flux_peclet_concentration_and_source_terms() {
         quality["transport_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(quality["transport_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["transport_quality_dominant_term"]["field"].as_str(),
+        Some("transport_total_flux_peak_magnitude")
+    );
+    assert_eq!(
+        quality["transport_quality_peak_flux_magnitude"].as_f64(),
+        Some(1.0)
+    );
     approx_eq(quality["transport_quality_score"].as_f64(), 4.7);
 }
 
@@ -166,6 +175,64 @@ fn blocks_transport_quality_when_required_metrics_are_missing() {
         quality["transport_quality_missing_metric_count"].as_u64(),
         Some(3)
     );
+    assert_eq!(quality["transport_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["transport_quality_blocking_terms"]
+            .as_array()
+            .expect("blocking terms")
+            .len(),
+        3
+    );
+    assert_eq!(
+        quality["transport_quality_blocking_terms"][0]["status"].as_str(),
+        Some("missing")
+    );
+}
+
+#[test]
+fn scores_transport_quality_with_enabled_terms_and_alias_fields() {
+    let quality = score_transport_quality(
+        serde_json::json!({
+            "peak_transport_flux": 0.75,
+            "peclet_max": 50.0,
+            "concentration_min": 0.2,
+            "concentration_max": 0.45,
+            "source_balance": 0.1
+        }),
+        serde_json::json!({
+            "enabled_terms": [
+                "transport_total_flux_peak_magnitude",
+                "transport_peclet_peak",
+                "transport_concentration_span",
+                "transport_source_sum"
+            ],
+            "targets": {
+                "transport_total_flux_peak_magnitude": 1.5,
+                "transport_peclet_peak": 100.0,
+                "transport_concentration_span": 1.0,
+                "transport_source_sum": 2.0
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("transport quality should score enabled terms");
+
+    assert_eq!(quality["transport_quality_ready"].as_bool(), Some(true));
+    assert_eq!(quality["transport_quality_term_count"].as_u64(), Some(4));
+    assert_eq!(
+        quality["transport_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        quality["transport_quality_peak_peclet"].as_f64(),
+        Some(50.0)
+    );
+    approx_eq(
+        quality["transport_quality_concentration_span"].as_f64(),
+        0.25,
+    );
+    approx_eq(quality["transport_quality_source_sum"].as_f64(), 0.1);
+    approx_eq(quality["transport_quality_score"].as_f64(), 3.05);
 }
 
 #[test]

@@ -16,8 +16,8 @@ pub fn extract_transport_result_diagnostics(
         .filter(|value| !value.is_empty())
         .unwrap_or("transport");
 
-    let concentrations = numeric_values(nodes, "concentration");
-    let sources = numeric_values(nodes, "source");
+    let concentrations = numeric_values(nodes, node_value, "concentration");
+    let sources = numeric_values(nodes, node_value, "source");
     let mut summary = Map::new();
     summary.insert(
         "diagnostic_contract".into(),
@@ -65,24 +65,28 @@ pub fn extract_transport_result_diagnostics(
         &format!("{prefix}_total_flux"),
         elements,
         "total_flux",
+        element_value,
     );
     merge_peak(
         &mut summary,
         &format!("{prefix}_diffusive_flux"),
         elements,
         "diffusive_flux",
+        element_value,
     );
     merge_peak(
         &mut summary,
         &format!("{prefix}_advective_flux"),
         elements,
         "advective_flux",
+        element_value,
     );
     merge_peak(
         &mut summary,
         &format!("{prefix}_peclet"),
         elements,
         "peclet_number",
+        element_value,
     );
 
     Ok(Value::Object(summary))
@@ -100,10 +104,15 @@ fn collection<'a>(
         .ok_or_else(|| format!("{operator_id} expects {key} array"))
 }
 
-fn numeric_values(items: &[Value], field: &str) -> Vec<f64> {
+fn numeric_values(
+    items: &[Value],
+    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
+    field: &str,
+) -> Vec<f64> {
     items
         .iter()
-        .filter_map(|item| item.get(field).and_then(Value::as_f64))
+        .filter_map(Value::as_object)
+        .filter_map(|item| value_fn(item, field))
         .collect()
 }
 
@@ -122,13 +131,18 @@ fn merge_min_max(summary: &mut Map<String, Value>, prefix: &str, values: &[f64])
     summary.insert(format!("{prefix}_span"), Value::from(max - min));
 }
 
-fn merge_peak(summary: &mut Map<String, Value>, prefix: &str, items: &[Value], field: &str) {
+fn merge_peak(
+    summary: &mut Map<String, Value>,
+    prefix: &str,
+    items: &[Value],
+    field: &str,
+    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
+) {
     let Some((value, item)) = items
         .iter()
         .filter_map(|item| {
-            item.get(field)
-                .and_then(Value::as_f64)
-                .map(|value| (value, item))
+            let object = item.as_object()?;
+            value_fn(object, field).map(|value| (value, item))
         })
         .max_by(|(left, _), (right, _)| left.abs().total_cmp(&right.abs()))
     else {
@@ -139,6 +153,55 @@ fn merge_peak(summary: &mut Map<String, Value>, prefix: &str, items: &[Value], f
     if let Some(id) = item.get("id").cloned() {
         summary.insert(format!("{prefix}_peak_id"), id);
     }
+}
+
+fn node_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| match field {
+            "concentration" => first_alias_number(object, &["c", "species", "scalar"]),
+            "source" => {
+                first_alias_number(object, &["source_density", "net_source", "source_term"])
+            }
+            _ => None,
+        })
+}
+
+fn element_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| match field {
+            "total_flux" => first_alias_number(object, &["flux", "flux_total"])
+                .or_else(|| vector_magnitude(object, "flux_x", "flux_y")),
+            "diffusive_flux" => {
+                first_alias_number(object, &["diffusion_flux", "diffusive_flux_total"])
+                    .or_else(|| vector_magnitude(object, "diffusive_flux_x", "diffusive_flux_y"))
+            }
+            "advective_flux" => {
+                first_alias_number(object, &["advection_flux", "advective_flux_total"])
+                    .or_else(|| vector_magnitude(object, "advective_flux_x", "advective_flux_y"))
+            }
+            "peclet_number" => first_alias_number(object, &["peclet", "pe"]),
+            _ => None,
+        })
+}
+
+fn vector_magnitude(object: &Map<String, Value>, x: &str, y: &str) -> Option<f64> {
+    let x = object.get(x).and_then(finite_number)?;
+    let y = object.get(y).and_then(finite_number)?;
+    Some((x * x + y * y).sqrt())
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
 }
 
 fn mean_or_zero(values: &[f64]) -> f64 {

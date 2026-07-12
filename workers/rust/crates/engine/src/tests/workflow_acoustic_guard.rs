@@ -148,6 +148,11 @@ fn scores_acoustic_quality_with_spl_intensity_and_damping_terms() {
         quality["acoustic_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(quality["acoustic_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["acoustic_quality_dominant_term"]["field"].as_str(),
+        Some("max_sound_pressure_level_db")
+    );
     approx_eq(
         quality["acoustic_quality_score"].as_f64(),
         5.423529411764706,
@@ -158,10 +163,10 @@ fn scores_acoustic_quality_with_spl_intensity_and_damping_terms() {
 fn scores_acoustic_quality_from_solver_result_aliases() {
     let quality = score_acoustic_quality(
         serde_json::json!({
-            "max_sound_pressure_level_db": 80.0,
-            "max_acoustic_intensity": 0.2,
-            "max_pressure": 0.5,
-            "total_damping_loss": 0.2
+            "peak_spl_db": 80.0,
+            "peak_acoustic_intensity": 0.2,
+            "pressure_amplitude_peak": 0.5,
+            "damping_loss_total": 0.2
         }),
         serde_json::json!({
             "enabled_terms": [
@@ -183,6 +188,8 @@ fn scores_acoustic_quality_from_solver_result_aliases() {
 
     assert_eq!(quality["acoustic_quality_ready"].as_bool(), Some(true));
     assert_eq!(quality["acoustic_quality_term_count"].as_u64(), Some(4));
+    approx_eq(quality["acoustic_quality_max_spl_db"].as_f64(), 80.0);
+    approx_eq(quality["acoustic_quality_max_intensity"].as_f64(), 0.2);
     approx_eq(quality["acoustic_quality_max_pressure"].as_f64(), 0.5);
     approx_eq(quality["acoustic_quality_total_damping_loss"].as_f64(), 0.2);
 }
@@ -202,6 +209,17 @@ fn blocks_acoustic_quality_when_required_metrics_are_missing() {
     assert_eq!(
         quality["acoustic_quality_missing_metric_count"].as_u64(),
         Some(3)
+    );
+    assert_eq!(
+        quality["acoustic_quality_blocking_terms"]
+            .as_array()
+            .expect("blocking terms")
+            .len(),
+        3
+    );
+    assert_eq!(
+        quality["acoustic_quality_blocking_terms"][0]["status"].as_str(),
+        Some("missing")
     );
 }
 

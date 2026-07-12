@@ -5,6 +5,7 @@ mod cfd_diagnostics;
 mod chunking;
 mod coupled_workflows;
 mod dynamic_quality;
+mod electrostatic_diagnostics;
 mod electrostatic_quality;
 mod heat_bridge;
 mod magnetostatic_bridge;

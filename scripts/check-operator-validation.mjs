@@ -10,7 +10,9 @@ const DEFAULT_OUT = "tmp/operator-validation-report.json";
 const SCHEMA_VERSION = "kyuubiki.operator-validation-profiles/v1";
 const REPORT_SCHEMA_VERSION = "kyuubiki.operator-validation-report/v1";
 const ALLOWED_COMMAND_PREFIXES = ["make ", "cd workers/rust && cargo "];
-const ALLOWED_KINDS = new Set(["analytic", "contract", "cross_check", "invariant"]);
+const ALLOWED_KINDS = new Set(["analytic", "boundary_regression", "contract", "cross_check", "invariant"]);
+const PROFILE_SCHEMA = "schemas/operator-validation-profiles.schema.json";
+const REPORT_SCHEMA = "schemas/operator-validation-report.schema.json";
 
 function parseArgs(argv) {
   const options = { config: DEFAULT_CONFIG, out: DEFAULT_OUT, execute: false };
@@ -58,6 +60,25 @@ function requireStringArray(value, field, context) {
     throw new Error(`${context}: ${field} must be a non-empty array`);
   }
   value.forEach((entry, index) => requireString(entry, `${field}[${index}]`, context));
+}
+
+function requireStringList(value, field, context) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${context}: ${field} must be an array`);
+  }
+  value.forEach((entry, index) => requireString(entry, `${field}[${index}]`, context));
+}
+
+function requireBoolean(value, field, context) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${context}: ${field} must be a boolean`);
+  }
+}
+
+function requireNumber(value, field, context) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${context}: ${field} must be a non-negative integer`);
+  }
 }
 
 function validateCommand(command, context) {
@@ -111,6 +132,81 @@ function validateConfig(config) {
   });
 }
 
+function requireSchemaCommandKinds(relativePath) {
+  const schema = readJson(relativePath);
+  const enumValues = schema?.$defs?.commandKind?.enum;
+  if (!Array.isArray(enumValues) || enumValues.length === 0) {
+    throw new Error(`${relativePath}: missing $defs.commandKind.enum`);
+  }
+  return new Set(enumValues);
+}
+
+function assertSetEquals(actual, expected, context) {
+  assert.deepEqual([...actual].sort(), [...expected].sort(), context);
+}
+
+function validateReportCommand(command, executed, context) {
+  requireString(command.id, "id", context);
+  requireString(command.kind, "kind", context);
+  requireString(command.command, "command", context);
+  if (!ALLOWED_KINDS.has(command.kind)) {
+    throw new Error(`${context}: unsupported command kind ${command.kind}`);
+  }
+  const result = command.result;
+  if (!result || typeof result !== "object") {
+    throw new Error(`${context}: result must be an object`);
+  }
+  if (executed) {
+    requireBoolean(result.ok, "result.ok", context);
+    if (!(Number.isInteger(result.status) || result.status === null)) {
+      throw new Error(`${context}: result.status must be an integer or null`);
+    }
+    requireNumber(result.duration_ms, "result.duration_ms", context);
+    requireStringList(result.stdout_tail, "result.stdout_tail", context);
+    requireStringList(result.stderr_tail, "result.stderr_tail", context);
+  } else if (result.ok !== null || result.status !== "not_run") {
+    throw new Error(`${context}: skipped command result must be ok=null,status=not_run`);
+  }
+}
+
+function validateReport(report, options) {
+  if (report.schema_version !== REPORT_SCHEMA_VERSION) {
+    throw new Error(`report schema_version must be ${REPORT_SCHEMA_VERSION}`);
+  }
+  if (report.source !== options.config) {
+    throw new Error(`report source must be ${options.config}`);
+  }
+  requireBoolean(report.executed, "executed", "report");
+  requireNumber(report.profile_count, "profile_count", "report");
+  requireBoolean(report.ok, "ok", "report");
+  if (!Array.isArray(report.profiles)) {
+    throw new Error("report profiles must be an array");
+  }
+  if (report.profile_count !== report.profiles.length) {
+    throw new Error("report profile_count must match profiles length");
+  }
+  const expectedOk = report.profiles.every((profile, profileIndex) => {
+    const context = `report.profiles/${profileIndex}`;
+    requireString(profile.profile_id, "profile_id", context);
+    requireString(profile.trust_goal, "trust_goal", context);
+    requireStringArray(profile.operators, "operators", context);
+    requireStringArray(profile.validation_methods, "validation_methods", context);
+    requireStringArray(profile.formal_invariants, "formal_invariants", context);
+    requireStringArray(profile.evidence_paths, "evidence_paths", context);
+    requireBoolean(profile.ok, "ok", context);
+    if (!Array.isArray(profile.commands) || profile.commands.length === 0) {
+      throw new Error(`${context}: commands must be non-empty`);
+    }
+    profile.commands.forEach((command, commandIndex) =>
+      validateReportCommand(command, report.executed, `${context}.commands/${commandIndex}`),
+    );
+    return profile.ok;
+  });
+  if (report.ok !== expectedOk) {
+    throw new Error("report ok must equal the profile status rollup");
+  }
+}
+
 function runCommand(command) {
   const startedAt = Date.now();
   let result;
@@ -161,7 +257,7 @@ function buildReport(config, options) {
   });
   return {
     schema_version: REPORT_SCHEMA_VERSION,
-    source: DEFAULT_CONFIG,
+    source: options.config,
     executed: options.execute,
     profile_count: profiles.length,
     ok: profiles.every((profile) => profile.ok),
@@ -176,6 +272,8 @@ function writeReport(report, outPath) {
 }
 
 function runSelfTest() {
+  assertSetEquals(requireSchemaCommandKinds(PROFILE_SCHEMA), ALLOWED_KINDS, "profile schema command kinds");
+  assertSetEquals(requireSchemaCommandKinds(REPORT_SCHEMA), ALLOWED_KINDS, "report schema command kinds");
   const sample = {
     schema_version: SCHEMA_VERSION,
     version_line: "tamamono test",
@@ -187,13 +285,28 @@ function runSelfTest() {
         validation_methods: ["analytic"],
         formal_invariants: ["finite"],
         evidence_paths: ["docs/operator-reliability.md"],
-        commands: [{ id: "smoke", kind: "contract", command: "make check-make-modules" }],
+        commands: [
+          { id: "smoke", kind: "contract", command: "make check-make-modules" },
+          {
+            id: "boundary",
+            kind: "boundary_regression",
+            command: "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability",
+          },
+        ],
       },
     ],
   };
   assert.doesNotThrow(() => validateConfig(sample));
   sample.profiles[0].commands[0].command = "rm -rf tmp";
   assert.throws(() => validateConfig(sample), /unsupported command prefix/u);
+  sample.profiles[0].commands[0].command = "make check-make-modules";
+  sample.profiles[0].commands[1].kind = "ad_hoc";
+  assert.throws(() => validateConfig(sample), /unsupported command kind/u);
+  sample.profiles[0].commands[1].kind = "boundary_regression";
+  const report = buildReport(sample, { config: "config/sample.json", execute: false });
+  assert.doesNotThrow(() => validateReport(report, { config: "config/sample.json" }));
+  report.profile_count = 2;
+  assert.throws(() => validateReport(report, { config: "config/sample.json" }), /profile_count/u);
   console.log("operator validation self-test passed");
 }
 
@@ -206,6 +319,7 @@ try {
   const config = readJson(options.config);
   validateConfig(config);
   const report = buildReport(config, options);
+  validateReport(report, options);
   writeReport(report, options.out);
   console.log(`operator validation ${report.ok ? "passed" : "failed"}: ${report.profile_count} profile(s), executed=${report.executed}`);
   if (!report.ok) process.exit(1);

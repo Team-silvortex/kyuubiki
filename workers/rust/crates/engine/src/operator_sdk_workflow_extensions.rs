@@ -11,6 +11,7 @@ mod operator_sdk_thermal_transforms;
 mod operator_sdk_transport_transforms;
 
 use crate::catalog::describe_built_in_operator;
+use crate::electrostatic_diagnostics::extract_electrostatic_result_diagnostics;
 use crate::magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics;
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_acoustic_transforms::register_acoustic_transform_extensions;
@@ -37,7 +38,6 @@ use crate::workflow_bundle_transforms::{
     compose_diagnostics_bundle, compose_diagnostics_report_payload,
     evaluate_diagnostics_bundle_guard,
 };
-use crate::workflow_diagnostics::extract_electrostatic_result_diagnostics;
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunResult, SolveElectrostaticPlaneQuad2dResult,

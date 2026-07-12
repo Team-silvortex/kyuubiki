@@ -46,6 +46,11 @@ fn scores_dynamic_quality_from_summary_fields() {
         quality["dynamic_quality_missing_metric_count"].as_u64(),
         Some(0)
     );
+    assert_eq!(quality["dynamic_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["dynamic_quality_dominant_term"]["field"].as_str(),
+        Some("peak_frequency_hz")
+    );
     assert_eq!(quality["dynamic_quality_term_count"].as_u64(), Some(4));
     approx_eq(quality["dynamic_quality_peak_frequency_hz"].as_f64(), 32.0);
 }
@@ -55,9 +60,9 @@ fn derives_dynamic_quality_from_harmonic_frequency_results() {
     let quality = score_dynamic_quality(
         serde_json::json!({
             "frequencies": [
-                { "frequency_hz": 5.0, "max_displacement": 0.01, "max_acceleration": 25.0, "max_force": 100.0 },
-                { "frequency_hz": 12.0, "max_displacement": 0.03, "max_acceleration": 180.0, "max_force": 450.0 },
-                { "frequency_hz": 30.0, "max_displacement": 0.02, "max_acceleration": 220.0, "max_force": 390.0 }
+                { "freq_hz": 5.0, "displacement_amplitude": 0.01, "acceleration_amplitude": 25.0, "force_amplitude": 100.0 },
+                { "freq_hz": 12.0, "displacement_amplitude": 0.03, "acceleration_amplitude": 180.0, "force_amplitude": 450.0 },
+                { "freq_hz": 30.0, "displacement_amplitude": 0.02, "acceleration_amplitude": 220.0, "force_amplitude": 390.0 }
             ]
         }),
         serde_json::json!({
@@ -72,6 +77,8 @@ fn derives_dynamic_quality_from_harmonic_frequency_results() {
     .expect("harmonic result should derive dynamic metrics");
 
     approx_eq(quality["dynamic_quality_peak_frequency_hz"].as_f64(), 12.0);
+    approx_eq(quality["dynamic_quality_max_displacement"].as_f64(), 0.03);
+    approx_eq(quality["dynamic_quality_max_force"].as_f64(), 450.0);
     assert_eq!(quality["dynamic_quality_ready"].as_bool(), Some(true));
 }
 
@@ -120,6 +127,13 @@ fn blocks_dynamic_quality_when_required_metrics_are_missing() {
     assert_eq!(
         quality["dynamic_quality_missing_metric_count"].as_u64(),
         Some(3)
+    );
+    assert_eq!(
+        quality["dynamic_quality_blocking_terms"]
+            .as_array()
+            .expect("blocking terms")
+            .len(),
+        3
     );
     assert_eq!(quality["dynamic_quality_grade"].as_str(), Some("block"));
 }

@@ -139,3 +139,28 @@ Expected digests:
   `083dfdfa3a8e7115d6966df8d64b457205db07811a4658d6bd319b60778aa612`
 - task digest:
   `d87818ffb27cc8f01e6a360f973ebf1d40025362b28cda0909078b99cd6139b7`
+
+The Elixir-authored fixture protects the hot authoring path while keeping the
+agent-facing task language-neutral:
+
+- operator id: `transform.elixir_quality_gate`
+- family: `quality_gate`
+- kind: `transform`
+- package ref: `orchestra://operator-package/transform.elixir_quality_gate`
+- input:
+  `{"candidate_id":"candidate-a","score":0.82,"minimum_score":0.75}`
+- config: `{"decision_key":"screening_pass","emit_reason":true}`
+- task id: `elixir-control-plane-quality-gate-task`
+- authoring mode: `elixir_control_plane`
+- execution language: `language_neutral`
+
+Expected digests:
+
+- descriptor digest:
+  `049f60146572e1611b407e2e5e1b9970fb9b406de8a0e2eb072ca436555d687c`
+- task digest:
+  `aa8334325e6eb3abed205450cf0233d39dfc563c4078c208f30c5e0ddf79da9d`
+
+`make check-operator-task-ir-contract` now requires both `rust_native` and
+`elixir_control_plane` TaskIR fixtures so the executable task surface cannot
+silently drift into a single authoring runtime.

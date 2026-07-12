@@ -186,6 +186,9 @@ Shell migration rule:
 - Keep `scripts/kyuubiki` as a tiny launcher only.
 - Prefer Rust native commands for new cross-platform operations.
 - Use `./scripts/kyuubiki native-script-audit` to list remaining shell wrappers.
+- Treat embedded `sh -lc`, `bash -lc`, or `ExecStart=/bin/sh` usage in runtime
+  sources as a failing audit unless it is replaced by native argument vectors
+  or an explicitly bounded host-tool boundary.
 - Treat the audit's `host tool boundary` section as the self-hosting backlog:
   those tools should eventually be provided by installer-managed runtimes,
   narrow native binaries, or explicit remote services rather than ad hoc shell

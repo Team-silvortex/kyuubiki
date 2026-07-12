@@ -1,77 +1,75 @@
 use serde_json::Value;
 
-pub fn extract_magnetostatic_result_diagnostics(
+pub fn extract_electrostatic_result_diagnostics(
     payload: Value,
     config: Value,
 ) -> Result<Value, String> {
     let object = payload.as_object().ok_or_else(|| {
-        "extract.magnetostatic_result_diagnostics expects an object payload".to_string()
+        "extract.electrostatic_result_diagnostics expects an object payload".to_string()
     })?;
     let nodes = fetch_collection(object, &config, "node_source", "nodes")?;
     let elements = fetch_collection(object, &config, "element_source", "elements")?;
-    let prefix = normalize_prefix(&config, "output_prefix", "magnetostatic");
+    let prefix = normalize_prefix(&config, "output_prefix", "electrostatic");
 
-    let vector_potential_nodes = collect_numeric_entries_with(
+    let potential_nodes = collect_numeric_entries_any(
         nodes,
-        field_name(&config, "vector_potential_field", "vector_potential"),
-        node_value,
+        &[
+            field_name(&config, "potential_field", "potential"),
+            "phi",
+            "voltage",
+        ],
     );
-    let current_density_nodes = collect_numeric_entries_with(
+    let charge_density_nodes = collect_numeric_entries_any(
         nodes,
-        field_name(&config, "current_density_field", "current_density"),
-        node_value,
+        &[
+            field_name(&config, "charge_density_field", "charge_density"),
+            "rho_e",
+            "q_density",
+        ],
     );
-    let energy_density_peak = peak_scalar_entry_with(
+    let energy_density_peak = peak_scalar_entry_any(
         elements,
-        field_name(&config, "energy_density_field", "energy_area_density"),
-        element_value,
-    )
-    .or_else(|| peak_scalar_entry_with(elements, "stored_energy", element_value));
-    let field_peak = peak_vector_entry(
+        &[
+            field_name(&config, "energy_density_field", "energy_density"),
+            "electric_energy_density",
+            "stored_energy_density",
+        ],
+    );
+    let field_peak = peak_vector_entry_any(
         elements,
-        field_name(&config, "field_x_field", "magnetic_field_strength_x"),
-        field_name(&config, "field_y_field", "magnetic_field_strength_y"),
+        &[
+            field_name(&config, "field_x_field", "electric_field_x"),
+            "e_x",
+        ],
+        &[
+            field_name(&config, "field_y_field", "electric_field_y"),
+            "e_y",
+        ],
         optional_field_name(&config, "field_z_field"),
-        Some(field_name(
-            &config,
-            "field_magnitude_field",
-            "magnetic_field_strength_magnitude",
-        )),
-    );
-    let flux_peak = peak_vector_entry(
-        elements,
-        field_name(&config, "flux_x_field", "magnetic_flux_density_x"),
-        field_name(&config, "flux_y_field", "magnetic_flux_density_y"),
-        optional_field_name(&config, "flux_z_field"),
-        Some(field_name(
-            &config,
-            "flux_magnitude_field",
-            "magnetic_flux_density_magnitude",
-        )),
+        &[
+            field_name(&config, "field_magnitude_field", "electric_field_magnitude"),
+            "e_mag",
+            "electric_field_abs",
+        ],
     );
 
     let diagnostics = serde_json::json!({
         format!("{prefix}_node_count"): count_object_entries(nodes),
         format!("{prefix}_element_count"): count_object_entries(elements),
-        "diagnostic_contract": "kyuubiki.workflow_diagnostics/v1",
-        "diagnostic_domain": "magnetostatic",
-        "diagnostic_subject": "magnetostatic_result",
-        "diagnostic_prefix": prefix,
-        "diagnostic_node_count": count_object_entries(nodes),
-        "diagnostic_element_count": count_object_entries(elements),
-        "diagnostic_metric_groups": ["vector_potential", "current_density", "energy_density", "field", "flux"],
     });
-    let diagnostics = merge_distribution_stats(
+    let diagnostics = merge_diagnostic_contract(
         diagnostics,
+        "electrostatic",
+        "electrostatic_result",
         &prefix,
-        "vector_potential",
-        &vector_potential_nodes,
+        &["potential", "charge_density", "energy_density", "field"],
     );
+    let diagnostics = merge_distribution_stats(diagnostics, &prefix, "potential", &potential_nodes);
     let diagnostics = merge_distribution_stats(
         diagnostics,
         &prefix,
-        "current_density",
-        &current_density_nodes,
+        "charge_density",
+        &charge_density_nodes,
     );
     let diagnostics = merge_peak_scalar(
         diagnostics,
@@ -80,12 +78,11 @@ pub fn extract_magnetostatic_result_diagnostics(
         energy_density_peak.as_ref(),
     );
     let diagnostics = merge_peak_vector(diagnostics, &prefix, "field", field_peak.as_ref());
-    let diagnostics = merge_peak_vector(diagnostics, &prefix, "flux", flux_peak.as_ref());
 
     ensure_non_empty_diagnostics(
         diagnostics,
         &prefix,
-        "extract.magnetostatic_result_diagnostics did not find any diagnostic fields",
+        "extract.electrostatic_result_diagnostics did not find any diagnostic fields",
     )
 }
 
@@ -138,111 +135,66 @@ fn count_object_entries(entries: &[Value]) -> usize {
     entries.iter().filter(|entry| entry.is_object()).count()
 }
 
-fn collect_numeric_entries_with<'a>(
-    entries: &'a [Value],
-    field: &str,
-    value_fn: fn(&serde_json::Map<String, Value>, &str) -> Option<f64>,
-) -> Vec<(&'a Value, f64)> {
+fn collect_numeric_entries_any<'a>(entries: &'a [Value], fields: &[&str]) -> Vec<(&'a Value, f64)> {
     entries
         .iter()
         .filter_map(|entry| {
-            let object = entry.as_object()?;
-            Some((entry, value_fn(object, field)?))
+            fields
+                .iter()
+                .find_map(|field| entry.get(*field).and_then(Value::as_f64))
+                .map(|value| (entry, value))
         })
         .collect()
 }
 
-fn peak_scalar_entry_with<'a>(
-    entries: &'a [Value],
-    field: &str,
-    value_fn: fn(&serde_json::Map<String, Value>, &str) -> Option<f64>,
-) -> Option<(&'a Value, f64)> {
-    collect_numeric_entries_with(entries, field, value_fn)
-        .into_iter()
-        .max_by(|left, right| left.1.total_cmp(&right.1))
+fn peak_scalar_entry_any<'a>(entries: &'a [Value], fields: &[&str]) -> Option<(&'a Value, f64)> {
+    fields.iter().find_map(|field| {
+        collect_numeric_entries_any(entries, &[*field])
+            .into_iter()
+            .max_by(|left, right| left.1.total_cmp(&right.1))
+    })
 }
 
-fn peak_vector_entry<'a>(
+fn peak_vector_entry_any<'a>(
     entries: &'a [Value],
-    x_field: &str,
-    y_field: &str,
+    x_fields: &[&str],
+    y_fields: &[&str],
     z_field: Option<&str>,
-    magnitude_field: Option<&str>,
+    magnitude_fields: &[&str],
 ) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
     entries
         .iter()
         .filter_map(|entry| {
-            let object = entry.as_object()?;
             let mut components = Vec::new();
-            if let Some(value) = element_value(object, x_field) {
+            if let Some(value) = first_entry_number(entry, x_fields) {
                 components.push(("x", value));
             }
-            if let Some(value) = element_value(object, y_field) {
+            if let Some(value) = first_entry_number(entry, y_fields) {
                 components.push(("y", value));
             }
             if let Some(field) = z_field {
-                if let Some(value) = element_value(object, field) {
+                if let Some(value) = entry.get(field).and_then(Value::as_f64) {
                     components.push(("z", value));
                 }
             }
-
-            let magnitude = magnitude_field
-                .and_then(|field| element_value(object, field))
-                .or_else(|| {
-                    (components.len() >= 2).then(|| {
-                        components
-                            .iter()
-                            .map(|(_, value)| value * value)
-                            .sum::<f64>()
-                            .sqrt()
-                    })
-                })?;
+            let magnitude = first_entry_number(entry, magnitude_fields).or_else(|| {
+                (components.len() >= 2).then(|| {
+                    components
+                        .iter()
+                        .map(|(_, value)| value * value)
+                        .sum::<f64>()
+                        .sqrt()
+                })
+            })?;
             Some((entry, magnitude, components))
         })
         .max_by(|left, right| left.1.total_cmp(&right.1))
 }
 
-fn node_value(object: &serde_json::Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| match field {
-            "vector_potential" => first_alias_number(object, &["a", "magnetic_vector_potential"]),
-            "current_density" => first_alias_number(object, &["j", "current_density_sum"]),
-            _ => None,
-        })
-}
-
-fn element_value(object: &serde_json::Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| match field {
-            "energy_area_density" | "stored_energy" => {
-                first_alias_number(object, &["energy_density", "magnetic_energy_density"])
-            }
-            "magnetic_field_strength_x" => first_alias_number(object, &["h_x", "field_x"]),
-            "magnetic_field_strength_y" => first_alias_number(object, &["h_y", "field_y"]),
-            "magnetic_field_strength_z" => first_alias_number(object, &["h_z", "field_z"]),
-            "magnetic_field_strength_magnitude" => {
-                first_alias_number(object, &["h_mag", "field_mag"])
-            }
-            "magnetic_flux_density_x" => first_alias_number(object, &["b_x", "flux_x"]),
-            "magnetic_flux_density_y" => first_alias_number(object, &["b_y", "flux_y"]),
-            "magnetic_flux_density_z" => first_alias_number(object, &["b_z", "flux_z"]),
-            "magnetic_flux_density_magnitude" => first_alias_number(object, &["b_mag", "flux_mag"]),
-            _ => None,
-        })
-}
-
-fn first_alias_number(object: &serde_json::Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
+fn first_entry_number(entry: &Value, fields: &[&str]) -> Option<f64> {
+    fields
         .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+        .find_map(|field| entry.get(*field).and_then(Value::as_f64))
 }
 
 fn merge_distribution_stats(
@@ -311,6 +263,25 @@ fn merge_peak_vector(
         }
     }
     merge_json_objects(diagnostics, peak_json)
+}
+
+fn merge_diagnostic_contract(
+    diagnostics: Value,
+    domain: &str,
+    subject: &str,
+    prefix: &str,
+    groups: &[&str],
+) -> Value {
+    merge_json_objects(
+        diagnostics,
+        serde_json::json!({
+            "diagnostic_contract": "kyuubiki.workflow_diagnostics/v1",
+            "diagnostic_domain": domain,
+            "diagnostic_subject": subject,
+            "diagnostic_prefix": prefix,
+            "diagnostic_metric_groups": groups,
+        }),
+    )
 }
 
 fn merge_json_objects(mut left: Value, right: Value) -> Value {

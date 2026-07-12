@@ -13,12 +13,31 @@ pub fn score_modal_quality(payload: Value, config: Value) -> Result<Value, Strin
         .iter()
         .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
         .count();
+    let watch_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
+        .count();
     let score = score_terms
         .iter()
         .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
         .sum::<f64>();
     let max_ready_score = config_number(&config, "max_ready_score", 8.0);
     let grade = quality_grade(score, missing_count, max_ready_score);
+    let dominant_term = dominant_quality_term(&score_terms);
+    let blocking_terms = if grade == "block" {
+        score_terms
+            .iter()
+            .filter(|term| {
+                matches!(
+                    term.get("status").and_then(Value::as_str),
+                    Some("missing" | "watch")
+                )
+            })
+            .map(compact_quality_term)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     Ok(serde_json::json!({
         "modal_quality_contract": "kyuubiki.modal_quality_score/v1",
@@ -26,15 +45,18 @@ pub fn score_modal_quality(payload: Value, config: Value) -> Result<Value, Strin
         "modal_quality_grade": grade,
         "modal_quality_ready": grade != "block",
         "modal_quality_missing_metric_count": missing_count,
+        "modal_quality_watch_count": watch_count,
         "modal_quality_term_count": score_terms.len(),
         "modal_quality_max_ready_score": max_ready_score,
         "modal_quality_min_frequency_hz": numeric_field(object, "min_frequency_hz"),
         "modal_quality_total_mass": numeric_field(object, "total_mass"),
         "modal_quality_frequency_span_hz": numeric_field(object, "frequency_span_hz"),
         "modal_quality_mode_1_participation_norm": numeric_field(object, "mode_1_participation_norm"),
+        "modal_quality_dominant_term": dominant_term,
+        "modal_quality_blocking_terms": blocking_terms,
         "modal_quality_terms": score_terms,
         "modal_quality_summary": format!(
-            "Modal quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+            "Modal quality {grade}: score={score:.4}, missing={missing_count}, watch={watch_count}, ready_limit={max_ready_score:.4}."
         ),
     }))
 }
@@ -148,17 +170,19 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
-        .and_then(Value::as_f64)
+        .and_then(finite_number)
+        .or_else(|| modal_alias_field(object, field))
         .or_else(|| derived_modal_field(object, field))
-        .filter(|value| value.is_finite())
 }
 
 fn derived_modal_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     match field {
         "frequency_span_hz" => {
-            let min = object.get("min_frequency_hz")?.as_f64()?;
-            let max = object.get("max_frequency_hz")?.as_f64()?;
-            Some(max - min)
+            let min = numeric_field(object, "min_frequency_hz")?;
+            let max = modal_alias_field(object, "max_frequency_hz")
+                .or_else(|| object.get("max_frequency_hz").and_then(finite_number))
+                .or_else(|| mode_frequency_bounds(object).map(|(_, max)| max))?;
+            Some((max - min).abs())
         }
         "mode_1_participation_norm" => object
             .get("modes")?
@@ -166,9 +190,97 @@ fn derived_modal_field(object: &Map<String, Value>, field: &str) -> Option<f64> 
             .first()?
             .as_object()?
             .get("participation_norm")?
-            .as_f64(),
+            .as_f64()
+            .filter(|value| value.is_finite()),
         _ => None,
     }
+}
+
+fn modal_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    match field {
+        "min_frequency_hz" => first_alias_number(
+            object,
+            &[
+                "first_frequency_hz",
+                "natural_frequency_min_hz",
+                "mode_1_frequency_hz",
+            ],
+        )
+        .or_else(|| mode_frequency_bounds(object).map(|(min, _)| min)),
+        "max_frequency_hz" => first_alias_number(
+            object,
+            &[
+                "last_frequency_hz",
+                "natural_frequency_max_hz",
+                "modal_frequency_max_hz",
+            ],
+        )
+        .or_else(|| mode_frequency_bounds(object).map(|(_, max)| max)),
+        "total_mass" => first_alias_number(
+            object,
+            &["modal_mass_total", "participating_mass_total", "mass_total"],
+        ),
+        "frequency_span_hz" => first_alias_number(
+            object,
+            &["modal_frequency_span_hz", "natural_frequency_span_hz"],
+        ),
+        "mode_1_participation_norm" => first_alias_number(
+            object,
+            &[
+                "first_mode_participation_norm",
+                "mode1_participation_norm",
+                "primary_mode_participation_norm",
+            ],
+        ),
+        _ => None,
+    }
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn mode_frequency_bounds(object: &Map<String, Value>) -> Option<(f64, f64)> {
+    let mut frequencies = object
+        .get("modes")?
+        .as_array()?
+        .iter()
+        .filter_map(Value::as_object)
+        .filter_map(|mode| mode.get("frequency_hz").and_then(finite_number));
+    let first = frequencies.next()?;
+    let (min, max) = frequencies.fold((first, first), |(min, max), frequency| {
+        (min.min(frequency), max.max(frequency))
+    });
+    Some((min, max))
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
+}
+
+fn dominant_quality_term(terms: &[Value]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| {
+            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            left_penalty
+                .partial_cmp(&right_penalty)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(compact_quality_term)
+        .unwrap_or(Value::Null)
+}
+
+fn compact_quality_term(term: &Value) -> Value {
+    serde_json::json!({
+        "field": term.get("field").cloned().unwrap_or(Value::Null),
+        "label": term.get("label").cloned().unwrap_or(Value::Null),
+        "status": term.get("status").cloned().unwrap_or(Value::Null),
+        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
+    })
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

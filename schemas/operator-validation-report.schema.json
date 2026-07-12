@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-validation-report.schema.json",
+  "title": "Kyuubiki Operator Validation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source", "executed", "profile_count", "ok", "profiles"],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-validation-report/v1"
+    },
+    "source": {
+      "$ref": "#/$defs/repoPath"
+    },
+    "executed": {
+      "type": "boolean"
+    },
+    "profile_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "commandKind": {
+      "enum": ["analytic", "boundary_regression", "contract", "cross_check", "invariant"]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "trust_goal",
+        "operators",
+        "validation_methods",
+        "formal_invariants",
+        "evidence_paths",
+        "commands",
+        "ok"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trust_goal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operators": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "validation_methods": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "formal_invariants": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "evidence_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repoPath"
+          }
+        },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "command", "result"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "$ref": "#/$defs/commandKind"
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/notRunResult"
+            },
+            {
+              "$ref": "#/$defs/executedResult"
+            }
+          ]
+        }
+      }
+    },
+    "notRunResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "status"],
+      "properties": {
+        "ok": {
+          "type": "null"
+        },
+        "status": {
+          "const": "not_run"
+        }
+      }
+    },
+    "executedResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "status", "duration_ms", "stdout_tail", "stderr_tail"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": ["integer", "null"]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stdout_tail": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "stderr_tail": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

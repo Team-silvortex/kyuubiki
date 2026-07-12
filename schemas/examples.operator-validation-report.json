@@ -1,0 +1,38 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": false,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "stokes-flow-screening",
+      "trust_goal": "review_screening",
+      "operators": [
+        "solve.stokes_flow_triangle_2d"
+      ],
+      "validation_methods": [
+        "boundary_response_cross_check"
+      ],
+      "formal_invariants": [
+        "finite_velocity_pressure_fields"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/cfd.json",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "stokes-triangle-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture",
+          "result": {
+            "ok": null,
+            "status": "not_run"
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

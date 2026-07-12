@@ -17,7 +17,8 @@ contributors and automation.
 - `operator-validation-profiles.json`
   Operator Validation Harness profile contract. It groups operators into
   executable validation profiles with analytic checks, local formal
-  invariants, cross-check commands, and evidence paths.
+  invariants, cross-check commands, evidence paths, and the
+  `schemas/operator-validation-profiles.schema.json` input shape.
 - `operator-qualification-roadmap.json`
   Planning queue for the first review-level operators that should be hardened
   toward `qualification`. It does not by itself upgrade any operator.

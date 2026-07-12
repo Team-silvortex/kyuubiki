@@ -13,12 +13,31 @@ pub fn score_dynamic_quality(payload: Value, config: Value) -> Result<Value, Str
         .iter()
         .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
         .count();
+    let watch_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
+        .count();
     let score = score_terms
         .iter()
         .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
         .sum::<f64>();
     let max_ready_score = config_number(&config, "max_ready_score", 8.0);
     let grade = quality_grade(score, missing_count, max_ready_score);
+    let dominant_term = dominant_quality_term(&score_terms);
+    let blocking_terms = if grade == "block" {
+        score_terms
+            .iter()
+            .filter(|term| {
+                matches!(
+                    term.get("status").and_then(Value::as_str),
+                    Some("missing" | "watch")
+                )
+            })
+            .map(compact_quality_term)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     Ok(serde_json::json!({
         "dynamic_quality_contract": "kyuubiki.dynamic_quality_score/v1",
@@ -26,14 +45,19 @@ pub fn score_dynamic_quality(payload: Value, config: Value) -> Result<Value, Str
         "dynamic_quality_grade": grade,
         "dynamic_quality_ready": grade != "block",
         "dynamic_quality_missing_metric_count": missing_count,
+        "dynamic_quality_watch_count": watch_count,
         "dynamic_quality_term_count": score_terms.len(),
         "dynamic_quality_max_ready_score": max_ready_score,
         "dynamic_quality_peak_frequency_hz": numeric_field(object, "peak_frequency_hz"),
+        "dynamic_quality_max_displacement": numeric_field(object, "max_displacement"),
         "dynamic_quality_max_velocity": numeric_field(object, "max_velocity"),
         "dynamic_quality_max_acceleration": numeric_field(object, "max_acceleration"),
+        "dynamic_quality_max_force": numeric_field(object, "max_force"),
+        "dynamic_quality_dominant_term": dominant_term,
+        "dynamic_quality_blocking_terms": blocking_terms,
         "dynamic_quality_terms": score_terms,
         "dynamic_quality_summary": format!(
-            "Dynamic quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+            "Dynamic quality {grade}: score={score:.4}, missing={missing_count}, watch={watch_count}, ready_limit={max_ready_score:.4}."
         ),
     }))
 }
@@ -161,9 +185,9 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
-        .and_then(Value::as_f64)
+        .and_then(finite_number)
+        .or_else(|| dynamic_alias_field(object, field))
         .or_else(|| derived_dynamic_field(object, field))
-        .filter(|value| value.is_finite())
 }
 
 fn derived_dynamic_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
@@ -181,14 +205,50 @@ fn derived_dynamic_field(object: &Map<String, Value>, field: &str) -> Option<f64
     }
 }
 
+fn dynamic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    match field {
+        "peak_frequency_hz" => first_alias_number(
+            object,
+            &[
+                "response_peak_frequency_hz",
+                "dominant_frequency_hz",
+                "freq_peak_hz",
+            ],
+        ),
+        "max_displacement" => first_alias_number(
+            object,
+            &["peak_displacement", "displacement_amplitude_peak", "u_max"],
+        ),
+        "max_velocity" => first_alias_number(
+            object,
+            &["peak_velocity", "velocity_amplitude_peak", "v_max"],
+        ),
+        "max_acceleration" => first_alias_number(
+            object,
+            &["peak_acceleration", "acceleration_amplitude_peak", "a_max"],
+        ),
+        "max_force" => first_alias_number(
+            object,
+            &["peak_force", "force_amplitude_peak", "dynamic_force_peak"],
+        ),
+        _ => None,
+    }
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
 fn peak_frequency(frequencies: &[Value]) -> Option<f64> {
     frequencies
         .iter()
         .filter_map(Value::as_object)
         .filter_map(|entry| {
             Some((
-                entry.get("frequency_hz")?.as_f64()?,
-                entry.get("max_displacement")?.as_f64()?,
+                frequency_entry_number(entry, "frequency_hz")?,
+                frequency_entry_number(entry, "max_displacement")?,
             ))
         })
         .max_by(|left, right| left.1.total_cmp(&right.1))
@@ -199,9 +259,35 @@ fn max_frequency_field(frequencies: &[Value], field: &str) -> Option<f64> {
     frequencies
         .iter()
         .filter_map(Value::as_object)
-        .filter_map(|entry| entry.get(field).and_then(Value::as_f64))
-        .filter(|value| value.is_finite())
+        .filter_map(|entry| frequency_entry_number(entry, field))
         .max_by(f64::total_cmp)
+}
+
+fn frequency_entry_number(entry: &Map<String, Value>, field: &str) -> Option<f64> {
+    entry
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| match field {
+            "frequency_hz" => {
+                first_alias_number(entry, &["frequency", "freq_hz", "response_frequency_hz"])
+            }
+            "max_displacement" => first_alias_number(
+                entry,
+                &["peak_displacement", "displacement_amplitude", "u_peak"],
+            ),
+            "max_velocity" => {
+                first_alias_number(entry, &["peak_velocity", "velocity_amplitude", "v_peak"])
+            }
+            "max_acceleration" => first_alias_number(
+                entry,
+                &["peak_acceleration", "acceleration_amplitude", "a_peak"],
+            ),
+            "max_force" => first_alias_number(
+                entry,
+                &["peak_force", "force_amplitude", "dynamic_force_peak"],
+            ),
+            _ => None,
+        })
 }
 
 fn max_transient_node_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
@@ -220,6 +306,33 @@ fn max_transient_node_field(object: &Map<String, Value>, field: &str) -> Option<
         .map(f64::abs)
         .filter(|value| value.is_finite())
         .max_by(f64::total_cmp)
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
+}
+
+fn dominant_quality_term(terms: &[Value]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| {
+            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            left_penalty
+                .partial_cmp(&right_penalty)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(compact_quality_term)
+        .unwrap_or(Value::Null)
+}
+
+fn compact_quality_term(term: &Value) -> Value {
+    serde_json::json!({
+        "field": term.get("field").cloned().unwrap_or(Value::Null),
+        "label": term.get("label").cloned().unwrap_or(Value::Null),
+        "status": term.get("status").cloned().unwrap_or(Value::Null),
+        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
+    })
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

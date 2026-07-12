@@ -149,6 +149,11 @@ fn scores_modal_quality_with_frequency_and_mass_penalties() {
     );
     assert_eq!(quality["modal_quality_term_count"].as_u64(), Some(4));
     assert_eq!(quality["modal_quality_grade"].as_str(), Some("good"));
+    assert_eq!(quality["modal_quality_watch_count"].as_u64(), Some(0));
+    assert_eq!(
+        quality["modal_quality_dominant_term"]["field"].as_str(),
+        Some("min_frequency_hz")
+    );
     let terms = quality["modal_quality_terms"]
         .as_array()
         .expect("quality terms should be an array");
@@ -161,12 +166,10 @@ fn scores_modal_quality_with_frequency_and_mass_penalties() {
 fn scores_modal_quality_from_solver_modes() {
     let quality = score_modal_quality(
         serde_json::json!({
-            "min_frequency_hz": 32.0,
-            "max_frequency_hz": 120.0,
-            "total_mass": 16.0,
+            "modal_mass_total": 16.0,
             "modes": [
-                { "index": 0, "participation_norm": 1.1 },
-                { "index": 1, "participation_norm": 0.6 }
+                { "index": 0, "frequency_hz": 32.0, "participation_norm": 1.1 },
+                { "index": 1, "frequency_hz": 120.0, "participation_norm": 0.6 }
             ]
         }),
         serde_json::json!({
@@ -189,6 +192,8 @@ fn scores_modal_quality_from_solver_modes() {
 
     assert_eq!(quality["modal_quality_ready"].as_bool(), Some(true));
     assert_eq!(quality["modal_quality_term_count"].as_u64(), Some(4));
+    approx_eq(quality["modal_quality_min_frequency_hz"].as_f64(), 32.0);
+    approx_eq(quality["modal_quality_total_mass"].as_f64(), 16.0);
     approx_eq(quality["modal_quality_frequency_span_hz"].as_f64(), 88.0);
     approx_eq(
         quality["modal_quality_mode_1_participation_norm"].as_f64(),
@@ -212,6 +217,13 @@ fn blocks_modal_quality_when_required_metrics_are_missing() {
         Some(3)
     );
     assert_eq!(quality["modal_quality_grade"].as_str(), Some("block"));
+    assert_eq!(
+        quality["modal_quality_blocking_terms"]
+            .as_array()
+            .expect("blocking terms")
+            .len(),
+        4
+    );
 }
 
 #[test]

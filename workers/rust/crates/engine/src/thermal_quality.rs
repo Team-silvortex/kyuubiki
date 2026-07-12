@@ -49,7 +49,9 @@ pub fn score_thermal_quality(payload: Value, config: Value) -> Result<Value, Str
         "thermal_quality_term_count": score_terms.len(),
         "thermal_quality_max_ready_score": max_ready_score,
         "thermal_quality_max_temperature": numeric_field(object, "thermal_temperature_max"),
+        "thermal_quality_temperature_delta": numeric_field(object, "thermo_temperature_delta_max"),
         "thermal_quality_peak_flux_magnitude": numeric_field(object, "thermal_flux_peak_magnitude"),
+        "thermal_quality_peak_stress": numeric_field(object, "thermo_stress_peak"),
         "thermal_quality_total_energy": numeric_field(object, "thermal_total_energy"),
         "thermal_quality_dominant_term": dominant_term,
         "thermal_quality_blocking_terms": blocking_terms,
@@ -198,21 +200,59 @@ fn compact_quality_term(term: &Value) -> Value {
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
-        .and_then(Value::as_f64)
+        .and_then(finite_number)
         .or_else(|| thermal_alias_field(object, field))
-        .filter(|value| value.is_finite())
 }
 
 fn thermal_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    let alias = match field {
-        "thermal_temperature_max" => "max_temperature",
-        "thermal_flux_peak_magnitude" => "max_heat_flux",
-        "thermo_temperature_delta_max" => "max_temperature_delta",
-        "thermo_stress_peak" => "max_stress",
-        "thermal_total_energy" => "total_thermal_energy",
-        _ => return None,
-    };
-    object.get(alias).and_then(Value::as_f64)
+    match field {
+        "thermal_temperature_max" => first_alias_number(
+            object,
+            &["max_temperature", "temperature_max", "peak_temperature"],
+        ),
+        "thermal_flux_peak_magnitude" => first_alias_number(
+            object,
+            &["max_heat_flux", "heat_flux_peak", "peak_heat_flux"],
+        ),
+        "thermo_temperature_delta_max" => first_alias_number(
+            object,
+            &[
+                "max_temperature_delta",
+                "temperature_delta_max",
+                "peak_temperature_delta",
+            ],
+        )
+        .or_else(|| temperature_delta_from_bounds(object)),
+        "thermo_stress_peak" => first_alias_number(
+            object,
+            &["max_stress", "peak_stress", "thermal_stress_peak"],
+        ),
+        "thermal_total_energy" => first_alias_number(
+            object,
+            &[
+                "total_thermal_energy",
+                "thermal_energy_total",
+                "total_heat_energy",
+            ],
+        ),
+        _ => None,
+    }
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn temperature_delta_from_bounds(object: &Map<String, Value>) -> Option<f64> {
+    let max = first_alias_number(object, &["temperature_max", "max_temperature"])?;
+    let min = first_alias_number(object, &["temperature_min", "min_temperature"])?;
+    Some((max - min).abs())
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

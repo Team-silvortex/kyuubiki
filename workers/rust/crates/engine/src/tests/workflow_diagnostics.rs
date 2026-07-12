@@ -1,10 +1,8 @@
 use crate::{
+    electrostatic_diagnostics::extract_electrostatic_result_diagnostics,
     magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics,
     transport_diagnostics::extract_transport_result_diagnostics,
-    workflow_diagnostics::{
-        extract_electrostatic_result_diagnostics, extract_thermal_result_diagnostics,
-        extract_thermo_result_diagnostics,
-    },
+    workflow_diagnostics::{extract_thermal_result_diagnostics, extract_thermo_result_diagnostics},
     workflow_executor::run_extract_operator,
 };
 
@@ -21,13 +19,13 @@ fn extracts_transport_result_diagnostics() {
     let diagnostics = extract_transport_result_diagnostics(
         serde_json::json!({
             "nodes": [
-                { "id": "c0", "concentration": 1.0, "source": 0.0 },
-                { "id": "c1", "concentration": 0.5, "source": 2.0 },
-                { "id": "c2", "concentration": 0.2, "source": -0.5 }
+                { "id": "c0", "c": 1.0, "source_density": 0.0 },
+                { "id": "c1", "c": 0.5, "source_density": 2.0 },
+                { "id": "c2", "c": 0.2, "source_density": -0.5 }
             ],
             "elements": [
-                { "id": "cd0", "total_flux": -0.8, "diffusive_flux": -0.2, "advective_flux": -0.6, "peclet_number": 120.0 },
-                { "id": "cd1", "total_flux": 1.4, "diffusive_flux": -0.1, "advective_flux": 1.5, "peclet_number": 220.0 }
+                { "id": "cd0", "flux_x": -0.6, "flux_y": -0.8, "diffusion_flux": -0.2, "advection_flux": -0.6, "peclet": 120.0 },
+                { "id": "cd1", "flux_x": 0.84, "flux_y": 1.12, "diffusion_flux": -0.1, "advection_flux": 1.5, "peclet": 220.0 }
             ]
         }),
         serde_json::json!({}),
@@ -237,24 +235,24 @@ fn extracts_electrostatic_result_diagnostics() {
     let diagnostics = extract_electrostatic_result_diagnostics(
         serde_json::json!({
             "nodes": [
-                { "id": "n0", "potential": 10.0, "charge_density": 0.2 },
-                { "id": "n1", "potential": 4.0, "charge_density": 0.5 },
-                { "id": "n2", "potential": 1.0, "charge_density": 0.1 }
+                { "id": "n0", "phi": 10.0, "rho_e": 0.2 },
+                { "id": "n1", "phi": 4.0, "rho_e": 0.5 },
+                { "id": "n2", "phi": 1.0, "rho_e": 0.1 }
             ],
             "elements": [
                 {
                     "id": "e0",
-                    "electric_field_x": 6.0,
-                    "electric_field_y": 8.0,
-                    "electric_field_magnitude": 10.0,
-                    "energy_density": 2.5
+                    "e_x": 6.0,
+                    "e_y": 8.0,
+                    "e_mag": 10.0,
+                    "electric_energy_density": 2.5
                 },
                 {
                     "id": "e1",
-                    "electric_field_x": 5.0,
-                    "electric_field_y": 12.0,
-                    "electric_field_magnitude": 13.0,
-                    "energy_density": 4.0
+                    "e_x": 5.0,
+                    "e_y": 12.0,
+                    "e_mag": 13.0,
+                    "electric_energy_density": 4.0
                 }
             ]
         }),
@@ -293,26 +291,26 @@ fn extracts_magnetostatic_result_diagnostics() {
     let diagnostics = extract_magnetostatic_result_diagnostics(
         serde_json::json!({
             "nodes": [
-                { "id": "n0", "vector_potential": 0.0, "current_density": 1.0 },
-                { "id": "n1", "vector_potential": 2.0, "current_density": 3.0 },
-                { "id": "n2", "vector_potential": 5.0, "current_density": 2.0 }
+                { "id": "n0", "a": 0.0, "j": 1.0 },
+                { "id": "n1", "a": 2.0, "j": 3.0 },
+                { "id": "n2", "a": 5.0, "j": 2.0 }
             ],
             "elements": [
                 {
                     "id": "m0",
-                    "magnetic_field_strength_x": 3.0,
-                    "magnetic_field_strength_y": 4.0,
-                    "magnetic_flux_density_x": 6.0,
-                    "magnetic_flux_density_y": 8.0,
-                    "energy_area_density": 2.5
+                    "h_x": 3.0,
+                    "h_y": 4.0,
+                    "b_x": 6.0,
+                    "b_y": 8.0,
+                    "energy_density": 2.5
                 },
                 {
                     "id": "m1",
-                    "magnetic_field_strength_x": 5.0,
-                    "magnetic_field_strength_y": 12.0,
-                    "magnetic_flux_density_x": 8.0,
-                    "magnetic_flux_density_y": 15.0,
-                    "energy_area_density": 7.0
+                    "h_x": 5.0,
+                    "h_y": 12.0,
+                    "b_x": 8.0,
+                    "b_y": 15.0,
+                    "energy_density": 7.0
                 }
             ]
         }),

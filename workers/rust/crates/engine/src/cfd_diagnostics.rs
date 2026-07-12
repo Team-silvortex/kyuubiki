@@ -29,11 +29,11 @@ pub fn extract_stokes_flow_result_diagnostics(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or("cfd");
-    let velocity_values = numeric_values(nodes, "velocity_magnitude");
-    let pressure_values = numeric_values(nodes, "pressure");
-    let divergence_values = numeric_values(elements, "divergence_error");
-    let reynolds_values = numeric_values(elements, "reynolds_number");
-    let dissipation_values = numeric_values(elements, "viscous_dissipation");
+    let velocity_values = numeric_values(nodes, cfd_node_value, "velocity_magnitude");
+    let pressure_values = numeric_values(nodes, cfd_node_value, "pressure");
+    let divergence_values = numeric_values(elements, cfd_element_value, "divergence_error");
+    let reynolds_values = numeric_values(elements, cfd_element_value, "reynolds_number");
+    let dissipation_values = numeric_values(elements, cfd_element_value, "viscous_dissipation");
     let mut summary = Map::new();
 
     summary.insert(
@@ -66,18 +66,21 @@ pub fn extract_stokes_flow_result_diagnostics(
         &format!("{prefix}_divergence_error"),
         elements,
         "divergence_error",
+        cfd_element_value,
     );
     merge_peak(
         &mut summary,
         &format!("{prefix}_reynolds_number"),
         elements,
         "reynolds_number",
+        cfd_element_value,
     );
     merge_peak(
         &mut summary,
         &format!("{prefix}_viscous_dissipation"),
         elements,
         "viscous_dissipation",
+        cfd_element_value,
     );
     summary.insert(
         format!("{prefix}_velocity_mean"),
@@ -107,7 +110,7 @@ pub fn score_cfd_quality(payload: Value, config: Value) -> Result<Value, String>
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.score_cfd_quality expects an object payload".to_string())?;
-    let terms = default_quality_terms();
+    let terms = quality_terms(&config);
     let score_terms = terms
         .iter()
         .map(|term| score_quality_term(object, &config, term))
@@ -151,6 +154,11 @@ pub fn score_cfd_quality(payload: Value, config: Value) -> Result<Value, String>
         "cfd_quality_watch_count": watch_count,
         "cfd_quality_term_count": score_terms.len(),
         "cfd_quality_max_ready_score": max_ready_score,
+        "cfd_quality_divergence_error_peak": numeric_field(object, "cfd_divergence_error_peak"),
+        "cfd_quality_reynolds_number_peak": numeric_field(object, "cfd_reynolds_number_peak"),
+        "cfd_quality_viscous_dissipation_total": numeric_field(object, "cfd_viscous_dissipation_total"),
+        "cfd_quality_velocity_span": numeric_field(object, "cfd_velocity_span"),
+        "cfd_quality_pressure_span": numeric_field(object, "cfd_pressure_span"),
         "cfd_quality_dominant_term": dominant_term,
         "cfd_quality_blocking_terms": blocking_terms,
         "cfd_quality_terms": score_terms,
@@ -160,6 +168,7 @@ pub fn score_cfd_quality(payload: Value, config: Value) -> Result<Value, String>
     }))
 }
 
+#[derive(Clone, Copy)]
 struct QualityTerm {
     field: &'static str,
     label: &'static str,
@@ -202,13 +211,31 @@ fn default_quality_terms() -> [QualityTerm; 5] {
     ]
 }
 
+fn quality_terms(config: &Value) -> Vec<QualityTerm> {
+    config
+        .get("enabled_terms")
+        .and_then(Value::as_array)
+        .map(|terms| {
+            terms
+                .iter()
+                .filter_map(Value::as_str)
+                .filter_map(quality_term_for)
+                .collect::<Vec<_>>()
+        })
+        .filter(|terms| !terms.is_empty())
+        .unwrap_or_else(|| default_quality_terms().to_vec())
+}
+
+fn quality_term_for(field: &str) -> Option<QualityTerm> {
+    default_quality_terms()
+        .into_iter()
+        .find(|term| term.field == field)
+}
+
 fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
     let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
     let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = object
-        .get(term.field)
-        .and_then(Value::as_f64)
-        .or_else(|| derived_span(object, term.field));
+    let value = numeric_field(object, term.field);
 
     match value {
         Some(value) if value.is_finite() => {
@@ -231,6 +258,37 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "penalty": 0.0,
             "status": "missing",
         }),
+    }
+}
+
+fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| derived_span(object, field))
+        .or_else(|| cfd_alias_field(object, field))
+}
+
+fn cfd_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    match field {
+        "cfd_divergence_error_peak" => first_alias_number(
+            object,
+            &["max_divergence_error", "divergence_peak", "div_u_peak"],
+        ),
+        "cfd_reynolds_number_peak" => {
+            first_alias_number(object, &["max_reynolds_number", "reynolds_peak", "re_peak"])
+        }
+        "cfd_viscous_dissipation_total" => first_alias_number(
+            object,
+            &[
+                "total_viscous_dissipation",
+                "viscous_dissipation_sum",
+                "dissipation_total",
+            ],
+        ),
+        "cfd_velocity_span" => first_alias_number(object, &["velocity_span", "speed_span"]),
+        "cfd_pressure_span" => first_alias_number(object, &["pressure_span", "p_span"]),
+        _ => None,
     }
 }
 
@@ -265,11 +323,17 @@ fn merge_min_max(summary: &mut Map<String, Value>, key: &str, values: &[f64]) {
     summary.insert(format!("{key}_span"), Value::from(max - min));
 }
 
-fn merge_peak(summary: &mut Map<String, Value>, key: &str, elements: &[Value], field: &str) {
+fn merge_peak(
+    summary: &mut Map<String, Value>,
+    key: &str,
+    elements: &[Value],
+    field: &str,
+    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
+) {
     let peak = elements
         .iter()
         .filter_map(Value::as_object)
-        .filter_map(|element| Some((element, element.get(field)?.as_f64()?)))
+        .filter_map(|element| Some((element, value_fn(element, field)?)))
         .max_by(|(_, left), (_, right)| {
             left.abs()
                 .partial_cmp(&right.abs())
@@ -291,12 +355,56 @@ fn merge_peak(summary: &mut Map<String, Value>, key: &str, elements: &[Value], f
     }
 }
 
-fn numeric_values(values: &[Value], field: &str) -> Vec<f64> {
+fn numeric_values(
+    values: &[Value],
+    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
+    field: &str,
+) -> Vec<f64> {
     values
         .iter()
         .filter_map(Value::as_object)
-        .filter_map(|value| value.get(field).and_then(Value::as_f64))
+        .filter_map(|value| value_fn(value, field))
         .collect()
+}
+
+fn cfd_node_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| match field {
+            "velocity_magnitude" => first_alias_number(object, &["speed", "u_mag"])
+                .or_else(|| vector_magnitude(object, "vx", "vy")),
+            "pressure" => first_alias_number(object, &["p", "static_pressure"]),
+            _ => None,
+        })
+}
+
+fn cfd_element_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    object
+        .get(field)
+        .and_then(finite_number)
+        .or_else(|| match field {
+            "divergence_error" => first_alias_number(object, &["div_u", "divergence"]),
+            "reynolds_number" => first_alias_number(object, &["reynolds", "re"]),
+            "viscous_dissipation" => first_alias_number(object, &["dissipation", "nu_dissipation"]),
+            _ => None,
+        })
+}
+
+fn vector_magnitude(object: &Map<String, Value>, x: &str, y: &str) -> Option<f64> {
+    let x = object.get(x).and_then(finite_number)?;
+    let y = object.get(y).and_then(finite_number)?;
+    Some((x * x + y * y).sqrt())
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
 }
 
 fn mean_or_zero(values: &[f64]) -> f64 {
@@ -327,9 +435,13 @@ fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
 
 fn derived_span(object: &Map<String, Value>, field: &str) -> Option<f64> {
     let prefix = field.strip_suffix("_span")?;
-    let min = object.get(&format!("{prefix}_min"))?.as_f64()?;
-    let max = object.get(&format!("{prefix}_max"))?.as_f64()?;
-    Some(max - min)
+    let min = object
+        .get(&format!("{prefix}_min"))
+        .and_then(finite_number)?;
+    let max = object
+        .get(&format!("{prefix}_max"))
+        .and_then(finite_number)?;
+    Some((max - min).abs())
 }
 
 fn quality_grade(score: f64, missing_count: usize, max_ready_score: f64) -> &'static str {

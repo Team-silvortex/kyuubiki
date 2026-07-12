@@ -149,19 +149,25 @@ fn scores_thermal_quality_with_temperature_flux_and_stress_terms() {
 fn scores_thermal_quality_from_solver_result_aliases() {
     let quality = score_thermal_quality(
         serde_json::json!({
-            "max_temperature": 95.0,
-            "max_heat_flux": 16.0,
-            "total_thermal_energy": 1250.0
+            "temperature_min": 20.0,
+            "temperature_max": 95.0,
+            "peak_heat_flux": 16.0,
+            "thermal_stress_peak": 110.0,
+            "thermal_energy_total": 1250.0
         }),
         serde_json::json!({
             "enabled_terms": [
                 "thermal_temperature_max",
+                "thermo_temperature_delta_max",
                 "thermal_flux_peak_magnitude",
+                "thermo_stress_peak",
                 "thermal_total_energy"
             ],
             "targets": {
                 "thermal_temperature_max": 120.0,
+                "thermo_temperature_delta_max": 80.0,
                 "thermal_flux_peak_magnitude": 20.0,
+                "thermo_stress_peak": 250.0,
                 "thermal_total_energy": 2000.0
             },
             "max_ready_score": 8.0
@@ -170,12 +176,14 @@ fn scores_thermal_quality_from_solver_result_aliases() {
     .expect("thermal solver aliases should score");
 
     assert_eq!(quality["thermal_quality_ready"].as_bool(), Some(true));
-    assert_eq!(quality["thermal_quality_term_count"].as_u64(), Some(3));
+    assert_eq!(quality["thermal_quality_term_count"].as_u64(), Some(5));
     approx_eq(quality["thermal_quality_max_temperature"].as_f64(), 95.0);
+    approx_eq(quality["thermal_quality_temperature_delta"].as_f64(), 75.0);
     approx_eq(
         quality["thermal_quality_peak_flux_magnitude"].as_f64(),
         16.0,
     );
+    approx_eq(quality["thermal_quality_peak_stress"].as_f64(), 110.0);
     approx_eq(quality["thermal_quality_total_energy"].as_f64(), 1250.0);
 }
 

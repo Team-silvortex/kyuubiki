@@ -83,11 +83,19 @@ README.
 - `operator-qualification-evidence-kits.schema.json` is for the planning-grade
   artifact kits attached to qualification roadmap candidates before any of
   those artifacts are promoted into manifest-level `evidence.qualification`
+- `operator-validation-profiles.schema.json` is for the input profile contract
+  consumed by `make check-operator-validation`, including grouped operators,
+  evidence paths, validation methods, formal invariants, and controlled command
+  kinds
 - `operator-package-dynamic-smoke.schema.json` is for the retained
   end-to-end external operator package smoke report, including template tests,
   strict package preflight, template `cdylib` build, and engine dynamic host
   loading stage evidence with per-stage descriptions, working directories, and
   command vectors
+- `operator-validation-report.schema.json` is for the machine-readable output
+  of `make check-operator-validation` and `make verify-operator-validation`,
+  including profile rollups, command kinds, skipped-command placeholders, and
+  executed command tail diagnostics
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
@@ -128,6 +136,9 @@ README.
   shared by schema readers, SDK smoke tests, and agent engine bring-up
 - `examples.operator-task-ir-float.json` is the fractional-number TaskIR sample
   that keeps canonical JSON digest behavior aligned across JS and Rust checks
+- `examples.operator-task-ir-elixir.json` is the Elixir control-plane authored
+  TaskIR sample proving hot authoring still lowers into language-neutral
+  execution, package-fetch, mirror, and digest contracts
 - `examples.operator-task-batch.json` is the matching batch wrapper sample for
   `POST /api/v1/operator-tasks/execute-batch` and SDK batch execution examples
 - `examples.operator-task-batch-preparation.json` is the matching
@@ -148,6 +159,9 @@ README.
   for validating external operator package dynamic-smoke stage order,
   diagnostic working directories and commands, package/operator summary, and
   evidence paths
+- `examples.operator-validation-report.json` is the retained fixture for the
+  operator validation report shape, including the `boundary_regression` command
+  kind and the non-executed `not_run` result form
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

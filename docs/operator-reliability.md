@@ -36,12 +36,26 @@ Harness contract. It groups operators into validation profiles and records:
 - evidence paths that must remain repo-relative
 - commands that can execute the validation profile
 
+The input profile shape is retained as
+`schemas/operator-validation-profiles.schema.json`.
+
 `make check-operator-validation` validates the profile contract and writes
 `tmp/operator-validation-report.json` without running heavy commands.
 `make verify-operator-validation` executes the declared commands and writes the
 same report with command status and output tails. This is not a whole-system
 formal proof; it is a practical lane for accumulating executable local
 invariants and cross-validation evidence per operator family.
+The report shape is retained as
+`schemas/operator-validation-report.schema.json` with
+`schemas/examples.operator-validation-report.json` as the fixture.
+
+Validation commands use a small controlled kind vocabulary:
+
+- `analytic`: closed-form or derived reference checks
+- `cross_check`: independent implementation, shape, or representation checks
+- `boundary_regression`: boundary-condition and edge-case regression checks
+- `invariant`: local conservation, finiteness, or sign invariants
+- `contract`: repository-level contract checks that support the profile
 
 The first validation profiles cover:
 
@@ -132,7 +146,14 @@ The CFD quality transform also exposes review-facing explanation fields:
 `cfd_quality_blocking_terms`. These fields make headless material or flow
 screening runs explainable: a candidate does not only receive a score, it also
 reports which diagnostic term dominated the penalty and which missing or
-out-of-target terms caused a block.
+out-of-target terms caused a block. The same transform also accepts
+`enabled_terms` and common alias fields such as `max_divergence_error`,
+`max_reynolds_number`, `total_viscous_dissipation`, `velocity_span`, and
+`pressure_span` so retained screening studies can narrow their objective
+without rewriting upstream diagnostics. Diagnostics also normalize compact CFD
+post-processing names such as `vx`/`vy`, `p`, `div_u`, `reynolds`, and
+`dissipation`, while quality scoring accepts aliases such as `div_u_peak`,
+`re_peak`, `dissipation_total`, `speed_span`, and `p_span`.
 
 ## Electromagnetic Plane Review Scope
 

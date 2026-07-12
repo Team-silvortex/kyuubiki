@@ -8,8 +8,10 @@ const schemaPath = "schemas/operator-task-ir.schema.json";
 const examplePaths = [
   "schemas/examples.operator-task-ir.json",
   "schemas/examples.operator-task-ir-float.json",
+  "schemas/examples.operator-task-ir-elixir.json",
   "schemas/examples.operator-task-batch.json",
 ];
+const requiredAuthoringModes = ["rust_native", "elixir_control_plane"];
 const requiredDigestFields = [
   "schema_version",
   "task_id",
@@ -183,6 +185,7 @@ function checkContracts() {
   }
 
   let taskCount = 0;
+  const authoringModes = new Set();
   for (const examplePath of examplePaths) {
     const tasks = collectTasks(readJson(examplePath));
     if (tasks.length === 0) {
@@ -194,8 +197,16 @@ function checkContracts() {
       validateDigestFieldCoverage(task, context);
       validateDescriptorDigest(task, context);
       validateTaskDigest(task, context);
+      if (typeof task.descriptor_authoring?.mode === "string") {
+        authoringModes.add(task.descriptor_authoring.mode);
+      }
       taskCount += 1;
     });
+  }
+  for (const mode of requiredAuthoringModes) {
+    if (!authoringModes.has(mode)) {
+      fail(`TaskIR examples must include descriptor_authoring.mode=${mode}`);
+    }
   }
 
   console.log(`Validated ${taskCount} operator task IR example contracts.`);

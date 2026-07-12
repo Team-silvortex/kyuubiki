@@ -13,12 +13,31 @@ pub fn score_acoustic_quality(payload: Value, config: Value) -> Result<Value, St
         .iter()
         .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
         .count();
+    let watch_count = score_terms
+        .iter()
+        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
+        .count();
     let score = score_terms
         .iter()
         .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
         .sum::<f64>();
     let max_ready_score = config_number(&config, "max_ready_score", 7.0);
     let grade = quality_grade(score, missing_count, max_ready_score);
+    let dominant_term = dominant_quality_term(&score_terms);
+    let blocking_terms = if grade == "block" {
+        score_terms
+            .iter()
+            .filter(|term| {
+                matches!(
+                    term.get("status").and_then(Value::as_str),
+                    Some("missing" | "watch")
+                )
+            })
+            .map(compact_quality_term)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     Ok(serde_json::json!({
         "acoustic_quality_contract": "kyuubiki.acoustic_quality_score/v1",
@@ -26,15 +45,18 @@ pub fn score_acoustic_quality(payload: Value, config: Value) -> Result<Value, St
         "acoustic_quality_grade": grade,
         "acoustic_quality_ready": grade != "block",
         "acoustic_quality_missing_metric_count": missing_count,
+        "acoustic_quality_watch_count": watch_count,
         "acoustic_quality_term_count": score_terms.len(),
         "acoustic_quality_max_ready_score": max_ready_score,
         "acoustic_quality_max_spl_db": numeric_field(object, "max_sound_pressure_level_db"),
         "acoustic_quality_max_intensity": numeric_field(object, "max_acoustic_intensity"),
         "acoustic_quality_max_pressure": numeric_field(object, "max_pressure_amplitude"),
         "acoustic_quality_total_damping_loss": numeric_field(object, "total_damping_loss"),
+        "acoustic_quality_dominant_term": dominant_term,
+        "acoustic_quality_blocking_terms": blocking_terms,
         "acoustic_quality_terms": score_terms,
         "acoustic_quality_summary": format!(
-            "Acoustic quality {grade}: score={score:.4}, missing={missing_count}, ready_limit={max_ready_score:.4}."
+            "Acoustic quality {grade}: score={score:.4}, missing={missing_count}, watch={watch_count}, ready_limit={max_ready_score:.4}."
         ),
     }))
 }
@@ -148,17 +170,71 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
-        .and_then(Value::as_f64)
+        .and_then(finite_number)
         .or_else(|| acoustic_alias_field(object, field))
-        .filter(|value| value.is_finite())
 }
 
 fn acoustic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    let alias = match field {
-        "max_pressure_amplitude" => "max_pressure",
-        _ => return None,
-    };
-    object.get(alias).and_then(Value::as_f64)
+    match field {
+        "max_sound_pressure_level_db" => first_alias_number(
+            object,
+            &["peak_spl_db", "spl_max_db", "sound_pressure_level_max_db"],
+        ),
+        "max_acoustic_intensity" => first_alias_number(
+            object,
+            &[
+                "peak_acoustic_intensity",
+                "acoustic_intensity_peak",
+                "intensity_max",
+            ],
+        ),
+        "max_pressure_amplitude" => first_alias_number(
+            object,
+            &["max_pressure", "peak_pressure", "pressure_amplitude_peak"],
+        ),
+        "total_damping_loss" => first_alias_number(
+            object,
+            &[
+                "damping_loss_total",
+                "total_acoustic_damping_loss",
+                "damping_energy_loss",
+            ],
+        ),
+        _ => None,
+    }
+}
+
+fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(finite_number))
+}
+
+fn finite_number(value: &Value) -> Option<f64> {
+    value.as_f64().filter(|number| number.is_finite())
+}
+
+fn dominant_quality_term(terms: &[Value]) -> Value {
+    terms
+        .iter()
+        .max_by(|left, right| {
+            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
+            left_penalty
+                .partial_cmp(&right_penalty)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(compact_quality_term)
+        .unwrap_or(Value::Null)
+}
+
+fn compact_quality_term(term: &Value) -> Value {
+    serde_json::json!({
+        "field": term.get("field").cloned().unwrap_or(Value::Null),
+        "label": term.get("label").cloned().unwrap_or(Value::Null),
+        "status": term.get("status").cloned().unwrap_or(Value::Null),
+        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
+    })
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

@@ -82,19 +82,28 @@ path:
 
 - `extract.transport_result_diagnostics` turns advection-diffusion results into
   summary metrics for concentration span, source totals, peak flux, and
-  Peclet-number review
+  Peclet-number review; compact solver names such as `c`, `source_density`,
+  `flux_x`/`flux_y`, and `peclet` are normalized into those diagnostics
 - `transform.evaluate_transport_guard` evaluates those metrics against visible
   warn/block threshold rules
 - `transform.benchmark_transport_pair` compares two transport candidates with
   weighted min/max criteria for optimization-oriented workflows
 - `transform.score_transport_quality` scores one candidate across peak flux,
   Peclet number, concentration span, and source balance, giving headless SDK
-  studies a stable optimization objective
+  studies a stable optimization objective with enabled-term filtering,
+  watch/missing counts, dominant-term explanation, and blocking-term summaries;
+  solver aliases such as `peak_transport_flux`, `peclet_max`,
+  `concentration_min`/`concentration_max`, and `source_balance` are normalized
+  into the same contract
 
 The electromagnetic line has the same decision posture for electrostatics and
 magnetostatics: diagnostics can be checked by field/energy threshold guards and
 paired candidates can be compared before a workflow commits to the next solve
-or bridge step.
+or bridge step. Electrostatic quality can also normalize solver aliases such as
+`max_electric_field`, `peak_energy_density`, and `potential_min`/`potential_max`
+into the canonical field, energy-density, and potential-span terms.
+Magnetostatic quality does the same for `max_magnetic_field_strength`,
+`peak_flux_density`, `peak_energy_density`, and `total_current_density`.
 
 The structural line now has a matching headless decision path too:
 `transform.evaluate_structural_guard` checks displacement, stress, force,
@@ -105,7 +114,9 @@ response into an optimization-ready quality score before a material-study
 workflow promotes one design. The score result also exposes
 `structural_quality_dominant_term`, `structural_quality_watch_count`, and
 `structural_quality_blocking_terms`, so headless studies can explain why a
-candidate needs another iteration without parsing every term manually.
+candidate needs another iteration without parsing every term manually. Solver
+aliases such as `von_mises_peak`, `peak_displacement`, `total_mass`, and
+`minimum_stiffness_margin` are normalized into the same quality contract.
 
 The thermal line has guard, pairwise benchmark, and single-candidate quality
 coverage through `transform.evaluate_thermal_guard`,
@@ -113,7 +124,9 @@ coverage through `transform.evaluate_thermal_guard`,
 `transform.score_thermal_quality`, so heat and thermo-mechanical branches can
 gate, compare, or rank designs by temperature, flux, temperature-delta, and
 stress objectives. Thermal scores now include dominant, watch-count, and
-blocking-term fields for automated recovery and next-step selection.
+blocking-term fields for automated recovery and next-step selection. Solver
+aliases such as `temperature_min`/`temperature_max`, `peak_heat_flux`,
+`thermal_stress_peak`, and `thermal_energy_total` are normalized too.
 
 The electrostatic line now mirrors that optimization shape:
 `transform.evaluate_electrostatic_guard`,
@@ -122,24 +135,42 @@ The electrostatic line now mirrors that optimization shape:
 potential-span objectives before downstream heat or material branches consume
 the result. Electrostatic quality results expose the same dominant, watch, and
 blocking explanation fields used by the other workflow-facing quality scorers.
+Electrostatic diagnostics normalize compact names such as `phi`, `rho_e`,
+`e_x`/`e_y`, and `electric_energy_density`.
 
 The magnetostatic line follows the same contract through
 `transform.evaluate_magnetostatic_guard`,
 `transform.benchmark_magnetostatic_pair`, and
 `transform.score_magnetostatic_quality`, covering peak magnetic field, flux,
-energy-density, and current-density objectives.
+energy-density, and current-density objectives. Magnetostatic quality now also
+reports watch, dominant-term, and blocking-term explanations. Magnetostatic
+diagnostics normalize compact field names such as `a`, `j`, `h_x`/`h_y`,
+`b_x`/`b_y`, and `energy_density`.
 
 The acoustic line can now do the same for frequency-domain duct studies:
 `transform.evaluate_acoustic_guard` checks SPL, pressure, velocity, intensity,
 or damping limits, `transform.benchmark_acoustic_pair` compares candidate
 acoustic responses, and `transform.score_acoustic_quality` turns one response
-into an optimization-ready acoustic quality score.
+into an optimization-ready acoustic quality score with watch/missing counts,
+dominant-term explanation, and blocking-term summaries. Solver aliases such as
+`peak_spl_db`, `peak_acoustic_intensity`, `pressure_amplitude_peak`, and
+`damping_loss_total` are normalized into that same score contract.
 
 The modal line is covered by `transform.evaluate_modal_guard`,
 `transform.benchmark_modal_pair`, and `transform.score_modal_quality`, so
 vibration studies can gate, compare, or rank candidate designs by
 natural-frequency band, mass, period, and participation metrics before a design
-is promoted.
+is promoted. The modal quality score also reports watch/missing counts,
+dominant terms, and blocking terms for automated review loops. Solver modes can
+provide `frequency_hz` and `participation_norm` directly, while aliases such as
+`modal_mass_total` are normalized into the same quality fields.
+
+The dynamic line extends that optimization path to harmonic and transient
+spring responses through `transform.score_dynamic_quality`. It reports peak
+frequency, velocity, acceleration, watch/missing counts, dominant terms, and
+blocking terms so automated sweeps can explain why a dynamic candidate is held.
+Harmonic response entries can use aliases such as `freq_hz`,
+`displacement_amplitude`, `acceleration_amplitude`, and `force_amplitude`.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

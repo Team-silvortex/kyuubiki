@@ -194,7 +194,35 @@ fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
     object
         .get(field)
         .and_then(Value::as_f64)
+        .or_else(|| structural_alias_field(object, field))
         .filter(|value| value.is_finite())
+}
+
+fn structural_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
+    let aliases = match field {
+        "max_displacement" => &[
+            "peak_displacement",
+            "max_translation",
+            "displacement_peak",
+            "u_max",
+        ][..],
+        "max_stress" => &[
+            "peak_stress",
+            "von_mises_peak",
+            "max_von_mises_stress",
+            "stress_peak",
+        ][..],
+        "mass" => &["total_mass", "structure_mass", "model_mass"][..],
+        "stiffness_margin" => &[
+            "minimum_stiffness_margin",
+            "min_stiffness_margin",
+            "stability_margin",
+        ][..],
+        _ => return None,
+    };
+    aliases
+        .iter()
+        .find_map(|alias| object.get(*alias).and_then(Value::as_f64))
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

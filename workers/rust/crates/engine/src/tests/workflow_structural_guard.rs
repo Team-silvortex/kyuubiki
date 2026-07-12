@@ -198,6 +198,42 @@ fn scores_structural_quality_with_enabled_solver_terms() {
 }
 
 #[test]
+fn scores_structural_quality_from_solver_result_aliases() {
+    let quality = score_structural_quality(
+        serde_json::json!({
+            "peak_displacement": 0.011,
+            "von_mises_peak": 130.0,
+            "total_mass": 13.0,
+            "minimum_stiffness_margin": 1.4
+        }),
+        serde_json::json!({
+            "targets": {
+                "max_displacement": 0.02,
+                "max_stress": 250.0,
+                "mass": 15.0,
+                "stiffness_margin": 1.2
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("structural aliases should score");
+
+    assert_eq!(quality["structural_quality_ready"].as_bool(), Some(true));
+    assert_eq!(
+        quality["structural_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(quality["structural_quality_term_count"].as_u64(), Some(4));
+    approx_eq(
+        quality["structural_quality_max_displacement"].as_f64(),
+        0.011,
+    );
+    approx_eq(quality["structural_quality_max_stress"].as_f64(), 130.0);
+    approx_eq(quality["structural_quality_mass"].as_f64(), 13.0);
+    approx_eq(quality["structural_quality_stiffness_margin"].as_f64(), 1.4);
+}
+
+#[test]
 fn blocks_structural_quality_when_required_metrics_are_missing() {
     let quality = score_structural_quality(
         serde_json::json!({

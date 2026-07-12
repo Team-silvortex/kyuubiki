@@ -1,0 +1,116 @@
+{
+  "$schema": "operator-task-ir.schema.json",
+  "schema_version": "kyuubiki.operator-task-ir/v1",
+  "task_id": "elixir-control-plane-quality-gate-task",
+  "operator": {
+    "id": "transform.elixir_quality_gate",
+    "family": "quality_gate",
+    "kind": "transform",
+    "execution": {
+      "package_ref": "orchestra://operator-package/transform.elixir_quality_gate"
+    }
+  },
+  "descriptor_authoring": {
+    "schema_version": "kyuubiki.operator-descriptor-authoring/v1",
+    "mode": "elixir_control_plane",
+    "runtime": "elixir",
+    "source": "apps/web/lib/kyuubiki_web/orchestra/operator_task_ir.ex",
+    "hot_reloadable": true,
+    "execution_language": "language_neutral"
+  },
+  "node": {
+    "id": "quality-gate",
+    "input_ports": [
+      "candidate"
+    ],
+    "output_ports": [
+      "decision"
+    ]
+  },
+  "input_artifact": {
+    "candidate_id": "candidate-a",
+    "score": 0.82,
+    "minimum_score": 0.75
+  },
+  "config": {
+    "decision_key": "screening_pass",
+    "emit_reason": true
+  },
+  "execution_program": {
+    "schema_version": "kyuubiki.operator-execution-program/v1",
+    "program_id": "transform.elixir_quality_gate",
+    "program_family": "quality_gate",
+    "program_kind": "transform",
+    "operator_category_id": null,
+    "package_ref": "orchestra://operator-package/transform.elixir_quality_gate",
+    "package_version": "control-plane-managed",
+    "package_integrity": null,
+    "runtime_protocol": "kyuubiki.operator-execution/v1",
+    "abi": {
+      "kind": "operator_task",
+      "input_encoding": "json",
+      "output_encoding": "json"
+    },
+    "entrypoint": {
+      "kind": "operator_id",
+      "name": "transform.elixir_quality_gate",
+      "operator_kind": "transform"
+    },
+    "bindings": {
+      "input_artifact": "task.input_artifact",
+      "config": "task.config",
+      "output_artifact": "task.output_artifact"
+    },
+    "node_binding": {
+      "node_id": "quality-gate",
+      "input_ports": [
+        "candidate"
+      ],
+      "output_ports": [
+        "decision"
+      ]
+    }
+  },
+  "dataset_contract": {
+    "contract_id": "quality-gate-screening/v1"
+  },
+  "orchestration_context": {
+    "authored_by": "elixir_control_plane",
+    "lowering_stage": "operator_task_ir"
+  },
+  "runtime_hints": {
+    "authority_mode": "single_orchestrator",
+    "execution_mode": "orchestra_fetch",
+    "source_ref": "apps/web/lib/kyuubiki_web/orchestra/operator_task_ir.ex",
+    "package_ref": "orchestra://operator-package/transform.elixir_quality_gate",
+    "package_version": "control-plane-managed",
+    "placement_tags": [
+      "control-plane-authored"
+    ],
+    "required_capabilities": [
+      "operator-task-ir/v1"
+    ],
+    "cache_scope": "job",
+    "agent_fetchable": true,
+    "operator_kind": "transform"
+  },
+  "integrity": {
+    "operator_integrity": null,
+    "descriptor_digest": "049f60146572e1611b407e2e5e1b9970fb9b406de8a0e2eb072ca436555d687c",
+    "task_digest": "aa8334325e6eb3abed205450cf0233d39dfc563c4078c208f30c5e0ddf79da9d",
+    "task_digest_fields": [
+      "schema_version",
+      "task_id",
+      "operator",
+      "descriptor_authoring",
+      "node",
+      "input_artifact",
+      "config",
+      "execution_program",
+      "dataset_contract",
+      "orchestration_context",
+      "runtime_hints"
+    ],
+    "digest_algorithm": "sha256"
+  }
+}

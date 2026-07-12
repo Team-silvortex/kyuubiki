@@ -17,6 +17,13 @@ struct ShellScriptRecord {
     kind: ShellScriptKind,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+struct EmbeddedShellRecord {
+    relative_path: String,
+    line_number: usize,
+    pattern: &'static str,
+}
+
 pub(crate) fn run_native_script_audit(
     root: &Path,
     host_label: &str,
@@ -31,8 +38,9 @@ pub(crate) fn run_native_script_audit(
     }
 
     let records = collect_shell_script_records(root)?;
-    print_report(root, host_label, &records);
-    Ok(0)
+    let embedded = collect_embedded_shell_records(root)?;
+    print_report(root, host_label, &records, &embedded);
+    Ok(if embedded.is_empty() { 0 } else { 1 })
 }
 
 fn collect_shell_script_records(root: &Path) -> RunnerResult<Vec<ShellScriptRecord>> {
@@ -72,6 +80,87 @@ fn collect_shell_script_records_in(
         });
     }
     Ok(())
+}
+
+fn collect_embedded_shell_records(root: &Path) -> RunnerResult<Vec<EmbeddedShellRecord>> {
+    let mut records = Vec::new();
+    for entry in embedded_shell_scan_roots() {
+        let scan_root = root.join(entry);
+        if scan_root.exists() {
+            collect_embedded_shell_records_in(root, &scan_root, &mut records)?;
+        }
+    }
+    records.sort_by(|left, right| {
+        left.relative_path
+            .cmp(&right.relative_path)
+            .then(left.line_number.cmp(&right.line_number))
+    });
+    Ok(records)
+}
+
+fn collect_embedded_shell_records_in(
+    root: &Path,
+    dir: &Path,
+    records: &mut Vec<EmbeddedShellRecord>,
+) -> RunnerResult<()> {
+    for entry in
+        fs::read_dir(dir).map_err(|error| format!("failed to scan {}: {error}", dir.display()))?
+    {
+        let path = entry
+            .map_err(|error| format!("failed to read directory entry: {error}"))?
+            .path();
+        let relative = relative_path(root, &path);
+        if should_skip_embedded_shell_path(&relative) {
+            continue;
+        }
+        if path.is_dir() {
+            collect_embedded_shell_records_in(root, &path, records)?;
+            continue;
+        }
+        if !is_embedded_shell_scan_candidate(&path) {
+            continue;
+        }
+        let content = fs::read_to_string(&path)
+            .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+        for (index, line) in content.lines().enumerate() {
+            if is_test_assertion_line(line) {
+                continue;
+            }
+            for pattern in embedded_shell_patterns() {
+                if line.contains(pattern) {
+                    records.push(EmbeddedShellRecord {
+                        relative_path: relative.clone(),
+                        line_number: index + 1,
+                        pattern,
+                    });
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn should_skip_embedded_shell_path(relative_path: &str) -> bool {
+    relative_path == "workers/rust/crates/script-runner/src/native_script_audit.rs"
+        || relative_path.contains("/target/")
+        || relative_path.contains("/node_modules/")
+        || relative_path.contains("/dist/")
+        || relative_path.starts_with("tmp/")
+}
+
+fn is_embedded_shell_scan_candidate(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|value| value.to_str()),
+        Some("rs" | "service" | "mk" | "yml" | "yaml" | "mjs" | "js" | "ts" | "json")
+    )
+}
+
+fn embedded_shell_patterns() -> &'static [&'static str] {
+    &["sh -lc", "bash -lc", "ExecStart=/bin/sh"]
+}
+
+fn is_test_assertion_line(line: &str) -> bool {
+    line.contains("assert!") || line.contains("assert_eq!") || line.contains("assert_ne!")
 }
 
 fn is_shell_script(path: &Path) -> bool {
@@ -132,12 +221,21 @@ fn is_native_shim(relative_path: &str) -> bool {
     )
 }
 
-fn print_report(root: &Path, host_label: &str, records: &[ShellScriptRecord]) {
+fn print_report(
+    root: &Path,
+    host_label: &str,
+    records: &[ShellScriptRecord],
+    embedded: &[EmbeddedShellRecord],
+) {
     println!("native script migration audit");
     println!("  host: {host_label}");
     println!("  root: {}", root.display());
     println!("  native runner: kyuubiki-script-runner");
     println!("  remote seam: workers/rust/crates/script-runner/src/remote_host.rs");
+    println!("  embedded shell scan roots:");
+    for root in embedded_shell_scan_roots() {
+        println!("  - {root}");
+    }
     println!("  host tool boundary:");
     for tool in host_tool_boundary() {
         println!("  - {tool}");
@@ -150,6 +248,17 @@ fn print_report(root: &Path, host_label: &str, records: &[ShellScriptRecord]) {
             shell_script_kind_label(record.kind)
         );
     }
+    println!("  embedded shell invocations:");
+    if embedded.is_empty() {
+        println!("  - none");
+    } else {
+        for record in embedded {
+            println!(
+                "  - {}:{} ({})",
+                record.relative_path, record.line_number, record.pattern
+            );
+        }
+    }
     println!("  summary:");
     for kind in [
         ShellScriptKind::TinyLauncher,
@@ -159,6 +268,7 @@ fn print_report(root: &Path, host_label: &str, records: &[ShellScriptRecord]) {
         let count = records.iter().filter(|record| record.kind == kind).count();
         println!("    {}: {count}", shell_script_kind_label(kind));
     }
+    println!("    embedded shell invocation: {}", embedded.len());
 }
 
 fn host_tool_boundary() -> &'static [&'static str] {
@@ -178,6 +288,10 @@ fn host_tool_boundary() -> &'static [&'static str] {
         "swift",
         "sips",
     ]
+}
+
+fn embedded_shell_scan_roots() -> &'static [&'static str] {
+    &[".github", "apps", "deploy", "make", "tests", "workers"]
 }
 
 fn shell_script_kind_label(kind: ShellScriptKind) -> &'static str {
@@ -227,6 +341,10 @@ fn run_self_test() {
     assert!(host_tool_boundary().contains(&"docker"));
     assert!(host_tool_boundary().contains(&"swift"));
     assert!(host_tool_boundary().contains(&"sips"));
+    assert!(embedded_shell_patterns().contains(&"sh -lc"));
+    assert!(embedded_shell_scan_roots().contains(&"apps"));
+    assert!(embedded_shell_scan_roots().contains(&"workers"));
+    assert!(embedded_shell_scan_roots().contains(&"deploy"));
 }
 
 #[cfg(test)]
@@ -297,6 +415,32 @@ mod tests {
                 "sips",
             ]
         );
+    }
+
+    #[test]
+    fn detects_embedded_shell_invocations_in_runtime_sources() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(root.join("deploy/systemd")).unwrap();
+        fs::write(
+            root.join("deploy/systemd/legacy.service"),
+            "ExecStart=/bin/sh -lc 'echo legacy'\n",
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("apps/installer-gui/src-tauri/src")).unwrap();
+        fs::write(
+            root.join("apps/installer-gui/src-tauri/src/remote.rs"),
+            r#"let command = "screen -dmS worker sh -lc 'run'";"#,
+        )
+        .unwrap();
+
+        let records = collect_embedded_shell_records(&root).unwrap();
+        let patterns = records
+            .iter()
+            .map(|record| record.pattern)
+            .collect::<Vec<_>>();
+        assert!(patterns.contains(&"ExecStart=/bin/sh"));
+        assert!(patterns.contains(&"sh -lc"));
+        fs::remove_dir_all(root).unwrap();
     }
 
     fn unique_temp_dir() -> PathBuf {

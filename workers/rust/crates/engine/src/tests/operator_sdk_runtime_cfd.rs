@@ -6,12 +6,12 @@ fn runs_cfd_diagnostics_operator_through_sdk_registry() {
         "extract.stokes_flow_result_diagnostics",
         serde_json::json!({
             "nodes": [
-                { "id": "n0", "velocity_magnitude": 0.0, "pressure": 1.0 },
-                { "id": "n1", "velocity_magnitude": 2.0, "pressure": -3.0 }
+                { "id": "n0", "vx": 0.0, "vy": 0.0, "p": 1.0 },
+                { "id": "n1", "vx": 1.2, "vy": 1.6, "p": -3.0 }
             ],
             "elements": [
-                { "id": "f0", "divergence_error": 0.02, "reynolds_number": 5.0, "viscous_dissipation": 0.3 },
-                { "id": "f1", "divergence_error": 0.08, "reynolds_number": 12.0, "viscous_dissipation": 0.9 }
+                { "id": "f0", "div_u": 0.02, "reynolds": 5.0, "dissipation": 0.3 },
+                { "id": "f1", "div_u": 0.08, "reynolds": 12.0, "dissipation": 0.9 }
             ]
         }),
         serde_json::Value::Null,
@@ -151,5 +151,70 @@ fn blocks_cfd_quality_when_required_metrics_are_missing() {
         blocking_terms
             .iter()
             .any(|term| term["field"].as_str() == Some("cfd_reynolds_number_peak"))
+    );
+}
+
+#[test]
+fn scores_cfd_quality_with_enabled_terms_and_alias_fields() {
+    let quality = run_transform_operator(
+        "transform.score_cfd_quality",
+        serde_json::json!({
+            "div_u_peak": 0.02,
+            "re_peak": 5.0,
+            "dissipation_total": 0.5,
+            "speed_span": 1.5,
+            "p_span": 3.0
+        }),
+        serde_json::json!({
+            "enabled_terms": [
+                "cfd_divergence_error_peak",
+                "cfd_reynolds_number_peak",
+                "cfd_viscous_dissipation_total",
+                "cfd_velocity_span",
+                "cfd_pressure_span"
+            ],
+            "targets": {
+                "cfd_divergence_error_peak": 0.04,
+                "cfd_reynolds_number_peak": 10.0,
+                "cfd_viscous_dissipation_total": 1.0,
+                "cfd_velocity_span": 2.0,
+                "cfd_pressure_span": 5.0
+            },
+            "weights": {
+                "cfd_divergence_error_peak": 4.0,
+                "cfd_reynolds_number_peak": 2.0,
+                "cfd_viscous_dissipation_total": 1.0,
+                "cfd_velocity_span": 0.5,
+                "cfd_pressure_span": 0.5
+            },
+            "max_ready_score": 8.0
+        }),
+    )
+    .expect("transform.score_cfd_quality should score selected alias fields");
+
+    assert_eq!(quality["cfd_quality_ready"].as_bool(), Some(true));
+    assert_eq!(quality["cfd_quality_term_count"].as_u64(), Some(5));
+    assert_eq!(
+        quality["cfd_quality_missing_metric_count"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        quality["cfd_quality_divergence_error_peak"].as_f64(),
+        Some(0.02)
+    );
+    assert_eq!(
+        quality["cfd_quality_reynolds_number_peak"].as_f64(),
+        Some(5.0)
+    );
+    assert_eq!(
+        quality["cfd_quality_viscous_dissipation_total"].as_f64(),
+        Some(0.5)
+    );
+    assert_eq!(quality["cfd_quality_velocity_span"].as_f64(), Some(1.5));
+    assert_eq!(quality["cfd_quality_pressure_span"].as_f64(), Some(3.0));
+    assert_eq!(quality["cfd_quality_score"].as_f64(), Some(4.175));
+    assert_eq!(
+        quality["cfd_quality_dominant_term"]["field"].as_str(),
+        Some("cfd_divergence_error_peak")
     );
 }

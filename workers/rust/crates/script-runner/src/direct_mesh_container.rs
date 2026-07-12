@@ -169,17 +169,9 @@ fn run_container_benchmark(run_index: usize, options: &Options) -> RunnerResult<
         OsString::from(format!("{}:/artifacts", run_dir.display())),
     ]);
     push_proxy_run_args(&mut args, options);
-    args.extend([
-        OsString::from(&options.image_tag),
-        OsString::from("bash"),
-        OsString::from("-lc"),
-        OsString::from(
-            r#"set -euo pipefail
-/usr/bin/time -f "elapsed_s=%e user_s=%U sys_s=%S max_rss_kib=%M" -o /artifacts/time.txt bash -lc "make test-integration-direct-mesh" 2>&1 | tee /artifacts/test.log
-test "${PIPESTATUS[0]}" -eq 0"#,
-        ),
-    ]);
-    let status = run_status("docker", args, Path::new("."))?;
+    args.push(OsString::from(&options.image_tag));
+    push_container_benchmark_command(&mut args);
+    let status = run_status_with_log("docker", args, Path::new("."), &run_dir.join("test.log"))?;
     if status != 0 {
         return Ok(status);
     }
@@ -443,6 +435,19 @@ fn proxy_pairs(options: &Options) -> Vec<(&'static str, &str)> {
     pairs
 }
 
+fn push_container_benchmark_command(args: &mut Vec<OsString>) {
+    args.extend([
+        OsString::from("/usr/bin/time"),
+        OsString::from("-f"),
+        OsString::from("elapsed_s=%e user_s=%U sys_s=%S max_rss_kib=%M"),
+        OsString::from("-o"),
+        OsString::from("/artifacts/time.txt"),
+        OsString::from("node"),
+        OsString::from("--test"),
+        OsString::from("tests/integration/direct-mesh-gui-smoke.test.mjs"),
+    ]);
+}
+
 fn write_aggregate_json(
     output: &mut File,
     name: &str,
@@ -483,6 +488,26 @@ where
     Ok(status.code().unwrap_or(1) as u8)
 }
 
+fn run_status_with_log<I>(program: &str, args: I, cwd: &Path, log_path: &Path) -> RunnerResult<u8>
+where
+    I: IntoIterator<Item = OsString>,
+{
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .map_err(|error| format!("failed to run {program}: {error}"))?;
+    let mut log = File::create(log_path)
+        .map_err(|error| format!("failed to create {}: {error}", log_path.display()))?;
+    log.write_all(&output.stdout)
+        .map_err(|error| format!("failed to write {}: {error}", log_path.display()))?;
+    log.write_all(&output.stderr)
+        .map_err(|error| format!("failed to write {}: {error}", log_path.display()))?;
+    print!("{}", String::from_utf8_lossy(&output.stdout));
+    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+    Ok(output.status.code().unwrap_or(1) as u8)
+}
+
 fn next_arg(iter: &mut impl Iterator<Item = OsString>, name: &str) -> RunnerResult<String> {
     iter.next()
         .and_then(|value| value.into_string().ok())
@@ -516,4 +541,25 @@ fn print_usage() {
         "Usage:\n  ./scripts/kyuubiki direct-mesh-benchmark-container [options]\n\n\
 Options:\n  --repeat <count>\n  --output-dir <path>\n  --image-tag <tag>\n  --base-image <image>\n  --skip-build\n  --keep-containers\n"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn container_benchmark_command_avoids_shell_and_make() {
+        let mut args = Vec::new();
+        push_container_benchmark_command(&mut args);
+        let rendered = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert!(!rendered.iter().any(|arg| arg == "bash" || arg == "sh"));
+        assert!(!rendered.iter().any(|arg| arg == "make"));
+        assert_eq!(rendered.first().map(String::as_str), Some("/usr/bin/time"));
+        assert!(rendered.contains(&"node".to_string()));
+        assert!(rendered.contains(&"tests/integration/direct-mesh-gui-smoke.test.mjs".to_string()));
+    }
 }
