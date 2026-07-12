@@ -61,8 +61,12 @@ If you want the agent to survive your shell session:
 ```bash
 cd ~/kyuubiki
 screen -S kyuubiki-agent-5001 -X quit >/dev/null 2>&1 || true
-screen -dmS kyuubiki-agent-5001 sh -lc './scripts/kyuubiki agent -- --port 5001'
+screen -dmS kyuubiki-agent-5001 env KYUUBIKI_AGENT_HOST=0.0.0.0 cargo run --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli -- agent --port 5001
 ```
+
+This is only the legacy manual pilot path. Prefer Installer-managed remote
+startup for repeatable nodes; it uses the same no-nested-shell `screen env
+cargo ...` shape.
 
 Laptop-side local orchestrator changes:
 

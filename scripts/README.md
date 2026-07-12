@@ -365,8 +365,9 @@ Useful smoke wrappers:
   loading smoke. The default report is
   `tmp/operator-package-dynamic-smoke.json`; override with `OUT=tmp/name.json`.
 - `make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json`
-  Validates the retained dynamic-smoke report schema, stage order, stage
-  success, and repo-local evidence paths.
+  Validates the retained dynamic-smoke report schema, package/operator
+  summary, stage order, stage descriptions, repo-local working directories,
+  reproducible command vectors, stage success, and repo-local evidence paths.
 - `make check-operator-package-dynamic-smoke-contract`
   Validates the shared dynamic-smoke schema and fixture without requiring a
   freshly generated `tmp/` report.

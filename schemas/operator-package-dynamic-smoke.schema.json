@@ -8,6 +8,10 @@
     "schema_version",
     "generated_at",
     "ok",
+    "package_id",
+    "operator_ids",
+    "host_version",
+    "sdk_api_version",
     "template_manifest",
     "package_manifest",
     "preflight_report",
@@ -27,6 +31,26 @@
     },
     "ok": {
       "const": true
+    },
+    "package_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "host_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sdk_api_version": {
+      "type": "string",
+      "minLength": 1
     },
     "template_manifest": {
       "$ref": "#/$defs/repoPath"
@@ -64,16 +88,32 @@
   "$defs": {
     "repoPath": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
     },
     "passingStage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "status", "ok"],
+      "required": ["id", "description", "cwd", "command", "status", "ok"],
       "properties": {
         "id": {
           "type": "string",
           "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cwd": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "status": {
           "const": 0

@@ -7,10 +7,16 @@ Wants=network-online.target
 Type=simple
 User={{KYUUBIKI_SERVICE_USER}}
 Environment=KYUUBIKI_HOME={{KYUUBIKI_INSTALL_ROOT}}
-ExecStart=/bin/sh -lc '. "$KYUUBIKI_HOME/deploy/kyuubiki-agent.env" 2>/dev/null || true; cd "$KYUUBIKI_HOME"; exec ./workers/rust/target/debug/kyuubiki-cli agent --host 0.0.0.0 --port "${KYUUBIKI_AGENT_PORT:-5001}" --agent-id "${KYUUBIKI_AGENT_ID:-kyuubiki-lab-solver}" --advertise-host "${KYUUBIKI_AGENT_ADVERTISE_HOST:-kyuubiki-lab.local}" ${KYUUBIKI_ORCHESTRATOR_URL:+--orchestrator-url "$KYUUBIKI_ORCHESTRATOR_URL"} ${KYUUBIKI_CLUSTER_API_TOKEN:+--cluster-api-token "$KYUUBIKI_CLUSTER_API_TOKEN"} ${KYUUBIKI_AGENT_FINGERPRINT:+--agent-fingerprint "$KYUUBIKI_AGENT_FINGERPRINT"}'
+Environment=RUST_LOG=info
+Environment=KYUUBIKI_AGENT_HOST=0.0.0.0
+Environment=KYUUBIKI_AGENT_PORT=5001
+Environment=KYUUBIKI_AGENT_ID=kyuubiki-lab-solver
+Environment=KYUUBIKI_AGENT_ADVERTISE_HOST=kyuubiki-lab.local
+EnvironmentFile=-{{KYUUBIKI_INSTALL_ROOT}}/deploy/kyuubiki-agent.env
+WorkingDirectory={{KYUUBIKI_INSTALL_ROOT}}
+ExecStart={{KYUUBIKI_INSTALL_ROOT}}/workers/rust/target/debug/kyuubiki-cli agent
 Restart=always
 RestartSec=2
-Environment=RUST_LOG=info
 
 [Install]
 WantedBy=multi-user.target

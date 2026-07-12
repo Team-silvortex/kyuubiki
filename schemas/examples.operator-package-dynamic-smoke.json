@@ -3,6 +3,12 @@
   "schema_version": "kyuubiki.operator-package-dynamic-smoke/v1",
   "generated_at": "2026-07-12T00:00:00Z",
   "ok": true,
+  "package_id": "operator.template.summary",
+  "operator_ids": [
+    "extract.template_summary"
+  ],
+  "host_version": "1.18.0",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
   "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
   "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
   "preflight_report": "tmp/operator-package-dynamic-preflight.json",
@@ -10,21 +16,66 @@
   "stages": [
     {
       "id": "template_tests",
+      "description": "Run template operator crate tests and descriptor readiness checks.",
+      "cwd": ".",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "workers/rust/templates/operator-crate-template/Cargo.toml",
+        "--",
+        "--nocapture"
+      ],
       "status": 0,
       "ok": true
     },
     {
       "id": "strict_preflight",
+      "description": "Run strict read-only package preflight with rejection and readiness-warning gates.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "kyuubiki-installer",
+        "--",
+        "operator-package-preflight",
+        "templates",
+        "--out",
+        "../../tmp/operator-package-dynamic-preflight.json",
+        "--fail-on-rejected",
+        "--fail-on-readiness-warnings"
+      ],
       "status": 0,
       "ok": true
     },
     {
       "id": "template_cdylib_build",
+      "description": "Build the template operator dynamic library for host loading.",
+      "cwd": ".",
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "workers/rust/templates/operator-crate-template/Cargo.toml"
+      ],
       "status": 0,
       "ok": true
     },
     {
       "id": "engine_dynamic_host_load",
+      "description": "Run the engine dynamic host test that loads and dispatches the template operator.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-engine",
+        "loads_prebuilt_template_cdylib_through_dynamic_host",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
       "status": 0,
       "ok": true
     }

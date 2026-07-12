@@ -153,6 +153,8 @@ impl AgentConfig {
     }
 
     fn apply_env_defaults(&mut self) {
+        fill_string_from_env(&mut self.host, "KYUUBIKI_AGENT_HOST");
+        fill_u16_from_env(&mut self.port, "KYUUBIKI_AGENT_PORT");
         fill_from_env(&mut self.agent_id, "KYUUBIKI_AGENT_ID");
         fill_from_env(&mut self.advertise_host, "KYUUBIKI_AGENT_ADVERTISE_HOST");
         fill_from_env(&mut self.orchestrator_url, "KYUUBIKI_ORCHESTRATOR_URL");
@@ -170,6 +172,10 @@ impl AgentConfig {
         fill_from_env(
             &mut self.operator_packages_root,
             "KYUUBIKI_OPERATOR_PACKAGES_ROOT",
+        );
+        fill_u64_from_env(
+            &mut self.register_interval_ms,
+            "KYUUBIKI_AGENT_REGISTER_INTERVAL_MS",
         );
 
         if self.operator_activated_package_count == 0 {
@@ -207,6 +213,31 @@ fn assign_next_option<'a>(
 fn fill_from_env(target: &mut Option<String>, key: &str) {
     if target.is_none() {
         *target = std::env::var(key).ok();
+    }
+}
+
+fn fill_string_from_env(target: &mut String, key: &str) {
+    if let Ok(value) = std::env::var(key) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            *target = trimmed.to_string();
+        }
+    }
+}
+
+fn fill_u16_from_env(target: &mut u16, key: &str) {
+    if let Ok(value) = std::env::var(key)
+        && let Ok(parsed) = value.trim().parse()
+    {
+        *target = parsed;
+    }
+}
+
+fn fill_u64_from_env(target: &mut u64, key: &str) {
+    if let Ok(value) = std::env::var(key)
+        && let Ok(parsed) = value.trim().parse()
+    {
+        *target = parsed;
     }
 }
 

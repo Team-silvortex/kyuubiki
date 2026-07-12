@@ -350,8 +350,10 @@ loading smoke. It writes
 `OUT=tmp/custom.json`. Use it when changing the SDK host, package manifest,
 template, or dynamic-library activation path.
 `make check-operator-package-dynamic-smoke` validates the retained report
-schema, stage order, stage success, and repo-local evidence paths. The retained
-report contract is also documented as
+schema, package/operator summary, stage order, stage descriptions,
+repo-local working directories, reproducible command vectors, stage success,
+and repo-local evidence paths.
+The retained report contract is also documented as
 [operator-package-dynamic-smoke.schema.json](../schemas/operator-package-dynamic-smoke.schema.json)
 with a fixture at
 [examples.operator-package-dynamic-smoke.json](../schemas/examples.operator-package-dynamic-smoke.json).

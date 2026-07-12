@@ -86,7 +86,8 @@ README.
 - `operator-package-dynamic-smoke.schema.json` is for the retained
   end-to-end external operator package smoke report, including template tests,
   strict package preflight, template `cdylib` build, and engine dynamic host
-  loading stage evidence
+  loading stage evidence with per-stage descriptions, working directories, and
+  command vectors
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
@@ -144,7 +145,8 @@ README.
   runtime readiness-blocked recovery path where the next action is
   `resolve_blocked_cases`, not ordinary failed-case retry
 - `examples.operator-package-dynamic-smoke.json` is the retained report fixture
-  for validating external operator package dynamic-smoke stage order and
+  for validating external operator package dynamic-smoke stage order,
+  diagnostic working directories and commands, package/operator summary, and
   evidence paths
 
 They are intentionally lightweight and JSON-first. They now serve four

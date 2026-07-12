@@ -127,9 +127,11 @@ tests, strict preflight, template `cdylib` build, and the engine dynamic host
 test that loads and dispatches the template operator. It writes
 `tmp/operator-package-dynamic-smoke.json` by default and accepts
 `OUT=tmp/name.json` when CI should retain a named artifact.
-The checker validates the retained dynamic-smoke report schema, canonical stage
-order, stage success, repo-local evidence paths, and the matching shared schema
-fixture under `schemas/`.
+The checker validates the retained dynamic-smoke report schema,
+package/operator summary, canonical stage order, stage descriptions,
+repo-local working directories, reproducible command vectors, stage success,
+repo-local evidence paths, and the matching shared schema fixture under
+`schemas/`.
 The contract target runs the same schema/example fixture checks without
 requiring a freshly generated `tmp/` report, so architecture checks can catch
 contract drift before the dynamic host smoke runs.

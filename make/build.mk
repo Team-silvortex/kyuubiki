@@ -26,7 +26,7 @@ operator-package-preflight:
 
 operator-package-dynamic-smoke:
 	@$(ENTRYPOINT) operator-package-dynamic-smoke $(if $(OUT),--out $(abspath $(OUT)),)
-	@$(MAKE) check-operator-package-dynamic-smoke IN=$${OUT:-tmp/operator-package-dynamic-smoke.json}
+	@$(MAKE) check-operator-package-dynamic-smoke $(if $(OUT),IN=$(abspath $(OUT)),IN=tmp/operator-package-dynamic-smoke.json)
 
 check-operator-package-dynamic-smoke:
 	@node ./scripts/check-operator-package-dynamic-smoke.mjs --self-test

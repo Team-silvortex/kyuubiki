@@ -62,10 +62,39 @@ function requireRepoPath(value, context, errors) {
   if (typeof value !== "string") {
     return;
   }
-  const relative = path.relative(repoRoot, path.resolve(value));
+  if (path.isAbsolute(value) || value.includes(repoRoot)) {
+    errors.push(`${context} must be a repo-relative path`);
+    return;
+  }
+  const relative = path.relative(repoRoot, path.resolve(repoRoot, value));
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     errors.push(`${context} must stay inside the repository`);
   }
+}
+
+function requireStringArray(value, context, errors) {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${context} must be a non-empty string array`);
+    return;
+  }
+  value.forEach((item, index) => {
+    requireString(item, `${context}[${index}]`, errors);
+  });
+}
+
+function requirePortableCommand(value, context, errors) {
+  requireStringArray(value, context, errors);
+  if (!Array.isArray(value)) {
+    return;
+  }
+  value.forEach((item, index) => {
+    if (typeof item !== "string") {
+      return;
+    }
+    if (path.isAbsolute(item) || item.includes(repoRoot)) {
+      errors.push(`${context}[${index}] must not contain local absolute paths`);
+    }
+  });
 }
 
 function dynamicSmokeErrors(report, context) {
@@ -77,6 +106,16 @@ function dynamicSmokeErrors(report, context) {
     errors.push(`${context}: ok must be true`);
   }
   requireString(report.generated_at, `${context}.generated_at`, errors);
+  requireString(report.package_id, `${context}.package_id`, errors);
+  requireString(report.host_version, `${context}.host_version`, errors);
+  requireString(report.sdk_api_version, `${context}.sdk_api_version`, errors);
+  if (!Array.isArray(report.operator_ids) || report.operator_ids.length === 0) {
+    errors.push(`${context}.operator_ids must be a non-empty array`);
+  } else {
+    report.operator_ids.forEach((operatorId, index) => {
+      requireString(operatorId, `${context}.operator_ids[${index}]`, errors);
+    });
+  }
   requireRepoPath(report.template_manifest, `${context}.template_manifest`, errors);
   requireRepoPath(report.package_manifest, `${context}.package_manifest`, errors);
   requireRepoPath(report.preflight_report, `${context}.preflight_report`, errors);
@@ -90,6 +129,9 @@ function dynamicSmokeErrors(report, context) {
     errors.push(`${context}.stages must match the canonical stage order`);
   }
   for (const [index, stage] of report.stages.entries()) {
+    requireString(stage?.description, `${context}.stages[${index}].description`, errors);
+    requireRepoPath(stage?.cwd, `${context}.stages[${index}].cwd`, errors);
+    requirePortableCommand(stage?.command, `${context}.stages[${index}].command`, errors);
     if (stage?.ok !== true || stage?.status !== 0) {
       errors.push(`${context}.stages[${index}] must pass with status 0`);
     }
@@ -116,6 +158,11 @@ function checkSchemaAndExample() {
   if (stageIds?.join("\n") !== requiredStages.join("\n")) {
     fail(`${schemaPath}: stage prefixItems must match canonical stage order`);
   }
+  for (const requiredProperty of ["description", "cwd", "command"]) {
+    if (!schema.$defs?.passingStage?.required?.includes(requiredProperty)) {
+      fail(`${schemaPath}: passingStage must require ${requiredProperty}`);
+    }
+  }
   checkDynamicSmoke(readRepoJson(examplePath), examplePath);
   const readme = readRepoText(schemasReadmePath);
   for (const expected of [schemaPath.split("/").at(-1), examplePath.split("/").at(-1)]) {
@@ -126,15 +173,27 @@ function checkSchemaAndExample() {
 }
 
 function runSelfTest() {
+  const stageFixture = (id) => ({
+    id,
+    description: `${id} diagnostic stage`,
+    cwd: ".",
+    command: ["echo", id],
+    status: 0,
+    ok: true,
+  });
   const sample = {
     schema_version: schemaVersion,
     generated_at: "2026-07-12T00:00:00Z",
     ok: true,
-    template_manifest: path.join(repoRoot, "workers/rust/templates/operator-crate-template/Cargo.toml"),
-    package_manifest: path.join(repoRoot, "workers/rust/templates/operator-crate-template/kyuubiki-operator.json"),
-    preflight_report: path.join(repoRoot, "tmp/operator-package-dynamic-preflight.json"),
-    dynamic_library: path.join(repoRoot, "workers/rust/templates/operator-crate-template/target/debug/libkyuubiki_operator_template.dylib"),
-    stages: requiredStages.map((id) => ({ id, status: 0, ok: true })),
+    package_id: "operator.template.summary",
+    operator_ids: ["extract.template_summary"],
+    host_version: "1.18.0",
+    sdk_api_version: "kyuubiki.operator-sdk/v1",
+    template_manifest: "workers/rust/templates/operator-crate-template/Cargo.toml",
+    package_manifest: "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+    preflight_report: "tmp/operator-package-dynamic-preflight.json",
+    dynamic_library: "workers/rust/templates/operator-crate-template/target/debug/libkyuubiki_operator_template.dylib",
+    stages: requiredStages.map(stageFixture),
   };
   checkDynamicSmoke(sample, "self-test");
   checkSchemaAndExample();
@@ -150,6 +209,45 @@ function runSelfTest() {
   };
   if (!dynamicSmokeErrors(failedStage, "self-test").some((error) => error.includes("status 0"))) {
     fail("self-test expected failed stage to fail");
+  }
+  const missingCommand = {
+    ...sample,
+    stages: sample.stages.map((stage, index) =>
+      index === 2 ? { ...stage, command: [] } : stage,
+    ),
+  };
+  if (
+    !dynamicSmokeErrors(missingCommand, "self-test").some((error) =>
+      error.includes("command"),
+    )
+  ) {
+    fail("self-test expected missing command to fail");
+  }
+  const absoluteCommand = {
+    ...sample,
+    stages: sample.stages.map((stage, index) =>
+      index === 0 ? { ...stage, command: ["cargo", path.join(repoRoot, "Cargo.toml")] } : stage,
+    ),
+  };
+  if (
+    !dynamicSmokeErrors(absoluteCommand, "self-test").some((error) =>
+      error.includes("absolute paths"),
+    )
+  ) {
+    fail("self-test expected absolute command path to fail");
+  }
+  const absoluteCwd = {
+    ...sample,
+    stages: sample.stages.map((stage, index) =>
+      index === 0 ? { ...stage, cwd: repoRoot } : stage,
+    ),
+  };
+  if (
+    !dynamicSmokeErrors(absoluteCwd, "self-test").some((error) =>
+      error.includes("repo-relative path"),
+    )
+  ) {
+    fail("self-test expected absolute cwd to fail");
   }
   console.log("operator package dynamic smoke check self-test passed");
 }

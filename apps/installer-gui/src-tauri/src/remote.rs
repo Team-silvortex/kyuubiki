@@ -144,13 +144,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
     )?;
     let certificate_env = prepared_certificate
         .as_ref()
-        .map(|material| {
-            material
-                .remote_env_exports
-                .iter()
-                .map(|(key, value)| format!("{key}={} ", shell_escape(value)))
-                .collect::<String>()
-        })
+        .map(|material| material.remote_env_exports.clone())
         .unwrap_or_default();
     let remote_command = match control_mode.as_str() {
         "offline_mesh" => build_remote_mesh_agent_command(
@@ -161,7 +155,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             payload.agent_port,
             cluster_id.as_deref(),
             &peer_endpoints,
-            &certificate_env,
+            certificate_env,
         ),
         _ => build_remote_orchestrated_agent_command(
             &remote_workspace,
@@ -170,7 +164,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             &agent_id,
             &advertise_host,
             payload.agent_port,
-            &certificate_env,
+            certificate_env,
         ),
     };
     let started = run_remote_ssh_command(payload.ssh_port, &target, &remote_command)?;
@@ -193,13 +187,24 @@ fn build_remote_orchestrated_agent_command(
     agent_id: &str,
     advertise_host: &str,
     agent_port: u16,
-    certificate_env: &str,
+    certificate_env: Vec<(String, String)>,
 ) -> String {
+    let env_args = remote_env_args(certificate_env.into_iter().chain([
+        (
+            "KYUUBIKI_ORCHESTRATOR_URL".to_string(),
+            orchestrator_url.to_string(),
+        ),
+        ("KYUUBIKI_AGENT_ID".to_string(), agent_id.to_string()),
+        (
+            "KYUUBIKI_AGENT_ADVERTISE_HOST".to_string(),
+            advertise_host.to_string(),
+        ),
+    ]));
     format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {certificate_env}KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
+        "cd {workspace}/workers/rust && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} env {env_args} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}",
         workspace = shell_escape(remote_workspace),
         screen = shell_escape(screen_name),
-        certificate_env = certificate_env,
+        env_args = env_args,
         orchestrator = shell_escape(orchestrator_url),
         agent_id = shell_escape(agent_id),
         advertise_host = shell_escape(advertise_host),
@@ -214,7 +219,7 @@ fn build_remote_mesh_agent_command(
     agent_port: u16,
     cluster_id: Option<&str>,
     peer_endpoints: &[String],
-    certificate_env: &str,
+    certificate_env: Vec<(String, String)>,
 ) -> String {
     let cluster_flag = cluster_id
         .map(|value| format!(" --cluster-id {}", shell_escape(value)))
@@ -223,21 +228,39 @@ fn build_remote_mesh_agent_command(
         .iter()
         .map(|value| format!(" --peer {}", shell_escape(value)))
         .collect::<String>();
-    let cluster_env = cluster_id
-        .map(|value| format!("KYUUBIKI_AGENT_CLUSTER_ID={} ", shell_escape(value)))
-        .unwrap_or_default();
+    let mut env_pairs = certificate_env;
+    if let Some(value) = cluster_id {
+        env_pairs.push(("KYUUBIKI_AGENT_CLUSTER_ID".to_string(), value.to_string()));
+    }
+    env_pairs.extend([
+        ("KYUUBIKI_AGENT_ID".to_string(), agent_id.to_string()),
+        (
+            "KYUUBIKI_AGENT_ADVERTISE_HOST".to_string(),
+            advertise_host.to_string(),
+        ),
+    ]);
+    let env_args = remote_env_args(env_pairs);
     format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {cluster_env}{certificate_env}KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host}{cluster_flag}{peer_flags}'",
+        "cd {workspace}/workers/rust && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} env {env_args} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host}{cluster_flag}{peer_flags}",
         workspace = shell_escape(remote_workspace),
         screen = shell_escape(screen_name),
-        cluster_env = cluster_env,
-        certificate_env = certificate_env,
+        env_args = env_args,
         agent_id = shell_escape(agent_id),
         advertise_host = shell_escape(advertise_host),
         port = agent_port,
         cluster_flag = cluster_flag,
         peer_flags = peer_flags
     )
+}
+fn remote_env_args<I>(pairs: I) -> String
+where
+    I: IntoIterator<Item = (String, String)>,
+{
+    pairs
+        .into_iter()
+        .map(|(key, value)| format!("{key}={}", shell_escape(&value)))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 pub(crate) fn validate_target_host(value: &str) -> Result<String, String> {
     let host = validate_host_token(value, "target host")?;
@@ -522,5 +545,46 @@ mod tests {
         unsafe {
             env::remove_var(REMOTE_ALLOWED_HOSTS_ENV);
         }
+    }
+
+    #[test]
+    fn remote_orchestrated_agent_command_avoids_nested_shell() {
+        let command = build_remote_orchestrated_agent_command(
+            "/opt/kyuubiki",
+            "kyuubiki_remote_agent_5001",
+            "http://127.0.0.1:4000",
+            "solver-a",
+            "solver-a.local",
+            5001,
+            vec![(
+                "KYUUBIKI_AGENT_CERT_PATH".to_string(),
+                "/opt/kyuubiki/.kyuubiki/certs/solver-a.crt".to_string(),
+            )],
+        );
+
+        assert!(!command.contains("sh -lc"));
+        assert!(command.contains("screen -dmS 'kyuubiki_remote_agent_5001' env "));
+        assert!(command.contains("KYUUBIKI_AGENT_CERT_PATH="));
+        assert!(command.contains("cargo run -p kyuubiki-cli -- agent"));
+    }
+
+    #[test]
+    fn remote_mesh_agent_command_avoids_nested_shell() {
+        let command = build_remote_mesh_agent_command(
+            "/opt/kyuubiki",
+            "kyuubiki_remote_agent_5002",
+            "mesh-a",
+            "mesh-a.local",
+            5002,
+            Some("lan-a"),
+            &["10.0.0.12:5001".to_string()],
+            Vec::new(),
+        );
+
+        assert!(!command.contains("sh -lc"));
+        assert!(command.contains("screen -dmS 'kyuubiki_remote_agent_5002' env "));
+        assert!(command.contains("KYUUBIKI_AGENT_CLUSTER_ID='lan-a'"));
+        assert!(command.contains("--cluster-id 'lan-a'"));
+        assert!(command.contains("--peer '10.0.0.12:5001'"));
     }
 }
