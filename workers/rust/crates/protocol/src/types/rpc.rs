@@ -112,6 +112,8 @@ pub enum RpcMethod {
     SolveHeatPlaneTriangle2d,
     #[serde(rename = "solve_heat_plane_quad_2d")]
     SolveHeatPlaneQuad2d,
+    #[serde(rename = "solve_stokes_flow_plane_triangle_2d")]
+    SolveStokesFlowPlaneTriangle2d,
     #[serde(rename = "solve_stokes_flow_plane_quad_2d")]
     SolveStokesFlowPlaneQuad2d,
     #[serde(rename = "solve_thermal_truss_2d")]

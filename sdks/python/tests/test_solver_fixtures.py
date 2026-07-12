@@ -25,6 +25,10 @@ class SolverFixturesTest(unittest.TestCase):
         self.assertEqual(methods["solve_heat_bar_1d"], "heat_bar_1d")
         self.assertEqual(methods["solve_spring_2d"], "spring_2d")
         self.assertEqual(methods["solve_stokes_flow_plane_quad_2d"], "stokes_flow_quad_2d")
+        self.assertEqual(
+            methods["solve_stokes_flow_plane_triangle_2d"],
+            "stokes_flow_triangle_2d",
+        )
 
     def test_payloads_are_non_empty(self) -> None:
         payloads = minimal_solver_payloads()

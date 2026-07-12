@@ -330,7 +330,24 @@ pub struct StokesFlowPlaneQuadElementInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StokesFlowPlaneTriangleElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub thickness: f64,
+    pub viscosity: f64,
+    pub density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveStokesFlowPlaneQuad2dRequest {
     pub nodes: Vec<StokesFlowPlaneNodeInput>,
     pub elements: Vec<StokesFlowPlaneQuadElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveStokesFlowPlaneTriangle2dRequest {
+    pub nodes: Vec<StokesFlowPlaneNodeInput>,
+    pub elements: Vec<StokesFlowPlaneTriangleElementInput>,
 }

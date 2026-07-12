@@ -71,6 +71,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/heat-plane-quad-2d/jobs",
     },
     DirectFemRoute {
+        action: "solve_stokes_flow_plane_triangle_2d",
+        route: "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_stokes_flow_plane_quad_2d",
         route: "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
     },
@@ -271,6 +275,10 @@ mod tests {
             Some("/api/v1/fem/thermal-frame-3d/jobs")
         );
         assert_eq!(
+            direct_fem_submit_route("solve_stokes_flow_plane_triangle_2d"),
+            Some("/api/v1/fem/stokes-flow-plane-triangle-2d/jobs")
+        );
+        assert_eq!(
             direct_fem_submit_route("solve_stokes_flow_plane_quad_2d"),
             Some("/api/v1/fem/stokes-flow-plane-quad-2d/jobs")
         );
@@ -293,7 +301,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 39);
+        assert_eq!(routes.len(), 40);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 

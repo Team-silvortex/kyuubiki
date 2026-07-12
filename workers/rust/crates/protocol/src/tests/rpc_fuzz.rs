@@ -85,6 +85,7 @@ fn pick_method_name(rng: &mut FuzzRng) -> String {
         "solve_frame_3d",
         "solve_heat_plane_quad_2d",
         "solve_stokes_flow_plane_quad_2d",
+        "solve_stokes_flow_plane_triangle_2d",
         "solve_not_real",
     ];
     if rng.one_in(5) {

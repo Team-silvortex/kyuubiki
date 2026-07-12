@@ -59,6 +59,63 @@
         "screening_divergence_tolerance_1e-10",
         "single_quad_patch"
       ]
+    },
+    {
+      "operator_id": "solve.stokes_flow_triangle_2d",
+      "benchmark_template": "stokes-plane-triangle",
+      "domain": "cfd",
+      "coverage_level": "review",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+        ],
+        "reliability_suite": "stokes_flow_triangle_reliability",
+        "review": {
+          "assumptions": [
+            "stokes_only",
+            "triangle_screening_patch",
+            "low_reynolds_number"
+          ],
+          "boundary_checks": [
+            "fixed_wall_velocity",
+            "fixed_reference_pressure",
+            "body_force_response",
+            "heterogeneous_viscosity_average",
+            "degenerate_triangle_rejection"
+          ],
+          "diagnostics": [
+            "velocity_components",
+            "pressure",
+            "divergence_error",
+            "reynolds_number",
+            "viscous_dissipation",
+            "non_finite_input_rejection",
+            "non_finite_material_input_rejection",
+            "missing_node_reference_rejection"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+          ],
+          "scope_notes": [
+            "docs/operator-reliability.md#cfd-stokes-screening-scope"
+          ],
+          "tolerance_notes": [
+            "docs/operator-reliability.md#cfd-stokes-divergence-tolerance",
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+          ]
+        }
+      },
+      "limits": [
+        "stokes_only",
+        "screening_only",
+        "triangle_screening_baseline",
+        "heterogeneous_viscosity_fixture",
+        "screening_divergence_tolerance_1e-10",
+        "single_triangle_patch"
+      ]
     }
   ]
 }

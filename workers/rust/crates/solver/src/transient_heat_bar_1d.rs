@@ -208,11 +208,26 @@ fn validate_request(request: &SolveTransientHeatBar1dRequest) -> Result<(), Stri
     if request.elements.is_empty() {
         return Err("transient heat bar must define at least one element".to_string());
     }
-    if request.time_step <= 0.0 {
+    if request.time_step <= 0.0 || !request.time_step.is_finite() {
         return Err("transient heat bar time_step must be positive".to_string());
     }
     if request.steps == 0 {
         return Err("transient heat bar steps must be positive".to_string());
+    }
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() {
+            return Err(format!("transient heat bar node {index} x must be finite"));
+        }
+        if !node.temperature.is_finite() {
+            return Err(format!(
+                "transient heat bar node {index} temperature must be finite"
+            ));
+        }
+        if !node.heat_load.is_finite() {
+            return Err(format!(
+                "transient heat bar node {index} heat_load must be finite"
+            ));
+        }
     }
     for element in &request.elements {
         validate_element(request, element)?;
@@ -243,13 +258,21 @@ fn validate_element(
             element.id
         ));
     }
-    if element.area <= 0.0 || element.conductivity <= 0.0 {
+    if element.area <= 0.0
+        || element.conductivity <= 0.0
+        || !element.area.is_finite()
+        || !element.conductivity.is_finite()
+    {
         return Err(format!(
             "transient heat bar element {} must have positive area and conductivity",
             element.id
         ));
     }
-    if element.density <= 0.0 || element.specific_heat <= 0.0 {
+    if element.density <= 0.0
+        || element.specific_heat <= 0.0
+        || !element.density.is_finite()
+        || !element.specific_heat.is_finite()
+    {
         return Err(format!(
             "transient heat bar element {} must have positive density and specific_heat",
             element.id

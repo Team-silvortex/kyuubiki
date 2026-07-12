@@ -62,6 +62,9 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         BenchmarkWorkload::MagnetostaticPlaneQuad2d(request) => {
             payload("solve.magnetostatic_plane_quad_2d", request)
         }
+        BenchmarkWorkload::StokesFlowPlaneTriangle2d(request) => {
+            payload("solve.stokes_flow_triangle_2d", request)
+        }
         BenchmarkWorkload::StokesFlowPlaneQuad2d(request) => {
             payload("solve.stokes_flow_quad_2d", request)
         }

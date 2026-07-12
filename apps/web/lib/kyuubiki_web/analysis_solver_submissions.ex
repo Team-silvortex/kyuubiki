@@ -110,6 +110,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_stokes_flow_plane_quad_2d"
       )
 
+  def submit_stokes_flow_plane_triangle_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_stokes_flow_plane_triangle_2d/1,
+        "solve_stokes_flow_plane_triangle_2d"
+      )
+
   def submit_thermal_truss_2d(params),
     do:
       submit_solver_job(

@@ -119,7 +119,11 @@ function validateReviewEvidence(entry, context) {
 }
 
 function validateStokesReviewEvidence(entry, context) {
-  if (entry.operator_id !== "solve.stokes_flow_quad_2d") {
+  const stokesOperators = new Set([
+    "solve.stokes_flow_quad_2d",
+    "solve.stokes_flow_triangle_2d",
+  ]);
+  if (!stokesOperators.has(entry.operator_id)) {
     return;
   }
   const review = entry.evidence.review;

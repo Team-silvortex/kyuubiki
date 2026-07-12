@@ -3,8 +3,9 @@ use kyuubiki_protocol::{
     ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
     ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
     SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest, StokesFlowPlaneNodeInput,
-    StokesFlowPlaneQuadElementInput,
+    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
+    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
 
 #[test]
@@ -16,6 +17,22 @@ fn handles_stokes_flow_plane_quad_2d_rpc_requests() {
         serde_json::from_value(final_response.result.expect("solver result"))
             .expect("stokes result");
     assert_eq!(result.nodes.len(), 4);
+    assert_eq!(result.elements.len(), 1);
+    assert!(result.max_velocity > 0.0);
+    assert!(result.max_reynolds_number >= 0.0);
+}
+
+#[test]
+fn handles_stokes_flow_plane_triangle_2d_rpc_requests() {
+    let final_response = execute(
+        RpcMethod::SolveStokesFlowPlaneTriangle2d,
+        stokes_triangle_request(),
+    );
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveStokesFlowPlaneTriangle2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("stokes triangle result");
+    assert_eq!(result.nodes.len(), 3);
     assert_eq!(result.elements.len(), 1);
     assert!(result.max_velocity > 0.0);
     assert!(result.max_reynolds_number >= 0.0);
@@ -153,6 +170,25 @@ fn stokes_request() -> SolveStokesFlowPlaneQuad2dRequest {
             node_j: 1,
             node_k: 2,
             node_l: 3,
+            thickness: 0.1,
+            viscosity: 1.0,
+            density: 1000.0,
+        }],
+    }
+}
+
+fn stokes_triangle_request() -> SolveStokesFlowPlaneTriangle2dRequest {
+    SolveStokesFlowPlaneTriangle2dRequest {
+        nodes: vec![
+            stokes_node("n0", 0.0, 0.0),
+            stokes_node("n1", 1.0, 0.0),
+            stokes_node("n2", 0.0, 1.0),
+        ],
+        elements: vec![StokesFlowPlaneTriangleElementInput {
+            id: "t0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
             thickness: 0.1,
             viscosity: 1.0,
             density: 1000.0,

@@ -36,6 +36,10 @@ _FEM_JOB_PATHS: dict[str, str] = {
     "heat_plane_quad_2d": "/api/v1/fem/heat-plane-quad-2d/jobs",
     "thermal_plane_quad_2d": "/api/v1/fem/thermal-plane-quad-2d/jobs",
     "electrostatic_plane_quad_2d": "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
+    "stokes_flow_triangle_2d": "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+    "stokes_flow_plane_triangle_2d": "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+    "stokes_flow_quad_2d": "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
+    "stokes_flow_plane_quad_2d": "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
     "truss_3d": "/api/v1/fem/truss-3d/jobs",
     "thermal_truss_3d": "/api/v1/fem/thermal-truss-3d/jobs",
     "frame_3d": "/api/v1/fem/frame-3d/jobs",
@@ -45,6 +49,8 @@ _FEM_JOB_PATHS: dict[str, str] = {
 
 _SOLVE_KIND_ALIASES: dict[str, str] = {
     "axial_bar_1d": "bar_1d",
+    "stokes_flow_plane_triangle_2d": "stokes_flow_triangle_2d",
+    "stokes_flow_plane_quad_2d": "stokes_flow_quad_2d",
 }
 
 

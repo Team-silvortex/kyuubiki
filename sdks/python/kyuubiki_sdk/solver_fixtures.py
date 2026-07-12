@@ -13,7 +13,12 @@ def solver_fixture_rpc_methods() -> dict[str, str]:
     """Return RPC method to solve-kind mappings for available fixtures."""
     return {
         "solve_stokes_flow_plane_quad_2d": "stokes_flow_quad_2d",
-        **{f"solve_{kind}": kind for kind in _PAYLOADS if kind != "stokes_flow_quad_2d"},
+        "solve_stokes_flow_plane_triangle_2d": "stokes_flow_triangle_2d",
+        **{
+            f"solve_{kind}": kind
+            for kind in _PAYLOADS
+            if kind not in {"stokes_flow_quad_2d", "stokes_flow_triangle_2d"}
+        },
     }
 
 
@@ -339,6 +344,14 @@ _PAYLOADS = {
             {"id": "n3", "x": 0.0, "y": 1.0, "fix_velocity_x": True, "velocity_x": 0.0, "fix_velocity_y": True, "velocity_y": 0.0, "fix_pressure": False, "pressure": 0.0, "body_force_x": 0.0, "body_force_y": 0.0},
         ],
         "elements": [{"id": "sf0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.1, "viscosity": 2.0, "density": 1.0}],
+    },
+    "stokes_flow_triangle_2d": {
+        "nodes": [
+            {"id": "n0", "x": 0.0, "y": 0.0, "fix_velocity_x": True, "velocity_x": 0.0, "fix_velocity_y": True, "velocity_y": 0.0, "fix_pressure": True, "pressure": 1.0, "body_force_x": 0.0, "body_force_y": 0.0},
+            {"id": "n1", "x": 1.0, "y": 0.0, "fix_velocity_x": False, "velocity_x": 0.0, "fix_velocity_y": True, "velocity_y": 0.0, "fix_pressure": False, "pressure": 0.0, "body_force_x": 2.0, "body_force_y": 0.0},
+            {"id": "n2", "x": 0.0, "y": 1.0, "fix_velocity_x": True, "velocity_x": 0.0, "fix_velocity_y": False, "velocity_y": 0.0, "fix_pressure": False, "pressure": 0.0, "body_force_x": 0.0, "body_force_y": 0.5},
+        ],
+        "elements": [{"id": "sf_tri0", "node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.1, "viscosity": 2.0, "density": 1.0}],
     },
     "solid_tetra_3d": {
         "nodes": [

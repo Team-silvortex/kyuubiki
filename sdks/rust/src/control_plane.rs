@@ -80,6 +80,14 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("modal_frame_3d", "/api/v1/fem/modal-frame-3d/jobs"),
     ("thermal_frame_3d", "/api/v1/fem/thermal-frame-3d/jobs"),
     (
+        "stokes_flow_triangle_2d",
+        "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+    ),
+    (
+        "stokes_flow_plane_triangle_2d",
+        "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+    ),
+    (
         "stokes_flow_quad_2d",
         "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",
     ),

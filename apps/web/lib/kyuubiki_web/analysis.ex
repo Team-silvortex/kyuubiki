@@ -28,6 +28,7 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_heat_plane_triangle_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_heat_plane_quad_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_stokes_flow_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_stokes_flow_plane_triangle_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_truss_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_thermal_truss_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_beam_1d(params), to: AnalysisSolverSubmissions

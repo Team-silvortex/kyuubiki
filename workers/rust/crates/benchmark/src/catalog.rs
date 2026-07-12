@@ -17,7 +17,7 @@ use crate::{
         generate_electrostatic_triangle_panel, generate_heat_bar_case,
         generate_heat_triangle_panel, generate_magnetostatic_bar_case,
         generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
-        generate_stokes_quad_panel, generate_torsion_case,
+        generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
     },
     generators_structural::{
         generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_case,
@@ -107,6 +107,7 @@ pub(crate) enum BenchmarkFamily {
     ElectrostaticPlaneQuad2d,
     MagnetostaticPlaneTriangle2d,
     MagnetostaticPlaneQuad2d,
+    StokesFlowPlaneTriangle2d,
     StokesFlowPlaneQuad2d,
 }
 
@@ -465,6 +466,16 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "stokes_flow_plane_quad_2d",
             workload: BenchmarkWorkload::StokesFlowPlaneQuad2d(generate_stokes_quad_panel(
+                profile.plane_quad.nx,
+                profile.plane_quad.ny,
+                profile.plane_quad.width,
+                profile.plane_quad.height,
+            )),
+        },
+        BenchmarkFamily::StokesFlowPlaneTriangle2d => BenchmarkCase {
+            id,
+            family: "stokes_flow_plane_triangle_2d",
+            workload: BenchmarkWorkload::StokesFlowPlaneTriangle2d(generate_stokes_triangle_panel(
                 profile.plane_quad.nx,
                 profile.plane_quad.ny,
                 profile.plane_quad.width,

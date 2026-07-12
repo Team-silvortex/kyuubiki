@@ -132,6 +132,14 @@ fn validate_request(request: &SolveAcousticBar1dRequest) -> Result<(), String> {
         if !node.x.is_finite() {
             return Err(format!("node {index} x must be finite"));
         }
+        if !node.pressure.is_finite() {
+            return Err(format!("node {index} pressure must be finite"));
+        }
+        if !node.volume_velocity_source.is_finite() {
+            return Err(format!(
+                "node {index} volume_velocity_source must be finite"
+            ));
+        }
     }
     for (index, element) in request.elements.iter().enumerate() {
         validate_element(request, element, index)?;

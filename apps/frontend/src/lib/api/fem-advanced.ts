@@ -31,6 +31,12 @@ export function createStokesFlowPlaneQuad2dJob(
   return createAdvancedFemJob("/api/v1/fem/stokes-flow-plane-quad-2d/jobs", input);
 }
 
+export function createStokesFlowPlaneTriangle2dJob(
+  input: AdvancedFemGraphJobInput,
+): Promise<JobEnvelope<AdvancedFemResult>> {
+  return createAdvancedFemJob("/api/v1/fem/stokes-flow-plane-triangle-2d/jobs", input);
+}
+
 export function createNonlinearSpring1dJob(
   input: AdvancedFemGraphJobInput,
 ): Promise<JobEnvelope<AdvancedFemResult>> {

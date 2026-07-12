@@ -36,7 +36,8 @@
     { "stem": "electrostatic-plane-quad", "family": "electrostatic_plane_quad2d" },
     { "stem": "magnetostatic-plane-triangle", "family": "magnetostatic_plane_triangle2d" },
     { "stem": "magnetostatic-plane-quad", "family": "magnetostatic_plane_quad2d" },
-    { "stem": "stokes-plane-quad", "family": "stokes_flow_plane_quad2d" }
+    { "stem": "stokes-plane-quad", "family": "stokes_flow_plane_quad2d" },
+    { "stem": "stokes-plane-triangle", "family": "stokes_flow_plane_triangle2d" }
   ],
   "matrices": [
     {
@@ -97,7 +98,8 @@
         "electrostatic-plane-quad",
         "magnetostatic-plane-triangle",
         "magnetostatic-plane-quad",
-        "stokes-plane-quad"
+        "stokes-plane-quad",
+        "stokes-plane-triangle"
       ],
       "owned_templates": []
     },
@@ -171,7 +173,8 @@
         "electrostatic-plane-quad",
         "magnetostatic-plane-triangle",
         "magnetostatic-plane-quad",
-        "stokes-plane-quad"
+        "stokes-plane-quad",
+        "stokes-plane-triangle"
       ],
       "owned_templates": []
     }

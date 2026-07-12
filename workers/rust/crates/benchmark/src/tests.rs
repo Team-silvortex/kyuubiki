@@ -75,7 +75,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 37);
+        assert_eq!(spec.templates.len(), 38);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 10);
         assert!(spec
@@ -286,7 +286,7 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 12);
+        assert_eq!(report.cases.len(), 13);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report
             .cases
@@ -296,6 +296,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "stokes_flow_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "stokes_flow_plane_triangle_2d"));
         assert!(report
             .cases
             .iter()
@@ -372,6 +376,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "stokes_flow_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "stokes_flow_plane_triangle_2d"));
         assert!(report
             .cases
             .iter()
@@ -457,6 +465,7 @@ mod tests {
         match family {
             "axial_bar_1d" => "solve.bar_1d".to_string(),
             "stokes_flow_plane_quad_2d" => "solve.stokes_flow_quad_2d".to_string(),
+            "stokes_flow_plane_triangle_2d" => "solve.stokes_flow_triangle_2d".to_string(),
             other => format!("solve.{other}"),
         }
     }

@@ -8,10 +8,11 @@ use kyuubiki_protocol::{
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
     SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
+    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -62,6 +63,7 @@ pub(crate) enum BenchmarkWorkload {
     ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dRequest),
     MagnetostaticPlaneTriangle2d(SolveMagnetostaticPlaneTriangle2dRequest),
     MagnetostaticPlaneQuad2d(SolveMagnetostaticPlaneQuad2dRequest),
+    StokesFlowPlaneTriangle2d(SolveStokesFlowPlaneTriangle2dRequest),
     StokesFlowPlaneQuad2d(SolveStokesFlowPlaneQuad2dRequest),
     HeadlessActionManifest,
     DirectFemManifest,

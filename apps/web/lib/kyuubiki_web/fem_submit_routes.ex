@@ -16,6 +16,8 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/heat-plane-triangle-2d/jobs", :submit_heat_plane_triangle_2d},
     {"/api/v1/fem/heat-plane-quad-2d/jobs", :submit_heat_plane_quad_2d},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", :submit_stokes_flow_plane_quad_2d},
+    {"/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
+     :submit_stokes_flow_plane_triangle_2d},
     {"/api/v1/fem/thermal-truss-2d/jobs", :submit_thermal_truss_2d},
     {"/api/v1/fem/thermal-truss-3d/jobs", :submit_thermal_truss_3d},
     {"/api/v1/fem/beam-1d/jobs", :submit_beam_1d},

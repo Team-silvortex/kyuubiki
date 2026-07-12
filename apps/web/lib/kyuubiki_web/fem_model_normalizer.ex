@@ -184,6 +184,17 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_stokes_flow_plane_quad_2d(_params),
     do: {:error, :invalid_stokes_flow_plane_quad_model}
 
+  def normalize_stokes_flow_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  def normalize_stokes_flow_plane_triangle_2d(%{nodes: nodes, elements: elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  def normalize_stokes_flow_plane_triangle_2d(_params),
+    do: {:error, :invalid_stokes_flow_plane_triangle_model}
+
   defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements} = params, _error)
        when is_list(nodes) and is_list(elements) do
     {:ok, params}

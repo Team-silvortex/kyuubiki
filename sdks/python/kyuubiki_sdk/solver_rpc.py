@@ -42,6 +42,7 @@ _SOLVER_METHODS: dict[str, str] = {
     "heat_plane_quad_2d": "solve_heat_plane_quad_2d",
     "thermal_plane_quad_2d": "solve_thermal_plane_quad_2d",
     "electrostatic_plane_quad_2d": "solve_electrostatic_plane_quad_2d",
+    "stokes_flow_triangle_2d": "solve_stokes_flow_plane_triangle_2d",
     "stokes_flow_quad_2d": "solve_stokes_flow_plane_quad_2d",
     "truss_3d": "solve_truss_3d",
     "thermal_truss_3d": "solve_thermal_truss_3d",
@@ -53,6 +54,7 @@ _SOLVER_METHODS: dict[str, str] = {
 
 _SOLVE_KIND_ALIASES: dict[str, str] = {
     "axial_bar_1d": "bar_1d",
+    "stokes_flow_plane_triangle_2d": "stokes_flow_triangle_2d",
     "stokes_flow_plane_quad_2d": "stokes_flow_quad_2d",
 }
 
@@ -149,6 +151,9 @@ class SolverRpcClient:
 
     def solve_stokes_flow_quad_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("stokes_flow_quad_2d", payload)
+
+    def solve_stokes_flow_triangle_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("stokes_flow_triangle_2d", payload)
 
     def solve_plane_triangle_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("plane_triangle_2d", payload)

@@ -4,7 +4,8 @@ use crate::{
     RPC_VERSION, RpcMethod, RpcRequest, SolidTetra3dElementInput, SolidTetra3dNodeInput,
     SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
     SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput,
+    SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
+    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
 
 #[test]
@@ -12,6 +13,16 @@ fn serializes_stokes_flow_quad_2d_rpc_round_trip() {
     let decoded = round_trip(RpcMethod::SolveStokesFlowPlaneQuad2d, stokes_request());
 
     assert_eq!(decoded.method, RpcMethod::SolveStokesFlowPlaneQuad2d);
+    assert_eq!(decoded.id, "advanced-rpc");
+}
+
+#[test]
+fn serializes_stokes_flow_triangle_2d_rpc_round_trip() {
+    let decoded = round_trip(
+        RpcMethod::SolveStokesFlowPlaneTriangle2d,
+        stokes_triangle_request(),
+    );
+    assert_eq!(decoded.method, RpcMethod::SolveStokesFlowPlaneTriangle2d);
     assert_eq!(decoded.id, "advanced-rpc");
 }
 
@@ -118,6 +129,25 @@ fn stokes_request() -> SolveStokesFlowPlaneQuad2dRequest {
             node_j: 1,
             node_k: 2,
             node_l: 3,
+            thickness: 0.1,
+            viscosity: 1.0,
+            density: 1000.0,
+        }],
+    }
+}
+
+fn stokes_triangle_request() -> SolveStokesFlowPlaneTriangle2dRequest {
+    SolveStokesFlowPlaneTriangle2dRequest {
+        nodes: vec![
+            stokes_node("n0", 0.0, 0.0),
+            stokes_node("n1", 1.0, 0.0),
+            stokes_node("n2", 0.0, 1.0),
+        ],
+        elements: vec![StokesFlowPlaneTriangleElementInput {
+            id: "t0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
             thickness: 0.1,
             viscosity: 1.0,
             density: 1000.0,

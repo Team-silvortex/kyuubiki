@@ -65,6 +65,7 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             | "solve_electrostatic_plane_quad_2d"
             | "solve_heat_plane_triangle_2d"
             | "solve_heat_plane_quad_2d"
+            | "solve_stokes_flow_plane_triangle_2d"
             | "solve_stokes_flow_plane_quad_2d"
             | "solve_thermal_truss_2d"
             | "solve_thermal_truss_3d"

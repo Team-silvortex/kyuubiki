@@ -340,7 +340,7 @@ fn session_supports_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..5 {
+        for _ in 0..6 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_http_request(&mut stream);
             let path = request
@@ -370,6 +370,11 @@ fn session_supports_expanded_solve_kinds() {
                 "/api/v1/fem/stokes-flow-plane-quad-2d/jobs" => (
                     202,
                     r#"{"job":{"job_id":"job-stokes-flow","status":"queued"}}"#.to_string(),
+                ),
+                "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs" => (
+                    202,
+                    r#"{"job":{"job_id":"job-stokes-flow-triangle","status":"queued"}}"#
+                        .to_string(),
                 ),
                 _ => (404, r#"{"error":"not_found"}"#.to_string()),
             };
@@ -435,6 +440,17 @@ fn session_supports_expanded_solve_kinds() {
         .expect("stokes flow submit");
     assert_eq!(stokes["job"]["job_id"].as_str(), Some("job-stokes-flow"));
 
+    let stokes_triangle = session
+        .submit_job(
+            "stokes_flow_triangle_2d",
+            &serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("stokes flow triangle submit");
+    assert_eq!(
+        stokes_triangle["job"]["job_id"].as_str(),
+        Some("job-stokes-flow-triangle")
+    );
+
     server.join().expect("server thread");
 }
 
@@ -444,7 +460,7 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("rpc listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..5 {
+        for _ in 0..6 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_rpc_request(&mut stream);
             let method = request["method"].as_str().expect("rpc method");
@@ -504,6 +520,17 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
         )
         .expect("stokes direct solve");
     assert_eq!(stokes["solver"].as_str(), Some("stokes_flow_plane_quad_2d"));
+
+    let stokes_triangle = session
+        .solve_direct(
+            "stokes_flow_triangle_2d",
+            serde_json::json!({"nodes": [], "elements": []}),
+        )
+        .expect("stokes triangle direct solve");
+    assert_eq!(
+        stokes_triangle["solver"].as_str(),
+        Some("stokes_flow_plane_triangle_2d")
+    );
 
     server.join().expect("server thread");
 }

@@ -119,7 +119,8 @@
       "priority": "p2",
       "domain": "cfd",
       "operator_ids": [
-        "solve.stokes_flow_quad_2d"
+        "solve.stokes_flow_quad_2d",
+        "solve.stokes_flow_triangle_2d"
       ],
       "rationale": "The Stokes operator is intentionally screening-grade; it now has a second boundary response but still needs explicit scope and qualification evidence before higher trust.",
       "evidence_gaps": [
@@ -128,6 +129,7 @@
       ],
       "required_artifacts": [
         "alternate boundary response regression",
+        "triangle geometry and heterogeneous material regression",
         "screening divergence tolerance policy",
         "screening-scope documentation"
       ],

@@ -361,6 +361,7 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     fluid_module = Enum.find(payload["modules"], &(&1["id"] == "fluid.solver"))
 
     assert Enum.any?(operators, &(&1["id"] == "solve.stokes_flow_quad_2d"))
+    assert Enum.any?(operators, &(&1["id"] == "solve.stokes_flow_triangle_2d"))
     assert Enum.all?(operators, &(&1["domain"] == "fluid"))
     assert fluid_module["lane"] == "physics"
     assert fluid_module["label"] == "Fluid Solvers"

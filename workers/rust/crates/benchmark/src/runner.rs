@@ -454,6 +454,19 @@ pub(crate) fn run_case_with_preconditioner(
                     max_displacement = result.max_velocity;
                     max_stress = result.max_pressure;
                 }),
+                BenchmarkWorkload::StokesFlowPlaneTriangle2d(request) => solve(
+                    EngineSolveRequest::StokesFlowPlaneTriangle2d(request.clone()),
+                )
+                .map(|result| {
+                    let AnalysisResult::StokesFlowPlaneTriangle2d(result) = result else {
+                        unreachable!("stokes triangle solve should return stokes triangle result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len() * 3;
+                    max_displacement = result.max_velocity;
+                    max_stress = result.max_pressure;
+                }),
                 BenchmarkWorkload::Truss3d(request) => {
                     solve(EngineSolveRequest::Truss3d(request.clone())).map(|result| {
                         let AnalysisResult::Truss3d(result) = result else {

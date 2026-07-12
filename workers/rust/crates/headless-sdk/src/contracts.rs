@@ -245,6 +245,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         output_keys: &["job_id", "status", "progress", "job"],
     },
     HeadlessActionContract {
+        id: "solve_stokes_flow_plane_triangle_2d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
         id: "solve_stokes_flow_plane_quad_2d",
         engine: HeadlessEngine::Service,
         category: "solve",

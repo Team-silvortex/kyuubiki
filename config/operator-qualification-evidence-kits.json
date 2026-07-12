@@ -145,7 +145,8 @@
       "status": "collecting",
       "artifact_profile": "screening_scope_boundary",
       "operator_ids": [
-        "solve.stokes_flow_quad_2d"
+        "solve.stokes_flow_quad_2d",
+        "solve.stokes_flow_triangle_2d"
       ],
       "artifact_requirements": [
         {
@@ -153,6 +154,13 @@
           "kind": "boundary_regression",
           "gate": "add a second Stokes boundary fixture before any higher trust claim",
           "artifact_path": "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "triangle-geometry-material-boundary-response",
+          "kind": "boundary_regression",
+          "gate": "cover triangle geometry rejection and heterogeneous viscosity response before any higher trust claim",
+          "artifact_path": "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

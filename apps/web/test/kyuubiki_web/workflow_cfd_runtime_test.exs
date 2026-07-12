@@ -8,6 +8,7 @@ defmodule KyuubikiWeb.WorkflowCfdRuntimeTest do
     operators = WorkflowOperatorCatalog.list() |> Enum.map(& &1["id"]) |> MapSet.new()
 
     assert MapSet.member?(operators, "solve.stokes_flow_quad_2d")
+    assert MapSet.member?(operators, "solve.stokes_flow_triangle_2d")
     assert MapSet.member?(operators, "extract.stokes_flow_result_diagnostics")
     assert MapSet.member?(operators, "transform.evaluate_cfd_guard")
     assert MapSet.member?(operators, "transform.benchmark_cfd_pair")

@@ -10,8 +10,9 @@ use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
-    SolveStokesFlowPlaneQuad2dRequest, SolveTorsion1dRequest, StokesFlowPlaneNodeInput,
-    StokesFlowPlaneQuadElementInput, Torsion1dElementInput, Torsion1dNodeInput,
+    SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
+    SolveTorsion1dRequest, StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput,
+    StokesFlowPlaneTriangleElementInput, Torsion1dElementInput, Torsion1dNodeInput,
 };
 
 pub(crate) fn generate_heat_bar_case(elements: usize) -> SolveHeatBar1dRequest {
@@ -238,6 +239,39 @@ pub(crate) fn generate_stokes_quad_panel(
         density: 1.225,
     });
     SolveStokesFlowPlaneQuad2dRequest { nodes, elements }
+}
+
+pub(crate) fn generate_stokes_triangle_panel(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    height: f64,
+) -> SolveStokesFlowPlaneTriangle2dRequest {
+    let nodes = scalar_plane_nodes(nx, ny, width, height, |index, x, y, left, right, mid| {
+        StokesFlowPlaneNodeInput {
+            id: format!("s{index}"),
+            x,
+            y,
+            fix_velocity_x: left || right,
+            velocity_x: if left { 1.0 } else { 0.0 },
+            fix_velocity_y: left || right,
+            velocity_y: 0.0,
+            fix_pressure: right,
+            pressure: 0.0,
+            body_force_x: if mid { 0.01 } else { 0.0 },
+            body_force_y: 0.0,
+        }
+    });
+    let elements = triangle_cells(nx, ny, |id, a, b, c| StokesFlowPlaneTriangleElementInput {
+        id,
+        node_i: a,
+        node_j: b,
+        node_k: c,
+        thickness: 0.02,
+        viscosity: 1.8e-5,
+        density: 1.225,
+    });
+    SolveStokesFlowPlaneTriangle2dRequest { nodes, elements }
 }
 
 pub(crate) fn generate_electrostatic_triangle_panel(

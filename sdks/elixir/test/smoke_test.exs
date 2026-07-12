@@ -191,7 +191,8 @@ defmodule KyuubikiSdk.SmokeTest do
               "solve_nonlinear_spring_1d",
               "solve_contact_gap_1d",
               "solve_acoustic_bar_1d",
-              "solve_stokes_flow_plane_quad_2d"
+              "solve_stokes_flow_plane_quad_2d",
+              "solve_stokes_flow_plane_triangle_2d"
             ] do
           {:ok, socket} = :gen_tcp.accept(listener)
           {:ok, <<size::unsigned-big-32>>} = :gen_tcp.recv(socket, 4)
@@ -239,11 +240,18 @@ defmodule KyuubikiSdk.SmokeTest do
     {:ok, stokes} =
       Session.solve_direct(session, "stokes_flow_quad_2d", %{"nodes" => [], "elements" => []})
 
+    {:ok, stokes_triangle} =
+      Session.solve_direct(session, "stokes_flow_triangle_2d", %{
+        "nodes" => [],
+        "elements" => []
+      })
+
     assert modal["solver"] == "modal_frame_2d"
     assert nonlinear["solver"] == "nonlinear_spring_1d"
     assert contact["solver"] == "contact_gap_1d"
     assert acoustic["solver"] == "acoustic_bar_1d"
     assert stokes["solver"] == "stokes_flow_plane_quad_2d"
+    assert stokes_triangle["solver"] == "stokes_flow_plane_triangle_2d"
   end
 
   defp accept_loop(listener, parent) do

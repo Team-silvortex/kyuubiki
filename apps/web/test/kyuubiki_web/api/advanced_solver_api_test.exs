@@ -77,6 +77,7 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
+    {"/api/v1/fem/stokes-flow-plane-triangle-2d/jobs", "max_velocity", %{}},
     {"/api/v1/fem/nonlinear-spring-1d/jobs", "converged", %{}},
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},

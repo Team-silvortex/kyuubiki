@@ -34,6 +34,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
                 RpcMethod::SolveHeatPlaneQuad2d,
+                RpcMethod::SolveStokesFlowPlaneTriangle2d,
                 RpcMethod::SolveStokesFlowPlaneQuad2d,
                 RpcMethod::SolveThermalTruss2d,
                 RpcMethod::SolveThermalTruss3d,

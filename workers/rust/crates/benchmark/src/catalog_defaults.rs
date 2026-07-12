@@ -71,6 +71,10 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
             BenchmarkFamily::MagnetostaticPlaneQuad2d,
         ),
         template("stokes-plane-quad", BenchmarkFamily::StokesFlowPlaneQuad2d),
+        template(
+            "stokes-plane-triangle",
+            BenchmarkFamily::StokesFlowPlaneTriangle2d,
+        ),
     ]
 }
 
@@ -134,6 +138,7 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "magnetostatic-plane-triangle",
                 "magnetostatic-plane-quad",
                 "stokes-plane-quad",
+                "stokes-plane-triangle",
             ],
             vec![],
         ),
@@ -208,6 +213,7 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "magnetostatic-plane-triangle",
                 "magnetostatic-plane-quad",
                 "stokes-plane-quad",
+                "stokes-plane-triangle",
             ],
             vec![],
         ),

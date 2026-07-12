@@ -62,6 +62,92 @@ fn advection_diffusion_bar_1d_matches_single_element_flux_baseline() {
     assert_close(result.max_peclet_number, expected_peclet);
 }
 
+#[test]
+fn advection_diffusion_bar_1d_rejects_non_finite_node_values() {
+    let mut request = transport_request();
+    request.nodes[1].source = f64::NAN;
+
+    let error = solve_advection_diffusion_bar_1d(&request)
+        .expect_err("non-finite source should be rejected");
+    assert!(
+        error.contains("node values must be finite"),
+        "unexpected non-finite node error: {error}"
+    );
+}
+
+#[test]
+fn advection_diffusion_bar_1d_rejects_invalid_element_topology() {
+    let mut request = transport_request();
+    request.elements[0].node_j = 7;
+
+    let error = solve_advection_diffusion_bar_1d(&request)
+        .expect_err("out-of-range element node should be rejected");
+    assert!(
+        error.contains("out-of-range node"),
+        "unexpected out-of-range node error: {error}"
+    );
+
+    let mut request = transport_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error =
+        solve_advection_diffusion_bar_1d(&request).expect_err("zero-length element should fail");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected zero-length error: {error}"
+    );
+}
+
+#[test]
+fn advection_diffusion_bar_1d_rejects_invalid_transport_materials() {
+    let mut request = transport_request();
+    request.elements[0].diffusivity = 0.0;
+
+    let error = solve_advection_diffusion_bar_1d(&request)
+        .expect_err("zero diffusivity should be rejected");
+    assert!(
+        error.contains("diffusivity must be positive"),
+        "unexpected diffusivity error: {error}"
+    );
+
+    let mut request = transport_request();
+    request.elements[0].velocity = f64::INFINITY;
+    let error =
+        solve_advection_diffusion_bar_1d(&request).expect_err("infinite velocity should fail");
+    assert!(
+        error.contains("velocity must be finite"),
+        "unexpected velocity error: {error}"
+    );
+}
+
+fn transport_request() -> SolveAdvectionDiffusionBar1dRequest {
+    SolveAdvectionDiffusionBar1dRequest {
+        nodes: vec![
+            AdvectionDiffusionBar1dNodeInput {
+                id: "inlet".to_string(),
+                x: 0.0,
+                fix_concentration: true,
+                concentration: 1.0,
+                source: 0.0,
+            },
+            AdvectionDiffusionBar1dNodeInput {
+                id: "outlet".to_string(),
+                x: 1.0,
+                fix_concentration: true,
+                concentration: 0.2,
+                source: 0.0,
+            },
+        ],
+        elements: vec![AdvectionDiffusionBar1dElementInput {
+            id: "transport".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            diffusivity: 0.05,
+            velocity: 0.1,
+        }],
+    }
+}
+
 fn assert_close(actual: f64, expected: f64) {
     let scale = expected.abs().max(1.0);
     assert!(

@@ -52,6 +52,14 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
         "electrostatic_plane_quad_2d",
         "solve_electrostatic_plane_quad_2d",
     ),
+    (
+        "stokes_flow_triangle_2d",
+        "solve_stokes_flow_plane_triangle_2d",
+    ),
+    (
+        "stokes_flow_plane_triangle_2d",
+        "solve_stokes_flow_plane_triangle_2d",
+    ),
     ("stokes_flow_quad_2d", "solve_stokes_flow_plane_quad_2d"),
     (
         "stokes_flow_plane_quad_2d",
@@ -220,6 +228,7 @@ impl SolverRpcClient {
 fn normalize_solve_kind(kind: &str) -> &str {
     match kind {
         "axial_bar_1d" => "bar_1d",
+        "stokes_flow_plane_triangle_2d" => "stokes_flow_triangle_2d",
         "stokes_flow_plane_quad_2d" => "stokes_flow_quad_2d",
         other => other,
     }

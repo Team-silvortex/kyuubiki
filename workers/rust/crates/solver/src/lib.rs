@@ -77,7 +77,9 @@ pub use plane_2d_profile::{
 };
 pub use solid_tetra_3d::solve_solid_tetra_3d;
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
-pub use stokes_flow_plane_2d::solve_stokes_flow_plane_quad_2d;
+pub use stokes_flow_plane_2d::{
+    solve_stokes_flow_plane_quad_2d, solve_stokes_flow_plane_triangle_2d,
+};
 pub use thermal_frame_3d::solve_thermal_frame_3d;
 pub use thermal_plane_2d::{
     profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
