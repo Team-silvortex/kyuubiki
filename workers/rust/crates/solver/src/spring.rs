@@ -418,6 +418,14 @@ fn validate_spring_1d_request(request: &SolveSpring1dRequest) -> Result<(), Stri
         return Err("1d spring model must restrain at least one degree of freedom".to_string());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.load_x.is_finite() {
+            return Err(format!(
+                "1d spring node {index} coordinates and loads must be finite"
+            ));
+        }
+    }
+
     for element in &request.elements {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("1d spring element references an out-of-range node".to_string());
@@ -451,6 +459,18 @@ fn validate_spring_2d_request(request: &SolveSpring2dRequest) -> Result<(), Stri
 
     if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
         return Err("2d spring model must restrain at least one degree of freedom".to_string());
+    }
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite()
+            || !node.y.is_finite()
+            || !node.load_x.is_finite()
+            || !node.load_y.is_finite()
+        {
+            return Err(format!(
+                "2d spring node {index} coordinates and loads must be finite"
+            ));
+        }
     }
 
     for element in &request.elements {
@@ -492,6 +512,20 @@ fn validate_spring_3d_request(request: &SolveSpring3dRequest) -> Result<(), Stri
         .any(|node| node.fix_x || node.fix_y || node.fix_z)
     {
         return Err("3d spring model must restrain at least one degree of freedom".to_string());
+    }
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite()
+            || !node.y.is_finite()
+            || !node.z.is_finite()
+            || !node.load_x.is_finite()
+            || !node.load_y.is_finite()
+            || !node.load_z.is_finite()
+        {
+            return Err(format!(
+                "3d spring node {index} coordinates and loads must be finite"
+            ));
+        }
     }
 
     for element in &request.elements {

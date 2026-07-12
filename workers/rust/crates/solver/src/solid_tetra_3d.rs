@@ -362,6 +362,22 @@ fn validate_element(
             ));
         }
     }
+    let nodes = [
+        element.node_a,
+        element.node_b,
+        element.node_c,
+        element.node_d,
+    ];
+    for left in 0..nodes.len() {
+        for right in (left + 1)..nodes.len() {
+            if nodes[left] == nodes[right] {
+                return Err(format!(
+                    "solid tetra element {} must reference four distinct nodes",
+                    element.id
+                ));
+            }
+        }
+    }
     if !element.youngs_modulus.is_finite() {
         return Err(format!(
             "solid tetra element {} youngs_modulus must be finite",

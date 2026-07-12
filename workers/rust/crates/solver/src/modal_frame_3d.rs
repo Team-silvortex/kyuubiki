@@ -123,6 +123,19 @@ fn validate_modal_frame_3d_request(request: &SolveModalFrame3dRequest) -> Result
     if constrained_modal_frame_3d_dofs(request).len() < 6 {
         return Err("modal frame 3d must restrain at least six degrees of freedom".to_string());
     }
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
+            return Err(format!(
+                "modal frame 3d node {index} has invalid coordinates"
+            ));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
+            return Err(format!("modal frame 3d node {index} has invalid load"));
+        }
+        if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
+            return Err(format!("modal frame 3d node {index} has invalid moment"));
+        }
+    }
     for element in &request.elements {
         validate_modal_frame_3d_element(request, element)?;
     }

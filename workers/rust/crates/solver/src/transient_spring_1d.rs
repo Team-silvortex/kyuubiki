@@ -280,13 +280,19 @@ fn validate_request(request: &SolveTransientSpring1dRequest) -> Result<(), Strin
     if request.elements.is_empty() {
         return Err("transient spring 1d must define at least one element".to_string());
     }
-    if request.time_step <= 0.0 || request.steps == 0 {
+    if request.time_step <= 0.0 || !request.time_step.is_finite() || request.steps == 0 {
         return Err("transient spring 1d requires positive time_step and steps".to_string());
     }
     for node in &request.nodes {
-        if node.mass <= 0.0 {
+        if !node.x.is_finite()
+            || !node.load_x.is_finite()
+            || !node.mass.is_finite()
+            || !node.initial_displacement.is_finite()
+            || !node.initial_velocity.is_finite()
+            || node.mass <= 0.0
+        {
             return Err(format!(
-                "transient spring node {} must have positive mass",
+                "transient spring node {} must have finite coordinates, load, initial state, and positive mass",
                 node.id
             ));
         }
@@ -309,7 +315,12 @@ fn validate_element(
             ));
         }
     }
-    if element.node_i == element.node_j || element.stiffness <= 0.0 || element.damping < 0.0 {
+    if element.node_i == element.node_j
+        || !element.stiffness.is_finite()
+        || element.stiffness <= 0.0
+        || !element.damping.is_finite()
+        || element.damping < 0.0
+    {
         return Err(format!(
             "transient spring element {} must have valid connectivity, stiffness, and damping",
             element.id

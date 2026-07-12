@@ -127,6 +127,15 @@ fn validate_torsion_1d_request(request: &SolveTorsion1dRequest) -> Result<(), St
         return Err("1d torsion model must include at least one rotational support".to_string());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() {
+            return Err(format!("1d torsion node {index} has invalid x"));
+        }
+        if !node.torque_z.is_finite() {
+            return Err(format!("1d torsion node {index} has invalid torque"));
+        }
+    }
+
     for element in &request.elements {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("1d torsion element references an out-of-range node".to_string());
@@ -147,7 +156,7 @@ fn validate_torsion_1d_request(request: &SolveTorsion1dRequest) -> Result<(), St
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
         let length = (node_j.x - node_i.x).abs();
-        if length <= 1.0e-12 {
+        if !length.is_finite() || length <= 1.0e-12 {
             return Err("1d torsion element length must be positive".to_string());
         }
     }

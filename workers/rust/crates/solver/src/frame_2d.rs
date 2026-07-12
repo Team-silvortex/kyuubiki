@@ -3,6 +3,7 @@ use crate::frame_2d_math::{
     frame_thermal_uniform_vector, frame_transform, multiply_matrix_vector_6x6, subtract_vector_6,
     transform_frame_stiffness, transpose_6x6,
 };
+use crate::frame_2d_validation::{validate_frame_2d_request, validate_thermal_frame_2d_request};
 use crate::frame_energy::{frame_strain_energy_6, thermal_frame2d_strain_energy};
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
 use kyuubiki_protocol::{
@@ -443,134 +444,6 @@ pub fn solve_thermal_frame_2d(
         max_temperature_gradient,
         total_strain_energy,
     })
-}
-
-fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("2d frame must define at least two nodes".to_string());
-    }
-
-    if request.elements.is_empty() {
-        return Err("2d frame must define at least one element".to_string());
-    }
-
-    if !request
-        .nodes
-        .iter()
-        .any(|node| node.fix_x || node.fix_y || node.fix_rz)
-    {
-        return Err("2d frame must include at least one support".to_string());
-    }
-
-    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
-        sum + usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_rz)
-    });
-    if constrained_dofs < 3 {
-        return Err("2d frame must restrain at least three degrees of freedom".to_string());
-    }
-
-    for element in &request.elements {
-        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-            return Err("2d frame element references an out-of-range node".to_string());
-        }
-        if element.node_i == element.node_j {
-            return Err("2d frame element must connect two distinct nodes".to_string());
-        }
-        if !(element.area.is_finite() && element.area > 0.0) {
-            return Err("2d frame element area must be positive".to_string());
-        }
-        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
-            return Err("2d frame element youngs_modulus must be positive".to_string());
-        }
-        if !(element.moment_of_inertia.is_finite() && element.moment_of_inertia > 0.0) {
-            return Err("2d frame element moment_of_inertia must be positive".to_string());
-        }
-        if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
-            return Err("2d frame element section_modulus must be positive".to_string());
-        }
-
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
-        if length <= 1.0e-12 {
-            return Err("2d frame element length must be positive".to_string());
-        }
-    }
-
-    Ok(())
-}
-
-fn validate_thermal_frame_2d_request(request: &SolveThermalFrame2dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("thermal frame must define at least two nodes".to_string());
-    }
-
-    if request.elements.is_empty() {
-        return Err("thermal frame must define at least one element".to_string());
-    }
-
-    if !request
-        .nodes
-        .iter()
-        .any(|node| node.fix_x || node.fix_y || node.fix_rz)
-    {
-        return Err("thermal frame must include at least one support".to_string());
-    }
-
-    for node in &request.nodes {
-        if !node.temperature_delta.is_finite() {
-            return Err("thermal frame node temperature_delta must be finite".to_string());
-        }
-    }
-
-    for element in &request.elements {
-        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-            return Err("thermal frame element references an out-of-range node".to_string());
-        }
-
-        if element.node_i == element.node_j {
-            return Err("thermal frame element cannot connect a node to itself".to_string());
-        }
-
-        if !(element.area.is_finite() && element.area > 0.0) {
-            return Err("thermal frame element area must be positive".to_string());
-        }
-
-        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
-            return Err("thermal frame element youngs_modulus must be positive".to_string());
-        }
-
-        if !(element.moment_of_inertia.is_finite() && element.moment_of_inertia > 0.0) {
-            return Err("thermal frame element moment_of_inertia must be positive".to_string());
-        }
-
-        if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
-            return Err("thermal frame element section_modulus must be positive".to_string());
-        }
-
-        if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-            return Err("thermal frame element thermal_expansion must be non-negative".to_string());
-        }
-
-        if !(element.section_depth.is_finite() && element.section_depth > 0.0) {
-            return Err("thermal frame element section_depth must be positive".to_string());
-        }
-
-        if !element.temperature_gradient_y.is_finite() {
-            return Err("thermal frame element temperature_gradient_y must be finite".to_string());
-        }
-
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let dx = node_j.x - node_i.x;
-        let dy = node_j.y - node_i.y;
-        let length = (dx * dx + dy * dy).sqrt();
-        if !(length.is_finite() && length > 0.0) {
-            return Err("thermal frame element length must be positive".to_string());
-        }
-    }
-
-    Ok(())
 }
 
 fn frame_dof_map(node_i: usize, node_j: usize) -> [usize; 6] {

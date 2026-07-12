@@ -115,6 +115,16 @@ fn validate_modal_frame_2d_request(request: &SolveModalFrame2dRequest) -> Result
     if constrained_dofs(request).len() < 3 {
         return Err("modal frame 2d must restrain at least three degrees of freedom".to_string());
     }
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() {
+            return Err(format!(
+                "modal frame 2d node {index} has invalid coordinates"
+            ));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.moment_z.is_finite() {
+            return Err(format!("modal frame 2d node {index} has invalid load"));
+        }
+    }
     for element in &request.elements {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("modal frame 2d element references an out-of-range node".to_string());

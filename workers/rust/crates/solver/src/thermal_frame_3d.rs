@@ -259,7 +259,18 @@ fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Re
         return Err("thermal 3d frame must restrain at least six degrees of freedom".to_string());
     }
 
-    for node in &request.nodes {
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
+            return Err(format!(
+                "thermal 3d frame node {index} has invalid coordinates"
+            ));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
+            return Err(format!("thermal 3d frame node {index} has invalid load"));
+        }
+        if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
+            return Err(format!("thermal 3d frame node {index} has invalid moment"));
+        }
         if !node.temperature_delta.is_finite() {
             return Err("thermal 3d frame node temperature_delta must be finite".to_string());
         }

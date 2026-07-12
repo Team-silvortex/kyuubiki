@@ -458,9 +458,21 @@ fn validate_truss_request(request: &SolveTruss2dRequest) -> Result<(), String> {
         return Err("truss must include at least one support".to_string());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() {
+            return Err(format!("truss node {index} has invalid coordinates"));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() {
+            return Err(format!("truss node {index} has invalid load"));
+        }
+    }
+
     for element in &request.elements {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("truss element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("truss element must connect two distinct nodes".to_string());
         }
 
         if !(element.area.is_finite() && element.area > 0.0) {
@@ -469,6 +481,13 @@ fn validate_truss_request(request: &SolveTruss2dRequest) -> Result<(), String> {
 
         if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
             return Err("truss element youngs_modulus must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
+        if !length.is_finite() || length <= 1.0e-12 {
+            return Err("truss element length must be positive".to_string());
         }
     }
 
@@ -491,9 +510,21 @@ fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String
         return Err("3d truss must restrain at least six degrees of freedom".to_string());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
+            return Err(format!("3d truss node {index} has invalid coordinates"));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
+            return Err(format!("3d truss node {index} has invalid load"));
+        }
+    }
+
     for element in &request.elements {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("3d truss element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("3d truss element must connect two distinct nodes".to_string());
         }
         if !(element.area.is_finite() && element.area > 0.0) {
             return Err("3d truss element area must be positive".to_string());
@@ -507,7 +538,7 @@ fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String
             + (node_j.y - node_i.y).powi(2)
             + (node_j.z - node_i.z).powi(2))
         .sqrt();
-        if length <= 1.0e-12 {
+        if !length.is_finite() || length <= 1.0e-12 {
             return Err("3d truss element length must be positive".to_string());
         }
     }

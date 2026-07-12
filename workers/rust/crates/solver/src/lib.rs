@@ -7,6 +7,7 @@ mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_validation;
 mod frame_2d;
 mod frame_2d_math;
+mod frame_2d_validation;
 mod frame_3d;
 mod frame_3d_math;
 mod frame_energy;

@@ -210,6 +210,18 @@ pub(super) fn validate_frame_3d_request(request: &SolveFrame3dRequest) -> Result
         return Err("3d frame must restrain at least six degrees of freedom".to_string());
     }
 
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
+            return Err(format!("3d frame node {index} has invalid coordinates"));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
+            return Err(format!("3d frame node {index} has invalid load"));
+        }
+        if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
+            return Err(format!("3d frame node {index} has invalid moment"));
+        }
+    }
+
     for element in &request.elements {
         validate_frame_3d_element(request, element)?;
     }
