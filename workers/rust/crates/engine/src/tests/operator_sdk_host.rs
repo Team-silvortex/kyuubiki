@@ -381,6 +381,13 @@ fn preflight_reports_accepted_and_rejected_packages_without_activation() {
     assert_eq!(report.accepted_packages[0].package_id, "operator.alpha");
     assert_eq!(report.rejected_packages.len(), 1);
     assert_eq!(report.rejected_packages[0].package_id, "operator.future");
+    assert_eq!(report.package_readiness.len(), 2);
+    assert!(
+        report
+            .package_readiness
+            .iter()
+            .all(|readiness| readiness.ok)
+    );
     assert!(
         report.rejected_packages[0]
             .reason

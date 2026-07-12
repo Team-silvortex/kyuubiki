@@ -2,6 +2,7 @@ use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
     OperatorPackageLoadSummary, OperatorRegistrationEntrypoint, OperatorRegistry,
+    OperatorSdkReadinessIssue, operator_package_manifest_readiness,
 };
 use libloading::Library;
 use std::collections::BTreeSet;
@@ -94,12 +95,21 @@ pub struct ExternalOperatorRejectedPackage {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalOperatorPackageReadinessSummary {
+    pub package_id: String,
+    pub manifest_path: PathBuf,
+    pub ok: bool,
+    pub issues: Vec<OperatorSdkReadinessIssue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalOperatorPreflightReport {
     pub registry_kind: BuiltInOperatorRegistryKind,
     pub packages_root: PathBuf,
     pub host_version: String,
     pub accepted_packages: Vec<OperatorPackageLoadSummary>,
     pub rejected_packages: Vec<ExternalOperatorRejectedPackage>,
+    pub package_readiness: Vec<ExternalOperatorPackageReadinessSummary>,
 }
 
 #[derive(Debug)]
@@ -163,9 +173,17 @@ pub fn preflight_external_operator_packages(
         .map_err(ExternalOperatorHostError::from)?;
     let mut accepted_packages = Vec::new();
     let mut rejected_packages = Vec::new();
+    let mut package_readiness = Vec::new();
 
     for package in discovered {
         let plan = kyuubiki_operator_sdk::build_operator_package_load_plan(package);
+        let readiness = operator_package_manifest_readiness(&plan.manifest);
+        package_readiness.push(ExternalOperatorPackageReadinessSummary {
+            package_id: plan.manifest.package_id.clone(),
+            manifest_path: plan.manifest_path.clone(),
+            ok: readiness.ok,
+            issues: readiness.issues,
+        });
         match validate_load_plan_against_policy(&plan, config) {
             Ok(()) => accepted_packages.push(plan.admission_summary()),
             Err(ExternalOperatorHostError::Policy {
@@ -186,6 +204,7 @@ pub fn preflight_external_operator_packages(
         host_version: config.host_version.clone(),
         accepted_packages,
         rejected_packages,
+        package_readiness,
     })
 }
 

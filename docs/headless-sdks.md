@@ -55,6 +55,14 @@ The stable headless surface is the contract set: task and workflow envelopes,
 operator descriptors, result bundles, report schemas, review records,
 materialization plans, lineage metadata, and execution status semantics.
 
+The Rust headless SDK now exposes a machine-readable surface index through
+`headless_sdk_surface_manifest()` under `workers/rust/crates/headless-sdk`.
+Treat that manifest as the compact source-of-truth for headless capability
+families: contracts, execution planning, direct FEM routes, templates, Operator
+TaskIR, material research, retained research artifacts, and workflow dataset
+preflight. This is separate from the Rust-only operator SDK used to author and
+package new operators.
+
 Minimal end-to-end examples:
 
 - [sdks/python/examples/run_study.py](../sdks/python/examples/run_study.py)

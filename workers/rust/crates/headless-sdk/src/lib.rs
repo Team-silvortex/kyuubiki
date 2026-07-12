@@ -50,6 +50,7 @@ mod operator_task_readiness;
 mod plan;
 mod run;
 mod service_executor;
+mod surface;
 mod template_search;
 #[cfg(test)]
 mod template_tests;
@@ -168,6 +169,11 @@ pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };
 pub use service_executor::ServiceHeadlessExecutor;
+pub use surface::{
+    HEADLESS_SDK_SURFACE_SCHEMA_VERSION, HeadlessSdkSurfaceArea, HeadlessSdkSurfaceCounts,
+    HeadlessSdkSurfaceManifest, find_headless_sdk_surface_area, headless_sdk_surface_areas,
+    headless_sdk_surface_counts, headless_sdk_surface_manifest,
+};
 pub use templates::{
     HeadlessTemplateSuggestion, build_template_document, find_template, list_template_categories,
     list_templates, search_templates, suggest_template_details, suggest_templates,

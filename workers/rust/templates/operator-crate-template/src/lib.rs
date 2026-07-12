@@ -119,7 +119,8 @@ pub fn run_template_operator(values: Vec<f64>) -> Result<OperatorRunResult, Oper
 
 #[cfg(test)]
 mod tests {
-    use super::run_template_operator;
+    use super::{TemplateSummaryOperator, run_template_operator};
+    use kyuubiki_operator_sdk::operator_descriptor_readiness;
 
     #[test]
     fn computes_template_summary() {
@@ -128,5 +129,12 @@ mod tests {
         assert_eq!(result.summary["sum"].as_f64(), Some(14.0));
         assert_eq!(result.summary["mean"].as_f64(), Some(14.0 / 3.0));
         assert_eq!(result.summary["max"].as_f64(), Some(8.0));
+    }
+
+    #[test]
+    fn descriptor_passes_operator_sdk_readiness() {
+        let operator = TemplateSummaryOperator::new();
+        let report = operator_descriptor_readiness(&operator.descriptor);
+        assert!(report.ok, "{:?}", report.issues);
     }
 }

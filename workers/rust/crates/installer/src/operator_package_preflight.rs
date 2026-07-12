@@ -61,6 +61,14 @@ pub fn operator_package_preflight(
                 "reason": package.reason,
             })
         }).collect::<Vec<_>>(),
+        "package_readiness": report.package_readiness.into_iter().map(|package| {
+            json!({
+                "package_id": package.package_id,
+                "manifest_path": package.manifest_path,
+                "ok": package.ok,
+                "issues": package.issues,
+            })
+        }).collect::<Vec<_>>(),
         "safety": {
             "mode": "read_only_preflight",
             "loads_dynamic_libraries": false,

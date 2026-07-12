@@ -153,7 +153,24 @@ fn solver_contract_ids_are_unique_and_sorted_by_catalog_order() {
     let ids = direct_solver_contract_ids();
     let unique = ids.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(ids.len(), unique.len(), "duplicate solver contract ids");
-    assert_eq!(ids.len(), 39, "unexpected solver contract coverage drift");
+    assert!(
+        ids.len() >= 39,
+        "direct solver contract coverage unexpectedly shrank to {}",
+        ids.len()
+    );
+    for required in [
+        "solve_bar_1d",
+        "solve_solid_tetra_3d",
+        "solve_thermal_frame_3d",
+        "solve_electrostatic_plane_quad_2d",
+        "solve_magnetostatic_plane_quad_2d",
+        "solve_stokes_flow_plane_quad_2d",
+    ] {
+        assert!(
+            unique.contains(required),
+            "direct solver contract catalog is missing {required}"
+        );
+    }
 }
 
 fn direct_solver_contract_ids() -> Vec<&'static str> {

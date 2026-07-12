@@ -3,6 +3,8 @@ mod loader;
 mod manifest;
 #[cfg(test)]
 mod manifest_fuzz;
+mod readiness;
+mod surface;
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
 };
@@ -29,6 +31,15 @@ pub use manifest::{
     DiscoveredOperatorPackage, OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION,
     OPERATOR_SDK_API_VERSION, OperatorManifestError, OperatorPackageManifest,
     OperatorPackageOperatorEntry, discover_operator_packages, read_operator_package_manifest,
+};
+pub use readiness::{
+    OperatorSdkReadinessIssue, OperatorSdkReadinessReport, OperatorSdkReadinessSeverity,
+    operator_descriptor_readiness, operator_package_descriptor_readiness,
+    operator_package_manifest_readiness,
+};
+pub use surface::{
+    OPERATOR_SDK_SURFACE_SCHEMA_VERSION, OperatorSdkSurfaceArea, OperatorSdkSurfaceManifest,
+    find_operator_sdk_surface_area, operator_sdk_surface_areas, operator_sdk_surface_manifest,
 };
 
 pub type OperatorRegistrationEntrypoint =

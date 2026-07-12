@@ -43,6 +43,14 @@ fn operator_package_preflight_json_reports_admission_summary() {
         "partial"
     );
     assert_eq!(payload["rejected_packages"][0]["package_id"], "lab.future");
+    assert_eq!(payload["package_readiness"].as_array().unwrap().len(), 2);
+    assert_eq!(payload["package_readiness"][0]["ok"], true);
+    assert!(
+        payload["package_readiness"][0]["issues"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
     assert!(
         payload["rejected_packages"][0]["reason"]
             .as_str()

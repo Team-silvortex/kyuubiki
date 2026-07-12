@@ -11,6 +11,7 @@ Rust operator crate.
 - a tiny example `main.rs` you can run immediately
 - a `kyuubiki-operator.json` manifest for external-local package discovery
 - package-level SDK compatibility and validation posture fields
+- a descriptor readiness test using `operator_descriptor_readiness`
 
 ## Suggested workflow
 
@@ -20,7 +21,8 @@ Rust operator crate.
 4. update `kyuubiki-operator.json` so package id, host version, operator id,
    validation notes, and entry symbol match
 5. replace the sample input/output types with your real operator contract
-6. add smoke and baseline tests before wiring it into a runtime
+6. keep the descriptor readiness test green while changing schemas and ports
+7. add smoke and baseline tests before wiring it into a runtime
 
 Keep `validation_status` at `partial` until the operator has repeatable
 baseline evidence. Use `verified` only when the package has release-quality

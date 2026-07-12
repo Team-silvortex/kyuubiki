@@ -207,6 +207,11 @@ Remote operator discovery should only be added when:
 The operator SDK now has a Rust-first representation because the runtime
 contract already lives closest to the Rust data plane.
 
+This SDK is the Rust-only surface for extending operators. It is intentionally
+separate from the headless SDKs, which are for UI-free control and execution.
+The closest frontend analogue is that wasm Python DSL authoring is not the same
+thing as headless Python automation.
+
 The current shape includes:
 
 - `OperatorDescriptor`
@@ -236,6 +241,17 @@ The first author-facing Rust SDK crate now also exists in
   `OperatorDescriptor` structs
 - `operator_summary_result`
   helper for common summary-only operator outputs
+- `operator_descriptor_readiness(...)`
+  pure Rust author-side self-check for descriptor completeness before runtime
+  loading is involved
+- `operator_package_manifest_readiness(...)`
+  manifest-only readiness report for external-local packages
+- `operator_package_descriptor_readiness(...)`
+  package/descriptor alignment check so manifest operators cannot silently drift
+  away from the registered Rust descriptors
+- `operator_sdk_surface_manifest()`
+  machine-readable index of the Rust-only operator authoring, runtime,
+  readiness, package-manifest, package-loading, and platform ABI surfaces
 
 There is now also a minimal example operator at
 `workers/rust/crates/operator-sdk/examples/minimal_operator.rs` that shows:
@@ -342,14 +358,19 @@ discovery, and activation-boundary helpers:
   runtime-host hook that turns a load plan into registered operators
 - `discover_and_activate_operator_packages(...)`
   convenience path for discovery plus host-driven activation
+- `operator_package_descriptor_readiness(...)`
+  non-loading readiness gate that checks manifest fields, Rust-only runtime
+  declaration, descriptor fields, validation evidence, port shape, and
+  manifest/descriptor id alignment
 
 This means external-local support has now moved past simple discovery and into
 an explicit activation boundary:
 
 1. discover package roots
 2. parse stable manifests
-3. resolve package entrypoints into load plans
-4. let the runtime host activate those plans into an `OperatorRegistry`
+3. run non-loading readiness checks
+4. resolve package entrypoints into load plans
+5. let the runtime host activate those plans into an `OperatorRegistry`
 
 What remains intentionally host-owned is platform policy, not the full loading
 mechanism. The SDK still does not hardcode one universal desktop/headless

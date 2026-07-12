@@ -62,7 +62,8 @@ pub use heat_bridge::{
 pub use operator_sdk_host::{
     DeferredDynamicLoadActivator, DynamicLibraryOperatorActivator, DynamicOperatorHostSession,
     ExternalOperatorHostConfig, ExternalOperatorHostError, ExternalOperatorLoadReport,
-    ExternalOperatorPreflightReport, ExternalOperatorRejectedPackage, ExternalOperatorTrustPolicy,
+    ExternalOperatorPackageReadinessSummary, ExternalOperatorPreflightReport,
+    ExternalOperatorRejectedPackage, ExternalOperatorTrustPolicy,
     built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
     load_external_operator_packages_with_dynamic_host, preflight_external_operator_packages,
 };
