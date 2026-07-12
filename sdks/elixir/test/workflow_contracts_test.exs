@@ -33,6 +33,42 @@ defmodule KyuubikiSdk.WorkflowContractsTest do
     assert error.message =~ "missing_value"
   end
 
+  test "rejects empty dataset schema ref fields" do
+    dataset =
+      "../../../schemas/examples.workflow-dataset.json"
+      |> Path.expand(__DIR__)
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["values", Access.at(0), "schema_ref", "schema"], " ")
+
+    assert {:error, error} = WorkflowContracts.validate_dataset_contract(dataset)
+    assert error.message =~ "schema_ref.schema"
+  end
+
+  test "rejects empty axis semantic" do
+    dataset =
+      "../../../schemas/examples.workflow-dataset.json"
+      |> Path.expand(__DIR__)
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["values", Access.at(0), "shape", "axes", Access.at(0), "semantic"], "")
+
+    assert {:error, error} = WorkflowContracts.validate_dataset_contract(dataset)
+    assert error.message =~ "shape.axes[0].semantic"
+  end
+
+  test "rejects dataset semantic artifact mismatch" do
+    graph =
+      "../../../schemas/examples.workflow-graph.json"
+      |> Path.expand(__DIR__)
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["dataset_contract", "values", Access.at(0), "semantic_type"], "study_model/not_heat")
+
+    assert {:error, error} = WorkflowContracts.validate_graph(graph)
+    assert error.message =~ "semantic_type"
+  end
+
   test "validates execution hints" do
     graph =
       "../../../schemas/examples.workflow-graph.json"

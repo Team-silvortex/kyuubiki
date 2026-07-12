@@ -75,14 +75,16 @@
           "minLength": 1
         },
         "label": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "size": {
           "type": "integer",
           "minimum": 0
         },
         "semantic": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -149,7 +151,8 @@
           "minLength": 1
         },
         "unit": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "encoding": {
           "$ref": "#/$defs/encoding"

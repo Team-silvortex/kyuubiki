@@ -295,7 +295,8 @@ thin workflow layer:
 - workflow catalog discovery, operator discovery, and workflow job submission
 - operator TaskIR prepare/execute/prepare-batch/batch-execute/checkpoint/verify-checkpoint/resume-plan through the control plane
 - headless workflow plan/preflight reports for CI and agent policy checks
-- workflow graph and workflow dataset contract validation helpers
+- workflow graph and workflow dataset contract validation helpers, including
+  Rust-side preflight for inline `workflow_submit_graph` payloads before submit
 - distributed workflow execution hints through dispatch policy, operator fetch
   plan, placement tags, and required capability fields
 - workflow output manifest extraction and result-contract validation helpers

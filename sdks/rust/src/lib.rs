@@ -7,6 +7,7 @@ mod material_workflows;
 mod session;
 mod solver_rpc;
 mod workflow_builders;
+mod workflow_contract_validation;
 mod workflow_contracts;
 mod workflow_results;
 

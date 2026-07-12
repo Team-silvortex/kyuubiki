@@ -45,6 +45,27 @@ class WorkflowContractValidationTest(unittest.TestCase):
             validate_workflow_dataset_contract(contract)
         self.assertIn("duplicate id", str(context.exception))
 
+    def test_rejects_empty_dataset_schema_ref_fields(self) -> None:
+        contract = load_json("examples.workflow-dataset.json")
+        contract["values"][0]["schema_ref"]["schema"] = " "
+        with self.assertRaises(WorkflowContractValidationError) as context:
+            validate_workflow_dataset_contract(contract)
+        self.assertIn("schema_ref.schema", str(context.exception))
+
+    def test_rejects_empty_axis_semantic(self) -> None:
+        contract = load_json("examples.workflow-dataset.json")
+        contract["values"][0]["shape"]["axes"][0]["semantic"] = ""
+        with self.assertRaises(WorkflowContractValidationError) as context:
+            validate_workflow_dataset_contract(contract)
+        self.assertIn("shape.axes[0].semantic", str(context.exception))
+
+    def test_rejects_dataset_semantic_artifact_mismatch(self) -> None:
+        graph = load_json("examples.workflow-graph.json")
+        graph["dataset_contract"]["values"][0]["semantic_type"] = "study_model/not_heat"
+        with self.assertRaises(WorkflowContractValidationError) as context:
+            validate_workflow_graph(graph)
+        self.assertIn("semantic_type", str(context.exception))
+
     def test_validates_execution_hints(self) -> None:
         graph = load_json("examples.workflow-graph.json")
         graph["dispatch_policy"] = "central_fetch"

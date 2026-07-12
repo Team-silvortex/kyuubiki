@@ -174,7 +174,10 @@ They now also expose a small workflow layer:
 - expose optimization profiles as first-class report contracts, including
   score formulas, constraints, normalized metric scores, and weighted
   candidate contributions
-- validate workflow graphs and workflow dataset contracts before submission
+- validate workflow graphs and workflow dataset contracts before submission,
+  including duplicate dataset values, unresolved graph references, port/edge
+  mismatch, unsupported data classes, empty schema refs, and semantic/artifact
+  drift
 - wait for terminal job states by polling the control plane
 - optionally bypass the control plane and solve directly over solver RPC
 - run one study and fetch its result bundle in one call

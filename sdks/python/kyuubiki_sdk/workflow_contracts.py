@@ -46,11 +46,15 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
     _optional_string(graph, "description", errors, "graph")
 
     contract = graph.get("dataset_contract")
-    dataset_value_ids: set[str] = set()
+    dataset_semantics: dict[str, str | None] = {}
     if contract is not None:
         if isinstance(contract, dict):
             _validate_dataset_contract(contract, errors, "graph.dataset_contract")
-            dataset_value_ids = {value["id"] for value in contract.get("values", []) if isinstance(value, dict) and isinstance(value.get("id"), str)}
+            dataset_semantics = {
+                value["id"]: value.get("semantic_type")
+                for value in contract.get("values", [])
+                if isinstance(value, dict) and isinstance(value.get("id"), str)
+            }
         else:
             errors.append("graph.dataset_contract must be an object")
 
@@ -126,12 +130,13 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
                 cardinality = port.get("cardinality")
                 if cardinality is not None and cardinality not in WORKFLOW_PORT_CARDINALITIES:
                     errors.append(f"{port_location}.cardinality must be one of {sorted(WORKFLOW_PORT_CARDINALITIES)!r}")
-                dataset_value = port.get("dataset_value")
-                if dataset_value is not None:
-                    if not isinstance(dataset_value, str) or not dataset_value.strip():
-                        errors.append(f"{port_location}.dataset_value must be a non-empty string")
-                    elif dataset_value_ids and dataset_value not in dataset_value_ids:
-                        errors.append(f"{port_location}.dataset_value {dataset_value!r} is not declared in graph.dataset_contract")
+                _validate_dataset_reference(
+                    port.get("dataset_value"),
+                    port.get("artifact_type"),
+                    dataset_semantics,
+                    errors,
+                    port_location,
+                )
                 if port_id:
                     if port_id in seen_port_ids:
                         errors.append(f"{location}.{port_kind} contains duplicate port id {port_id!r}")
@@ -161,11 +166,13 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
                 seen_edge_ids.add(edge_id)
         artifact_type = _require_non_empty_string(edge, "artifact_type", errors, location)
         dataset_value = edge.get("dataset_value")
-        if dataset_value is not None:
-            if not isinstance(dataset_value, str) or not dataset_value.strip():
-                errors.append(f"{location}.dataset_value must be a non-empty string")
-            elif dataset_value_ids and dataset_value not in dataset_value_ids:
-                errors.append(f"{location}.dataset_value {dataset_value!r} is not declared in graph.dataset_contract")
+        _validate_dataset_reference(
+            dataset_value,
+            artifact_type,
+            dataset_semantics,
+            errors,
+            location,
+        )
 
         source_ref = _validate_node_port_ref(edge.get("from"), errors, f"{location}.from")
         target_ref = _validate_node_port_ref(edge.get("to"), errors, f"{location}.to")
@@ -277,6 +284,33 @@ def _validate_node_port_ref(value: Any, errors: list[str], location: str) -> tup
     return node, port
 
 
+def _validate_dataset_reference(
+    dataset_value: Any,
+    artifact_type: Any,
+    dataset_semantics: dict[str, str | None],
+    errors: list[str],
+    location: str,
+) -> None:
+    if dataset_value is None:
+        return
+    if not isinstance(dataset_value, str) or not dataset_value.strip():
+        errors.append(f"{location}.dataset_value must be a non-empty string")
+        return
+    if not dataset_semantics:
+        return
+    if dataset_value not in dataset_semantics:
+        errors.append(
+            f"{location}.dataset_value {dataset_value!r} is not declared in graph.dataset_contract"
+        )
+        return
+    semantic_type = dataset_semantics[dataset_value]
+    if semantic_type is not None and semantic_type != artifact_type:
+        errors.append(
+            f"{location}.dataset_value {dataset_value!r} semantic_type {semantic_type!r} "
+            f"does not match artifact_type {artifact_type!r}"
+        )
+
+
 def _validate_dispatch_policy(value: Any, errors: list[str], location: str) -> None:
     if value is None:
         return
@@ -349,7 +383,7 @@ def _optional_string(container: dict[str, Any], key: str, errors: list[str], loc
     if not isinstance(value, str):
         errors.append(f"{location}.{key} must be a string")
         return None
-    if not value and key not in {"description", "unit", "label", "semantic"}:
+    if not value and key != "description":
         errors.append(f"{location}.{key} must not be empty")
         return None
     return value

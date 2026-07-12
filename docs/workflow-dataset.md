@@ -241,9 +241,11 @@ The first runtime validation layer now also exists in the Rust engine:
 
 - `WorkflowGraph.dataset_contract` is checked against workflow JSON security
   budgets before semantic validation
+- dataset contract `id` and `version` must be non-empty
 - dataset value ids inside one contract must be non-empty and unique
 - `data_class` must stay inside the stable workflow dataset class set
-- `element_type`, `schema_ref`, and shape axis ids must not be empty
+- `element_type`, `schema_ref`, shape axis ids, and optional shape axis text
+  fields must not be empty
 - shape axis ids must be unique inside each dataset value
 - ports that reference `dataset_value` must resolve inside the contract
 - edges cannot disagree with connected ports about the named dataset value

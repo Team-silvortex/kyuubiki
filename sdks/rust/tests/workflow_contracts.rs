@@ -31,6 +31,56 @@ fn rejects_unknown_dataset_value_reference() {
 }
 
 #[test]
+fn rejects_empty_dataset_schema_ref_fields() {
+    let mut dataset: WorkflowDatasetContract = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-dataset.json"
+    ))
+    .expect("dataset example");
+    dataset.values[0].schema_ref.as_mut().unwrap().schema = " ".into();
+    match dataset.validate() {
+        Err(SdkError::Validation { errors }) => {
+            assert!(errors.iter().any(|item| item.contains("schema_ref.schema")));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+}
+
+#[test]
+fn rejects_dataset_semantic_artifact_mismatch() {
+    let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
+    graph.dataset_contract.as_mut().unwrap().values[0].semantic_type =
+        Some("study_model/not_heat".into());
+    match graph.validate() {
+        Err(SdkError::Validation { errors }) => {
+            assert!(errors.iter().any(|item| item.contains("semantic_type")));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+}
+
+#[test]
+fn rejects_edge_dataset_value_that_disagrees_with_ports() {
+    let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
+        "../../../schemas/examples.workflow-graph.json"
+    ))
+    .expect("graph example");
+    graph.nodes[1].inputs[0].dataset_value = Some("heat_result".into());
+    match graph.validate() {
+        Err(SdkError::Validation { errors }) => {
+            assert!(
+                errors
+                    .iter()
+                    .any(|item| item.contains("does not match target input port dataset_value"))
+            );
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+}
+
+#[test]
 fn validates_execution_hints() {
     let mut graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
         "../../../schemas/examples.workflow-graph.json"

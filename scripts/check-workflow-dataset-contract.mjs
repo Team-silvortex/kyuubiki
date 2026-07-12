@@ -57,6 +57,15 @@ function checkSchema(schema) {
   if (schema?.$defs?.axis?.properties?.id?.minLength !== 1) {
     fail(`${datasetSchemaPath}: axis.id must require minLength 1`);
   }
+  if (schema?.$defs?.axis?.properties?.label?.minLength !== 1) {
+    fail(`${datasetSchemaPath}: axis.label must require minLength 1 when present`);
+  }
+  if (schema?.$defs?.axis?.properties?.semantic?.minLength !== 1) {
+    fail(`${datasetSchemaPath}: axis.semantic must require minLength 1 when present`);
+  }
+  if (schema?.$defs?.valueInfo?.properties?.unit?.minLength !== 1) {
+    fail(`${datasetSchemaPath}: unit must require minLength 1 when present`);
+  }
   if (schema?.$defs?.schemaRef?.properties?.schema?.minLength !== 1) {
     fail(`${datasetSchemaPath}: schema_ref.schema must require minLength 1`);
   }
@@ -121,6 +130,12 @@ function checkShape(shape, context) {
   const axisIds = new Set();
   for (const [index, axis] of axes.entries()) {
     requireString(axis.id, `shape.axes/${index}.id`, context);
+    if (axis.label !== undefined) {
+      requireString(axis.label, `shape.axes/${index}.label`, context);
+    }
+    if (axis.semantic !== undefined) {
+      requireString(axis.semantic, `shape.axes/${index}.semantic`, context);
+    }
     if (axisIds.has(axis.id)) {
       fail(`${context}: duplicate shape axis id ${axis.id}`);
     }
@@ -180,8 +195,10 @@ function checkGraphExample(graph, allowedDataClasses) {
 function checkDocumentation() {
   const docs = readText(docsPath);
   for (const phrase of [
+    "dataset contract `id` and `version` must be non-empty",
     "dataset value ids inside one contract must be non-empty and unique",
     "`data_class` must stay inside the stable workflow dataset class set",
+    "`element_type`, `schema_ref`, shape axis ids, and optional shape axis text",
     "shape axis ids must be unique inside each dataset value",
   ]) {
     if (!docs.includes(phrase)) {

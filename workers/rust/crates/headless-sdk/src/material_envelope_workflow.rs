@@ -7,6 +7,32 @@ pub(crate) fn material_study_envelope_graph_payload() -> Value {
         "name": "Material study envelope ranking",
         "version": "1.0.0",
         "description": "Compose material study envelopes, rank candidates, and extract Pareto frontier.",
+        "dataset_contract": {
+            "schema_version": "kyuubiki.workflow-dataset/v1",
+            "id": "dataset.material_study_envelope/v1",
+            "version": "1.0.0",
+            "values": [
+                {
+                    "id": "material_study",
+                    "data_class": "table",
+                    "element_type": "json_object",
+                    "shape": {
+                        "axes": [
+                            {
+                                "id": "candidate",
+                                "semantic": "material_candidate"
+                            }
+                        ]
+                    },
+                    "semantic_type": "artifact/result_summary",
+                    "encoding": "json",
+                    "schema_ref": {
+                        "schema": "kyuubiki.material.study.envelope.row",
+                        "version": "1"
+                    }
+                }
+            ]
+        },
         "entry_nodes": ["material_rows"],
         "output_nodes": ["ranking_output", "pareto_output"],
         "defaults": {},

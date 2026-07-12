@@ -6,6 +6,7 @@ pub fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), S
         return Ok(());
     };
 
+    validate_dataset_contract_identity(graph.id.as_str(), contract)?;
     validate_dataset_value_ids(graph.id.as_str(), contract)?;
 
     let value_map = contract
@@ -141,6 +142,23 @@ pub fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), S
     Ok(())
 }
 
+fn validate_dataset_contract_identity(
+    graph_id: &str,
+    contract: &kyuubiki_protocol::WorkflowDatasetContract,
+) -> Result<(), String> {
+    if contract.id.trim().is_empty() {
+        return Err(format!(
+            "workflow {graph_id} dataset contract has an empty id"
+        ));
+    }
+    if contract.version.trim().is_empty() {
+        return Err(format!(
+            "workflow {graph_id} dataset contract has an empty version"
+        ));
+    }
+    Ok(())
+}
+
 fn validate_dataset_value_ids(
     graph_id: &str,
     contract: &kyuubiki_protocol::WorkflowDatasetContract,
@@ -226,6 +244,26 @@ fn validate_dataset_shape(
             return Err(format!(
                 "workflow {graph_id} dataset value {} has duplicate shape axis id {}",
                 value.id, axis.id
+            ));
+        }
+        if axis
+            .label
+            .as_deref()
+            .is_some_and(|label| label.trim().is_empty())
+        {
+            return Err(format!(
+                "workflow {graph_id} dataset value {} has an empty shape axis label",
+                value.id
+            ));
+        }
+        if axis
+            .semantic
+            .as_deref()
+            .is_some_and(|semantic| semantic.trim().is_empty())
+        {
+            return Err(format!(
+                "workflow {graph_id} dataset value {} has an empty shape axis semantic",
+                value.id
             ));
         }
     }

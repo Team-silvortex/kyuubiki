@@ -30,16 +30,20 @@ defmodule KyuubikiSdk.WorkflowContracts do
   def validate_graph(_graph), do: {:error, Error.validation(["graph must be an object"])}
 
   defp validate_graph_errors(graph) do
-    dataset_ids =
+    dataset_index =
       case Map.get(graph, "dataset_contract") do
         contract when is_map(contract) ->
           case validate_dataset_contract(contract) do
-            {:ok, _} -> MapSet.new(Enum.map(Map.get(contract, "values", []), &Map.get(&1, "id")))
+            {:ok, _} ->
+              contract
+              |> Map.get("values", [])
+              |> Map.new(&{Map.get(&1, "id"), Map.get(&1, "semantic_type")})
+
             {:error, %Error{message: message}} -> message_to_lines(message, "graph.dataset_contract")
           end
 
         nil ->
-          MapSet.new()
+          %{}
 
         _ ->
           ["graph.dataset_contract must be an object"]
@@ -63,15 +67,15 @@ defmodule KyuubikiSdk.WorkflowContracts do
       |> validate_operator_fetch_plan(Map.get(graph, "operator_fetch_plan"), "graph.operator_fetch_plan")
       |> validate_defaults(Map.get(graph, "defaults"))
 
-    {node_errors, node_ids, input_ports, output_ports} = validate_nodes(Map.get(graph, "nodes", []), dataset_ids)
+    {node_errors, node_ids, input_ports, output_ports} = validate_nodes(Map.get(graph, "nodes", []), dataset_index)
     entry_errors = validate_named_node_refs(Map.get(graph, "entry_nodes", []), node_ids, "graph.entry_nodes")
     output_errors = validate_named_node_refs(Map.get(graph, "output_nodes", []), node_ids, "graph.output_nodes")
-    edge_errors = validate_edges(Map.get(graph, "edges", []), dataset_ids, input_ports, output_ports)
+    edge_errors = validate_edges(Map.get(graph, "edges", []), dataset_index, input_ports, output_ports)
 
-    List.flatten([base_errors, normalize_nested_errors(dataset_ids), node_errors, entry_errors, output_errors, edge_errors])
+    List.flatten([base_errors, normalize_nested_errors(dataset_index), node_errors, entry_errors, output_errors, edge_errors])
   end
 
-  defp validate_nodes(nodes, dataset_ids) when is_list(nodes) do
+  defp validate_nodes(nodes, dataset_index) when is_list(nodes) do
     Enum.with_index(nodes)
     |> Enum.reduce({[], MapSet.new(), %{}, %{}}, fn {node, index}, {errors, node_ids, input_ports, output_ports} ->
       path = "graph.nodes[#{index}]"
@@ -96,8 +100,8 @@ defmodule KyuubikiSdk.WorkflowContracts do
         node_id = Map.get(node, "id")
         duplicate_errors = if present_string?(node_id) and MapSet.member?(node_ids, node_id), do: ["graph.nodes contains duplicate id #{inspect(node_id)}"], else: []
         next_node_ids = if present_string?(node_id), do: MapSet.put(node_ids, node_id), else: node_ids
-        {input_errors, next_input_ports} = collect_ports(node_id, Map.get(node, "inputs", []), dataset_ids, "#{path}.inputs")
-        {output_errors, next_output_ports} = collect_ports(node_id, Map.get(node, "outputs", []), dataset_ids, "#{path}.outputs")
+        {input_errors, next_input_ports} = collect_ports(node_id, Map.get(node, "inputs", []), dataset_index, "#{path}.inputs")
+        {output_errors, next_output_ports} = collect_ports(node_id, Map.get(node, "outputs", []), dataset_index, "#{path}.outputs")
 
         {
           errors ++ current_errors ++ duplicate_errors ++ input_errors ++ output_errors,
@@ -111,7 +115,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
     end)
   end
 
-  defp collect_ports(node_id, ports, dataset_ids, path) when is_list(ports) do
+  defp collect_ports(node_id, ports, dataset_index, path) when is_list(ports) do
     Enum.with_index(ports)
     |> Enum.reduce({[], %{}, MapSet.new()}, fn {port, index}, {errors, bucket, port_ids} ->
       port_path = "#{path}[#{index}]"
@@ -124,7 +128,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
           |> optional_string(port, "name", port_path)
           |> validate_boolean(Map.get(port, "required"), "#{port_path}.required")
           |> validate_enum(Map.get(port, "cardinality"), @cardinalities, "#{port_path}.cardinality")
-          |> validate_dataset_value(Map.get(port, "dataset_value"), dataset_ids, "#{port_path}.dataset_value")
+          |> validate_dataset_value(Map.get(port, "dataset_value"), dataset_index, Map.get(port, "artifact_type"), "#{port_path}.dataset_value")
 
         port_id = Map.get(port, "id")
         duplicate_errors = if present_string?(port_id) and MapSet.member?(port_ids, port_id), do: ["#{path} contains duplicate port id #{inspect(port_id)}"], else: []
@@ -138,7 +142,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
     |> then(fn {errors, bucket, _port_ids} -> {errors, bucket} end)
   end
 
-  defp validate_edges(edges, dataset_ids, input_ports, output_ports) when is_list(edges) do
+  defp validate_edges(edges, dataset_index, input_ports, output_ports) when is_list(edges) do
     Enum.with_index(edges)
     |> Enum.reduce({[], MapSet.new()}, fn {edge, index}, {errors, edge_ids} ->
       path = "graph.edges[#{index}]"
@@ -148,7 +152,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
           []
           |> require_string(edge, "id", path)
           |> require_string(edge, "artifact_type", path)
-          |> validate_dataset_value(Map.get(edge, "dataset_value"), dataset_ids, "#{path}.dataset_value")
+          |> validate_dataset_value(Map.get(edge, "dataset_value"), dataset_index, Map.get(edge, "artifact_type"), "#{path}.dataset_value")
 
         edge_id = Map.get(edge, "id")
         duplicate_errors = if present_string?(edge_id) and MapSet.member?(edge_ids, edge_id), do: ["graph.edges contains duplicate id #{inspect(edge_id)}"], else: []
@@ -381,19 +385,26 @@ defmodule KyuubikiSdk.WorkflowContracts do
   defp validate_non_negative_integer(errors, value, _path) when is_integer(value) and value >= 0, do: errors
   defp validate_non_negative_integer(errors, _value, path), do: errors ++ ["#{path} must be a non-negative integer"]
 
-  defp validate_dataset_value(errors, nil, _dataset_ids, _path), do: errors
+  defp validate_dataset_value(errors, nil, _dataset_index, _artifact_type, _path), do: errors
 
-  defp validate_dataset_value(errors, value, dataset_ids, path) do
+  defp validate_dataset_value(errors, value, dataset_index, artifact_type, path) when is_map(dataset_index) do
     cond do
       not present_string?(value) ->
         errors ++ ["#{path} must be a non-empty string"]
 
-      MapSet.size(dataset_ids) > 0 and not MapSet.member?(dataset_ids, value) ->
+      map_size(dataset_index) > 0 and not Map.has_key?(dataset_index, value) ->
         errors ++ ["#{path} #{inspect(value)} is not declared in graph.dataset_contract"]
+
+      present_string?(Map.get(dataset_index, value)) and Map.get(dataset_index, value) != artifact_type ->
+        errors ++ ["#{path} #{inspect(value)} semantic_type #{inspect(Map.get(dataset_index, value))} does not match artifact_type #{inspect(artifact_type)}"]
 
       true ->
         errors
     end
+  end
+
+  defp validate_dataset_value(errors, value, _dataset_errors, _artifact_type, path) do
+    if present_string?(value), do: errors, else: errors ++ ["#{path} must be a non-empty string"]
   end
 
   defp validate_cache_policy(errors, nil, _path), do: errors
@@ -443,8 +454,16 @@ defmodule KyuubikiSdk.WorkflowContracts do
   defp optional_string(errors, map, key, path) do
     case Map.get(map, key) do
       nil -> errors
-      value when is_binary(value) -> errors
+      value when is_binary(value) -> validate_optional_string_value(errors, value, key, path)
       _ -> errors ++ ["#{path}.#{key} must be a string"]
+    end
+  end
+
+  defp validate_optional_string_value(errors, value, key, path) do
+    if String.trim(value) != "" or key == "description" do
+      errors
+    else
+      errors ++ ["#{path}.#{key} must be a non-empty string"]
     end
   end
 
@@ -488,6 +507,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
   end
 
   defp normalize_nested_errors(%MapSet{}), do: []
+  defp normalize_nested_errors(%{}), do: []
   defp normalize_nested_errors(errors) when is_list(errors), do: errors
 
   defp message_to_lines(message, prefix) do

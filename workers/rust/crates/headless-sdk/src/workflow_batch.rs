@@ -1,4 +1,7 @@
-use crate::{HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle, find_action_contract};
+use crate::{
+    HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle, find_action_contract,
+    preflight_workflow_dataset_contract,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeSet, HashMap};
@@ -220,6 +223,7 @@ pub fn validate_batch(batch: &HeadlessExecutionBatch) -> HeadlessValidationRepor
                 step_number, step.action
             ));
         }
+        collect_workflow_graph_issues(step, step_number, &mut issues);
         collect_binding_issues(&step.payload, step_number, &known_outputs, &mut issues);
     }
     HeadlessValidationReport {
@@ -231,6 +235,26 @@ pub fn validate_batch(batch: &HeadlessExecutionBatch) -> HeadlessValidationRepor
         summary: Some(summarize_batch(batch)),
         policy: Some(build_policy_summary(batch)),
     }
+}
+
+fn collect_workflow_graph_issues(
+    step: &HeadlessExecutionBatchStep,
+    step_number: usize,
+    issues: &mut Vec<String>,
+) {
+    if step.action != "workflow_submit_graph" {
+        return;
+    }
+    let Some(graph) = step.payload.get("graph") else {
+        return;
+    };
+    let report = preflight_workflow_dataset_contract(graph);
+    issues.extend(
+        report
+            .issues
+            .into_iter()
+            .map(|issue| format!("step {step_number} workflow graph: {issue}")),
+    );
 }
 
 fn collect_inline_template_warnings(value: &Value, warnings: &mut Vec<String>) {
@@ -498,5 +522,32 @@ mod tests {
                 .iter()
                 .any(|issue| issue.contains("future-or-self step 9"))
         );
+    }
+
+    #[test]
+    fn validates_workflow_graph_dataset_contract_before_submit() {
+        let mut graph: Value = serde_json::from_str(include_str!(
+            "../../../../../schemas/examples.workflow-graph.json"
+        ))
+        .expect("example workflow graph should parse");
+        graph["edges"][0]["dataset_value"] = Value::String("missing_value".to_string());
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "2026-07-12T00:00:00Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "dataset-preflight-fixture".to_string(),
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "workflow_submit_graph".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: serde_json::json!({ "graph": graph, "input_artifacts": {} }),
+            }],
+            warnings: Vec::new(),
+        };
+        let report = validate_batch(&batch);
+        assert!(!report.ok);
+        assert!(report.issues.iter().any(|issue| {
+            issue.contains("step 1 workflow graph: dataset_value missing_value is referenced")
+        }));
     }
 }

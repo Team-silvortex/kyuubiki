@@ -145,6 +145,34 @@ fn rejects_workflow_graph_with_empty_dataset_value_id() {
 }
 
 #[test]
+fn rejects_workflow_graph_with_empty_dataset_contract_identity() {
+    let mut graph = dataset_contract_smoke_graph();
+    graph.dataset_contract = Some(WorkflowDatasetContract {
+        id: " ".to_string(),
+        version: "1.0.0".to_string(),
+        values: vec![dataset_value("result_summary", "report/summary")],
+        metadata: BTreeMap::new(),
+    });
+
+    let error = run_smoke_graph(graph).expect_err("empty dataset contract id should be rejected");
+
+    assert!(error.contains("dataset contract has an empty id"));
+
+    let mut graph = dataset_contract_smoke_graph();
+    graph.dataset_contract = Some(WorkflowDatasetContract {
+        id: "dataset.smoke/v1".to_string(),
+        version: "".to_string(),
+        values: vec![dataset_value("result_summary", "report/summary")],
+        metadata: BTreeMap::new(),
+    });
+
+    let error =
+        run_smoke_graph(graph).expect_err("empty dataset contract version should be rejected");
+
+    assert!(error.contains("dataset contract has an empty version"));
+}
+
+#[test]
 fn rejects_workflow_graph_with_unsupported_dataset_data_class() {
     let mut graph = dataset_contract_smoke_graph();
     let mut value = dataset_value("result_summary", "report/summary");
@@ -182,6 +210,41 @@ fn rejects_workflow_graph_with_duplicate_dataset_shape_axis_ids() {
         run_smoke_graph(graph).expect_err("duplicate dataset shape axis ids should be rejected");
 
     assert!(error.contains("duplicate shape axis id nodes"));
+}
+
+#[test]
+fn rejects_workflow_graph_with_empty_dataset_shape_axis_text() {
+    let mut graph = dataset_contract_smoke_graph();
+    let mut value = dataset_value("result_summary", "report/summary");
+    value.shape = WorkflowDatasetShape {
+        axes: vec![WorkflowDatasetAxis {
+            id: "nodes".to_string(),
+            label: Some(" ".to_string()),
+            size: None,
+            semantic: None,
+        }],
+    };
+    graph.dataset_contract = Some(dataset_contract(vec![value]));
+
+    let error = run_smoke_graph(graph).expect_err("empty shape axis label should be rejected");
+
+    assert!(error.contains("empty shape axis label"));
+
+    let mut graph = dataset_contract_smoke_graph();
+    let mut value = dataset_value("result_summary", "report/summary");
+    value.shape = WorkflowDatasetShape {
+        axes: vec![WorkflowDatasetAxis {
+            id: "nodes".to_string(),
+            label: None,
+            size: None,
+            semantic: Some("".to_string()),
+        }],
+    };
+    graph.dataset_contract = Some(dataset_contract(vec![value]));
+
+    let error = run_smoke_graph(graph).expect_err("empty shape axis semantic should be rejected");
+
+    assert!(error.contains("empty shape axis semantic"));
 }
 
 #[test]

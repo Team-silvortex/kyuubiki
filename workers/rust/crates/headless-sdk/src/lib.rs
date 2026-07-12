@@ -56,6 +56,7 @@ mod template_tests;
 mod template_workflows;
 mod templates;
 mod workflow_batch;
+mod workflow_dataset_preflight;
 
 pub use capabilities::{
     HeadlessActionCapability, action_capability_manifest, find_action_capability,
@@ -176,4 +177,7 @@ pub use workflow_batch::{
     HeadlessPolicySummary, HeadlessTemplateDescriptor, HeadlessTemplateSnapshot,
     HeadlessValidationReport, HeadlessWorkflowDocument, HeadlessWorkflowDraft,
     HeadlessWorkflowStep, normalize_workflow_document, summarize_batch, validate_batch,
+};
+pub use workflow_dataset_preflight::{
+    HeadlessWorkflowDatasetPreflightReport, preflight_workflow_dataset_contract,
 };
