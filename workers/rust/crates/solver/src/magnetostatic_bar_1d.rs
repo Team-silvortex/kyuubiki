@@ -1,6 +1,7 @@
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
 };
+use crate::magnetostatic_bar_1d_validation::validate_request;
 use kyuubiki_protocol::{
     MagnetostaticBar1dElementResult, MagnetostaticBar1dNodeResult, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticBar1dResult,
@@ -9,7 +10,7 @@ use kyuubiki_protocol::{
 pub fn solve_magnetostatic_bar_1d(
     request: &SolveMagnetostaticBar1dRequest,
 ) -> Result<SolveMagnetostaticBar1dResult, String> {
-    validate_magnetostatic_bar_1d_request(request)?;
+    validate_request(request)?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -134,59 +135,4 @@ pub fn solve_magnetostatic_bar_1d(
         max_flux_density,
         total_stored_energy,
     })
-}
-
-fn validate_magnetostatic_bar_1d_request(
-    request: &SolveMagnetostaticBar1dRequest,
-) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("1d magnetostatic bar model must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("1d magnetostatic bar model must define at least one element".to_string());
-    }
-    if !request.nodes.iter().any(|node| node.fix_magnetic_potential) {
-        return Err(
-            "1d magnetostatic bar model must include at least one magnetic potential support"
-                .to_string(),
-        );
-    }
-
-    for node in &request.nodes {
-        if !node.x.is_finite() {
-            return Err("1d magnetostatic bar node x must be finite".to_string());
-        }
-        if !node.magnetic_potential.is_finite() {
-            return Err("1d magnetostatic bar node magnetic_potential must be finite".to_string());
-        }
-        if !node.magnetomotive_source.is_finite() {
-            return Err(
-                "1d magnetostatic bar node magnetomotive_source must be finite".to_string(),
-            );
-        }
-    }
-
-    for element in &request.elements {
-        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-            return Err("1d magnetostatic bar element references an out-of-range node".to_string());
-        }
-        if element.node_i == element.node_j {
-            return Err("1d magnetostatic bar element must connect two distinct nodes".to_string());
-        }
-        if !element.area.is_finite() || element.area <= 0.0 {
-            return Err("1d magnetostatic bar element area must be positive".to_string());
-        }
-        if !element.permeability.is_finite() || element.permeability <= 0.0 {
-            return Err("1d magnetostatic bar element permeability must be positive".to_string());
-        }
-
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = (node_j.x - node_i.x).abs();
-        if !length.is_finite() || length <= 0.0 {
-            return Err("1d magnetostatic bar element length must be positive".to_string());
-        }
-    }
-
-    Ok(())
 }

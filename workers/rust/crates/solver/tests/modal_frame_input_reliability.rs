@@ -8,30 +8,89 @@ use kyuubiki_solver::{solve_modal_frame_2d, solve_modal_frame_3d};
 fn modal_frame_2d_rejects_non_finite_node_coordinates_and_load_fields() {
     let mut request = modal_frame_2d_request();
     request.nodes[1].x = f64::NAN;
-    assert!(solve_modal_frame_2d(&request).is_err());
+    let error = solve_modal_frame_2d(&request).expect_err("NaN coordinate should be rejected");
+    assert!(
+        error.contains("invalid coordinates"),
+        "unexpected coordinate error: {error}"
+    );
 
     let mut request = modal_frame_2d_request();
     request.nodes[1].load_y = f64::INFINITY;
-    assert!(solve_modal_frame_2d(&request).is_err());
+    let error = solve_modal_frame_2d(&request).expect_err("infinite load should be rejected");
+    assert!(
+        error.contains("invalid load"),
+        "unexpected load error: {error}"
+    );
 
     let mut request = modal_frame_2d_request();
     request.nodes[1].moment_z = f64::NEG_INFINITY;
-    assert!(solve_modal_frame_2d(&request).is_err());
+    let error = solve_modal_frame_2d(&request).expect_err("infinite moment should be rejected");
+    assert!(
+        error.contains("invalid load"),
+        "unexpected moment error: {error}"
+    );
 }
 
 #[test]
 fn modal_frame_3d_rejects_non_finite_node_coordinates_loads_and_moments() {
     let mut request = modal_frame_3d_request();
     request.nodes[1].z = f64::NAN;
-    assert!(solve_modal_frame_3d(&request).is_err());
+    let error = solve_modal_frame_3d(&request).expect_err("NaN coordinate should be rejected");
+    assert!(
+        error.contains("invalid coordinates"),
+        "unexpected coordinate error: {error}"
+    );
 
     let mut request = modal_frame_3d_request();
     request.nodes[1].load_y = f64::INFINITY;
-    assert!(solve_modal_frame_3d(&request).is_err());
+    let error = solve_modal_frame_3d(&request).expect_err("infinite load should be rejected");
+    assert!(
+        error.contains("invalid load"),
+        "unexpected load error: {error}"
+    );
 
     let mut request = modal_frame_3d_request();
     request.nodes[1].moment_z = f64::NEG_INFINITY;
-    assert!(solve_modal_frame_3d(&request).is_err());
+    let error = solve_modal_frame_3d(&request).expect_err("infinite moment should be rejected");
+    assert!(
+        error.contains("invalid moment"),
+        "unexpected moment error: {error}"
+    );
+}
+
+#[test]
+fn modal_frames_reject_invalid_element_topology_and_materials() {
+    let mut request = modal_frame_2d_request();
+    request.elements[0].node_j = 9;
+    let error = solve_modal_frame_2d(&request).expect_err("out-of-range 2d node should fail");
+    assert!(
+        error.contains("out-of-range node"),
+        "unexpected 2d topology error: {error}"
+    );
+
+    let mut request = modal_frame_2d_request();
+    request.elements[0].density = 0.0;
+    let error = solve_modal_frame_2d(&request).expect_err("zero 2d density should fail");
+    assert!(
+        error.contains("density must be positive"),
+        "unexpected 2d density error: {error}"
+    );
+
+    let mut request = modal_frame_3d_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error = solve_modal_frame_3d(&request).expect_err("zero-length 3d element should fail");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected 3d length error: {error}"
+    );
+
+    let mut request = modal_frame_3d_request();
+    request.elements[0].torsion_constant = f64::NAN;
+    let error = solve_modal_frame_3d(&request).expect_err("NaN torsion constant should fail");
+    assert!(
+        error.contains("torsion_constant must be positive"),
+        "unexpected 3d torsion constant error: {error}"
+    );
 }
 
 fn modal_frame_2d_request() -> SolveModalFrame2dRequest {

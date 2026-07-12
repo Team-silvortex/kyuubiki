@@ -1,3 +1,4 @@
+use crate::dynamic_spring_1d_validation::validate_transient_request;
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
 use kyuubiki_protocol::{
     SolveTransientSpring1dRequest, SolveTransientSpring1dResult, TransientSpring1dElementInput,
@@ -10,7 +11,7 @@ const GAMMA: f64 = 0.5;
 pub fn solve_transient_spring_1d(
     request: &SolveTransientSpring1dRequest,
 ) -> Result<SolveTransientSpring1dResult, String> {
-    validate_request(request)?;
+    validate_transient_request(request)?;
 
     let count = request.nodes.len();
     let stiffness = assemble_matrix(count, request, |element| element.stiffness);
@@ -271,62 +272,6 @@ fn constrained_dofs(request: &SolveTransientSpring1dRequest) -> Vec<usize> {
         .enumerate()
         .filter_map(|(index, node)| node.fix_x.then_some(index))
         .collect()
-}
-
-fn validate_request(request: &SolveTransientSpring1dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("transient spring 1d must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("transient spring 1d must define at least one element".to_string());
-    }
-    if request.time_step <= 0.0 || !request.time_step.is_finite() || request.steps == 0 {
-        return Err("transient spring 1d requires positive time_step and steps".to_string());
-    }
-    for node in &request.nodes {
-        if !node.x.is_finite()
-            || !node.load_x.is_finite()
-            || !node.mass.is_finite()
-            || !node.initial_displacement.is_finite()
-            || !node.initial_velocity.is_finite()
-            || node.mass <= 0.0
-        {
-            return Err(format!(
-                "transient spring node {} must have finite coordinates, load, initial state, and positive mass",
-                node.id
-            ));
-        }
-    }
-    for element in &request.elements {
-        validate_element(request, element)?;
-    }
-    Ok(())
-}
-
-fn validate_element(
-    request: &SolveTransientSpring1dRequest,
-    element: &TransientSpring1dElementInput,
-) -> Result<(), String> {
-    for index in [element.node_i, element.node_j] {
-        if index >= request.nodes.len() {
-            return Err(format!(
-                "transient spring element {} references missing node {}",
-                element.id, index
-            ));
-        }
-    }
-    if element.node_i == element.node_j
-        || !element.stiffness.is_finite()
-        || element.stiffness <= 0.0
-        || !element.damping.is_finite()
-        || element.damping < 0.0
-    {
-        return Err(format!(
-            "transient spring element {} must have valid connectivity, stiffness, and damping",
-            element.id
-        ));
-    }
-    Ok(())
 }
 
 fn multiply_matrix_vector(matrix: &[Vec<f64>], vector: &[f64]) -> Vec<f64> {

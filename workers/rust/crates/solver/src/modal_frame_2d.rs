@@ -1,4 +1,5 @@
 use crate::frame_2d_math::{frame_local_stiffness, frame_transform, transform_frame_stiffness};
+use crate::modal_frame_validation::validate_modal_frame_2d_request;
 use crate::modal_math::{expand_mode_shape, jacobi_eigenpairs, mass_normalized_stiffness};
 use kyuubiki_protocol::{
     ModalFrame2dModeResult, SolveModalFrame2dRequest, SolveModalFrame2dResult,
@@ -103,54 +104,6 @@ pub fn solve_modal_frame_2d(
         min_frequency_hz,
         max_frequency_hz,
     })
-}
-
-fn validate_modal_frame_2d_request(request: &SolveModalFrame2dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("modal frame 2d must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("modal frame 2d must define at least one element".to_string());
-    }
-    if constrained_dofs(request).len() < 3 {
-        return Err("modal frame 2d must restrain at least three degrees of freedom".to_string());
-    }
-    for (index, node) in request.nodes.iter().enumerate() {
-        if !node.x.is_finite() || !node.y.is_finite() {
-            return Err(format!(
-                "modal frame 2d node {index} has invalid coordinates"
-            ));
-        }
-        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.moment_z.is_finite() {
-            return Err(format!("modal frame 2d node {index} has invalid load"));
-        }
-    }
-    for element in &request.elements {
-        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-            return Err("modal frame 2d element references an out-of-range node".to_string());
-        }
-        if element.node_i == element.node_j {
-            return Err("modal frame 2d element must connect two distinct nodes".to_string());
-        }
-        for (label, value) in [
-            ("area", element.area),
-            ("youngs_modulus", element.youngs_modulus),
-            ("moment_of_inertia", element.moment_of_inertia),
-            ("section_modulus", element.section_modulus),
-            ("density", element.density),
-        ] {
-            if !(value.is_finite() && value > 0.0) {
-                return Err(format!("modal frame 2d element {label} must be positive"));
-            }
-        }
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
-        if !(length.is_finite() && length > 1.0e-12) {
-            return Err("modal frame 2d element length must be positive".to_string());
-        }
-    }
-    Ok(())
 }
 
 fn constrained_dofs(request: &SolveModalFrame2dRequest) -> Vec<usize> {

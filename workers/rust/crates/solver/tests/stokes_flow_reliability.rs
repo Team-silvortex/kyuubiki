@@ -211,6 +211,35 @@ fn stokes_flow_quad_2d_rejects_non_finite_element_input() {
     );
 }
 
+#[test]
+fn stokes_flow_quad_2d_rejects_duplicate_element_nodes() {
+    let request = SolveStokesFlowPlaneQuad2dRequest {
+        nodes: vec![
+            node("n0", 0.0, 0.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+            node("n1", 1.0, 0.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+            node("n2", 1.0, 1.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+            node("n3", 0.0, 1.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+        ],
+        elements: vec![StokesFlowPlaneQuadElementInput {
+            id: "folded".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 1,
+            node_l: 3,
+            thickness: 0.1,
+            viscosity: 1.0,
+            density: 1.0,
+        }],
+    };
+
+    let error = solve_stokes_flow_plane_quad_2d(&request)
+        .expect_err("duplicate stokes quad node should be rejected");
+    assert!(
+        error.contains("four distinct nodes"),
+        "unexpected duplicate-node error: {error}"
+    );
+}
+
 #[allow(clippy::too_many_arguments)]
 fn node(
     id: &str,

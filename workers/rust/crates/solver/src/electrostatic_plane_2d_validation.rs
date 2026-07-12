@@ -45,6 +45,12 @@ pub(super) fn validate_electrostatic_plane_triangle_request(
                 "electrostatic plane triangle element references an out-of-range node".to_string(),
             );
         }
+        if has_duplicate(&[element.node_i, element.node_j, element.node_k]) {
+            return Err(
+                "electrostatic plane triangle element must reference three distinct nodes"
+                    .to_string(),
+            );
+        }
         if !element.thickness.is_finite() || element.thickness <= 0.0 {
             return Err("electrostatic plane triangle thickness must be positive".to_string());
         }
@@ -79,7 +85,7 @@ pub(super) fn validate_electrostatic_plane_triangle_request(
             load_y: 0.0,
         };
         let area = signed_triangle_area(&ni, &nj, &nk).abs();
-        if area <= 1.0e-12 {
+        if !(area.is_finite() && area > 1.0e-12) {
             return Err("electrostatic plane triangle element area must be positive".to_string());
         }
     }
@@ -125,6 +131,16 @@ pub(super) fn validate_electrostatic_plane_quad_request(
                 "electrostatic plane quad element references an out-of-range node".to_string(),
             );
         }
+        if has_duplicate(&[
+            element.node_i,
+            element.node_j,
+            element.node_k,
+            element.node_l,
+        ]) {
+            return Err(
+                "electrostatic plane quad element must reference four distinct nodes".to_string(),
+            );
+        }
         if !element.thickness.is_finite() || element.thickness <= 0.0 {
             return Err("electrostatic plane quad thickness must be positive".to_string());
         }
@@ -147,7 +163,9 @@ pub(super) fn validate_electrostatic_plane_quad_request(
         let nl = to_node(element.node_l);
         let first_area = signed_triangle_area(&ni, &nj, &nk).abs();
         let second_area = signed_triangle_area(&ni, &nk, &nl).abs();
-        if first_area <= 1.0e-12 || second_area <= 1.0e-12 {
+        if !(first_area.is_finite() && first_area > 1.0e-12)
+            || !(second_area.is_finite() && second_area > 1.0e-12)
+        {
             return Err("electrostatic plane quad triangles must have positive area".to_string());
         }
     }
@@ -162,4 +180,11 @@ fn signed_triangle_area(
 ) -> f64 {
     0.5 * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
         - (node_k.x - node_i.x) * (node_j.y - node_i.y))
+}
+
+fn has_duplicate(indices: &[usize]) -> bool {
+    indices
+        .iter()
+        .enumerate()
+        .any(|(left, value)| indices[(left + 1)..].contains(value))
 }

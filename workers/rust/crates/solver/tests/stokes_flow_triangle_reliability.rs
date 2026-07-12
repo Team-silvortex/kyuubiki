@@ -73,6 +73,25 @@ fn stokes_flow_triangle_2d_rejects_missing_node_references() {
 }
 
 #[test]
+fn stokes_flow_triangle_2d_rejects_duplicate_element_nodes() {
+    let request = SolveStokesFlowPlaneTriangle2dRequest {
+        nodes: vec![
+            node("n0", 0.0, 0.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+            node("n1", 1.0, 0.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+            node("n2", 0.0, 1.0, true, 0.0, true, 0.0, true, 0.0, 0.0, 0.0),
+        ],
+        elements: vec![element("folded", 0, 1, 1, 0.1, 1.0, 1.0)],
+    };
+
+    let error = solve_stokes_flow_plane_triangle_2d(&request)
+        .expect_err("duplicate stokes triangle node should be rejected");
+    assert!(
+        error.contains("three distinct nodes"),
+        "unexpected duplicate-node error: {error}"
+    );
+}
+
+#[test]
 fn stokes_flow_triangle_2d_rejects_non_finite_inputs_and_invalid_material() {
     let mut request = valid_triangle_request();
     request.nodes[1].body_force_x = f64::NAN;

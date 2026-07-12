@@ -1,6 +1,7 @@
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
 };
+use crate::transient_heat_bar_1d_validation::validate_request;
 use kyuubiki_protocol::{
     HeatBar1dElementResult, HeatBar1dNodeResult, SolveTransientHeatBar1dRequest,
     SolveTransientHeatBar1dResult, TransientHeatBar1dElementInput, TransientHeatBar1dStepResult,
@@ -199,84 +200,4 @@ fn element_length(
     element: &TransientHeatBar1dElementInput,
 ) -> f64 {
     (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs()
-}
-
-fn validate_request(request: &SolveTransientHeatBar1dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("transient heat bar must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("transient heat bar must define at least one element".to_string());
-    }
-    if request.time_step <= 0.0 || !request.time_step.is_finite() {
-        return Err("transient heat bar time_step must be positive".to_string());
-    }
-    if request.steps == 0 {
-        return Err("transient heat bar steps must be positive".to_string());
-    }
-    for (index, node) in request.nodes.iter().enumerate() {
-        if !node.x.is_finite() {
-            return Err(format!("transient heat bar node {index} x must be finite"));
-        }
-        if !node.temperature.is_finite() {
-            return Err(format!(
-                "transient heat bar node {index} temperature must be finite"
-            ));
-        }
-        if !node.heat_load.is_finite() {
-            return Err(format!(
-                "transient heat bar node {index} heat_load must be finite"
-            ));
-        }
-    }
-    for element in &request.elements {
-        validate_element(request, element)?;
-    }
-    if lumped_capacity(request).iter().any(|value| *value <= 0.0) {
-        return Err(
-            "transient heat bar every node must receive positive heat capacity".to_string(),
-        );
-    }
-    Ok(())
-}
-
-fn validate_element(
-    request: &SolveTransientHeatBar1dRequest,
-    element: &TransientHeatBar1dElementInput,
-) -> Result<(), String> {
-    for index in [element.node_i, element.node_j] {
-        if index >= request.nodes.len() {
-            return Err(format!(
-                "transient heat bar element {} references missing node {}",
-                element.id, index
-            ));
-        }
-    }
-    if element.node_i == element.node_j || element_length(request, element) <= 0.0 {
-        return Err(format!(
-            "transient heat bar element {} must have non-zero length",
-            element.id
-        ));
-    }
-    if element.area <= 0.0
-        || element.conductivity <= 0.0
-        || !element.area.is_finite()
-        || !element.conductivity.is_finite()
-    {
-        return Err(format!(
-            "transient heat bar element {} must have positive area and conductivity",
-            element.id
-        ));
-    }
-    if element.density <= 0.0
-        || element.specific_heat <= 0.0
-        || !element.density.is_finite()
-        || !element.specific_heat.is_finite()
-    {
-        return Err(format!(
-            "transient heat bar element {} must have positive density and specific_heat",
-            element.id
-        ));
-    }
-    Ok(())
 }

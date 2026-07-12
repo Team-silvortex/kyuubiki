@@ -25,6 +25,18 @@ fn spring_1d_rejects_non_finite_node_coordinates_and_loads() {
 }
 
 #[test]
+fn spring_1d_rejects_duplicate_element_nodes() {
+    let mut request = spring_1d_request();
+    request.elements[0].node_j = request.elements[0].node_i;
+
+    let error = solve_spring_1d(&request).expect_err("duplicate 1D spring nodes should fail");
+    assert!(
+        error.contains("two distinct nodes"),
+        "unexpected 1D spring duplicate-node error: {error}"
+    );
+}
+
+#[test]
 fn spring_2d_rejects_non_finite_node_coordinates_and_loads() {
     let mut request = spring_2d_request();
     request.nodes[1].y = f64::NAN;
@@ -44,6 +56,18 @@ fn spring_2d_rejects_non_finite_node_coordinates_and_loads() {
 }
 
 #[test]
+fn spring_2d_rejects_duplicate_element_nodes() {
+    let mut request = spring_2d_request();
+    request.elements[0].node_j = request.elements[0].node_i;
+
+    let error = solve_spring_2d(&request).expect_err("duplicate 2D spring nodes should fail");
+    assert!(
+        error.contains("two distinct nodes"),
+        "unexpected 2D spring duplicate-node error: {error}"
+    );
+}
+
+#[test]
 fn spring_3d_rejects_non_finite_node_coordinates_and_loads() {
     let mut request = spring_3d_request();
     request.nodes[1].z = f64::NAN;
@@ -59,6 +83,18 @@ fn spring_3d_rejects_non_finite_node_coordinates_and_loads() {
     assert!(
         error.contains("coordinates and loads must be finite"),
         "unexpected 3D spring load error: {error}"
+    );
+}
+
+#[test]
+fn spring_3d_rejects_duplicate_element_nodes() {
+    let mut request = spring_3d_request();
+    request.elements[0].node_j = request.elements[0].node_i;
+
+    let error = solve_spring_3d(&request).expect_err("duplicate 3D spring nodes should fail");
+    assert!(
+        error.contains("two distinct nodes"),
+        "unexpected 3D spring duplicate-node error: {error}"
     );
 }
 

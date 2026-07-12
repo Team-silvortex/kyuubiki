@@ -1,4 +1,5 @@
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::solid_tetra_3d_validation::validate_request;
 use kyuubiki_protocol::{
     SolidTetra3dElementInput, SolidTetra3dElementResult, SolidTetra3dNodeResult,
     SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
@@ -315,95 +316,6 @@ fn constrained_dofs(request: &SolveSolidTetra3dRequest) -> Vec<usize> {
             dofs
         })
         .collect()
-}
-
-fn validate_request(request: &SolveSolidTetra3dRequest) -> Result<(), String> {
-    if request.nodes.len() < 4 {
-        return Err("solid tetra 3d model must define at least four nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("solid tetra 3d model must define at least one element".to_string());
-    }
-    if constrained_dofs(request).len() < 6 {
-        return Err(
-            "solid tetra 3d model must restrain at least six degrees of freedom".to_string(),
-        );
-    }
-    for (index, node) in request.nodes.iter().enumerate() {
-        if !(node.x.is_finite() && node.y.is_finite() && node.z.is_finite()) {
-            return Err(format!(
-                "solid tetra 3d node {index} coordinates must be finite"
-            ));
-        }
-        if !(node.load_x.is_finite() && node.load_y.is_finite() && node.load_z.is_finite()) {
-            return Err(format!("solid tetra 3d node {index} loads must be finite"));
-        }
-    }
-    for element in &request.elements {
-        validate_element(request, element)?;
-    }
-    Ok(())
-}
-
-fn validate_element(
-    request: &SolveSolidTetra3dRequest,
-    element: &SolidTetra3dElementInput,
-) -> Result<(), String> {
-    for index in [
-        element.node_a,
-        element.node_b,
-        element.node_c,
-        element.node_d,
-    ] {
-        if index >= request.nodes.len() {
-            return Err(format!(
-                "solid tetra element {} references missing node {}",
-                element.id, index
-            ));
-        }
-    }
-    let nodes = [
-        element.node_a,
-        element.node_b,
-        element.node_c,
-        element.node_d,
-    ];
-    for left in 0..nodes.len() {
-        for right in (left + 1)..nodes.len() {
-            if nodes[left] == nodes[right] {
-                return Err(format!(
-                    "solid tetra element {} must reference four distinct nodes",
-                    element.id
-                ));
-            }
-        }
-    }
-    if !element.youngs_modulus.is_finite() {
-        return Err(format!(
-            "solid tetra element {} youngs_modulus must be finite",
-            element.id
-        ));
-    }
-    if element.youngs_modulus <= 0.0 {
-        return Err(format!(
-            "solid tetra element {} must have positive youngs_modulus",
-            element.id
-        ));
-    }
-    if !element.poisson_ratio.is_finite() {
-        return Err(format!(
-            "solid tetra element {} poisson_ratio must be finite",
-            element.id
-        ));
-    }
-    if !(element.poisson_ratio > -1.0 && element.poisson_ratio < 0.5) {
-        return Err(format!(
-            "solid tetra element {} must have poisson_ratio in (-1, 0.5)",
-            element.id
-        ));
-    }
-    let _ = tetra_geometry(request, element)?;
-    Ok(())
 }
 
 fn det4(m: &[[f64; 4]; 4]) -> f64 {

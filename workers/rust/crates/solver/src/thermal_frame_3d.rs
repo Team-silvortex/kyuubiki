@@ -5,6 +5,7 @@ use crate::frame_3d_math::{
 };
 use crate::frame_energy::thermal_frame3d_strain_energy;
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dElementResult,
     ThermalFrame3dNodeResult,
@@ -13,7 +14,7 @@ use kyuubiki_protocol::{
 pub fn solve_thermal_frame_3d(
     request: &SolveThermalFrame3dRequest,
 ) -> Result<SolveThermalFrame3dResult, String> {
-    validate_thermal_frame_3d_request(request)?;
+    validate_request(request)?;
 
     let dof_count = request.nodes.len() * 6;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -244,111 +245,6 @@ fn build_thermal_frame_3d_elements(
             }
         })
         .collect()
-}
-
-fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("thermal 3d frame must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("thermal 3d frame must define at least one element".to_string());
-    }
-
-    let constrained_dofs = constrained_thermal_frame_3d_dofs(request).len();
-    if constrained_dofs < 6 {
-        return Err("thermal 3d frame must restrain at least six degrees of freedom".to_string());
-    }
-
-    for (index, node) in request.nodes.iter().enumerate() {
-        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
-            return Err(format!(
-                "thermal 3d frame node {index} has invalid coordinates"
-            ));
-        }
-        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
-            return Err(format!("thermal 3d frame node {index} has invalid load"));
-        }
-        if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
-            return Err(format!("thermal 3d frame node {index} has invalid moment"));
-        }
-        if !node.temperature_delta.is_finite() {
-            return Err("thermal 3d frame node temperature_delta must be finite".to_string());
-        }
-    }
-
-    for element in &request.elements {
-        validate_thermal_frame_3d_element(request, element)?;
-    }
-
-    Ok(())
-}
-
-fn validate_thermal_frame_3d_element(
-    request: &SolveThermalFrame3dRequest,
-    element: &kyuubiki_protocol::ThermalFrame3dElementInput,
-) -> Result<(), String> {
-    if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-        return Err("thermal 3d frame element references an out-of-range node".to_string());
-    }
-    if element.node_i == element.node_j {
-        return Err("thermal 3d frame element cannot connect a node to itself".to_string());
-    }
-    validate_positive_frame_properties(element)?;
-    if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-        return Err("thermal 3d frame element thermal_expansion must be non-negative".to_string());
-    }
-    if !(element.section_depth_y.is_finite() && element.section_depth_y > 0.0) {
-        return Err("thermal 3d frame element section_depth_y must be positive".to_string());
-    }
-    if !(element.section_depth_z.is_finite() && element.section_depth_z > 0.0) {
-        return Err("thermal 3d frame element section_depth_z must be positive".to_string());
-    }
-    if !element.temperature_gradient_y.is_finite() {
-        return Err("thermal 3d frame element temperature_gradient_y must be finite".to_string());
-    }
-    if !element.temperature_gradient_z.is_finite() {
-        return Err("thermal 3d frame element temperature_gradient_z must be finite".to_string());
-    }
-
-    let node_i = &request.nodes[element.node_i];
-    let node_j = &request.nodes[element.node_j];
-    let dx = node_j.x - node_i.x;
-    let dy = node_j.y - node_i.y;
-    let dz = node_j.z - node_i.z;
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
-    frame3d_rotation(dx, dy, dz, length)?;
-
-    Ok(())
-}
-
-fn validate_positive_frame_properties(
-    element: &kyuubiki_protocol::ThermalFrame3dElementInput,
-) -> Result<(), String> {
-    if !(element.area.is_finite() && element.area > 0.0) {
-        return Err("thermal 3d frame element area must be positive".to_string());
-    }
-    if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
-        return Err("thermal 3d frame element youngs_modulus must be positive".to_string());
-    }
-    if !(element.shear_modulus.is_finite() && element.shear_modulus > 0.0) {
-        return Err("thermal 3d frame element shear_modulus must be positive".to_string());
-    }
-    if !(element.torsion_constant.is_finite() && element.torsion_constant > 0.0) {
-        return Err("thermal 3d frame element torsion_constant must be positive".to_string());
-    }
-    if !(element.moment_of_inertia_y.is_finite() && element.moment_of_inertia_y > 0.0) {
-        return Err("thermal 3d frame element moment_of_inertia_y must be positive".to_string());
-    }
-    if !(element.moment_of_inertia_z.is_finite() && element.moment_of_inertia_z > 0.0) {
-        return Err("thermal 3d frame element moment_of_inertia_z must be positive".to_string());
-    }
-    if !(element.section_modulus_y.is_finite() && element.section_modulus_y > 0.0) {
-        return Err("thermal 3d frame element section_modulus_y must be positive".to_string());
-    }
-    if !(element.section_modulus_z.is_finite() && element.section_modulus_z > 0.0) {
-        return Err("thermal 3d frame element section_modulus_z must be positive".to_string());
-    }
-    Ok(())
 }
 
 fn constrained_thermal_frame_3d_dofs(request: &SolveThermalFrame3dRequest) -> Vec<usize> {

@@ -54,6 +54,26 @@ fn transient_heat_bar_1d_rejects_invalid_element_geometry_and_materials() {
     );
 }
 
+#[test]
+fn transient_heat_bar_1d_rejects_missing_node_and_unheated_capacity_island() {
+    let mut request = transient_heat_request();
+    request.elements[0].node_j = 99;
+    let error = solve_transient_heat_bar_1d(&request).expect_err("missing node should be rejected");
+    assert!(
+        error.contains("references missing node 99"),
+        "unexpected missing-node error: {error}"
+    );
+
+    let mut request = transient_heat_request();
+    request.elements.remove(1);
+    let error =
+        solve_transient_heat_bar_1d(&request).expect_err("capacity island should be rejected");
+    assert!(
+        error.contains("every node must receive positive heat capacity"),
+        "unexpected capacity island error: {error}"
+    );
+}
+
 fn transient_heat_request() -> SolveTransientHeatBar1dRequest {
     SolveTransientHeatBar1dRequest {
         nodes: vec![

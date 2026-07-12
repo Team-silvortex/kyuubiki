@@ -50,6 +50,15 @@ fn transient_spring_1d_rejects_invalid_element_connectivity_and_materials() {
         error.contains("valid connectivity, stiffness, and damping"),
         "unexpected damping error: {error}"
     );
+
+    let mut request = transient_spring_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error =
+        solve_transient_spring_1d(&request).expect_err("zero-length element should be rejected");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected zero-length error: {error}"
+    );
 }
 
 fn transient_spring_request() -> SolveTransientSpring1dRequest {

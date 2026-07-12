@@ -98,6 +98,34 @@ fn acoustic_bar_1d_rejects_non_finite_pressure_and_volume_velocity_source() {
     );
 }
 
+#[test]
+fn acoustic_bar_1d_rejects_invalid_element_materials_and_geometry() {
+    let mut request = acoustic_request();
+    request.elements[0].density = 0.0;
+    let error = solve_acoustic_bar_1d(&request).expect_err("zero density should be rejected");
+    assert!(
+        error.contains("density must be positive"),
+        "unexpected density validation error: {error}"
+    );
+
+    let mut request = acoustic_request();
+    request.elements[0].damping_ratio = -0.1;
+    let error =
+        solve_acoustic_bar_1d(&request).expect_err("negative damping ratio should be rejected");
+    assert!(
+        error.contains("damping_ratio must be non-negative"),
+        "unexpected damping validation error: {error}"
+    );
+
+    let mut request = acoustic_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error = solve_acoustic_bar_1d(&request).expect_err("zero-length duct should be rejected");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected length validation error: {error}"
+    );
+}
+
 fn acoustic_request() -> SolveAcousticBar1dRequest {
     SolveAcousticBar1dRequest {
         frequency_hz: 100.0,

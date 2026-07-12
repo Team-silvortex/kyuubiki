@@ -76,6 +76,21 @@ fn advection_diffusion_bar_1d_rejects_non_finite_node_values() {
 }
 
 #[test]
+fn advection_diffusion_bar_1d_rejects_missing_concentration_support() {
+    let mut request = transport_request();
+    for node in &mut request.nodes {
+        node.fix_concentration = false;
+    }
+
+    let error = solve_advection_diffusion_bar_1d(&request)
+        .expect_err("missing concentration support should be rejected");
+    assert!(
+        error.contains("at least one concentration support"),
+        "unexpected missing-support error: {error}"
+    );
+}
+
+#[test]
 fn advection_diffusion_bar_1d_rejects_invalid_element_topology() {
     let mut request = transport_request();
     request.elements[0].node_j = 7;
@@ -107,6 +122,14 @@ fn advection_diffusion_bar_1d_rejects_invalid_transport_materials() {
     assert!(
         error.contains("diffusivity must be positive"),
         "unexpected diffusivity error: {error}"
+    );
+
+    let mut request = transport_request();
+    request.elements[0].area = f64::NAN;
+    let error = solve_advection_diffusion_bar_1d(&request).expect_err("NaN area should fail");
+    assert!(
+        error.contains("area must be positive"),
+        "unexpected area error: {error}"
     );
 
     let mut request = transport_request();

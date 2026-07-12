@@ -25,6 +25,18 @@ fn beam_1d_rejects_non_finite_node_and_distributed_load_inputs() {
 }
 
 #[test]
+fn beam_1d_rejects_duplicate_element_nodes() {
+    let mut request = beam_request();
+    request.elements[0].node_j = request.elements[0].node_i;
+
+    let error = solve_beam_1d(&request).expect_err("duplicate beam nodes should fail");
+    assert!(
+        error.contains("two distinct nodes"),
+        "unexpected beam duplicate-node error: {error}"
+    );
+}
+
+#[test]
 fn thermal_beam_1d_rejects_non_finite_section_properties() {
     let mut request = thermal_beam_request();
     request.elements[0].youngs_modulus = f64::NAN;
@@ -37,6 +49,19 @@ fn thermal_beam_1d_rejects_non_finite_section_properties() {
     let mut request = thermal_beam_request();
     request.elements[0].section_depth = f64::NAN;
     assert!(solve_thermal_beam_1d(&request).is_err());
+}
+
+#[test]
+fn thermal_beam_1d_rejects_duplicate_element_nodes() {
+    let mut request = thermal_beam_request();
+    request.elements[0].node_j = request.elements[0].node_i;
+
+    let error =
+        solve_thermal_beam_1d(&request).expect_err("duplicate thermal beam nodes should fail");
+    assert!(
+        error.contains("two distinct nodes"),
+        "unexpected thermal beam duplicate-node error: {error}"
+    );
 }
 
 #[test]

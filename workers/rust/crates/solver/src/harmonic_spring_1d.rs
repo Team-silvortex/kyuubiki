@@ -1,3 +1,4 @@
+use crate::dynamic_spring_1d_validation::validate_harmonic_request;
 use kyuubiki_protocol::{
     HarmonicSpring1dElementResponse, HarmonicSpring1dFrequencyResult, HarmonicSpring1dNodeResponse,
     SolveHarmonicSpring1dRequest, SolveHarmonicSpring1dResult, TransientSpring1dElementInput,
@@ -13,7 +14,7 @@ struct Complex {
 pub fn solve_harmonic_spring_1d(
     request: &SolveHarmonicSpring1dRequest,
 ) -> Result<SolveHarmonicSpring1dResult, String> {
-    validate_request(request)?;
+    validate_harmonic_request(request)?;
 
     let count = request.nodes.len();
     let mass = request
@@ -233,64 +234,6 @@ fn solve_complex_system(
         result[row] = sum / matrix[row][row];
     }
     Ok(result)
-}
-
-fn validate_request(request: &SolveHarmonicSpring1dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("harmonic spring 1d must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("harmonic spring 1d must define at least one element".to_string());
-    }
-    if request.frequencies_hz.is_empty() {
-        return Err("harmonic spring 1d must include at least one frequency".to_string());
-    }
-    if request.nodes.iter().all(|node| node.fix_x) {
-        return Err("harmonic spring 1d must leave at least one free node".to_string());
-    }
-    for node in &request.nodes {
-        if !node.x.is_finite()
-            || !node.load_x.is_finite()
-            || !node.mass.is_finite()
-            || node.mass <= 0.0
-        {
-            return Err(format!(
-                "harmonic spring node {} must have finite coordinates, load, and positive mass",
-                node.id
-            ));
-        }
-    }
-    for (index, frequency) in request.frequencies_hz.iter().enumerate() {
-        if !frequency.is_finite() || *frequency < 0.0 {
-            return Err(format!(
-                "harmonic spring frequency {index} must be non-negative and finite"
-            ));
-        }
-    }
-    for element in &request.elements {
-        validate_element(request, element)?;
-    }
-    Ok(())
-}
-
-fn validate_element(
-    request: &SolveHarmonicSpring1dRequest,
-    element: &TransientSpring1dElementInput,
-) -> Result<(), String> {
-    if element.node_i >= request.nodes.len()
-        || element.node_j >= request.nodes.len()
-        || element.node_i == element.node_j
-        || !element.stiffness.is_finite()
-        || element.stiffness <= 0.0
-        || !element.damping.is_finite()
-        || element.damping < 0.0
-    {
-        return Err(format!(
-            "harmonic spring element {} must have valid connectivity, stiffness, and damping",
-            element.id
-        ));
-    }
-    Ok(())
 }
 
 impl Complex {

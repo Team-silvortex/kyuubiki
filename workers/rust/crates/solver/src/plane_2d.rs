@@ -4,7 +4,7 @@ use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::plane_2d_math::{
     PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element,
-    precompute_plane_triangle_element_from_nodes, signed_triangle_area,
+    precompute_plane_triangle_element_from_nodes,
 };
 use crate::plane_2d_profile::{
     PlaneProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
@@ -15,6 +15,7 @@ use crate::plane_2d_summary::{
     max_triangle_strain_energy_density, max_triangle_stress, quad_total_strain_energy,
     triangle_total_strain_energy,
 };
+use crate::plane_2d_validation::{validate_plane_quad_request, validate_plane_request};
 use kyuubiki_protocol::{
     PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
@@ -360,117 +361,6 @@ fn build_plane_quad_elements(
         .collect()
 }
 
-fn validate_plane_request(request: &SolvePlaneTriangle2dRequest) -> Result<(), String> {
-    if request.nodes.len() < 3 {
-        return Err("plane model must define at least three nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("plane model must define at least one element".to_string());
-    }
-    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
-        return Err("plane model must include at least one support".to_string());
-    }
-
-    for element in &request.elements {
-        validate_plane_triangle_element(request, element)?;
-    }
-    Ok(())
-}
-
-fn validate_plane_quad_request(request: &SolvePlaneQuad2dRequest) -> Result<(), String> {
-    if request.nodes.len() < 4 {
-        return Err("plane quad model must define at least four nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("plane quad model must define at least one element".to_string());
-    }
-    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
-        return Err("plane quad model must include at least one support".to_string());
-    }
-
-    let triangle_request = to_triangle_request(request);
-    for element in &request.elements {
-        let indices = [
-            element.node_i,
-            element.node_j,
-            element.node_k,
-            element.node_l,
-        ];
-        if indices.iter().any(|&index| index >= request.nodes.len()) {
-            return Err("plane quad element references an out-of-range node".to_string());
-        }
-        let unique_count = indices
-            .iter()
-            .copied()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len();
-        if unique_count < 4 {
-            return Err("plane quad element must reference four distinct nodes".to_string());
-        }
-        validate_plane_material(
-            element.thickness,
-            element.youngs_modulus,
-            element.poisson_ratio,
-        )?;
-        validate_positive_triangle_area(
-            &triangle_request,
-            element.node_i,
-            element.node_j,
-            element.node_k,
-            "plane quad element must decompose into positive-area triangles",
-        )?;
-        validate_positive_triangle_area(
-            &triangle_request,
-            element.node_i,
-            element.node_k,
-            element.node_l,
-            "plane quad element must decompose into positive-area triangles",
-        )?;
-    }
-    Ok(())
-}
-
-fn validate_plane_triangle_element(
-    request: &SolvePlaneTriangle2dRequest,
-    element: &PlaneTriangleElementInput,
-) -> Result<(), String> {
-    if element.node_i >= request.nodes.len()
-        || element.node_j >= request.nodes.len()
-        || element.node_k >= request.nodes.len()
-    {
-        return Err("plane element references an out-of-range node".to_string());
-    }
-    validate_plane_material(
-        element.thickness,
-        element.youngs_modulus,
-        element.poisson_ratio,
-    )?;
-    validate_positive_triangle_area(
-        request,
-        element.node_i,
-        element.node_j,
-        element.node_k,
-        "plane element area must be positive",
-    )
-}
-
-fn validate_plane_material(
-    thickness: f64,
-    youngs_modulus: f64,
-    poisson_ratio: f64,
-) -> Result<(), String> {
-    if !(thickness.is_finite() && thickness > 0.0) {
-        return Err("plane element thickness must be positive".to_string());
-    }
-    if !(youngs_modulus.is_finite() && youngs_modulus > 0.0) {
-        return Err("plane element youngs_modulus must be positive".to_string());
-    }
-    if !(poisson_ratio.is_finite() && poisson_ratio > -1.0 && poisson_ratio < 0.5) {
-        return Err("plane element poisson_ratio must be between -1.0 and 0.5".to_string());
-    }
-    Ok(())
-}
-
 fn precompute_plane_quad_element(
     request: &SolvePlaneQuad2dRequest,
     element: &PlaneQuadElementInput,
@@ -549,23 +439,4 @@ fn triangle_displacements(
 ) -> [f64; 6] {
     let map = triangle_dof_map(node_i, node_j, node_k);
     std::array::from_fn(|index| displacements[map[index]])
-}
-
-fn validate_positive_triangle_area(
-    request: &SolvePlaneTriangle2dRequest,
-    node_i: usize,
-    node_j: usize,
-    node_k: usize,
-    message: &str,
-) -> Result<(), String> {
-    let area = signed_triangle_area(
-        &request.nodes[node_i],
-        &request.nodes[node_j],
-        &request.nodes[node_k],
-    )
-    .abs();
-    if area <= 1.0e-12 {
-        return Err(message.to_string());
-    }
-    Ok(())
 }

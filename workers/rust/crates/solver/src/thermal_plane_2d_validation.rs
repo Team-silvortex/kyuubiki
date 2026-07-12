@@ -16,11 +16,7 @@ pub(super) fn validate_thermal_plane_triangle_request(
     if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
         return Err("thermal plane model must include at least one support".to_string());
     }
-    for node in &request.nodes {
-        if !node.temperature_delta.is_finite() {
-            return Err("thermal plane node temperature_delta must be finite".to_string());
-        }
-    }
+    validate_thermal_plane_nodes(&request.nodes, "thermal plane")?;
     let plane_nodes = to_plane_nodes(request);
     for element in &request.elements {
         validate_thermal_triangle_element(request, &plane_nodes, element)?;
@@ -40,11 +36,7 @@ pub(super) fn validate_thermal_plane_quad_request(
     if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
         return Err("thermal plane quad model must include at least one support".to_string());
     }
-    for node in &request.nodes {
-        if !node.temperature_delta.is_finite() {
-            return Err("thermal plane quad node temperature_delta must be finite".to_string());
-        }
-    }
+    validate_thermal_plane_nodes(&request.nodes, "thermal plane quad")?;
     let plane_nodes = to_quad_plane_nodes(request);
     for element in &request.elements {
         validate_thermal_quad_element(request, &plane_nodes, element)?;
@@ -62,6 +54,9 @@ fn validate_thermal_triangle_element(
         || element.node_k >= request.nodes.len()
     {
         return Err("thermal plane element references an out-of-range node".to_string());
+    }
+    if has_duplicate(&[element.node_i, element.node_j, element.node_k]) {
+        return Err("thermal plane element must reference three distinct nodes".to_string());
     }
     validate_thermal_material(
         element.thickness,
@@ -157,10 +152,37 @@ fn validate_positive_triangle_area(
     message: &str,
 ) -> Result<(), String> {
     let area = signed_triangle_area(&nodes[node_i], &nodes[node_j], &nodes[node_k]).abs();
-    if area <= 1.0e-12 {
+    if !(area.is_finite() && area > 1.0e-12) {
         return Err(message.to_string());
     }
     Ok(())
+}
+
+fn validate_thermal_plane_nodes(
+    nodes: &[kyuubiki_protocol::ThermalPlaneNodeInput],
+    label: &str,
+) -> Result<(), String> {
+    for (index, node) in nodes.iter().enumerate() {
+        if !node.x.is_finite() || !node.y.is_finite() {
+            return Err(format!("{label} node {index} coordinates must be finite"));
+        }
+        if !node.load_x.is_finite() || !node.load_y.is_finite() {
+            return Err(format!("{label} node {index} loads must be finite"));
+        }
+        if !node.temperature_delta.is_finite() {
+            return Err(format!(
+                "{label} node {index} temperature_delta must be finite"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn has_duplicate(indices: &[usize]) -> bool {
+    indices
+        .iter()
+        .enumerate()
+        .any(|(left, value)| indices[(left + 1)..].contains(value))
 }
 
 fn to_plane_nodes(request: &SolveThermalPlaneTriangle2dRequest) -> Vec<PlaneNodeInput> {

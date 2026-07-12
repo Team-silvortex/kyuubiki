@@ -69,6 +69,87 @@ fn magnetostatic_bar_1d_matches_single_element_permeance_baseline() {
     assert_close(result.max_flux_density, expected_flux_density.abs());
 }
 
+#[test]
+fn magnetostatic_bar_1d_rejects_non_finite_node_values_and_missing_support() {
+    let mut request = magnetostatic_request();
+    request.nodes[1].magnetomotive_source = f64::INFINITY;
+    let error = solve_magnetostatic_bar_1d(&request)
+        .expect_err("infinite magnetomotive source should be rejected");
+    assert!(
+        error.contains("magnetomotive_source must be finite"),
+        "unexpected source validation error: {error}"
+    );
+
+    let mut request = magnetostatic_request();
+    for node in &mut request.nodes {
+        node.fix_magnetic_potential = false;
+    }
+    let error =
+        solve_magnetostatic_bar_1d(&request).expect_err("missing support should be rejected");
+    assert!(
+        error.contains("at least one magnetic potential support"),
+        "unexpected missing-support error: {error}"
+    );
+}
+
+#[test]
+fn magnetostatic_bar_1d_rejects_invalid_element_topology_and_materials() {
+    let mut request = magnetostatic_request();
+    request.elements[0].node_j = 7;
+    let error =
+        solve_magnetostatic_bar_1d(&request).expect_err("out-of-range node should be rejected");
+    assert!(
+        error.contains("out-of-range node"),
+        "unexpected out-of-range node error: {error}"
+    );
+
+    let mut request = magnetostatic_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error =
+        solve_magnetostatic_bar_1d(&request).expect_err("zero-length element should be rejected");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected length error: {error}"
+    );
+
+    let mut request = magnetostatic_request();
+    request.elements[0].permeability = 0.0;
+    let error =
+        solve_magnetostatic_bar_1d(&request).expect_err("zero permeability should be rejected");
+    assert!(
+        error.contains("permeability must be positive"),
+        "unexpected permeability error: {error}"
+    );
+}
+
+fn magnetostatic_request() -> SolveMagnetostaticBar1dRequest {
+    SolveMagnetostaticBar1dRequest {
+        nodes: vec![
+            MagnetostaticBar1dNodeInput {
+                id: "ground".to_string(),
+                x: 0.0,
+                fix_magnetic_potential: true,
+                magnetic_potential: 0.0,
+                magnetomotive_source: 0.0,
+            },
+            MagnetostaticBar1dNodeInput {
+                id: "source".to_string(),
+                x: 2.0,
+                fix_magnetic_potential: false,
+                magnetic_potential: 0.0,
+                magnetomotive_source: 3.0e-6,
+            },
+        ],
+        elements: vec![MagnetostaticBar1dElementInput {
+            id: "core".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.25,
+            permeability: 4.0e-7 * std::f64::consts::PI,
+        }],
+    }
+}
+
 fn assert_close(actual: f64, expected: f64) {
     let scale = expected.abs().max(1.0);
     assert!(

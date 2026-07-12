@@ -57,19 +57,72 @@ fn frame_3d_rejects_non_finite_node_coordinates_loads_and_moments() {
 fn thermal_frame_3d_rejects_non_finite_node_coordinates_loads_moments_and_temperature() {
     let mut request = thermal_frame_3d_request();
     request.nodes[1].z = f64::NAN;
-    assert!(solve_thermal_frame_3d(&request).is_err());
+    let error = solve_thermal_frame_3d(&request).expect_err("NaN coordinate should be rejected");
+    assert!(
+        error.contains("invalid coordinates"),
+        "unexpected coordinate error: {error}"
+    );
 
     let mut request = thermal_frame_3d_request();
     request.nodes[1].load_y = f64::INFINITY;
-    assert!(solve_thermal_frame_3d(&request).is_err());
+    let error = solve_thermal_frame_3d(&request).expect_err("infinite load should be rejected");
+    assert!(
+        error.contains("invalid load"),
+        "unexpected load error: {error}"
+    );
 
     let mut request = thermal_frame_3d_request();
     request.nodes[1].moment_z = f64::NEG_INFINITY;
-    assert!(solve_thermal_frame_3d(&request).is_err());
+    let error = solve_thermal_frame_3d(&request).expect_err("infinite moment should be rejected");
+    assert!(
+        error.contains("invalid moment"),
+        "unexpected moment error: {error}"
+    );
 
     let mut request = thermal_frame_3d_request();
     request.nodes[1].temperature_delta = f64::NAN;
-    assert!(solve_thermal_frame_3d(&request).is_err());
+    let error = solve_thermal_frame_3d(&request).expect_err("NaN temperature should be rejected");
+    assert!(
+        error.contains("temperature_delta must be finite"),
+        "unexpected temperature error: {error}"
+    );
+}
+
+#[test]
+fn thermal_frame_3d_rejects_invalid_element_topology_and_thermal_properties() {
+    let mut request = thermal_frame_3d_request();
+    request.elements[0].node_j = 9;
+    let error = solve_thermal_frame_3d(&request).expect_err("out-of-range node should be rejected");
+    assert!(
+        error.contains("out-of-range node"),
+        "unexpected topology error: {error}"
+    );
+
+    let mut request = thermal_frame_3d_request();
+    request.nodes[1].x = request.nodes[0].x;
+    let error =
+        solve_thermal_frame_3d(&request).expect_err("zero-length element should be rejected");
+    assert!(
+        error.contains("length must be positive"),
+        "unexpected length error: {error}"
+    );
+
+    let mut request = thermal_frame_3d_request();
+    request.elements[0].thermal_expansion = -1.0e-6;
+    let error =
+        solve_thermal_frame_3d(&request).expect_err("negative expansion should be rejected");
+    assert!(
+        error.contains("thermal_expansion must be non-negative"),
+        "unexpected expansion error: {error}"
+    );
+
+    let mut request = thermal_frame_3d_request();
+    request.elements[0].temperature_gradient_z = f64::INFINITY;
+    let error = solve_thermal_frame_3d(&request).expect_err("infinite gradient should be rejected");
+    assert!(
+        error.contains("temperature_gradient_z must be finite"),
+        "unexpected gradient error: {error}"
+    );
 }
 
 fn frame_2d_request() -> SolveFrame2dRequest {

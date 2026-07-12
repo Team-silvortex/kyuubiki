@@ -2,10 +2,10 @@ use crate::frame_3d_math::{
     frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation, frame3d_transform,
     transform_frame3d_stiffness,
 };
+use crate::modal_frame_validation::validate_modal_frame_3d_request;
 use crate::modal_math::{expand_mode_shape, jacobi_eigenpairs, mass_normalized_stiffness};
 use kyuubiki_protocol::{
-    ModalFrame3dElementInput, ModalFrame3dModeResult, SolveModalFrame3dRequest,
-    SolveModalFrame3dResult,
+    ModalFrame3dModeResult, SolveModalFrame3dRequest, SolveModalFrame3dResult,
 };
 
 pub fn solve_modal_frame_3d(
@@ -111,68 +111,6 @@ pub fn solve_modal_frame_3d(
         free_dofs,
         total_mass,
     })
-}
-
-fn validate_modal_frame_3d_request(request: &SolveModalFrame3dRequest) -> Result<(), String> {
-    if request.nodes.len() < 2 {
-        return Err("modal frame 3d must define at least two nodes".to_string());
-    }
-    if request.elements.is_empty() {
-        return Err("modal frame 3d must define at least one element".to_string());
-    }
-    if constrained_modal_frame_3d_dofs(request).len() < 6 {
-        return Err("modal frame 3d must restrain at least six degrees of freedom".to_string());
-    }
-    for (index, node) in request.nodes.iter().enumerate() {
-        if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
-            return Err(format!(
-                "modal frame 3d node {index} has invalid coordinates"
-            ));
-        }
-        if !node.load_x.is_finite() || !node.load_y.is_finite() || !node.load_z.is_finite() {
-            return Err(format!("modal frame 3d node {index} has invalid load"));
-        }
-        if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
-            return Err(format!("modal frame 3d node {index} has invalid moment"));
-        }
-    }
-    for element in &request.elements {
-        validate_modal_frame_3d_element(request, element)?;
-    }
-    Ok(())
-}
-
-fn validate_modal_frame_3d_element(
-    request: &SolveModalFrame3dRequest,
-    element: &ModalFrame3dElementInput,
-) -> Result<(), String> {
-    if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-        return Err("modal frame 3d element references an out-of-range node".to_string());
-    }
-    if element.node_i == element.node_j {
-        return Err("modal frame 3d element must connect two distinct nodes".to_string());
-    }
-    for (label, value) in [
-        ("area", element.area),
-        ("youngs_modulus", element.youngs_modulus),
-        ("shear_modulus", element.shear_modulus),
-        ("torsion_constant", element.torsion_constant),
-        ("moment_of_inertia_y", element.moment_of_inertia_y),
-        ("moment_of_inertia_z", element.moment_of_inertia_z),
-        ("density", element.density),
-    ] {
-        if !(value.is_finite() && value > 0.0) {
-            return Err(format!("modal frame 3d element {label} must be positive"));
-        }
-    }
-    let node_i = &request.nodes[element.node_i];
-    let node_j = &request.nodes[element.node_j];
-    let dx = node_j.x - node_i.x;
-    let dy = node_j.y - node_i.y;
-    let dz = node_j.z - node_i.z;
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
-    frame3d_rotation(dx, dy, dz, length)?;
-    Ok(())
 }
 
 fn constrained_modal_frame_3d_dofs(request: &SolveModalFrame3dRequest) -> Vec<usize> {
