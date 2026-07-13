@@ -67,7 +67,7 @@ config/installer-certificates.json
 
 # Solver/runtime artifacts
 uploads/
-storage/
+/storage/
 artifacts/
 checkpoints/
 

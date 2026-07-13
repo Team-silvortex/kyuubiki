@@ -129,7 +129,10 @@ function paradigm, and evidence path.
 Run `make check-contracts-runtime-api-surface` when shared contracts gain or
 move runtime API sources. It validates
 `config/architecture/contracts-runtime-api-surface.json`, including the
-frontend, protocol, and orchestra contract families that other modules consume.
+frontend, protocol, orchestra, and central-store contract families that other
+modules consume. Run `make check-central-store-contract` when changing the
+future center-server catalog, login/session policy, language-pack distribution,
+or matching frontend client surface.
 
 ## Product Shells
 

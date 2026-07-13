@@ -1,5 +1,7 @@
 import { requestJson } from "./core.ts";
 import type {
+  CentralDatabasePolicyPayload,
+  CentralPublishPolicyPayload,
   CentralSessionPolicyPayload,
   CentralStoreCatalogPayload,
   CentralStoreEntryEnvelope,
@@ -51,6 +53,18 @@ export function createCentralStoreApiClient(request: CentralStoreRequestJson) {
         cache: "no-store",
       });
     },
+    fetchCentralPublishPolicy() {
+      return request<CentralPublishPolicyPayload>("/api/v1/central/publish-policy", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
+    fetchCentralDatabasePolicy() {
+      return request<CentralDatabasePolicyPayload>("/api/v1/central/database-policy", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
   };
 }
 
@@ -68,4 +82,12 @@ export function fetchCentralStoreEntry(kind: CentralStoreEntryKind, entryId: str
 
 export function fetchCentralSessionPolicy() {
   return defaultCentralStoreApiClient.fetchCentralSessionPolicy();
+}
+
+export function fetchCentralPublishPolicy() {
+  return defaultCentralStoreApiClient.fetchCentralPublishPolicy();
+}
+
+export function fetchCentralDatabasePolicy() {
+  return defaultCentralStoreApiClient.fetchCentralDatabasePolicy();
 }

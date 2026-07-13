@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.CentralStore do
 
   alias KyuubikiWeb.AssetStore
   alias KyuubikiWeb.Security
+  alias KyuubikiWeb.Storage.CentralDatabase
 
   @repo_root Path.expand("../../../../", __DIR__)
   @language_catalog_path Path.join(@repo_root, "language-packs/catalog.json")
@@ -83,6 +84,59 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def publish_policy do
+    %{
+      "schema_version" => "kyuubiki.central-publish-policy/v1",
+      "status" => "preview_contract",
+      "accepting_submissions" => false,
+      "reason" => "publisher accounts, signing keys, and provenance checks are planned",
+      "resource_kinds" => Enum.map(@store_kinds, &publish_resource_policy/1),
+      "review_stages" => [
+        "manifest_shape",
+        "schema_validation",
+        "provenance_check",
+        "security_scan",
+        "compatibility_smoke",
+        "signature_attestation",
+        "catalog_indexing"
+      ],
+      "publisher_requirements" => %{
+        "login_required" => true,
+        "publisher_account_required" => true,
+        "personal_access_token_supported" => true,
+        "device_code_supported" => true,
+        "anonymous_publish_allowed" => false
+      }
+    }
+  end
+
+  def database_policy do
+    %{
+      "schema_version" => "kyuubiki.central-database-policy/v1",
+      "status" => "preview_contract",
+      "active_backend" => Atom.to_string(KyuubikiWeb.Storage.backend()),
+      "repo_module" => repo_module_name(),
+      "supported_backends" => ["sqlite", "postgres"],
+      "server_test_profile" => %{
+        "preferred_backend" => "postgres",
+        "local_backend" => "sqlite",
+        "required_env" => ["KYUUBIKI_STORAGE_BACKEND", "DATABASE_URL"],
+        "smoke_commands" => [
+          "MODE=cloud BACKEND=postgres make check-central-database-readiness",
+          "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke"
+        ]
+      },
+      "persistence_domains" => CentralDatabase.persistence_domains(),
+      "migration_policy" => CentralDatabase.migration_plan(),
+      "table_specs" => CentralDatabase.table_specs(),
+      "backup_policy" => %{
+        "sqlite" => "copy database file after stopping writers",
+        "postgres" => "pg_dump plus retained catalog manifest snapshot",
+        "retention" => "deployment-defined"
+      }
+    }
+  end
+
   def capabilities do
     %{
       "operator_store" => %{"status" => "ready", "backing" => "AssetStore.operator"},
@@ -97,8 +151,63 @@ defmodule KyuubikiWeb.CentralStore do
       "language_pack_store" => %{"status" => "ready", "backing" => "language-packs/catalog.json"},
       "login_system" => %{"status" => "preview_contract", "backing" => "Security.descriptor"},
       "signed_downloads" => %{"status" => "planned"},
-      "publisher_accounts" => %{"status" => "planned"}
+      "publisher_accounts" => %{"status" => "planned"},
+      "publish_policy" => %{
+        "status" => "preview_contract",
+        "backing" => "CentralStore.publish_policy"
+      },
+      "database_policy" => %{
+        "status" => "preview_contract",
+        "backing" => "CentralStore.database_policy"
+      }
     }
+  end
+
+  defp publish_resource_policy("operator") do
+    %{
+      "kind" => "operator",
+      "manifest_schema" => "schemas/operator-package-dynamic-smoke.schema.json",
+      "required_evidence" => ["manifest", "dynamic_smoke", "operator_task_ir"],
+      "distribution_modes" => ["signed_archive", "orchestra_pull"],
+      "mutable_after_publish" => false
+    }
+  end
+
+  defp publish_resource_policy("workflow_template") do
+    %{
+      "kind" => "workflow_template",
+      "manifest_schema" => "schemas/workflow-graph.schema.json",
+      "required_evidence" => ["workflow_graph", "dataset_contract", "catalog_smoke"],
+      "distribution_modes" => ["catalog_entry", "project_install"],
+      "mutable_after_publish" => false
+    }
+  end
+
+  defp publish_resource_policy("frontend_dsl_template") do
+    %{
+      "kind" => "frontend_dsl_template",
+      "manifest_schema" => "kyuubiki.frontend-dsl/v1",
+      "required_evidence" => ["dsl_document", "ui_automation_contract", "sandbox_review"],
+      "distribution_modes" => ["project_template", "workbench_install"],
+      "mutable_after_publish" => false
+    }
+  end
+
+  defp publish_resource_policy("language_pack") do
+    %{
+      "kind" => "language_pack",
+      "manifest_schema" => "schemas/language-pack.schema.json",
+      "required_evidence" => ["language_pack", "locale_target", "surface_validation"],
+      "distribution_modes" => ["language_pack_catalog", "local_import"],
+      "mutable_after_publish" => false
+    }
+  end
+
+  defp repo_module_name do
+    case KyuubikiWeb.Storage.repo_module() do
+      nil -> nil
+      module -> Atom.to_string(module)
+    end
   end
 
   defp language_pack_entries(filters) do

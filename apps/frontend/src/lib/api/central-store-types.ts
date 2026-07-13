@@ -44,6 +44,8 @@ export type CentralStoreCapabilities = {
   login_system: { status: string; backing?: string };
   signed_downloads: { status: string };
   publisher_accounts: { status: string };
+  publish_policy: { status: string; backing?: string };
+  database_policy: { status: string; backing?: string };
 };
 
 export type CentralStoreCatalogPayload = {
@@ -85,5 +87,71 @@ export type CentralSessionPolicyPayload = {
     publish_requires_session: boolean;
     agent_registration_requires_cluster_identity: boolean;
     credential_storage: string;
+  };
+};
+
+export type CentralPublishResourcePolicy = {
+  kind: CentralStoreEntryKind;
+  manifest_schema: string;
+  required_evidence: string[];
+  distribution_modes: string[];
+  mutable_after_publish: boolean;
+};
+
+export type CentralPublishPolicyPayload = {
+  schema_version: "kyuubiki.central-publish-policy/v1";
+  status: string;
+  accepting_submissions: boolean;
+  reason: string;
+  resource_kinds: CentralPublishResourcePolicy[];
+  review_stages: string[];
+  publisher_requirements: {
+    login_required: boolean;
+    publisher_account_required: boolean;
+    personal_access_token_supported: boolean;
+    device_code_supported: boolean;
+    anonymous_publish_allowed: boolean;
+  };
+};
+
+export type CentralDatabasePersistenceDomain = {
+  id: string;
+  status: "ready" | "planned" | "schema_ready_preview" | string;
+  tables: string[];
+  owned_kinds: string[];
+};
+
+export type CentralDatabaseTableSpec = {
+  name: string;
+  domain: string;
+  purpose: string;
+};
+
+export type CentralDatabasePolicyPayload = {
+  schema_version: "kyuubiki.central-database-policy/v1";
+  status: string;
+  active_backend: "sqlite" | "postgres" | "memory" | string;
+  repo_module: string | null;
+  supported_backends: Array<"sqlite" | "postgres" | string>;
+  server_test_profile: {
+    preferred_backend: string;
+    local_backend: string;
+    required_env: string[];
+    smoke_commands: string[];
+  };
+  persistence_domains: CentralDatabasePersistenceDomain[];
+  migration_policy: {
+    schema_version: "kyuubiki.central-database-contract/v1";
+    mode: string;
+    future_mode: string;
+    startup_schema_check: boolean;
+    destructive_changes_allowed: boolean;
+    managed_tables: string[];
+  };
+  table_specs: CentralDatabaseTableSpec[];
+  backup_policy: {
+    sqlite: string;
+    postgres: string;
+    retention: string;
   };
 };

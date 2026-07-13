@@ -4,7 +4,7 @@
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui
 .PHONY: test-integration-benchmark-profile-index
-.PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture
+.PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
 .PHONY: test-integration-direct-mesh-docker-report
 .PHONY: test-integration-direct-mesh-docker-nightly
@@ -75,6 +75,12 @@ test-integration-direct-mesh-docker:
 
 test-integration-remote-ssh-fixture:
 	@$(ENTRYPOINT) remote-ssh-fixture
+
+test-central-database-smoke:
+	@node ./scripts/run-central-database-smoke.mjs --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
+
+remote-central-database-smoke:
+	@node ./scripts/run-remote-central-database-smoke.mjs --host $${REMOTE:-kyuubiki-lab} --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
 
 test-integration-direct-mesh-docker-compare:
 	@node ./scripts/compare-direct-mesh-benchmark.mjs --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}

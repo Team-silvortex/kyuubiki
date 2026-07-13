@@ -70,6 +70,65 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert Enum.any?(payload["planned_auth"], &(&1["id"] == "personal_access_token"))
   end
 
+  test "central publish policy exposes resource admission requirements without accepting writes" do
+    conn =
+      :get
+      |> conn("/api/v1/central/publish-policy")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    resource_kinds = MapSet.new(Enum.map(payload["resource_kinds"], & &1["kind"]))
+
+    assert payload["schema_version"] == "kyuubiki.central-publish-policy/v1"
+    assert payload["accepting_submissions"] == false
+    assert payload["publisher_requirements"]["anonymous_publish_allowed"] == false
+    assert "security_scan" in payload["review_stages"]
+
+    assert MapSet.subset?(
+             MapSet.new([
+               "operator",
+               "workflow_template",
+               "frontend_dsl_template",
+               "language_pack"
+             ]),
+             resource_kinds
+           )
+
+    operator = Enum.find(payload["resource_kinds"], &(&1["kind"] == "operator"))
+    language_pack = Enum.find(payload["resource_kinds"], &(&1["kind"] == "language_pack"))
+
+    assert "dynamic_smoke" in operator["required_evidence"]
+    assert language_pack["manifest_schema"] == "schemas/language-pack.schema.json"
+  end
+
+  test "central database policy exposes server deployment persistence requirements" do
+    conn =
+      :get
+      |> conn("/api/v1/central/database-policy")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    domain_ids = MapSet.new(Enum.map(payload["persistence_domains"], & &1["id"]))
+
+    assert payload["schema_version"] == "kyuubiki.central-database-policy/v1"
+    assert payload["active_backend"] in ["sqlite", "postgres", "memory"]
+    assert "postgres" in payload["supported_backends"]
+    assert "sqlite" in payload["supported_backends"]
+    assert payload["server_test_profile"]["preferred_backend"] == "postgres"
+    assert "DATABASE_URL" in payload["server_test_profile"]["required_env"]
+    assert payload["migration_policy"]["destructive_changes_allowed"] == false
+    assert "central_store_entries" in payload["migration_policy"]["managed_tables"]
+    assert "central_artifact_signatures" in Enum.map(payload["table_specs"], & &1["name"])
+    assert payload["backup_policy"]["postgres"] =~ "pg_dump"
+
+    assert MapSet.subset?(
+             MapSet.new(["catalog_entries", "publisher_accounts", "release_artifacts"]),
+             domain_ids
+           )
+  end
+
   test "central catalog returns explicit not-found errors" do
     conn =
       :get

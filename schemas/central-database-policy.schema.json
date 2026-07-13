@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-database-policy.schema.json",
+  "title": "Kyuubiki central database policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "active_backend",
+    "repo_module",
+    "supported_backends",
+    "server_test_profile",
+    "persistence_domains",
+    "migration_policy",
+    "table_specs",
+    "backup_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-database-policy/v1" },
+    "status": { "type": "string" },
+    "active_backend": { "type": "string" },
+    "repo_module": { "type": ["string", "null"] },
+    "supported_backends": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "server_test_profile": {
+      "type": "object",
+      "required": ["preferred_backend", "local_backend", "required_env", "smoke_commands"],
+      "additionalProperties": false,
+      "properties": {
+        "preferred_backend": { "type": "string" },
+        "local_backend": { "type": "string" },
+        "required_env": { "type": "array", "items": { "type": "string" } },
+        "smoke_commands": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "persistence_domains": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/persistenceDomain" },
+      "minItems": 1
+    },
+    "migration_policy": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "mode",
+        "future_mode",
+        "startup_schema_check",
+        "destructive_changes_allowed",
+        "managed_tables"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "const": "kyuubiki.central-database-contract/v1" },
+        "mode": { "type": "string" },
+        "future_mode": { "type": "string" },
+        "startup_schema_check": { "type": "boolean" },
+        "destructive_changes_allowed": { "type": "boolean" },
+        "managed_tables": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "table_specs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tableSpec" },
+      "minItems": 1
+    },
+    "backup_policy": {
+      "type": "object",
+      "required": ["sqlite", "postgres", "retention"],
+      "additionalProperties": false,
+      "properties": {
+        "sqlite": { "type": "string" },
+        "postgres": { "type": "string" },
+        "retention": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "persistenceDomain": {
+      "type": "object",
+      "required": ["id", "status", "tables", "owned_kinds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "tables": { "type": "array", "items": { "type": "string" } },
+        "owned_kinds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "tableSpec": {
+      "type": "object",
+      "required": ["name", "domain", "purpose"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -28,7 +28,7 @@ export type InstallerRuntimeRoute = {
 export type InstallerValidationGate = {
   id: string;
   capability: InstallerRuntimeCapability;
-  requiredBefore: string;
+  requiredBefore: InstallerRuntimeCapability;
   failureMode: "block_action" | "diagnostics_only";
 };
 

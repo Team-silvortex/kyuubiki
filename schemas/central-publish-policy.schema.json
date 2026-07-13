@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-publish-policy.schema.json",
+  "title": "Kyuubiki central publish policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "accepting_submissions",
+    "reason",
+    "resource_kinds",
+    "review_stages",
+    "publisher_requirements"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-publish-policy/v1" },
+    "status": { "type": "string" },
+    "accepting_submissions": { "type": "boolean" },
+    "reason": { "type": "string" },
+    "resource_kinds": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resourcePolicy" },
+      "minItems": 1
+    },
+    "review_stages": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "publisher_requirements": {
+      "type": "object",
+      "required": [
+        "login_required",
+        "publisher_account_required",
+        "personal_access_token_supported",
+        "device_code_supported",
+        "anonymous_publish_allowed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "login_required": { "type": "boolean" },
+        "publisher_account_required": { "type": "boolean" },
+        "personal_access_token_supported": { "type": "boolean" },
+        "device_code_supported": { "type": "boolean" },
+        "anonymous_publish_allowed": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "kind": {
+      "type": "string",
+      "enum": ["operator", "workflow_template", "frontend_dsl_template", "language_pack"]
+    },
+    "resourcePolicy": {
+      "type": "object",
+      "required": [
+        "kind",
+        "manifest_schema",
+        "required_evidence",
+        "distribution_modes",
+        "mutable_after_publish"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "$ref": "#/$defs/kind" },
+        "manifest_schema": { "type": "string", "minLength": 1 },
+        "required_evidence": { "type": "array", "items": { "type": "string" } },
+        "distribution_modes": { "type": "array", "items": { "type": "string" } },
+        "mutable_after_publish": { "type": "boolean" }
+      }
+    }
+  }
+}

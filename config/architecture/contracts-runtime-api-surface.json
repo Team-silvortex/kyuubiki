@@ -45,10 +45,34 @@
           "operator task execution",
           "control-plane surface"
         ]
+      },
+      {
+        "id": "central-store-runtime-api",
+        "sources": [
+          "apps/web/lib/kyuubiki_web/central_store.ex",
+          "apps/web/lib/kyuubiki_web/central_store_router.ex",
+          "apps/frontend/src/lib/api/central-store-client.ts",
+          "apps/frontend/src/lib/api/central-store-types.ts",
+          "schemas/central-store-catalog.schema.json",
+          "schemas/central-session-policy.schema.json",
+          "schemas/central-publish-policy.schema.json",
+          "schemas/central-database-policy.schema.json"
+        ],
+        "client_surfaces": ["workbench-shell", "hub-shell", "sdk-headless", "installer-shell"],
+        "stability_contracts": [
+          "operator store catalog",
+          "workflow template store catalog",
+          "frontend DSL template store catalog",
+          "language-pack distribution",
+          "session policy",
+          "publish policy",
+          "database policy"
+        ]
       }
     ],
     "verification_commands": [
       "node scripts/check-contracts-runtime-api-surface.mjs",
+      "node scripts/check-central-store-contract.mjs",
       "node scripts/check-module-function-matrix.mjs"
     ]
   }

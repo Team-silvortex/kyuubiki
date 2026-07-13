@@ -1,5 +1,5 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
-.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-contracts-runtime-api-surface build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-contracts-runtime-api-surface check-central-store-contract check-central-database-readiness build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
@@ -49,6 +49,14 @@ check-module-function-coverage-tensor:
 check-contracts-runtime-api-surface:
 	@node ./scripts/check-contracts-runtime-api-surface.mjs --self-test
 	@node ./scripts/check-contracts-runtime-api-surface.mjs
+
+check-central-store-contract:
+	@node ./scripts/check-central-store-contract.mjs --self-test
+	@node ./scripts/check-central-store-contract.mjs
+
+check-central-database-readiness:
+	@node ./scripts/check-central-database-readiness.mjs --self-test
+	@node ./scripts/check-central-database-readiness.mjs --mode $${MODE:-local} --backend $${BACKEND:-sqlite}
 
 build-module-topology-report:
 	@node ./scripts/build-module-topology-report.mjs --out-dir $${OUT_DIR:-tmp/module-topology}
@@ -207,6 +215,8 @@ architecture-check:
 	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-module-function-coverage-tensor
 	@$(MAKE) check-contracts-runtime-api-surface
+	@$(MAKE) check-central-store-contract
+	@$(MAKE) check-central-database-readiness
 	@$(MAKE) test-runtime-surfaces
 	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
@@ -238,6 +248,8 @@ verify:
 	@$(MAKE) check-toolchains
 	@$(MAKE) check-elixir-self-host
 	@$(MAKE) check-native-script-audit
+	@$(MAKE) check-central-store-contract
+	@$(MAKE) check-central-database-readiness
 	@$(MAKE) check-language-packs
 	@$(MAKE) check-version-line
 	@$(MAKE) check-operator-reliability

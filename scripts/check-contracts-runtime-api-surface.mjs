@@ -34,6 +34,12 @@ if (args.has("--self-test")) {
           client_surfaces: ["orchestra-control-plane"],
           stability_contracts: ["control-plane surface"],
         },
+        {
+          id: "central-store-runtime-api",
+          sources: ["scripts/check-contracts-runtime-api-surface.mjs"],
+          client_surfaces: ["workbench-shell"],
+          stability_contracts: ["central store catalog"],
+        },
       ],
     },
   });
@@ -79,6 +85,7 @@ function validateSurface(surface) {
     "frontend-runtime-api",
     "protocol-runtime-api",
     "orchestra-runtime-api",
+    "central-store-runtime-api",
   ];
 
   for (const familyId of requiredFamilies) {

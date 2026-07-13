@@ -69,6 +69,22 @@ This directory contains host-native operational entry points.
   envelopes for the current release index version in the `tamamono 1.x` line,
   including exact parity with
   `config/localization/mainstream-language-pack-locales.json`.
+- `check-central-store-contract.mjs`
+  Verify the future central-server store contract across JSON schemas, Elixir
+  API surface, frontend API client/types, tests, and docs.
+- `check-central-database-readiness.mjs`
+  Verify central-server database readiness before local or server deployment
+  smoke tests. It checks storage mode, required env, and DB policy surfaces
+  without opening a network/database connection.
+- `run-central-database-smoke.mjs`
+  Run the central-store database smoke wrapper. It always runs readiness first;
+  by default it is a dry-run, and only executes Postgres-backed Elixir tests
+  when `RUN_DB_SMOKE=1` or `--run` is supplied.
+- `run-remote-central-database-smoke.mjs`
+  Sync the current source tree to an existing SSH host such as `kyuubiki-lab`
+  and run the same central DB readiness/smoke pair on that machine. It uses a
+  relative scratch directory, excludes generated build outputs, and never
+  stores SSH credentials or `DATABASE_URL` in the repository.
 - `check-ui-automation-contract.mjs`
   Verify the product-owned Workbench automation selector contract. It compares
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and

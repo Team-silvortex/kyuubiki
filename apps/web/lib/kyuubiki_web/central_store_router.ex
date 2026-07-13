@@ -22,6 +22,18 @@ defmodule KyuubikiWeb.CentralStoreRouter do
     end)
   end
 
+  get "/publish-policy" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.publish_policy())
+    end)
+  end
+
+  get "/database-policy" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.database_policy())
+    end)
+  end
+
   get "/catalog/:kind/:entry_id" do
     with_auth(conn, :read, fn conn ->
       case CentralStore.fetch(kind, entry_id) do
