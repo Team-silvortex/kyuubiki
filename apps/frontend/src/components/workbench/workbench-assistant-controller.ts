@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
+import {
+  requestWorkbenchAssistantPlan,
+  validateAssistantEndpoint,
+  type AssistantPlan,
+} from "@/lib/assistant/openai-compatible";
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import type { WorkbenchCopy, WorkbenchLanguage } from "@/components/workbench/workbench-copy";
 import type { TrussDiagnostics, TrussSuggestion } from "@/components/workbench/workbench-defaults";
@@ -284,8 +288,20 @@ export function useWorkbenchAssistantController({
     [language, studyKind, t],
   );
 
-  const requestLlmAssistantPlan = async (prompt: string): Promise<AssistantPlan> =>
-    requestWorkbenchAssistantPlan({
+  const requestLlmAssistantPlan = async (prompt: string): Promise<AssistantPlan> => {
+    const validation = validateAssistantEndpoint(assistantApiBaseUrl);
+    const trustedOrigins = new Set<string>();
+    if (validation.requiresTrust && validation.origin) {
+      const approved = window.confirm(
+        `This assistant request will send${assistantApiKey ? " your API key and" : ""} the workbench snapshot directly to ${validation.origin}.\n\nOnly continue if you trust this host.`,
+      );
+      if (!approved) {
+        throw new Error("assistant request cancelled before contacting the configured host");
+      }
+      trustedOrigins.add(validation.origin);
+    }
+
+    return requestWorkbenchAssistantPlan({
       baseUrl: assistantApiBaseUrl,
       apiKey: assistantApiKey,
       model: assistantModel,
@@ -297,7 +313,9 @@ export function useWorkbenchAssistantController({
         summary: card.summary,
         actionLabel: card.actionLabel,
       })),
+      trustedOrigins,
     });
+  };
 
   return {
     assistantCards,

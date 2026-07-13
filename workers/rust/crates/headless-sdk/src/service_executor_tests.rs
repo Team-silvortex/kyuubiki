@@ -24,6 +24,26 @@ fn builds_post_request_with_json_body() {
 }
 
 #[test]
+fn rejects_path_and_header_injection_inputs() {
+    assert!(sanitize_request_path("/api/health").is_ok());
+    assert!(sanitize_request_path("/api/v1/jobs/../secrets").is_err());
+    assert!(sanitize_request_path("/api/v1/jobs/job_1\r\nX-Bad: yes").is_err());
+    assert!(sanitize_header_value(Some("secret-token"), "api token").is_ok());
+    assert!(sanitize_header_value(Some("secret\r\nX-Bad: yes"), "api token").is_err());
+}
+
+#[test]
+fn rejects_unsafe_dynamic_path_segments() {
+    let payload = json!({ "job_id": "../other" });
+    let error = required_path_segment(&payload, &["job_id"]).expect_err("unsafe job id");
+    assert!(error.message.contains("safe path segment"));
+
+    let payload = json!({ "workflow_id": "catalog/demo" });
+    let error = required_path_segment(&payload, &["workflow_id"]).expect_err("unsafe workflow id");
+    assert!(error.message.contains("safe path segment"));
+}
+
+#[test]
 fn parses_json_response_payload() {
     let response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"job\":{\"status\":\"completed\"}}";
     let payload =

@@ -1,8 +1,9 @@
 use crate::{
     electrostatic_diagnostics::extract_electrostatic_result_diagnostics,
     magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics,
+    thermal_diagnostics::extract_thermal_result_diagnostics,
+    thermo_diagnostics::extract_thermo_result_diagnostics,
     transport_diagnostics::extract_transport_result_diagnostics,
-    workflow_diagnostics::{extract_thermal_result_diagnostics, extract_thermo_result_diagnostics},
     workflow_executor::run_extract_operator,
 };
 

@@ -52,51 +52,14 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             "operator_task_execute" => {
                 execute_operator_task_execute(&self.base_url, self.api_token.as_deref(), payload)
             }
-            "solve_bar_1d"
-            | "solve_acoustic_bar_1d"
-            | "solve_thermal_bar_1d"
-            | "solve_heat_bar_1d"
-            | "solve_electrostatic_bar_1d"
-            | "solve_magnetostatic_bar_1d"
-            | "solve_transient_heat_bar_1d"
-            | "solve_magnetostatic_plane_triangle_2d"
-            | "solve_magnetostatic_plane_quad_2d"
-            | "solve_electrostatic_plane_triangle_2d"
-            | "solve_electrostatic_plane_quad_2d"
-            | "solve_heat_plane_triangle_2d"
-            | "solve_heat_plane_quad_2d"
-            | "solve_stokes_flow_plane_triangle_2d"
-            | "solve_stokes_flow_plane_quad_2d"
-            | "solve_thermal_truss_2d"
-            | "solve_thermal_truss_3d"
-            | "solve_beam_1d"
-            | "solve_thermal_plane_triangle_2d"
-            | "solve_thermal_plane_quad_2d"
-            | "solve_thermal_beam_1d"
-            | "solve_thermal_frame_2d"
-            | "solve_thermal_frame_3d"
-            | "solve_torsion_1d"
-            | "solve_spring_1d"
-            | "solve_transient_spring_1d"
-            | "solve_harmonic_spring_1d"
-            | "solve_nonlinear_spring_1d"
-            | "solve_contact_gap_1d"
-            | "solve_spring_2d"
-            | "solve_spring_3d"
-            | "solve_truss_2d"
-            | "solve_truss_3d"
-            | "solve_plane_triangle_2d"
-            | "solve_plane_quad_2d"
-            | "solve_frame_2d"
-            | "solve_modal_frame_2d"
-            | "solve_modal_frame_3d"
-            | "solve_solid_tetra_3d"
-            | "solve_frame_3d" => execute_direct_fem_submit(
-                &self.base_url,
-                self.api_token.as_deref(),
-                action,
-                payload,
-            ),
+            direct_fem_action if direct_fem_submit_route(direct_fem_action).is_some() => {
+                execute_direct_fem_submit(
+                    &self.base_url,
+                    self.api_token.as_deref(),
+                    direct_fem_action,
+                    payload,
+                )
+            }
             "workflow_submit_catalog" => {
                 execute_workflow_submit_catalog(&self.base_url, self.api_token.as_deref(), payload)
             }
@@ -156,8 +119,9 @@ fn execute_service_health(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let request_path = pick_string(payload, &["path"]).unwrap_or("/api/health");
-    let result = request_json(base_url, api_token, "GET", request_path, None)?;
+    let request_path =
+        sanitize_request_path(pick_string(payload, &["path"]).unwrap_or("/api/health"))?;
+    let result = request_json(base_url, api_token, "GET", &request_path, None)?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
         result,
@@ -189,7 +153,7 @@ fn execute_workflow_submit_catalog(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let workflow_id = required_string(payload, &["workflow_id", "workflowId"])?;
+    let workflow_id = required_path_segment(payload, &["workflow_id", "workflowId"])?;
     let result = request_json(
         base_url,
         api_token,
@@ -237,7 +201,7 @@ fn execute_job_fetch(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_string(payload, &["job_id", "jobId"])?;
+    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
     let result = request_json(
         base_url,
         api_token,
@@ -256,7 +220,7 @@ fn execute_job_wait(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_string(payload, &["job_id", "jobId"])?;
+    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
     let interval_ms = pick_u64(payload, &["interval_ms", "intervalMs"]).unwrap_or(1000);
     let timeout_ms = pick_u64(payload, &["timeout_ms", "timeoutMs"]).unwrap_or(60000);
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
@@ -293,7 +257,7 @@ fn execute_result_fetch(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_string(payload, &["job_id", "jobId"])?;
+    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
     let prefer_job_result = payload
         .get("prefer_job_result")
         .and_then(Value::as_bool)
@@ -370,11 +334,12 @@ fn request_json(
     body: Option<Value>,
 ) -> Result<Value, HeadlessExecutorError> {
     let endpoint = parse_http_url(base_url)?;
-    let request_path = if path.starts_with('/') {
+    let request_path = sanitize_request_path(if path.starts_with('/') {
         path.to_string()
     } else {
         format!("/{path}")
-    };
+    })?;
+    let api_token = sanitize_header_value(api_token, "api token")?;
     let body_text = body
         .map(|value| serde_json::to_string(&value))
         .transpose()
@@ -395,7 +360,7 @@ fn request_json(
         &endpoint.host,
         &request_path,
         body_text.as_deref(),
-        api_token,
+        api_token.as_deref(),
     );
     stream
         .write_all(request.as_bytes())
@@ -432,6 +397,77 @@ fn build_request(
     request.push_str("\r\n");
     request.push_str(body);
     request
+}
+
+fn required_path_segment<'a>(
+    payload: &'a Value,
+    keys: &[&str],
+) -> Result<&'a str, HeadlessExecutorError> {
+    let value = required_string(payload, keys)?;
+    validate_path_segment(value, keys.join("|").as_str())?;
+    Ok(value)
+}
+
+fn validate_path_segment(value: &str, label: &str) -> Result<(), HeadlessExecutorError> {
+    if value.is_empty()
+        || value.starts_with('.')
+        || value.contains("..")
+        || !value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.'))
+    {
+        return Err(HeadlessExecutorError {
+            message: format!("{label} must be a safe path segment"),
+        });
+    }
+    Ok(())
+}
+
+fn sanitize_request_path<P>(path: P) -> Result<String, HeadlessExecutorError>
+where
+    P: AsRef<str>,
+{
+    let path = path.as_ref();
+    if !path.starts_with('/') || path.contains('\\') || path.contains("//") {
+        return Err(HeadlessExecutorError {
+            message: format!("invalid request path: {path}"),
+        });
+    }
+    if path
+        .chars()
+        .any(|ch| ch.is_ascii_control() || ch.is_whitespace())
+    {
+        return Err(HeadlessExecutorError {
+            message: "request path contains unsupported whitespace or control characters"
+                .to_string(),
+        });
+    }
+    for segment in path.split('/').filter(|segment| !segment.is_empty()) {
+        if segment == "." || segment == ".." {
+            return Err(HeadlessExecutorError {
+                message: format!("request path escapes route boundary: {path}"),
+            });
+        }
+    }
+    Ok(path.to_string())
+}
+
+fn sanitize_header_value(
+    value: Option<&str>,
+    label: &str,
+) -> Result<Option<String>, HeadlessExecutorError> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    if value
+        .chars()
+        .any(|ch| ch == '\r' || ch == '\n' || ch == '\0')
+    {
+        return Err(HeadlessExecutorError {
+            message: format!("{label} contains unsupported control characters"),
+        });
+    }
+    Ok(Some(value.to_string()))
 }
 
 fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExecutorError> {

@@ -110,9 +110,7 @@ impl UploadConfig {
                 .unwrap_or_else(|_| "ssh".to_string()),
             rsync_bin: std::env::var("KYUUBIKI_RELEASE_REMOTE_RSYNC_BIN")
                 .unwrap_or_else(|_| "rsync".to_string()),
-            remote_password: std::env::var("KYUUBIKI_RELEASE_REMOTE_PASSWORD")
-                .ok()
-                .filter(|value| !value.is_empty()),
+            remote_password: release_remote_password()?,
             ssh_options: split_words(
                 &std::env::var("KYUUBIKI_RELEASE_REMOTE_SSH_OPTS")
                     .unwrap_or_else(|_| "-o StrictHostKeyChecking=yes".to_string()),
@@ -345,6 +343,21 @@ fn split_words(value: &str) -> Vec<OsString> {
         .collect()
 }
 
+fn release_remote_password() -> RunnerResult<Option<String>> {
+    let password = std::env::var("KYUUBIKI_RELEASE_REMOTE_PASSWORD")
+        .ok()
+        .filter(|value| !value.is_empty());
+    if password.is_some()
+        && !std::env::var("KYUUBIKI_RELEASE_REMOTE_ALLOW_PASSWORD").is_ok_and(|value| value == "1")
+    {
+        return Err(
+            "KYUUBIKI_RELEASE_REMOTE_PASSWORD requires KYUUBIKI_RELEASE_REMOTE_ALLOW_PASSWORD=1; prefer SSH keys or an agent"
+                .to_string(),
+        );
+    }
+    Ok(password)
+}
+
 impl ReleasePlatform {
     fn name(self) -> &'static str {
         match self {
@@ -363,8 +376,9 @@ fn print_help() {
 Upload generated desktop release outputs to a remote download server.\n\n\
 Environment:\n  \
 KYUUBIKI_RELEASE_REMOTE_HOST   SSH host or alias. Default: kyuubiki-lab\n  \
-KYUUBIKI_RELEASE_REMOTE_DIR    Remote root directory. Default: ~/kyuubiki-downloads\n  \
-KYUUBIKI_RELEASE_REMOTE_PASSWORD Optional sshpass-backed password compatibility path\n  \
+	KYUUBIKI_RELEASE_REMOTE_DIR    Remote root directory. Default: ~/kyuubiki-downloads\n  \
+	KYUUBIKI_RELEASE_REMOTE_PASSWORD Optional dev-only sshpass-backed compatibility path\n  \
+	KYUUBIKI_RELEASE_REMOTE_ALLOW_PASSWORD Set to 1 to allow the password compatibility path\n  \
 KYUUBIKI_RELEASE_VERSION       Override version folder\n  \
 KYUUBIKI_RELEASE_REMOTE_SSH_BIN Override SSH binary. Default: ssh\n  \
 KYUUBIKI_RELEASE_REMOTE_RSYNC_BIN Override rsync binary. Default: rsync\n  \

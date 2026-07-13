@@ -14,6 +14,49 @@ export type AssistantPlan = {
   suggested_actions: AssistantSuggestedAction[];
 };
 
+export type AssistantEndpointValidation = {
+  ok: boolean;
+  normalized?: string;
+  reason?: string;
+  requiresTrust?: boolean;
+  origin?: string;
+};
+
+function isLoopbackAssistantHost(hostname: string) {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1" || normalized === "[::1]";
+}
+
+export function validateAssistantEndpoint(baseUrl: string): AssistantEndpointValidation {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) {
+    return { ok: false, reason: "assistant base URL is required" };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return { ok: false, reason: "assistant base URL must be an absolute URL" };
+  }
+
+  const protocol = parsed.protocol.toLowerCase();
+  const isLoopback = isLoopbackAssistantHost(parsed.hostname);
+  if (protocol === "http:" && !isLoopback) {
+    return { ok: false, reason: "remote assistant HTTP endpoints are not allowed; use HTTPS" };
+  }
+  if (protocol !== "https:" && !(protocol === "http:" && isLoopback)) {
+    return { ok: false, reason: "assistant base URL must use HTTPS, or HTTP only for loopback" };
+  }
+
+  return {
+    ok: true,
+    normalized: parsed.origin + parsed.pathname.replace(/\/+$/, ""),
+    requiresTrust: !isLoopback,
+    origin: parsed.origin.toLowerCase(),
+  };
+}
+
 function extractJsonBlock(value: string): string {
   const fenced = value.match(/```json\s*([\s\S]*?)```/i);
   if (fenced?.[1]) {
@@ -36,8 +79,17 @@ export async function requestWorkbenchAssistantPlan(input: {
   prompt: string;
   snapshot: WorkbenchScriptSnapshot;
   localHints: Array<{ id: string; title: string; summary: string; actionLabel: string }>;
+  trustedOrigins?: ReadonlySet<string>;
 }): Promise<AssistantPlan> {
-  const endpoint = `${input.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const validation = validateAssistantEndpoint(input.baseUrl);
+  if (!validation.ok || !validation.normalized) {
+    throw new Error(validation.reason ?? "assistant base URL is not allowed");
+  }
+  if (validation.requiresTrust && validation.origin && !input.trustedOrigins?.has(validation.origin)) {
+    throw new Error(`assistant host must be explicitly trusted before use: ${validation.origin}`);
+  }
+
+  const endpoint = `${validation.normalized}/chat/completions`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -105,4 +157,3 @@ export async function requestWorkbenchAssistantPlan(input: {
       : [],
   };
 }
-

@@ -1,62 +1,5 @@
 use serde_json::Value;
 
-pub fn extract_thermal_result_diagnostics(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload.as_object().ok_or_else(|| {
-        "extract.thermal_result_diagnostics expects an object payload".to_string()
-    })?;
-    let nodes = fetch_collection(object, &config, "node_source", "nodes")?;
-    let elements = fetch_collection(object, &config, "element_source", "elements")?;
-    let prefix = normalize_prefix(&config, "output_prefix", "thermal");
-
-    let temperature_nodes = collect_numeric_entries(
-        nodes,
-        field_name(&config, "temperature_field", "temperature"),
-    );
-    let heat_load_nodes =
-        collect_numeric_entries(nodes, field_name(&config, "heat_load_field", "heat_load"));
-    let gradient_peak = peak_vector_entry(
-        elements,
-        field_name(&config, "gradient_x_field", "temperature_gradient_x"),
-        field_name(&config, "gradient_y_field", "temperature_gradient_y"),
-        optional_field_name(&config, "gradient_z_field"),
-        optional_field_name(&config, "gradient_magnitude_field"),
-    );
-    let flux_peak = peak_vector_entry(
-        elements,
-        field_name(&config, "flux_x_field", "heat_flux_x"),
-        field_name(&config, "flux_y_field", "heat_flux_y"),
-        optional_field_name(&config, "flux_z_field"),
-        Some(field_name(
-            &config,
-            "flux_magnitude_field",
-            "heat_flux_magnitude",
-        )),
-    );
-
-    let diagnostics = serde_json::json!({
-        format!("{prefix}_node_count"): count_object_entries(nodes),
-        format!("{prefix}_element_count"): count_object_entries(elements),
-    });
-    let diagnostics = merge_diagnostic_contract(
-        diagnostics,
-        "thermal",
-        "thermal_result",
-        &prefix,
-        &["temperature", "heat_load", "gradient", "flux"],
-    );
-    let diagnostics =
-        merge_distribution_stats(diagnostics, &prefix, "temperature", &temperature_nodes);
-    let diagnostics = merge_distribution_stats(diagnostics, &prefix, "heat_load", &heat_load_nodes);
-    let diagnostics = merge_peak_vector(diagnostics, &prefix, "gradient", gradient_peak.as_ref());
-    let diagnostics = merge_peak_vector(diagnostics, &prefix, "flux", flux_peak.as_ref());
-
-    ensure_non_empty_diagnostics(
-        diagnostics,
-        &prefix,
-        "extract.thermal_result_diagnostics did not find any diagnostic fields",
-    )
-}
-
 pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Result<Value, String> {
     let object = payload
         .as_object()
@@ -296,33 +239,14 @@ fn peak_vector_entry<'a>(
     z_field: Option<&str>,
     magnitude_field: Option<&str>,
 ) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
-    peak_vector_entry_any(
-        entries,
-        &[x_field],
-        &[y_field],
-        z_field,
-        magnitude_field
-            .map(|field| vec![field])
-            .unwrap_or_default()
-            .as_slice(),
-    )
-}
-
-fn peak_vector_entry_any<'a>(
-    entries: &'a [Value],
-    x_fields: &[&str],
-    y_fields: &[&str],
-    z_field: Option<&str>,
-    magnitude_fields: &[&str],
-) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
     entries
         .iter()
         .filter_map(|entry| {
             let mut components = Vec::new();
-            if let Some(value) = first_entry_number(entry, x_fields) {
+            if let Some(value) = entry.get(x_field).and_then(Value::as_f64) {
                 components.push(("x", value));
             }
-            if let Some(value) = first_entry_number(entry, y_fields) {
+            if let Some(value) = entry.get(y_field).and_then(Value::as_f64) {
                 components.push(("y", value));
             }
             if let Some(field) = z_field {
@@ -331,24 +255,20 @@ fn peak_vector_entry_any<'a>(
                 }
             }
 
-            let magnitude = first_entry_number(entry, magnitude_fields).or_else(|| {
-                (components.len() >= 2).then(|| {
-                    components
-                        .iter()
-                        .map(|(_, value)| value * value)
-                        .sum::<f64>()
-                        .sqrt()
-                })
-            })?;
+            let magnitude = magnitude_field
+                .and_then(|field| entry.get(field).and_then(Value::as_f64))
+                .or_else(|| {
+                    (components.len() >= 2).then(|| {
+                        components
+                            .iter()
+                            .map(|(_, value)| value * value)
+                            .sum::<f64>()
+                            .sqrt()
+                    })
+                })?;
             Some((entry, magnitude, components))
         })
         .max_by(|left, right| left.1.total_cmp(&right.1))
-}
-
-fn first_entry_number(entry: &Value, fields: &[&str]) -> Option<f64> {
-    fields
-        .iter()
-        .find_map(|field| entry.get(*field).and_then(Value::as_f64))
 }
 
 fn merge_diagnostic_contract(

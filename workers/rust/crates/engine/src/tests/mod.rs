@@ -14,6 +14,7 @@ mod workflow_coupled_diagnostics_report;
 mod workflow_coupled_electrostatic_heat_triangle;
 mod workflow_coupled_electrostatic_triangle;
 mod workflow_coupled_entrypoints;
+mod workflow_coupled_readiness;
 mod workflow_coupled_triangle;
 mod workflow_diagnostics;
 mod workflow_diagnostics_bundle;

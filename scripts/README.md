@@ -378,8 +378,8 @@ Useful smoke wrappers:
   Upload the current shipping-version desktop release outputs to the remote
   download server. Override the target with
   `KYUUBIKI_RELEASE_REMOTE_HOST=user@host`. Prefer SSH keys or an agent; the
-  temporary `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` compatibility path uses
-  `sshpass -e`, and `PURGE_LOCAL=1` removes local `dist/` and platform-matched
+  temporary `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` compatibility path requires
+  `KYUUBIKI_RELEASE_REMOTE_ALLOW_PASSWORD=1` and uses `sshpass -e`; `PURGE_LOCAL=1` removes local `dist/` and platform-matched
   Tauri bundle outputs after a successful upload.
 - `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
   Compatibility shim for

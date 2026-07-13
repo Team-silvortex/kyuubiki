@@ -9,11 +9,10 @@ export function assistantTrustHostOrigin(baseUrl) {
 export function assistantHostRequiresTrust(baseUrl) {
   try {
     const parsed = new URL(baseUrl);
-    const protocol = parsed.protocol.toLowerCase();
     const hostname = parsed.hostname.toLowerCase();
     const isLoopback =
       hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
-    return protocol === "https:" && !isLoopback;
+    return !isLoopback;
   } catch {
     return false;
   }

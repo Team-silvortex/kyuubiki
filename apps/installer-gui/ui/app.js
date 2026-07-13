@@ -148,8 +148,31 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     if (ui.completionGuide) ui.completionGuide.textContent = message;
   };
 
+  const highImpactGuardedActions = new Set([
+    "remote_bootstrap",
+    "remote_start_agent",
+    "write_remote_policy",
+    "write_remote_nodes",
+    "write_certificate_policy",
+    "initialize_certificate_authority",
+    "issue_node_certificate",
+    "revoke_node_certificate",
+    "stage_release",
+    "prepare_staged_update",
+    "write_update_source_config",
+    "download_update",
+    "apply_downloaded_update",
+    "build_installer_bundle",
+  ]);
+
   const invokeGuardedMutation = (action, payload = {}) =>
-    invoke("guarded_mutation_action", { payload: { action, ...payload } });
+    invoke("guarded_mutation_action", {
+      payload: {
+        action,
+        ...payload,
+        ...(highImpactGuardedActions.has(action) ? { confirmationNonce: `confirmed:${action}` } : {}),
+      },
+    });
 
   const renderServiceStatus = (report) => {
     renderRuntimeStatusPlane(ui.serviceStatusPlane, report?.summary);

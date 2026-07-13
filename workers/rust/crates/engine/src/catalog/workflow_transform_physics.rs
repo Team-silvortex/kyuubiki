@@ -327,5 +327,20 @@ pub(super) fn workflow_physics_transform_descriptors() -> Vec<OperatorDescriptor
                 "headless_safe",
             ],
         ),
+        built_in_transform_descriptor(
+            "transform.evaluate_coupled_readiness",
+            "multi_domain",
+            "evaluate_coupled_readiness",
+            "Evaluate cross-domain physics summaries as a unified readiness envelope for coupled workflow chaining, automation, and optimization.",
+            &[
+                "transform",
+                "multi_domain",
+                "coupled",
+                "readiness",
+                "workflow",
+                "optimization",
+                "headless_safe",
+            ],
+        ),
     ]
 }

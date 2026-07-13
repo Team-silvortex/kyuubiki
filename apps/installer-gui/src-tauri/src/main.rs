@@ -82,6 +82,7 @@ struct BuildPayload {
 #[serde(rename_all = "camelCase")]
 struct InstallerGuardedMutationPayload {
     action: String,
+    confirmation_nonce: Option<String>,
     channel: Option<String>,
     catalog_path: Option<String>,
     artifact_root: Option<String>,
@@ -136,6 +137,42 @@ fn append_installer_guarded_mutation_audit(
         "detail": detail,
     });
     let _ = desktop_append_audit_line(INSTALLER_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
+}
+
+fn high_impact_guarded_action(action: &str) -> bool {
+    matches!(
+        action,
+        "remote_bootstrap"
+            | "remote_start_agent"
+            | "write_remote_policy"
+            | "write_remote_nodes"
+            | "write_certificate_policy"
+            | "initialize_certificate_authority"
+            | "issue_node_certificate"
+            | "revoke_node_certificate"
+            | "stage_release"
+            | "prepare_staged_update"
+            | "write_update_source_config"
+            | "download_update"
+            | "apply_downloaded_update"
+            | "build_installer_bundle"
+    )
+}
+
+fn require_guarded_action_confirmation(
+    payload: &InstallerGuardedMutationPayload,
+) -> Result<(), String> {
+    if !high_impact_guarded_action(payload.action.as_str()) {
+        return Ok(());
+    }
+    let expected = format!("confirmed:{}", payload.action);
+    match payload.confirmation_nonce.as_deref() {
+        Some(value) if value == expected => Ok(()),
+        _ => Err(format!(
+            "guarded installer action requires explicit confirmation nonce: {}",
+            payload.action
+        )),
+    }
 }
 
 #[tauri::command]
@@ -226,6 +263,7 @@ fn build_installer_bundle(payload: BuildPayload) -> Result<String, String> {
 
 #[tauri::command]
 fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<String, String> {
+    require_guarded_action_confirmation(&payload)?;
     let result = match payload.action.as_str() {
         "validate_env" => validate_env_file(),
         "init_env" => installer_init_env(payload.force.unwrap_or(false)),

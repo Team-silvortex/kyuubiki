@@ -1,5 +1,6 @@
 mod operator_sdk_acoustic_transforms;
 mod operator_sdk_cfd_transforms;
+mod operator_sdk_coupled_transforms;
 mod operator_sdk_dynamic_transforms;
 mod operator_sdk_electrostatic_transforms;
 mod operator_sdk_focus_chain_operators;
@@ -18,6 +19,7 @@ use crate::operator_sdk_workflow_extensions::operator_sdk_acoustic_transforms::r
 use crate::operator_sdk_workflow_extensions::operator_sdk_cfd_transforms::{
     register_cfd_extract_extensions, register_cfd_transform_extensions,
 };
+use crate::operator_sdk_workflow_extensions::operator_sdk_coupled_transforms::register_coupled_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_dynamic_transforms::register_dynamic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_electrostatic_transforms::register_electrostatic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_focus_chain_operators::register_focus_chain_transform_extensions;
@@ -335,6 +337,7 @@ pub fn register_workflow_transform_extensions(registry: &mut OperatorRegistry) {
     register_magnetostatic_transform_extensions(registry);
     register_cfd_transform_extensions(registry);
     register_transport_transform_extensions(registry);
+    register_coupled_transform_extensions(registry);
     registry
         .register_json(ComposeDiagnosticsBundleOperator {
             descriptor: descriptor("transform.compose_diagnostics_bundle"),

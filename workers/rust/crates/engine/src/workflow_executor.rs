@@ -63,6 +63,7 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.evaluate_transport_guard",
     "transform.benchmark_transport_pair",
     "transform.score_transport_quality",
+    "transform.evaluate_coupled_readiness",
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
@@ -166,6 +167,7 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.compose_quality_objective"
         || operator_id == "transform.compose_quality_lineage_report"
         || operator_id == "transform.join_parameter_sweep_results"
+        || operator_id == "transform.evaluate_coupled_readiness"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
@@ -341,6 +343,7 @@ pub fn run_transform_operator(
         | "transform.evaluate_transport_guard"
         | "transform.benchmark_transport_pair"
         | "transform.score_transport_quality"
+        | "transform.evaluate_coupled_readiness"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

@@ -64,6 +64,7 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
                     "electric_flux_density_x": 4.0,
                     "electric_flux_density_y": 1.0,
                     "electric_flux_density_magnitude": 4.1231056256,
+                    "electric_energy_density": 0.75,
                     "stored_energy": 1.5
                 },
                 {
@@ -83,12 +84,14 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
                     "electric_flux_density_x": 5.0,
                     "electric_flux_density_y": 2.0,
                     "electric_flux_density_magnitude": 5.3851648071,
+                    "electric_energy_density": 1.75,
                     "stored_energy": 3.5
                 }
             ],
             "max_potential": 12.0,
             "max_electric_field": 10.7703296143,
             "max_flux_density": 5.3851648071,
+            "max_electric_energy_density": 1.75,
             "total_stored_energy": 5.0
         }),
         serde_json::Value::Null,
@@ -148,6 +151,7 @@ fn runs_magnetostatic_peak_extract_operator_through_sdk_registry() {
                     "magnetic_flux_density_x": 6.0,
                     "magnetic_flux_density_y": 8.0,
                     "magnetic_flux_density_magnitude": 10.0,
+                    "magnetic_energy_density": 1.25,
                     "stored_energy": 2.5
                 },
                 {
@@ -167,12 +171,14 @@ fn runs_magnetostatic_peak_extract_operator_through_sdk_registry() {
                     "magnetic_flux_density_x": 8.0,
                     "magnetic_flux_density_y": 15.0,
                     "magnetic_flux_density_magnitude": 17.0,
+                    "magnetic_energy_density": 3.5,
                     "stored_energy": 7.0
                 }
             ],
             "max_vector_potential": 5.0,
             "max_magnetic_field_strength": 13.0,
             "max_flux_density": 17.0,
+            "max_magnetic_energy_density": 3.5,
             "total_stored_energy": 9.5
         }),
         serde_json::Value::Null,
@@ -228,7 +234,8 @@ fn runs_heat_peak_flux_extract_operator_through_sdk_registry() {
                     "temperature_gradient_y": -5.0,
                     "heat_flux_x": 30.0,
                     "heat_flux_y": 10.0,
-                    "heat_flux_magnitude": 31.6227766017
+                    "heat_flux_magnitude": 31.6227766017,
+                    "heat_flow_rate": 31.6227766017
                 },
                 {
                     "index": 1,
@@ -243,11 +250,13 @@ fn runs_heat_peak_flux_extract_operator_through_sdk_registry() {
                     "temperature_gradient_y": -12.0,
                     "heat_flux_x": 40.0,
                     "heat_flux_y": 24.0,
-                    "heat_flux_magnitude": 46.6476151588
+                    "heat_flux_magnitude": 46.6476151588,
+                    "heat_flow_rate": 46.6476151588
                 }
             ],
             "max_temperature": 100.0,
-            "max_heat_flux": 46.6476151588
+            "max_heat_flux": 46.6476151588,
+            "total_abs_heat_flow_rate": 78.2703917605
         }),
         serde_json::Value::Null,
     )
@@ -331,7 +340,8 @@ fn runs_thermo_peak_response_extract_operator_through_sdk_registry() {
                     "principal_stress_1": 11.0,
                     "principal_stress_2": 7.0,
                     "max_in_plane_shear": 2.0,
-                    "von_mises": 12.0
+                    "von_mises": 12.0,
+                    "strain_energy_density": 0.18
                 },
                 {
                     "index": 1,
@@ -354,12 +364,15 @@ fn runs_thermo_peak_response_extract_operator_through_sdk_registry() {
                     "principal_stress_1": 15.0,
                     "principal_stress_2": 8.0,
                     "max_in_plane_shear": 3.5,
-                    "von_mises": 16.5
+                    "von_mises": 16.5,
+                    "strain_energy_density": 0.32
                 }
             ],
             "max_displacement": 0.005,
             "max_stress": 16.5,
-            "max_temperature_delta": 40.0
+            "max_temperature_delta": 40.0,
+            "total_strain_energy": 0.5,
+            "max_strain_energy_density": 0.32
         }),
         serde_json::Value::Null,
     )

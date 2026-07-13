@@ -3,10 +3,9 @@ use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
     thermal_peak_summary, thermo_peak_summary,
 };
+use crate::thermal_diagnostics::extract_thermal_result_diagnostics;
 use crate::thermal_quality::score_thermal_quality;
-use crate::workflow_diagnostics::{
-    extract_thermal_result_diagnostics, extract_thermo_result_diagnostics,
-};
+use crate::thermo_diagnostics::extract_thermo_result_diagnostics;
 use crate::workflow_guard_transforms::{benchmark_coupled_heat_pair, evaluate_thermal_guard};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{

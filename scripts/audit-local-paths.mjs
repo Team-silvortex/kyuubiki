@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -70,7 +70,10 @@ const violations = [];
 for (const relativePath of gitFiles()) {
   if (!shouldCheck(relativePath)) continue;
 
-  const contents = readFileSync(path.join(ROOT, relativePath), "utf8");
+  const absolutePath = path.join(ROOT, relativePath);
+  if (!existsSync(absolutePath)) continue;
+
+  const contents = readFileSync(absolutePath, "utf8");
   contents.split("\n").forEach((line, index) => {
     const pattern = LOCAL_PATH_PATTERNS.find((candidate) => candidate.test(line));
     if (pattern) {
