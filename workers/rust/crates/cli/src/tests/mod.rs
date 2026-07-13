@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::{
     build_agent_descriptor, build_peer_descriptors, compute_cluster_health_score,
     filter_self_peers, handle_request_bytes, normalize_peer_addresses, parse_http_url,
@@ -35,6 +33,7 @@ use kyuubiki_protocol::{
 };
 
 mod advanced_rpc;
+mod agent_mesh_descriptor_rpc;
 mod config_and_transport;
 mod core_field_rpc;
 mod electrostatic_and_truss_rpc;

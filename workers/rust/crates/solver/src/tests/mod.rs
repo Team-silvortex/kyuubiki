@@ -44,6 +44,7 @@ use kyuubiki_protocol::{
 };
 
 mod core_fields;
+mod core_fields_plane;
 mod linear_solver_reliability;
 mod mechanics;
 mod plane_profile;
