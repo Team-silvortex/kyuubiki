@@ -28,6 +28,7 @@ pub(crate) fn effective_preconditioner<'a>(case: &BenchmarkCase, requested: &'a 
 
     match case.workload {
         BenchmarkWorkload::Truss2d(_)
+        | BenchmarkWorkload::HeatPlaneQuad2d(_)
         | BenchmarkWorkload::PlaneTriangle2d(_)
         | BenchmarkWorkload::PlaneQuad2d(_)
         | BenchmarkWorkload::ThermalPlaneTriangle2d(_)

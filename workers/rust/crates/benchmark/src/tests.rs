@@ -7,7 +7,12 @@ mod tests {
     use crate::config::BenchmarkProfile;
     use crate::models::{BenchmarkCase, BenchmarkWorkload};
     use crate::runner::run_case;
+    use serde::Deserialize;
+    use std::collections::HashSet;
     use std::fs;
+
+    #[path = "tests_performance.rs"]
+    mod performance;
 
     #[test]
     fn exposes_default_benchmark_config() {
@@ -77,7 +82,7 @@ mod tests {
 
         assert_eq!(spec.templates.len(), 38);
         assert!(spec.matrices.len() >= 10);
-        assert_eq!(spec.profiles.len(), 10);
+        assert_eq!(spec.profiles.len(), 11);
         assert!(spec
             .profiles
             .iter()
@@ -94,6 +99,10 @@ mod tests {
             .profiles
             .iter()
             .any(|profile| profile.profile == BenchmarkProfile::FourHundredK));
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::FiveHundredK));
     }
 
     #[test]
@@ -135,101 +144,6 @@ mod tests {
 
         assert_eq!(report.matrix, "thermal");
         assert_eq!(report.profile, BenchmarkProfile::TenK);
-    }
-
-    #[test]
-    fn solver_preconditioner_all_expands_truss_cases() {
-        let cases = benchmark_cases(BenchmarkProfile::Medium, "mechanical-core");
-        let selected = cases
-            .iter()
-            .filter(|case| case.id == "truss-roof-medium")
-            .collect::<Vec<_>>();
-        let report = crate::runner::build_report(
-            &selected,
-            1,
-            BenchmarkProfile::Medium,
-            "mechanical-core",
-            "all",
-        );
-
-        assert_eq!(report.cases.len(), 2);
-        assert!(report.cases.iter().any(|case| case.id.ends_with("#jacobi")));
-        assert!(report
-            .cases
-            .iter()
-            .any(|case| case.id.ends_with("#symmetric-gauss-seidel")));
-        assert_eq!(report.preconditioner_comparisons.len(), 1);
-        assert_eq!(
-            report.preconditioner_comparisons[0].base_case_id,
-            "truss-roof-medium"
-        );
-        assert_eq!(report.preconditioner_comparisons[0].compared.len(), 2);
-        assert!(report.preconditioner_comparisons[0].winner_speedup_ratio >= 1.0);
-        let json = serde_json::to_value(&report).expect("benchmark report should serialize");
-        assert!(json.get("preconditioner_comparisons").is_some());
-        assert!(json["preconditioner_comparisons"][0]
-            .get("winner_speedup_ratio")
-            .is_some());
-    }
-
-    #[test]
-    fn solver_preconditioner_auto_uses_sgs_for_iterative_cases() {
-        for (matrix, case_id) in [
-            ("thermal-structural", "thermal-plane-triangle-medium"),
-            ("thermal-structural", "thermal-plane-quad-medium"),
-            ("mechanical-core", "truss-roof-medium"),
-            ("mechanical-core", "plane-panel-medium"),
-            ("mechanical-core", "plane-quad-panel-medium"),
-        ] {
-            let cases = benchmark_cases(BenchmarkProfile::Medium, matrix);
-            let selected = cases
-                .iter()
-                .filter(|case| case.id == case_id)
-                .collect::<Vec<_>>();
-            let report =
-                crate::runner::build_report(&selected, 1, BenchmarkProfile::Medium, matrix, "auto");
-
-            assert_eq!(report.cases.len(), 1);
-            assert_eq!(
-                report.cases[0].solver_preconditioner.as_deref(),
-                Some("symmetric-gauss-seidel"),
-                "case {case_id} should use SGS in auto mode"
-            );
-        }
-    }
-
-    #[test]
-    fn iterative_structural_cases_expose_solver_hotspot_stages() {
-        let cases = benchmark_cases(BenchmarkProfile::TenK, "mechanical-core");
-        let selected = cases
-            .iter()
-            .filter(|case| case.id == "plane-panel-10k")
-            .collect::<Vec<_>>();
-        let report = crate::runner::build_report(
-            &selected,
-            1,
-            BenchmarkProfile::TenK,
-            "mechanical-core",
-            "auto",
-        );
-        let stage_labels = report.cases[0]
-            .memory_stages
-            .iter()
-            .map(|stage| stage.label.as_str())
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            report.cases[0].solver_preconditioner.as_deref(),
-            Some("symmetric-gauss-seidel")
-        );
-        assert!(
-            report.cases[0].solver_matrix_non_zero_count.unwrap_or_default() > 0,
-            "iterative benchmark cases should expose reduced sparse matrix nnz"
-        );
-        assert!(stage_labels.contains(&"solve_spd_system"));
-        assert!(stage_labels.contains(&"solve_spd_matvec"));
-        assert!(stage_labels.contains(&"solve_spd_preconditioner"));
-        assert!(stage_labels.contains(&"solve_spd_dot"));
     }
 
     #[test]
@@ -470,6 +384,23 @@ mod tests {
         }
     }
 
+    fn benchmark_profile_from_manifest_name(name: &str) -> BenchmarkProfile {
+        match name {
+            "medium" => BenchmarkProfile::Medium,
+            "large" => BenchmarkProfile::Large,
+            "v2" => BenchmarkProfile::V2,
+            "ten_k" | "10k" => BenchmarkProfile::TenK,
+            "fifteen_k" | "15k" => BenchmarkProfile::FifteenK,
+            "twenty_k" | "20k" => BenchmarkProfile::TwentyK,
+            "hundred_k" | "100k" => BenchmarkProfile::HundredK,
+            "two_hundred_k" | "200k" => BenchmarkProfile::TwoHundredK,
+            "three_hundred_k" | "300k" => BenchmarkProfile::ThreeHundredK,
+            "four_hundred_k" | "400k" => BenchmarkProfile::FourHundredK,
+            "five_hundred_k" | "500k" => BenchmarkProfile::FiveHundredK,
+            other => panic!("unsupported benchmark profile coverage target: {other}"),
+        }
+    }
+
     #[test]
     fn three_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
@@ -518,6 +449,81 @@ mod tests {
             assert!(
                 cases.iter().all(|case| case.id.ends_with("-400k")),
                 "{matrix} should keep the 400k case suffix"
+            );
+        }
+    }
+
+    #[test]
+    fn five_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
+        let matrix_cases = [
+            ("mechanical-core", 5, 500_000),
+            ("thermal-core", 1, 500_000),
+            ("compound-core", 4, 500_000),
+            ("thermal-structural", 9, 500_000),
+        ];
+
+        for (matrix, expected_count, minimum_nodes) in matrix_cases {
+            let cases = benchmark_cases(BenchmarkProfile::FiveHundredK, matrix);
+
+            assert_eq!(cases.len(), expected_count, "{matrix} case count changed");
+            assert!(
+                cases
+                    .iter()
+                    .any(|case| benchmark_shape(case).0 >= minimum_nodes),
+                "{matrix} no longer includes a 500k-scale case"
+            );
+            assert!(
+                cases.iter().all(|case| case.id.ends_with("-500k")),
+                "{matrix} should keep the 500k case suffix"
+            );
+        }
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ProfileCoverageManifest {
+        targets: Vec<ProfileCoverageTarget>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ProfileCoverageTarget {
+        matrix: String,
+        profile: String,
+        expected_cases: Vec<String>,
+    }
+
+    #[test]
+    fn profile_coverage_manifest_matches_generated_cases() {
+        let manifest_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../../config/benchmark-profile-coverage.json");
+        let manifest_json = fs::read_to_string(&manifest_path)
+            .expect("benchmark profile coverage manifest should exist");
+        let manifest = serde_json::from_str::<ProfileCoverageManifest>(&manifest_json)
+            .expect("benchmark profile coverage manifest should parse");
+
+        assert!(
+            !manifest.targets.is_empty(),
+            "benchmark profile coverage manifest must keep at least one target"
+        );
+
+        for target in manifest.targets {
+            let profile = benchmark_profile_from_manifest_name(&target.profile);
+            let generated = benchmark_cases(profile, &target.matrix)
+                .into_iter()
+                .map(|case| case.id)
+                .collect::<HashSet<_>>();
+            let missing = target
+                .expected_cases
+                .iter()
+                .filter(|case_id| !generated.contains(*case_id))
+                .cloned()
+                .collect::<Vec<_>>();
+
+            assert!(
+                missing.is_empty(),
+                "{} / {} declares cases that catalog generation cannot produce: {}",
+                target.matrix,
+                target.profile,
+                missing.join(", ")
             );
         }
     }

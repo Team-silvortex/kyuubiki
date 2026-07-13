@@ -159,6 +159,7 @@ function solverTuningNoteRow(item) {
 
 function formatProfile(profile) {
   const profiles = {
+    five_hundred_k: "500k",
     four_hundred_k: "400k",
     hundred_k: "100k",
     ten_k: "10k",

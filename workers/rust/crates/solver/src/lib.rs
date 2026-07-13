@@ -82,7 +82,8 @@ pub use frame_3d::solve_frame_3d;
 pub use harmonic_spring_1d::solve_harmonic_spring_1d;
 pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
-    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
+    profile_heat_plane_quad_2d_with_options, solve_heat_plane_quad_2d,
+    solve_heat_plane_triangle_2d,
 };
 pub use linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 pub use magnetostatic_bar_1d::solve_magnetostatic_bar_1d;

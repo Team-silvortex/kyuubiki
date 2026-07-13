@@ -7,12 +7,15 @@ use crate::heat_plane_2d_validation::{
 };
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    solve_spd_system_profile_with_options,
 };
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     HeatPlaneNodeResult, HeatPlaneQuadElementResult, HeatPlaneTriangleElementResult,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
     SolveHeatPlaneTriangle2dResult,
 };
+use std::time::{Duration, Instant};
 
 pub fn solve_heat_plane_triangle_2d(
     request: &SolveHeatPlaneTriangle2dRequest,
@@ -144,30 +147,43 @@ pub fn solve_heat_plane_triangle_2d(
 pub fn solve_heat_plane_quad_2d(
     request: &SolveHeatPlaneQuad2dRequest,
 ) -> Result<SolveHeatPlaneQuad2dResult, String> {
-    solve_heat_plane_quad_2d_internal(request, false).map(|profile| profile.result)
+    solve_heat_plane_quad_2d_internal(request, false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
 }
 
 #[derive(Debug, Clone)]
 pub struct HeatPlaneQuadMemoryStage {
     pub label: &'static str,
     pub rss_kib: u64,
+    pub elapsed_ms: f64,
 }
 
 #[derive(Debug, Clone)]
 pub struct HeatPlaneQuadProfile {
     pub result: SolveHeatPlaneQuad2dResult,
     pub memory_stages: Vec<HeatPlaneQuadMemoryStage>,
+    pub solver_iterations: usize,
+    pub solver_matrix_non_zero_count: usize,
+    pub solver_residual_norm: f64,
 }
 
 pub fn profile_heat_plane_quad_2d(
     request: &SolveHeatPlaneQuad2dRequest,
 ) -> Result<HeatPlaneQuadProfile, String> {
-    solve_heat_plane_quad_2d_internal(request, true)
+    profile_heat_plane_quad_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn profile_heat_plane_quad_2d_with_options(
+    request: &SolveHeatPlaneQuad2dRequest,
+    solve_options: SpdSolveOptions,
+) -> Result<HeatPlaneQuadProfile, String> {
+    solve_heat_plane_quad_2d_internal(request, true, solve_options)
 }
 
 fn solve_heat_plane_quad_2d_internal(
     request: &SolveHeatPlaneQuad2dRequest,
     collect_memory_stages: bool,
+    solve_options: SpdSolveOptions,
 ) -> Result<HeatPlaneQuadProfile, String> {
     validate_heat_plane_quad_request(request)?;
 
@@ -175,12 +191,19 @@ fn solve_heat_plane_quad_2d_internal(
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut heat_vector = vec![0.0; dof_count];
     let mut memory_stages = Vec::new();
+    let mut stage_started = Instant::now();
     let computed_elements = request
         .elements
         .iter()
         .map(|element| precompute_heat_plane_quad_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
-    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "precompute");
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "precompute",
+        stage_started.elapsed(),
+    );
+    stage_started = Instant::now();
 
     for (index, node) in request.nodes.iter().enumerate() {
         heat_vector[index] = node.heat_load;
@@ -220,12 +243,44 @@ fn solve_heat_plane_quad_2d_internal(
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
 
-    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "assemble_global");
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "assemble_global",
+        stage_started.elapsed(),
+    );
+    stage_started = Instant::now();
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
-    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "reduce_system");
-    let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
-    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "solve_system");
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "reduce_system",
+        stage_started.elapsed(),
+    );
+    stage_started = Instant::now();
+    let solve_profile =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, solve_options)?;
+    let solver_iterations = solve_profile.iterations;
+    let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
+    let solver_residual_norm = solve_profile.residual_norm;
+    let reduced_temperatures = solve_profile.solution;
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "solve_system",
+        stage_started.elapsed(),
+    );
+    if collect_memory_stages {
+        memory_stages.extend(solve_profile.stages.into_iter().map(|stage| {
+            HeatPlaneQuadMemoryStage {
+                label: stage.label,
+                rss_kib: current_rss_kib(),
+                elapsed_ms: stage.elapsed_ms,
+            }
+        }));
+    }
+    stage_started = Instant::now();
 
     let mut temperatures = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -322,7 +377,12 @@ fn solve_heat_plane_quad_2d_internal(
         .map(|element| element.heat_flow_rate.abs())
         .sum();
 
-    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "assemble");
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "assemble",
+        stage_started.elapsed(),
+    );
 
     Ok(HeatPlaneQuadProfile {
         result: SolveHeatPlaneQuad2dResult {
@@ -334,6 +394,9 @@ fn solve_heat_plane_quad_2d_internal(
             total_abs_heat_flow_rate,
         },
         memory_stages,
+        solver_iterations,
+        solver_matrix_non_zero_count,
+        solver_residual_norm,
     })
 }
 
@@ -341,6 +404,7 @@ fn push_heat_plane_quad_memory_stage(
     stages: &mut Vec<HeatPlaneQuadMemoryStage>,
     enabled: bool,
     label: &'static str,
+    elapsed: Duration,
 ) {
     if !enabled {
         return;
@@ -349,6 +413,7 @@ fn push_heat_plane_quad_memory_stage(
     stages.push(HeatPlaneQuadMemoryStage {
         label,
         rss_kib: current_rss_kib(),
+        elapsed_ms: elapsed.as_secs_f64() * 1000.0,
     });
 }
 

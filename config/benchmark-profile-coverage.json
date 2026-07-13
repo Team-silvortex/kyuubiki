@@ -11,6 +11,81 @@
         "plane-panel-400k",
         "plane-quad-panel-400k"
       ]
+    },
+    {
+      "matrix": "thermal-core",
+      "profile": "four_hundred_k",
+      "expected_cases": [
+        "heat-plane-quad-400k"
+      ]
+    },
+    {
+      "matrix": "compound-core",
+      "profile": "four_hundred_k",
+      "expected_cases": [
+        "truss-roof-400k",
+        "space-frame-400k",
+        "heat-plane-quad-400k",
+        "compound-surface-panel-400k"
+      ]
+    },
+    {
+      "matrix": "thermal-structural",
+      "profile": "four_hundred_k",
+      "expected_cases": [
+        "thermal-bar-400k",
+        "thermal-truss-2d-400k",
+        "thermal-truss-3d-400k",
+        "thermal-plane-triangle-400k",
+        "thermal-plane-quad-400k",
+        "frame-2d-400k",
+        "frame-3d-400k",
+        "thermal-frame-2d-400k",
+        "thermal-frame-3d-400k"
+      ]
+    },
+    {
+      "matrix": "mechanical-core",
+      "profile": "five_hundred_k",
+      "expected_cases": [
+        "axial-bar-500k",
+        "truss-roof-500k",
+        "space-frame-500k",
+        "plane-panel-500k",
+        "plane-quad-panel-500k"
+      ]
+    },
+    {
+      "matrix": "thermal-core",
+      "profile": "five_hundred_k",
+      "expected_cases": [
+        "heat-plane-quad-500k"
+      ]
+    },
+    {
+      "matrix": "compound-core",
+      "profile": "five_hundred_k",
+      "expected_cases": [
+        "truss-roof-500k",
+        "space-frame-500k",
+        "heat-plane-quad-500k",
+        "compound-surface-panel-500k"
+      ]
+    },
+    {
+      "matrix": "thermal-structural",
+      "profile": "five_hundred_k",
+      "expected_cases": [
+        "thermal-bar-500k",
+        "thermal-truss-2d-500k",
+        "thermal-truss-3d-500k",
+        "thermal-plane-triangle-500k",
+        "thermal-plane-quad-500k",
+        "frame-2d-500k",
+        "frame-3d-500k",
+        "thermal-frame-2d-500k",
+        "thermal-frame-3d-500k"
+      ]
     }
   ]
 }

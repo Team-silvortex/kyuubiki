@@ -155,6 +155,54 @@ impl SparseMatrix {
             inverse_diagonal,
         }
     }
+
+    fn compress_scaled(&self, scaling: &[f64]) -> CompressedSparseMatrix {
+        let size = self.size();
+        debug_assert_eq!(scaling.len(), size);
+
+        let mut row_offsets = Vec::with_capacity(size + 1);
+        let mut lower_end_offsets = Vec::with_capacity(size);
+        let mut upper_start_offsets = Vec::with_capacity(size);
+        let non_zero_hint = self.non_zero_count();
+        let mut columns = Vec::with_capacity(non_zero_hint);
+        let mut values = Vec::with_capacity(non_zero_hint);
+        let mut diagonal = vec![0.0; size];
+
+        row_offsets.push(0);
+        for (row_index, row) in self.rows.iter().enumerate() {
+            let row_start = columns.len();
+            lower_end_offsets
+                .push(row_start + row.partition_point(|(column, _)| *column < row_index));
+            upper_start_offsets
+                .push(row_start + row.partition_point(|(column, _)| *column <= row_index));
+
+            let row_scale = scaling[row_index];
+            for &(column, value) in row {
+                let scaled_value = value * row_scale * scaling[column];
+                if column == row_index {
+                    diagonal[row_index] = scaled_value;
+                }
+                columns.push(column);
+                values.push(scaled_value);
+            }
+            row_offsets.push(columns.len());
+        }
+
+        let inverse_diagonal = diagonal
+            .iter()
+            .map(|value| safe_diagonal(*value).recip())
+            .collect();
+
+        CompressedSparseMatrix {
+            row_offsets,
+            lower_end_offsets,
+            upper_start_offsets,
+            columns,
+            values,
+            diagonal,
+            inverse_diagonal,
+        }
+    }
 }
 
 impl CompressedSparseMatrix {
@@ -386,10 +434,8 @@ pub(crate) fn solve_spd_system_profile_with_options(
     }
     let scaling = diagonal_sparse_scaling(matrix);
     let scaled_rhs = scale_sparse_rhs(rhs, &scaling);
-    let scaled_matrix = scale_sparse_matrix(matrix, &scaling);
-    let diagonal_scale = average_diagonal_magnitude(&scaled_matrix).max(1.0);
-    let compressed = scaled_matrix.compress();
-    drop(scaled_matrix);
+    let diagonal_scale = average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
+    let compressed = matrix.compress_scaled(&scaling);
 
     match solve_spd_compressed(&compressed, &scaled_rhs, matrix, options.preconditioner) {
         Ok(profile) => Ok(profile),
@@ -494,13 +540,13 @@ fn unscale_profile(profile: SpdSolveProfile, scaling: &[f64]) -> SpdSolveProfile
     }
 }
 
-fn average_diagonal_magnitude(matrix: &SparseMatrix) -> f64 {
+fn average_scaled_diagonal_magnitude(matrix: &SparseMatrix, scaling: &[f64]) -> f64 {
     let size = matrix.size().max(1);
     let diagonal_sum = matrix
         .rows
         .iter()
         .enumerate()
-        .map(|(index, _)| matrix.diagonal_value(index).abs())
+        .map(|(index, _)| matrix.diagonal_value(index).abs() * scaling[index] * scaling[index])
         .sum::<f64>();
 
     diagonal_sum / size as f64

@@ -3,7 +3,9 @@ use std::time::Instant;
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
-use kyuubiki_solver::{SpdSolveOptions, profile_heat_plane_quad_2d, profile_truss_2d_with_options};
+use kyuubiki_solver::{
+    SpdSolveOptions, profile_heat_plane_quad_2d_with_options, profile_truss_2d_with_options,
+};
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
@@ -355,24 +357,32 @@ pub(crate) fn run_case_with_preconditioner(
                             .collect();
                     })
                 }
-                BenchmarkWorkload::HeatPlaneQuad2d(request) => profile_heat_plane_quad_2d(request)
-                    .map(|profile| {
+                BenchmarkWorkload::HeatPlaneQuad2d(request) => {
+                    let options = SpdSolveOptions {
+                        preconditioner: parse_preconditioner(solver_preconditioner),
+                    };
+                    profile_heat_plane_quad_2d_with_options(request, options).map(|profile| {
                         let result = profile.result;
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len();
                         max_displacement = result.max_temperature;
                         max_stress = result.max_heat_flux;
+                        solver_iterations = Some(profile.solver_iterations);
+                        solver_matrix_non_zero_count = Some(profile.solver_matrix_non_zero_count);
+                        solver_residual_norm = Some(profile.solver_residual_norm);
+                        solver_preconditioner_name = Some(solver_preconditioner.to_string());
                         memory_stages = profile
                             .memory_stages
                             .into_iter()
                             .map(|stage| BenchmarkMemoryStage {
                                 label: stage.label.to_string(),
                                 rss_kib: stage.rss_kib,
-                                elapsed_ms: None,
+                                elapsed_ms: Some(stage.elapsed_ms),
                             })
                             .collect();
-                    }),
+                    })
+                }
                 BenchmarkWorkload::HeatPlaneTriangle2d(request) => {
                     solve(EngineSolveRequest::HeatPlaneTriangle2d(request.clone())).map(|result| {
                         let AnalysisResult::HeatPlaneTriangle2d(result) = result else {

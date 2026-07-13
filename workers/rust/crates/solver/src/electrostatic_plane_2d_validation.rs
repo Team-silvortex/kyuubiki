@@ -57,34 +57,16 @@ pub(super) fn validate_electrostatic_plane_triangle_request(
         if !element.permittivity.is_finite() || element.permittivity <= 0.0 {
             return Err("electrostatic plane triangle permittivity must be positive".to_string());
         }
-        let ni = kyuubiki_protocol::PlaneNodeInput {
-            id: request.nodes[element.node_i].id.clone(),
-            x: request.nodes[element.node_i].x,
-            y: request.nodes[element.node_i].y,
-            fix_x: false,
-            fix_y: false,
-            load_x: 0.0,
-            load_y: 0.0,
-        };
-        let nj = kyuubiki_protocol::PlaneNodeInput {
-            id: request.nodes[element.node_j].id.clone(),
-            x: request.nodes[element.node_j].x,
-            y: request.nodes[element.node_j].y,
-            fix_x: false,
-            fix_y: false,
-            load_x: 0.0,
-            load_y: 0.0,
-        };
-        let nk = kyuubiki_protocol::PlaneNodeInput {
-            id: request.nodes[element.node_k].id.clone(),
-            x: request.nodes[element.node_k].x,
-            y: request.nodes[element.node_k].y,
-            fix_x: false,
-            fix_y: false,
-            load_x: 0.0,
-            load_y: 0.0,
-        };
-        let area = signed_triangle_area(&ni, &nj, &nk).abs();
+        let n = |index: usize| &request.nodes[index];
+        let area = signed_triangle_area(
+            n(element.node_i).x,
+            n(element.node_i).y,
+            n(element.node_j).x,
+            n(element.node_j).y,
+            n(element.node_k).x,
+            n(element.node_k).y,
+        )
+        .abs();
         if !(area.is_finite() && area > 1.0e-12) {
             return Err("electrostatic plane triangle element area must be positive".to_string());
         }
@@ -148,21 +130,25 @@ pub(super) fn validate_electrostatic_plane_quad_request(
             return Err("electrostatic plane quad permittivity must be positive".to_string());
         }
 
-        let to_node = |index: usize| kyuubiki_protocol::PlaneNodeInput {
-            id: request.nodes[index].id.clone(),
-            x: request.nodes[index].x,
-            y: request.nodes[index].y,
-            fix_x: false,
-            fix_y: false,
-            load_x: 0.0,
-            load_y: 0.0,
-        };
-        let ni = to_node(element.node_i);
-        let nj = to_node(element.node_j);
-        let nk = to_node(element.node_k);
-        let nl = to_node(element.node_l);
-        let first_area = signed_triangle_area(&ni, &nj, &nk).abs();
-        let second_area = signed_triangle_area(&ni, &nk, &nl).abs();
+        let n = |index: usize| &request.nodes[index];
+        let first_area = signed_triangle_area(
+            n(element.node_i).x,
+            n(element.node_i).y,
+            n(element.node_j).x,
+            n(element.node_j).y,
+            n(element.node_k).x,
+            n(element.node_k).y,
+        )
+        .abs();
+        let second_area = signed_triangle_area(
+            n(element.node_i).x,
+            n(element.node_i).y,
+            n(element.node_k).x,
+            n(element.node_k).y,
+            n(element.node_l).x,
+            n(element.node_l).y,
+        )
+        .abs();
         if !(first_area.is_finite() && first_area > 1.0e-12)
             || !(second_area.is_finite() && second_area > 1.0e-12)
         {
@@ -173,13 +159,8 @@ pub(super) fn validate_electrostatic_plane_quad_request(
     Ok(())
 }
 
-fn signed_triangle_area(
-    node_i: &kyuubiki_protocol::PlaneNodeInput,
-    node_j: &kyuubiki_protocol::PlaneNodeInput,
-    node_k: &kyuubiki_protocol::PlaneNodeInput,
-) -> f64 {
-    0.5 * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
-        - (node_k.x - node_i.x) * (node_j.y - node_i.y))
+fn signed_triangle_area(ix: f64, iy: f64, jx: f64, jy: f64, kx: f64, ky: f64) -> f64 {
+    0.5 * ((jx - ix) * (ky - iy) - (kx - ix) * (jy - iy))
 }
 
 fn has_duplicate(indices: &[usize]) -> bool {

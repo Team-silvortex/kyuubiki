@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 mod agent_registry_sync;
+mod benchmark_profile_plan;
 mod benchmark_profile_remote;
 mod benchmark_profile_remote_summary;
 mod desktop;
@@ -209,6 +210,9 @@ fn run() -> RunnerResult<u8> {
         "benchmark-profile-remote" => {
             benchmark_profile_remote::run_benchmark_profile_remote(&paths.root, rest)
         }
+        "benchmark-profile-plan" => {
+            benchmark_profile_plan::run_benchmark_profile_plan(&paths.root, rest)
+        }
         "direct-mesh-benchmark-container" => {
             direct_mesh_container::run_direct_mesh_benchmark_container(&paths.root, rest)
         }
@@ -402,6 +406,7 @@ lab remote-ssh-fixture\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   benchmark-profile-remote\n  \
+  benchmark-profile-plan\n  \
   direct-mesh-benchmark-container\n  \
   direct-mesh-benchmark-regression\n  \
   standard-benchmark-regression\n  \

@@ -67,7 +67,7 @@ fn validate_plane_triangle_element(
         element.poisson_ratio,
     )?;
     validate_positive_triangle_area(
-        request,
+        &request.nodes,
         element.node_i,
         element.node_j,
         element.node_k,
@@ -96,19 +96,15 @@ fn validate_plane_quad_element(
         element.youngs_modulus,
         element.poisson_ratio,
     )?;
-    let triangle_request = SolvePlaneTriangle2dRequest {
-        nodes: request.nodes.clone(),
-        elements: vec![],
-    };
     validate_positive_triangle_area(
-        &triangle_request,
+        &request.nodes,
         element.node_i,
         element.node_j,
         element.node_k,
         "plane quad element must decompose into positive-area triangles",
     )?;
     validate_positive_triangle_area(
-        &triangle_request,
+        &request.nodes,
         element.node_i,
         element.node_k,
         element.node_l,
@@ -134,18 +130,13 @@ fn validate_plane_material(
 }
 
 fn validate_positive_triangle_area(
-    request: &SolvePlaneTriangle2dRequest,
+    nodes: &[PlaneNodeInput],
     node_i: usize,
     node_j: usize,
     node_k: usize,
     message: &str,
 ) -> Result<(), String> {
-    let area = signed_triangle_area(
-        &request.nodes[node_i],
-        &request.nodes[node_j],
-        &request.nodes[node_k],
-    )
-    .abs();
+    let area = signed_triangle_area(&nodes[node_i], &nodes[node_j], &nodes[node_k]).abs();
     if !(area.is_finite() && area > 1.0e-12) {
         return Err(message.to_string());
     }

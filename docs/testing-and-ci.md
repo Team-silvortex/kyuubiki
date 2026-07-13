@@ -288,6 +288,13 @@ Use these entrypoints:
   baselines.
 - `make benchmark-standard-report PROFILE=10k REPEAT=1`
   Emit per-matrix reports plus one merged local standard comparison report.
+- `make benchmark-compare MATRIX=mechanical-core PROFILE=10k CASE=plane-quad-panel-10k REPEAT=1`
+  Run a narrow local hot-case comparison against the checked baseline. Use
+  `CASE=<substring>` with `benchmark-baseline`, `benchmark-compare`,
+  `benchmark-report`, or `benchmark-physics-coverage` when validating one
+  suspect operator path without rerunning the full matrix. Case-filtered
+  baselines and Markdown reports are written to case-suffixed artifact names so
+  full-matrix baselines are not overwritten by a hot-case probe.
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1`
   Run the broad physics smoke matrix for solver families that are not yet part
   of the standard 10k regression trio.
@@ -338,6 +345,18 @@ Use these entrypoints:
 - `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural REPEAT=1 SOLVER_PRECONDITIONER=auto`
   Run the full 400k coupled thermal-structural matrix after the two surface
   probes pass. This is a long remote smoke, not a local or default nightly lane.
+- `make benchmark-profile-remote PROFILE=500k MATRIX=mechanical-core CASE=axial-bar-500k REPEAT=1`
+  Start 500k coverage with the cheapest remote mechanical probe. Treat 500k as
+  exploratory shape coverage plus narrow lab evidence until repeated timings
+  justify any scheduled matrix lane.
+- `make benchmark-profile-plan PROFILE=500k`
+  Print the full 500k remote-first probe plan from
+  `config/benchmark-profile-coverage.json` without executing it. Use
+  `MATRIX=<matrix>`, `CASE=<substring>`, and `LIMIT=<n>` to choose a safe batch.
+- `make benchmark-profile-plan PROFILE=500k LIMIT=2 EXECUTE=1`
+  Execute a narrowed 500k plan sequentially. Each probe gets an isolated
+  `OUTPUT_SLUG`, so retained `summary.json` files can be indexed without
+  per-case overwrites.
 
 Baseline and report surfaces:
 
@@ -365,8 +384,9 @@ Baseline and report surfaces:
   metrics. Malformed retained summaries are listed under `skipped_runs` instead
   of aborting the index refresh. Matrix-level rollups are emitted under
   `matrix_summaries` for quick mechanical/thermal coverage review, and
-  `coverage_summaries` tracks release-scale completeness such as
-  `mechanical-core` `400k`. Coverage targets live in
+  `coverage_summaries` tracks release-scale completeness for the standard
+  `400k` and `500k` matrix contracts: `mechanical-core`, `thermal-core`,
+  `compound-core`, and `thermal-structural`. Coverage targets live in
   `config/benchmark-profile-coverage.json`; use
   `./scripts/build-benchmark-profile-index.mjs --coverage-targets <manifest>`
   for experimental matrix contracts. The manifest is validated strictly, so
@@ -381,7 +401,7 @@ Current behavior notes:
   timing should prefer `kyuubiki-lab`
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
-- `200k`, `300k`, and `400k` are remote-first: CI checks the catalog shape, while timing evidence
+- `200k`, `300k`, `400k`, and `500k` are remote-first: CI checks the catalog shape, while timing evidence
   should be collected from `kyuubiki-lab` before adding checked baselines
 - cases under `5.0 ms` baseline median remain visible in reports but are not
   treated as hard failures by default
@@ -389,14 +409,24 @@ Current behavior notes:
   rely on checked-in server-specific runtime configuration files
 - remote profile runs enable benchmark `--progress`, which prints per-case
   start/done lines to stderr while keeping stdout valid JSON for report files
+- heat-plane quad profile reports include timed memory stages, so large 400k and
+  500k thermal probes can distinguish assembly, reduction, solve, and result
+  scatter hotspots instead of reporting RSS-only stages
 - `SOLVER_PRECONDITIONER=auto` is available for exploratory large thermal
-  structural probes; it selects symmetric Gauss-Seidel for thermal plane
-  triangle/quad cases and Jacobi elsewhere
+  structural and heat-plane quad probes; it selects symmetric Gauss-Seidel for
+  heat-plane quad plus thermal plane triangle/quad cases and Jacobi elsewhere
+- current 500k heat-plane quad remote evidence is solver-bound: with `auto`,
+  `heat-plane-quad-500k` completes in about `8.13 s` at roughly `596 MiB` peak
+  RSS, with most time under `solve_system`; the next optimization targets are
+  sparse preconditioning and sparse matrix-vector work
 - local retained run folders are now indexed and pruned by retention count so
   nightly artifact history does not sprawl indefinitely on the runner workspace
 - `400k` is exploratory, not a default nightly tier. Use narrow thermal and
   mechanical probes first, then promote only stable matrices into checked
   baselines.
+- `500k` is shape-covered but lab-probe-first. Begin with axial bar and thermal
+  quad probes, then expand to mechanical surface and truss cases only after
+  memory and stage profiles look stable.
 - the first `400k` probes passed for axial bar, thermal quad, truss, 3D
   space-frame, triangular structural surface, and quad structural surface
   cases, with peak RSS ranging from roughly `404 MiB` to `1.85 GiB`. Treat
