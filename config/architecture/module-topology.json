@@ -143,12 +143,24 @@
     {
       "id": "orchestra-control-plane",
       "layer": "control_plane",
-      "summary": "Phoenix APIs, orchestration, job lifecycle, persistence, workflow catalog, and security events.",
+      "summary": "Phoenix APIs, orchestration, job lifecycle, persistence, workflow catalog, central self-host service surfaces, and security events.",
       "owned_paths": ["apps/web"],
+      "service_surfaces": [
+        {
+          "id": "orchestra-api-service",
+          "kind": "control_api",
+          "summary": "Orchestration, job lifecycle, workflow catalog, graph execution, and agent-facing control APIs."
+        },
+        {
+          "id": "central-web-service",
+          "kind": "self_host_web",
+          "summary": "Self-hosted central-server website/API surface for stores, login/session policy, language packs, signed downloads, and research-team distribution."
+        }
+      ],
       "depends_on": ["contracts", "runtime-protocol"],
       "benchmark_lanes": ["control_plane", "workflow_catalog", "mesh"],
       "security_lanes": ["api_auth", "data_contract", "credential_storage"],
-      "risk_tags": ["auth_regression", "persistence_drift", "catalog_hot_path"]
+      "risk_tags": ["auth_regression", "persistence_drift", "catalog_hot_path", "self_host_boundary"]
     },
     {
       "id": "runtime-protocol",

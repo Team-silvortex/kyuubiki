@@ -64,6 +64,8 @@
     "scripts/build-central-readiness-report.mjs",
     "scripts/check-central-readiness-report.mjs",
     "schemas/central-readiness-report.schema.json",
+    "config/architecture/module-topology.json",
+    "config/architecture/contracts-runtime-api-surface.json",
     "docs/central-server-components.md"
   ],
   "text_checks": [
@@ -104,6 +106,10 @@
     { "file": "scripts/build-central-readiness-report.mjs", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema" },
     { "file": "scripts/build-central-readiness-report.mjs", "text": "/api/v1/central/database-status", "label": "central readiness report database status endpoint" },
     { "file": "scripts/check-central-readiness-report.mjs", "text": "unsafe text detected", "label": "central readiness report secret guard" },
-    { "file": "schemas/central-readiness-report.schema.json", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema file" }
+    { "file": "schemas/central-readiness-report.schema.json", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema file" },
+    { "file": "config/architecture/module-topology.json", "text": "central-web-service", "label": "central self-host web service surface topology" },
+    { "file": "config/architecture/module-topology.json", "text": "self_host_web", "label": "central self-host web service kind" },
+    { "file": "config/architecture/contracts-runtime-api-surface.json", "text": "self-hosted website service surface", "label": "central runtime API self-host web surface contract" },
+    { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" }
   ]
 }

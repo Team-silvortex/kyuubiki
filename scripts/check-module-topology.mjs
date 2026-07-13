@@ -15,6 +15,12 @@ const REQUIRED_LAYERS = new Set([
   "verification",
 ]);
 const ALLOWED_PLAN_SCOPES = new Set(["local", "integration", "benchmark", "remote", "release"]);
+const ALLOWED_SERVICE_SURFACE_KINDS = new Set([
+  "control_api",
+  "self_host_web",
+  "runtime_adapter",
+  "storage_api",
+]);
 const ALLOWED_COMMAND_PREFIXES = [
   "make ",
   "node ",
@@ -73,6 +79,28 @@ function checkLaneReferences(module, lanes, field, context) {
       throw new Error(`${context}: unknown ${field} entry: ${lane}`);
     }
   }
+}
+
+function checkServiceSurfaces(module, context) {
+  if (module.service_surfaces === undefined) return;
+  if (!Array.isArray(module.service_surfaces) || module.service_surfaces.length === 0) {
+    throw new Error(`${context}: service_surfaces must be a non-empty array when present`);
+  }
+
+  const ids = new Set();
+  module.service_surfaces.forEach((surface, index) => {
+    const surfaceContext = `${context}#service_surfaces/${index}`;
+    requireNonEmptyString(surface.id, "id", surfaceContext);
+    requireNonEmptyString(surface.kind, "kind", surfaceContext);
+    requireNonEmptyString(surface.summary, "summary", surfaceContext);
+    if (ids.has(surface.id)) {
+      throw new Error(`${surfaceContext}: duplicate service surface id ${surface.id}`);
+    }
+    if (!ALLOWED_SERVICE_SURFACE_KINDS.has(surface.kind)) {
+      throw new Error(`${surfaceContext}: unknown service surface kind ${surface.kind}`);
+    }
+    ids.add(surface.id);
+  });
 }
 
 function checkPlanCommand(command, context) {
@@ -213,6 +241,7 @@ function checkTopology(topology, context) {
     modulesById.set(module.id, module);
     checkLaneReferences(module, benchmarkLanes, "benchmark_lanes", moduleContext);
     checkLaneReferences(module, securityLanes, "security_lanes", moduleContext);
+    checkServiceSurfaces(module, moduleContext);
 
     for (const ownedPath of module.owned_paths) {
       checkPathExists(ownedPath, moduleContext);
@@ -283,6 +312,13 @@ function runSelfTest() {
         layer: "control_plane",
         summary: "api",
         owned_paths: ["config"],
+        service_surfaces: [
+          {
+            id: "central-web-service",
+            kind: "self_host_web",
+            summary: "self-hosted web service surface",
+          },
+        ],
         depends_on: ["contracts"],
         benchmark_lanes: ["ui_startup"],
         security_lanes: ["ui_boundary"],
@@ -327,5 +363,8 @@ function runSelfTest() {
   sample.modules[1].depends_on = ["contracts"];
   sample.modules[0].depends_on = ["hub"];
   assert.throws(() => checkTopology(sample, "self-test"), /dependency cycle/u);
+  sample.modules[0].depends_on = [];
+  sample.modules[2].service_surfaces = [{ id: "bad", kind: "module", summary: "wrong" }];
+  assert.throws(() => checkTopology(sample, "self-test"), /unknown service surface kind/u);
   console.log("module topology self-test passed");
 }

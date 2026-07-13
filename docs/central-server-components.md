@@ -5,6 +5,15 @@ server. The central server is not the solver engine and not the desktop Hub. It
 is the distribution and identity plane that can later back hosted stores,
 publisher accounts, language-pack delivery, and signed downloads.
 
+The website service belongs to this central-server surface. It is a deployable
+web/API face of the same `apps/web` control-plane workload, not a separate
+top-level module and not an independent product shell. Hosted Kyuubiki and
+self-hosted research deployments should consume the same contracts so a lab can
+run its own store, login/session policy, language-pack distribution, and signed
+download index without forking the architecture.
+
+Architecture boundary: the website service is not a separate top-level module.
+
 ## Current Preview Surface
 
 - API catalog: `GET /api/v1/central/catalog`
@@ -27,6 +36,31 @@ publisher accounts, language-pack delivery, and signed downloads.
 - Database status schema: `schemas/central-database-status.schema.json`
 - Readiness report schema: `schemas/central-readiness-report.schema.json`
 - Contract-check config: `config/architecture/central-store-contract.json`
+- Module topology service surface: `central-web-service` under
+  `orchestra-control-plane`
+
+## Self-Hosted Website Service Boundary
+
+The central website service is an internal service surface of
+`orchestra-control-plane`.
+
+It should:
+
+- publish central store catalogs, language packs, release indexes, and read-only
+  policy surfaces through stable API contracts.
+- support self-hosted deployment with the same schema and readiness checks as a
+  future hosted Kyuubiki service.
+- keep credentials, database URLs, signing keys, and host-local deployment
+  details outside the repository.
+- remain callable by Hub, Workbench, Installer, and headless SDK clients without
+  importing GUI code.
+
+It should not:
+
+- become a separate top-level module with its own path ownership.
+- replace Hub or Workbench UI responsibilities.
+- execute solver workloads or agent tasks directly.
+- bypass installer-managed deployment, provenance, or integrity checks.
 
 ## Store Kinds
 

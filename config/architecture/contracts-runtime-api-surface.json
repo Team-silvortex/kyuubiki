@@ -76,6 +76,7 @@
           "database policy",
           "provenance policy",
           "database status",
+          "self-hosted website service surface",
           "central database table contract"
         ]
       }

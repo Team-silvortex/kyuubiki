@@ -49,6 +49,11 @@ Every top-level module must declare:
 - `security_lanes`: security lanes that should include this module
 - `risk_tags`: short labels for targeted review and future dashboards
 
+Control-plane modules may also declare `service_surfaces`. A service surface is
+not a new top-level module and does not own repository paths. It names an
+operational face inside an existing module so self-host, benchmark, and security
+work can target it without splitting ownership incorrectly.
+
 The same topology file also carries `lane_test_plan`. That plan maps each
 benchmark and security lane to suggested commands with a scope:
 
@@ -208,12 +213,20 @@ Responsibilities:
 - orchestration and job lifecycle
 - workflow catalog and graph execution
 - persistence and result storage
+- central-server website/API service surface for self-hosted stores, login
+  policy, language packs, and signed download distribution
 - operator TaskIR preparation and execution envelopes
 - material workflow transforms that run inside the control plane
 
 The control plane is a workload managed by the product shell. It is not the
 whole platform. Headless SDKs and agents must be able to interoperate through
 protocols without importing frontend code.
+
+The self-hosted website service is part of this control-plane workload. It is
+not Hub, not a separate product shell, and not a standalone module. It exists
+so a lab or research group can host the same central store, account/session
+policy, language-pack delivery, and release distribution contracts on their own
+infrastructure.
 
 ## Runtime Data Plane
 

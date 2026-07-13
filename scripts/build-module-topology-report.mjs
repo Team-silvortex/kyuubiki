@@ -45,6 +45,7 @@ function laneIndex(topology, field, descriptions) {
           id: module.id,
           layer: module.layer,
           owned_paths: module.owned_paths,
+          service_surfaces: module.service_surfaces ?? [],
           risk_tags: module.risk_tags,
         }));
       return [
@@ -66,6 +67,7 @@ function buildReport(topology) {
     summary: module.summary,
     owned_paths: module.owned_paths,
     depends_on: module.depends_on,
+    service_surfaces: module.service_surfaces ?? [],
     benchmark_lanes: module.benchmark_lanes,
     security_lanes: module.security_lanes,
     risk_tags: module.risk_tags,
@@ -126,13 +128,16 @@ function renderMarkdown(report) {
     "",
     "## Modules",
     "",
-    "| Module | Layer | Depends on | Benchmark lanes | Security lanes |",
-    "| --- | --- | --- | --- | --- |",
+    "| Module | Layer | Depends on | Service surfaces | Benchmark lanes | Security lanes |",
+    "| --- | --- | --- | --- | --- | --- |",
   ];
 
   for (const module of report.modules) {
+    const surfaces = module.service_surfaces
+      .map((surface) => `\`${surface.id}\`/\`${surface.kind}\``)
+      .join(", ") || "-";
     lines.push(
-      `| \`${module.id}\` | \`${module.layer}\` | ${module.depends_on.map((id) => `\`${id}\``).join(", ") || "-"} | ${module.benchmark_lanes.map((id) => `\`${id}\``).join(", ")} | ${module.security_lanes.map((id) => `\`${id}\``).join(", ")} |`,
+      `| \`${module.id}\` | \`${module.layer}\` | ${module.depends_on.map((id) => `\`${id}\``).join(", ") || "-"} | ${surfaces} | ${module.benchmark_lanes.map((id) => `\`${id}\``).join(", ")} | ${module.security_lanes.map((id) => `\`${id}\``).join(", ")} |`,
     );
   }
   lines.push("");
