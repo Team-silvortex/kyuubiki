@@ -1,0 +1,51 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "workbench-el-core-1.19",
+  "language": "el",
+  "targetSurface": "workbench",
+  "name": "Greek Workbench Core",
+  "version": "1.19.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.19.0",
+  "source": "downloaded",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
+  "description": "Starter Greek UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "overrides": {
+    "title": "Kyuubiki Workbench - Ελληνικά",
+    "subtitle": "Greek starter language pack for simulation, workflow, and agent surfaces.",
+    "rail": {
+      "study": "Study",
+      "model": "Model",
+      "workflow": "Workflow",
+      "store": "Store",
+      "library": "History",
+      "system": "System"
+    },
+    "sections": {
+      "study": "Study setup",
+      "model": "Model space",
+      "workflow": "Workflow studio",
+      "store": "Project store",
+      "library": "Task history",
+      "system": "System"
+    },
+    "workflowBuilderPage": "Builder",
+    "workflowRunsPage": "Runs",
+    "workflowCatalogTitle": "Greek workflow catalog",
+    "workflowTemplateChainLibraryLabel": "Ελληνικά chain library",
+    "languagePacksTitle": "Greek language packs",
+    "languagePacksHint": "Install this Greek starter pack locally now; remote sources can reuse the same envelope later.",
+    "languagePacksEmptyLabel": "No Greek language pack is installed yet.",
+    "languagePackName": "Name",
+    "languagePackVersion": "Version",
+    "languagePackSourceImported": "Imported",
+    "languagePackSourceDownloaded": "Downloaded",
+    "languagePackDownloadTemplate": "Download template",
+    "languagePackExportInstalled": "Export installed pack",
+    "languagePackImport": "Import pack",
+    "languagePackRemove": "Remove",
+    "languagePackCatalogTitle": "Ελληνικά catalog",
+    "languagePackCatalogHint": "Starter coverage for Greek; full product copy can expand incrementally without changing the pack contract.",
+    "languagePackCatalogAction": "Install"
+  }
+}

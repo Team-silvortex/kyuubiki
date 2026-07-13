@@ -10,6 +10,7 @@ const packRoot = path.join(repoRoot, "language-packs");
 
 const PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
 const CATALOG_SCHEMA_VERSION = "kyuubiki.language-pack-catalog/v1";
+const LOCALE_TARGET_SCHEMA_VERSION = "kyuubiki.localization-mainstream-locales/v1";
 const VERSION_LINE = "tamamono 1.x";
 const TARGET_APP_VERSION = readCurrentReleaseVersion();
 const SOURCE_VALUES = new Set(["downloaded", "imported"]);
@@ -54,6 +55,44 @@ function validateTimestamp(value, relativePath) {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
     fail(`${relativePath}: updatedAt must be an ISO date-time string`);
   }
+}
+
+function validateLocaleTarget() {
+  const target = readJson("config/localization/mainstream-language-pack-locales.json");
+  if (!isPlainObject(target)) {
+    fail("config/localization/mainstream-language-pack-locales.json: target must be a JSON object");
+    return new Map();
+  }
+  if (target.schema_version !== LOCALE_TARGET_SCHEMA_VERSION) {
+    fail(`config/localization/mainstream-language-pack-locales.json: schema_version must be ${LOCALE_TARGET_SCHEMA_VERSION}`);
+  }
+  if (target.line !== VERSION_LINE) {
+    fail(`config/localization/mainstream-language-pack-locales.json: line must be ${VERSION_LINE}`);
+  }
+  validateTimestamp(target.updatedAt, "config/localization/mainstream-language-pack-locales.json");
+  if (!Array.isArray(target.locales)) {
+    fail("config/localization/mainstream-language-pack-locales.json: locales must be an array");
+    return new Map();
+  }
+  if (target.locales.length !== target.target_count) {
+    fail("config/localization/mainstream-language-pack-locales.json: target_count must match locales length");
+  }
+
+  const localeTarget = new Map();
+  target.locales.forEach((locale, index) => {
+    const label = `config/localization/mainstream-language-pack-locales.json:locales[${index}]`;
+    if (!isPlainObject(locale)) {
+      fail(`${label}: locale must be an object`);
+      return;
+    }
+    ["language", "englishName", "nativeName"].forEach((field) => validateString(locale, field, label));
+    if (localeTarget.has(locale.language)) {
+      fail(`${label}: duplicate language ${locale.language}`);
+    }
+    localeTarget.set(locale.language, locale);
+  });
+
+  return localeTarget;
 }
 
 function validatePack(relativePath, expectedSurface) {
@@ -113,8 +152,10 @@ function discoverPackFiles(surface) {
 }
 
 const catalog = readJson("language-packs/catalog.json");
+const localeTarget = validateLocaleTarget();
 const referencedPaths = new Set();
 const seenIds = new Set();
+const packsBySurface = new Map([...SURFACES].map((surface) => [surface, []]));
 const validatedPacks = [];
 
 if (isPlainObject(catalog)) {
@@ -152,6 +193,7 @@ if (isPlainObject(catalog)) {
       const pack = validatePack(entry.path, entry.surface);
       if (!pack) return;
       validatedPacks.push(pack);
+      packsBySurface.get(entry.surface)?.push(pack);
       if (pack.id !== entry.id) {
         fail(`${label}: id does not match pack id ${pack.id}`);
       }
@@ -170,11 +212,8 @@ if (isPlainObject(catalog)) {
 const frontendCatalogTest = spawnSync(
   "node",
   [
-    "--import",
-    "./test/support/register-alias-loader.mjs",
-    "--test",
-    "--experimental-strip-types",
-    "./test/workflow/workbench-language-pack-catalog.test.ts",
+    "./scripts/test-unit.mjs",
+    "workflow/workbench-language-pack-catalog",
   ],
   {
     cwd: path.join(repoRoot, "apps/frontend"),
@@ -193,6 +232,26 @@ if (frontendCatalogTest.status !== 0) {
 }
 
 for (const surface of SURFACES) {
+  const packs = packsBySurface.get(surface) ?? [];
+  const languages = new Set(packs.map((pack) => pack.language));
+  if (packs.length !== localeTarget.size) {
+    fail(`language-packs/catalog.json: ${surface} must ship exactly ${localeTarget.size} mainstream language packs`);
+  }
+  if (languages.size !== packs.length) {
+    fail(`language-packs/catalog.json: ${surface} language packs must use unique language tags`);
+  }
+  for (const [language, locale] of localeTarget) {
+    const pack = packs.find((entry) => entry.language === language);
+    if (!pack) {
+      fail(`language-packs/catalog.json: ${surface} is missing mainstream language ${language}`);
+      continue;
+    }
+    const expectedName = `${locale.englishName} ${surface === "hub" ? "Hub" : "Workbench"} Core`;
+    if (pack.name !== expectedName) {
+      fail(`language-packs/${surface}/${language}: name must be ${expectedName}`);
+    }
+  }
+
   for (const discoveredPath of discoverPackFiles(surface)) {
     if (!referencedPaths.has(discoveredPath)) {
       fail(`language-packs/${discoveredPath}: discovered pack is not listed in catalog.json`);

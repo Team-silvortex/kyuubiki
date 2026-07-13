@@ -259,6 +259,8 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  forward("/api/v1/central", to: KyuubikiWeb.CentralStoreRouter)
+
   get "/api/v1/jobs" do
     with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.list_jobs()) end)
   end

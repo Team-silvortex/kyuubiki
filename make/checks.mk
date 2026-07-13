@@ -1,5 +1,5 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
-.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-contracts-runtime-api-surface build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
@@ -45,6 +45,10 @@ check-module-function-matrix:
 check-module-function-coverage-tensor:
 	@node ./scripts/build-module-function-coverage-tensor.mjs --self-test
 	@node ./scripts/build-module-function-coverage-tensor.mjs
+
+check-contracts-runtime-api-surface:
+	@node ./scripts/check-contracts-runtime-api-surface.mjs --self-test
+	@node ./scripts/check-contracts-runtime-api-surface.mjs
 
 build-module-topology-report:
 	@node ./scripts/build-module-topology-report.mjs --out-dir $${OUT_DIR:-tmp/module-topology}
@@ -202,6 +206,8 @@ architecture-check:
 	@$(MAKE) check-module-topology
 	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-module-function-coverage-tensor
+	@$(MAKE) check-contracts-runtime-api-surface
+	@$(MAKE) test-runtime-surfaces
 	@$(MAKE) check-native-script-audit
 	@$(MAKE) check-version-line
 	@$(MAKE) check-workflow-dataset-contract

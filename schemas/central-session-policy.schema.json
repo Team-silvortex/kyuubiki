@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-session-policy.schema.json",
+  "title": "Kyuubiki central session policy",
+  "type": "object",
+  "required": ["schema_version", "status", "current_auth", "planned_auth", "session_rules"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-session-policy/v1" },
+    "status": { "type": "string" },
+    "current_auth": {
+      "type": "object",
+      "required": ["mode", "descriptor"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "minLength": 1 },
+        "descriptor": { "type": "object" }
+      }
+    },
+    "planned_auth": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "status", "intended_clients"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 },
+          "status": { "type": "string" },
+          "intended_clients": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "session_rules": {
+      "type": "object",
+      "required": [
+        "store_download_requires_session",
+        "publish_requires_session",
+        "agent_registration_requires_cluster_identity",
+        "credential_storage"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "store_download_requires_session": { "type": "boolean" },
+        "publish_requires_session": { "type": "boolean" },
+        "agent_registration_requires_cluster_identity": { "type": "boolean" },
+        "credential_storage": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

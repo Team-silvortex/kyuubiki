@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_ROOT = path.join(ROOT, "test");
-const DOMAIN_FILTER = process.argv[2]?.trim().toLowerCase() ?? "";
+const DOMAIN_FILTERS = process.argv
+  .slice(2)
+  .map((filter) => filter.trim().toLowerCase())
+  .filter(Boolean);
 
 function listTestFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -19,11 +22,12 @@ function listTestFiles(dir) {
   });
 }
 
-function filterFiles(files, domainFilter) {
-  if (!domainFilter) return files;
-  return files.filter((file) =>
-    path.relative(TEST_ROOT, file).toLowerCase().includes(domainFilter),
-  );
+function filterFiles(files, domainFilters) {
+  if (domainFilters.length === 0) return files;
+  return files.filter((file) => {
+    const relative = path.relative(TEST_ROOT, file).toLowerCase();
+    return domainFilters.some((filter) => relative.includes(filter));
+  });
 }
 
 if (!statSync(TEST_ROOT, { throwIfNoEntry: false })?.isDirectory()) {
@@ -31,11 +35,11 @@ if (!statSync(TEST_ROOT, { throwIfNoEntry: false })?.isDirectory()) {
   process.exit(1);
 }
 
-const testFiles = filterFiles(listTestFiles(TEST_ROOT), DOMAIN_FILTER);
+const testFiles = filterFiles(listTestFiles(TEST_ROOT), DOMAIN_FILTERS);
 if (testFiles.length === 0) {
   console.error(
-    DOMAIN_FILTER
-      ? `no frontend unit tests matched domain filter: ${DOMAIN_FILTER}`
+    DOMAIN_FILTERS.length > 0
+      ? `no frontend unit tests matched domain filter(s): ${DOMAIN_FILTERS.join(", ")}`
       : "no frontend unit tests found",
   );
   process.exit(1);
@@ -47,7 +51,6 @@ const result = spawnSync(
     "--import",
     "./test/support/register-alias-loader.mjs",
     "--test",
-    "--experimental-strip-types",
     ...testFiles,
   ],
   {

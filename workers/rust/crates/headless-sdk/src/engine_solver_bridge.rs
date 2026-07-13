@@ -9,6 +9,8 @@ pub struct EngineSolverHeadlessBridgeManifest {
     pub schema_version: &'static str,
     pub bridge_owner: &'static str,
     pub route_count: usize,
+    pub executable_solver_route_count: usize,
+    pub benchmark_route_count: usize,
     pub routes: Vec<EngineSolverHeadlessBridgeRoute>,
 }
 
@@ -18,6 +20,8 @@ pub struct EngineSolverHeadlessBridgeRoute {
     pub direct_fem_route: String,
     pub engine_operator_id: String,
     pub result_type: String,
+    pub execution_kind: &'static str,
+    pub benchmark_lane: &'static str,
     pub provenance_field: &'static str,
 }
 
@@ -31,6 +35,8 @@ pub fn engine_solver_headless_bridge_manifest() -> EngineSolverHeadlessBridgeMan
                 direct_fem_route: route.route.to_string(),
                 result_type: result_type_for_engine_operator(&engine_operator_id),
                 engine_operator_id,
+                execution_kind: "solver_execution",
+                benchmark_lane: benchmark_lane_for_action(route.action),
                 provenance_field: "_solver_provenance",
             }
         })
@@ -39,6 +45,11 @@ pub fn engine_solver_headless_bridge_manifest() -> EngineSolverHeadlessBridgeMan
     EngineSolverHeadlessBridgeManifest {
         schema_version: ENGINE_SOLVER_HEADLESS_BRIDGE_SCHEMA_VERSION,
         bridge_owner: "headless_sdk",
+        executable_solver_route_count: routes.len(),
+        benchmark_route_count: routes
+            .iter()
+            .filter(|route| route.benchmark_lane != "unclassified")
+            .count(),
         route_count: routes.len(),
         routes,
     }
@@ -61,6 +72,20 @@ fn result_type_for_engine_operator(operator_id: &str) -> String {
         .unwrap_or_else(|| "result/unknown".to_string())
 }
 
+fn benchmark_lane_for_action(action: &str) -> &'static str {
+    if action.contains("thermal") || action.contains("heat") {
+        "thermal-core"
+    } else if action.contains("electrostatic") || action.contains("magnetostatic") {
+        "extended-physics"
+    } else if action.contains("stokes_flow") {
+        "physics-coverage"
+    } else if action.contains("frame") || action.contains("truss") || action.contains("beam") {
+        "structural-extended"
+    } else {
+        "mechanical-core"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -77,14 +102,21 @@ mod tests {
             ENGINE_SOLVER_HEADLESS_BRIDGE_SCHEMA_VERSION
         );
         assert_eq!(manifest.route_count, all_direct_fem_routes().len());
+        assert_eq!(
+            manifest.executable_solver_route_count,
+            all_direct_fem_routes().len()
+        );
+        assert!(manifest.benchmark_route_count > 0);
         assert!(manifest.routes.iter().all(|route| {
             route.engine_operator_id.starts_with("solve.")
+                && route.execution_kind == "solver_execution"
                 && route.provenance_field == "_solver_provenance"
         }));
         assert!(manifest.routes.iter().any(|route| {
             route.action == "solve_stokes_flow_plane_quad_2d"
                 && route.engine_operator_id == "solve.stokes_flow_quad_2d"
                 && route.result_type == "result/stokes_flow_quad_2d"
+                && route.benchmark_lane == "physics-coverage"
         }));
     }
 }

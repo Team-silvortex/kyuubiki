@@ -31,6 +31,8 @@ pub struct HeadlessSdkSurfaceCounts {
     pub action_capabilities: usize,
     pub direct_fem_routes: usize,
     pub engine_solver_bridge_routes: usize,
+    pub executable_solver_routes: usize,
+    pub benchmark_solver_routes: usize,
     pub workflow_templates: usize,
     pub template_categories: usize,
     pub material_studies: usize,
@@ -48,11 +50,14 @@ pub fn headless_sdk_surface_manifest() -> HeadlessSdkSurfaceManifest {
 }
 
 pub fn headless_sdk_surface_counts() -> HeadlessSdkSurfaceCounts {
+    let bridge = engine_solver_headless_bridge_manifest();
     HeadlessSdkSurfaceCounts {
         action_contracts: all_action_contracts().len(),
         action_capabilities: action_capability_manifest().len(),
         direct_fem_routes: all_direct_fem_routes().len(),
-        engine_solver_bridge_routes: engine_solver_headless_bridge_manifest().route_count,
+        engine_solver_bridge_routes: bridge.route_count,
+        executable_solver_routes: bridge.executable_solver_route_count,
+        benchmark_solver_routes: bridge.benchmark_route_count,
         workflow_templates: list_templates().len(),
         template_categories: list_template_categories().len(),
         material_studies: material_study_catalog().len(),
@@ -218,6 +223,11 @@ mod tests {
             manifest.counts.engine_solver_bridge_routes,
             engine_solver_headless_bridge_manifest().route_count
         );
+        assert_eq!(
+            manifest.counts.executable_solver_routes,
+            engine_solver_headless_bridge_manifest().executable_solver_route_count
+        );
+        assert!(manifest.counts.benchmark_solver_routes > 0);
         assert_eq!(manifest.counts.workflow_templates, list_templates().len());
         assert_eq!(
             manifest.counts.material_studies,

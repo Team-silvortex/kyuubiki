@@ -1,4 +1,4 @@
-.PHONY: test test-web test-rust test-frontend workflow-preflight test-sdk
+.PHONY: test test-web test-rust test-frontend workflow-preflight test-runtime-surfaces test-sdk
 .PHONY: test-agent-capability-smoke test-playground
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
@@ -28,6 +28,11 @@ test-frontend:
 
 workflow-preflight:
 	@cd apps/frontend && npm run check:workflow-preflight
+
+test-runtime-surfaces:
+	@cd apps/frontend && npm run test:unit -- hub-runtime-surface installer-runtime-surface workbench-workflow-benchmark-surface
+	@cd apps/web && mix test test/kyuubiki_web/orchestra/control_plane_surface_test.exs
+	@cd workers/rust && cargo test -p kyuubiki-protocol protocol_benchmark_surface -- --nocapture
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke

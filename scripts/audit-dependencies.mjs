@@ -10,9 +10,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AUDIT_LOCKFILE_CONTRACT = loadAuditLockfileContract();
 const NPM_AUDIT_DIRS = AUDIT_LOCKFILE_CONTRACT.npm;
 const CARGO_AUDIT_DIRS = AUDIT_LOCKFILE_CONTRACT.cargo;
+const HEX_AUDIT_DIRS = AUDIT_LOCKFILE_CONTRACT.hex;
 
 const NPM_AUDIT_ARGS = ["audit", "--omit=dev", "--package-lock-only", "--json"];
 const CARGO_AUDIT_ARGS = ["audit"];
+const HEX_AUDIT_ARGS = ["hex.audit"];
 
 if (process.argv.includes("--self-test")) {
   runSelfTest();
@@ -25,6 +27,7 @@ function loadAuditLockfileContract() {
   assert.equal(contract.schema, "kyuubiki.dependency-audit-lockfiles/v1");
   assert.ok(Array.isArray(contract.npm));
   assert.ok(Array.isArray(contract.cargo));
+  assert.ok(Array.isArray(contract.hex));
   return contract;
 }
 
@@ -99,6 +102,16 @@ function auditCargo() {
   });
 }
 
+function auditHex() {
+  return HEX_AUDIT_DIRS.map((cwd) => {
+    const result = run("mix", HEX_AUDIT_ARGS, cwd);
+    return {
+      ...result,
+      summary: result.status === 0 ? "0 advisory/retired package(s)" : "Hex advisories found",
+    };
+  });
+}
+
 function runSelfTest() {
   assert.deepEqual(NPM_AUDIT_DIRS, [
     "apps/frontend",
@@ -113,6 +126,7 @@ function runSelfTest() {
     "apps/installer-gui/src-tauri",
     "apps/workbench-gui/src-tauri",
   ]);
+  assert.deepEqual(HEX_AUDIT_DIRS, ["apps/web"]);
   assert.deepEqual(
     NPM_AUDIT_DIRS.map((auditDir) => `${auditDir}/package-lock.json`),
     [
@@ -132,8 +146,12 @@ function runSelfTest() {
       "apps/workbench-gui/src-tauri/Cargo.lock",
     ],
   );
+  assert.deepEqual(HEX_AUDIT_DIRS.map((auditDir) => `${auditDir}/mix.lock`), [
+    "apps/web/mix.lock",
+  ]);
   assert.deepEqual(NPM_AUDIT_ARGS, ["audit", "--omit=dev", "--package-lock-only", "--json"]);
   assert.deepEqual(CARGO_AUDIT_ARGS, ["audit"]);
+  assert.deepEqual(HEX_AUDIT_ARGS, ["hex.audit"]);
   assert.equal(
     summarizeNpmAudit('{"metadata":{"vulnerabilities":{"total":0}}}'),
     "0 vulnerability(s)",
@@ -170,7 +188,7 @@ function printResult(result) {
   }
 }
 
-const results = [...auditNpm(), ...auditCargo()];
+const results = [...auditNpm(), ...auditCargo(), ...auditHex()];
 for (const result of results) {
   printResult(result);
 }

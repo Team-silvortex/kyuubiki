@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "workbench-ko-core-1.15",
+  "id": "workbench-ko-core-1.19",
   "language": "ko",
   "targetSurface": "workbench",
   "name": "Korean Workbench Core",
@@ -8,8 +8,8 @@
   "versionLine": "tamamono 1.x",
   "targetAppVersion": "1.19.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-07T00:00:00.000Z",
-  "description": "Core Korean UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
+  "description": "Starter Korean UI overrides for Workbench navigation, workflow, store, and system surfaces.",
   "overrides": {
     "title": "Kyuubiki 워크벤치",
     "subtitle": "시뮬레이션, 워크플로, 에이전트를 위한 작업 공간입니다.",

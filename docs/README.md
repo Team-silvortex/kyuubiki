@@ -278,6 +278,9 @@ Then branch by intent:
 - `language-packs.md`
   Local-first language-pack format, override behavior, and the future remote
   delivery shape for Workbench UI translation packs.
+- `central-server-components.md`
+  Preview contract for the future central server: operator store, template
+  store, frontend DSL template store, language-pack delivery, and login policy.
 - `fem-blender-roadmap.md`
   Long-range product shape for turning Kyuubiki into a full FEM creation platform.
 - `rendering-roadmap.html`

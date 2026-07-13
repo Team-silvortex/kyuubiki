@@ -66,7 +66,9 @@ This directory contains host-native operational entry points.
   do not come back.
 - `validate-language-packs.mjs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
-  envelopes for the current release index version in the `tamamono 1.x` line.
+  envelopes for the current release index version in the `tamamono 1.x` line,
+  including exact parity with
+  `config/localization/mainstream-language-pack-locales.json`.
 - `check-ui-automation-contract.mjs`
   Verify the product-owned Workbench automation selector contract. It compares
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and

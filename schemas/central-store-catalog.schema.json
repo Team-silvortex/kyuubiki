@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-store-catalog.schema.json",
+  "title": "Kyuubiki central store catalog",
+  "type": "object",
+  "required": ["schema_version", "service", "status", "entries", "sources", "summary", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-store-catalog/v1" },
+    "service": { "const": "kyuubiki-central" },
+    "status": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["entry_count", "kinds", "sources", "store_kinds"],
+      "additionalProperties": false,
+      "properties": {
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "kinds": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "sources": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "store_kinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/kind" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "capabilities": { "type": "object", "additionalProperties": { "type": "object" } }
+  },
+  "$defs": {
+    "kind": {
+      "type": "string",
+      "enum": ["operator", "workflow_template", "frontend_dsl_template", "language_pack"]
+    },
+    "entry": {
+      "type": "object",
+      "required": ["id", "kind", "title", "source_id", "source_kind", "tags", "install"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/kind" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": ["string", "null"] },
+        "version": { "type": ["string", "null"] },
+        "source_id": { "type": "string", "minLength": 1 },
+        "source_kind": { "type": "string", "minLength": 1 },
+        "package_ref": { "type": ["string", "null"] },
+        "domain": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "install": {
+          "type": "object",
+          "required": ["mode", "requires_download"],
+          "additionalProperties": true,
+          "properties": {
+            "mode": { "type": "string" },
+            "requires_download": { "type": "boolean" },
+            "target": { "type": ["string", "null"] }
+          }
+        },
+        "payload": { "type": "object" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["id", "type", "label", "enabled", "editable", "status", "supports"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "enabled": { "type": "boolean" },
+        "editable": { "type": "boolean" },
+        "status": { "type": "string" },
+        "supports": { "type": "array", "items": { "$ref": "#/$defs/kind" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "workbench-zh-tw-core-1.19",
+  "language": "zh-TW",
+  "targetSurface": "workbench",
+  "name": "Traditional Chinese Workbench Core",
+  "version": "1.19.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.19.0",
+  "source": "downloaded",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
+  "description": "Starter Traditional Chinese UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "overrides": {
+    "title": "Kyuubiki Workbench - 繁體中文",
+    "subtitle": "Traditional Chinese starter language pack for simulation, workflow, and agent surfaces.",
+    "rail": {
+      "study": "Study",
+      "model": "Model",
+      "workflow": "Workflow",
+      "store": "Store",
+      "library": "History",
+      "system": "System"
+    },
+    "sections": {
+      "study": "Study setup",
+      "model": "Model space",
+      "workflow": "Workflow studio",
+      "store": "Project store",
+      "library": "Task history",
+      "system": "System"
+    },
+    "workflowBuilderPage": "Builder",
+    "workflowRunsPage": "Runs",
+    "workflowCatalogTitle": "Traditional Chinese workflow catalog",
+    "workflowTemplateChainLibraryLabel": "繁體中文 chain library",
+    "languagePacksTitle": "Traditional Chinese language packs",
+    "languagePacksHint": "Install this Traditional Chinese starter pack locally now; remote sources can reuse the same envelope later.",
+    "languagePacksEmptyLabel": "No Traditional Chinese language pack is installed yet.",
+    "languagePackName": "Name",
+    "languagePackVersion": "Version",
+    "languagePackSourceImported": "Imported",
+    "languagePackSourceDownloaded": "Downloaded",
+    "languagePackDownloadTemplate": "Download template",
+    "languagePackExportInstalled": "Export installed pack",
+    "languagePackImport": "Import pack",
+    "languagePackRemove": "Remove",
+    "languagePackCatalogTitle": "繁體中文 catalog",
+    "languagePackCatalogHint": "Starter coverage for Traditional Chinese; full product copy can expand incrementally without changing the pack contract.",
+    "languagePackCatalogAction": "Install"
+  }
+}

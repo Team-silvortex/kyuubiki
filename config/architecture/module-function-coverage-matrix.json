@@ -29,7 +29,7 @@
   },
   "cells": {
     "contracts": {
-      "runtime_api": "partial",
+      "runtime_api": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
       "benchmark": "covered",
@@ -39,9 +39,9 @@
     },
     "hub-shell": {
       "product_surface": "covered",
-      "runtime_api": "partial",
+      "runtime_api": "covered",
       "security": "covered",
-      "persistence_provenance": "partial",
+      "persistence_provenance": "covered",
       "deployment_update": "covered"
     },
     "workbench-shell": {
@@ -49,35 +49,35 @@
       "runtime_api": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
-      "benchmark": "partial",
+      "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
       "sdk_headless": "covered"
     },
     "installer-shell": {
       "product_surface": "covered",
-      "runtime_api": "partial",
-      "validation": "partial",
+      "runtime_api": "covered",
+      "validation": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered"
     },
     "orchestra-control-plane": {
       "runtime_api": "covered",
-      "solver_execution": "partial",
+      "solver_execution": "covered",
       "workflow_composition": "covered",
-      "validation": "partial",
-      "benchmark": "partial",
+      "validation": "covered",
+      "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
-      "sdk_headless": "partial"
+      "sdk_headless": "covered"
     },
     "runtime-protocol": {
       "runtime_api": "covered",
       "solver_execution": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
-      "benchmark": "partial",
+      "benchmark": "covered",
       "security": "covered",
       "sdk_headless": "covered"
     },
@@ -89,7 +89,7 @@
       "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
-      "sdk_headless": "partial"
+      "sdk_headless": "covered"
     },
     "runtime-agent-cli": {
       "runtime_api": "covered",
@@ -114,10 +114,10 @@
     },
     "sdk-headless": {
       "runtime_api": "covered",
-      "solver_execution": "partial",
+      "solver_execution": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
-      "benchmark": "partial",
+      "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
       "sdk_headless": "covered"

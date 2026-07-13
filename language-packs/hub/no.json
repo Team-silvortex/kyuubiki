@@ -1,0 +1,44 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "hub-no-core-1.19",
+  "language": "no",
+  "targetSurface": "hub",
+  "name": "Norwegian Hub Core",
+  "version": "1.19.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.19.0",
+  "source": "downloaded",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
+  "description": "Starter Norwegian UI overrides for Hub navigation, shell, and primary route labels.",
+  "overrides": {
+    "nav": {
+      "projects": "Home",
+      "runtimes": "Runtimes",
+      "deploy": "Deploy",
+      "observe": "Observe",
+      "tools": "Tools"
+    },
+    "sections": {
+      "projects": {
+        "title": "Norsk home",
+        "copy": "Norwegian starter copy for importing, inspecting, and opening Workbench."
+      },
+      "runtimes": {
+        "title": "Runtimes",
+        "copy": "Start the right local loop and keep health checks visible for Norwegian operators."
+      },
+      "deploy": {
+        "title": "Deploy",
+        "copy": "Prepare release paths and station checks with the Norwegian support pack enabled."
+      }
+    },
+    "shell": {
+      "language": "Norsk",
+      "actionStatus": "Action status",
+      "idle": "idle",
+      "openWorkbench": "Open Workbench",
+      "startLocal": "Start local stack",
+      "validateEnv": "Validate environment"
+    }
+  }
+}

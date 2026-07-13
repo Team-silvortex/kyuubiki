@@ -2,39 +2,487 @@
   "schema_version": "kyuubiki.language-pack-catalog/v1",
   "line": "tamamono 1.x",
   "shipping_version": "1.19.0",
-  "updatedAt": "2026-07-11T00:00:00.000Z",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
   "packs": [
     {
-      "id": "workbench-fr-core-1.15",
+      "id": "workbench-ar-core-1.19",
+      "surface": "workbench",
+      "language": "ar",
+      "name": "Arabic Workbench Core",
+      "path": "workbench/ar.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-bn-core-1.19",
+      "surface": "workbench",
+      "language": "bn",
+      "name": "Bengali Workbench Core",
+      "path": "workbench/bn.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-cs-core-1.19",
+      "surface": "workbench",
+      "language": "cs",
+      "name": "Czech Workbench Core",
+      "path": "workbench/cs.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-da-core-1.19",
+      "surface": "workbench",
+      "language": "da",
+      "name": "Danish Workbench Core",
+      "path": "workbench/da.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-de-core-1.19",
+      "surface": "workbench",
+      "language": "de",
+      "name": "German Workbench Core",
+      "path": "workbench/de.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-el-core-1.19",
+      "surface": "workbench",
+      "language": "el",
+      "name": "Greek Workbench Core",
+      "path": "workbench/el.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-fa-core-1.19",
+      "surface": "workbench",
+      "language": "fa",
+      "name": "Persian Workbench Core",
+      "path": "workbench/fa.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-fi-core-1.19",
+      "surface": "workbench",
+      "language": "fi",
+      "name": "Finnish Workbench Core",
+      "path": "workbench/fi.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-fr-core-1.19",
       "surface": "workbench",
       "language": "fr",
       "name": "French Workbench Core",
       "path": "workbench/fr.json",
-      "status": "preview"
+      "status": "starter"
     },
     {
-      "id": "workbench-ko-core-1.15",
+      "id": "workbench-he-core-1.19",
+      "surface": "workbench",
+      "language": "he",
+      "name": "Hebrew Workbench Core",
+      "path": "workbench/he.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-hi-core-1.19",
+      "surface": "workbench",
+      "language": "hi",
+      "name": "Hindi Workbench Core",
+      "path": "workbench/hi.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-id-core-1.19",
+      "surface": "workbench",
+      "language": "id",
+      "name": "Indonesian Workbench Core",
+      "path": "workbench/id.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-it-core-1.19",
+      "surface": "workbench",
+      "language": "it",
+      "name": "Italian Workbench Core",
+      "path": "workbench/it.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-ko-core-1.19",
       "surface": "workbench",
       "language": "ko",
       "name": "Korean Workbench Core",
       "path": "workbench/ko.json",
-      "status": "preview"
+      "status": "starter"
     },
     {
-      "id": "hub-fr-core-1.15",
+      "id": "workbench-ms-core-1.19",
+      "surface": "workbench",
+      "language": "ms",
+      "name": "Malay Workbench Core",
+      "path": "workbench/ms.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-nl-core-1.19",
+      "surface": "workbench",
+      "language": "nl",
+      "name": "Dutch Workbench Core",
+      "path": "workbench/nl.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-no-core-1.19",
+      "surface": "workbench",
+      "language": "no",
+      "name": "Norwegian Workbench Core",
+      "path": "workbench/no.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-pl-core-1.19",
+      "surface": "workbench",
+      "language": "pl",
+      "name": "Polish Workbench Core",
+      "path": "workbench/pl.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-pt-br-core-1.19",
+      "surface": "workbench",
+      "language": "pt-BR",
+      "name": "Portuguese (Brazil) Workbench Core",
+      "path": "workbench/pt-br.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-ro-core-1.19",
+      "surface": "workbench",
+      "language": "ro",
+      "name": "Romanian Workbench Core",
+      "path": "workbench/ro.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-ru-core-1.19",
+      "surface": "workbench",
+      "language": "ru",
+      "name": "Russian Workbench Core",
+      "path": "workbench/ru.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-sv-core-1.19",
+      "surface": "workbench",
+      "language": "sv",
+      "name": "Swedish Workbench Core",
+      "path": "workbench/sv.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-sw-core-1.19",
+      "surface": "workbench",
+      "language": "sw",
+      "name": "Swahili Workbench Core",
+      "path": "workbench/sw.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-ta-core-1.19",
+      "surface": "workbench",
+      "language": "ta",
+      "name": "Tamil Workbench Core",
+      "path": "workbench/ta.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-th-core-1.19",
+      "surface": "workbench",
+      "language": "th",
+      "name": "Thai Workbench Core",
+      "path": "workbench/th.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-tr-core-1.19",
+      "surface": "workbench",
+      "language": "tr",
+      "name": "Turkish Workbench Core",
+      "path": "workbench/tr.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-uk-core-1.19",
+      "surface": "workbench",
+      "language": "uk",
+      "name": "Ukrainian Workbench Core",
+      "path": "workbench/uk.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-ur-core-1.19",
+      "surface": "workbench",
+      "language": "ur",
+      "name": "Urdu Workbench Core",
+      "path": "workbench/ur.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-vi-core-1.19",
+      "surface": "workbench",
+      "language": "vi",
+      "name": "Vietnamese Workbench Core",
+      "path": "workbench/vi.json",
+      "status": "starter"
+    },
+    {
+      "id": "workbench-zh-tw-core-1.19",
+      "surface": "workbench",
+      "language": "zh-TW",
+      "name": "Traditional Chinese Workbench Core",
+      "path": "workbench/zh-tw.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ar-core-1.19",
+      "surface": "hub",
+      "language": "ar",
+      "name": "Arabic Hub Core",
+      "path": "hub/ar.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-bn-core-1.19",
+      "surface": "hub",
+      "language": "bn",
+      "name": "Bengali Hub Core",
+      "path": "hub/bn.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-cs-core-1.19",
+      "surface": "hub",
+      "language": "cs",
+      "name": "Czech Hub Core",
+      "path": "hub/cs.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-da-core-1.19",
+      "surface": "hub",
+      "language": "da",
+      "name": "Danish Hub Core",
+      "path": "hub/da.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-de-core-1.19",
+      "surface": "hub",
+      "language": "de",
+      "name": "German Hub Core",
+      "path": "hub/de.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-el-core-1.19",
+      "surface": "hub",
+      "language": "el",
+      "name": "Greek Hub Core",
+      "path": "hub/el.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-fa-core-1.19",
+      "surface": "hub",
+      "language": "fa",
+      "name": "Persian Hub Core",
+      "path": "hub/fa.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-fi-core-1.19",
+      "surface": "hub",
+      "language": "fi",
+      "name": "Finnish Hub Core",
+      "path": "hub/fi.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-fr-core-1.19",
       "surface": "hub",
       "language": "fr",
       "name": "French Hub Core",
       "path": "hub/fr.json",
-      "status": "preview"
+      "status": "starter"
     },
     {
-      "id": "hub-ko-core-1.15",
+      "id": "hub-he-core-1.19",
+      "surface": "hub",
+      "language": "he",
+      "name": "Hebrew Hub Core",
+      "path": "hub/he.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-hi-core-1.19",
+      "surface": "hub",
+      "language": "hi",
+      "name": "Hindi Hub Core",
+      "path": "hub/hi.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-id-core-1.19",
+      "surface": "hub",
+      "language": "id",
+      "name": "Indonesian Hub Core",
+      "path": "hub/id.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-it-core-1.19",
+      "surface": "hub",
+      "language": "it",
+      "name": "Italian Hub Core",
+      "path": "hub/it.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ko-core-1.19",
       "surface": "hub",
       "language": "ko",
       "name": "Korean Hub Core",
       "path": "hub/ko.json",
-      "status": "preview"
+      "status": "starter"
+    },
+    {
+      "id": "hub-ms-core-1.19",
+      "surface": "hub",
+      "language": "ms",
+      "name": "Malay Hub Core",
+      "path": "hub/ms.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-nl-core-1.19",
+      "surface": "hub",
+      "language": "nl",
+      "name": "Dutch Hub Core",
+      "path": "hub/nl.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-no-core-1.19",
+      "surface": "hub",
+      "language": "no",
+      "name": "Norwegian Hub Core",
+      "path": "hub/no.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-pl-core-1.19",
+      "surface": "hub",
+      "language": "pl",
+      "name": "Polish Hub Core",
+      "path": "hub/pl.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-pt-br-core-1.19",
+      "surface": "hub",
+      "language": "pt-BR",
+      "name": "Portuguese (Brazil) Hub Core",
+      "path": "hub/pt-br.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ro-core-1.19",
+      "surface": "hub",
+      "language": "ro",
+      "name": "Romanian Hub Core",
+      "path": "hub/ro.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ru-core-1.19",
+      "surface": "hub",
+      "language": "ru",
+      "name": "Russian Hub Core",
+      "path": "hub/ru.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-sv-core-1.19",
+      "surface": "hub",
+      "language": "sv",
+      "name": "Swedish Hub Core",
+      "path": "hub/sv.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-sw-core-1.19",
+      "surface": "hub",
+      "language": "sw",
+      "name": "Swahili Hub Core",
+      "path": "hub/sw.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ta-core-1.19",
+      "surface": "hub",
+      "language": "ta",
+      "name": "Tamil Hub Core",
+      "path": "hub/ta.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-th-core-1.19",
+      "surface": "hub",
+      "language": "th",
+      "name": "Thai Hub Core",
+      "path": "hub/th.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-tr-core-1.19",
+      "surface": "hub",
+      "language": "tr",
+      "name": "Turkish Hub Core",
+      "path": "hub/tr.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-uk-core-1.19",
+      "surface": "hub",
+      "language": "uk",
+      "name": "Ukrainian Hub Core",
+      "path": "hub/uk.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-ur-core-1.19",
+      "surface": "hub",
+      "language": "ur",
+      "name": "Urdu Hub Core",
+      "path": "hub/ur.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-vi-core-1.19",
+      "surface": "hub",
+      "language": "vi",
+      "name": "Vietnamese Hub Core",
+      "path": "hub/vi.json",
+      "status": "starter"
+    },
+    {
+      "id": "hub-zh-tw-core-1.19",
+      "surface": "hub",
+      "language": "zh-TW",
+      "name": "Traditional Chinese Hub Core",
+      "path": "hub/zh-tw.json",
+      "status": "starter"
     }
   ]
 }

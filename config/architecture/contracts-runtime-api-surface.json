@@ -1,0 +1,55 @@
+{
+  "schema_version": "kyuubiki.contracts-runtime-api-surface/v1",
+  "module_id": "contracts",
+  "runtime_api": {
+    "owner": "contracts",
+    "contract_families": [
+      {
+        "id": "frontend-runtime-api",
+        "sources": [
+          "apps/frontend/src/lib/api/runtime-types.ts",
+          "apps/frontend/src/lib/api/workflow-types.ts",
+          "apps/frontend/src/lib/api/gui-runtime-capabilities.ts"
+        ],
+        "client_surfaces": ["workbench-shell", "hub-shell", "installer-shell"],
+        "stability_contracts": [
+          "typed payloads",
+          "capability manifests",
+          "backend target resolution"
+        ]
+      },
+      {
+        "id": "protocol-runtime-api",
+        "sources": [
+          "workers/rust/crates/protocol/src/lib.rs",
+          "workers/rust/crates/protocol/src/operator_task_ir.rs",
+          "workers/rust/crates/protocol/src/solver_execution_capability.rs"
+        ],
+        "client_surfaces": ["runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
+        "stability_contracts": [
+          "TaskIR",
+          "solver RPC descriptor",
+          "execution capability report"
+        ]
+      },
+      {
+        "id": "orchestra-runtime-api",
+        "sources": [
+          "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex"
+        ],
+        "client_surfaces": ["workbench-shell", "sdk-headless", "runtime-agent-cli"],
+        "stability_contracts": [
+          "workflow graph execution",
+          "operator task execution",
+          "control-plane surface"
+        ]
+      }
+    ],
+    "verification_commands": [
+      "node scripts/check-contracts-runtime-api-surface.mjs",
+      "node scripts/check-module-function-matrix.mjs"
+    ]
+  }
+}

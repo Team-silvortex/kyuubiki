@@ -1,0 +1,51 @@
+{
+  "schema_version": "kyuubiki.language-pack/v1",
+  "id": "workbench-vi-core-1.19",
+  "language": "vi",
+  "targetSurface": "workbench",
+  "name": "Vietnamese Workbench Core",
+  "version": "1.19.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.19.0",
+  "source": "downloaded",
+  "updatedAt": "2026-07-13T00:00:00.000Z",
+  "description": "Starter Vietnamese UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "overrides": {
+    "title": "Kyuubiki Workbench - Tiếng Việt",
+    "subtitle": "Vietnamese starter language pack for simulation, workflow, and agent surfaces.",
+    "rail": {
+      "study": "Study",
+      "model": "Model",
+      "workflow": "Workflow",
+      "store": "Store",
+      "library": "History",
+      "system": "System"
+    },
+    "sections": {
+      "study": "Study setup",
+      "model": "Model space",
+      "workflow": "Workflow studio",
+      "store": "Project store",
+      "library": "Task history",
+      "system": "System"
+    },
+    "workflowBuilderPage": "Builder",
+    "workflowRunsPage": "Runs",
+    "workflowCatalogTitle": "Vietnamese workflow catalog",
+    "workflowTemplateChainLibraryLabel": "Tiếng Việt chain library",
+    "languagePacksTitle": "Vietnamese language packs",
+    "languagePacksHint": "Install this Vietnamese starter pack locally now; remote sources can reuse the same envelope later.",
+    "languagePacksEmptyLabel": "No Vietnamese language pack is installed yet.",
+    "languagePackName": "Name",
+    "languagePackVersion": "Version",
+    "languagePackSourceImported": "Imported",
+    "languagePackSourceDownloaded": "Downloaded",
+    "languagePackDownloadTemplate": "Download template",
+    "languagePackExportInstalled": "Export installed pack",
+    "languagePackImport": "Import pack",
+    "languagePackRemove": "Remove",
+    "languagePackCatalogTitle": "Tiếng Việt catalog",
+    "languagePackCatalogHint": "Starter coverage for Vietnamese; full product copy can expand incrementally without changing the pack contract.",
+    "languagePackCatalogAction": "Install"
+  }
+}

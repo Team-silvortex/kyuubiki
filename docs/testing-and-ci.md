@@ -173,10 +173,12 @@ The full integration entrypoint list stays in:
 ## CI lanes
 
 - `architecture-contracts`
-  Runs source organization, UI automation contract, language pack,
-  version-line, operator reliability, toolchain, and docs-book checks without
-  booting services. This lane is meant to catch contract drift early before
-  heavier build or integration jobs spend time.
+  Runs source organization, module topology, module-function matrix/tensor,
+  shared contracts runtime API surface, lightweight runtime surface tests, UI
+  automation contract, language pack, version-line, operator reliability,
+  toolchain, and docs-book checks without booting long-lived services. This
+  lane is meant to catch contract drift early before heavier build or
+  integration jobs spend time.
 
 ### Desktop shell checks
 
@@ -207,6 +209,11 @@ listed above.
 For workflow-heavy frontend work, prefer the dedicated preflight entrypoint:
 
 - `./scripts/kyuubiki workflow-preflight`
+
+For runtime-boundary or contract-surface changes, use the focused lightweight
+surface lane:
+
+- `make test-runtime-surfaces`
 
 Start `npm run dev` inside `apps/frontend` first. The layout/search guard needs
 the live benchmark route and is intentionally separate from `frontend-test`, so

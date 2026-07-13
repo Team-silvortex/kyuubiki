@@ -126,6 +126,11 @@ does not replace detailed tests. It points each weak coordinate at the relevant
 benchmark and security lanes so the next task can pick a concrete module,
 function paradigm, and evidence path.
 
+Run `make check-contracts-runtime-api-surface` when shared contracts gain or
+move runtime API sources. It validates
+`config/architecture/contracts-runtime-api-surface.json`, including the
+frontend, protocol, and orchestra contract families that other modules consume.
+
 ## Product Shells
 
 ### Hub
@@ -257,6 +262,8 @@ Owned paths:
 - `config/operator-reliability*.json`
 - `config/operator-qualification*.json`
 - `language-packs`
+- `apps/web/lib/kyuubiki_web/central_store.ex`
+- `apps/web/lib/kyuubiki_web/central_store_router.ex`
 
 Responsibilities:
 
@@ -266,6 +273,8 @@ Responsibilities:
 - material score contract and manifest
 - UI automation contract
 - language-pack contract
+- central-store catalog and session-policy contract
+- central-server JSON schemas
 - operator reliability and qualification evidence
 
 Contract files are the shared language between product shells, control plane,
