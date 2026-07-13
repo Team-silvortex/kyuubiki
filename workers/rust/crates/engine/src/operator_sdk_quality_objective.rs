@@ -1,7 +1,7 @@
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
+use crate::workflow_quality_lineage::compose_quality_lineage_report;
 use crate::workflow_quality_objective::{
-    compose_quality_lineage_report, compose_quality_objective, prepare_quality_next_round_request,
-    rank_quality_candidates,
+    compose_quality_objective, prepare_quality_next_round_request, rank_quality_candidates,
 };
 use crate::workflow_quality_sweep_plan::materialize_quality_sweep_expansion;
 use crate::workflow_quality_sweep_request::build_quality_parameter_sweep_plan;

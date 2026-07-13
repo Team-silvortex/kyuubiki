@@ -38,6 +38,7 @@ mod workflow_focus_chain;
 mod workflow_guard_transforms;
 mod workflow_parameter_sweep;
 mod workflow_parameter_sweep_results;
+mod workflow_quality_lineage;
 mod workflow_quality_objective;
 mod workflow_quality_sweep_plan;
 mod workflow_quality_sweep_request;

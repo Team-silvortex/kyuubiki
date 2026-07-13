@@ -61,6 +61,7 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
                 "source_plan_contract": payload.get("quality_parameter_sweep_plan_contract").cloned().unwrap_or(Value::Null),
                 "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
                 "optimization_hint": payload.get("optimization_hint").cloned().unwrap_or(Value::Null),
+                "coupled_readiness": payload.get("coupled_readiness").cloned().unwrap_or(Value::Null),
                 "focused_axis_path": payload.get("focused_axis_path").cloned().unwrap_or(Value::Null),
                 "repair_strategy": payload.get("repair_strategy").cloned().unwrap_or(Value::Null),
                 "repair_focus": payload.get("repair_focus").cloned().unwrap_or(Value::Null),

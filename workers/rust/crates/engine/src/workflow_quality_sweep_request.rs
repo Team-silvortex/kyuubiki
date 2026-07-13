@@ -43,6 +43,15 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .or_else(|| payload.get("selected_iteration_hint"))
         .cloned()
         .unwrap_or(Value::Null);
+    let focus_domain = optimization_hint
+        .get("focus_domain")
+        .and_then(Value::as_str);
+    let coupled_readiness = request
+        .get("coupled_readiness")
+        .or_else(|| payload.get("selected_coupled_readiness"))
+        .or_else(|| payload.get("coupled_readiness"))
+        .cloned()
+        .unwrap_or(Value::Null);
     let repair_strategy = repair_strategy_from_hint(&optimization_hint);
     let max_axes = config
         .get("max_axes")
@@ -57,7 +66,8 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
             .unwrap_or(64.0),
     );
     let usable_axis_count = usable_search_space_axis_count(search_space, samples);
-    let axes = prioritized_search_space_axes(search_space, samples, focus_field, max_axes);
+    let axes =
+        prioritized_search_space_axes(search_space, samples, focus_field, focus_domain, max_axes);
     if axes.is_empty() {
         return Err(
             "transform.build_quality_parameter_sweep_plan requires usable search_space axes"
@@ -89,6 +99,7 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
             .unwrap_or(Value::Null),
         "target_score": payload.get("target_score").cloned().unwrap_or(Value::Null),
         "optimization_hint": optimization_hint,
+        "coupled_readiness": coupled_readiness.clone(),
         "repair_strategy": repair_strategy,
         "repair_focus": {
             "field": focus_field.map(Value::from).unwrap_or(Value::Null),
@@ -102,6 +113,14 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
                 .get("optimization_hint")
                 .or_else(|| payload.get("selected_iteration_hint"))
                 .and_then(|hint| hint.get("focus_domain"))
+                .cloned()
+                .unwrap_or(Value::Null),
+            "readiness_state": coupled_readiness
+                .get("coupled_readiness_state")
+                .cloned()
+                .unwrap_or(Value::Null),
+            "readiness_recommendation": coupled_readiness
+                .get("coupled_readiness_recommendation")
                 .cloned()
                 .unwrap_or(Value::Null),
         },
@@ -125,6 +144,8 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
 fn repair_strategy_from_hint(optimization_hint: &Value) -> &'static str {
     match optimization_hint.get("action").and_then(Value::as_str) {
         Some("fix_validation_failure") => "rerun_validation_focused_sweep",
+        Some("fix_coupled_readiness") => "repair_coupled_readiness_sweep",
+        Some("review_coupled_readiness") => "review_coupled_readiness_sweep",
         Some("fix_blocking_term") => "repair_blocking_term_sweep",
         Some("reduce_dominant_term") => "reduce_dominant_term_sweep",
         _ => "general_quality_sweep",
@@ -142,6 +163,7 @@ fn prioritized_search_space_axes(
     search_space: &Map<String, Value>,
     samples: usize,
     focus_field: Option<&str>,
+    focus_domain: Option<&str>,
     max_axes: Option<usize>,
 ) -> Vec<Value> {
     let mut axes = search_space
@@ -162,8 +184,8 @@ fn prioritized_search_space_axes(
     axes.sort_by(|left, right| {
         let left_path = left.get("path").and_then(Value::as_str).unwrap_or("");
         let right_path = right.get("path").and_then(Value::as_str).unwrap_or("");
-        focus_rank(left_path, focus_field)
-            .cmp(&focus_rank(right_path, focus_field))
+        focus_rank(left_path, focus_field, focus_domain)
+            .cmp(&focus_rank(right_path, focus_field, focus_domain))
             .then_with(|| left_path.cmp(right_path))
     });
     if let Some(max_axes) = max_axes {
@@ -245,18 +267,61 @@ fn recommended_axis_count_for_budget(axes: &[Value], max_cases: f64) -> usize {
     included.max(1).min(axes.len())
 }
 
-fn focus_rank(path: &str, focus_field: Option<&str>) -> u8 {
-    let Some(focus_field) = focus_field else {
-        return 1;
-    };
-    let focus_field = focus_field.trim();
-    if focus_field.is_empty() {
-        return 1;
-    }
-    if path == focus_field || path.ends_with(&format!(".{focus_field}")) {
+fn focus_rank(path: &str, focus_field: Option<&str>, focus_domain: Option<&str>) -> u8 {
+    if focus_field_matches(path, focus_field) {
         0
-    } else {
+    } else if focus_domain_matches(path, focus_domain) {
         1
+    } else {
+        2
+    }
+}
+
+fn focus_field_matches(path: &str, focus_field: Option<&str>) -> bool {
+    let Some(focus_field) = focus_field.map(str::trim).filter(|field| !field.is_empty()) else {
+        return false;
+    };
+    path == focus_field || path.ends_with(&format!(".{focus_field}"))
+}
+
+fn focus_domain_matches(path: &str, focus_domain: Option<&str>) -> bool {
+    let Some(focus_domain) = focus_domain
+        .map(str::trim)
+        .filter(|domain| !domain.is_empty())
+    else {
+        return false;
+    };
+    let path = path.to_ascii_lowercase();
+    let focus_domain = focus_domain.to_ascii_lowercase();
+    domain_aliases(&focus_domain)
+        .iter()
+        .any(|alias| path.contains(alias))
+}
+
+fn domain_aliases(domain: &str) -> &'static [&'static str] {
+    match domain {
+        "structural" => &[
+            "structural",
+            "stress",
+            "strain",
+            "stiffness",
+            "displacement",
+        ],
+        "thermal" | "thermo" | "heat" => &["thermal", "thermo", "heat", "temperature"],
+        "electrostatic" | "electric" => &[
+            "electrostatic",
+            "electric",
+            "voltage",
+            "permittivity",
+            "charge",
+        ],
+        "magnetostatic" | "magnetic" => &["magnetostatic", "magnetic", "magnet", "permeability"],
+        "cfd" | "fluid" => &["cfd", "fluid", "velocity", "pressure", "viscosity"],
+        "transport" => &["transport", "diffusion", "concentration"],
+        "acoustic" => &["acoustic", "sound"],
+        "modal" => &["modal", "frequency", "mode"],
+        "dynamic" => &["dynamic", "damping", "transient"],
+        _ => &[],
     }
 }
 
