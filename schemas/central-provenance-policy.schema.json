@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-provenance-policy.schema.json",
+  "title": "Kyuubiki central provenance policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "accepting_artifact_uploads",
+    "artifact_contract",
+    "resource_gates",
+    "required_attestations",
+    "signature_policy",
+    "revocation_policy",
+    "download_rules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-provenance-policy/v1" },
+    "status": { "type": "string" },
+    "accepting_artifact_uploads": { "type": "boolean" },
+    "artifact_contract": {
+      "type": "object",
+      "required": ["digest_algorithms", "metadata_fields", "immutable_fields"],
+      "additionalProperties": false,
+      "properties": {
+        "digest_algorithms": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "metadata_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "immutable_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "required_attestations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/attestation" },
+      "minItems": 1
+    },
+    "resource_gates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resourceGate" },
+      "minItems": 1
+    },
+    "signature_policy": {
+      "type": "object",
+      "required": ["mode", "accepted_key_kinds", "detached_signature_required"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string" },
+        "accepted_key_kinds": { "type": "array", "items": { "type": "string" } },
+        "detached_signature_required": { "type": "boolean" }
+      }
+    },
+    "revocation_policy": {
+      "type": "object",
+      "required": ["supports_yank", "supports_security_recall", "retains_audit_log"],
+      "additionalProperties": false,
+      "properties": {
+        "supports_yank": { "type": "boolean" },
+        "supports_security_recall": { "type": "boolean" },
+        "retains_audit_log": { "type": "boolean" }
+      }
+    },
+    "download_rules": {
+      "type": "object",
+      "required": ["anonymous_download_allowed", "checksum_required_before_install", "installer_must_verify_signature"],
+      "additionalProperties": false,
+      "properties": {
+        "anonymous_download_allowed": { "type": "boolean" },
+        "checksum_required_before_install": { "type": "boolean" },
+        "installer_must_verify_signature": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "attestation": {
+      "type": "object",
+      "required": ["id", "status", "applies_to"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "applies_to": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "resourceGate": {
+      "type": "object",
+      "required": [
+        "kind",
+        "publish_evidence",
+        "provenance_attestations",
+        "installer_checks",
+        "storage_tables"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "publish_evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "provenance_attestations": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "installer_checks": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    }
+  }
+}

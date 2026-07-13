@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-topology/v1",
-  "version_line": "tamamono 1.16.x",
+  "version_line": "tamamono 1.19.x",
   "benchmark_lanes": {
     "ui_startup": "WebView, layout, workflow UI, and desktop shell startup/render cost.",
     "workflow_catalog": "Workflow catalog search, topology, package, and graph authoring cost.",
@@ -33,6 +33,8 @@
       ],
       "control_plane": [
         { "id": "web-tests", "command": "make test-web", "scope": "local" },
+        { "id": "central-db-readiness", "command": "make check-central-database-readiness MODE=local BACKEND=sqlite", "scope": "local" },
+        { "id": "central-db-remote-dry-run", "command": "make remote-central-database-smoke REMOTE=kyuubiki-lab", "scope": "remote" },
         { "id": "api-smoke", "command": "make test-integration-api", "scope": "integration" },
         { "id": "cluster-smoke", "command": "make test-integration-cluster", "scope": "integration" }
       ],
@@ -90,6 +92,8 @@
       ],
       "data_contract": [
         { "id": "architecture-check", "command": "make architecture-check", "scope": "release" },
+        { "id": "central-store-contract", "command": "make check-central-store-contract", "scope": "local" },
+        { "id": "central-db-readiness", "command": "make check-central-database-readiness MODE=local BACKEND=sqlite", "scope": "local" },
         { "id": "doc-book", "command": "make check-doc-book", "scope": "local" },
         { "id": "local-path-audit", "command": "node scripts/audit-local-paths.mjs", "scope": "local" }
       ]

@@ -36,9 +36,19 @@ if (args.has("--self-test")) {
         },
         {
           id: "central-store-runtime-api",
-          sources: ["scripts/check-contracts-runtime-api-surface.mjs"],
+          sources: [
+            "scripts/check-contracts-runtime-api-surface.mjs",
+            "config/architecture/central-store-contract.json",
+            "schemas/central-store-contract-check.schema.json",
+            "apps/web/lib/kyuubiki_web/storage/central_database.ex",
+            "schemas/central-database-status.schema.json",
+          ],
           client_surfaces: ["workbench-shell"],
-          stability_contracts: ["central store catalog"],
+          stability_contracts: [
+            "central store catalog",
+            "database status",
+            "central database table contract",
+          ],
         },
       ],
     },
@@ -94,6 +104,46 @@ function validateSurface(surface) {
     }
   }
 
+  const centralFamily = families.find((family) => family.id === "central-store-runtime-api");
+  if (centralFamily) {
+    requireIncludes(
+      errors,
+      centralFamily.sources,
+      "config/architecture/central-store-contract.json",
+      "central-store-runtime-api source",
+    );
+    requireIncludes(
+      errors,
+      centralFamily.sources,
+      "schemas/central-store-contract-check.schema.json",
+      "central-store-runtime-api source",
+    );
+    requireIncludes(
+      errors,
+      centralFamily.sources,
+      "apps/web/lib/kyuubiki_web/storage/central_database.ex",
+      "central-store-runtime-api source",
+    );
+    requireIncludes(
+      errors,
+      centralFamily.sources,
+      "schemas/central-database-status.schema.json",
+      "central-store-runtime-api source",
+    );
+    requireIncludes(
+      errors,
+      centralFamily.stability_contracts,
+      "database status",
+      "central-store-runtime-api stability contract",
+    );
+    requireIncludes(
+      errors,
+      centralFamily.stability_contracts,
+      "central database table contract",
+      "central-store-runtime-api stability contract",
+    );
+  }
+
   for (const family of families) {
     if (!Array.isArray(family.sources) || family.sources.length === 0) {
       errors.push(`${family.id} has no source files`);
@@ -119,4 +169,10 @@ function validateSurface(surface) {
   }
 
   return { errors, familyCount: families.length };
+}
+
+function requireIncludes(errors, values, expected, label) {
+  if (!Array.isArray(values) || !values.includes(expected)) {
+    errors.push(`${label} missing ${expected}`);
+  }
 }

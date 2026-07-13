@@ -43,6 +43,12 @@ the profile commands themselves should be executed.
   module has explicit coverage status across product surface, runtime API,
   solver execution, workflow composition, validation, benchmark, security,
   persistence, deployment, and headless SDK paradigms.
+- `architecture/central-store-contract.json`
+  Central-server store contract checker input. It lists the schemas, backend
+  surfaces, frontend API surfaces, docs, readiness scripts, and text checks
+  that keep the future catalog/auth/publish/provenance/database plane aligned
+  before write-side publishing exists. Its shape is guarded by
+  `schemas/central-store-contract-check.schema.json`.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
 - `dependency-audit-lockfiles.json`

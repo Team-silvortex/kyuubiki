@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-store-contract-check.schema.json",
+  "title": "Kyuubiki central store contract check config",
+  "type": "object",
+  "required": ["schema_version", "contracts", "required_files", "text_checks"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "kyuubiki.central-store-contract-check/v1" },
+    "contracts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contract" },
+      "minItems": 1
+    },
+    "required_files": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repoPath" },
+      "minItems": 1
+    },
+    "text_checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/textCheck" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "contract": {
+      "type": "object",
+      "required": [
+        "id",
+        "schema_version",
+        "schema_path",
+        "backend_path",
+        "frontend_types_path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "string", "minLength": 1 },
+        "schema_path": { "$ref": "#/$defs/repoPath" },
+        "backend_path": { "$ref": "#/$defs/repoPath" },
+        "frontend_types_path": { "$ref": "#/$defs/repoPath" }
+      }
+    },
+    "textCheck": {
+      "type": "object",
+      "required": ["file", "text", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "$ref": "#/$defs/repoPath" },
+        "text": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(^|/)\\.\\.(/|$)).+"
+    }
+  }
+}

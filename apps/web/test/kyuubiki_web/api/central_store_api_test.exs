@@ -102,6 +102,26 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert language_pack["manifest_schema"] == "schemas/language-pack.schema.json"
   end
 
+  test "central publish readiness explains preview blockers per resource kind" do
+    conn =
+      :get
+      |> conn("/api/v1/central/publish-readiness")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    resource_readiness = Map.new(payload["resource_readiness"], &{&1["kind"], &1})
+
+    assert payload["schema_version"] == "kyuubiki.central-publish-readiness/v1"
+    assert payload["accepting_submissions"] == false
+    assert payload["status"] == "blocked_preview"
+    assert "central_artifact_signatures" in payload["required_storage_tables"]
+    assert "signing_keys_not_configured" in payload["blocking_reasons"]
+    assert "artifact_signature_required" in resource_readiness["operator"]["blocking_reasons"]
+    assert "sbom" in resource_readiness["operator"]["provenance_attestations"]
+    assert "language_pack" in Map.keys(resource_readiness)
+  end
+
   test "central database policy exposes server deployment persistence requirements" do
     conn =
       :get
@@ -127,6 +147,55 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
              MapSet.new(["catalog_entries", "publisher_accounts", "release_artifacts"]),
              domain_ids
            )
+  end
+
+  test "central provenance policy exposes download verification requirements without uploads" do
+    conn =
+      :get
+      |> conn("/api/v1/central/provenance-policy")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    attestations = MapSet.new(Enum.map(payload["required_attestations"], & &1["id"]))
+    resource_gates = Map.new(payload["resource_gates"], &{&1["kind"], &1})
+
+    assert payload["schema_version"] == "kyuubiki.central-provenance-policy/v1"
+    assert payload["accepting_artifact_uploads"] == false
+    assert "sha256" in payload["artifact_contract"]["digest_algorithms"]
+    assert "digest" in payload["artifact_contract"]["immutable_fields"]
+    assert payload["signature_policy"]["detached_signature_required"] == true
+    assert payload["download_rules"]["checksum_required_before_install"] == true
+    assert payload["revocation_policy"]["supports_security_recall"] == true
+    assert resource_gates["operator"]["storage_tables"] == [
+             "central_artifacts",
+             "central_artifact_signatures"
+           ]
+
+    assert "sbom" in resource_gates["operator"]["provenance_attestations"]
+    assert "detached_signature" in resource_gates["workflow_template"]["installer_checks"]
+
+    assert MapSet.subset?(
+             MapSet.new(["manifest_schema", "compatibility_smoke", "security_scan", "signature"]),
+             attestations
+           )
+  end
+
+  test "central database status exposes schema preview coverage" do
+    conn =
+      :get
+      |> conn("/api/v1/central/database-status")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["schema_version"] == "kyuubiki.central-database-status/v1"
+    assert payload["contract_schema_version"] == "kyuubiki.central-database-contract/v1"
+    assert payload["backend"] in ["sqlite", "postgres", "memory"]
+    assert payload["managed_table_count"] == 6
+    assert "central_store_entries" in payload["managed_tables"]
+    assert payload["coverage"]["catalog_entries"]["status"] == "schema_ready_preview"
   end
 
   test "central catalog returns explicit not-found errors" do

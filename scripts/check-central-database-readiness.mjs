@@ -17,15 +17,17 @@ if (args.has("--self-test")) {
       "apps/web/config/config.exs": "KYUUBIKI_STORAGE_BACKEND DATABASE_URL SQLITE_DATABASE_PATH",
       "apps/web/lib/kyuubiki_web/central_store.ex":
         "kyuubiki.central-database-policy/v1 CentralDatabase.table_specs",
-      "apps/web/lib/kyuubiki_web/central_store_router.ex": "/database-policy",
+      "apps/web/lib/kyuubiki_web/central_store_router.ex": "/database-policy /database-status",
       "apps/web/lib/kyuubiki_web/storage/central_database.ex":
         "kyuubiki.central-database-contract/v1 central_store_entries central_artifact_signatures",
       "apps/web/lib/kyuubiki_web/storage/schema_setup.ex": "CentralDatabase.create_table_sqls",
-      "apps/frontend/src/lib/api/central-store-client.ts": "/api/v1/central/database-policy",
+      "apps/frontend/src/lib/api/central-store-client.ts":
+        "/api/v1/central/database-policy /api/v1/central/database-status",
       "apps/frontend/src/lib/api/central-store-types.ts":
-        "CentralDatabaseTableSpec kyuubiki.central-database-contract/v1",
+        "CentralDatabaseTableSpec CentralDatabaseStatusPayload kyuubiki.central-database-contract/v1",
       "schemas/central-database-policy.schema.json":
         "kyuubiki.central-database-policy/v1 kyuubiki.central-database-contract/v1",
+      "schemas/central-database-status.schema.json": "kyuubiki.central-database-status/v1",
     },
   });
 
@@ -80,6 +82,7 @@ function requiredFiles() {
     "apps/frontend/src/lib/api/central-store-client.ts",
     "apps/frontend/src/lib/api/central-store-types.ts",
     "schemas/central-database-policy.schema.json",
+    "schemas/central-database-status.schema.json",
   ];
 }
 
@@ -119,6 +122,7 @@ function validate({ mode, backend, env, files }) {
   requireContains(issues, files, "apps/web/lib/kyuubiki_web/central_store.ex", "kyuubiki.central-database-policy/v1");
   requireContains(issues, files, "apps/web/lib/kyuubiki_web/central_store.ex", "CentralDatabase.table_specs");
   requireContains(issues, files, "apps/web/lib/kyuubiki_web/central_store_router.ex", "/database-policy");
+  requireContains(issues, files, "apps/web/lib/kyuubiki_web/central_store_router.ex", "/database-status");
   requireContains(
     issues,
     files,
@@ -144,7 +148,9 @@ function validate({ mode, backend, env, files }) {
     "CentralDatabase.create_table_sqls",
   );
   requireContains(issues, files, "apps/frontend/src/lib/api/central-store-client.ts", "/api/v1/central/database-policy");
+  requireContains(issues, files, "apps/frontend/src/lib/api/central-store-client.ts", "/api/v1/central/database-status");
   requireContains(issues, files, "apps/frontend/src/lib/api/central-store-types.ts", "CentralDatabaseTableSpec");
+  requireContains(issues, files, "apps/frontend/src/lib/api/central-store-types.ts", "CentralDatabaseStatusPayload");
   requireContains(
     issues,
     files,
@@ -157,6 +163,12 @@ function validate({ mode, backend, env, files }) {
     files,
     "schemas/central-database-policy.schema.json",
     "kyuubiki.central-database-contract/v1",
+  );
+  requireContains(
+    issues,
+    files,
+    "schemas/central-database-status.schema.json",
+    "kyuubiki.central-database-status/v1",
   );
 
   return {

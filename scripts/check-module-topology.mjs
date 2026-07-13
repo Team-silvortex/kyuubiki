@@ -127,6 +127,29 @@ function checkLaneTestPlan(topology, benchmarkLanes, securityLanes, context) {
       }
     }
   }
+
+  requirePlanEntry(
+    plan.benchmark?.control_plane,
+    "central-db-readiness",
+    `${context}: lane_test_plan.benchmark.control_plane`,
+  );
+  requirePlanEntry(
+    plan.security?.data_contract,
+    "central-store-contract",
+    `${context}: lane_test_plan.security.data_contract`,
+  );
+  requirePlanEntry(
+    plan.security?.data_contract,
+    "central-db-readiness",
+    `${context}: lane_test_plan.security.data_contract`,
+  );
+}
+
+function requirePlanEntry(entries, requiredId, context) {
+  if (entries === undefined) return;
+  if (!Array.isArray(entries) || !entries.some((entry) => entry.id === requiredId)) {
+    throw new Error(`${context}: missing required test plan id ${requiredId}`);
+  }
 }
 
 function checkAcyclicDependencyGraph(modulesById) {

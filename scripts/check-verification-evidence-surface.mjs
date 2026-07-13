@@ -11,6 +11,7 @@ const COVERED_PARADIGMS = [
   "workflow_composition",
   "deployment_update",
   "sdk_headless",
+  "persistence_provenance",
 ];
 
 function repoPath(relativePath) {
@@ -59,6 +60,26 @@ function assertSurface(surface) {
       throw new Error(`generated artifact must live under tmp/: ${artifact}`);
     }
   }
+  assertIncludes(
+    surface.runtime_api?.stable_commands ?? [],
+    "node scripts/build-central-readiness-report.mjs",
+    "stable command",
+  );
+  assertIncludes(
+    surface.runtime_api?.stable_commands ?? [],
+    "node scripts/check-central-readiness-report.mjs",
+    "stable command",
+  );
+  assertIncludes(
+    surface.runtime_api?.generated_artifacts ?? [],
+    "tmp/central-readiness-report.json",
+    "generated artifact",
+  );
+  assertIncludes(
+    surface.runtime_api?.generated_artifacts ?? [],
+    "tmp/central-readiness-report.md",
+    "generated artifact",
+  );
   for (const paradigm of COVERED_PARADIGMS) {
     const block = surface[paradigm];
     if (!block) throw new Error(`missing ${paradigm} evidence block`);
@@ -72,6 +93,12 @@ function assertSurface(surface) {
     for (const source of sources) {
       assertEvidenceSource(source);
     }
+  }
+}
+
+function assertIncludes(values, expected, label) {
+  if (!Array.isArray(values) || !values.includes(expected)) {
+    throw new Error(`${label} missing ${expected}`);
   }
 }
 

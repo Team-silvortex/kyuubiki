@@ -28,9 +28,27 @@ defmodule KyuubikiWeb.CentralStoreRouter do
     end)
   end
 
+  get "/publish-readiness" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.publish_readiness())
+    end)
+  end
+
   get "/database-policy" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, CentralStore.database_policy())
+    end)
+  end
+
+  get "/provenance-policy" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.provenance_policy())
+    end)
+  end
+
+  get "/database-status" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.database_status())
     end)
   end
 

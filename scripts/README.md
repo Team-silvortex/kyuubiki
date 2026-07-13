@@ -71,11 +71,30 @@ This directory contains host-native operational entry points.
   `config/localization/mainstream-language-pack-locales.json`.
 - `check-central-store-contract.mjs`
   Verify the future central-server store contract across JSON schemas, Elixir
-  API surface, frontend API client/types, tests, and docs.
+  API surface, frontend API client/types, tests, and docs. It also keeps the
+  read-only central database status and provenance policy endpoints aligned
+  with the storage table, publish-readiness, and artifact verification
+  contracts before write-side publishing exists. The checked surface is driven
+  by `config/architecture/central-store-contract.json` so new center-server
+  routes can be added without growing the script itself.
 - `check-central-database-readiness.mjs`
   Verify central-server database readiness before local or server deployment
   smoke tests. It checks storage mode, required env, and DB policy surfaces
   without opening a network/database connection.
+- `build-central-readiness-report.mjs`
+  Write a retained machine-readable central readiness report under `tmp/`.
+  The report combines central DB readiness, API endpoint coverage, schema file
+  presence, storage table-contract presence, and safe runbook commands without
+  storing credentials. It also writes a compact Markdown summary for human
+  review.
+- `check-central-readiness-report.mjs`
+  Validate a retained central readiness report, including required endpoints,
+  schema coverage, storage table-contract coverage, and absence of obvious
+  inline credential material.
+- `check-verification-evidence-surface.mjs`
+  Verify the verification-evidence runtime surface, including stable evidence
+  commands, generated artifacts under `tmp/`, and the central readiness report
+  generation/check pair.
 - `run-central-database-smoke.mjs`
   Run the central-store database smoke wrapper. It always runs readiness first;
   by default it is a dry-run, and only executes Postgres-backed Elixir tests

@@ -47,6 +47,29 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
 
   def table_specs, do: @tables
 
+  def status_report do
+    managed_tables = Enum.map(@tables, & &1["name"])
+    domains = persistence_domains()
+
+    %{
+      "schema_version" => "kyuubiki.central-database-status/v1",
+      "contract_schema_version" => @schema_version,
+      "status" => if(Storage.sql?(), do: "schema_ready_preview", else: "memory_preview"),
+      "backend" => Atom.to_string(Storage.backend()),
+      "sql_enabled" => Storage.sql?(),
+      "repo_module" => repo_module_name(),
+      "managed_table_count" => length(managed_tables),
+      "managed_tables" => managed_tables,
+      "domain_count" => length(domains),
+      "domains" => domains,
+      "coverage" => %{
+        "catalog_entries" => coverage_for("catalog_entries"),
+        "publisher_accounts" => coverage_for("publisher_accounts"),
+        "release_artifacts" => coverage_for("release_artifacts")
+      }
+    }
+  end
+
   def migration_plan do
     %{
       "schema_version" => @schema_version,
@@ -109,6 +132,24 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
     @tables
     |> Enum.filter(&(&1["domain"] == domain))
     |> Enum.map(& &1["name"])
+  end
+
+  defp coverage_for(domain) do
+    tables = tables_for(domain)
+
+    %{
+      "domain" => domain,
+      "table_count" => length(tables),
+      "tables" => tables,
+      "status" => if(tables == [], do: "missing", else: "schema_ready_preview")
+    }
+  end
+
+  defp repo_module_name do
+    case Storage.repo_module() do
+      nil -> nil
+      module -> Atom.to_string(module)
+    end
   end
 
   defp create_sources_sql do

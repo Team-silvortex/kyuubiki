@@ -1,0 +1,109 @@
+{
+  "$schema": "../../schemas/central-store-contract-check.schema.json",
+  "schema_version": "kyuubiki.central-store-contract-check/v1",
+  "contracts": [
+    {
+      "id": "catalog",
+      "schema_version": "kyuubiki.central-store-catalog/v1",
+      "schema_path": "schemas/central-store-catalog.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "session",
+      "schema_version": "kyuubiki.central-session-policy/v1",
+      "schema_path": "schemas/central-session-policy.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "publish",
+      "schema_version": "kyuubiki.central-publish-policy/v1",
+      "schema_path": "schemas/central-publish-policy.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "publish-readiness",
+      "schema_version": "kyuubiki.central-publish-readiness/v1",
+      "schema_path": "schemas/central-publish-readiness.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "database",
+      "schema_version": "kyuubiki.central-database-policy/v1",
+      "schema_path": "schemas/central-database-policy.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "provenance",
+      "schema_version": "kyuubiki.central-provenance-policy/v1",
+      "schema_path": "schemas/central-provenance-policy.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/central_store.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    },
+    {
+      "id": "database-status",
+      "schema_version": "kyuubiki.central-database-status/v1",
+      "schema_path": "schemas/central-database-status.schema.json",
+      "backend_path": "apps/web/lib/kyuubiki_web/storage/central_database.ex",
+      "frontend_types_path": "apps/frontend/src/lib/api/central-store-types.ts"
+    }
+  ],
+  "required_files": [
+    "apps/web/lib/kyuubiki_web/central_store_router.ex",
+    "apps/web/lib/kyuubiki_web/storage/central_database.ex",
+    "apps/web/test/kyuubiki_web/api/central_store_api_test.exs",
+    "apps/web/test/kyuubiki_web/storage/central_database_test.exs",
+    "apps/frontend/src/lib/api/central-store-client.ts",
+    "apps/frontend/test/workflow/workbench-central-store-api-client.test.ts",
+    "scripts/run-central-database-smoke.mjs",
+    "scripts/run-remote-central-database-smoke.mjs",
+    "scripts/build-central-readiness-report.mjs",
+    "scripts/check-central-readiness-report.mjs",
+    "schemas/central-readiness-report.schema.json",
+    "docs/central-server-components.md"
+  ],
+  "text_checks": [
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/catalog", "label": "router catalog route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/session-policy", "label": "router session route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/publish-policy", "label": "router publish route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/publish-readiness", "label": "router publish readiness route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/database-policy", "label": "router database route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/provenance-policy", "label": "router provenance route" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/database-status", "label": "router database status route" },
+    { "file": "apps/web/lib/kyuubiki_web/storage/central_database.ex", "text": "kyuubiki.central-database-contract/v1", "label": "central database contract version" },
+    { "file": "apps/web/lib/kyuubiki_web/storage/central_database.ex", "text": "central_artifact_signatures", "label": "central database artifact signature table" },
+    { "file": "apps/frontend/src/lib/api/central-store-client.ts", "text": "/api/v1/central/catalog", "label": "frontend catalog path" },
+    { "file": "apps/frontend/src/lib/api/central-store-client.ts", "text": "/api/v1/central/database-status", "label": "frontend database status path" },
+    { "file": "apps/frontend/src/lib/api/central-store-client.ts", "text": "/api/v1/central/publish-readiness", "label": "frontend publish readiness path" },
+    { "file": "apps/frontend/src/lib/api/central-store-client.ts", "text": "/api/v1/central/provenance-policy", "label": "frontend provenance policy path" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "CentralDatabaseTableSpec", "label": "frontend central database table spec type" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "CentralDatabaseStatusPayload", "label": "frontend central database status type" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "CentralProvenancePolicyPayload", "label": "frontend central provenance policy type" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "CentralPublishReadinessPayload", "label": "frontend central publish readiness type" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "kyuubiki.central-database-contract/v1", "label": "frontend central database contract version" },
+    { "file": "schemas/central-database-policy.schema.json", "text": "table_specs", "label": "central database policy table specs schema" },
+    { "file": "schemas/central-database-status.schema.json", "text": "kyuubiki.central-database-status/v1", "label": "central database status schema" },
+    { "file": "schemas/central-provenance-policy.schema.json", "text": "detached_signature_required", "label": "central provenance signature schema" },
+    { "file": "schemas/central-publish-readiness.schema.json", "text": "resource_readiness", "label": "central publish readiness schema" },
+    { "file": "schemas/central-provenance-policy.schema.json", "text": "resource_gates", "label": "central provenance resource gate schema" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "provenance_resource_gate", "label": "central provenance resource gate builder" },
+    { "file": "apps/frontend/src/lib/api/central-store-types.ts", "text": "resource_gates", "label": "frontend central provenance resource gates" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-store-catalog.schema.json", "label": "central docs schema reference" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-publish-policy.schema.json", "label": "central docs publish schema reference" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-publish-readiness.schema.json", "label": "central docs publish readiness schema reference" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-database-policy.schema.json", "label": "central docs database schema reference" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-database-status.schema.json", "label": "central docs database status schema reference" },
+    { "file": "docs/central-server-components.md", "text": "schemas/central-provenance-policy.schema.json", "label": "central docs provenance schema reference" },
+    { "file": "scripts/run-central-database-smoke.mjs", "text": "check-central-database-readiness.mjs", "label": "central database smoke readiness preflight" },
+    { "file": "scripts/run-remote-central-database-smoke.mjs", "text": "BatchMode=yes", "label": "remote central database smoke ssh key mode" },
+    { "file": "scripts/run-remote-central-database-smoke.mjs", "text": "run-central-database-smoke.mjs", "label": "remote central database smoke wrapper" },
+    { "file": "scripts/build-central-readiness-report.mjs", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema" },
+    { "file": "scripts/build-central-readiness-report.mjs", "text": "/api/v1/central/database-status", "label": "central readiness report database status endpoint" },
+    { "file": "scripts/check-central-readiness-report.mjs", "text": "unsafe text detected", "label": "central readiness report secret guard" },
+    { "file": "schemas/central-readiness-report.schema.json", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema file" }
+  ]
+}

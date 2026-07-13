@@ -8,12 +8,16 @@
     "stable_commands": [
       "node scripts/check-module-function-matrix.mjs",
       "node scripts/build-module-function-coverage-tensor.mjs",
-      "node scripts/build-regression-gate-report.mjs"
+      "node scripts/build-regression-gate-report.mjs",
+      "node scripts/build-central-readiness-report.mjs",
+      "node scripts/check-central-readiness-report.mjs"
     ],
     "generated_artifacts": [
       "tmp/module-function-matrix-report.json",
       "tmp/module-function-coverage-tensor.json",
-      "tmp/regression-gate-report.json"
+      "tmp/regression-gate-report.json",
+      "tmp/central-readiness-report.json",
+      "tmp/central-readiness-report.md"
     ]
   },
   "solver_execution": {
@@ -59,6 +63,23 @@
       "kyuubiki.headless-sdk-surface/v1",
       "kyuubiki.headless-engine-solver-bridge/v1",
       "kyuubiki.installer-headless-surface/v1"
+    ]
+  },
+  "persistence_provenance": {
+    "evidence_sources": [
+      "scripts/build-central-readiness-report.mjs",
+      "scripts/check-central-readiness-report.mjs",
+      "schemas/central-readiness-report.schema.json",
+      "config/architecture/module-topology.json"
+    ],
+    "required_surfaces": [
+      "kyuubiki.central-readiness-report/v1",
+      "kyuubiki.central-database-readiness/v1",
+      "kyuubiki.central-database-contract/v1"
+    ],
+    "generated_artifacts": [
+      "tmp/central-readiness-report.json",
+      "tmp/central-readiness-report.md"
     ]
   }
 }

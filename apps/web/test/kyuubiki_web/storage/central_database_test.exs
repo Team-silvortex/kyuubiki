@@ -42,4 +42,15 @@ defmodule KyuubikiWeb.Storage.CentralDatabaseTest do
     refute sql =~ "raw_token"
     refute sql =~ "token_secret"
   end
+
+  test "status report exposes central schema coverage without connecting to the database" do
+    report = CentralDatabase.status_report()
+
+    assert report["schema_version"] == "kyuubiki.central-database-status/v1"
+    assert report["contract_schema_version"] == "kyuubiki.central-database-contract/v1"
+    assert report["managed_table_count"] == 6
+    assert report["domain_count"] == 4
+    assert report["coverage"]["publisher_accounts"]["table_count"] == 2
+    assert "central_artifacts" in report["coverage"]["release_artifacts"]["tables"]
+  end
 end

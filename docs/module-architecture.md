@@ -130,9 +130,12 @@ Run `make check-contracts-runtime-api-surface` when shared contracts gain or
 move runtime API sources. It validates
 `config/architecture/contracts-runtime-api-surface.json`, including the
 frontend, protocol, orchestra, and central-store contract families that other
-modules consume. Run `make check-central-store-contract` when changing the
-future center-server catalog, login/session policy, language-pack distribution,
-or matching frontend client surface.
+modules consume. The central-store family includes the central database table
+contract plus read-only database policy/status endpoints, so deployment checks
+can tell whether a build carries the expected persistence surface before any
+write-side publishing is enabled. Run `make check-central-store-contract` when
+changing the future center-server catalog, login/session policy, language-pack
+distribution, database policy/status, or matching frontend client surface.
 
 ## Product Shells
 
@@ -276,8 +279,9 @@ Responsibilities:
 - material score contract and manifest
 - UI automation contract
 - language-pack contract
-- central-store catalog and session-policy contract
+- central-store catalog, session-policy, database-policy, and database-status contract
 - central-server JSON schemas
+- central readiness report schema and retained evidence check
 - operator reliability and qualification evidence
 
 Contract files are the shared language between product shells, control plane,
@@ -304,6 +308,7 @@ Responsibilities:
 - operator reliability checks
 - material score contract validation
 - UI automation contract checks
+- central readiness report generation and retained report validation
 - ExUnit and Rust regression suites
 - benchmark and qualification evidence capture
 

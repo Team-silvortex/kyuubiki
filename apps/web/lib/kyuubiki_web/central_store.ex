@@ -110,6 +110,29 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def publish_readiness do
+    provenance_gates = Map.new(provenance_policy()["resource_gates"], &{&1["kind"], &1})
+
+    %{
+      "schema_version" => "kyuubiki.central-publish-readiness/v1",
+      "status" => "blocked_preview",
+      "accepting_submissions" => false,
+      "blocking_reasons" => [
+        "publisher_accounts_not_enabled",
+        "signing_keys_not_configured",
+        "write_side_review_queue_not_enabled"
+      ],
+      "resource_readiness" =>
+        Enum.map(@store_kinds, &publish_resource_readiness(&1, provenance_gates[&1])),
+      "required_storage_tables" => ["central_publishers", "central_artifacts", "central_artifact_signatures"],
+      "next_unlocks" => [
+        "enable publisher account storage and token scopes",
+        "configure detached artifact signing keys outside the repository",
+        "enable write-side review queue after provenance smoke passes"
+      ]
+    }
+  end
+
   def database_policy do
     %{
       "schema_version" => "kyuubiki.central-database-policy/v1",
@@ -137,6 +160,71 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def provenance_policy do
+    %{
+      "schema_version" => "kyuubiki.central-provenance-policy/v1",
+      "status" => "preview_contract",
+      "accepting_artifact_uploads" => false,
+      "artifact_contract" => %{
+        "digest_algorithms" => ["sha256", "blake3"],
+        "metadata_fields" => ["artifact_id", "kind", "entry_id", "version", "digest", "size_bytes"],
+        "immutable_fields" => ["artifact_id", "kind", "entry_id", "version", "digest"]
+      },
+      "resource_gates" => Enum.map(@store_kinds, &provenance_resource_gate/1),
+      "required_attestations" => [
+        %{"id" => "manifest_schema", "status" => "required", "applies_to" => @store_kinds},
+        %{"id" => "compatibility_smoke", "status" => "required", "applies_to" => @store_kinds},
+        %{"id" => "security_scan", "status" => "required", "applies_to" => @store_kinds},
+        %{"id" => "sbom", "status" => "planned_required", "applies_to" => ["operator"]},
+        %{"id" => "signature", "status" => "planned_required", "applies_to" => @store_kinds}
+      ],
+      "signature_policy" => %{
+        "mode" => "detached_signature_preview",
+        "accepted_key_kinds" => ["ed25519", "minisign", "cosign"],
+        "detached_signature_required" => true
+      },
+      "revocation_policy" => %{
+        "supports_yank" => true,
+        "supports_security_recall" => true,
+        "retains_audit_log" => true
+      },
+      "download_rules" => %{
+        "anonymous_download_allowed" => true,
+        "checksum_required_before_install" => true,
+        "installer_must_verify_signature" => true
+      }
+    }
+  end
+
+  defp provenance_resource_gate(kind) do
+    publish_policy = publish_resource_policy(kind)
+
+    %{
+      "kind" => kind,
+      "publish_evidence" => publish_policy["required_evidence"],
+      "provenance_attestations" => provenance_attestations_for(kind),
+      "installer_checks" => [
+        "manifest_schema",
+        "artifact_digest",
+        "detached_signature",
+        "compatibility_smoke"
+      ],
+      "storage_tables" => ["central_artifacts", "central_artifact_signatures"]
+    }
+  end
+
+  defp provenance_attestations_for("operator") do
+    ["manifest_schema", "compatibility_smoke", "security_scan", "sbom", "signature"]
+  end
+
+  defp provenance_attestations_for(_kind) do
+    ["manifest_schema", "compatibility_smoke", "security_scan", "signature"]
+  end
+
+  def database_status do
+    CentralDatabase.status_report()
+  end
+
   def capabilities do
     %{
       "operator_store" => %{"status" => "ready", "backing" => "AssetStore.operator"},
@@ -156,9 +244,17 @@ defmodule KyuubikiWeb.CentralStore do
         "status" => "preview_contract",
         "backing" => "CentralStore.publish_policy"
       },
+      "publish_readiness" => %{
+        "status" => "blocked_preview",
+        "backing" => "CentralStore.publish_readiness"
+      },
       "database_policy" => %{
         "status" => "preview_contract",
         "backing" => "CentralStore.database_policy"
+      },
+      "provenance_policy" => %{
+        "status" => "preview_contract",
+        "backing" => "CentralStore.provenance_policy"
       }
     }
   end
@@ -200,6 +296,23 @@ defmodule KyuubikiWeb.CentralStore do
       "required_evidence" => ["language_pack", "locale_target", "surface_validation"],
       "distribution_modes" => ["language_pack_catalog", "local_import"],
       "mutable_after_publish" => false
+    }
+  end
+
+  defp publish_resource_readiness(kind, provenance_gate) do
+    policy = publish_resource_policy(kind)
+
+    %{
+      "kind" => kind,
+      "status" => "blocked_preview",
+      "publish_evidence" => policy["required_evidence"],
+      "provenance_attestations" => provenance_gate["provenance_attestations"],
+      "installer_checks" => provenance_gate["installer_checks"],
+      "blocking_reasons" => [
+        "publisher_identity_required",
+        "artifact_signature_required",
+        "central_write_api_disabled"
+      ]
     }
   end
 

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-readiness-report.schema.json",
+  "title": "Kyuubiki central readiness report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "mode",
+    "backend",
+    "status",
+    "readiness",
+    "api_surface",
+    "schema_surface",
+    "config_surface",
+    "storage_contract",
+    "runbook"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-readiness-report/v1" },
+    "generated_at": { "type": "string" },
+    "mode": { "type": "string" },
+    "backend": { "type": "string" },
+    "status": { "type": "string" },
+    "readiness": { "type": "object" },
+    "api_surface": {
+      "type": "object",
+      "required": ["endpoints"],
+      "additionalProperties": false,
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/endpoint" }
+        }
+      }
+    },
+    "schema_surface": {
+      "type": "object",
+      "required": ["schema_files"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_files": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/schemaFile" }
+        }
+      }
+    },
+    "config_surface": {
+      "type": "object",
+      "required": ["config_files"],
+      "additionalProperties": false,
+      "properties": {
+        "config_files": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/configFile" }
+        }
+      }
+    },
+    "storage_contract": {
+      "type": "object",
+      "required": ["schema_version", "table_contract_present"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "const": "kyuubiki.central-database-contract/v1" },
+        "table_contract_present": { "type": "boolean" }
+      }
+    },
+    "runbook": {
+      "type": "object",
+      "required": ["local_readiness", "remote_dry_run", "postgres_smoke"],
+      "additionalProperties": false,
+      "properties": {
+        "local_readiness": { "type": "string" },
+        "remote_dry_run": { "type": "string" },
+        "postgres_smoke": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "endpoint": {
+      "type": "object",
+      "required": ["path", "router_present", "client_present"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "router_present": { "type": "boolean" },
+        "client_present": { "type": "boolean" }
+      }
+    },
+    "schemaFile": {
+      "type": "object",
+      "required": ["path", "present"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "present": { "type": "boolean" }
+      }
+    },
+    "configFile": {
+      "type": "object",
+      "required": ["path", "present", "schema_version_present"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "present": { "type": "boolean" },
+        "schema_version_present": { "type": "boolean" }
+      }
+    }
+  }
+}

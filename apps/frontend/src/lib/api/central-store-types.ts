@@ -45,7 +45,9 @@ export type CentralStoreCapabilities = {
   signed_downloads: { status: string };
   publisher_accounts: { status: string };
   publish_policy: { status: string; backing?: string };
+  publish_readiness: { status: string; backing?: string };
   database_policy: { status: string; backing?: string };
+  provenance_policy: { status: string; backing?: string };
 };
 
 export type CentralStoreCatalogPayload = {
@@ -114,6 +116,23 @@ export type CentralPublishPolicyPayload = {
   };
 };
 
+export type CentralPublishReadinessPayload = {
+  schema_version: "kyuubiki.central-publish-readiness/v1";
+  status: string;
+  accepting_submissions: boolean;
+  blocking_reasons: string[];
+  resource_readiness: Array<{
+    kind: CentralStoreEntryKind;
+    status: string;
+    publish_evidence: string[];
+    provenance_attestations: string[];
+    installer_checks: string[];
+    blocking_reasons: string[];
+  }>;
+  required_storage_tables: string[];
+  next_unlocks: string[];
+};
+
 export type CentralDatabasePersistenceDomain = {
   id: string;
   status: "ready" | "planned" | "schema_ready_preview" | string;
@@ -153,5 +172,64 @@ export type CentralDatabasePolicyPayload = {
     sqlite: string;
     postgres: string;
     retention: string;
+  };
+};
+
+export type CentralDatabaseCoverage = {
+  domain: string;
+  table_count: number;
+  tables: string[];
+  status: "schema_ready_preview" | "missing" | string;
+};
+
+export type CentralDatabaseStatusPayload = {
+  schema_version: "kyuubiki.central-database-status/v1";
+  contract_schema_version: "kyuubiki.central-database-contract/v1";
+  status: "schema_ready_preview" | "memory_preview" | string;
+  backend: "sqlite" | "postgres" | "memory" | string;
+  sql_enabled: boolean;
+  repo_module: string | null;
+  managed_table_count: number;
+  managed_tables: string[];
+  domain_count: number;
+  domains: CentralDatabasePersistenceDomain[];
+  coverage: Record<string, CentralDatabaseCoverage>;
+};
+
+export type CentralProvenancePolicyPayload = {
+  schema_version: "kyuubiki.central-provenance-policy/v1";
+  status: string;
+  accepting_artifact_uploads: boolean;
+  artifact_contract: {
+    digest_algorithms: string[];
+    metadata_fields: string[];
+    immutable_fields: string[];
+  };
+  resource_gates: Array<{
+    kind: CentralStoreEntryKind;
+    publish_evidence: string[];
+    provenance_attestations: string[];
+    installer_checks: string[];
+    storage_tables: string[];
+  }>;
+  required_attestations: Array<{
+    id: string;
+    status: string;
+    applies_to: CentralStoreEntryKind[];
+  }>;
+  signature_policy: {
+    mode: string;
+    accepted_key_kinds: string[];
+    detached_signature_required: boolean;
+  };
+  revocation_policy: {
+    supports_yank: boolean;
+    supports_security_recall: boolean;
+    retains_audit_log: boolean;
+  };
+  download_rules: {
+    anonymous_download_allowed: boolean;
+    checksum_required_before_install: boolean;
+    installer_must_verify_signature: boolean;
   };
 };

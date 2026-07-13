@@ -100,6 +100,10 @@ README.
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
   classify workloads before opening them
+- `central-store-contract-check.schema.json` is for the architecture-owned
+  central store contract checker config. It keeps catalog, auth, publish,
+  provenance, database, frontend client, docs, and readiness guard inputs
+  project-relative and machine-checkable.
 - `deploy/installation-integrity-contract.json` is the shared installer and
   desktop-facing installation contract source that defines standard layout,
   protected paths, cleanup allowlists, and visible repair rules

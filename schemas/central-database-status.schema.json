@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-database-status.schema.json",
+  "title": "Kyuubiki central database status",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "contract_schema_version",
+    "status",
+    "backend",
+    "sql_enabled",
+    "repo_module",
+    "managed_table_count",
+    "managed_tables",
+    "domain_count",
+    "domains",
+    "coverage"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-database-status/v1" },
+    "contract_schema_version": { "const": "kyuubiki.central-database-contract/v1" },
+    "status": { "type": "string" },
+    "backend": { "type": "string" },
+    "sql_enabled": { "type": "boolean" },
+    "repo_module": { "type": ["string", "null"] },
+    "managed_table_count": { "type": "integer", "minimum": 0 },
+    "managed_tables": { "type": "array", "items": { "type": "string" } },
+    "domain_count": { "type": "integer", "minimum": 0 },
+    "domains": {
+      "type": "array",
+      "items": { "$ref": "central-database-policy.schema.json#/$defs/persistenceDomain" }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/coverage" }
+    }
+  },
+  "$defs": {
+    "coverage": {
+      "type": "object",
+      "required": ["domain", "table_count", "tables", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "domain": { "type": "string" },
+        "table_count": { "type": "integer", "minimum": 0 },
+        "tables": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string" }
+      }
+    }
+  }
+}

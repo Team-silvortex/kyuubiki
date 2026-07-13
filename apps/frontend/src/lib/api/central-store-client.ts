@@ -1,7 +1,10 @@
 import { requestJson } from "./core.ts";
 import type {
   CentralDatabasePolicyPayload,
+  CentralDatabaseStatusPayload,
+  CentralProvenancePolicyPayload,
   CentralPublishPolicyPayload,
+  CentralPublishReadinessPayload,
   CentralSessionPolicyPayload,
   CentralStoreCatalogPayload,
   CentralStoreEntryEnvelope,
@@ -59,8 +62,26 @@ export function createCentralStoreApiClient(request: CentralStoreRequestJson) {
         cache: "no-store",
       });
     },
+    fetchCentralPublishReadiness() {
+      return request<CentralPublishReadinessPayload>("/api/v1/central/publish-readiness", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
     fetchCentralDatabasePolicy() {
       return request<CentralDatabasePolicyPayload>("/api/v1/central/database-policy", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
+    fetchCentralProvenancePolicy() {
+      return request<CentralProvenancePolicyPayload>("/api/v1/central/provenance-policy", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
+    fetchCentralDatabaseStatus() {
+      return request<CentralDatabaseStatusPayload>("/api/v1/central/database-status", {
         method: "GET",
         cache: "no-store",
       });
@@ -88,6 +109,18 @@ export function fetchCentralPublishPolicy() {
   return defaultCentralStoreApiClient.fetchCentralPublishPolicy();
 }
 
+export function fetchCentralPublishReadiness() {
+  return defaultCentralStoreApiClient.fetchCentralPublishReadiness();
+}
+
 export function fetchCentralDatabasePolicy() {
   return defaultCentralStoreApiClient.fetchCentralDatabasePolicy();
+}
+
+export function fetchCentralProvenancePolicy() {
+  return defaultCentralStoreApiClient.fetchCentralProvenancePolicy();
+}
+
+export function fetchCentralDatabaseStatus() {
+  return defaultCentralStoreApiClient.fetchCentralDatabaseStatus();
 }

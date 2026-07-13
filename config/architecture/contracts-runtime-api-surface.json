@@ -51,12 +51,18 @@
         "sources": [
           "apps/web/lib/kyuubiki_web/central_store.ex",
           "apps/web/lib/kyuubiki_web/central_store_router.ex",
+          "apps/web/lib/kyuubiki_web/storage/central_database.ex",
           "apps/frontend/src/lib/api/central-store-client.ts",
           "apps/frontend/src/lib/api/central-store-types.ts",
+          "config/architecture/central-store-contract.json",
+          "schemas/central-store-contract-check.schema.json",
           "schemas/central-store-catalog.schema.json",
           "schemas/central-session-policy.schema.json",
           "schemas/central-publish-policy.schema.json",
-          "schemas/central-database-policy.schema.json"
+          "schemas/central-publish-readiness.schema.json",
+          "schemas/central-database-policy.schema.json",
+          "schemas/central-provenance-policy.schema.json",
+          "schemas/central-database-status.schema.json"
         ],
         "client_surfaces": ["workbench-shell", "hub-shell", "sdk-headless", "installer-shell"],
         "stability_contracts": [
@@ -66,7 +72,11 @@
           "language-pack distribution",
           "session policy",
           "publish policy",
-          "database policy"
+          "publish readiness",
+          "database policy",
+          "provenance policy",
+          "database status",
+          "central database table contract"
         ]
       }
     ],

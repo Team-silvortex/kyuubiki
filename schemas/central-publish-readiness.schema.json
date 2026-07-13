@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-publish-readiness.schema.json",
+  "title": "Kyuubiki central publish readiness",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "accepting_submissions",
+    "blocking_reasons",
+    "resource_readiness",
+    "required_storage_tables",
+    "next_unlocks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-publish-readiness/v1" },
+    "status": { "type": "string" },
+    "accepting_submissions": { "type": "boolean" },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" } },
+    "resource_readiness": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resourceReadiness" },
+      "minItems": 1
+    },
+    "required_storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "next_unlocks": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  },
+  "$defs": {
+    "resourceReadiness": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "publish_evidence",
+        "provenance_attestations",
+        "installer_checks",
+        "blocking_reasons"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "publish_evidence": { "type": "array", "items": { "type": "string" } },
+        "provenance_attestations": { "type": "array", "items": { "type": "string" } },
+        "installer_checks": { "type": "array", "items": { "type": "string" } },
+        "blocking_reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

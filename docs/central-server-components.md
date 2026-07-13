@@ -11,13 +11,22 @@ publisher accounts, language-pack delivery, and signed downloads.
 - API fetch: `GET /api/v1/central/catalog/:kind/:entry_id`
 - Session policy: `GET /api/v1/central/session-policy`
 - Publish policy: `GET /api/v1/central/publish-policy`
+- Publish readiness: `GET /api/v1/central/publish-readiness`
 - Database policy: `GET /api/v1/central/database-policy`
+- Provenance policy: `GET /api/v1/central/provenance-policy`
+- Database status: `GET /api/v1/central/database-status`
 - Backing module: `KyuubikiWeb.CentralStore`
 - Router module: `KyuubikiWeb.CentralStoreRouter`
 - Catalog schema: `schemas/central-store-catalog.schema.json`
+- Contract-check schema: `schemas/central-store-contract-check.schema.json`
 - Session schema: `schemas/central-session-policy.schema.json`
 - Publish schema: `schemas/central-publish-policy.schema.json`
+- Publish readiness schema: `schemas/central-publish-readiness.schema.json`
 - Database schema: `schemas/central-database-policy.schema.json`
+- Provenance schema: `schemas/central-provenance-policy.schema.json`
+- Database status schema: `schemas/central-database-status.schema.json`
+- Readiness report schema: `schemas/central-readiness-report.schema.json`
+- Contract-check config: `config/architecture/central-store-contract.json`
 
 ## Store Kinds
 
@@ -37,12 +46,28 @@ resource kinds, manifest schemas, review stages, and evidence requirements, but
 does not accept uploads yet. Write paths should wait until publisher accounts,
 token scopes, signing keys, and provenance checks are in place.
 
+The publish readiness endpoint turns those blockers into a machine-readable
+matrix. It lists global blockers, per-resource readiness, provenance
+attestations, installer checks, storage tables, and the next unlocks required
+before any write-side upload API can be enabled.
+
+## Provenance Policy
+
+The provenance policy is also read-only. It defines the download and artifact
+verification contract before central uploads exist: accepted digest algorithms,
+immutable artifact metadata, required attestations, detached signature posture,
+yank/security-recall behavior, and installer verification rules. This lets the
+Installer, Workbench store, and headless SDKs agree on supply-chain checks
+without storing signing keys or release credentials in the repository.
+
 ## Database Policy
 
 The database policy exposes the active storage backend, supported server
 backends, schema-ready preview central-server persistence domains, table specs,
-and smoke commands for a Postgres deployment. The current preview still relies
-on startup schema setup for existing runtime and central tables. Central-server
+and smoke commands for a Postgres deployment. The database status endpoint is a
+read-only runtime view of the same contract: backend, repo module, managed table
+count, and per-domain table coverage. The current preview still relies on
+startup schema setup for existing runtime and central tables. Central-server
 tables should move to versioned migrations before write-side publishing is
 enabled.
 
@@ -63,6 +88,15 @@ build artifacts, and runs the same readiness/smoke pair there. It does not
 store SSH credentials, server config, or `DATABASE_URL` in the repository; a
 real DB-backed run still requires `RUN_DB_SMOKE=1 DATABASE_URL=...` in the
 current process environment.
+
+Use `make build-central-readiness-report` when CI, release notes, Hub docs, or
+LLM ingestion need one machine-readable summary. The report is written under
+`tmp/central-readiness-report.json` by default, with a compact Markdown summary
+at `tmp/central-readiness-report.md`. It combines DB readiness, central API
+endpoint coverage, schema file coverage, storage table-contract presence, and
+central contract config coverage, plus safe runbook commands. It intentionally
+does not store credentials or live database connection strings. Its schema is
+`schemas/central-readiness-report.schema.json`.
 
 ## Auth Boundary
 
