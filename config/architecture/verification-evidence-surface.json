@@ -1,0 +1,64 @@
+{
+  "schema_version": "kyuubiki.verification-evidence-surface/v1",
+  "matrix": "config/architecture/module-function-coverage-matrix.json",
+  "tensor": "config/architecture/module-function-coverage-tensor.json",
+  "module_id": "verification-evidence",
+  "runtime_api": {
+    "owner": "verification-evidence",
+    "stable_commands": [
+      "node scripts/check-module-function-matrix.mjs",
+      "node scripts/build-module-function-coverage-tensor.mjs",
+      "node scripts/build-regression-gate-report.mjs"
+    ],
+    "generated_artifacts": [
+      "tmp/module-function-matrix-report.json",
+      "tmp/module-function-coverage-tensor.json",
+      "tmp/regression-gate-report.json"
+    ]
+  },
+  "solver_execution": {
+    "evidence_sources": [
+      "workers/rust/crates/engine/src/workflow_solve_executor.rs",
+      "workers/rust/crates/engine/src/tests/core.rs",
+      "workers/rust/crates/protocol/src/solver_execution_capability.rs"
+    ],
+    "required_receipts": [
+      "kyuubiki.engine-solver-provenance/v1",
+      "kyuubiki.solver-execution-capability/v1"
+    ]
+  },
+  "workflow_composition": {
+    "evidence_sources": [
+      "config/architecture/module-function-coverage-tensor.json",
+      "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
+      "workers/rust/crates/cli/src/agent_headless_bridge.rs"
+    ],
+    "required_surfaces": [
+      "kyuubiki.agent-headless-bridge/v1",
+      "kyuubiki.headless-operator-task-provenance/v1"
+    ]
+  },
+  "deployment_update": {
+    "evidence_sources": [
+      "workers/rust/crates/installer/src/headless_surface.rs",
+      "workers/rust/crates/installer/src/update_catalog.rs",
+      "workers/rust/crates/installer/src/remote_deployment_plan.rs"
+    ],
+    "required_surfaces": [
+      "kyuubiki.installer-headless-surface/v1",
+      "kyuubiki.installer-runtime-api/v1"
+    ]
+  },
+  "sdk_headless": {
+    "evidence_sources": [
+      "workers/rust/crates/headless-sdk/src/surface.rs",
+      "workers/rust/crates/headless-sdk/src/engine_solver_bridge.rs",
+      "workers/rust/crates/installer/src/headless_surface.rs"
+    ],
+    "required_surfaces": [
+      "kyuubiki.headless-sdk-surface/v1",
+      "kyuubiki.headless-engine-solver-bridge/v1",
+      "kyuubiki.installer-headless-surface/v1"
+    ]
+  }
+}

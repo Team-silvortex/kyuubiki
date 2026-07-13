@@ -4,6 +4,7 @@ mod contract_tests;
 mod contracts;
 mod contracts_types;
 mod direct_fem;
+mod engine_solver_bridge;
 mod executor;
 mod hybrid_executor;
 mod material_candidate_drafts;
@@ -46,7 +47,9 @@ mod material_study_execution_plan;
 mod material_thermo;
 mod material_workflows;
 mod operator_task;
+mod operator_task_provenance;
 mod operator_task_readiness;
+mod operator_task_security;
 #[cfg(test)]
 mod operator_task_tests;
 mod operator_task_validation;
@@ -74,6 +77,10 @@ pub use contracts_types::{
 pub use direct_fem::{
     DirectFemCapability, DirectFemRoute, all_direct_fem_routes, direct_fem_capability_manifest,
     direct_fem_submit_route,
+};
+pub use engine_solver_bridge::{
+    ENGINE_SOLVER_HEADLESS_BRIDGE_SCHEMA_VERSION, EngineSolverHeadlessBridgeManifest,
+    EngineSolverHeadlessBridgeRoute, engine_solver_headless_bridge_manifest,
 };
 pub use executor::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, MockHeadlessExecutor,
@@ -165,6 +172,12 @@ pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
     is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,
     preview_operator_task_execute_payload,
+};
+pub use operator_task_provenance::{
+    HEADLESS_OPERATOR_TASK_PROVENANCE_SCHEMA_VERSION, operator_task_provenance_profile,
+};
+pub use operator_task_security::{
+    HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION, operator_task_security_profile,
 };
 pub use operator_task_validation::{
     HeadlessOperatorTaskValidationReport, validate_operator_task_for_agent,

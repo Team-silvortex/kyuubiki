@@ -32,10 +32,10 @@
       "runtime_api": "partial",
       "workflow_composition": "covered",
       "validation": "covered",
-      "benchmark": "partial",
+      "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
-      "sdk_headless": "partial"
+      "sdk_headless": "covered"
     },
     "hub-shell": {
       "product_surface": "covered",
@@ -46,12 +46,12 @@
     },
     "workbench-shell": {
       "product_surface": "covered",
-      "runtime_api": "partial",
+      "runtime_api": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
       "benchmark": "partial",
       "security": "covered",
-      "persistence_provenance": "partial",
+      "persistence_provenance": "covered",
       "sdk_headless": "covered"
     },
     "installer-shell": {
@@ -82,35 +82,35 @@
       "sdk_headless": "covered"
     },
     "runtime-engine-solver": {
-      "runtime_api": "partial",
+      "runtime_api": "covered",
       "solver_execution": "covered",
       "workflow_composition": "covered",
       "validation": "covered",
       "benchmark": "covered",
       "security": "covered",
-      "persistence_provenance": "partial",
+      "persistence_provenance": "covered",
       "sdk_headless": "partial"
     },
     "runtime-agent-cli": {
       "runtime_api": "covered",
       "solver_execution": "covered",
-      "workflow_composition": "partial",
-      "validation": "partial",
-      "benchmark": "covered",
-      "security": "covered",
-      "persistence_provenance": "partial",
-      "deployment_update": "covered",
-      "sdk_headless": "partial"
-    },
-    "runtime-installer": {
-      "runtime_api": "partial",
-      "workflow_composition": "partial",
+      "workflow_composition": "covered",
       "validation": "covered",
-      "benchmark": "partial",
+      "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered",
-      "sdk_headless": "partial"
+      "sdk_headless": "covered"
+    },
+    "runtime-installer": {
+      "runtime_api": "covered",
+      "workflow_composition": "covered",
+      "validation": "covered",
+      "benchmark": "covered",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "deployment_update": "covered",
+      "sdk_headless": "covered"
     },
     "sdk-headless": {
       "runtime_api": "covered",
@@ -118,20 +118,20 @@
       "workflow_composition": "covered",
       "validation": "covered",
       "benchmark": "partial",
-      "security": "partial",
-      "persistence_provenance": "partial",
+      "security": "covered",
+      "persistence_provenance": "covered",
       "sdk_headless": "covered"
     },
     "verification-evidence": {
-      "runtime_api": "partial",
-      "solver_execution": "partial",
-      "workflow_composition": "partial",
+      "runtime_api": "covered",
+      "solver_execution": "covered",
+      "workflow_composition": "covered",
       "validation": "covered",
       "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
-      "deployment_update": "partial",
-      "sdk_headless": "partial"
+      "deployment_update": "covered",
+      "sdk_headless": "covered"
     }
   }
 }

@@ -177,9 +177,26 @@ fn describes_operator_task_ir_rpc_method() {
     let AgentReply::Stream(_, final_response) =
         handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
 
+    let result = final_response.result.expect("descriptor result");
+    assert_eq!(
+        result["headless_bridge"]["schema_version"],
+        "kyuubiki.agent-headless-bridge/v1"
+    );
+    assert_eq!(
+        result["headless_bridge"]["headless_entrypoints"][0]["rpc_method"],
+        "RunOperatorTaskIr"
+    );
+    assert_eq!(
+        result["headless_bridge"]["workflow_composition"]["accepts_language_neutral_task_ir"],
+        true
+    );
+    assert_eq!(
+        result["headless_bridge"]["sdk_contract"]["stable_descriptor_field"],
+        "headless_bridge"
+    );
+
     let descriptor: AgentDescriptor =
-        serde_json::from_value(final_response.result.expect("descriptor result"))
-            .expect("agent descriptor should decode");
+        serde_json::from_value(result).expect("agent descriptor should decode");
 
     assert!(
         descriptor
@@ -245,6 +262,33 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
     assert_eq!(
         result["package_fetch_request"]["schema_version"],
         "kyuubiki.operator-package-fetch-request/v1"
+    );
+    assert_eq!(
+        result["validation_receipt"]["schema_version"],
+        "kyuubiki.agent-operator-task-validation/v1"
+    );
+    assert_eq!(result["validation_receipt"]["digest_verified"], true);
+    assert_eq!(
+        result["validation_receipt"]["execution_program_verified"],
+        true
+    );
+    assert_eq!(result["validation_receipt"]["validation_status"], "blocked");
+    assert_eq!(
+        result["validation_receipt"]["blocked_reason"],
+        OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
+    );
+    assert_eq!(
+        result["provenance_receipt"]["schema_version"],
+        "kyuubiki.agent-operator-task-provenance/v1"
+    );
+    assert_eq!(result["provenance_receipt"]["retention_scope"], "job");
+    assert_eq!(
+        result["provenance_receipt"]["lineage"]["digest_verified"],
+        true
+    );
+    assert_eq!(
+        result["provenance_receipt"]["operator_package_runtime_attached"],
+        false
     );
     assert_eq!(
         result["package_fetch_request"]["request_status"],
@@ -378,6 +422,31 @@ fn operator_task_runtime_can_report_attached_package_host_readiness() {
     assert_eq!(
         result["package_fetch_request"]["target"]["host_id"],
         "agent-local/operator-host"
+    );
+    assert_eq!(
+        result["validation_receipt"]["validation_status"],
+        "accepted"
+    );
+    assert!(result["validation_receipt"]["blocked_reason"].is_null());
+    assert_eq!(
+        result["validation_receipt"]["operator_package_runtime_attached"],
+        true
+    );
+    assert_eq!(
+        result["provenance_receipt"]["schema_version"],
+        "kyuubiki.agent-operator-task-provenance/v1"
+    );
+    assert_eq!(
+        result["provenance_receipt"]["requested_mode"],
+        OPERATOR_TASK_MODE_EXECUTE
+    );
+    assert_eq!(
+        result["provenance_receipt"]["operator_package_runtime_attached"],
+        true
+    );
+    assert_eq!(
+        result["provenance_receipt"]["lineage"]["preview_digest"],
+        result["task_digest"]
     );
     assert_eq!(
         result["package_fetch_request"]["target"]["packages_root"],

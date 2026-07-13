@@ -9,6 +9,7 @@ use kyuubiki_protocol::{
 use crate::agent_deployment::{
     AgentDeploymentReadiness, build_agent_deployment_readiness, default_agent_deployment_readiness,
 };
+use crate::agent_headless_bridge::agent_headless_bridge_manifest;
 use crate::agent_watchdog;
 use crate::config::AgentConfig;
 use crate::operator_task_runtime::{
@@ -145,6 +146,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "tags": registration_tags(config),
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
+        "headless_bridge": agent_headless_bridge_manifest(),
         "operator_package_runtime": operator_package_runtime_snapshot_for_config(config),
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
@@ -165,6 +167,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         object.insert(
             "operator_package_runtime".to_string(),
             operator_package_runtime_snapshot(),
+        );
+        object.insert(
+            "headless_bridge".to_string(),
+            agent_headless_bridge_manifest(),
         );
         object.insert(
             "deployment_readiness".to_string(),

@@ -4,12 +4,14 @@ use std::sync::{Arc, Mutex};
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 
 mod agent_deployment;
+mod agent_headless_bridge;
 mod agent_http;
 mod agent_mesh;
 mod agent_state;
 mod agent_watchdog;
 mod config;
 mod operator_task_builtin;
+mod operator_task_receipts;
 mod operator_task_runtime;
 mod rpc;
 mod transport;

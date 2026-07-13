@@ -1,7 +1,7 @@
 use crate::{
     EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
-    is_supported_workflow_operator, solve, supported_workflow_operator_ids,
-    workflow_solve_executor::run_solve_operator,
+    is_supported_workflow_operator, solve, solve_operator_runtime_manifest,
+    supported_workflow_operator_ids, workflow_solve_executor::run_solve_operator,
 };
 use kyuubiki_protocol::{
     AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput,
@@ -55,6 +55,45 @@ fn runs_stokes_flow_through_workflow_solve_executor() {
     assert_eq!(result["elements"][0]["id"], "sf0");
     assert!(result["max_velocity"].as_f64().unwrap() > 0.0);
     assert!(result["max_reynolds_number"].as_f64().unwrap() > 0.0);
+    assert_eq!(
+        result["_solver_provenance"]["schema_version"],
+        "kyuubiki.engine-solver-provenance/v1"
+    );
+    assert_eq!(
+        result["_solver_provenance"]["operator_id"],
+        "solve.stokes_flow_quad_2d"
+    );
+    assert_eq!(
+        result["_solver_provenance"]["result_type"],
+        "result/stokes_flow_quad_2d"
+    );
+    assert_eq!(
+        result["_solver_provenance"]["lineage"]["solver_dispatch_verified"],
+        true
+    );
+}
+
+#[test]
+fn exposes_solve_operator_runtime_manifest() {
+    let manifest = solve_operator_runtime_manifest();
+
+    assert_eq!(
+        manifest["schema_version"],
+        "kyuubiki.engine-solve-operator-runtime-manifest/v1"
+    );
+    assert_eq!(manifest["runtime_api"], "workflow_solve_executor");
+    assert!(
+        manifest["operator_count"].as_u64().unwrap()
+            >= crate::workflow_solve_executor::SUPPORTED_SOLVE_OPERATORS.len() as u64
+    );
+    assert_eq!(
+        manifest["execution_contract"]["result_provenance_field"],
+        "_solver_provenance"
+    );
+    assert!(manifest["operators"].as_array().unwrap().iter().any(
+        |operator| operator["operator_id"] == "solve.stokes_flow_quad_2d"
+            && operator["result_type"] == "result/stokes_flow_quad_2d"
+    ));
 }
 
 #[test]

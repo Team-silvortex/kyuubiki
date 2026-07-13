@@ -11,6 +11,7 @@ mod credential_storage;
 mod cross_platform;
 mod embedded_runtime;
 mod exports;
+mod headless_surface;
 mod integrity;
 mod integrity_contract;
 mod integrity_versions;

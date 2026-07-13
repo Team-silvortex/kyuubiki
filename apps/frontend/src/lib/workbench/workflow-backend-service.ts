@@ -4,6 +4,8 @@ import { defaultWorkbenchRuntimeBackedBackendServices } from "@/lib/workbench/ba
 import {
   createWorkflowBackendService,
   type WorkbenchWorkflowBackendService,
+  type WorkbenchWorkflowPreflightInput,
+  type WorkbenchWorkflowPreflightResult,
   type WorkbenchWorkflowBackendTransport,
   type WorkbenchWorkflowSubmitInput,
 } from "@/lib/workbench/workflow-backend-service-core";
@@ -11,6 +13,8 @@ import {
 export {
   createWorkflowBackendService,
   type WorkbenchWorkflowBackendService,
+  type WorkbenchWorkflowPreflightInput,
+  type WorkbenchWorkflowPreflightResult,
   type WorkbenchWorkflowBackendTransport,
   type WorkbenchWorkflowSubmitInput,
 };

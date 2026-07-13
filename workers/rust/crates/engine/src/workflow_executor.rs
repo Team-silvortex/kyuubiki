@@ -8,7 +8,7 @@ use crate::{
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-pub use crate::workflow_solve_executor::run_solve_operator;
+pub use crate::workflow_solve_executor::{run_solve_operator, solve_operator_runtime_manifest};
 
 const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "bridge.temperature_field_to_thermo_quad_2d",

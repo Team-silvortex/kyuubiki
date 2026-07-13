@@ -14,6 +14,11 @@ pub use crate::cross_platform::{
 pub use crate::embedded_runtime::{
     EmbeddedRuntimeReport, build_embedded_runtime_manifest, embedded_runtime_report,
 };
+pub use crate::headless_surface::{
+    INSTALLER_HEADLESS_SURFACE_SCHEMA_VERSION, InstallerBenchmarkLane, InstallerHeadlessEntrypoint,
+    InstallerHeadlessRuntimeApi, InstallerHeadlessSurfaceManifest, InstallerWorkflowComposition,
+    installer_headless_surface_manifest,
+};
 pub use crate::integrity::{
     InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
     ResidueCandidate, VersionAlignmentCheck, installation_integrity_report, repair_installation,

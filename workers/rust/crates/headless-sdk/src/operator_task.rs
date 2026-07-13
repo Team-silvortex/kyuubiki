@@ -5,10 +5,12 @@ use kyuubiki_protocol::{
 };
 use serde_json::{Map, Value};
 
+use crate::operator_task_provenance::operator_task_provenance_profile;
 use crate::operator_task_readiness::{
     OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OPERATOR_TASK_FETCH_STAGE, detached_execution_plan,
     detached_execution_readiness, package_fetch_request_preview,
 };
+use crate::operator_task_security::operator_task_security_profile;
 
 pub const OPERATOR_TASK_PREPARE_ACTION: &str = "operator_task_prepare";
 pub const OPERATOR_TASK_EXECUTE_ACTION: &str = "operator_task_execute";
@@ -46,6 +48,14 @@ fn prepare_operator_task_payload_checked(
         (
             "task_execution_preview".to_string(),
             task_execution_preview_payload(&execution_preview),
+        ),
+        (
+            "security_profile".to_string(),
+            operator_task_security_profile(&summary, &execution_preview),
+        ),
+        (
+            "provenance_profile".to_string(),
+            operator_task_provenance_profile(&summary, &execution_preview),
         ),
         ("task_digest".to_string(), Value::from(summary.task_digest)),
         ("task_id".to_string(), Value::from(summary.task_id)),

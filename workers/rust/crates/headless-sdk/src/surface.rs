@@ -1,6 +1,7 @@
 use crate::{
     action_capability_manifest, all_action_contracts, all_direct_fem_routes,
-    list_template_categories, list_templates, material_study_catalog, material_workflow_catalog,
+    engine_solver_headless_bridge_manifest, list_template_categories, list_templates,
+    material_study_catalog, material_workflow_catalog,
 };
 use serde::Serialize;
 
@@ -29,6 +30,7 @@ pub struct HeadlessSdkSurfaceCounts {
     pub action_contracts: usize,
     pub action_capabilities: usize,
     pub direct_fem_routes: usize,
+    pub engine_solver_bridge_routes: usize,
     pub workflow_templates: usize,
     pub template_categories: usize,
     pub material_studies: usize,
@@ -50,6 +52,7 @@ pub fn headless_sdk_surface_counts() -> HeadlessSdkSurfaceCounts {
         action_contracts: all_action_contracts().len(),
         action_capabilities: action_capability_manifest().len(),
         direct_fem_routes: all_direct_fem_routes().len(),
+        engine_solver_bridge_routes: engine_solver_headless_bridge_manifest().route_count,
         workflow_templates: list_templates().len(),
         template_categories: list_template_categories().len(),
         material_studies: material_study_catalog().len(),
@@ -95,13 +98,14 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
         },
         HeadlessSdkSurfaceArea {
             id: "direct_fem",
-            title: "Direct FEM routes",
-            role: "GUI-independent solver action to control-plane route mapping for agent and SDK callers.",
-            modules: &["direct_fem"],
+            title: "Direct FEM and engine solver bridge",
+            role: "GUI-independent solver action to control-plane route and engine solver operator mapping.",
+            modules: &["direct_fem", "engine_solver_bridge"],
             anchor_exports: &[
                 "all_direct_fem_routes",
                 "direct_fem_submit_route",
                 "direct_fem_capability_manifest",
+                "engine_solver_headless_bridge_manifest",
             ],
         },
         HeadlessSdkSurfaceArea {
@@ -187,8 +191,9 @@ mod tests {
         headless_sdk_surface_areas, headless_sdk_surface_manifest,
     };
     use crate::{
-        action_capability_manifest, all_action_contracts, all_direct_fem_routes, list_templates,
-        material_study_catalog, material_workflow_catalog,
+        action_capability_manifest, all_action_contracts, all_direct_fem_routes,
+        engine_solver_headless_bridge_manifest, list_templates, material_study_catalog,
+        material_workflow_catalog,
     };
     use std::collections::BTreeSet;
 
@@ -208,6 +213,10 @@ mod tests {
         assert_eq!(
             manifest.counts.direct_fem_routes,
             all_direct_fem_routes().len()
+        );
+        assert_eq!(
+            manifest.counts.engine_solver_bridge_routes,
+            engine_solver_headless_bridge_manifest().route_count
         );
         assert_eq!(manifest.counts.workflow_templates, list_templates().len());
         assert_eq!(

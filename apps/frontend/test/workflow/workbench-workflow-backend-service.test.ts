@@ -105,3 +105,59 @@ test("orchestrated workflow backend keeps catalog/operator/job reads behind the 
 
   assert.deepEqual(calls, ["catalog:thermal", "operators:solve", "job:job-42"]);
 });
+
+test("workflow backend service exposes injectable preflight seam", async () => {
+  const service = createWorkflowBackendService({
+    fetchJob: async <TResult>(jobId: string) => jobEnvelope(jobId) as JobEnvelope<TResult>,
+    fetchCatalog: async () => ({ workflows: [] }) satisfies WorkflowCatalogPayload,
+    fetchOperators: async () => ({ modules: [], operators: [] }) satisfies WorkflowOperatorCatalogPayload,
+    preflightWorkflow: async ({ workflow }) => ({
+      schema_version: "kyuubiki.workbench-workflow-preflight/v1",
+      ok: true,
+      status: "ready",
+      workflow_id: workflow.id,
+      issues: [],
+    }),
+    submitCatalogJob: async () => jobEnvelope("catalog-job"),
+    submitGraphJob: async () => jobEnvelope("graph-job"),
+  });
+
+  const result = await service.preflightWorkflow({
+    workflow: {
+      entry_inputs: [],
+      id: "workflow.ready",
+      name: "Ready",
+      output_artifacts: [],
+      summary: "ready",
+      version: "1.19.0",
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.workflow_id, "workflow.ready");
+});
+
+test("workflow backend service reports unconfigured preflight seam", async () => {
+  const service = createWorkflowBackendService({
+    fetchJob: async <TResult>(jobId: string) => jobEnvelope(jobId) as JobEnvelope<TResult>,
+    fetchCatalog: async () => ({ workflows: [] }) satisfies WorkflowCatalogPayload,
+    fetchOperators: async () => ({ modules: [], operators: [] }) satisfies WorkflowOperatorCatalogPayload,
+    submitCatalogJob: async () => jobEnvelope("catalog-job"),
+    submitGraphJob: async () => jobEnvelope("graph-job"),
+  });
+
+  const result = await service.preflightWorkflow({
+    workflow: {
+      entry_inputs: [],
+      id: "workflow.not-configured",
+      name: "Not configured",
+      output_artifacts: [],
+      summary: "blocked",
+      version: "1.19.0",
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.issues[0]?.id, "workflow:preflight:not-configured");
+});

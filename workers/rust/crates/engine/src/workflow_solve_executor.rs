@@ -46,6 +46,37 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.thermal_frame_2d",
 ];
 
+const SOLVER_PROVENANCE_SCHEMA_VERSION: &str = "kyuubiki.engine-solver-provenance/v1";
+const SOLVE_OPERATOR_RUNTIME_MANIFEST_SCHEMA_VERSION: &str =
+    "kyuubiki.engine-solve-operator-runtime-manifest/v1";
+
+pub fn solve_operator_runtime_manifest() -> Value {
+    let operators = SUPPORTED_SOLVE_OPERATORS
+        .iter()
+        .map(|operator_id| {
+            serde_json::json!({
+                "operator_id": operator_id,
+                "result_type": result_type_for_operator(operator_id),
+                "provenance_schema": SOLVER_PROVENANCE_SCHEMA_VERSION,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::json!({
+        "schema_version": SOLVE_OPERATOR_RUNTIME_MANIFEST_SCHEMA_VERSION,
+        "runtime_owner": "runtime_engine_solver",
+        "runtime_api": "workflow_solve_executor",
+        "operator_count": operators.len(),
+        "operators": operators,
+        "provenance_schema": SOLVER_PROVENANCE_SCHEMA_VERSION,
+        "execution_contract": {
+            "input_encoding": "json",
+            "output_encoding": "json",
+            "result_provenance_field": "_solver_provenance"
+        }
+    })
+}
+
 pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, String> {
     match operator_id {
         "solve.bar_1d" => encode_solve_result(
@@ -411,5 +442,40 @@ where
 {
     let selected = selector(result)
         .ok_or_else(|| format!("{operator_id} returned an unexpected result variant"))?;
-    serde_json::to_value(selected).map_err(|err| err.to_string())
+    let mut encoded = serde_json::to_value(selected).map_err(|err| err.to_string())?;
+    attach_solver_provenance(&mut encoded, operator_id);
+    Ok(encoded)
+}
+
+fn attach_solver_provenance(result: &mut Value, operator_id: &str) {
+    let Some(object) = result.as_object_mut() else {
+        return;
+    };
+    object.insert(
+        "_solver_provenance".to_string(),
+        serde_json::json!({
+            "schema_version": SOLVER_PROVENANCE_SCHEMA_VERSION,
+            "provenance_owner": "runtime_engine_solver",
+            "operator_id": operator_id,
+            "result_type": result_type_for_operator(operator_id),
+            "engine": "kyuubiki-engine",
+            "execution_path": "workflow_solve_executor",
+            "persistence_hint": {
+                "artifact_type": result_type_for_operator(operator_id),
+                "recommended_retention_scope": "run",
+                "stable_key_fields": ["operator_id", "result_type"]
+            },
+            "lineage": {
+                "solver_dispatch_verified": true,
+                "result_serialized": true
+            }
+        }),
+    );
+}
+
+fn result_type_for_operator(operator_id: &str) -> String {
+    operator_id
+        .strip_prefix("solve.")
+        .map(|suffix| format!("result/{}", suffix.replace('.', "_")))
+        .unwrap_or_else(|| "result/unknown".to_string())
 }

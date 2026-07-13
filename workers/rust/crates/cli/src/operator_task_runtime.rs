@@ -6,6 +6,9 @@ use crate::config::AgentConfig;
 use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
 };
+use crate::operator_task_receipts::{
+    operator_task_provenance_receipt, operator_task_validation_receipt,
+};
 use kyuubiki_protocol::{
     OperatorTaskDigestError, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
     OperatorTaskSummaryError, OperatorTaskSummaryErrorCode, preview_operator_task_execution,
@@ -101,7 +104,7 @@ impl OperatorPackageRuntimeBinding {
         }
     }
 
-    fn is_attached(&self) -> bool {
+    pub(crate) fn is_attached(&self) -> bool {
         match self {
             Self::Detached => false,
             Self::Attached(_) => true,
@@ -231,6 +234,8 @@ fn build_preflight_payload(
         "operator_task_ir_status": OPERATOR_TASK_STATUS_VERIFIED_PENDING,
         "execution_runtime_status": execution_runtime_status(&package_runtime),
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
+        "validation_receipt": operator_task_validation_receipt(&summary, &preview, &package_runtime),
+        "provenance_receipt": operator_task_provenance_receipt(&summary, &preview, mode, &package_runtime),
         "package_fetch_request": package_fetch_request(&summary, &package_runtime),
         "operator_package_runtime_ready": package_runtime.is_attached(),
         "blocked_stage": blocked_stage(&package_runtime),
@@ -268,6 +273,13 @@ fn build_agent_native_execution_payload(
         "operator_task_ir_status": OPERATOR_TASK_STATUS_EXECUTED,
         "execution_runtime_status": OPERATOR_TASK_AGENT_NATIVE_STATUS,
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
+        "validation_receipt": operator_task_validation_receipt(&summary, &preview, &package_runtime),
+        "provenance_receipt": operator_task_provenance_receipt(
+            &summary,
+            &preview,
+            OPERATOR_TASK_MODE_EXECUTE,
+            &package_runtime
+        ),
         "package_fetch_request": Value::Null,
         "operator_package_runtime_ready": package_runtime.is_attached(),
         "blocked_stage": Value::Null,

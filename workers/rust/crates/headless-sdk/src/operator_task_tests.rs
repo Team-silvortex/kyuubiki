@@ -31,6 +31,41 @@ fn prepare_operator_task_payload_returns_execution_summary() {
         preview["task_digest"],
         "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
     );
+    assert_eq!(
+        preview["security_profile"]["schema_version"],
+        crate::HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION
+    );
+    assert_eq!(
+        preview["security_profile"]["security_owner"],
+        "headless_sdk"
+    );
+    assert_eq!(preview["security_profile"]["package_fetch_required"], true);
+    assert_eq!(preview["security_profile"]["offline_runnable"], false);
+    assert_eq!(
+        preview["security_profile"]["requires_runtime_attachment"],
+        true
+    );
+    assert_eq!(
+        preview["security_profile"]["trust_boundaries"][0],
+        "central_operator_library"
+    );
+    assert_eq!(
+        preview["provenance_profile"]["schema_version"],
+        crate::HEADLESS_OPERATOR_TASK_PROVENANCE_SCHEMA_VERSION
+    );
+    assert_eq!(
+        preview["provenance_profile"]["provenance_owner"],
+        "headless_sdk"
+    );
+    assert_eq!(preview["provenance_profile"]["retention_scope"], "job");
+    assert_eq!(
+        preview["provenance_profile"]["lineage"]["digest_verified"],
+        true
+    );
+    assert_eq!(
+        preview["provenance_profile"]["lineage"]["preview_digest"],
+        preview["task_digest"]
+    );
 }
 
 #[test]
@@ -157,6 +192,22 @@ fn operator_task_execute_preview_verifies_before_runtime_dispatch() {
     assert_eq!(preview["task_execution_preview"]["offline_runnable"], false);
     assert_eq!(preview["execution_plan"][2]["stage"], "fetch_package");
     assert_eq!(preview["execution_plan"][2]["gate"], "blocked");
+    assert_eq!(
+        preview["security_profile"]["allowed_execution_mode"],
+        "orchestra_fetch"
+    );
+    assert_eq!(
+        preview["security_profile"]["trust_boundaries"][1],
+        "operator_package_runtime"
+    );
+    assert_eq!(
+        preview["provenance_profile"]["dispatch_route"],
+        "fetch_package_then_operator_task"
+    );
+    assert_eq!(
+        preview["provenance_profile"]["package_ref"],
+        "orchestra://operator-package/transform.fixture"
+    );
 }
 
 #[test]

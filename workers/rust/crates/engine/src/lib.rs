@@ -75,7 +75,8 @@ pub use operator_sdk_host::{
 pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 pub use workflow::run_workflow_graph;
 pub use workflow_executor::{
-    is_supported_workflow_operator, run_solve_operator, supported_workflow_operator_ids,
+    is_supported_workflow_operator, run_solve_operator, solve_operator_runtime_manifest,
+    supported_workflow_operator_ids,
 };
 
 use kyuubiki_protocol::{

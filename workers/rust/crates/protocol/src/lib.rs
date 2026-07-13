@@ -1,4 +1,5 @@
 mod analysis;
+mod benchmark_surface;
 mod job;
 mod operator;
 mod operator_task_ir;
@@ -25,6 +26,10 @@ mod types {
 }
 
 pub use analysis::{AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse};
+pub use benchmark_surface::{
+    PROTOCOL_BENCHMARK_SURFACE_SCHEMA_VERSION, ProtocolBenchmarkLane, ProtocolBenchmarkSurface,
+    protocol_benchmark_surface,
+};
 pub use job::{Job, JobStatus, ProgressEvent};
 pub use operator::{
     OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
