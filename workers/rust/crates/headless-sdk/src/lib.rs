@@ -49,6 +49,9 @@ mod operator_task;
 mod operator_task_readiness;
 #[cfg(test)]
 mod operator_task_tests;
+mod operator_task_validation;
+#[cfg(test)]
+mod operator_task_validation_tests;
 mod plan;
 mod run;
 mod service_executor;
@@ -162,6 +165,10 @@ pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
     is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,
     preview_operator_task_execute_payload,
+};
+pub use operator_task_validation::{
+    HeadlessOperatorTaskValidationReport, validate_operator_task_for_agent,
+    validate_operator_task_for_builtin_agent,
 };
 pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,

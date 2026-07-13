@@ -21,16 +21,17 @@ Read these first, in order:
 2. `book-manifest.json`
 3. `navigation-matrix.html`
 4. `current-line.md`
-5. `system-overview.md`
-6. `module-architecture.md`
-7. `project-architecture-organization.md`
-8. `protocols.md`
-9. `repository-structure.md`
-10. `testing-and-ci.md`
-11. `maintenance.md`
-12. `installer-remote-control.md`
-13. `minimal-industrial-closure.md`
-14. `weakness-roadmap.md`
+5. `current-architecture-map.md`
+6. `system-overview.md`
+7. `module-architecture.md`
+8. `project-architecture-organization.md`
+9. `protocols.md`
+10. `repository-structure.md`
+11. `testing-and-ci.md`
+12. `maintenance.md`
+13. `installer-remote-control.md`
+14. `minimal-industrial-closure.md`
+15. `weakness-roadmap.md`
 
 For the current `1.19.x` hardening path, keep four threads mentally linked:
 
@@ -155,6 +156,9 @@ Then branch by intent:
 - `current-line.md`
   Single-entry explanation of the current product line, boundaries, and
   release posture.
+- `current-architecture-map.md`
+  Compact current architecture map across product shells, Orchestra, agents,
+  runtime crates, SDKs, contracts, verification lanes, and authority modes.
 - `system-overview.md`
   Full runtime map across GUI, control plane, and solver data plane.
 - `module-architecture.md`

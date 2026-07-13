@@ -2,6 +2,9 @@ use crate::linear_dense::{solve_linear_system, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
 
+#[path = "linear_algebra_scaling.rs"]
+mod scaling;
+
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
     rows: Vec<Vec<(usize, f64)>>,
@@ -411,7 +414,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
     if matrix.size() != size {
         return Err("matrix dimensions do not match vector".to_string());
     }
-    validate_sparse_system_finite(matrix, rhs)?;
+    scaling::validate_sparse_system_finite(matrix, rhs)?;
     if size == 0 {
         return Ok(SpdSolveProfile {
             solution: Vec::new(),
@@ -432,19 +435,19 @@ pub(crate) fn solve_spd_system_profile_with_options(
             }
         });
     }
-    let scaling = diagonal_sparse_scaling(matrix);
-    let scaled_rhs = scale_sparse_rhs(rhs, &scaling);
-    let diagonal_scale = average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
+    let scaling = scaling::diagonal_sparse_scaling(matrix);
+    let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling);
+    let diagonal_scale = scaling::average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
     let compressed = matrix.compress_scaled(&scaling);
 
     match solve_spd_compressed(&compressed, &scaled_rhs, matrix, options.preconditioner) {
         Ok(profile) => Ok(profile),
         Err(error) => {
-            let scaled_matrix = scale_sparse_matrix(matrix, &scaling);
+            let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 let regularized =
-                    regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
+                    scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
                 let compressed_regularized = regularized.compress();
 
                 if let Ok(profile) = solve_spd_compressed(
@@ -453,14 +456,14 @@ pub(crate) fn solve_spd_system_profile_with_options(
                     &regularized,
                     options.preconditioner,
                 ) {
-                    return Ok(unscale_profile(profile, &scaling));
+                    return Ok(scaling::unscale_profile(profile, &scaling));
                 }
             }
 
             Err(error)
         }
     }
-    .map(|profile| unscale_profile(profile, &scaling))
+    .map(|profile| scaling::unscale_profile(profile, &scaling))
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {
@@ -480,106 +483,4 @@ pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
         }
     }
     dense
-}
-
-fn diagonal_sparse_scaling(matrix: &SparseMatrix) -> Vec<f64> {
-    let size = matrix.size();
-    let mut scaling = vec![1.0; size];
-
-    for (index, row) in matrix.rows.iter().enumerate() {
-        let diagonal = row
-            .iter()
-            .find_map(|(column, value)| (*column == index).then_some(*value))
-            .unwrap_or(0.0)
-            .abs();
-        scaling[index] = if diagonal > 1.0e-12 {
-            diagonal.sqrt().recip()
-        } else {
-            1.0
-        };
-    }
-
-    scaling
-}
-
-fn scale_sparse_matrix(matrix: &SparseMatrix, scaling: &[f64]) -> SparseMatrix {
-    let size = matrix.size();
-    let mut scaled =
-        SparseMatrix::with_uniform_row_capacity(size, matrix.average_row_non_zero_hint());
-    for (row_index, row) in matrix.rows.iter().enumerate() {
-        let row_scale = scaling[row_index];
-        for &(column, value) in row {
-            scaled.push_sorted_entry(row_index, column, value * row_scale * scaling[column]);
-        }
-    }
-    scaled
-}
-
-fn scale_sparse_rhs(rhs: &[f64], scaling: &[f64]) -> Vec<f64> {
-    rhs.iter()
-        .enumerate()
-        .map(|(index, value)| value * scaling[index])
-        .collect()
-}
-
-fn unscale_solution(solution: &[f64], scaling: &[f64]) -> Vec<f64> {
-    solution
-        .iter()
-        .enumerate()
-        .map(|(index, value)| value * scaling[index])
-        .collect()
-}
-
-fn unscale_profile(profile: SpdSolveProfile, scaling: &[f64]) -> SpdSolveProfile {
-    SpdSolveProfile {
-        solution: unscale_solution(&profile.solution, scaling),
-        iterations: profile.iterations,
-        matrix_non_zero_count: profile.matrix_non_zero_count,
-        residual_norm: profile.residual_norm,
-        stages: profile.stages,
-    }
-}
-
-fn average_scaled_diagonal_magnitude(matrix: &SparseMatrix, scaling: &[f64]) -> f64 {
-    let size = matrix.size().max(1);
-    let diagonal_sum = matrix
-        .rows
-        .iter()
-        .enumerate()
-        .map(|(index, _)| matrix.diagonal_value(index).abs() * scaling[index] * scaling[index])
-        .sum::<f64>();
-
-    diagonal_sum / size as f64
-}
-
-fn regularize_sparse_diagonal(matrix: &SparseMatrix, epsilon: f64) -> SparseMatrix {
-    let mut regularized = SparseMatrix::with_uniform_row_capacity(
-        matrix.size(),
-        matrix.average_row_non_zero_hint() + 1,
-    );
-
-    for (row_index, row) in matrix.rows.iter().enumerate() {
-        regularized.rows[row_index].extend(row.iter().copied());
-    }
-
-    for row in 0..regularized.size() {
-        regularized.add_at(row, row, epsilon);
-    }
-
-    regularized
-}
-
-fn validate_sparse_system_finite(matrix: &SparseMatrix, rhs: &[f64]) -> Result<(), String> {
-    if rhs.iter().any(|value| !value.is_finite()) {
-        return Err("linear system vector contains non-finite value".to_string());
-    }
-    if matrix
-        .rows
-        .iter()
-        .flatten()
-        .any(|(_, value)| !value.is_finite())
-    {
-        return Err("linear system matrix contains non-finite value".to_string());
-    }
-    Ok(())
 }

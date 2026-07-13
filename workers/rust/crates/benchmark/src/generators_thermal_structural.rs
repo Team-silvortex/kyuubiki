@@ -1,12 +1,17 @@
+#[path = "generators_thermal_structural_frames.rs"]
+mod frames;
+
+pub(crate) use frames::{
+    generate_frame_2d_case, generate_frame_3d_case, generate_thermal_frame_2d_case,
+    generate_thermal_frame_3d_case,
+};
+
 use kyuubiki_protocol::{
-    Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveThermalBar1dRequest, SolveThermalFrame2dRequest,
-    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalBar1dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
     SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, ThermalBar1dElementInput,
-    ThermalBar1dNodeInput, ThermalFrame2dElementInput, ThermalFrame2dNodeInput,
-    ThermalFrame3dElementInput, ThermalFrame3dNodeInput, ThermalPlaneNodeInput,
-    ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput, ThermalTruss2dElementInput,
-    ThermalTruss2dNodeInput, ThermalTruss3dElementInput, ThermalTruss3dNodeInput,
+    ThermalBar1dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+    ThermalPlaneTriangleElementInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
+    ThermalTruss3dElementInput, ThermalTruss3dNodeInput,
 };
 
 pub(crate) fn generate_thermal_bar_case(elements: usize) -> SolveThermalBar1dRequest {
@@ -32,128 +37,170 @@ pub(crate) fn generate_thermal_bar_case(elements: usize) -> SolveThermalBar1dReq
     SolveThermalBar1dRequest { nodes, elements }
 }
 
-pub(crate) fn generate_thermal_truss_2d_case() -> SolveThermalTruss2dRequest {
-    SolveThermalTruss2dRequest {
-        nodes: vec![
-            thermal_truss_2d_node("t0", 0.0, 0.0, true, true, 0.0, 0.0, 20.0),
-            thermal_truss_2d_node("t1", 2.0, 0.0, true, true, 0.0, 0.0, 20.0),
-            thermal_truss_2d_node("top", 1.0, 1.4, false, false, 400.0, -900.0, 45.0),
-        ],
-        elements: vec![
-            thermal_truss_2d_element("tt0", 0, 2),
-            thermal_truss_2d_element("tt1", 1, 2),
-            thermal_truss_2d_element("tt2", 0, 1),
-        ],
+pub(crate) fn generate_thermal_lattice_truss_2d_case(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    height: f64,
+) -> SolveThermalTruss2dRequest {
+    let dx = width / nx.max(1) as f64;
+    let dy = height / ny.max(1) as f64;
+    let mut nodes = Vec::with_capacity((nx + 1) * (ny + 1));
+    let mut elements = Vec::new();
+    let load_i = nx / 2;
+
+    for row in 0..=ny {
+        for col in 0..=nx {
+            let index = grid_index(row, col, nx);
+            nodes.push(thermal_truss_2d_node(
+                &format!("tt2n{index}"),
+                col as f64 * dx,
+                row as f64 * dy,
+                row == 0 && col == 0,
+                row == 0 && (col == 0 || col == nx),
+                0.0,
+                if row == ny && col.abs_diff(load_i) <= 1 {
+                    -600.0
+                } else {
+                    0.0
+                },
+                20.0 + 35.0 * row as f64 / ny.max(1) as f64,
+            ));
+        }
     }
+
+    for row in 0..=ny {
+        for col in 0..=nx {
+            let index = grid_index(row, col, nx);
+            if col < nx {
+                elements.push(thermal_truss_2d_element(
+                    &format!("tt2hx{index}"),
+                    index,
+                    index + 1,
+                ));
+            }
+            if row < ny {
+                elements.push(thermal_truss_2d_element(
+                    &format!("tt2vy{index}"),
+                    index,
+                    index + nx + 1,
+                ));
+            }
+            if col < nx && row < ny {
+                elements.push(thermal_truss_2d_element(
+                    &format!("tt2d1{index}"),
+                    index,
+                    index + nx + 2,
+                ));
+                elements.push(thermal_truss_2d_element(
+                    &format!("tt2d2{index}"),
+                    index + 1,
+                    index + nx + 1,
+                ));
+            }
+        }
+    }
+
+    SolveThermalTruss2dRequest { nodes, elements }
 }
 
-pub(crate) fn generate_thermal_truss_3d_case() -> SolveThermalTruss3dRequest {
-    SolveThermalTruss3dRequest {
-        nodes: vec![
-            thermal_truss_3d_node("a", 0.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0, 15.0),
-            thermal_truss_3d_node("b", 1.6, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0, 15.0),
-            thermal_truss_3d_node("c", 0.0, 1.4, 0.0, true, true, true, 0.0, 0.0, 0.0, 15.0),
-            thermal_truss_3d_node(
-                "tip", 0.7, 0.5, 1.4, false, false, false, 300.0, -200.0, -1100.0, 42.0,
-            ),
-        ],
-        elements: vec![
-            thermal_truss_3d_element("tt3-0", 0, 3),
-            thermal_truss_3d_element("tt3-1", 1, 3),
-            thermal_truss_3d_element("tt3-2", 2, 3),
-            thermal_truss_3d_element("tt3-3", 0, 1),
-            thermal_truss_3d_element("tt3-4", 1, 2),
-            thermal_truss_3d_element("tt3-5", 2, 0),
-        ],
-    }
-}
+pub(crate) fn generate_thermal_space_truss_3d_case(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    depth: f64,
+    height: f64,
+) -> SolveThermalTruss3dRequest {
+    let dx = width / nx.max(1) as f64;
+    let dy = depth / ny.max(1) as f64;
+    let layer_size = (nx + 1) * (ny + 1);
+    let mut nodes = Vec::with_capacity(layer_size * 2);
+    let mut elements = Vec::new();
 
-pub(crate) fn generate_frame_2d_case() -> SolveFrame2dRequest {
-    SolveFrame2dRequest {
-        nodes: vec![
-            frame_2d_node("f0", 0.0, 0.0, true, 0.0, 0.0, 0.0),
-            frame_2d_node("f1", 2.4, 0.0, false, 0.0, -1000.0, 0.0),
-        ],
-        elements: vec![Frame2dElementInput {
-            id: "f2e0".to_string(),
-            node_i: 0,
-            node_j: 1,
-            area: 0.02,
-            youngs_modulus: 210.0e9,
-            moment_of_inertia: 8.0e-6,
-            section_modulus: 1.6e-4,
-        }],
+    for row in 0..=ny {
+        for col in 0..=nx {
+            let index = grid_index(row, col, nx);
+            nodes.push(thermal_truss_3d_node(
+                &format!("tt3b{index}"),
+                col as f64 * dx,
+                row as f64 * dy,
+                0.0,
+                true,
+                true,
+                true,
+                0.0,
+                0.0,
+                0.0,
+                18.0,
+            ));
+        }
     }
-}
 
-pub(crate) fn generate_frame_3d_case() -> SolveFrame3dRequest {
-    SolveFrame3dRequest {
-        nodes: vec![
-            frame_3d_node("f3-0", 0.0, true, 0.0, 0.0, 0.0),
-            frame_3d_node("f3-1", 2.4, false, 0.0, -1000.0, 0.0),
-        ],
-        elements: vec![Frame3dElementInput {
-            id: "f3e0".to_string(),
-            node_i: 0,
-            node_j: 1,
-            area: 0.02,
-            youngs_modulus: 210.0e9,
-            shear_modulus: 80.0e9,
-            torsion_constant: 5.0e-6,
-            moment_of_inertia_y: 8.0e-6,
-            moment_of_inertia_z: 8.0e-6,
-            section_modulus_y: 1.6e-4,
-            section_modulus_z: 1.6e-4,
-        }],
+    let center_i = nx / 2;
+    let center_j = ny / 2;
+    for row in 0..=ny {
+        for col in 0..=nx {
+            let index = grid_index(row, col, nx);
+            let near_center = col.abs_diff(center_i) + row.abs_diff(center_j) <= 2;
+            nodes.push(thermal_truss_3d_node(
+                &format!("tt3t{index}"),
+                col as f64 * dx,
+                row as f64 * dy,
+                height,
+                false,
+                false,
+                false,
+                0.0,
+                0.0,
+                if near_center { -4_000.0 } else { 0.0 },
+                18.0 + 35.0 * row as f64 / ny.max(1) as f64,
+            ));
+        }
     }
-}
 
-pub(crate) fn generate_thermal_frame_2d_case() -> SolveThermalFrame2dRequest {
-    SolveThermalFrame2dRequest {
-        nodes: vec![
-            thermal_frame_2d_node("tf0", 0.0, true, 35.0),
-            thermal_frame_2d_node("tf1", 2.0, true, 35.0),
-        ],
-        elements: vec![ThermalFrame2dElementInput {
-            id: "tf2e0".to_string(),
-            node_i: 0,
-            node_j: 1,
-            area: 0.02,
-            youngs_modulus: 210.0e9,
-            moment_of_inertia: 8.0e-6,
-            section_modulus: 1.6e-4,
-            thermal_expansion: 12.0e-6,
-            section_depth: 0.2,
-            temperature_gradient_y: 30.0,
-        }],
+    for row in 0..=ny {
+        for col in 0..=nx {
+            let base = grid_index(row, col, nx);
+            let top = layer_size + base;
+            elements.push(thermal_truss_3d_element(&format!("tt3v{base}"), base, top));
+            if col < nx {
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3bx{base}"),
+                    base,
+                    base + 1,
+                ));
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3tx{base}"),
+                    top,
+                    top + 1,
+                ));
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3dx{base}"),
+                    base,
+                    top + 1,
+                ));
+            }
+            if row < ny {
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3by{base}"),
+                    base,
+                    base + nx + 1,
+                ));
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3ty{base}"),
+                    top,
+                    top + nx + 1,
+                ));
+                elements.push(thermal_truss_3d_element(
+                    &format!("tt3dy{base}"),
+                    base,
+                    top + nx + 1,
+                ));
+            }
+        }
     }
-}
 
-pub(crate) fn generate_thermal_frame_3d_case() -> SolveThermalFrame3dRequest {
-    SolveThermalFrame3dRequest {
-        nodes: vec![
-            thermal_frame_3d_node("tf3-0", 0.0, true, 35.0),
-            thermal_frame_3d_node("tf3-1", 2.0, true, 35.0),
-        ],
-        elements: vec![ThermalFrame3dElementInput {
-            id: "tf3e0".to_string(),
-            node_i: 0,
-            node_j: 1,
-            area: 0.02,
-            youngs_modulus: 210.0e9,
-            shear_modulus: 80.0e9,
-            torsion_constant: 5.0e-6,
-            moment_of_inertia_y: 8.0e-6,
-            moment_of_inertia_z: 6.0e-6,
-            section_modulus_y: 1.6e-4,
-            section_modulus_z: 1.2e-4,
-            thermal_expansion: 12.0e-6,
-            section_depth_y: 0.2,
-            section_depth_z: 0.15,
-            temperature_gradient_y: 30.0,
-            temperature_gradient_z: 20.0,
-        }],
-    }
+    SolveThermalTruss3dRequest { nodes, elements }
 }
 
 pub(crate) fn generate_thermal_triangle_panel(
@@ -249,7 +296,6 @@ fn thermal_triangle_element(
 fn grid_index(row: usize, col: usize, nx: usize) -> usize {
     row * (nx + 1) + col
 }
-
 fn thermal_truss_2d_node(
     id: &str,
     x: f64,
@@ -271,7 +317,6 @@ fn thermal_truss_2d_node(
         temperature_delta,
     }
 }
-
 fn thermal_truss_2d_element(id: &str, node_i: usize, node_j: usize) -> ThermalTruss2dElementInput {
     ThermalTruss2dElementInput {
         id: id.to_string(),
@@ -282,7 +327,6 @@ fn thermal_truss_2d_element(id: &str, node_i: usize, node_j: usize) -> ThermalTr
         thermal_expansion: 12.0e-6,
     }
 }
-
 #[allow(clippy::too_many_arguments)]
 fn thermal_truss_3d_node(
     id: &str,
@@ -311,7 +355,6 @@ fn thermal_truss_3d_node(
         temperature_delta,
     }
 }
-
 fn thermal_truss_3d_element(id: &str, node_i: usize, node_j: usize) -> ThermalTruss3dElementInput {
     ThermalTruss3dElementInput {
         id: id.to_string(),
@@ -320,102 +363,5 @@ fn thermal_truss_3d_element(id: &str, node_i: usize, node_j: usize) -> ThermalTr
         area: 0.012,
         youngs_modulus: 210.0e9,
         thermal_expansion: 12.0e-6,
-    }
-}
-
-fn frame_2d_node(
-    id: &str,
-    x: f64,
-    y: f64,
-    fixed: bool,
-    load_x: f64,
-    load_y: f64,
-    moment_z: f64,
-) -> Frame2dNodeInput {
-    Frame2dNodeInput {
-        id: id.to_string(),
-        x,
-        y,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_rz: fixed,
-        load_x,
-        load_y,
-        moment_z,
-    }
-}
-
-fn frame_3d_node(
-    id: &str,
-    x: f64,
-    fixed: bool,
-    load_x: f64,
-    load_y: f64,
-    load_z: f64,
-) -> Frame3dNodeInput {
-    Frame3dNodeInput {
-        id: id.to_string(),
-        x,
-        y: 0.0,
-        z: 0.0,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_z: fixed,
-        fix_rx: fixed,
-        fix_ry: fixed,
-        fix_rz: fixed,
-        load_x,
-        load_y,
-        load_z,
-        moment_x: 0.0,
-        moment_y: 0.0,
-        moment_z: 0.0,
-    }
-}
-
-fn thermal_frame_2d_node(
-    id: &str,
-    x: f64,
-    fixed: bool,
-    temperature_delta: f64,
-) -> ThermalFrame2dNodeInput {
-    ThermalFrame2dNodeInput {
-        id: id.to_string(),
-        x,
-        y: 0.0,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_rz: fixed,
-        load_x: 0.0,
-        load_y: 0.0,
-        moment_z: 0.0,
-        temperature_delta,
-    }
-}
-
-fn thermal_frame_3d_node(
-    id: &str,
-    x: f64,
-    fixed: bool,
-    temperature_delta: f64,
-) -> ThermalFrame3dNodeInput {
-    ThermalFrame3dNodeInput {
-        id: id.to_string(),
-        x,
-        y: 0.0,
-        z: 0.0,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_z: fixed,
-        fix_rx: fixed,
-        fix_ry: fixed,
-        fix_rz: fixed,
-        load_x: 0.0,
-        load_y: 0.0,
-        load_z: 0.0,
-        moment_x: 0.0,
-        moment_y: 0.0,
-        moment_z: 0.0,
-        temperature_delta,
     }
 }

@@ -5,6 +5,7 @@ mod frame_beam_rpc;
 mod operator_task_ir;
 mod operator_task_ir_fuzz;
 mod rpc_fuzz;
+mod solver_execution_capability;
 mod spring_control_rpc;
 mod thermal_plane_rpc;
 mod workflow_dataset_contract;
@@ -40,21 +41,22 @@ mod prelude {
         SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
         SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dRequest, SolveTorsion1dRequest,
         SolveTransientHeatBar1dRequest, SolveTransientSpring1dRequest, SolveTruss3dRequest,
-        Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
-        Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput, ThermalBar1dNodeInput,
-        ThermalBeam1dElementInput, ThermalBeam1dNodeInput, ThermalFrame2dElementInput,
-        ThermalFrame2dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
-        ThermalPlaneNodeInput, ThermalPlaneNodeResult, ThermalPlaneQuadElementInput,
-        ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
-        ThermalPlaneTriangleElementResult, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
-        Torsion1dElementInput, Torsion1dNodeInput, TransientHeatBar1dElementInput,
-        TransientSpring1dElementInput, TransientSpring1dNodeInput, WORKFLOW_DATASET_DATA_CLASSES,
-        WorkflowCachePolicy, WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding,
+        SolverExecutionCapability, Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput,
+        Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
+        ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
+        ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalFrame3dElementInput,
+        ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneNodeResult,
+        ThermalPlaneQuadElementInput, ThermalPlaneQuadElementResult,
+        ThermalPlaneTriangleElementInput, ThermalPlaneTriangleElementResult,
+        ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
+        Torsion1dNodeInput, TransientHeatBar1dElementInput, TransientSpring1dElementInput,
+        TransientSpring1dNodeInput, WORKFLOW_DATASET_DATA_CLASSES, WorkflowCachePolicy,
+        WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding,
         WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge,
         WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
         WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, canonical_json,
-        compute_operator_task_digest, preview_operator_task_execution,
-        summarize_operator_task_execution, summarize_operator_task_execution_checked,
-        verify_operator_task_digest,
+        check_operator_task_execution_capability, compute_operator_task_digest,
+        preview_operator_task_execution, summarize_operator_task_execution,
+        summarize_operator_task_execution_checked, verify_operator_task_digest,
     };
 }

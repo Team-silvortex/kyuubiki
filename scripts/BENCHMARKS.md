@@ -49,6 +49,19 @@ Focused reference for benchmark and regression script entry points.
   prints the case-by-case 500k remote probe plan from
   `config/benchmark-profile-coverage.json` without running it. Add
   `MATRIX=<matrix>`, `CASE=<substring>`, or `LIMIT=<n>` to narrow the plan.
+- `SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  includes generated nodes, elements, and DOFs beside each planned remote probe
+  without running the solver.
+- `FORMAT=json SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  emits the same dry-run plan as machine-readable JSON for dashboards, CI
+  artifacts, or batch controllers. JSON mode is intentionally dry-run-only.
+- `PLAN_OUT=tmp/benchmark-profile-plan.json SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  writes the structured plan to a repo-local JSON file while keeping the normal
+  human-readable plan on stdout.
+- `make benchmark-shapes PROFILE=500k MATRIX=thermal-structural FORMAT=json`
+  prints nodes, elements, and DOFs for generated benchmark cases without
+  solving them. Use this before launching a remote batch when catalog scale is
+  the thing being checked.
 - `make benchmark-profile-plan PROFILE=500k LIMIT=2 EXECUTE=1`
   executes the first two selected remote probes sequentially. Each case receives
   its own `OUTPUT_SLUG`, so retained profile summaries do not overwrite each

@@ -27,6 +27,7 @@ mod tests {
             compare_report_out: None,
             solver_preconditioner: "jacobi".to_string(),
             progress: false,
+            dry_run_shapes: false,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -34,6 +35,7 @@ mod tests {
 
         assert_eq!(config.repeat, 10);
         assert!(matches!(config.format, OutputFormat::Table));
+        assert!(!config.dry_run_shapes);
     }
 
     #[test]

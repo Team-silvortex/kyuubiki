@@ -17,6 +17,7 @@ mod runner_progress;
 mod runner_shape;
 mod runner_structural;
 mod runner_util;
+mod shape_report;
 #[cfg(test)]
 mod workflow_payloads;
 #[cfg(test)]
@@ -31,6 +32,7 @@ use config::{BenchmarkConfig, OutputFormat};
 use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
 use models::select_cases;
 use runner::{build_report, build_report_with_progress};
+use shape_report::{build_shape_report, print_shape_table};
 
 fn main() {
     let config = BenchmarkConfig::from_env();
@@ -40,6 +42,21 @@ fn main() {
         benchmark_cases(config.profile, &config.matrix)
     };
     let selected = select_cases(&cases, config.case_filter.as_deref());
+
+    if config.dry_run_shapes {
+        let report = build_shape_report(&selected, config.profile, &config.matrix);
+        match config.format {
+            OutputFormat::Json => {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).expect("shape report should serialize")
+                );
+            }
+            OutputFormat::Table => print_shape_table(&report),
+        }
+        return;
+    }
+
     let report = if config.progress {
         build_report_with_progress(
             &selected,

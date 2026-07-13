@@ -50,6 +50,15 @@ fn handles_describe_agent_rpc_requests() {
         descriptor_payload["operator_package_runtime"]["status"],
         "not_attached"
     );
+    assert_eq!(
+        descriptor_payload["deployment_readiness"]["schema_version"],
+        "kyuubiki.agent-deployment-readiness/v1"
+    );
+    assert_eq!(descriptor_payload["deployment_readiness"]["ready"], true);
+    assert_eq!(
+        descriptor_payload["deployment_readiness"]["cleanup_policy"],
+        "installer_owned_paths_only"
+    );
 
     let descriptor: AgentDescriptor =
         serde_json::from_value(descriptor_payload).expect("agent descriptor");
@@ -68,6 +77,90 @@ fn handles_describe_agent_rpc_requests() {
     assert_eq!(descriptor.engine.lifecycle, "agent_embedded");
     assert_eq!(descriptor.engine.task_source, "manual_or_sdk");
     assert_eq!(descriptor.engine.operator_source, "bound_orchestra_fetch");
+}
+
+#[test]
+fn agent_deployment_readiness_reports_orchestrated_setup_gaps() {
+    let config = AgentConfig {
+        host: "127.0.0.1".to_string(),
+        port: 5001,
+        agent_id: Some("agent-needs-token".to_string()),
+        advertise_host: None,
+        orchestrator_url: Some("https://orchestra.example.com".to_string()),
+        cluster_api_token: None,
+        agent_fingerprint: None,
+        certificate_id: Some("agent-cert".to_string()),
+        cert_path: Some("certs/agent.pem".to_string()),
+        key_path: None,
+        ca_cert_path: None,
+        register_interval_ms: 5_000,
+        cluster_id: Some("cluster-a".to_string()),
+        peers: vec![],
+        operator_package_host_id: Some("agent-needs-package-root".to_string()),
+        operator_packages_root: None,
+        operator_activated_package_count: 0,
+    };
+
+    let readiness = build_agent_deployment_readiness_for_config(&config);
+
+    assert!(!readiness.ready);
+    assert_eq!(readiness.status, "needs_attention");
+    assert_eq!(readiness.runtime_mode, "orchestrated");
+    assert_eq!(readiness.update_strategy, "orchestra_assisted_pull");
+    assert_eq!(readiness.operator_package_runtime_ready, false);
+    assert!(
+        readiness
+            .issues
+            .iter()
+            .any(|issue| issue.contains("cluster_api_token"))
+    );
+    assert!(
+        readiness
+            .issues
+            .iter()
+            .any(|issue| issue.contains("operator_packages_root"))
+    );
+    assert!(
+        readiness
+            .issues
+            .iter()
+            .any(|issue| issue.contains("cert_path and key_path"))
+    );
+}
+
+#[test]
+fn registration_payload_includes_agent_deployment_readiness() {
+    let config = AgentConfig {
+        host: "127.0.0.1".to_string(),
+        port: 5001,
+        agent_id: Some("agent-ready".to_string()),
+        advertise_host: Some("10.0.0.10".to_string()),
+        orchestrator_url: Some("https://orchestra.example.com".to_string()),
+        cluster_api_token: Some("token".to_string()),
+        agent_fingerprint: Some("fp".to_string()),
+        certificate_id: None,
+        cert_path: None,
+        key_path: None,
+        ca_cert_path: None,
+        register_interval_ms: 5_000,
+        cluster_id: Some("cluster-a".to_string()),
+        peers: vec![],
+        operator_package_host_id: Some("operator-host".to_string()),
+        operator_packages_root: Some(".kyuubiki/operator-packages".to_string()),
+        operator_activated_package_count: 2,
+    };
+
+    let payload = registration_payload(&config);
+
+    assert_eq!(payload["deployment_readiness"]["ready"], true);
+    assert_eq!(
+        payload["deployment_readiness"]["operator_package_runtime_ready"],
+        true
+    );
+    assert_eq!(
+        payload["deployment_readiness"]["update_strategy"],
+        "orchestra_assisted_pull"
+    );
 }
 
 #[test]

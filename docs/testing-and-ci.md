@@ -353,6 +353,18 @@ Use these entrypoints:
   Print the full 500k remote-first probe plan from
   `config/benchmark-profile-coverage.json` without executing it. Use
   `MATRIX=<matrix>`, `CASE=<substring>`, and `LIMIT=<n>` to choose a safe batch.
+- `SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  Include generated shape summaries beside each planned probe while still
+  keeping the plan in dry-run mode.
+- `FORMAT=json SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  Emit a machine-readable dry-run plan with command, output slug, and shape
+  fields for later dashboards or batch controllers.
+- `PLAN_OUT=tmp/benchmark-profile-plan.json SHAPES=1 make benchmark-profile-plan PROFILE=500k MATRIX=thermal-structural LIMIT=2`
+  Retain the same structured dry-run plan as a repo-local JSON artifact while
+  still printing the normal text plan.
+- `make benchmark-shapes PROFILE=500k MATRIX=thermal-structural`
+  Print generated case scale without solving. This is the fastest way to verify
+  that a 500k probe is truly profile-sized before sending it to `kyuubiki-lab`.
 - `make benchmark-profile-plan PROFILE=500k LIMIT=2 EXECUTE=1`
   Execute a narrowed 500k plan sequentially. Each probe gets an isolated
   `OUTPUT_SLUG`, so retained `summary.json` files can be indexed without
@@ -401,8 +413,9 @@ Current behavior notes:
   timing should prefer `kyuubiki-lab`
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
-- `200k`, `300k`, `400k`, and `500k` are remote-first: CI checks the catalog shape, while timing evidence
-  should be collected from `kyuubiki-lab` before adding checked baselines
+- `200k`, `300k`, `400k`, and `500k` are remote-first: CI checks the catalog
+  shape, while timing evidence should be collected from `kyuubiki-lab` before
+  adding checked baselines
 - cases under `5.0 ms` baseline median remain visible in reports but are not
   treated as hard failures by default
 - the remote wrapper syncs the Rust workspace without `target/` and does not
@@ -424,9 +437,24 @@ Current behavior notes:
 - `400k` is exploratory, not a default nightly tier. Use narrow thermal and
   mechanical probes first, then promote only stable matrices into checked
   baselines.
-- `500k` is shape-covered but lab-probe-first. Begin with axial bar and thermal
-  quad probes, then expand to mechanical surface and truss cases only after
-  memory and stage profiles look stable.
+- `500k` is shape-covered but lab-probe-first. `mechanical-core`,
+  `thermal-core`, and `compound-core` now have retained 500k evidence on
+  `kyuubiki-lab`: axial bar, truss roof, 3D space frame, triangle plane panel,
+  quad plane panel, heat plane quad, compound surface panel, and the
+  thermal-structural matrix all pass.
+- the 500k coverage gate is now complete across `mechanical-core`,
+  `thermal-core`, `compound-core`, and `thermal-structural`. Thermal truss and
+  frame templates now use profile-scaled generators and have a shape-only
+  regression guard, but earlier retained thermal-structural runs that used
+  small fixture generators should be superseded by fresh lab pressure evidence
+  before they are treated as final 500k timings.
+- current 500k mechanical surface and truss evidence is solver-bound at about
+  `65-67 s` for `truss-roof-500k`, `plane-panel-500k`, and
+  `plane-quad-panel-500k`, with peak RSS around `1.7-2.1 GiB`. The dominant
+  internal stages are sparse preconditioning and sparse matrix-vector work.
+- current 500k compound evidence matches the mechanical profile: the compound
+  surface panel passes in about `67.7 s` at roughly `2.0 GiB` peak RSS, while
+  the compound heat-plane quad passes in about `8.2 s`.
 - the first `400k` probes passed for axial bar, thermal quad, truss, 3D
   space-frame, triangular structural surface, and quad structural surface
   cases, with peak RSS ranging from roughly `404 MiB` to `1.85 GiB`. Treat

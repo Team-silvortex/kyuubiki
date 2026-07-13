@@ -2,6 +2,7 @@ mod analysis;
 mod job;
 mod operator;
 mod operator_task_ir;
+mod solver_execution_capability;
 mod workflow;
 
 mod types {
@@ -39,6 +40,10 @@ pub use operator_task_ir::{
     operator_task_digest_fields, preview_operator_task_execution,
     summarize_operator_task_execution, summarize_operator_task_execution_checked,
     verify_operator_task_digest,
+};
+pub use solver_execution_capability::{
+    SolverExecutionCapability, SolverExecutionCapabilityReport,
+    check_operator_task_execution_capability,
 };
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;

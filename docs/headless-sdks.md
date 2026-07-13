@@ -194,6 +194,9 @@ They now also expose a small workflow layer:
 - classify failures into machine-usable buckets for agent policy layers
 - execute language-neutral Operator TaskIR envelopes and
   `quality_execution_batch` files without using the Workbench
+- validate Operator TaskIR against an agent execution capability before
+  dispatch, including digest, runtime protocol, ABI, operator ID, and
+  package-fetch constraints
 
 Rust material reports can be generated headlessly:
 

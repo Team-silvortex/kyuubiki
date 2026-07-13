@@ -13,6 +13,7 @@
       "chapter_page": "docs/book-ch01-what-is-kyuubiki.html",
       "summary": "Product surface map across Hub, Workbench, Installer, orchestrator, and Rust agents.",
       "sources": [
+        "docs/current-architecture-map.md",
         "docs/system-overview.md",
         "docs/app-runtime-boundaries.md",
         "docs/hub-architecture.md"
@@ -35,6 +36,7 @@
       "chapter_page": "docs/book-ch03-architecture-boundaries.html",
       "summary": "Role split and authority boundaries across desktop shells, orchestrator, and agents.",
       "sources": [
+        "docs/current-architecture-map.md",
         "docs/project-architecture-organization.md",
         "docs/app-runtime-boundaries.md",
         "docs/agent-orchestrator-boundary.md",
@@ -112,6 +114,7 @@
   "reading_paths": {
     "operator": [
       "docs/current-line.md",
+      "docs/current-architecture-map.md",
       "docs/system-overview.md",
       "docs/app-runtime-boundaries.md",
       "docs/operations.md",
@@ -125,6 +128,7 @@
       "docs/rendering-roadmap.html"
     ],
     "runtime_engineer": [
+      "docs/current-architecture-map.md",
       "docs/system-overview.md",
       "docs/project-architecture-organization.md",
       "docs/agent-orchestrator-boundary.md",
@@ -133,6 +137,7 @@
       "docs/operations.md"
     ],
     "sdk_engineer": [
+      "docs/current-architecture-map.md",
       "docs/project-architecture-organization.md",
       "docs/operator-sdk.md",
       "docs/headless-sdks.md",
@@ -166,6 +171,7 @@
     "llm_integrator": [
       "docs/book.html",
       "docs/book-manifest.json",
+      "docs/current-architecture-map.md",
       "docs/system-overview.md",
       "docs/project-architecture-organization.md",
       "docs/app-runtime-boundaries.md",

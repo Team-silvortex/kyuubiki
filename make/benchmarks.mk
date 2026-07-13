@@ -1,4 +1,4 @@
-.PHONY: benchmark benchmark-physics-coverage benchmark-profile-remote benchmark-profile-plan
+.PHONY: benchmark benchmark-shapes benchmark-physics-coverage benchmark-profile-remote benchmark-profile-plan
 .PHONY: benchmark-profile-report benchmark-profile-index
 .PHONY: benchmark-baseline benchmark-compare benchmark-report
 .PHONY: benchmark-standard-baselines benchmark-standard-compare
@@ -13,6 +13,9 @@ regression-gate-report:
 
 benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
+
+benchmark-shapes:
+	@case_arg=$$( [ -n "$${CASE:-}" ] && printf -- ' --case %s' "$$CASE" || true ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --dry-run-shapes --profile $${PROFILE:-500k} --matrix $${MATRIX:-thermal-structural} --format $${FORMAT:-table} $$case_arg
 
 benchmark-physics-coverage:
 	@case_arg=$$( [ -n "$${CASE:-}" ] && printf -- ' --case %s' "$$CASE" || true ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --matrix physics-coverage --repeat $${REPEAT:-1} $$case_arg

@@ -6,6 +6,9 @@ use kyuubiki_protocol::{
     RpcProgress, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
 };
 
+use crate::agent_deployment::{
+    AgentDeploymentReadiness, build_agent_deployment_readiness, default_agent_deployment_readiness,
+};
 use crate::agent_watchdog;
 use crate::config::AgentConfig;
 use crate::operator_task_runtime::{
@@ -27,6 +30,24 @@ pub(crate) fn runtime_descriptor() -> &'static Mutex<AgentDescriptor> {
 pub(crate) fn store_runtime_descriptor(descriptor: AgentDescriptor) {
     if let Ok(mut current) = runtime_descriptor().lock() {
         *current = descriptor;
+    }
+}
+
+pub(crate) fn agent_deployment_readiness() -> AgentDeploymentReadiness {
+    deployment_readiness()
+        .lock()
+        .map(|readiness| readiness.clone())
+        .unwrap_or_else(|_| default_agent_deployment_readiness())
+}
+
+pub(crate) fn deployment_readiness() -> &'static Mutex<AgentDeploymentReadiness> {
+    static READINESS: OnceLock<Mutex<AgentDeploymentReadiness>> = OnceLock::new();
+    READINESS.get_or_init(|| Mutex::new(default_agent_deployment_readiness()))
+}
+
+pub(crate) fn store_deployment_readiness(readiness: AgentDeploymentReadiness) {
+    if let Ok(mut current) = deployment_readiness().lock() {
+        *current = readiness;
     }
 }
 
@@ -54,6 +75,13 @@ pub(crate) fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
     descriptor.authority = build_runtime_authority_descriptor(config, runtime_mode);
     descriptor.engine = build_runtime_engine_descriptor(runtime_mode);
     descriptor
+}
+
+pub(crate) fn build_agent_deployment_readiness_for_config(
+    config: &AgentConfig,
+) -> AgentDeploymentReadiness {
+    let descriptor = build_agent_descriptor(config);
+    build_agent_deployment_readiness(config, &descriptor)
 }
 
 fn build_runtime_authority_descriptor(
@@ -118,6 +146,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
         "operator_package_runtime": operator_package_runtime_snapshot_for_config(config),
+        "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot()
     })
@@ -136,6 +165,11 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         object.insert(
             "operator_package_runtime".to_string(),
             operator_package_runtime_snapshot(),
+        );
+        object.insert(
+            "deployment_readiness".to_string(),
+            serde_json::to_value(agent_deployment_readiness())
+                .expect("agent deployment readiness should serialize"),
         );
     }
 

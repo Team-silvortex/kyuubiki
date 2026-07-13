@@ -173,3 +173,48 @@ fn heat_quad_benchmark_exposes_timed_memory_stages() {
         "heat quad profile should keep elapsed timings for every memory stage"
     );
 }
+
+#[test]
+fn thermal_structural_500k_frame_and_truss_cases_are_profile_scaled() {
+    let cases = benchmark_cases(BenchmarkProfile::FiveHundredK, "thermal-structural");
+
+    for case_id in [
+        "thermal-truss-2d-500k",
+        "thermal-truss-3d-500k",
+        "frame-2d-500k",
+        "thermal-frame-2d-500k",
+        "frame-3d-500k",
+        "thermal-frame-3d-500k",
+    ] {
+        let case = cases
+            .iter()
+            .find(|case| case.id == case_id)
+            .unwrap_or_else(|| panic!("{case_id} should be in thermal-structural 500k"));
+        let (_, _, dofs) = crate::runner_shape::workload_shape(&case.workload);
+
+        assert!(
+            dofs >= 500_000,
+            "{case_id} should be profile-scaled, got {dofs} dofs"
+        );
+    }
+}
+
+#[test]
+fn dry_run_shape_report_exposes_selected_case_scale_without_solving() {
+    let cases = benchmark_cases(BenchmarkProfile::FiveHundredK, "thermal-structural");
+    let selected = cases
+        .iter()
+        .filter(|case| case.id == "thermal-truss-2d-500k")
+        .collect::<Vec<_>>();
+    let report = crate::shape_report::build_shape_report(
+        &selected,
+        BenchmarkProfile::FiveHundredK,
+        "thermal-structural",
+    );
+
+    assert_eq!(report.cases.len(), 1);
+    assert_eq!(report.cases[0].id, "thermal-truss-2d-500k");
+    assert!(report.cases[0].node_count >= 250_000);
+    assert!(report.cases[0].element_count >= 500_000);
+    assert!(report.cases[0].dof_count >= 500_000);
+}

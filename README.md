@@ -79,6 +79,9 @@ Start here if you need orientation:
   Full current documentation map.
 - [docs/current-line.md](docs/current-line.md)
   Short current-line posture for `tamamono 1.x`.
+- [docs/current-architecture-map.md](docs/current-architecture-map.md)
+  Compact current architecture map across product shells, control plane,
+  runtime data plane, SDKs, contracts, verification, and authority modes.
 - [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
 - [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
@@ -97,6 +100,7 @@ Start here if you need orientation:
 
 - new to the project:
   [docs/README.md](docs/README.md),
+  [docs/current-architecture-map.md](docs/current-architecture-map.md),
   [docs/system-overview.md](docs/system-overview.md),
   [docs/project-architecture-organization.md](docs/project-architecture-organization.md),
   [docs/repository-structure.md](docs/repository-structure.md)

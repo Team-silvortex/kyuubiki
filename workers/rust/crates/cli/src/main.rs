@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 
+mod agent_deployment;
 mod agent_http;
 mod agent_mesh;
 mod agent_state;
@@ -22,7 +23,10 @@ use agent_mesh::{
     build_peer_descriptors, compute_cluster_health_score, filter_self_peers,
     normalize_peer_addresses,
 };
-use agent_state::{build_agent_descriptor, store_runtime_descriptor};
+use agent_state::{
+    build_agent_deployment_readiness_for_config, build_agent_descriptor,
+    store_deployment_readiness, store_runtime_descriptor,
+};
 use config::{AgentConfig, Command};
 use operator_task_runtime::{
     operator_package_runtime_binding_from_config, store_operator_package_runtime_binding,
@@ -45,6 +49,7 @@ fn main() {
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
     store_runtime_descriptor(build_agent_descriptor(config));
+    store_deployment_readiness(build_agent_deployment_readiness_for_config(config));
     store_operator_package_runtime_binding(operator_package_runtime_binding_from_config(config));
     let registration = AgentRegistrationHandle::maybe_spawn(config);
     let peer_mesh = PeerMeshHandle::maybe_spawn(config);

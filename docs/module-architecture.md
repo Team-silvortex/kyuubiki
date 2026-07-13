@@ -14,6 +14,10 @@ topology; the topology file drives benchmark and security-test grouping.
 The companion coverage matrix is
 `config/architecture/module-function-coverage-matrix.json`; it checks whether
 each module is covered across the main function paradigms.
+The coverage tensor is
+`config/architecture/module-function-coverage-tensor.json`; it combines the
+module topology, function matrix, benchmark lanes, and security lanes into a
+three-axis gap map.
 
 ## Architecture Principle
 
@@ -99,6 +103,28 @@ Run `make check-module-function-matrix` to validate the matrix and write
 `tmp/module-function-matrix-report.json` plus a Markdown table. Required
 module/paradigm cells cannot be missing, and all rows must match declared
 module topology IDs.
+
+## Module Function Coverage Tensor
+
+The matrix is two-dimensional. The coverage tensor adds a third dimension:
+evidence depth.
+
+Its axes are:
+
+- `module`: the module ID from `config/architecture/module-topology.json`
+- `function_paradigm`: the paradigm from
+  `config/architecture/module-function-coverage-matrix.json`
+- `evidence_depth`: required state, matrix status, benchmark evidence,
+  security evidence, and derived gap level
+
+Run `make check-module-function-coverage-tensor` to generate
+`tmp/module-function-coverage-tensor.json` and
+`tmp/module-function-coverage-tensor.md`.
+
+The tensor is the review map for "where have we not really done it yet". It
+does not replace detailed tests. It points each weak coordinate at the relevant
+benchmark and security lanes so the next task can pick a concrete module,
+function paradigm, and evidence path.
 
 ## Product Shells
 

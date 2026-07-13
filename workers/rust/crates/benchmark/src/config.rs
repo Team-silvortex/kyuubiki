@@ -12,6 +12,7 @@ pub(crate) struct BenchmarkConfig {
     pub(crate) compare_report_out: Option<String>,
     pub(crate) solver_preconditioner: String,
     pub(crate) progress: bool,
+    pub(crate) dry_run_shapes: bool,
     pub(crate) fail_on_median_regression_pct: Option<f64>,
     pub(crate) fail_on_rss_regression_pct: Option<f64>,
     pub(crate) min_baseline_median_ms: f64,
@@ -70,6 +71,7 @@ impl BenchmarkConfig {
             compare_report_out: None,
             solver_preconditioner: "jacobi".to_string(),
             progress: false,
+            dry_run_shapes: false,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
             min_baseline_median_ms: 5.0,
@@ -143,6 +145,9 @@ impl BenchmarkConfig {
                 }
                 "--progress" => {
                     config.progress = true;
+                }
+                "--dry-run-shapes" => {
+                    config.dry_run_shapes = true;
                 }
                 "--fail-on-median-regression-pct" => {
                     if let Some(value) = args.next() {

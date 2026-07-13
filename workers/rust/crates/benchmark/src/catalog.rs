@@ -28,8 +28,8 @@ use crate::{
     generators_thermal_structural::{
         generate_frame_2d_case, generate_frame_3d_case, generate_thermal_bar_case,
         generate_thermal_frame_2d_case, generate_thermal_frame_3d_case,
-        generate_thermal_quad_panel, generate_thermal_triangle_panel,
-        generate_thermal_truss_2d_case, generate_thermal_truss_3d_case,
+        generate_thermal_lattice_truss_2d_case, generate_thermal_quad_panel,
+        generate_thermal_space_truss_3d_case, generate_thermal_triangle_panel,
     },
     models::{BenchmarkCase, BenchmarkWorkload},
 };
@@ -300,22 +300,34 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::Frame2d => BenchmarkCase {
             id,
             family: "frame_2d",
-            workload: BenchmarkWorkload::Frame2d(generate_frame_2d_case()),
+            workload: BenchmarkWorkload::Frame2d(generate_frame_2d_case(
+                frame_chain_segments(&profile.space_frame),
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::Frame3d => BenchmarkCase {
             id,
             family: "frame_3d",
-            workload: BenchmarkWorkload::Frame3d(generate_frame_3d_case()),
+            workload: BenchmarkWorkload::Frame3d(generate_frame_3d_case(
+                frame_chain_segments(&profile.space_frame),
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::ThermalFrame2d => BenchmarkCase {
             id,
             family: "thermal_frame_2d",
-            workload: BenchmarkWorkload::ThermalFrame2d(generate_thermal_frame_2d_case()),
+            workload: BenchmarkWorkload::ThermalFrame2d(generate_thermal_frame_2d_case(
+                frame_chain_segments(&profile.space_frame),
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::ThermalFrame3d => BenchmarkCase {
             id,
             family: "thermal_frame_3d",
-            workload: BenchmarkWorkload::ThermalFrame3d(generate_thermal_frame_3d_case()),
+            workload: BenchmarkWorkload::ThermalFrame3d(generate_thermal_frame_3d_case(
+                frame_chain_segments(&profile.space_frame),
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::ModalFrame2d => BenchmarkCase {
             id,
@@ -347,12 +359,20 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::ThermalTruss2d => BenchmarkCase {
             id,
             family: "thermal_truss_2d",
-            workload: BenchmarkWorkload::ThermalTruss2d(generate_thermal_truss_2d_case()),
+            workload: BenchmarkWorkload::ThermalTruss2d(build_thermal_truss_2d_case(
+                &profile.truss,
+            )),
         },
         BenchmarkFamily::ThermalTruss3d => BenchmarkCase {
             id,
             family: "thermal_truss_3d",
-            workload: BenchmarkWorkload::ThermalTruss3d(generate_thermal_truss_3d_case()),
+            workload: BenchmarkWorkload::ThermalTruss3d(generate_thermal_space_truss_3d_case(
+                profile.space_frame.nx,
+                profile.space_frame.ny,
+                profile.space_frame.width,
+                profile.space_frame.depth,
+                profile.space_frame.height,
+            )),
         },
         BenchmarkFamily::PlaneTriangle2d => BenchmarkCase {
             id,
@@ -486,61 +506,8 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec, CaseTemplateSpec,
-        resolve_matrix_templates,
-    };
-
-    #[test]
-    fn matrix_template_resolution_preserves_declared_order() {
-        let spec = catalog_spec(vec![
-            template("a", BenchmarkFamily::AxialBar),
-            template("b", BenchmarkFamily::HeatBar1d),
-            template("c", BenchmarkFamily::Frame2d),
-        ]);
-        let matrix = BenchmarkMatrixSpec {
-            name: "ordered".to_string(),
-            template_stems: vec!["c".to_string(), "a".to_string()],
-            owned_templates: vec![],
-        };
-
-        let stems = resolve_matrix_templates(&spec, &matrix)
-            .into_iter()
-            .map(|template| template.stem.as_str())
-            .collect::<Vec<_>>();
-
-        assert_eq!(stems, vec!["c", "a"]);
-    }
-
-    #[test]
-    #[should_panic(expected = "benchmark matrix 'broken' references missing template 'missing'")]
-    fn matrix_template_resolution_rejects_missing_stems() {
-        let spec = catalog_spec(vec![template("a", BenchmarkFamily::AxialBar)]);
-        let matrix = BenchmarkMatrixSpec {
-            name: "broken".to_string(),
-            template_stems: vec!["missing".to_string()],
-            owned_templates: vec![],
-        };
-
-        let _ = resolve_matrix_templates(&spec, &matrix);
-    }
-
-    fn catalog_spec(templates: Vec<CaseTemplateSpec>) -> BenchmarkCatalogSpec {
-        BenchmarkCatalogSpec {
-            templates,
-            matrices: vec![],
-            profiles: vec![],
-        }
-    }
-
-    fn template(stem: &str, family: BenchmarkFamily) -> CaseTemplateSpec {
-        CaseTemplateSpec {
-            stem: stem.to_string(),
-            family,
-        }
-    }
-}
+#[path = "catalog_tests.rs"]
+mod tests;
 
 fn build_truss_case(id: String, truss: &TrussScale) -> BenchmarkCase {
     let workload = match truss {
@@ -560,6 +527,26 @@ fn build_truss_case(id: String, truss: &TrussScale) -> BenchmarkCase {
         family: "truss_2d",
         workload,
     }
+}
+
+fn build_thermal_truss_2d_case(
+    truss: &TrussScale,
+) -> kyuubiki_protocol::SolveThermalTruss2dRequest {
+    match truss {
+        TrussScale::Pratt { bays, span, height } => {
+            generate_thermal_lattice_truss_2d_case(*bays, 1, *span, *height)
+        }
+        TrussScale::Lattice {
+            nx,
+            ny,
+            width,
+            height,
+        } => generate_thermal_lattice_truss_2d_case(*nx, *ny, *width, *height),
+    }
+}
+
+fn frame_chain_segments(scale: &FrameGridScale) -> usize {
+    (scale.nx * scale.ny).max(scale.nx).max(1)
 }
 
 pub(crate) fn catalog_spec_path_candidates() -> [String; 2] {
