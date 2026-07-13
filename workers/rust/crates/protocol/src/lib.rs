@@ -34,8 +34,9 @@ pub use operator::{
 };
 pub use operator_task_ir::{
     OPERATOR_TASK_DIGEST_FIELDS, OPERATOR_TASK_IR_SCHEMA, OperatorTaskDigestError,
-    OperatorTaskExecutionSummary, OperatorTaskSummaryError, OperatorTaskSummaryErrorCode,
-    canonical_json, compute_operator_task_digest, operator_task_digest_fields,
+    OperatorTaskExecutionPreview, OperatorTaskExecutionSummary, OperatorTaskSummaryError,
+    OperatorTaskSummaryErrorCode, canonical_json, compute_operator_task_digest,
+    operator_task_digest_fields, preview_operator_task_execution,
     summarize_operator_task_execution, summarize_operator_task_execution_checked,
     verify_operator_task_digest,
 };

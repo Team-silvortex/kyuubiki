@@ -1,7 +1,7 @@
 {
   "name": "Kyuubiki Workbench UI Automation Contract",
   "product": "tamamono",
-  "version": "1.18.x",
+  "version": "1.19.x",
   "contractVersion": 1,
   "productOwned": true,
   "userExtensible": false,

@@ -179,6 +179,39 @@ pub fn summarize_operator_task_execution_checked(
     })
 }
 
+pub fn preview_operator_task_execution(
+    task: &Value,
+) -> Result<OperatorTaskExecutionPreview, OperatorTaskSummaryError> {
+    let summary = summarize_operator_task_execution_checked(task)?;
+    let package_fetch_required = task_requires_package_fetch(&summary);
+    let package_readiness_gate = package_readiness_gate(&summary, package_fetch_required);
+    let result_serialization =
+        optional_string(task, &["execution_program", "abi", "output_encoding"])
+            .unwrap_or_else(|| "json".to_string());
+    let dispatch_route = dispatch_route(&summary, package_fetch_required);
+    let offline_runnable = task_is_offline_runnable(&summary, package_fetch_required);
+    let dispatch_warnings = dispatch_warnings(&summary, package_fetch_required, offline_runnable);
+
+    Ok(OperatorTaskExecutionPreview {
+        task_digest: summary.task_digest,
+        task_id: summary.task_id,
+        operator_id: summary.operator_id,
+        operator_kind: summary.operator_kind,
+        dispatch_route,
+        package_ref: summary.package_ref,
+        package_version: summary.package_version,
+        package_fetch_required,
+        package_readiness_gate,
+        result_serialization,
+        authority_mode: summary.authority_mode,
+        execution_mode: summary.execution_mode,
+        cache_scope: summary.cache_scope,
+        agent_fetchable: summary.agent_fetchable,
+        offline_runnable,
+        dispatch_warnings,
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorTaskDigestError {
     Missing,
@@ -233,6 +266,26 @@ pub struct OperatorTaskExecutionSummary {
     pub execution_mode: Option<String>,
     pub cache_scope: Option<String>,
     pub agent_fetchable: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperatorTaskExecutionPreview {
+    pub task_digest: String,
+    pub task_id: String,
+    pub operator_id: String,
+    pub operator_kind: String,
+    pub dispatch_route: String,
+    pub package_ref: Option<String>,
+    pub package_version: Option<String>,
+    pub package_fetch_required: bool,
+    pub package_readiness_gate: String,
+    pub result_serialization: String,
+    pub authority_mode: Option<String>,
+    pub execution_mode: Option<String>,
+    pub cache_scope: Option<String>,
+    pub agent_fetchable: Option<bool>,
+    pub offline_runnable: bool,
+    pub dispatch_warnings: Vec<String>,
 }
 
 fn canonical_object_json(object: &Map<String, Value>) -> String {
@@ -302,6 +355,70 @@ fn validate_execution_abi(
     }
 
     Ok(())
+}
+
+fn task_requires_package_fetch(summary: &OperatorTaskExecutionSummary) -> bool {
+    summary.execution_mode.as_deref() == Some("orchestra_fetch")
+        || summary.authority_mode.as_deref() == Some("central_operator_library")
+        || summary.agent_fetchable == Some(true)
+        || summary
+            .package_ref
+            .as_deref()
+            .is_some_and(|package_ref| package_ref.starts_with("orchestra://"))
+}
+
+fn package_readiness_gate(
+    summary: &OperatorTaskExecutionSummary,
+    package_fetch_required: bool,
+) -> String {
+    if package_fetch_required {
+        return "central_package_readiness".to_string();
+    }
+    if summary.package_ref.is_some() {
+        return "local_package_readiness".to_string();
+    }
+    "built_in_operator_descriptor".to_string()
+}
+
+fn dispatch_route(summary: &OperatorTaskExecutionSummary, package_fetch_required: bool) -> String {
+    if summary.operator_kind == "solver" {
+        return "solver_rpc".to_string();
+    }
+    if package_fetch_required {
+        return "fetch_package_then_operator_task".to_string();
+    }
+    "local_operator_task".to_string()
+}
+
+fn task_is_offline_runnable(
+    summary: &OperatorTaskExecutionSummary,
+    package_fetch_required: bool,
+) -> bool {
+    !package_fetch_required
+        && !matches!(
+            summary.authority_mode.as_deref(),
+            Some("central_operator_library")
+        )
+        && !matches!(summary.execution_mode.as_deref(), Some("orchestra_fetch"))
+}
+
+fn dispatch_warnings(
+    summary: &OperatorTaskExecutionSummary,
+    package_fetch_required: bool,
+    offline_runnable: bool,
+) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if package_fetch_required && summary.package_ref.is_none() {
+        warnings.push(
+            "package fetch is required but execution_program.package_ref is missing".to_string(),
+        );
+    }
+    if !offline_runnable && summary.cache_scope.is_none() {
+        warnings.push(
+            "remote or centralized execution should declare runtime_hints.cache_scope".to_string(),
+        );
+    }
+    warnings
 }
 
 fn validate_mirror_field(

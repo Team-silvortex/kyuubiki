@@ -75,6 +75,19 @@ function readText(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
 }
 
+function containsTodoPlaceholder(value) {
+  if (typeof value === "string") {
+    return value.includes("TODO:");
+  }
+  if (Array.isArray(value)) {
+    return value.some(containsTodoPlaceholder);
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).some(containsTodoPlaceholder);
+  }
+  return false;
+}
+
 function currentReleaseVersion() {
   return readJson("releases/index.json").current_version;
 }
@@ -126,6 +139,7 @@ function exactChecks(expectedVersion) {
   const expectedDisplayMinorLine = versionDisplay("tamamono", expectedMinorLine);
   const files = [
     "apps/frontend/package.json",
+    "apps/frontend/public/brand.json",
     "apps/hub-gui/package.json",
     "apps/hub-gui/src-tauri/Cargo.toml",
     "apps/hub-gui/src-tauri/tauri.conf.json",
@@ -229,6 +243,13 @@ function exactChecks(expectedVersion) {
     expected: expectedVersion,
     actual: contract.shipping_version ?? null,
   });
+  checks.push({
+    kind: "shipping_version",
+    file: "deploy/install-update-disk-hygiene.json",
+    field: "shipping_version",
+    expected: expectedVersion,
+    actual: readJson("deploy/install-update-disk-hygiene.json").shipping_version ?? null,
+  });
   const requiredVersionRule = (contract.visible_rules ?? []).find((rule) =>
     rule.label === "required development version" || rule.label === "required shipping version"
   );
@@ -294,6 +315,24 @@ function exactChecks(expectedVersion) {
     expected: expectedVersion,
     actual: currentSnapshots.length === 1 ? currentSnapshots[0] : currentSnapshots.join(","),
   });
+  const currentSnapshotEntry = (releaseIndex.snapshots ?? []).find((snapshot) =>
+    snapshot.status === "current" && snapshot.version === expectedVersion
+  );
+  if (currentSnapshotEntry?.snapshot_path) {
+    const currentSnapshot = readJson(`releases/${currentSnapshotEntry.snapshot_path}`);
+    checks.push({
+      kind: "current_snapshot_placeholders",
+      file: `releases/${currentSnapshotEntry.snapshot_path}`,
+      field: "summary/product_surfaces/workflow_builder/operator_sdk",
+      expected: false,
+      actual: containsTodoPlaceholder({
+        summary: currentSnapshot.summary,
+        product_surfaces: currentSnapshot.product_surfaces,
+        workflow_builder: currentSnapshot.workflow_builder,
+        operator_sdk: currentSnapshot.operator_sdk,
+      }),
+    });
+  }
 
   const catalog = readJson("releases/update-catalog.json");
   const currentCatalogVersions = (catalog.versions ?? [])
@@ -305,6 +344,17 @@ function exactChecks(expectedVersion) {
     field: "versions[status=current]",
     expected: expectedVersion,
     actual: currentCatalogVersions.length === 1 ? currentCatalogVersions[0] : currentCatalogVersions.join(","),
+  });
+  const currentCatalogPayloads = [
+    ...(catalog.channels ?? []).filter((channel) => channel.status === "current"),
+    ...(catalog.versions ?? []).filter((version) => version.status === "current"),
+  ];
+  checks.push({
+    kind: "current_catalog_placeholders",
+    file: "releases/update-catalog.json",
+    field: "channels[status=current]/versions[status=current]",
+    expected: false,
+    actual: currentCatalogPayloads.some(containsTodoPlaceholder),
   });
 
   return checks.map((check) => ({
@@ -449,7 +499,7 @@ function printHumanReport(report) {
 }
 
 function runSelfTest() {
-  const checks = markdownFactChecks("1.18.0", "tamamono", (file) => {
+  const checks = markdownFactChecks("1.19.0", "tamamono", (file) => {
     if (file === "docs/version-line.md") {
       return "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line";
     }

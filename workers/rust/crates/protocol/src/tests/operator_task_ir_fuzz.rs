@@ -39,6 +39,7 @@ fn exercise_task_ir_boundary(value: &Value) {
     let _ = compute_operator_task_digest(value);
     let _ = verify_operator_task_digest(value);
     let _ = summarize_operator_task_execution_checked(value);
+    let _ = preview_operator_task_execution(value);
 }
 
 fn fuzz_task_ir_json(rng: &mut FuzzRng, case_index: usize) -> Value {

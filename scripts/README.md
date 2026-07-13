@@ -314,7 +314,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.18.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.19.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.

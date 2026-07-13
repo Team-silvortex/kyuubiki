@@ -31,7 +31,7 @@ export function mountIntegrityPanel() {
           <ul class="integrity-policy-list">
             <li>All platforms use the same repo-local runtime roots: \`tmp/\`, \`dist/\`, and \`releases/\`.</li>
             <li>User data and environment config are preserved during repair; only removable residue is cleaned.</li>
-            <li>Desktop shells, release manifests, and runtime layout must stay version-aligned to \`tamamono 1.18.0\`.</li>
+            <li>Desktop shells, release manifests, and runtime layout must stay version-aligned to \`tamamono 1.19.0\`.</li>
           </ul>
           <p id="integrity-policy-copy">Repair only clears known cache noise and stale runtime artifacts, so the install surface stays deterministic.</p>
         </article>
@@ -39,7 +39,7 @@ export function mountIntegrityPanel() {
           <div class="panel-header desktop-shell-section-header"><h3>Current target</h3></div>
           <div class="integrity-target-grid">
             <div><span>Platform</span><strong id="integrity-platform-value">unknown</strong></div>
-            <div><span>Version</span><strong id="integrity-version-value">1.18.0</strong></div>
+            <div><span>Version</span><strong id="integrity-version-value">1.19.0</strong></div>
           </div>
           <pre id="integrity-report-output">Waiting for installation integrity report…</pre>
         </article>
@@ -239,7 +239,7 @@ export function renderIntegrityReport(report, brandConfig = null) {
   const removableResidues = residues.filter((item) => item.removable);
   const missingPaths = layout.filter((entry) => entry.required && !entry.present).length;
   const versionMismatches = versionChecks.filter((check) => !check.ok).length;
-  const releaseVersion = String(brandConfig?.releaseVersion || report?.current_version || "1.18.0").replace(
+  const releaseVersion = String(brandConfig?.releaseVersion || report?.current_version || "1.19.0").replace(
     /^v/u,
     "",
   );

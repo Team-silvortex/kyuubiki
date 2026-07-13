@@ -25,7 +25,7 @@ Current weak point:
 - smoke tests are broader than benchmark-backed accuracy evidence
 - some limitations are implicit instead of product-visible
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep every broad physics family at least smoke-covered
 - identify the first qualification candidates across mechanical, thermal,
@@ -59,7 +59,7 @@ Current weak point:
 - external packages need stronger end-to-end examples from authoring to
   package admission and execution
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
@@ -92,7 +92,7 @@ Current weak point:
 - distributed execution must prove recovery from partial failure, package
   fetch failure, node loss, and stale authority state
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep agent and orchestra authority modes explicit
 - ensure every agent execution failure reports a machine-readable reason
@@ -127,7 +127,7 @@ Current weak point:
   reaches agent engines must be language-neutral
 - the TaskIR surface still needs more golden examples and compatibility gates
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep TaskIR independent of UI, Phoenix, React, and Elixir-only runtime state
 - make package fetch, readiness, dispatch, and result serialization visible in
@@ -158,7 +158,7 @@ Current weak point:
   backend capabilities, but experience parity is not fully proven
 - Workbench still needs an obvious main workflow loop for serious users
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep GUI actions, headless flows, and Installer preflight aligned around the
   same backend reports
@@ -190,7 +190,7 @@ Current weak point:
   systematic around manifests, TaskIR, workflow datasets, credentials, and
   package loading
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep dynamic library loading behind explicit host policy
 - keep credential storage sandboxed and visible
@@ -223,7 +223,7 @@ Current weak point:
 - optimization metrics and reports need to feel like product primitives, not
   demo notes
 
-`1.18.x` focus:
+`1.19.x` focus:
 
 - keep the heat-spreader example reproducible
 - expand score contracts and feasibility explanations

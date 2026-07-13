@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `tamamono`
 - active line: `1.x`
-- current development point: `tamamono 1.18.0`
-- current documentation target: `tamamono 1.18.x` pre-`moxi` line
+- current development point: `tamamono 1.19.0`
+- current documentation target: `tamamono 1.19.x` pre-`moxi` line
 - formal public release target: `moxi 2.0.0`
 - major-version policy:
   `tamamono` remains on major version `1`; `moxi 2.0.0` is the intended first

@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-07-11T13:30:59.494Z",
-  "shipping_version": "1.18.0",
+  "generated_at": "2026-07-13T03:19:01.975Z",
+  "shipping_version": "1.19.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.18",
-        "tamamono:1.18.0"
+        "tamamono:1.19",
+        "tamamono:1.19.0"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.18.0",
-      "summary": "TODO: summarize tamamono 1.18.0.",
-      "date": "2026-07-11",
+      "version": "1.19.0",
+      "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
+      "date": "2026-07-13",
       "notes": [
         "Primary operator-facing update track for the current pre-moxi development line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.18.0.json",
+      "snapshot_path": "releases/snapshots/1.19.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,33 +69,38 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.18.0",
+          "version": "1.19.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Aligned Workbench-visible version strings, language-pack targets, workflow fixtures, and docs entrypoints to tamamono 1.19.0.",
+            "Keeps workflow automation surfaces aligned with the shared backend contracts instead of UI-only version state."
           ]
         },
         "hub_gui": {
-          "version": "1.18.0",
+          "version": "1.19.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Aligned Hub desktop version branding, docs mirrors, update catalog visibility, and language-pack smoke expectations to tamamono 1.19.0.",
+            "Keeps update and installation contract mirrors visible from the Hub documentation surface."
           ]
         },
         "workbench_gui": {
-          "version": "1.18.0",
+          "version": "1.19.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Aligned Workbench desktop package, Tauri, brand, and smoke-test metadata to tamamono 1.19.0.",
+            "Keeps the desktop shell version in sync with the shared release contract."
           ]
         },
         "installer_gui": {
-          "version": "1.18.0",
+          "version": "1.19.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Aligned Installer desktop version metadata, visible install integrity copy, and update-panel defaults to tamamono 1.19.0.",
+            "Keeps installation, update, cleanup, and rollback visibility tied to the current release contract."
           ]
         },
         "web_api": {
-          "version": "1.18.0",
+          "version": "1.19.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Keeps the current release catalog and deploy/update channels aligned for operator-facing update flows.",
+            "Preserves historical 1.18.0 snapshot records while making 1.19.0 the current channel target."
           ]
         }
       },
@@ -111,7 +116,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.18.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.19.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -146,7 +151,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.18.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.19.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -181,7 +186,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.18.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.19.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -210,12 +215,12 @@
   ],
   "versions": [
     {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "line": "1.x",
       "status": "current",
-      "date": "2026-07-11",
-      "summary": "TODO: summarize tamamono 1.18.0.",
-      "snapshot_path": "releases/snapshots/1.18.0.json",
+      "date": "2026-07-13",
+      "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
+      "snapshot_path": "releases/snapshots/1.19.0.json",
       "channels": [
         "stable"
       ],
@@ -223,9 +228,163 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.18",
-        "tamamono:1.18.0"
+        "tamamono:1.19",
+        "tamamono:1.19.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "1.19.0",
+          "notes": [
+            "Aligned Workbench-visible version strings, language-pack targets, workflow fixtures, and docs entrypoints to tamamono 1.19.0.",
+            "Keeps workflow automation surfaces aligned with the shared backend contracts instead of UI-only version state."
+          ]
+        },
+        "hub_gui": {
+          "version": "1.19.0",
+          "notes": [
+            "Aligned Hub desktop version branding, docs mirrors, update catalog visibility, and language-pack smoke expectations to tamamono 1.19.0.",
+            "Keeps update and installation contract mirrors visible from the Hub documentation surface."
+          ]
+        },
+        "workbench_gui": {
+          "version": "1.19.0",
+          "notes": [
+            "Aligned Workbench desktop package, Tauri, brand, and smoke-test metadata to tamamono 1.19.0.",
+            "Keeps the desktop shell version in sync with the shared release contract."
+          ]
+        },
+        "installer_gui": {
+          "version": "1.19.0",
+          "notes": [
+            "Aligned Installer desktop version metadata, visible install integrity copy, and update-panel defaults to tamamono 1.19.0.",
+            "Keeps installation, update, cleanup, and rollback visibility tied to the current release contract."
+          ]
+        },
+        "web_api": {
+          "version": "1.19.0",
+          "notes": [
+            "Keeps the current release catalog and deploy/update channels aligned for operator-facing update flows.",
+            "Preserves historical 1.18.0 snapshot records while making 1.19.0 the current channel target."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.19.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.19.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.19.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "exists": false
+        }
+      ]
+    },
+    {
+      "version": "1.18.0",
+      "line": "1.x",
+      "status": "archived",
+      "date": "2026-07-11",
+      "summary": "TODO: summarize tamamono 1.18.0.",
+      "snapshot_path": "releases/snapshots/1.18.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "1.18.0",

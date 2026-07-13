@@ -218,6 +218,23 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
     assert_eq!(result["operator_package_runtime_ready"], false);
     assert_eq!(result["execution_readiness"]["status"], "blocked");
     assert_eq!(
+        result["task_execution_preview"]["dispatch_route"],
+        "fetch_package_then_operator_task"
+    );
+    assert_eq!(
+        result["task_execution_preview"]["package_readiness_gate"],
+        "central_package_readiness"
+    );
+    assert_eq!(
+        result["task_execution_preview"]["package_fetch_required"],
+        true
+    );
+    assert_eq!(result["task_execution_preview"]["offline_runnable"], false);
+    assert_eq!(
+        result["task_execution_preview"]["result_serialization"],
+        "json"
+    );
+    assert_eq!(
         result["execution_readiness"]["blocking_reason"],
         OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
     );
@@ -298,6 +315,14 @@ fn operator_task_runtime_accepts_explicit_execute_mode_as_blocked_dispatch() {
     assert_eq!(
         result["execution_runtime_status"],
         OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
+    );
+    assert_eq!(
+        result["task_execution_preview"]["dispatch_route"],
+        "fetch_package_then_operator_task"
+    );
+    assert_eq!(
+        result["task_execution_preview"]["package_fetch_required"],
+        true
     );
     assert_eq!(result["execution_readiness"]["status"], "blocked");
     assert_eq!(

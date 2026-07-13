@@ -47,6 +47,8 @@ mod material_thermo;
 mod material_workflows;
 mod operator_task;
 mod operator_task_readiness;
+#[cfg(test)]
+mod operator_task_tests;
 mod plan;
 mod run;
 mod service_executor;

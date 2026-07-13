@@ -7,9 +7,9 @@ use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
 };
 use kyuubiki_protocol::{
-    OperatorTaskDigestError, OperatorTaskExecutionSummary, OperatorTaskSummaryError,
-    OperatorTaskSummaryErrorCode, summarize_operator_task_execution_checked,
-    verify_operator_task_digest,
+    OperatorTaskDigestError, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
+    OperatorTaskSummaryError, OperatorTaskSummaryErrorCode, preview_operator_task_execution,
+    summarize_operator_task_execution_checked, verify_operator_task_digest,
 };
 
 pub(crate) const OPERATOR_TASK_STATUS_VERIFIED_PENDING: &str = "verified_pending_engine_execution";
@@ -141,6 +141,7 @@ pub(crate) fn run_operator_task_ir_with_runtime(
 
     let summary =
         summarize_operator_task_execution_checked(task_ir).map_err(classify_operator_task_error)?;
+    let preview = preview_operator_task_execution(task_ir).map_err(classify_operator_task_error)?;
 
     if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
     {
@@ -150,12 +151,18 @@ pub(crate) fn run_operator_task_ir_with_runtime(
             })?;
         return Ok(build_agent_native_execution_payload(
             summary,
+            preview,
             package_runtime,
             result,
         ));
     }
 
-    Ok(build_preflight_payload(summary, mode, package_runtime))
+    Ok(build_preflight_payload(
+        summary,
+        preview,
+        mode,
+        package_runtime,
+    ))
 }
 
 fn classify_digest_error(error: OperatorTaskDigestError) -> OperatorTaskRuntimeError {
@@ -214,11 +221,13 @@ fn parse_mode(params: &Value) -> Result<&'static str, OperatorTaskRuntimeError> 
 
 fn build_preflight_payload(
     summary: OperatorTaskExecutionSummary,
+    preview: OperatorTaskExecutionPreview,
     mode: &str,
     package_runtime: OperatorPackageRuntimeBinding,
 ) -> Value {
     serde_json::json!({
         "requested_mode": mode,
+        "task_execution_preview": operator_task_execution_preview_payload(&preview),
         "operator_task_ir_status": OPERATOR_TASK_STATUS_VERIFIED_PENDING,
         "execution_runtime_status": execution_runtime_status(&package_runtime),
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
@@ -249,11 +258,13 @@ fn build_preflight_payload(
 
 fn build_agent_native_execution_payload(
     summary: OperatorTaskExecutionSummary,
+    preview: OperatorTaskExecutionPreview,
     package_runtime: OperatorPackageRuntimeBinding,
     result: Value,
 ) -> Value {
     serde_json::json!({
         "requested_mode": OPERATOR_TASK_MODE_EXECUTE,
+        "task_execution_preview": operator_task_execution_preview_payload(&preview),
         "operator_task_ir_status": OPERATOR_TASK_STATUS_EXECUTED,
         "execution_runtime_status": OPERATOR_TASK_AGENT_NATIVE_STATUS,
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
@@ -280,6 +291,27 @@ fn build_agent_native_execution_payload(
         "cache_scope": summary.cache_scope,
         "agent_fetchable": summary.agent_fetchable,
         "result": result
+    })
+}
+
+fn operator_task_execution_preview_payload(preview: &OperatorTaskExecutionPreview) -> Value {
+    serde_json::json!({
+        "task_digest": preview.task_digest,
+        "task_id": preview.task_id,
+        "operator_id": preview.operator_id,
+        "operator_kind": preview.operator_kind,
+        "dispatch_route": preview.dispatch_route,
+        "package_ref": preview.package_ref,
+        "package_version": preview.package_version,
+        "package_fetch_required": preview.package_fetch_required,
+        "package_readiness_gate": preview.package_readiness_gate,
+        "result_serialization": preview.result_serialization,
+        "authority_mode": preview.authority_mode,
+        "execution_mode": preview.execution_mode,
+        "cache_scope": preview.cache_scope,
+        "agent_fetchable": preview.agent_fetchable,
+        "offline_runnable": preview.offline_runnable,
+        "dispatch_warnings": preview.dispatch_warnings
     })
 }
 

@@ -1,11 +1,11 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "archived",
-  "date": "2026-07-11",
-  "git_commit": "619446009b7a587e2392ba607236906ebf0bc393",
-  "summary": "TODO: summarize tamamono 1.18.0.",
+  "status": "current",
+  "date": "2026-07-13",
+  "git_commit": "3a2cd68207482bd946743436a2cf4c7dbe98f04d",
+  "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -17,57 +17,70 @@
   },
   "product_surfaces": {
     "frontend_workbench": {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "notes": [
-        "TODO: describe frontend/workbench changes."
+        "Aligned Workbench-visible version strings, language-pack targets, workflow fixtures, and docs entrypoints to tamamono 1.19.0.",
+        "Keeps workflow automation surfaces aligned with the shared backend contracts instead of UI-only version state."
       ]
     },
     "hub_gui": {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "notes": [
-        "TODO: describe Hub desktop-shell changes."
+        "Aligned Hub desktop version branding, docs mirrors, update catalog visibility, and language-pack smoke expectations to tamamono 1.19.0.",
+        "Keeps update and installation contract mirrors visible from the Hub documentation surface."
       ]
     },
     "workbench_gui": {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "notes": [
-        "TODO: describe Workbench desktop-shell changes."
+        "Aligned Workbench desktop package, Tauri, brand, and smoke-test metadata to tamamono 1.19.0.",
+        "Keeps the desktop shell version in sync with the shared release contract."
       ]
     },
     "installer_gui": {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "notes": [
-        "TODO: describe Installer desktop-shell changes."
+        "Aligned Installer desktop version metadata, visible install integrity copy, and update-panel defaults to tamamono 1.19.0.",
+        "Keeps installation, update, cleanup, and rollback visibility tied to the current release contract."
       ]
     },
     "web_api": {
-      "version": "1.18.0",
+      "version": "1.19.0",
       "notes": [
-        "TODO: describe API/control-plane changes."
+        "Keeps the current release catalog and deploy/update channels aligned for operator-facing update flows.",
+        "Preserves historical 1.18.0 snapshot records while making 1.19.0 the current channel target."
       ]
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "review",
+    "capabilities": [
+      "coupled-readiness next-round requests can force replan or review continuation",
+      "quality sweep plans preserve coupled-readiness metadata and repair focus",
+      "lineage reports explain coupled-readiness repair and review intent"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "review",
+    "capabilities": [
+      "catalog descriptors expose coupled/readiness/repair/review tags for quality round operators",
+      "catalog-runtime consistency tests cover coupled-readiness workflow operators",
+      "release source-version checks include frontend public brand and install/update disk hygiene contracts"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.18.0_aarch64.dmg",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.19.0_aarch64.dmg",
     "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
     "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
     "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
     "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.18.0_aarch64.dmg",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.19.0_aarch64.dmg",
     "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
     "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
     "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
     "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.18.0_aarch64.dmg",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.19.0_aarch64.dmg",
     "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
     "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
     "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
@@ -76,7 +89,7 @@
     "git_worktree": {
       "clean": false,
       "status_short": [
-        "M apps/frontend/package-lock.json",
+        "M README.md",
         " M apps/frontend/package.json",
         " M apps/frontend/public/brand.json",
         " M apps/frontend/src/app/docs/page.tsx",
@@ -90,13 +103,12 @@
         " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
         " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
         " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
         " M apps/frontend/test/support/workflow-package-fixtures.ts",
         " M apps/frontend/test/support/workflow-template-chain-fixtures.ts",
         " M apps/frontend/test/workflow/workbench-workflow-builder-import.test.ts",
         " M apps/frontend/test/workflow/workbench-workflow-builder-validation.test.ts",
-        " M apps/hub-gui/package-lock.json",
         " M apps/hub-gui/package.json",
-        " M apps/hub-gui/src-tauri/Cargo.lock",
         " M apps/hub-gui/src-tauri/Cargo.toml",
         " M apps/hub-gui/src-tauri/tauri.conf.json",
         " M apps/hub-gui/test/hub-copy-registry.test.mjs",
@@ -104,63 +116,57 @@
         " M apps/hub-gui/ui/docs/current-line.html",
         " M apps/hub-gui/ui/docs/index.html",
         " M apps/hub-gui/ui/index.html",
-        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/README.md",
         " M apps/installer-gui/package.json",
-        " M apps/installer-gui/src-tauri/Cargo.lock",
         " M apps/installer-gui/src-tauri/Cargo.toml",
         " M apps/installer-gui/src-tauri/tauri.conf.json",
         " M apps/installer-gui/ui/assets/brand.json",
         " M apps/installer-gui/ui/index.html",
         " M apps/installer-gui/ui/integrity-panel.js",
         " M apps/installer-gui/ui/update-panel.js",
-        " M apps/workbench-gui/package-lock.json",
         " M apps/workbench-gui/package.json",
-        " M apps/workbench-gui/src-tauri/Cargo.lock",
         " M apps/workbench-gui/src-tauri/Cargo.toml",
         " M apps/workbench-gui/src-tauri/tauri.conf.json",
         " M apps/workbench-gui/ui/assets/brand.json",
         " M apps/workbench-gui/ui/index.html",
-        " M deploy/install-update-disk-hygiene.json",
-        " M deploy/installation-integrity-contract.json",
-        " M deploy/update-channels.json",
+        " M docs/README.md",
         " M docs/book-manifest.json",
         " M docs/book.html",
         " M docs/component-integrity-protocol.html",
         " M docs/current-line.md",
         " M docs/desktop-release-checklist.md",
-        " M docs/installation-integrity-contract.html",
         " M docs/installer-remote-control.md",
         " M docs/material-research-roadmap.md",
         " M docs/module-architecture.md",
         " M docs/navigation-matrix.html",
         " M docs/testing-and-ci.md",
         " M docs/ui-automation-contract.html",
-        " M docs/update-catalog.html",
+        " M docs/ui-automation-contract.json",
         " M docs/version-line.md",
+        " M docs/weakness-roadmap.md",
         " M language-packs/catalog.json",
         " M language-packs/hub/fr.json",
         " M language-packs/hub/ko.json",
         " M language-packs/workbench/fr.json",
         " M language-packs/workbench/ko.json",
-        " M releases/index.json",
-        " M releases/snapshots/1.16.0.json",
-        " M releases/snapshots/1.17.8.json",
+        " M schemas/examples.operator-package-dynamic-smoke.json",
+        " M scripts/README.md",
         " M scripts/audit-version-line.mjs",
         " M scripts/check-install-update-disk-hygiene.mjs",
-        " M workers/rust/Cargo.lock",
+        " M scripts/check-operator-package-dynamic-smoke.mjs",
+        " M scripts/create-release-snapshot.mjs",
         " M workers/rust/Cargo.toml",
         " M workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
         " M workers/rust/crates/installer/src/remote_deployment_artifacts_fuzz.rs",
         " M workers/rust/crates/installer/src/tests/control_update.rs",
         " M workers/rust/crates/installer/src/update_catalog_fuzz.rs",
-        " M workers/rust/crates/operator-sdk/src/manifest_fuzz.rs",
-        "?? releases/snapshots/1.18.0.json"
+        " M workers/rust/crates/operator-sdk/src/manifest_fuzz.rs"
       ]
     },
     "desktop_bundle_versions": {
-      "hub": "1.18.0",
-      "workbench": "1.18.0",
-      "installer": "1.18.0"
+      "hub": "1.19.0",
+      "workbench": "1.19.0",
+      "installer": "1.19.0"
     },
     "collected_desktop_bundle_versions": {
       "hub": null,
@@ -178,6 +184,8 @@
       "git diff --check",
       "make audit-project-organization",
       "make operator-package-preflight",
+      "make check-operator-package-dynamic-smoke-contract",
+      "make operator-package-dynamic-smoke",
       "make architecture-check"
     ]
   }

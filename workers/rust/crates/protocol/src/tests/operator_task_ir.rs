@@ -121,6 +121,63 @@ fn operator_task_execution_summary_exposes_agent_ready_fields() {
 }
 
 #[test]
+fn operator_task_execution_preview_exposes_central_package_dispatch() {
+    let task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+
+    let preview = preview_operator_task_execution(&task).expect("preview should build");
+
+    assert_eq!(preview.task_id, "fixture-task");
+    assert_eq!(preview.operator_id, "transform.fixture");
+    assert_eq!(preview.operator_kind, "transform");
+    assert_eq!(preview.dispatch_route, "fetch_package_then_operator_task");
+    assert_eq!(preview.package_fetch_required, true);
+    assert_eq!(preview.package_readiness_gate, "central_package_readiness");
+    assert_eq!(preview.result_serialization, "json");
+    assert_eq!(preview.offline_runnable, false);
+    assert_eq!(preview.dispatch_warnings, Vec::<String>::new());
+}
+
+#[test]
+fn operator_task_execution_preview_exposes_local_offline_dispatch() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["execution_program"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    task["operator"]["execution"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    task["runtime_hints"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    task["runtime_hints"]["authority_mode"] = json!("offline_mesh");
+    task["runtime_hints"]["execution_mode"] = json!("local_bundle");
+    task["runtime_hints"]["agent_fetchable"] = json!(false);
+
+    let preview = preview_operator_task_execution(&task).expect("preview should build");
+
+    assert_eq!(preview.dispatch_route, "local_operator_task");
+    assert_eq!(preview.package_fetch_required, false);
+    assert_eq!(preview.package_readiness_gate, "local_package_readiness");
+    assert_eq!(preview.offline_runnable, true);
+}
+
+#[test]
+fn operator_task_execution_preview_rejects_inconsistent_task_ir() {
+    let mut task = golden_task_fixture(Some(
+        "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",
+    ));
+    task["runtime_hints"]["operator_kind"] = json!("solver");
+
+    let error =
+        preview_operator_task_execution(&task).expect_err("preview should reuse summary checks");
+
+    assert_eq!(error.code, OperatorTaskSummaryErrorCode::MirrorMismatch);
+    assert!(
+        error
+            .message
+            .contains("runtime_hints.operator_kind must match operator.kind")
+    );
+}
+
+#[test]
 fn operator_task_execution_summary_rejects_inconsistent_abi() {
     let mut task = golden_task_fixture(Some(
         "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",

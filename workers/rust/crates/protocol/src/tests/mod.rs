@@ -53,7 +53,8 @@ mod prelude {
         WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge,
         WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
         WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, canonical_json,
-        compute_operator_task_digest, summarize_operator_task_execution,
-        summarize_operator_task_execution_checked, verify_operator_task_digest,
+        compute_operator_task_digest, preview_operator_task_execution,
+        summarize_operator_task_execution, summarize_operator_task_execution_checked,
+        verify_operator_task_digest,
     };
 }

@@ -28,18 +28,18 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current development point in this line is `tamamono 1.18.0`.
+The current development point in this line is `tamamono 1.19.0`.
 
 This is still a pre-`moxi` industrialization line, not the formal public
 launch line. `moxi 2.0.0` is the intended first formal release line; the job of
-`tamamono 1.18.x` through `1.20.x` is to harden trust, contracts, and
+`tamamono 1.19.x` through `1.20.x` is to harden trust, contracts, and
 operator-visible runtime behavior before that handoff.
 
 The immediate hardening focus is:
 
 - benchmark-backed accuracy claims instead of anecdotal confidence
 - broad `1.15.x` physics smoke coverage before task-file and engine contracts
-  harden in `1.15.x` and `1.18.x`
+  harden in `1.15.x` and `1.19.x`
 - clearer task, failure, and recovery semantics across runtime surfaces
 - stronger workflow and asset contracts instead of ad hoc payload growth
 - more explicit Installer-side remote deployment and runtime-control behavior
@@ -78,7 +78,7 @@ agent surfaces.
    Trust-gate checklist for deciding whether the line is ready to become a
    credible `moxi 2.0.0` early-commercial product.
 4. [weakness-roadmap.md](weakness-roadmap.md)
-   Current weak-spot roadmap from `tamamono 1.18.x` through the `moxi 2.0.0`
+   Current weak-spot roadmap from `tamamono 1.19.x` through the `moxi 2.0.0`
    trust boundary.
 5. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.

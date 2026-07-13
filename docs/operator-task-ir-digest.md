@@ -101,6 +101,29 @@ The JSON schema carries the same rule as `x-kyuubiki-mirror_constraints`, and
 constraints, digest field order, and example `descriptor_digest` /
 `task_digest` values aligned.
 
+## Execution preview
+
+TaskIR also has a Rust protocol preview helper:
+
+- `kyuubiki_protocol::preview_operator_task_execution`
+
+The preview does not run the task. It translates the language-neutral task
+envelope into fields that agents, orchestra, Installer preflight, Workbench,
+and headless SDKs can all inspect before dispatch:
+
+- dispatch route: solver RPC, local operator task, or fetch-package-then-run
+- package reference and package version
+- whether package fetch is required
+- which readiness gate should apply
+- result serialization encoding
+- authority mode, execution mode, cache scope, and agent fetchability
+- whether the task can run offline
+- warnings for incomplete centralized or remote dispatch hints
+
+This keeps package fetch, readiness, dispatch, and result serialization visible
+without making the GUI, Elixir control plane, or any one SDK the owner of the
+executable task semantics.
+
 ## Golden fixtures
 
 The basic cross-language fixture used by tests is:

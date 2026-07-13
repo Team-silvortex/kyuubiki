@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.installation-contract/v1",
   "product_line": "tamamono 1.x",
-  "shipping_version": "1.18.0",
-  "workspace_version": "1.18.0",
+  "shipping_version": "1.19.0",
+  "workspace_version": "1.19.0",
   "required_layout": [
     {
       "label": "workspace root",
@@ -106,7 +106,7 @@
     {
       "id": "workspace.root",
       "kind": "workspace",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki",
       "owned_paths": [
         "."
@@ -129,7 +129,7 @@
     {
       "id": "brand.shared",
       "kind": "brand-metadata",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki",
       "owned_paths": [
         "assets/brand"
@@ -142,7 +142,7 @@
       "visible_rules": [
         {
           "label": "release_version",
-          "value": "1.18.0",
+          "value": "1.19.0",
           "editable": false,
           "description": "Shared brand metadata must expose releaseVersion for every desktop shell copy."
         }
@@ -152,7 +152,7 @@
     {
       "id": "installer.core",
       "kind": "installer",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-installer",
       "owned_paths": [
         "deploy",
@@ -183,7 +183,7 @@
     {
       "id": "desktop.installer",
       "kind": "desktop-shell",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-installer",
       "owned_paths": [
         "apps/installer-gui"
@@ -209,7 +209,7 @@
     {
       "id": "desktop.hub",
       "kind": "desktop-shell",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-hub",
       "owned_paths": [
         "apps/hub-gui"
@@ -235,7 +235,7 @@
     {
       "id": "desktop.workbench",
       "kind": "desktop-shell",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-workbench",
       "owned_paths": [
         "apps/workbench-gui"
@@ -261,7 +261,7 @@
     {
       "id": "release.snapshots",
       "kind": "release-history",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-release",
       "owned_paths": [
         "releases/snapshots"
@@ -286,7 +286,7 @@
     {
       "id": "runtime.state",
       "kind": "runtime-state",
-      "version": "1.18.0",
+      "version": "1.19.0",
       "owner": "kyuubiki-runtime",
       "owned_paths": [
         "tmp"
@@ -354,7 +354,7 @@
     {
       "category": "version",
       "label": "required development version",
-      "value": "1.18.0",
+      "value": "1.19.0",
       "editable": false,
       "description": "Desktop shells, workspace packages, and local release descriptors are expected to align to this working version."
     },
