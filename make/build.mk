@@ -36,7 +36,7 @@ sync-desktop-shared:
 	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs
 
 build-installation-docs:
-	@node ./scripts/build-installation-integrity-docs.mjs
+	@$(ENTRYPOINT) build-installation-integrity-docs
 
 build-update-catalog:
-	@node ./scripts/build-update-catalog.mjs
+	@$(ENTRYPOINT) build-update-catalog

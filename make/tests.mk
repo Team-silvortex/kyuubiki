@@ -42,7 +42,7 @@ test-agent-capability-smoke:
 	@$(ENTRYPOINT) agent-capability-smoke --host $${AGENT_HOST:-127.0.0.1} --port $${AGENT_PORT:-5001} --profile $${AGENT_SMOKE_PROFILE:-advertised} --output $${OUTPUT:-tmp/agent-capability-smoke.json} $${AGENT_SMOKE_ARGS:-}
 
 test-playground:
-	@node --test apps/web/playground/test/fem.test.mjs
+	@$(ENTRYPOINT) playground-fem-node-test
 
 test-hub-gui:
 	@cd apps/hub-gui && npm run test:smoke
@@ -56,19 +56,19 @@ test-workbench-gui:
 test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
-	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
+	@$(ENTRYPOINT) integration-api-node-test
 
 test-integration-cluster:
-	@node --test tests/integration/distributed-control-plane-smoke.test.mjs
+	@$(ENTRYPOINT) integration-cluster-node-test
 
 test-integration-direct-mesh:
-	@node --test tests/integration/direct-mesh-gui-smoke.test.mjs
+	@$(ENTRYPOINT) integration-direct-mesh-node-test
 
 test-integration-desktop-gui:
-	@node --test tests/integration/desktop-shell-regression.test.mjs tests/integration/workbench-shell-regression.test.mjs
+	@$(ENTRYPOINT) integration-desktop-gui-node-test
 
 test-integration-benchmark-profile-index:
-	@node --test tests/integration/benchmark-profile-index.test.mjs
+	@$(ENTRYPOINT) integration-benchmark-profile-index-node-test
 
 test-integration-direct-mesh-docker:
 	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
@@ -77,13 +77,13 @@ test-integration-remote-ssh-fixture:
 	@$(ENTRYPOINT) remote-ssh-fixture
 
 test-central-database-smoke:
-	@node ./scripts/run-central-database-smoke.mjs --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
+	@$(ENTRYPOINT) central-database-smoke --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
 
 remote-central-database-smoke:
-	@node ./scripts/run-remote-central-database-smoke.mjs --host $${REMOTE:-kyuubiki-lab} --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
+	@$(ENTRYPOINT) remote-central-database-smoke --host $${REMOTE:-kyuubiki-lab} --mode $${MODE:-cloud} --backend $${BACKEND:-postgres}
 
 test-integration-direct-mesh-docker-compare:
-	@node ./scripts/compare-direct-mesh-benchmark.mjs --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}
+	@$(ENTRYPOINT) compare-direct-mesh-benchmark --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}
 
 test-integration-direct-mesh-docker-report:
 	@$(MAKE) test-integration-direct-mesh-docker REPEAT=$${REPEAT:-3} OUTPUT_DIR=$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
@@ -99,7 +99,7 @@ test-integration-workflow-mesh-nightly:
 	@$(ENTRYPOINT) workflow-mesh-regression-remote
 
 test-integration-workflow-catalog-compare:
-	@node ./scripts/compare-workflow-catalog-benchmark.mjs --current $${CURRENT:-tmp/workflow-catalog-benchmark.json} --baseline $${BASELINE:-tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json} --json-out $${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} --report-out $${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md} --fail-on-median-regression-pct $${WORKFLOW_MEDIAN_THRESHOLD:-50} --fail-on-avg-regression-pct $${WORKFLOW_AVG_THRESHOLD:-80}
+	@$(ENTRYPOINT) compare-workflow-catalog-benchmark --current $${CURRENT:-tmp/workflow-catalog-benchmark.json} --baseline $${BASELINE:-tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json} --json-out $${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} --report-out $${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md} --fail-on-median-regression-pct $${WORKFLOW_MEDIAN_THRESHOLD:-50} --fail-on-avg-regression-pct $${WORKFLOW_AVG_THRESHOLD:-80}
 
 test-integration-workflow-catalog-report:
 	@cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_catalog_report_test.exs
@@ -109,10 +109,10 @@ test-integration-workflow-catalog-nightly:
 	@$(ENTRYPOINT) workflow-catalog-benchmark-regression
 
 test-integration-ui-mechanical:
-	@node --test tests/integration/workbench-ui-mechanical-smoke.test.mjs
+	@$(ENTRYPOINT) integration-ui-mechanical-node-test
 
 test-integration-ui-thermal:
-	@node --test tests/integration/workbench-ui-thermal-smoke.test.mjs
+	@$(ENTRYPOINT) integration-ui-thermal-node-test
 
 format: format-web format-rust
 

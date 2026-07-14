@@ -36,6 +36,8 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   sync-doc-book-version\n  \
   check-toolchain-contract\n  \
   check-install-update-disk-hygiene\n  \
+  build-installation-integrity-docs\n  \
+  build-update-catalog\n  \
   check-module-topology\n  \
   build-module-topology-report\n  \
   check-module-function-matrix\n  \
@@ -44,6 +46,8 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   check-verification-evidence-surface\n  \
   check-central-store-contract\n  \
   check-central-database-readiness\n  \
+  central-database-smoke\n  \
+  remote-central-database-smoke\n  \
   build-central-readiness-report\n  \
   check-central-readiness-report\n  \
   validate-commercial-readiness\n  \
@@ -57,7 +61,16 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   check-material-study-execution-plan-contract\n  \
   check-material-exploration-chain-contract\n  \
   check-material-research-bundle-contract\n  \
+  build-material-research-bundle\n  \
+  build-material-research-bundle-index\n  \
   check-material-research-bundle\n  \
+  check-material-study-sdk-examples\n  \
+  check-remote-material-preconditioner-health\n  \
+  check-remote-material-stage-health\n  \
+  build-remote-material-benchmark-summary\n  \
+  remote-material-research-example\n  \
+  capture-material-research-example\n  \
+  check-material-research-example\n  \
   check-operator-task-ir-contract\n  \
   validate-material-score-contract\n  \
   audit-local-paths\n  \
@@ -66,12 +79,31 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   frontend-file-lines frontend-storage-security\n  \
   benchmark-profile-remote\n  \
   benchmark-profile-plan\n  \
+  build-benchmark-profile-index\n  \
+  build-regression-lane-catalog\n  \
+  build-regression-gate-report\n  \
+  build-nightly-artifact-overview\n  \
   direct-mesh-benchmark-container\n  \
+  compare-direct-mesh-benchmark\n  \
   direct-mesh-benchmark-regression\n  \
   standard-benchmark-regression\n  \
   workflow-catalog-benchmark-regression\n  \
   workflow-mesh-regression-remote\n  \
   workflow-mesh-regression\n  \
+  build-standard-benchmark-report\n  \
+  compare-workflow-catalog-benchmark\n  \
+  playground-fem-node-test\n  \
+  hub-gui-compile-ui\n  \
+  hub-gui-smoke-node-test\n  \
+  installer-gui-smoke-node-test\n  \
+  workbench-gui-smoke-node-test\n  \
+  integration-api-node-test\n  \
+  integration-cluster-node-test\n  \
+  integration-direct-mesh-node-test\n  \
+  integration-desktop-gui-node-test\n  \
+  integration-benchmark-profile-index-node-test\n  \
+  integration-ui-mechanical-node-test\n  \
+  integration-ui-thermal-node-test\n  \
   agent-capability-smoke\n  \
 worker benchmark agent frontend format\n  \
 hub-gui-dev installer-gui-dev workbench-gui-dev\n  \

@@ -6,10 +6,10 @@
 
 regression-gate-report:
 	@$(ENTRYPOINT) build-module-topology-report --out-dir ./tmp/module-topology
-	@node ./scripts/build-benchmark-profile-index.mjs
-	@node ./scripts/build-regression-lane-catalog.mjs --tmp-root ./tmp
-	@node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
-	@node ./scripts/build-nightly-artifact-overview.mjs --tmp-root ./tmp
+	@$(ENTRYPOINT) build-benchmark-profile-index
+	@$(ENTRYPOINT) build-regression-lane-catalog --tmp-root ./tmp
+	@$(ENTRYPOINT) build-regression-gate-report --tmp-root ./tmp
+	@$(ENTRYPOINT) build-nightly-artifact-overview --tmp-root ./tmp
 
 benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
@@ -30,7 +30,7 @@ benchmark-profile-report:
 	@REPORT_ONLY=1 $(ENTRYPOINT) benchmark-profile-remote
 
 benchmark-profile-index:
-	@node ./scripts/build-benchmark-profile-index.mjs
+	@$(ENTRYPOINT) build-benchmark-profile-index
 
 benchmark-baseline:
 	@matrix=$${MATRIX:-core}; profile=$${PROFILE:-10k}; case_arg=$$( [ -n "$${CASE:-}" ] && printf -- ' --case %s' "$$CASE" || true ); case_slug=$$( [ -n "$${CASE:-}" ] && printf '%s' "$$CASE" | tr -c '[:alnum:]_.-' '-' || true ); baseline=$$( if [ "$$matrix" = "core" ]; then [ -n "$$case_slug" ] && printf 'benchmarks/%s-%s-baseline.json' "$$profile" "$$case_slug" || printf 'benchmarks/%s-baseline.json' "$$profile"; else [ -n "$$case_slug" ] && printf 'benchmarks/%s-%s-%s-baseline.json' "$$matrix" "$$profile" "$$case_slug" || printf 'benchmarks/%s-%s-baseline.json' "$$matrix" "$$profile"; fi ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $$profile --matrix $$matrix --repeat $${REPEAT:-5} --baseline-out $$baseline $$case_arg
@@ -57,7 +57,7 @@ benchmark-standard-report:
 	@$(MAKE) benchmark-report PROFILE=$${PROFILE:-10k} MATRIX=mechanical-core REPEAT=$${REPEAT:-3}
 	@$(MAKE) benchmark-report PROFILE=$${PROFILE:-10k} MATRIX=thermal-core REPEAT=$${REPEAT:-3}
 	@$(MAKE) benchmark-report PROFILE=$${PROFILE:-10k} MATRIX=compound-core REPEAT=$${REPEAT:-3}
-	@node ./scripts/build-standard-benchmark-report.mjs --profile $${PROFILE:-10k} --output $${OUTPUT:-workers/rust/benchmarks/reports/standard-$${PROFILE:-10k}-compare.md}
+	@$(ENTRYPOINT) build-standard-benchmark-report --profile $${PROFILE:-10k} --output $${OUTPUT:-workers/rust/benchmarks/reports/standard-$${PROFILE:-10k}-compare.md}
 
 benchmark-standard-nightly:
 	@$(ENTRYPOINT) standard-benchmark-regression

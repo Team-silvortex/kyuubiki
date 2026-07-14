@@ -133,9 +133,8 @@ impl Options {
 }
 
 fn run_compare(root: &Path, options: &Options) -> RunnerResult<u8> {
-    run_node(
+    crate::workflow_catalog_benchmark_compare::run_compare_workflow_catalog_benchmark(
         root,
-        "compare-workflow-catalog-benchmark.mjs",
         vec![
             "--current".into(),
             options.current_summary_local.clone().into_os_string(),

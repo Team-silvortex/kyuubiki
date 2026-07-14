@@ -91,7 +91,7 @@ function remoteCommand({ backend, mode, remoteDir, runSmoke }, databaseUrl) {
     `export RUN_DB_SMOKE=${shellQuote(smokeFlag)}`,
     `export DATABASE_URL=${shellQuote(databaseUrl)}`,
     "node ./scripts/check-central-database-readiness.mjs --mode \"$MODE\" --backend \"$BACKEND\" --json",
-    "node ./scripts/run-central-database-smoke.mjs --mode \"$MODE\" --backend \"$BACKEND\"",
+    "./scripts/kyuubiki central-database-smoke --mode \"$MODE\" --backend \"$BACKEND\"",
   ].join("; ");
 }
 

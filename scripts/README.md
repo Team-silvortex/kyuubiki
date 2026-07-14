@@ -524,7 +524,7 @@ Useful smoke wrappers:
   `tmp/direct-mesh-benchmark-container/`. For LAN agent discovery, prefer
   `DOCKER_RUN_NETWORK=host`. The current checked-in baseline snapshot is
   `tests/integration/benchmarks/direct-mesh-docker-baseline.json`.
-- `node ./scripts/compare-direct-mesh-benchmark.mjs --current tmp/direct-mesh-benchmark-container/latest/summary.json --baseline tests/integration/benchmarks/direct-mesh-docker-baseline.json --report-out tmp/direct-mesh-benchmark-container/latest/compare.md --json-out tmp/direct-mesh-benchmark-container/latest/compare.json`
+- `./scripts/kyuubiki compare-direct-mesh-benchmark --current tmp/direct-mesh-benchmark-container/latest/summary.json --baseline tests/integration/benchmarks/direct-mesh-docker-baseline.json --report-out tmp/direct-mesh-benchmark-container/latest/compare.md --json-out tmp/direct-mesh-benchmark-container/latest/compare.json`
   Compare a direct-mesh Docker benchmark summary against the checked-in
   baseline and emit both Markdown and machine-readable diff artifacts.
 - `./scripts/run-direct-mesh-benchmark-regression.sh`

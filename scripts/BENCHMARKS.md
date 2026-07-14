@@ -8,7 +8,7 @@ Focused reference for benchmark and regression script entry points.
 - `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_catalog_report_test.exs`
   runs the catalog-backed composite workflow benchmark suite and writes
   `tmp/workflow-catalog-benchmark.json`.
-- `node ./scripts/compare-workflow-catalog-benchmark.mjs --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
+- `./scripts/kyuubiki compare-workflow-catalog-benchmark --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
   compares a workflow catalog benchmark report against the checked-in baseline.
 - `make test-integration-workflow-catalog-compare CURRENT=tmp/workflow-catalog-benchmark.json`
   compares a workflow catalog benchmark report through Make.

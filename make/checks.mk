@@ -122,8 +122,8 @@ check-material-research-bundle-contract:
 	@$(ENTRYPOINT) check-material-research-bundle-contract
 
 check-material-study-sdk-examples:
-	@node ./scripts/check-material-study-sdk-examples.mjs --self-test
-	@node ./scripts/check-material-study-sdk-examples.mjs
+	@$(ENTRYPOINT) check-material-study-sdk-examples --self-test
+	@$(ENTRYPOINT) check-material-study-sdk-examples
 
 check-operator-task-ir-contract:
 	@$(ENTRYPOINT) check-operator-task-ir-contract --self-test
@@ -165,17 +165,17 @@ check-line-field-qualification-release-evidence:
 	@$(ENTRYPOINT) check-line-field-qualification-release-evidence --in $${IN:-tmp/line-field-qualification-release-evidence.json}
 
 capture-material-research-example:
-	@node ./scripts/capture-material-research-example.mjs --out $${OUT:-tmp/material-research-example.json}
+	@$(ENTRYPOINT) capture-material-research-example --out $${OUT:-tmp/material-research-example.json}
 
 check-material-research-example:
-	@node ./scripts/check-material-research-example.mjs --in $${IN:-tmp/material-research-example.json}
+	@$(ENTRYPOINT) check-material-research-example --in $${IN:-tmp/material-research-example.json}
 
 verify-material-research-example:
 	@$(MAKE) capture-material-research-example OUT=$${OUT:-tmp/material-research-example.json}
 	@$(MAKE) check-material-research-example IN=$${OUT:-tmp/material-research-example.json}
 
 build-material-research-bundle:
-	@node ./scripts/build-material-research-bundle.mjs --study $${STUDY:-heat-spreader} --out $${OUT:-tmp/material-research-bundle.json}
+	@$(ENTRYPOINT) build-material-research-bundle --study $${STUDY:-heat-spreader} --out $${OUT:-tmp/material-research-bundle.json}
 
 check-material-research-bundle:
 	@$(ENTRYPOINT) check-material-research-bundle --self-test
@@ -186,19 +186,19 @@ verify-material-research-bundle:
 	@$(MAKE) check-material-research-bundle IN=$${OUT:-tmp/material-research-bundle.json}
 
 material-research-bundle-index:
-	@node ./scripts/build-material-research-bundle-index.mjs --self-test
-	@node ./scripts/build-material-research-bundle-index.mjs --ensure-bundles --out-dir $${OUT_DIR:-tmp/material-research-bundles}
+	@$(ENTRYPOINT) build-material-research-bundle-index --self-test
+	@$(ENTRYPOINT) build-material-research-bundle-index --ensure-bundles --out-dir $${OUT_DIR:-tmp/material-research-bundles}
 
 remote-material-research-example:
-	@node ./scripts/run-remote-material-research-example.mjs --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
+	@$(ENTRYPOINT) remote-material-research-example --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
 
 remote-material-research-summary:
-	@node ./scripts/build-remote-material-benchmark-summary.mjs --self-test
-	@node ./scripts/build-remote-material-benchmark-summary.mjs
-	@node ./scripts/check-remote-material-preconditioner-health.mjs --self-test
-	@node ./scripts/check-remote-material-preconditioner-health.mjs
-	@node ./scripts/check-remote-material-stage-health.mjs --self-test
-	@node ./scripts/check-remote-material-stage-health.mjs
+	@$(ENTRYPOINT) build-remote-material-benchmark-summary --self-test
+	@$(ENTRYPOINT) build-remote-material-benchmark-summary
+	@$(ENTRYPOINT) check-remote-material-preconditioner-health --self-test
+	@$(ENTRYPOINT) check-remote-material-preconditioner-health
+	@$(ENTRYPOINT) check-remote-material-stage-health --self-test
+	@$(ENTRYPOINT) check-remote-material-stage-health
 
 check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness
 	@$(ENTRYPOINT) check-operator-reliability
@@ -288,4 +288,4 @@ verify:
 	@$(MAKE) operator-package-preflight
 	@$(ENTRYPOINT) sdk-smoke
 	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}
-	@node --test apps/web/playground/test/fem.test.mjs
+	@$(ENTRYPOINT) playground-fem-node-test

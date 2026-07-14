@@ -4,10 +4,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 mod agent_registry_sync;
+mod benchmark_profile_index;
 mod benchmark_profile_plan;
 mod benchmark_profile_remote;
 mod benchmark_profile_remote_summary;
 mod central_database_readiness;
+mod central_database_smoke;
 mod central_readiness_report;
 mod central_store_contract;
 mod commercial_readiness;
@@ -17,14 +19,17 @@ mod desktop;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;
+mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
 mod direct_mesh_remote;
 mod docs_book;
 mod elixir_self_host;
 mod frontend_checks;
+mod governance_commands;
 mod gui_runtime_capability_contract;
 mod help;
 mod install_update_disk_hygiene;
+mod installation_integrity_docs;
 mod lab;
 mod language_packs;
 mod line_field_baseline;
@@ -33,10 +38,15 @@ mod line_field_release_evidence;
 mod local_path_audit;
 mod make_modules;
 mod material_exploration_chain_contract;
+mod material_research;
 mod material_research_bundle;
+mod material_research_bundle_build;
 mod material_research_bundle_contract;
+mod material_research_bundle_index;
+mod material_research_example;
 mod material_score_contract;
 mod material_study_execution_plan_contract;
+mod material_study_sdk_examples;
 mod materialization_plan_contract;
 mod minimal_industrial_closure;
 mod module_extension_standard;
@@ -46,6 +56,8 @@ mod module_topology;
 mod module_topology_report;
 mod native_script_audit;
 mod native_time;
+mod nightly_artifact_overview;
+mod node_tests;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_readiness;
 mod operator_reliability;
@@ -54,15 +66,25 @@ mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod project_organization_audit;
+mod regression_gate_report;
+mod regression_lane_catalog;
 mod release_snapshot;
+mod remote_central_database_smoke;
 mod remote_host;
+mod remote_material_health;
+mod remote_material_research_example;
+mod remote_material_stage_health;
+mod remote_material_summary;
 mod remote_ssh_fixture;
 mod rust_line_counts;
 mod standard_benchmark_remote;
+mod standard_benchmark_report;
 mod toolchain_contract;
 mod ui_automation_contract;
+mod update_catalog_docs;
 mod verification_evidence_surface;
 mod version_line_audit;
+mod workflow_catalog_benchmark_compare;
 mod workflow_catalog_remote;
 mod workflow_dataset_contract;
 mod workflow_mesh;
@@ -106,6 +128,20 @@ fn run() -> RunnerResult<u8> {
         .unwrap_or_else(|| "help".to_string());
     let rest: Vec<OsString> = args.collect();
 
+    if let Some(result) =
+        material_research::run_material_research_command(&paths.root, &command, rest.clone())
+    {
+        return result;
+    }
+    if let Some(result) = governance_commands::run_governance_command(
+        &paths.root,
+        &paths.frontend,
+        &command,
+        rest.clone(),
+    ) {
+        return result;
+    }
+
     match command.as_str() {
         "help" | "--help" | "-h" => {
             print_help();
@@ -148,6 +184,15 @@ fn run() -> RunnerResult<u8> {
         "validate-env" => run_installer(&paths, "validate-env", rest),
         "cross-platform-audit" => run_installer(&paths, "cross-platform-audit", rest),
         "check-elixir-self-host" => elixir_self_host::run_check_elixir_self_host(&paths.root, rest),
+        "check-central-database-readiness" => {
+            central_database_readiness::run_check_central_database_readiness(&paths.root, rest)
+        }
+        "central-database-smoke" => {
+            central_database_smoke::run_central_database_smoke(&paths.root, rest)
+        }
+        "remote-central-database-smoke" => {
+            remote_central_database_smoke::run_remote_central_database_smoke(&paths.root, rest)
+        }
         "operator-package-preflight" => run_installer(&paths, "operator-package-preflight", rest),
         "operator-package-dynamic-smoke" => {
             operator_package_dynamic_smoke::run_operator_package_dynamic_smoke(&paths, rest)
@@ -306,127 +351,73 @@ fn run() -> RunnerResult<u8> {
             ]
             .map(OsString::from),
         ),
+        "playground-fem-node-test" => {
+            node_tests::run_node_test(&paths.root, &["apps/web/playground/test/fem.test.mjs"])
+        }
+        "hub-gui-compile-ui" => node_tests::run_hub_gui_compile(&paths.hub_gui),
+        "hub-gui-smoke-node-test" => node_tests::run_hub_gui_smoke(&paths.hub_gui),
+        "installer-gui-smoke-node-test" => node_tests::run_app_smoke(&paths.installer_gui),
+        "workbench-gui-smoke-node-test" => node_tests::run_app_smoke(&paths.workbench_gui),
+        "integration-api-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/orchestrator-agent-api-smoke.test.mjs"],
+        ),
+        "integration-cluster-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/distributed-control-plane-smoke.test.mjs"],
+        ),
+        "integration-direct-mesh-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/direct-mesh-gui-smoke.test.mjs"],
+        ),
+        "integration-desktop-gui-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &[
+                "tests/integration/desktop-shell-regression.test.mjs",
+                "tests/integration/workbench-shell-regression.test.mjs",
+            ],
+        ),
+        "integration-benchmark-profile-index-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/benchmark-profile-index.test.mjs"],
+        ),
+        "integration-ui-mechanical-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/workbench-ui-mechanical-smoke.test.mjs"],
+        ),
+        "integration-ui-thermal-node-test" => node_tests::run_node_test(
+            &paths.root,
+            &["tests/integration/workbench-ui-thermal-smoke.test.mjs"],
+        ),
         "sdk-smoke" => run_sdk_smoke(&paths),
         "workflow-preflight" => run_command(
             &paths.frontend,
             "npm",
             ["run", "check:workflow-preflight"].map(OsString::from),
         ),
-        "check-make-modules" => make_modules::run_check_make_modules(&paths.root, rest),
-        "check-doc-book" => docs_book::run_check_doc_book(&paths.root, rest),
-        "sync-doc-book-version" => docs_book::run_sync_doc_book_version(&paths.root, rest),
-        "check-toolchain-contract" => {
-            toolchain_contract::run_check_toolchain_contract(&paths.root, rest)
-        }
-        "check-install-update-disk-hygiene" => {
-            install_update_disk_hygiene::run_check_install_update_disk_hygiene(&paths.root, rest)
-        }
-        "check-module-topology" => module_topology::run_check_module_topology(&paths.root, rest),
-        "build-module-topology-report" => {
-            module_topology_report::run_build_module_topology_report(&paths.root, rest)
-        }
-        "check-module-function-matrix" => {
-            module_function_matrix::run_check_module_function_matrix(&paths.root, rest)
-        }
-        "check-module-function-coverage-tensor" => {
-            module_function_tensor::run_check_module_function_tensor(&paths.root, rest)
-        }
-        "check-module-extension-standard" => {
-            module_extension_standard::run_check_module_extension_standard(&paths.root, rest)
-        }
-        "check-verification-evidence-surface" => {
-            verification_evidence_surface::run_check_verification_evidence_surface(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-central-store-contract" => {
-            central_store_contract::run_check_central_store_contract(&paths.root, rest)
-        }
-        "check-central-database-readiness" => {
-            central_database_readiness::run_check_central_database_readiness(&paths.root, rest)
-        }
-        "build-central-readiness-report" => {
-            central_readiness_report::run_build_central_readiness_report(&paths.root, rest)
-        }
-        "check-central-readiness-report" => {
-            central_readiness_report::run_check_central_readiness_report(&paths.root, rest)
-        }
-        "check-contracts-runtime-api-surface" => {
-            contracts_runtime_api_surface::run_check_contracts_runtime_api_surface(
-                &paths.root,
-                rest,
-            )
-        }
-        "validate-language-packs" => language_packs::run_validate_language_packs(&paths.root, rest),
-        "validate-commercial-readiness" => {
-            commercial_readiness::run_validate_commercial_readiness(&paths.root, rest)
-        }
-        "validate-minimal-industrial-closure" => {
-            minimal_industrial_closure::run_validate_minimal_industrial_closure(&paths.root, rest)
-        }
-        "check-ui-automation-contract" => {
-            ui_automation_contract::run_check_ui_automation_contract(&paths.root, rest)
-        }
-        "check-gui-runtime-capability-contract" => {
-            gui_runtime_capability_contract::run_check_gui_runtime_capability_contract(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-workflow-dataset-contract" => {
-            workflow_dataset_contract::run_check_workflow_dataset_contract(&paths.root, rest)
-        }
-        "check-materialization-plan-contract" => {
-            materialization_plan_contract::run_check_materialization_plan_contract(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-material-study-execution-plan-contract" => {
-            material_study_execution_plan_contract::run_check_material_study_execution_plan_contract(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-material-exploration-chain-contract" => {
-            material_exploration_chain_contract::run_check_material_exploration_chain_contract(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-material-research-bundle-contract" => {
-            material_research_bundle_contract::run_check_material_research_bundle_contract(
-                &paths.root,
-                rest,
-            )
-        }
-        "check-material-research-bundle" => {
-            material_research_bundle::run_check_material_research_bundle(&paths.root, rest)
-        }
-        "check-operator-task-ir-contract" => {
-            operator_task_ir_contract::run_check_operator_task_ir_contract(&paths.root, rest)
-        }
-        "validate-material-score-contract" => {
-            material_score_contract::run_validate_material_score_contract(&paths.root, rest)
-        }
-        "audit-local-paths" => local_path_audit::run_audit_local_paths(&paths.root, rest),
-        "audit-project-organization" => {
-            project_organization_audit::run_audit_project_organization(&paths.root, rest)
-        }
-        "audit-dependencies" => dependency_audit::run_audit_dependencies(&paths.root, rest),
-        "frontend-file-lines" => frontend_checks::run_frontend_file_lines(&paths.frontend, rest),
-        "frontend-storage-security" => {
-            frontend_checks::run_frontend_storage_security(&paths.frontend, rest)
-        }
         "benchmark-profile-remote" => {
             benchmark_profile_remote::run_benchmark_profile_remote(&paths.root, rest)
         }
         "benchmark-profile-plan" => {
             benchmark_profile_plan::run_benchmark_profile_plan(&paths.root, rest)
         }
+        "build-benchmark-profile-index" => {
+            benchmark_profile_index::run_build_benchmark_profile_index(&paths.root, rest)
+        }
+        "build-regression-lane-catalog" => {
+            regression_lane_catalog::run_build_regression_lane_catalog(&paths.root, rest)
+        }
+        "build-regression-gate-report" => {
+            regression_gate_report::run_build_regression_gate_report(&paths.root, rest)
+        }
+        "build-nightly-artifact-overview" => {
+            nightly_artifact_overview::run_build_nightly_artifact_overview(&paths.root, rest)
+        }
         "direct-mesh-benchmark-container" => {
             direct_mesh_container::run_direct_mesh_benchmark_container(&paths.root, rest)
+        }
+        "compare-direct-mesh-benchmark" => {
+            direct_mesh_benchmark_compare::run_compare_direct_mesh_benchmark(&paths.root, rest)
         }
         "direct-mesh-benchmark-regression" => {
             direct_mesh_remote::run_direct_mesh_benchmark_regression(&paths.root, rest)
@@ -434,8 +425,17 @@ fn run() -> RunnerResult<u8> {
         "standard-benchmark-regression" => {
             standard_benchmark_remote::run_standard_benchmark_regression(&paths.root, rest)
         }
+        "build-standard-benchmark-report" => {
+            standard_benchmark_report::run_build_standard_benchmark_report(&paths.root, rest)
+        }
         "workflow-catalog-benchmark-regression" => {
             workflow_catalog_remote::run_workflow_catalog_remote(&paths.root, rest)
+        }
+        "compare-workflow-catalog-benchmark" => {
+            workflow_catalog_benchmark_compare::run_compare_workflow_catalog_benchmark(
+                &paths.root,
+                rest,
+            )
         }
         "workflow-mesh-regression-remote" => {
             workflow_mesh_remote::run_workflow_mesh_remote(&paths.root, rest)

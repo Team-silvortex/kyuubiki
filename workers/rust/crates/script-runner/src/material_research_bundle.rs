@@ -31,7 +31,7 @@ pub(crate) fn run_check_material_research_bundle(
         .map_err(|error| format!("failed to read {relative}: {error}"))?;
     let bundle: Value = serde_json::from_str(&text)
         .map_err(|error| format!("{relative}: invalid json: {error}"))?;
-    match validate_bundle(root, &bundle, Some(&text)) {
+    match validate_material_research_bundle_value(root, &bundle, Some(&text)) {
         Ok(()) => {
             println!("material research bundle ok: {}", options.input);
             Ok(0)
@@ -128,11 +128,19 @@ fn run_self_test() -> RunnerResult<u8> {
 }
 
 fn expect_failure(root: &Path, bundle: &Value, label: &str) -> RunnerResult<()> {
-    if validate_bundle(root, bundle, None).is_ok() {
+    if validate_material_research_bundle_value(root, bundle, None).is_ok() {
         Err(format!("self-test did not reject {label}"))
     } else {
         Ok(())
     }
+}
+
+pub(crate) fn validate_material_research_bundle_value(
+    root: &Path,
+    bundle: &Value,
+    raw_text: Option<&str>,
+) -> RunnerResult<()> {
+    validate_bundle(root, bundle, raw_text)
 }
 
 fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> RunnerResult<()> {

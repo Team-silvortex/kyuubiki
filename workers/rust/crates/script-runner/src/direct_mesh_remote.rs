@@ -259,9 +259,8 @@ fn find_remote_summary(options: &Options, root: &Path) -> RunnerResult<String> {
 }
 
 fn run_compare(root: &Path, options: &Options) -> RunnerResult<u8> {
-    run_node(
+    crate::direct_mesh_benchmark_compare::run_compare_direct_mesh_benchmark(
         root,
-        "compare-direct-mesh-benchmark.mjs",
         vec![
             "--current".into(),
             options.current_summary_local.clone().into_os_string(),

@@ -185,6 +185,6 @@ requireOk("remote material research run", run("ssh", sshArgs(options.host, remot
 pullEvidence(options, localDir);
 requireOk(
   "remote material benchmark summary",
-  run("node", ["./scripts/build-remote-material-benchmark-summary.mjs"]),
+  run("./scripts/kyuubiki", ["build-remote-material-benchmark-summary"]),
 );
 console.log(`remote material research evidence: ${localDir}`);
