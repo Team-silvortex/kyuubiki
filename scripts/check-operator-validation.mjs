@@ -25,6 +25,9 @@ function parseArgs(argv) {
     } else if (arg === "--out" && next) {
       options.out = next;
       index += 1;
+    } else if (arg === "--profile" && next) {
+      options.profile = next;
+      index += 1;
     } else if (arg === "--execute") {
       options.execute = true;
     } else if (arg === "--self-test") {
@@ -237,7 +240,11 @@ function tail(text) {
 }
 
 function buildReport(config, options) {
-  const profiles = config.profiles.map((profile) => {
+  const selectedProfiles = config.profiles.filter((profile) => !options.profile || profile.profile_id === options.profile);
+  if (selectedProfiles.length === 0) {
+    throw new Error(`no operator validation profiles matched ${options.profile ?? "<all>"}`);
+  }
+  const profiles = selectedProfiles.map((profile) => {
     const commands = profile.commands.map((command) => ({
       id: command.id,
       kind: command.kind,
@@ -305,6 +312,10 @@ function runSelfTest() {
   sample.profiles[0].commands[1].kind = "boundary_regression";
   const report = buildReport(sample, { config: "config/sample.json", execute: false });
   assert.doesNotThrow(() => validateReport(report, { config: "config/sample.json" }));
+  assert.throws(
+    () => buildReport(sample, { config: "config/sample.json", execute: false, profile: "missing" }),
+    /no operator validation profiles matched/u,
+  );
   report.profile_count = 2;
   assert.throws(() => validateReport(report, { config: "config/sample.json" }), /profile_count/u);
   console.log("operator validation self-test passed");

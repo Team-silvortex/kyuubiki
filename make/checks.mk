@@ -3,8 +3,8 @@
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
-.PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence
-.PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence
+.PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
+.PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
@@ -157,6 +157,13 @@ capture-line-field-qualification-provenance:
 
 capture-line-field-qualification-release-evidence:
 	@$(ENTRYPOINT) capture-line-field-qualification-release-evidence --out $${OUT:-tmp/line-field-qualification-release-evidence.json}
+
+capture-beam-frame-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile beam-frame-classic --out $${OUT:-tmp/beam-frame-classic-qualification-release-evidence.json}
+
+check-beam-frame-qualification-release-evidence:
+	@$(ENTRYPOINT) check-beam-frame-qualification-release-evidence --in $${IN:-tmp/beam-frame-classic-qualification-release-evidence.json}
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline

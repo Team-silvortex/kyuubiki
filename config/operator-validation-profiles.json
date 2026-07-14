@@ -179,6 +179,58 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_quad_2d_review -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "beam-frame-classic",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.beam_1d",
+        "solve.torsion_1d",
+        "solve.frame_2d"
+      ],
+      "validation_methods": [
+        "classic_closed_form",
+        "beam_frame_cross_check",
+        "torsion_closed_form",
+        "sign_convention_scope"
+      ],
+      "formal_invariants": [
+        "cantilever_tip_displacement_matches_closed_form",
+        "cantilever_tip_rotation_matches_closed_form",
+        "frame_2d_matches_equivalent_beam_cantilever",
+        "torsion_twist_matches_t_l_over_gj",
+        "sign_convention_documented_for_force_moment_rotation_and_torsion"
+      ],
+      "evidence_paths": [
+        "evidence/operator-qualification/beam-frame-classic-reference-note.md",
+        "evidence/operator-qualification/beam-frame-force-sign-convention.md",
+        "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+        "workers/rust/crates/solver/tests/beam_1d_review.rs",
+        "workers/rust/crates/solver/tests/torsion_1d_review.rs",
+        "workers/rust/crates/solver/tests/frame_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "beam-frame-classic-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_frame_classic_regression -- --nocapture"
+        },
+        {
+          "id": "beam-review-fixture",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_1d_review -- --nocapture"
+        },
+        {
+          "id": "torsion-review-fixture",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test torsion_1d_review -- --nocapture"
+        },
+        {
+          "id": "frame-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_review -- --nocapture"
+        }
+      ]
     }
   ]
 }

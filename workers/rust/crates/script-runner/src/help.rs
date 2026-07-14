@@ -19,6 +19,7 @@ operator-package-dynamic-smoke\n  \
   capture-line-field-qualification-provenance\n  \
   capture-line-field-qualification-release-evidence\n  \
   check-line-field-qualification-release-evidence\n  \
+  check-beam-frame-qualification-release-evidence\n  \
   build-operator-qualification-readiness\n  \
   check-operator-qualification-readiness\n  \
 project macro build-frontend build-orchestrator build-agent\n  \

@@ -89,6 +89,10 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "artifact_check_command": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "path_policy": {
                   "enum": [
                     "repo-relative-required-before-qualification"

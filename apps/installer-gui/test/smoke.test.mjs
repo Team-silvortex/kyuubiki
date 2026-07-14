@@ -117,6 +117,9 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(certificatePanel, /use-for-remote-agent/);
   assert.match(certificatePanel, /selectedOptions/);
   assert.match(js, /getActiveCertificates/);
+  assert.doesNotMatch(read("ui/installer-workflows.js"), /card\.innerHTML/);
+  assert.match(read("ui/installer-workflows.js"), /label\.textContent = check\.label/);
+  assert.match(read("ui/installer-workflows.js"), /state\.textContent = stateLabel/);
   assert.match(js, /mountRemoteNodePanel\(\{/);
   assert.match(js, /getActiveCertificates,\s*showCompletion/);
   assert.match(regressionGatePanel, /renderRegressionGateReport/);
@@ -160,6 +163,10 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(remoteNodeMesh, /renderRolloutFailures/);
   assert.match(remoteNodeMesh, /retryFailedNodes/);
   assert.match(remoteNodeMesh, /retry-failures/);
+  assert.match(remoteNodeMesh, /const escapeHtml =/);
+  assert.match(remoteNodeMesh, /escapeHtml\(issue\)/);
+  assert.match(remoteNodeMesh, /escapeHtml\(cluster\.clusterId\)/);
+  assert.match(remoteNodeMesh, /escapeHtml\(entry\.message\)/);
   assert.match(remoteNodeMesh, /data-remote-cluster-action/);
   assert.match(remoteNodeMesh, /focus-cluster/);
   assert.match(remoteNodeMesh, /preflight-missing/);

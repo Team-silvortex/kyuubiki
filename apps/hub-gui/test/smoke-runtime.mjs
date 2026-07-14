@@ -1,4 +1,5 @@
 import test from "node:test";
+import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
 import {
   HUB_APP_RUNTIME_PATTERNS,
@@ -86,6 +87,10 @@ test("hub shell registers section switching behavior", () => {
   assertMatches(appRuntimeSource, HUB_APP_RUNTIME_PATTERNS);
   assertMatches(bridge, HUB_MODULE_PATTERNS.bridge);
   assertMatches(projectBundles, HUB_MODULE_PATTERNS.projectBundles);
+  assert.doesNotMatch(projectHistoryPanel, /button\.innerHTML/);
+  assert.match(projectHistoryPanel, /titleElement\.textContent = title/);
+  assert.match(projectHistoryPanel, /detailsElement\.textContent = details/);
+  assert.match(projectHistoryPanel, /badge\.textContent = entry\.status \|\| "idle"/);
   assertMatches(runtimeHelpers, HUB_MODULE_PATTERNS.runtimeHelpers);
   assertMatches(projectActions, HUB_MODULE_PATTERNS.projectActions);
   assertMatches(runtimeActions, HUB_MODULE_PATTERNS.runtimeActions);

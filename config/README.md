@@ -21,11 +21,14 @@ contributors and automation.
   `schemas/operator-validation-profiles.schema.json` input shape.
 - `operator-qualification-roadmap.json`
   Planning queue for the first review-level operators that should be hardened
-  toward `qualification`. It does not by itself upgrade any operator.
+  toward stronger trust. Each candidate records target level, evidence phase,
+  primary blocker, preferred validation lane, and release-gate impact. It does
+  not by itself upgrade any operator.
 - `operator-qualification-evidence-kits.json`
   Planning-grade artifact checklist for each qualification roadmap candidate.
   A kit describes what must be collected before real `evidence.qualification`
-  can be added to the reliability shards.
+  can be added to the reliability shards. Command-backed artifacts can pair a
+  capture command with a separate check command for generated release bundles.
 
 Run `make check-operator-reliability` and `make check-operator-validation`
 after changing any of these files. Use `make verify-operator-validation` when

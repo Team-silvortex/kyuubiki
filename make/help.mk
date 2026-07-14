@@ -86,6 +86,8 @@ help:
 	@echo "  make build-operator-qualification-readiness Write and validate operator qualification readiness report to OUT=tmp/operator-qualification-readiness.json"
 	@echo "  make capture-line-field-qualification-provenance Write line-field qualification provenance JSON to OUT=tmp/line-field-qualification-provenance.json"
 	@echo "  make capture-line-field-qualification-release-evidence Run and retain line-field qualification evidence output under OUT=tmp/line-field-qualification-release-evidence.json"
+	@echo "  make capture-beam-frame-qualification-release-evidence Run and retain beam/frame/torsion validation output under OUT=tmp/beam-frame-classic-qualification-release-evidence.json"
+	@echo "  make check-beam-frame-qualification-release-evidence Verify beam/frame/torsion release evidence from IN=tmp/beam-frame-classic-qualification-release-evidence.json"
 	@echo "  make check-line-field-closed-form-baseline Verify line-field closed-form qualification baseline artifact"
 	@echo "  make check-line-field-qualification-release-evidence Verify release evidence JSON from IN=tmp/line-field-qualification-release-evidence.json"
 	@echo "  make capture-material-research-example Run the heat-spreader automated material research example to OUT=tmp/material-research-example.json"

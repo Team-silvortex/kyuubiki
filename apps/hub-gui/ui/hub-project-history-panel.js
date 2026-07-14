@@ -154,19 +154,35 @@ export function createHubProjectHistoryPanel(context) {
     button.type = "button";
     button.className = "hub-history-item__summary desktop-shell-button-ghost";
     const paths = [entry.bundlePath, entry.comparePath, entry.outputPath].filter(Boolean).join("  •  ");
-    const badge = `<span class="${projectActionStateClass(entry.status)}">${entry.status || "idle"}</span>`;
     const time = context.formatProjectActionTime(entry.executedAt);
-    const meta = [badge, time ? `<span>${time}</span>` : ""].filter(Boolean).join("");
     const details = summarizeProjectActionResult(entry.note) || paths || "No stored paths";
     const title = entry.pinned && entry.favoriteLabel ? entry.favoriteLabel : entry.action;
-    button.innerHTML = `
-      <div class="hub-history-item__heading">
-        <strong>${title}</strong>
-        <div class="hub-history-item__meta">${meta}</div>
-      </div>
-      ${entry.pinned && entry.favoriteLabel ? `<span class="hub-history-item__alias">${entry.action}</span>` : ""}
-      <span>${details}</span>
-    `;
+    const heading = document.createElement("div");
+    heading.className = "hub-history-item__heading";
+    const titleElement = document.createElement("strong");
+    titleElement.textContent = title;
+    const meta = document.createElement("div");
+    meta.className = "hub-history-item__meta";
+    const badge = document.createElement("span");
+    badge.className = projectActionStateClass(entry.status);
+    badge.textContent = entry.status || "idle";
+    meta.appendChild(badge);
+    if (time) {
+      const timeElement = document.createElement("span");
+      timeElement.textContent = time;
+      meta.appendChild(timeElement);
+    }
+    heading.append(titleElement, meta);
+    button.appendChild(heading);
+    if (entry.pinned && entry.favoriteLabel) {
+      const alias = document.createElement("span");
+      alias.className = "hub-history-item__alias";
+      alias.textContent = entry.action;
+      button.appendChild(alias);
+    }
+    const detailsElement = document.createElement("span");
+    detailsElement.textContent = details;
+    button.appendChild(detailsElement);
     button.addEventListener("click", () => restoreProjectActionWithNotice(entry));
     return button;
   }

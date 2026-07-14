@@ -7,6 +7,8 @@
       "candidate_id": "line-field-closed-form",
       "priority": "p0",
       "domain": "core_line_fields",
+      "target_level": "qualification",
+      "evidence_phase": "collecting",
       "operator_ids": [
         "solve.bar_1d",
         "solve.thermal_bar_1d",
@@ -14,6 +16,7 @@
         "solve.electrostatic_bar_1d"
       ],
       "rationale": "Small line-field cases have direct closed-form references and are the safest first qualification candidates.",
+      "primary_blocker": "release-retained evidence bundle must be attached to an actual release record before trust-level promotion",
       "evidence_gaps": [
         "release-retained regression output",
         "environment and solver-version provenance attached to the retained run"
@@ -23,34 +26,42 @@
         "versioned baseline JSON",
         "release-gated regression test"
       ],
-      "graduation_gate": "analytic reference, tolerance provenance, and CI artifact must all be present before qualification"
+      "graduation_gate": "analytic reference, tolerance provenance, and CI artifact must all be present before qualification",
+      "preferred_validation_lane": "make capture-line-field-qualification-release-evidence",
+      "release_gate_impact": "release_blocker"
     },
     {
       "candidate_id": "beam-frame-classic",
       "priority": "p0",
       "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "collecting",
       "operator_ids": [
         "solve.beam_1d",
         "solve.torsion_1d",
         "solve.frame_2d"
       ],
       "rationale": "Classic beam, torsion, and frame cases are central to engineering trust and have textbook references.",
+      "primary_blocker": "release-retained regression provenance must be attached before trust-level promotion",
       "evidence_gaps": [
-        "second independent load case",
-        "textbook reference citation",
-        "sign-convention explanation"
+        "release-retained regression provenance"
       ],
       "required_artifacts": [
         "canonical benchmark note",
         "multi-case regression test",
-        "documented force and moment sign convention"
+        "documented force and moment sign convention",
+        "release-retained validation output"
       ],
-      "graduation_gate": "two independent canonical cases must pass with documented tolerances"
+      "graduation_gate": "two independent canonical cases must pass with documented tolerances",
+      "preferred_validation_lane": "make capture-beam-frame-qualification-release-evidence",
+      "release_gate_impact": "release_blocker"
     },
     {
       "candidate_id": "thermal-plane-patch",
       "priority": "p1",
       "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "planned",
       "operator_ids": [
         "solve.thermal_plane_triangle_2d",
         "solve.thermal_plane_quad_2d",
@@ -58,6 +69,7 @@
         "solve.heat_plane_quad_2d"
       ],
       "rationale": "2D thermal and thermoelastic patches are needed before material heat-spreader claims can mature.",
+      "primary_blocker": "mesh refinement and boundary-condition coverage are not yet retained as qualification artifacts",
       "evidence_gaps": [
         "mesh convergence record",
         "boundary coverage fingerprint",
@@ -68,12 +80,16 @@
         "boundary-condition coverage report",
         "material-card linked benchmark fixture"
       ],
-      "graduation_gate": "mesh and boundary evidence must be linked from the operator reliability entry"
+      "graduation_gate": "mesh and boundary evidence must be linked from the operator reliability entry",
+      "preferred_validation_lane": "make verify-operator-validation",
+      "release_gate_impact": "release_watch"
     },
     {
       "candidate_id": "electromagnetic-plane-patch",
       "priority": "p1",
       "domain": "electromagnetic",
+      "target_level": "qualification",
+      "evidence_phase": "planned",
       "operator_ids": [
         "solve.electrostatic_plane_triangle_2d",
         "solve.electrostatic_plane_quad_2d",
@@ -81,6 +97,7 @@
         "solve.magnetostatic_plane_quad_2d"
       ],
       "rationale": "Plane electromagnetic patches are important for dielectric and magnetic material screening.",
+      "primary_blocker": "orientation and field-energy tolerance evidence are not yet paired with material provenance",
       "evidence_gaps": [
         "energy-density tolerance derivation",
         "independent patch orientation case",
@@ -91,17 +108,22 @@
         "field-energy derivation note",
         "material-card linked field fixture"
       ],
-      "graduation_gate": "field, flux, and stored-energy checks must pass across at least two orientations"
+      "graduation_gate": "field, flux, and stored-energy checks must pass across at least two orientations",
+      "preferred_validation_lane": "make verify-operator-validation",
+      "release_gate_impact": "release_watch"
     },
     {
       "candidate_id": "modal-frame-sanity",
       "priority": "p2",
       "domain": "modal",
+      "target_level": "qualification",
+      "evidence_phase": "planned",
       "operator_ids": [
         "solve.modal_frame_2d",
         "solve.modal_frame_3d"
       ],
       "rationale": "Modal workflows need convergence and mode-order evidence before serious vibration claims.",
+      "primary_blocker": "mode-shape normalization and refinement stability are not yet captured as release evidence",
       "evidence_gaps": [
         "mode-shape normalization policy",
         "mesh or discretization convergence",
@@ -112,17 +134,22 @@
         "mode-order regression test",
         "mode normalization documentation"
       ],
-      "graduation_gate": "mode frequencies and ordering must remain stable under documented refinement"
+      "graduation_gate": "mode frequencies and ordering must remain stable under documented refinement",
+      "preferred_validation_lane": "make benchmark-physics-coverage",
+      "release_gate_impact": "release_watch"
     },
     {
       "candidate_id": "screening-cfd-boundary",
       "priority": "p2",
       "domain": "cfd",
+      "target_level": "review",
+      "evidence_phase": "collecting",
       "operator_ids": [
         "solve.stokes_flow_quad_2d",
         "solve.stokes_flow_triangle_2d"
       ],
       "rationale": "The Stokes operator is intentionally screening-grade; it now has a second boundary response but still needs explicit scope and qualification evidence before higher trust.",
+      "primary_blocker": "Stokes-only screening scope must remain explicit until convergence or external-reference evidence exists",
       "evidence_gaps": [
         "mesh-convergence or external-reference evidence",
         "scope note explaining Stokes-only limits beyond screening fixtures"
@@ -133,7 +160,9 @@
         "screening divergence tolerance policy",
         "screening-scope documentation"
       ],
-      "graduation_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence"
+      "graduation_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence",
+      "preferred_validation_lane": "make verify-operator-validation",
+      "release_gate_impact": "experimental_only"
     }
   ]
 }

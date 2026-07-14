@@ -6,19 +6,19 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 mod self_test;
+#[cfg(test)]
+mod unit_tests;
 
-const DEFAULT_INPUT: &str = "tmp/operator-qualification-readiness.json";
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
 const EVIDENCE_KITS_PATH: &str = "config/operator-qualification-evidence-kits.json";
 const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-readiness/v1";
-const ALLOWED_ACTION_KINDS: &[&str] = &[
-    "collect_artifact",
-    "restore_or_generate_artifact",
-    "run_command",
-    "review",
-];
+#[rustfmt::skip]
+const ALLOWED_ACTION_KINDS: &[&str] = &["collect_artifact", "restore_or_generate_artifact", "run_command", "review"];
+const TARGET_LEVELS: &[&str] = &["baseline", "review", "qualification"];
+const EVIDENCE_PHASES: &[&str] = &["planned", "collecting", "ready_for_review", "blocked"];
+const RELEASE_GATE_IMPACTS: &[&str] = &["release_blocker", "release_watch", "experimental_only"];
 
 pub(crate) fn run_build_operator_qualification_readiness(
     root: &Path,
@@ -81,7 +81,7 @@ struct CheckOptions {
 }
 
 fn parse_check_args(args: Vec<OsString>) -> RunnerResult<CheckOptions> {
-    let mut input = DEFAULT_INPUT.to_string();
+    let mut input = "tmp/operator-qualification-readiness.json".to_string();
     let mut self_test = false;
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -139,6 +139,9 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
                 == candidate.pointer("/artifact_counts/total").and_then(Value::as_u64)).count(),
             "broken": candidates.iter().filter(|candidate| field(candidate, "readiness") == "broken").count(),
             "next_action_count": next_actions.len(),
+            "target_levels": count_by(&candidates, "target_level", TARGET_LEVELS),
+            "evidence_phases": count_by(&candidates, "evidence_phase", EVIDENCE_PHASES),
+            "release_gate_impacts": count_by(&candidates, "release_gate_impact", RELEASE_GATE_IMPACTS),
         },
         "next_actions": next_actions,
         "candidates": candidates,
@@ -175,6 +178,8 @@ fn readiness_for(root: &Path, candidate: &Value, kit: Option<&Value>) -> RunnerR
         "candidate_id": field(candidate, "candidate_id"),
         "priority": field(candidate, "priority"),
         "domain": field(candidate, "domain"),
+        "target_level": field(candidate, "target_level"),
+        "evidence_phase": field(candidate, "evidence_phase"),
         "status": kit.map(|kit| field(kit, "status")).unwrap_or("missing_kit"),
         "readiness": readiness,
         "operator_ids": candidate.get("operator_ids").cloned().unwrap_or(Value::Array(Vec::new())),
@@ -186,8 +191,11 @@ fn readiness_for(root: &Path, candidate: &Value, kit: Option<&Value>) -> RunnerR
             "not_started": not_started,
         },
         "artifacts": artifacts,
+        "primary_blocker": field(candidate, "primary_blocker"),
         "evidence_gaps": candidate.get("evidence_gaps").cloned().unwrap_or(Value::Array(Vec::new())),
         "graduation_gate": field(candidate, "graduation_gate"),
+        "preferred_validation_lane": field(candidate, "preferred_validation_lane"),
+        "release_gate_impact": field(candidate, "release_gate_impact"),
     }))
 }
 
@@ -209,6 +217,7 @@ fn artifact_state(root: &Path, requirement: &Value) -> RunnerResult<Value> {
             "kind": field(requirement, "kind"),
             "state": "command_available",
             "command": command,
+            "check_command": optional_field(requirement, "artifact_check_command"),
             "gate": field(requirement, "gate"),
         }));
     }
@@ -228,14 +237,19 @@ fn build_next_actions(candidates: &[Value]) -> Vec<Value> {
             json!({
                 "candidate_id": field(candidate, "candidate_id"),
                 "priority": field(candidate, "priority"),
+                "target_level": field(candidate, "target_level"),
+                "evidence_phase": field(candidate, "evidence_phase"),
                 "readiness": field(candidate, "readiness"),
                 "action_kind": action_kind_for_artifact(artifact),
                 "artifact_id": artifact.and_then(|artifact| artifact.get("artifact_id")).cloned().unwrap_or(Value::Null),
                 "artifact_state": artifact.and_then(|artifact| artifact.get("state")).cloned().unwrap_or(Value::Null),
                 "artifact_kind": artifact.and_then(|artifact| artifact.get("kind")).cloned().unwrap_or(Value::Null),
                 "command": artifact.and_then(|artifact| artifact.get("command")).cloned().unwrap_or(Value::Null),
+                "check_command": artifact.and_then(|artifact| artifact.get("check_command")).cloned().unwrap_or(Value::Null),
                 "path": artifact.and_then(|artifact| artifact.get("path")).cloned().unwrap_or(Value::Null),
                 "gate": artifact.and_then(|artifact| artifact.get("gate")).and_then(Value::as_str).unwrap_or_else(|| field(candidate, "graduation_gate")),
+                "preferred_validation_lane": field(candidate, "preferred_validation_lane"),
+                "release_gate_impact": field(candidate, "release_gate_impact"),
             })
         })
         .filter(|action| {
@@ -365,12 +379,43 @@ fn check_summary(
             errors.push(format!("{relative_input}: {label}"));
         }
     }
+    check_count_map(
+        report,
+        "/summary/target_levels",
+        &count_by(candidates, "target_level", TARGET_LEVELS),
+        relative_input,
+        "summary.target_levels",
+        errors,
+    );
+    check_count_map(
+        report,
+        "/summary/evidence_phases",
+        &count_by(candidates, "evidence_phase", EVIDENCE_PHASES),
+        relative_input,
+        "summary.evidence_phases",
+        errors,
+    );
+    check_count_map(
+        report,
+        "/summary/release_gate_impacts",
+        &count_by(candidates, "release_gate_impact", RELEASE_GATE_IMPACTS),
+        relative_input,
+        "summary.release_gate_impacts",
+        errors,
+    );
 }
 
 fn action_errors(action: &Value, index: usize) -> Vec<String> {
     let mut errors = Vec::new();
     let context = format!("next_actions[{index}]");
-    for field_name in ["candidate_id", "priority", "readiness", "action_kind"] {
+    for field_name in [
+        "candidate_id",
+        "priority",
+        "target_level",
+        "evidence_phase",
+        "readiness",
+        "action_kind",
+    ] {
         require_string(action.get(field_name), field_name, &context, &mut errors);
     }
     let action_kind = field(action, "action_kind");
@@ -384,7 +429,59 @@ fn action_errors(action: &Value, index: usize) -> Vec<String> {
         require_string(action.get("path"), "path", &context, &mut errors);
     }
     require_string(action.get("gate"), "gate", &context, &mut errors);
+    require_string(
+        action.get("preferred_validation_lane"),
+        "preferred_validation_lane",
+        &context,
+        &mut errors,
+    );
+    require_string(
+        action.get("release_gate_impact"),
+        "release_gate_impact",
+        &context,
+        &mut errors,
+    );
     errors
+}
+
+fn count_by<T>(candidates: &[T], field_name: &str, values: &[&str]) -> Value
+where
+    T: std::borrow::Borrow<Value>,
+{
+    let mut map = serde_json::Map::new();
+    for value in values {
+        let count = candidates
+            .iter()
+            .filter(|candidate| field(candidate.borrow(), field_name) == *value)
+            .count();
+        map.insert((*value).to_string(), Value::from(count));
+    }
+    Value::Object(map)
+}
+
+fn check_count_map(
+    report: &Value,
+    pointer: &str,
+    expected: &Value,
+    relative_input: &str,
+    label: &str,
+    errors: &mut Vec<String>,
+) {
+    let Some(actual) = report.pointer(pointer).and_then(Value::as_object) else {
+        errors.push(format!("{relative_input}: {label} must be an object"));
+        return;
+    };
+    let Some(expected) = expected.as_object() else {
+        errors.push(format!(
+            "{relative_input}: {label} expected count map is invalid"
+        ));
+        return;
+    };
+    for (key, expected_value) in expected {
+        if actual.get(key).and_then(Value::as_u64) != expected_value.as_u64() {
+            errors.push(format!("{relative_input}: {label}.{key} is stale"));
+        }
+    }
 }
 
 pub(super) fn compare_actions(left: &Value, right: &Value) -> Ordering {
@@ -419,26 +516,11 @@ fn count_state(artifacts: &[Value], state: &str) -> usize {
         .count()
 }
 
-fn priority_rank(priority: &str) -> u8 {
-    match priority {
-        "p0" => 0,
-        "p1" => 1,
-        "p2" => 2,
-        "p3" => 3,
-        _ => 99,
-    }
-}
+#[rustfmt::skip]
+fn priority_rank(priority: &str) -> u8 { match priority { "p0" => 0, "p1" => 1, "p2" => 2, "p3" => 3, _ => 99 } }
 
-fn readiness_rank(readiness: &str) -> u8 {
-    match readiness {
-        "broken" => 0,
-        "planned" => 1,
-        "partially_collecting" => 2,
-        "collecting_with_entries" => 3,
-        "blocked" => 4,
-        _ => 99,
-    }
-}
+#[rustfmt::skip]
+fn readiness_rank(readiness: &str) -> u8 { match readiness { "broken" => 0, "planned" => 1, "partially_collecting" => 2, "collecting_with_entries" => 3, "blocked" => 4, _ => 99 } }
 
 fn require_string(
     value: Option<&Value>,
@@ -499,22 +581,5 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{compare_actions, priority_rank, readiness_rank};
-
-    #[test]
-    fn sort_ranks_match_contract_order() {
-        assert!(priority_rank("p0") < priority_rank("p1"));
-        assert!(readiness_rank("broken") < readiness_rank("planned"));
-    }
-
-    #[test]
-    fn compare_actions_orders_priority_first() {
-        let left =
-            serde_json::json!({"priority": "p0", "readiness": "blocked", "candidate_id": "z"});
-        let right =
-            serde_json::json!({"priority": "p1", "readiness": "broken", "candidate_id": "a"});
-        assert!(compare_actions(&left, &right).is_lt());
-    }
-}
+#[rustfmt::skip]
+fn optional_field(value: &Value, key: &str) -> Value { let text = field(value, key); if text.is_empty() { Value::Null } else { Value::from(text) } }

@@ -3,6 +3,12 @@ import { operatorReliabilitySchemaVersions } from "./operator-reliability-contra
 export const orderedLevels = ["smoke", "baseline", "review", "qualification"];
 export const allowedLevels = new Set(orderedLevels);
 export const allowedKitStatuses = new Set(["planned", "collecting", "ready_for_review", "blocked"]);
+export const allowedRoadmapPhases = allowedKitStatuses;
+export const allowedReleaseGateImpacts = new Set([
+  "release_blocker",
+  "release_watch",
+  "experimental_only",
+]);
 
 export function levelRank(level) {
   return orderedLevels.indexOf(level);
@@ -56,10 +62,32 @@ export function qualificationRoadmapErrors(roadmap, manifest, seenOperators, ope
       continue;
     }
     seenCandidates.add(candidate.candidate_id);
-    for (const field of ["priority", "domain", "rationale", "graduation_gate"]) {
+    for (const field of [
+      "priority",
+      "domain",
+      "target_level",
+      "evidence_phase",
+      "rationale",
+      "primary_blocker",
+      "graduation_gate",
+      "preferred_validation_lane",
+      "release_gate_impact",
+    ]) {
       if (typeof candidate[field] !== "string" || candidate[field].length === 0) {
         errors.push(`${context}: ${field} must be non-empty`);
       }
+    }
+    if (!allowedLevels.has(candidate.target_level) || candidate.target_level === "smoke") {
+      errors.push(`${context}: target_level must be baseline, review, or qualification`);
+    }
+    if (!allowedRoadmapPhases.has(candidate.evidence_phase)) {
+      errors.push(`${context}: unknown evidence_phase ${candidate.evidence_phase}`);
+    }
+    if (!allowedReleaseGateImpacts.has(candidate.release_gate_impact)) {
+      errors.push(`${context}: unknown release_gate_impact ${candidate.release_gate_impact}`);
+    }
+    if (!/^make [a-zA-Z0-9_.-]+$/.test(candidate.preferred_validation_lane ?? "")) {
+      errors.push(`${context}: preferred_validation_lane must be a make target`);
     }
     for (const field of ["operator_ids", "evidence_gaps", "required_artifacts"]) {
       if (!Array.isArray(candidate[field]) || candidate[field].length === 0) {

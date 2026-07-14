@@ -60,6 +60,7 @@ fn run(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
 struct Options {
     config: String,
     out: String,
+    profile: Option<String>,
     execute: bool,
     self_test: bool,
 }
@@ -68,6 +69,7 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
     let mut options = Options {
         config: DEFAULT_CONFIG.to_string(),
         out: DEFAULT_OUT.to_string(),
+        profile: None,
         execute: false,
         self_test: false,
     };
@@ -85,6 +87,12 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
                     return Err("missing value for --out".to_string());
                 };
                 options.out = value.to_string_lossy().to_string();
+            }
+            "--profile" => {
+                let Some(value) = iter.next() else {
+                    return Err("missing value for --profile".to_string());
+                };
+                options.profile = Some(value.to_string_lossy().to_string());
             }
             "--execute" => options.execute = true,
             "--self-test" => options.self_test = true,
@@ -175,13 +183,24 @@ fn validate_command(command: &Value, context: &str) -> RunnerResult<()> {
 }
 
 fn build_report(root: &Path, config: &Value, options: &Options) -> RunnerResult<Value> {
-    let profiles = config
+    let source_profiles = config
         .get("profiles")
         .and_then(Value::as_array)
-        .unwrap_or(&Vec::new())
+        .ok_or_else(|| "profiles must be an array".to_string())?;
+    let profiles = source_profiles
         .iter()
+        .filter(|profile| {
+            options
+                .profile
+                .as_deref()
+                .is_none_or(|wanted| field(profile, "profile_id") == wanted)
+        })
         .map(|profile| build_profile_report(root, profile, options))
         .collect::<RunnerResult<Vec<_>>>()?;
+    if profiles.is_empty() {
+        let wanted = options.profile.as_deref().unwrap_or("<all>");
+        return Err(format!("no operator validation profiles matched {wanted}"));
+    }
     let ok = profiles
         .iter()
         .all(|profile| profile.get("ok").and_then(Value::as_bool) == Some(true));
@@ -387,6 +406,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         &Options {
             config: "config/sample.json".to_string(),
             out: DEFAULT_OUT.to_string(),
+            profile: None,
             execute: false,
             self_test: false,
         },
@@ -396,9 +416,25 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         &Options {
             config: "config/sample.json".to_string(),
             out: DEFAULT_OUT.to_string(),
+            profile: None,
             execute: false,
             self_test: false,
         },
+    )?;
+    expect_error(
+        build_report(
+            root,
+            &sample,
+            &Options {
+                config: "config/sample.json".to_string(),
+                out: DEFAULT_OUT.to_string(),
+                profile: Some("missing".to_string()),
+                execute: false,
+                self_test: false,
+            },
+        )
+        .map(|_| ()),
+        "no operator validation profiles matched",
     )?;
     report["profile_count"] = Value::from(2);
     expect_error(
@@ -407,6 +443,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
             &Options {
                 config: "config/sample.json".to_string(),
                 out: DEFAULT_OUT.to_string(),
+                profile: None,
                 execute: false,
                 self_test: false,
             },

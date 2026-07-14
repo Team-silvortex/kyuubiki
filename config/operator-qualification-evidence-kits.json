@@ -39,13 +39,14 @@
           "kind": "release_retained_regression_output",
           "gate": "retain output from make capture-line-field-qualification-release-evidence with the release record before promotion",
           "artifact_command": "make capture-line-field-qualification-release-evidence",
+          "artifact_check_command": "make check-line-field-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
     },
     {
       "candidate_id": "beam-frame-classic",
-      "status": "planned",
+      "status": "collecting",
       "artifact_profile": "canonical_structural_benchmark",
       "operator_ids": [
         "solve.beam_1d",
@@ -57,18 +58,29 @@
           "artifact_id": "textbook-case-note",
           "kind": "reference_note",
           "gate": "cite and reproduce at least two independent canonical load cases",
+          "artifact_path": "evidence/operator-qualification/beam-frame-classic-reference-note.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "multi-case-regression",
           "kind": "regression_test",
           "gate": "retain two canonical beam/frame/torsion cases with documented tolerances",
+          "artifact_path": "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "force-sign-convention",
           "kind": "scope_note",
           "gate": "document force, moment, rotation, and torsion sign conventions",
+          "artifact_path": "evidence/operator-qualification/beam-frame-force-sign-convention.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "retain output from make capture-beam-frame-qualification-release-evidence with the release record before promotion",
+          "artifact_command": "make capture-beam-frame-qualification-release-evidence",
+          "artifact_check_command": "make check-beam-frame-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]

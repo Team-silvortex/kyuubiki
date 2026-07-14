@@ -78,11 +78,13 @@ README.
   required before any operator may claim `qualification`
 - `operator-qualification-roadmap.schema.json` is for the release-owned
   qualification candidate queue that lists priority groups, evidence gaps,
-  required artifacts, and graduation gates before selected review operators can
-  move toward `qualification`
+  required artifacts, target trust level, evidence phase, primary blocker,
+  preferred validation lane, release-gate impact, and graduation gates before
+  selected review operators can move toward stronger trust
 - `operator-qualification-evidence-kits.schema.json` is for the planning-grade
   artifact kits attached to qualification roadmap candidates before any of
-  those artifacts are promoted into manifest-level `evidence.qualification`
+  those artifacts are promoted into manifest-level `evidence.qualification`;
+  generated bundle artifacts can include both capture and check commands
 - `operator-qualification-readiness.schema.json` is for the generated
   qualification readiness report that turns roadmap candidates and evidence
   kits into a sorted next-action queue

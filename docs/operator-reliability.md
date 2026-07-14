@@ -100,6 +100,25 @@ The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
 roadmap candidates reference existing manifest operators and already satisfy
 the roadmap's minimum candidate level.
+Each roadmap candidate also carries a machine-readable qualification posture:
+
+- `target_level`
+  the trust level the candidate is trying to reach, usually `qualification`
+  but intentionally `review` for screening-only families that should not be
+  over-promoted
+- `evidence_phase`
+  whether evidence is still `planned`, actively `collecting`,
+  `ready_for_review`, or `blocked`
+- `primary_blocker`
+  the single most important reason the candidate cannot be promoted yet
+- `preferred_validation_lane`
+  the make target release owners should run first when refreshing evidence
+- `release_gate_impact`
+  whether the candidate is a release blocker, release watch item, or
+  experimental-only constraint
+
+These fields make the weak point explicit: Kyuubiki should advance numerical
+trust through retained evidence, not by silently changing a coverage label.
 
 The qualification evidence kits live at
 `config/operator-qualification-evidence-kits.json`. They are deliberately
@@ -107,13 +126,19 @@ planning-grade: they list the artifacts that must be collected before a
 roadmap candidate can be promoted into real `evidence.qualification` manifest
 entries. The checker keeps every kit tied to an existing roadmap candidate and
 prevents operators from drifting into the wrong qualification group.
+Command-backed artifacts may also declare an `artifact_check_command`, so the
+readiness report can show both the evidence capture step and the acceptance
+step for a generated release bundle.
 `make build-operator-qualification-readiness` writes a local JSON report that
 summarizes which roadmap artifacts are present, command-backed, missing, or not
 started. The generated report also includes a `next_actions` queue so release
 owners can see the highest-priority evidence collection step without manually
-diffing every candidate kit. The make target uses the native script runner and
-validates the generated report so
-the queue stays machine-consumable for release gates and future UI surfaces.
+diffing every candidate kit. Its summary also groups candidates by target
+trust level, evidence phase, and release-gate impact, so CI and future UI
+surfaces can distinguish release blockers from watch items without reparsing
+every candidate. The make target uses the native script runner and validates
+the generated report so the queue stays machine-consumable for release gates
+and future UI surfaces.
 `make check-operator-reliability` builds and validates this readiness report
 before checking the release manifest, so the qualification queue stays visible
 without pretending that planning artifacts are qualification evidence.
@@ -255,6 +280,25 @@ the actual release record before any manifest entry becomes `qualification`.
 solid-tetra benchmark template and a solver-level review fixture for a
 restrained single-tetra load path. It is still a screening fixture, not a
 mesh-convergence or qualification claim.
+
+The `beam-frame-classic` qualification candidate has now started evidence
+collection too. Its reference note is
+`evidence/operator-qualification/beam-frame-classic-reference-note.md`, and its
+first multi-case regression is
+`workers/rust/crates/solver/tests/beam_frame_classic_regression.rs`. That test
+checks a closed-form cantilever beam, equivalent 2D frame cantilever, and
+prismatic torsion shaft. Its sign convention note is
+`evidence/operator-qualification/beam-frame-force-sign-convention.md`. The
+`beam-frame-classic` profile is also part of `make verify-operator-validation`,
+so release validation output now executes the regression, beam review, torsion
+review, and frame review fixtures together. The remaining blocker is retaining
+that output with release provenance before any manifest entry is promoted.
+Use `make capture-beam-frame-qualification-release-evidence` to write the
+repo-local release-retained operator validation report for this candidate under
+`tmp/beam-frame-classic-qualification-release-evidence.json` by default.
+Use `make check-beam-frame-qualification-release-evidence` before attaching the
+file to a release record; it rejects non-executed reports, mixed-profile
+reports, missing evidence paths, and failed beam/frame/torsion commands.
 
 ## Smoke-Level Gaps
 

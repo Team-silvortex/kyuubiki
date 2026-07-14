@@ -14,11 +14,22 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v1" },
-    "version_line": { "type": "string", "pattern": "^tamamono 1\\.19\\.x$" },
+    "version_line": { "type": "string", "pattern": "^tamamono 1\\.20\\.x$" },
     "generated_at_utc": { "type": "string", "minLength": 10 },
     "summary": {
       "type": "object",
-      "required": ["candidates", "collecting", "planned", "with_entries", "not_started", "broken", "next_action_count"],
+      "required": [
+        "candidates",
+        "collecting",
+        "planned",
+        "with_entries",
+        "not_started",
+        "broken",
+        "next_action_count",
+        "target_levels",
+        "evidence_phases",
+        "release_gate_impacts"
+      ],
       "additionalProperties": false,
       "properties": {
         "candidates": { "type": "integer", "minimum": 1 },
@@ -27,23 +38,75 @@
         "with_entries": { "type": "integer", "minimum": 0 },
         "not_started": { "type": "integer", "minimum": 0 },
         "broken": { "type": "integer", "minimum": 0 },
-        "next_action_count": { "type": "integer", "minimum": 0 }
+        "next_action_count": { "type": "integer", "minimum": 0 },
+        "target_levels": { "$ref": "#/$defs/targetLevelCounts" },
+        "evidence_phases": { "$ref": "#/$defs/evidencePhaseCounts" },
+        "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" }
       }
     },
     "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
     "candidates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/candidate" } }
   },
   "$defs": {
+    "targetLevelCounts": {
+      "type": "object",
+      "required": ["baseline", "review", "qualification"],
+      "additionalProperties": false,
+      "properties": {
+        "baseline": { "type": "integer", "minimum": 0 },
+        "review": { "type": "integer", "minimum": 0 },
+        "qualification": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evidencePhaseCounts": {
+      "type": "object",
+      "required": ["planned", "collecting", "ready_for_review", "blocked"],
+      "additionalProperties": false,
+      "properties": {
+        "planned": { "type": "integer", "minimum": 0 },
+        "collecting": { "type": "integer", "minimum": 0 },
+        "ready_for_review": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "releaseGateImpactCounts": {
+      "type": "object",
+      "required": ["release_blocker", "release_watch", "experimental_only"],
+      "additionalProperties": false,
+      "properties": {
+        "release_blocker": { "type": "integer", "minimum": 0 },
+        "release_watch": { "type": "integer", "minimum": 0 },
+        "experimental_only": { "type": "integer", "minimum": 0 }
+      }
+    },
     "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "broken", "blocked"] },
     "artifactState": { "enum": ["present", "missing", "command_available", "not_started"] },
     "candidate": {
       "type": "object",
-      "required": ["candidate_id", "priority", "domain", "status", "readiness", "operator_ids", "artifact_counts", "artifacts", "evidence_gaps", "graduation_gate"],
+      "required": [
+        "candidate_id",
+        "priority",
+        "domain",
+        "target_level",
+        "evidence_phase",
+        "status",
+        "readiness",
+        "operator_ids",
+        "artifact_counts",
+        "artifacts",
+        "primary_blocker",
+        "evidence_gaps",
+        "graduation_gate",
+        "preferred_validation_lane",
+        "release_gate_impact"
+      ],
       "additionalProperties": false,
       "properties": {
         "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
         "priority": { "enum": ["p0", "p1", "p2", "p3"] },
         "domain": { "type": "string", "minLength": 1 },
+        "target_level": { "enum": ["baseline", "review", "qualification"] },
+        "evidence_phase": { "enum": ["planned", "collecting", "ready_for_review", "blocked"] },
         "status": { "enum": ["planned", "collecting", "ready_for_review", "blocked", "missing_kit"] },
         "readiness": { "$ref": "#/$defs/readiness" },
         "operator_ids": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^solve\\.[a-z0-9_]+$" } },
@@ -60,8 +123,11 @@
           }
         },
         "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "primary_blocker": { "type": "string", "minLength": 1 },
         "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "graduation_gate": { "type": "string", "minLength": 1 }
+        "graduation_gate": { "type": "string", "minLength": 1 },
+        "preferred_validation_lane": { "type": "string", "pattern": "^make [a-zA-Z0-9_.-]+$" },
+        "release_gate_impact": { "enum": ["release_blocker", "release_watch", "experimental_only"] }
       }
     },
     "artifact": {
@@ -74,24 +140,45 @@
         "state": { "$ref": "#/$defs/artifactState" },
         "path": { "type": "string", "minLength": 1 },
         "command": { "type": "string", "minLength": 1 },
+        "check_command": { "type": ["string", "null"], "minLength": 1 },
         "gate": { "type": "string", "minLength": 1 }
       }
     },
     "nextAction": {
       "type": "object",
-      "required": ["candidate_id", "priority", "readiness", "action_kind", "artifact_id", "artifact_state", "artifact_kind", "command", "path", "gate"],
+      "required": [
+        "candidate_id",
+        "priority",
+        "target_level",
+        "evidence_phase",
+        "readiness",
+        "action_kind",
+        "artifact_id",
+        "artifact_state",
+        "artifact_kind",
+        "command",
+        "path",
+        "gate",
+        "preferred_validation_lane",
+        "release_gate_impact"
+      ],
       "additionalProperties": false,
       "properties": {
         "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
         "priority": { "enum": ["p0", "p1", "p2", "p3"] },
+        "target_level": { "enum": ["baseline", "review", "qualification"] },
+        "evidence_phase": { "enum": ["planned", "collecting", "ready_for_review", "blocked"] },
         "readiness": { "$ref": "#/$defs/readiness" },
         "action_kind": { "enum": ["collect_artifact", "restore_or_generate_artifact", "run_command", "review"] },
         "artifact_id": { "type": ["string", "null"] },
         "artifact_state": { "type": ["string", "null"] },
         "artifact_kind": { "type": ["string", "null"] },
         "command": { "type": ["string", "null"] },
+        "check_command": { "type": ["string", "null"] },
         "path": { "type": ["string", "null"] },
-        "gate": { "type": "string", "minLength": 1 }
+        "gate": { "type": "string", "minLength": 1 },
+        "preferred_validation_lane": { "type": "string", "pattern": "^make [a-zA-Z0-9_.-]+$" },
+        "release_gate_impact": { "enum": ["release_blocker", "release_watch", "experimental_only"] }
       }
     }
   }

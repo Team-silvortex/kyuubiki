@@ -176,6 +176,15 @@ function checkQualificationRoadmapClosure() {
   }
 
   const makeTargets = listMakeTargets();
+  for (const candidate of candidates.values()) {
+    const target = candidate.preferred_validation_lane?.match(/^make ([a-zA-Z0-9_.-]+)$/)?.[1];
+    if (!target) {
+      fail(`${candidate.candidate_id}: preferred_validation_lane must be a make target`);
+    }
+    if (!makeTargets.has(target)) {
+      fail(`${candidate.candidate_id}: unknown preferred_validation_lane target ${target}`);
+    }
+  }
   for (const kit of kits.values()) {
     for (const artifact of kit.artifact_requirements) {
       if (artifact.artifact_path) {

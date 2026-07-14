@@ -12,6 +12,13 @@ export function createRemoteNodeMeshController({
   executeNodeAction,
 }) {
   let lastRolloutFailures = [];
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#39;");
   const meshNodesFrom = (nodes) =>
     nodes.filter((node) => (node.control_mode || "orchestrated") === "offline_mesh");
 
@@ -84,21 +91,21 @@ export function createRemoteNodeMeshController({
       `;
     meshIssuesHost.innerHTML = diagnostics.issues.length === 0
       ? (diagnostics.meshNodeCount === 0 ? "" : `<article class="remote-mesh-issues__item"><strong>Mesh ready</strong><span>No contract gaps detected in the current node registry.</span></article>`)
-      : diagnostics.issues.map((issue) => `<article class="remote-mesh-issues__item"><strong>Mesh issue</strong><span>${issue}</span></article>`).join("");
+      : diagnostics.issues.map((issue) => `<article class="remote-mesh-issues__item"><strong>Mesh issue</strong><span>${escapeHtml(issue)}</span></article>`).join("");
     meshClustersHost.innerHTML = diagnostics.clusters.length === 0
       ? ""
       : diagnostics.clusters.map((cluster) => `
         <article class="remote-mesh-cluster" data-readiness="${cluster.readiness}">
-          <strong>${cluster.clusterId}</strong>
+          <strong>${escapeHtml(cluster.clusterId)}</strong>
           <span><strong>${cluster.finalReadiness === "go" ? "Ready for run" : "Hold"}</strong></span>
           <span>nodes ${cluster.nodeCount} · peers ${cluster.peerCount}</span>
           <span>preflight ok ${cluster.readyCount}/${cluster.nodeCount}</span>
           <span>agents started ${cluster.nodeCount - cluster.missingStartCount}/${cluster.nodeCount}</span>
           <span>${cluster.finalReadiness === "go" ? "preflight and agent startup aligned" : cluster.readiness === "ready" ? "start remaining agents before workload tests" : `needs ${cluster.missingPreflightCount} more verified node(s)`}</span>
           <div class="action-row">
-            <button data-remote-cluster-action="focus-cluster" data-remote-cluster-id="${cluster.clusterId}">Focus cluster</button>
-            ${cluster.missingStartCount === 0 ? "" : `<button data-remote-cluster-action="start-missing" data-remote-cluster-id="${cluster.clusterId}">Start missing agents</button>`}
-            ${cluster.readiness === "ready" ? "" : `<button data-remote-cluster-action="preflight-missing" data-remote-cluster-id="${cluster.clusterId}">Preflight missing</button>`}
+            <button data-remote-cluster-action="focus-cluster" data-remote-cluster-id="${escapeHtml(cluster.clusterId)}">Focus cluster</button>
+            ${cluster.missingStartCount === 0 ? "" : `<button data-remote-cluster-action="start-missing" data-remote-cluster-id="${escapeHtml(cluster.clusterId)}">Start missing agents</button>`}
+            ${cluster.readiness === "ready" ? "" : `<button data-remote-cluster-action="preflight-missing" data-remote-cluster-id="${escapeHtml(cluster.clusterId)}">Preflight missing</button>`}
           </div>
         </article>
       `).join("");
@@ -115,8 +122,8 @@ export function createRemoteNodeMeshController({
         </div>
         ${lastRolloutFailures.map((entry) => `
           <article class="remote-mesh-rollout-failures__item">
-            <strong>${entry.stage} · ${entry.label}</strong>
-            <span>${entry.message}</span>
+            <strong>${escapeHtml(entry.stage)} · ${escapeHtml(entry.label)}</strong>
+            <span>${escapeHtml(entry.message)}</span>
           </article>
         `).join("")}
       `;

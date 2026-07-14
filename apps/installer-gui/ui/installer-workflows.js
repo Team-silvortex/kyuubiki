@@ -151,8 +151,13 @@ export function renderDoctor(report, platformLabel, workspaceLabel, doctorGrid) 
     const card = document.createElement("article");
     card.className = "doctor-card desktop-shell-surface-card";
     const stateLabel = check.ok ? "ok" : "missing";
-    card.innerHTML = `<strong>${check.label}</strong><span class="doctor-state ${stateLabel}">${stateLabel}</span>`;
-    applyDesktopState(card.querySelector(".doctor-state"), stateLabel, { kind: "health" });
+    const label = document.createElement("strong");
+    label.textContent = check.label;
+    const state = document.createElement("span");
+    state.className = `doctor-state ${stateLabel}`;
+    state.textContent = stateLabel;
+    card.append(label, state);
+    applyDesktopState(state, stateLabel, { kind: "health" });
     doctorGrid.appendChild(card);
   });
 }

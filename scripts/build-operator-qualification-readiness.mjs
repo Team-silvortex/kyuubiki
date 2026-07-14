@@ -56,6 +56,7 @@ function artifactState(requirement) {
       kind: requirement.kind,
       state: "command_available",
       command: requirement.artifact_command,
+      check_command: requirement.artifact_check_command ?? null,
       gate: requirement.gate,
     };
   }
@@ -88,6 +89,8 @@ function readinessFor(candidate, kit) {
     candidate_id: candidate.candidate_id,
     priority: candidate.priority,
     domain: candidate.domain,
+    target_level: candidate.target_level,
+    evidence_phase: candidate.evidence_phase,
     status: kit?.status ?? "missing_kit",
     readiness,
     operator_ids: candidate.operator_ids,
@@ -99,8 +102,11 @@ function readinessFor(candidate, kit) {
       not_started: notStarted,
     },
     artifacts,
+    primary_blocker: candidate.primary_blocker,
     evidence_gaps: candidate.evidence_gaps,
     graduation_gate: candidate.graduation_gate,
+    preferred_validation_lane: candidate.preferred_validation_lane,
+    release_gate_impact: candidate.release_gate_impact,
   };
 }
 
@@ -143,14 +149,19 @@ function buildNextActions(candidates) {
       return {
         candidate_id: candidate.candidate_id,
         priority: candidate.priority,
+        target_level: candidate.target_level,
+        evidence_phase: candidate.evidence_phase,
         readiness: candidate.readiness,
         action_kind: actionKindForArtifact(artifact),
         artifact_id: artifact?.artifact_id ?? null,
         artifact_state: artifact?.state ?? null,
         artifact_kind: artifact?.kind ?? null,
         command: artifact?.command ?? null,
+        check_command: artifact?.check_command ?? null,
         path: artifact?.path ?? null,
         gate: artifact?.gate ?? candidate.graduation_gate,
+        preferred_validation_lane: candidate.preferred_validation_lane,
+        release_gate_impact: candidate.release_gate_impact,
       };
     })
     .filter((action) => action.artifact_id !== null || action.readiness !== "collecting_with_entries")
@@ -159,6 +170,13 @@ function buildNextActions(candidates) {
       || readinessRank(left.readiness) - readinessRank(right.readiness)
       || left.candidate_id.localeCompare(right.candidate_id)
     );
+}
+
+function countBy(candidates, field, values) {
+  return Object.fromEntries(values.map((value) => [
+    value,
+    candidates.filter((candidate) => candidate[field] === value).length,
+  ]));
 }
 
 function buildReport() {
@@ -184,6 +202,13 @@ function buildReport() {
       not_started: candidates.filter((candidate) => candidate.artifact_counts.not_started === candidate.artifact_counts.total).length,
       broken: candidates.filter((candidate) => candidate.readiness === "broken").length,
       next_action_count: nextActions.length,
+      target_levels: countBy(candidates, "target_level", ["baseline", "review", "qualification"]),
+      evidence_phases: countBy(candidates, "evidence_phase", ["planned", "collecting", "ready_for_review", "blocked"]),
+      release_gate_impacts: countBy(candidates, "release_gate_impact", [
+        "release_blocker",
+        "release_watch",
+        "experimental_only",
+      ]),
     },
     next_actions: nextActions,
     candidates,

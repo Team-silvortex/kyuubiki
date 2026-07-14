@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 mod agent_registry_sync;
+mod beam_frame_release_evidence;
 mod benchmark_profile_index;
 mod benchmark_profile_plan;
 mod benchmark_profile_remote;
@@ -245,6 +246,12 @@ fn run() -> RunnerResult<u8> {
         }
         "check-line-field-qualification-release-evidence" => {
             line_field_release_evidence::run_check_line_field_qualification_release_evidence(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-beam-frame-qualification-release-evidence" => {
+            beam_frame_release_evidence::run_check_beam_frame_qualification_release_evidence(
                 &paths.root,
                 rest,
             )

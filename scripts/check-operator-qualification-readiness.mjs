@@ -24,6 +24,9 @@ const allowedActionKinds = new Set([
   "run_command",
   "review",
 ]);
+const targetLevels = ["baseline", "review", "qualification"];
+const evidencePhases = ["planned", "collecting", "ready_for_review", "blocked"];
+const releaseGateImpacts = ["release_blocker", "release_watch", "experimental_only"];
 
 function fail(message) {
   console.error(`operator qualification readiness check failed: ${message}`);
@@ -81,6 +84,8 @@ function actionErrors(action, index) {
   const context = `next_actions[${index}]`;
   errors.push(...requireStringErrors(action.candidate_id, "candidate_id", context));
   errors.push(...requireStringErrors(action.priority, "priority", context));
+  errors.push(...requireStringErrors(action.target_level, "target_level", context));
+  errors.push(...requireStringErrors(action.evidence_phase, "evidence_phase", context));
   errors.push(...requireStringErrors(action.readiness, "readiness", context));
   errors.push(...requireStringErrors(action.action_kind, "action_kind", context));
   if (!allowedActionKinds.has(action.action_kind)) {
@@ -93,6 +98,28 @@ function actionErrors(action, index) {
     errors.push(...requireStringErrors(action.path, "path", context));
   }
   errors.push(...requireStringErrors(action.gate, "gate", context));
+  errors.push(...requireStringErrors(action.preferred_validation_lane, "preferred_validation_lane", context));
+  errors.push(...requireStringErrors(action.release_gate_impact, "release_gate_impact", context));
+  return errors;
+}
+
+function countBy(candidates, field, values) {
+  return Object.fromEntries(values.map((value) => [
+    value,
+    candidates.filter((candidate) => candidate[field] === value).length,
+  ]));
+}
+
+function countMapErrors(actual, expected, field, context) {
+  const errors = [];
+  if (!actual || typeof actual !== "object" || Array.isArray(actual)) {
+    return [`${context}: summary.${field} must be an object`];
+  }
+  for (const [key, value] of Object.entries(expected)) {
+    if (actual[key] !== value) {
+      errors.push(`${context}: summary.${field}.${key} is stale`);
+    }
+  }
   return errors;
 }
 
@@ -131,6 +158,9 @@ function readinessErrors(report, relativeInput) {
   if (report.summary?.planned !== planned) errors.push(`${relativeInput}: summary.planned is stale`);
   if (report.summary?.with_entries !== withEntries) errors.push(`${relativeInput}: summary.with_entries is stale`);
   if (report.summary?.broken !== broken) errors.push(`${relativeInput}: summary.broken is stale`);
+  errors.push(...countMapErrors(report.summary?.target_levels, countBy(report.candidates, "target_level", targetLevels), "target_levels", relativeInput));
+  errors.push(...countMapErrors(report.summary?.evidence_phases, countBy(report.candidates, "evidence_phase", evidencePhases), "evidence_phases", relativeInput));
+  errors.push(...countMapErrors(report.summary?.release_gate_impacts, countBy(report.candidates, "release_gate_impact", releaseGateImpacts), "release_gate_impacts", relativeInput));
   report.next_actions.forEach((action, index) => {
     errors.push(...actionErrors(action, index));
   });
@@ -155,40 +185,68 @@ if (args.selfTest) {
     schema_version: "kyuubiki.operator-qualification-readiness/v1",
     version_line: "tamamono 1.20.x",
     generated_at_utc: "2026-01-01T00:00:00.000Z",
-    summary: { candidates: 1, collecting: 0, planned: 1, with_entries: 0, not_started: 1, broken: 0, next_action_count: 2 },
+    summary: {
+      candidates: 1,
+      collecting: 0,
+      planned: 1,
+      with_entries: 0,
+      not_started: 1,
+      broken: 0,
+      next_action_count: 2,
+      target_levels: { baseline: 0, review: 0, qualification: 1 },
+      evidence_phases: { planned: 1, collecting: 0, ready_for_review: 0, blocked: 0 },
+      release_gate_impacts: { release_blocker: 1, release_watch: 0, experimental_only: 0 },
+    },
     candidates: [{
       candidate_id: "sample",
       priority: "p0",
       domain: "sample",
+      target_level: "qualification",
+      evidence_phase: "planned",
       status: "planned",
       readiness: "planned",
       operator_ids: ["solve.sample"],
       artifact_counts: { total: 1, present: 0, command_available: 0, missing: 0, not_started: 1 },
       artifacts: [],
+      primary_blocker: "sample blocker",
       evidence_gaps: ["sample"],
       graduation_gate: "sample gate",
+      preferred_validation_lane: "make sample-validation",
+      release_gate_impact: "release_blocker",
     }],
     next_actions: [
       {
         candidate_id: "candidate_a",
         priority: "p0",
+        target_level: "qualification",
+        evidence_phase: "planned",
         readiness: "planned",
         action_kind: "collect_artifact",
         artifact_id: "note",
         artifact_state: "not_started",
         artifact_kind: "reference_note",
+        command: null,
+        path: null,
         gate: "collect canonical reference note",
+        preferred_validation_lane: "make sample-validation",
+        release_gate_impact: "release_blocker",
       },
       {
         candidate_id: "candidate_b",
         priority: "p1",
+        target_level: "review",
+        evidence_phase: "collecting",
         readiness: "collecting_with_entries",
         action_kind: "run_command",
         artifact_id: "release-output",
         artifact_state: "command_available",
         artifact_kind: "release_output",
         command: "make sample-release-evidence",
+        check_command: "make check-sample-release-evidence",
+        path: null,
         gate: "retain release evidence",
+        preferred_validation_lane: "make sample-release-evidence",
+        release_gate_impact: "release_watch",
       },
     ],
   };

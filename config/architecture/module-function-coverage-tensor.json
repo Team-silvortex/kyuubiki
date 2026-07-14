@@ -12,6 +12,26 @@
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "operator-qualification-readiness",
+        "files": [
+          "config/operator-qualification-roadmap.json",
+          "config/operator-qualification-evidence-kits.json",
+          "schemas/operator-qualification-readiness.schema.json",
+          "scripts/build-operator-qualification-readiness.mjs",
+          "scripts/check-operator-qualification-readiness.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.operator-qualification-readiness/v1",
+          "target_levels",
+          "evidence_phases",
+          "release_gate_impacts",
+          "primary_blocker",
+          "preferred_validation_lane"
+        ]
+      }
+    ],
     "runtime_api": [
       {
         "id": "contracts-runtime-api-surface",
