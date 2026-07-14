@@ -3,6 +3,7 @@
 import { useWorkbenchAssistantController } from "@/components/workbench/workbench-assistant-controller";
 import { createWorkbenchPrimaryActionsController } from "@/components/workbench/workbench-primary-actions-controller";
 import { createWorkbenchScriptInvoker } from "@/components/workbench/workbench-script-invoker";
+import { buildWorkbenchUxGuardrailSummary } from "@/components/workbench/workbench-ux-guardrails";
 import { serializeCurrentModel } from "@/lib/workbench/helpers";
 
 export function useWorkbenchFlowControllers(props: Record<string, any>) {
@@ -137,6 +138,19 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
 
   const invokeScriptAction = createWorkbenchScriptInvoker({
     language: props.language,
+    uxGuardrailSummary: buildWorkbenchUxGuardrailSummary({
+      frontendRuntimeMode: props.frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui",
+      healthStatus: props.health?.status,
+      protocolOnline: Boolean(props.health?.protocol),
+      watchdogOnline: Boolean(props.health?.watchdog),
+      controlPlaneApiToken: props.controlPlaneApiToken ?? "",
+      clusterApiToken: props.clusterApiToken ?? "",
+      directMeshApiToken: props.directMeshApiToken ?? "",
+      directMeshEndpointsText: props.directMeshEndpointsText ?? "",
+      selectedProjectId: props.selectedProjectId ?? null,
+      selectedVersionId: props.selectedVersionId ?? null,
+      languagePackCount: props.languagePackCount ?? 0,
+    }),
     recordSecurityAuditEvent: props.recordSecurityAuditEvent,
     appendScriptActionLog: props.appendScriptActionLog,
     studyKind: props.studyKind,

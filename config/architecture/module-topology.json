@@ -136,8 +136,8 @@
       "summary": "Install, update, repair, cleanup, component integrity, and remote deployment UX.",
       "owned_paths": ["apps/installer-gui", "deploy", "releases"],
       "depends_on": ["contracts", "runtime-installer"],
-      "benchmark_lanes": ["installer_release"],
-      "security_lanes": ["remote_deploy", "credential_storage", "supply_chain"],
+      "benchmark_lanes": ["ui_startup", "installer_release"],
+      "security_lanes": ["ui_boundary", "remote_deploy", "credential_storage", "supply_chain"],
       "risk_tags": ["residual_cleanup", "remote_host_trust", "release_artifact_drift"]
     },
     {

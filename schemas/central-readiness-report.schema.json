@@ -13,6 +13,7 @@
     "api_surface",
     "schema_surface",
     "config_surface",
+    "service_surface",
     "storage_contract",
     "runbook"
   ],
@@ -55,6 +56,24 @@
           "type": "array",
           "items": { "$ref": "#/$defs/configFile" }
         }
+      }
+    },
+    "service_surface": {
+      "type": "object",
+      "required": [
+        "id",
+        "module_id",
+        "kind",
+        "topology_present",
+        "boundary_documented"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "const": "central-web-service" },
+        "module_id": { "const": "orchestra-control-plane" },
+        "kind": { "const": "self_host_web" },
+        "topology_present": { "type": "boolean" },
+        "boundary_documented": { "type": "boolean" }
       }
     },
     "storage_contract": {

@@ -14,11 +14,12 @@ const ALLOWED_STATUS = new Set(["covered", "partial", "planned", "not_applicable
 const GAP_ORDER = new Map([
   ["required_gap", 0],
   ["weak", 1],
-  ["planned", 2],
-  ["watch", 3],
-  ["missing", 4],
-  ["ok", 5],
-  ["not_applicable", 6],
+  ["weak_evidence", 2],
+  ["planned", 3],
+  ["watch", 4],
+  ["missing", 5],
+  ["ok", 6],
+  ["not_applicable", 7],
 ]);
 
 function parseArgs(argv) {
@@ -49,6 +50,10 @@ function repoPath(relativePath) {
 
 function readJson(relativePath) {
   return JSON.parse(readFileSync(repoPath(relativePath), "utf8"));
+}
+
+function readText(relativePath) {
+  return readFileSync(repoPath(relativePath), "utf8");
 }
 
 function ensureArray(value, label) {
@@ -85,6 +90,30 @@ function validateTensorConfig(tensor, topology, matrix) {
   for (const paradigm of Object.keys(tensor.paradigm_lanes ?? {})) {
     if (!paradigms.has(paradigm)) throw new Error(`tensor maps unknown paradigm ${paradigm}`);
   }
+  for (const [paradigm, entries] of Object.entries(tensor.paradigm_contract_evidence ?? {})) {
+    if (!paradigms.has(paradigm)) throw new Error(`tensor evidence maps unknown paradigm ${paradigm}`);
+    validateContractEvidenceEntries(entries, paradigm);
+  }
+}
+
+function validateContractEvidenceEntries(entries, paradigm) {
+  const seen = new Set();
+  for (const [index, entry] of ensureArray(entries, `${paradigm}.contract_evidence`).entries()) {
+    if (!entry.id || typeof entry.id !== "string") {
+      throw new Error(`${paradigm}.contract_evidence[${index}] must have id`);
+    }
+    if (seen.has(entry.id)) throw new Error(`${paradigm}.contract_evidence duplicate id ${entry.id}`);
+    seen.add(entry.id);
+    let combinedText = "";
+    for (const file of ensureArray(entry.files, `${entry.id}.files`)) {
+      combinedText += `\n${readText(file)}`;
+    }
+    for (const requiredText of ensureArray(entry.required_text, `${entry.id}.required_text`)) {
+      if (!combinedText.includes(requiredText)) {
+        throw new Error(`${entry.id}: evidence bundle missing ${requiredText}`);
+      }
+    }
+  }
 }
 
 function getLaneTests(topology, laneKind, lanes) {
@@ -114,12 +143,29 @@ function deriveGap(status, required) {
   return "missing";
 }
 
+function deriveEvidenceAwareGap(status, required, evidenceDepth) {
+  const gap = deriveGap(status, required);
+  if (gap !== "ok" || !required) return gap;
+  const hasRunnableEvidence = evidenceDepth.test_command_count > 0;
+  const hasContractEvidence = evidenceDepth.contract_evidence_count > 0;
+  return hasRunnableEvidence || hasContractEvidence ? "ok" : "weak_evidence";
+}
+
+function contractEvidenceFor(tensor, paradigm) {
+  return (tensor.paradigm_contract_evidence?.[paradigm] ?? []).map((entry) => ({
+    id: entry.id,
+    files: entry.files,
+    required_text: entry.required_text,
+  }));
+}
+
 function emptyCounts() {
   return {
     ok: 0,
     weak: 0,
     watch: 0,
     planned: 0,
+    weak_evidence: 0,
     required_gap: 0,
     missing: 0,
     not_applicable: 0,
@@ -146,9 +192,18 @@ function buildTensorReport(tensor, topology, matrix) {
       const status = matrix.cells?.[module.id]?.[paradigm] ?? "not_applicable";
       const required = requiredSet.has(paradigm);
       const mapping = tensor.paradigm_lanes[paradigm];
+      const contractEvidence = contractEvidenceFor(tensor, paradigm);
       const benchmarkLanes = intersect(module.benchmark_lanes ?? [], mapping.benchmark);
       const securityLanes = intersect(module.security_lanes ?? [], mapping.security);
-      const gap = deriveGap(status, required);
+      const evidenceDepth = {
+        benchmark_lane_count: benchmarkLanes.length,
+        security_lane_count: securityLanes.length,
+        contract_evidence_count: contractEvidence.length,
+        test_command_count:
+          getLaneTests(topology, "benchmark", benchmarkLanes).length +
+          getLaneTests(topology, "security", securityLanes).length,
+      };
+      const gap = deriveEvidenceAwareGap(status, required, evidenceDepth);
       const cell = {
         status,
         required,
@@ -157,13 +212,8 @@ function buildTensorReport(tensor, topology, matrix) {
         security_lanes: securityLanes,
         benchmark_tests: getLaneTests(topology, "benchmark", benchmarkLanes),
         security_tests: getLaneTests(topology, "security", securityLanes),
-        evidence_depth: {
-          benchmark_lane_count: benchmarkLanes.length,
-          security_lane_count: securityLanes.length,
-          test_command_count:
-            getLaneTests(topology, "benchmark", benchmarkLanes).length +
-            getLaneTests(topology, "security", securityLanes).length,
-        },
+        contract_evidence: contractEvidence,
+        evidence_depth: evidenceDepth,
       };
       moduleCells[paradigm] = cell;
       increment(moduleCounts, gap);
@@ -206,6 +256,7 @@ function buildTensorReport(tensor, topology, matrix) {
     },
     module_summary: moduleSummary,
     paradigm_summary: paradigmSummary,
+    paradigm_contract_evidence: tensor.paradigm_contract_evidence ?? {},
     gap_count: gaps.length,
     blocking_gap_count: gaps.filter((gap) => gap.gap === "required_gap" || gap.gap === "missing").length,
     gaps,
@@ -228,23 +279,39 @@ function renderMarkdown(report) {
     "",
     "## Module Summary",
     "",
-    "| Module | Layer | OK | Weak | Watch | Planned | Required Gap | Missing | N/A |",
-    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Module | Layer | OK | Weak | Weak Evidence | Watch | Planned | Required Gap | Missing | N/A |",
+    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ];
   for (const [moduleId, summary] of Object.entries(report.module_summary)) {
     const counts = summary.counts;
     lines.push(
-      `| \`${moduleId}\` | \`${summary.layer}\` | ${counts.ok} | ${counts.weak} | ${counts.watch} | ${counts.planned} | ${counts.required_gap} | ${counts.missing} | ${counts.not_applicable} |`,
+      `| \`${moduleId}\` | \`${summary.layer}\` | ${counts.ok} | ${counts.weak} | ${counts.weak_evidence} | ${counts.watch} | ${counts.planned} | ${counts.required_gap} | ${counts.missing} | ${counts.not_applicable} |`,
     );
   }
 
   lines.push("", "## Paradigm Summary", "");
-  lines.push("| Paradigm | OK | Weak | Watch | Planned | Required Gap | Missing | N/A |");
-  lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  lines.push("| Paradigm | OK | Weak | Weak Evidence | Watch | Planned | Required Gap | Missing | N/A |");
+  lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   for (const [paradigm, counts] of Object.entries(report.paradigm_summary)) {
     lines.push(
-      `| \`${paradigm}\` | ${counts.ok} | ${counts.weak} | ${counts.watch} | ${counts.planned} | ${counts.required_gap} | ${counts.missing} | ${counts.not_applicable} |`,
+      `| \`${paradigm}\` | ${counts.ok} | ${counts.weak} | ${counts.weak_evidence} | ${counts.watch} | ${counts.planned} | ${counts.required_gap} | ${counts.missing} | ${counts.not_applicable} |`,
     );
+  }
+
+  lines.push("", "## Contract Evidence", "");
+  const contractEvidenceEntries = Object.entries(report.paradigm_contract_evidence ?? {});
+  if (contractEvidenceEntries.length === 0) {
+    lines.push("No contract evidence.");
+  } else {
+    lines.push("| Paradigm | Evidence | Files | Required Text |");
+    lines.push("| --- | --- | --- | --- |");
+    for (const [paradigm, entries] of contractEvidenceEntries) {
+      for (const entry of entries) {
+        lines.push(
+          `| \`${paradigm}\` | \`${entry.id}\` | ${entry.files.map((file) => `\`${file}\``).join(", ")} | ${entry.required_text.map((text) => `\`${text}\``).join(", ")} |`,
+        );
+      }
+    }
   }
 
   lines.push("", "## Gaps", "");
@@ -271,6 +338,8 @@ function writeReport(report, outPath) {
 
 function runSelfTest() {
   assert.equal(deriveGap("covered", true), "ok");
+  assert.equal(deriveEvidenceAwareGap("covered", true, { test_command_count: 0, contract_evidence_count: 0 }), "weak_evidence");
+  assert.equal(deriveEvidenceAwareGap("covered", true, { test_command_count: 1, contract_evidence_count: 0 }), "ok");
   assert.equal(deriveGap("partial", true), "weak");
   assert.equal(deriveGap("partial", false), "watch");
   assert.equal(deriveGap("planned", true), "required_gap");

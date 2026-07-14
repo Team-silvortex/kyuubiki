@@ -27,7 +27,10 @@ const requiredSchemas = [
   "schemas/central-database-status.schema.json",
   "schemas/central-readiness-report.schema.json",
 ];
-const requiredConfigs = ["config/architecture/central-store-contract.json"];
+const requiredConfigs = [
+  "config/architecture/central-store-contract.json",
+  "config/architecture/module-topology.json",
+];
 
 if (process.argv.includes("--self-test")) {
   const issues = validateReport({
@@ -49,6 +52,13 @@ if (process.argv.includes("--self-test")) {
         present: true,
         schema_version_present: true,
       })),
+    },
+    service_surface: {
+      id: "central-web-service",
+      module_id: "orchestra-control-plane",
+      kind: "self_host_web",
+      topology_present: true,
+      boundary_documented: true,
     },
     storage_contract: {
       schema_version: "kyuubiki.central-database-contract/v1",
@@ -113,6 +123,21 @@ function validateReport(report) {
   if (report.storage_contract?.table_contract_present !== true) {
     issues.push("storage table contract missing");
   }
+  if (report.service_surface?.id !== "central-web-service") {
+    issues.push("central web service surface id missing");
+  }
+  if (report.service_surface?.module_id !== "orchestra-control-plane") {
+    issues.push("central web service module binding mismatch");
+  }
+  if (report.service_surface?.kind !== "self_host_web") {
+    issues.push("central web service surface kind mismatch");
+  }
+  if (report.service_surface?.topology_present !== true) {
+    issues.push("central web service topology coverage missing");
+  }
+  if (report.service_surface?.boundary_documented !== true) {
+    issues.push("central web service boundary documentation missing");
+  }
   issues.push(...unsafeTextIssues(JSON.stringify(report)));
   return issues;
 }
@@ -136,10 +161,14 @@ function validateMarkdown(markdown) {
     "## API Surface",
     "## Schemas",
     "## Config Surface",
+    "## Service Surface",
     "## Storage Contract",
     "## Runbook",
     "kyuubiki.central-readiness-report/v1",
     "kyuubiki.central-database-contract/v1",
+    "central-web-service",
+    "orchestra-control-plane",
+    "self_host_web",
     "make check-central-database-readiness MODE=local BACKEND=sqlite",
     "make remote-central-database-smoke REMOTE=kyuubiki-lab",
     "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke",
@@ -169,6 +198,9 @@ function markdownFixture() {
     "",
     "## Config Surface",
     ...requiredConfigs.map((config) => `| \`${config}\` | \`yes\` | \`yes\` |`),
+    "",
+    "## Service Surface",
+    "| `central-web-service` | `orchestra-control-plane` | `self_host_web` | `yes` | `yes` |",
     "",
     "## Storage Contract",
     "- Contract: `kyuubiki.central-database-contract/v1`",

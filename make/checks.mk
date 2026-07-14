@@ -1,5 +1,5 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene
-.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
@@ -45,6 +45,10 @@ check-module-function-matrix:
 check-module-function-coverage-tensor:
 	@node ./scripts/build-module-function-coverage-tensor.mjs --self-test
 	@node ./scripts/build-module-function-coverage-tensor.mjs
+
+check-module-extension-standard:
+	@node ./scripts/check-module-extension-standard.mjs --self-test
+	@node ./scripts/check-module-extension-standard.mjs
 
 check-contracts-runtime-api-surface:
 	@node ./scripts/check-contracts-runtime-api-surface.mjs --self-test
@@ -227,6 +231,7 @@ architecture-check:
 	@$(MAKE) check-module-topology
 	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-module-function-coverage-tensor
+	@$(MAKE) check-module-extension-standard
 	@$(MAKE) check-contracts-runtime-api-surface
 	@$(MAKE) check-verification-evidence-surface
 	@$(MAKE) check-central-store-contract

@@ -2,6 +2,7 @@
 
 import { buildWorkbenchSnapshot, restoreWorkbenchSnapshot } from "@/lib/workbench/history";
 import { getWorkbenchScriptActionDefinition } from "@/lib/scripting/workbench-script-runtime";
+import { evaluateWorkbenchUxActionGuardrail } from "@/components/workbench/workbench-ux-action-guardrails";
 
 export function buildWorkbenchScriptSnapshot(props: Record<string, any>) {
   return {
@@ -114,6 +115,35 @@ export function restoreWorkbenchUiSnapshot(snapshot: any, props: Record<string, 
 
 export async function invokeWorkbenchScriptAction(options: Record<string, any>): Promise<Record<string, unknown>> {
   const actionDefinition = getWorkbenchScriptActionDefinition(options.action);
+  const guardrail = evaluateWorkbenchUxActionGuardrail({
+    action: options.action,
+    definition: actionDefinition,
+    summary: options.uxGuardrailSummary,
+  });
+  if (!guardrail.allowed) {
+    const summary =
+      options.language === "zh"
+        ? `操作已被防呆保护拦截：${guardrail.reason}`
+        : options.language === "ja"
+          ? `操作はガードレールによりブロックされました: ${guardrail.reason}`
+          : `Action blocked by UX guardrails: ${guardrail.reason}`;
+    options.recordSecurityAuditEvent({
+      action: options.action,
+      source: options.source,
+      risk: actionDefinition?.risk === "destructive" ? "destructive" : "sensitive",
+      status: "failed",
+      note: summary,
+    });
+    options.appendScriptActionLog({
+      action: options.action,
+      source: options.source,
+      status: "failed",
+      summary,
+      payload: options.payload,
+      note: guardrail.blockingItemId ?? undefined,
+    });
+    throw new Error(summary);
+  }
   if (actionDefinition?.requiresConfirmation) {
     const auditRisk = actionDefinition.risk;
     options.recordSecurityAuditEvent({

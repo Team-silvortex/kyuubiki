@@ -1,0 +1,101 @@
+{
+  "$schema": "../../schemas/module-extension-standard.schema.json",
+  "schema_version": "kyuubiki.module-extension-standard/v1",
+  "version_line": "tamamono 1.19.x",
+  "summary": "Standard onboarding flow for new architecture modules, function paradigms, service surfaces, evidence lanes, and contract families.",
+  "source_of_truth": {
+    "topology": "config/architecture/module-topology.json",
+    "matrix": "config/architecture/module-function-coverage-matrix.json",
+    "tensor": "config/architecture/module-function-coverage-tensor.json",
+    "docs": "docs/architecture-extension-standard.md"
+  },
+  "evidence_rules": {
+    "required_cell_without_evidence": "weak_evidence",
+    "minimum_required_cell_evidence": "At least one runnable test command or one contract evidence bundle.",
+    "service_surface_rule": "A service surface belongs inside an existing module and must not claim owned paths.",
+    "path_rule": "All source, evidence, and docs paths must be repository-relative.",
+    "file_size_rule": "Source and docs touched by extension work should stay under the project file-line guard."
+  },
+  "extension_types": [
+    {
+      "id": "module",
+      "required_files": [
+        "config/architecture/module-topology.json",
+        "config/architecture/module-function-coverage-matrix.json",
+        "config/architecture/module-function-coverage-tensor.json",
+        "docs/module-architecture.md",
+        "docs/architecture-extension-standard.md"
+      ],
+      "steps": [
+        "Declare the module id, layer, owned paths, dependencies, benchmark lanes, security lanes, and risk tags in module-topology.",
+        "Add required function paradigms and cell statuses in module-function-coverage-matrix.",
+        "Ensure the coverage tensor reports no required_gap, missing, or weak_evidence cells.",
+        "Document ownership, non-ownership, and handoff boundaries."
+      ]
+    },
+    {
+      "id": "function_paradigm",
+      "required_files": [
+        "config/architecture/module-function-coverage-matrix.json",
+        "config/architecture/module-function-coverage-tensor.json",
+        "docs/architecture-extension-standard.md"
+      ],
+      "steps": [
+        "Add the paradigm description to the matrix.",
+        "Map the paradigm to benchmark and security lanes in the tensor.",
+        "Update required_by_module only for modules that truly own that capability.",
+        "Run matrix and tensor checks before claiming coverage."
+      ]
+    },
+    {
+      "id": "service_surface",
+      "required_files": [
+        "config/architecture/module-topology.json",
+        "config/architecture/contracts-runtime-api-surface.json",
+        "docs/module-architecture.md"
+      ],
+      "steps": [
+        "Attach the service surface to its owning module rather than creating a fake module.",
+        "Bind runtime API families or readiness reports when the surface exposes shared contracts.",
+        "Document whether the surface is product shell, control API, self-host web, or runtime-facing."
+      ]
+    },
+    {
+      "id": "evidence_lane",
+      "required_files": [
+        "config/architecture/module-topology.json",
+        "config/architecture/module-function-coverage-tensor.json",
+        "docs/architecture-extension-standard.md"
+      ],
+      "steps": [
+        "Declare the benchmark or security lane centrally.",
+        "Attach at least one command to lane_test_plan.",
+        "Map the lane from relevant paradigms in the tensor.",
+        "Verify the lane creates evidence_depth for required cells."
+      ]
+    },
+    {
+      "id": "contract_family",
+      "required_files": [
+        "config/architecture/contracts-runtime-api-surface.json",
+        "schemas/contracts-runtime-api-surface.schema.json",
+        "config/architecture/central-store-contract.json",
+        "docs/architecture-extension-standard.md"
+      ],
+      "steps": [
+        "Add repository-relative source files and client surfaces.",
+        "Add schema or text anchors to the appropriate release contract.",
+        "Attach contract evidence to the tensor when the family proves a required paradigm.",
+        "Run the family checker and the full architecture gate."
+      ]
+    }
+  ],
+  "gates": [
+    { "id": "topology", "command": "make check-module-topology" },
+    { "id": "matrix", "command": "make check-module-function-matrix" },
+    { "id": "tensor", "command": "make check-module-function-coverage-tensor" },
+    { "id": "runtime-api-surface", "command": "make check-contracts-runtime-api-surface" },
+    { "id": "central-store", "command": "make check-central-store-contract" },
+    { "id": "full-architecture", "command": "make architecture-check" }
+  ]
+}

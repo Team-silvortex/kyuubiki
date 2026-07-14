@@ -34,7 +34,10 @@ const schemaFiles = [
   "schemas/central-readiness-report.schema.json",
 ];
 
-const configFiles = ["config/architecture/central-store-contract.json"];
+const configFiles = [
+  "config/architecture/central-store-contract.json",
+  "config/architecture/module-topology.json",
+];
 
 if (args.has("--self-test")) {
   const report = buildReport({
@@ -51,6 +54,9 @@ if (args.has("--self-test")) {
         "kyuubiki.central-database-contract/v1 central_store_entries central_artifact_signatures",
       ...Object.fromEntries(schemaFiles.map((file) => [file, "{}"])),
       ...Object.fromEntries(configFiles.map((file) => [file, "kyuubiki.central-store-contract-check/v1"])),
+      "config/architecture/module-topology.json":
+        "kyuubiki.module-topology/v1 central-web-service self_host_web orchestra-control-plane",
+      "docs/central-server-components.md": "central-web-service not a separate top-level module",
     },
   });
   const issues = validateReport(report);
@@ -81,6 +87,7 @@ function requiredFiles() {
     "apps/web/lib/kyuubiki_web/central_store_router.ex",
     "apps/frontend/src/lib/api/central-store-client.ts",
     "apps/web/lib/kyuubiki_web/storage/central_database.ex",
+    "docs/central-server-components.md",
     ...schemaFiles,
     ...configFiles,
   ];
@@ -131,8 +138,24 @@ function buildReport({ readiness, files }) {
         path: file,
         present: typeof files[file] === "string",
         schema_version_present:
-          files[file]?.includes("kyuubiki.central-store-contract-check/v1") === true,
+          file === "config/architecture/central-store-contract.json"
+            ? files[file]?.includes("kyuubiki.central-store-contract-check/v1") === true
+            : files[file]?.includes("kyuubiki.module-topology/v1") === true,
       })),
+    },
+    service_surface: {
+      id: "central-web-service",
+      module_id: "orchestra-control-plane",
+      kind: "self_host_web",
+      topology_present: includesAll(files["config/architecture/module-topology.json"], [
+        "central-web-service",
+        "self_host_web",
+        "orchestra-control-plane",
+      ]),
+      boundary_documented: includesAll(files["docs/central-server-components.md"], [
+        "central-web-service",
+        "not a separate top-level module",
+      ]),
     },
     storage_contract: {
       schema_version: "kyuubiki.central-database-contract/v1",
@@ -183,6 +206,12 @@ function validateReport(report) {
     if (!config.present) issues.push(`config file missing: ${config.path}`);
     if (!config.schema_version_present) issues.push(`config schema version missing: ${config.path}`);
   }
+  if (report.service_surface.topology_present !== true) {
+    issues.push("central self-host web service surface missing from topology");
+  }
+  if (report.service_surface.boundary_documented !== true) {
+    issues.push("central self-host web service boundary missing from docs");
+  }
   return issues;
 }
 
@@ -231,6 +260,14 @@ function renderMarkdown(report) {
       `| \`${config.path}\` | \`${config.present ? "yes" : "no"}\` | \`${config.schema_version_present ? "yes" : "no"}\` |`,
     );
   }
+  lines.push(
+    "",
+    "## Service Surface",
+    "",
+    "| Service | Module | Kind | Topology | Boundary |",
+    "| --- | --- | --- | --- | --- |",
+    `| \`${report.service_surface.id}\` | \`${report.service_surface.module_id}\` | \`${report.service_surface.kind}\` | \`${report.service_surface.topology_present ? "yes" : "no"}\` | \`${report.service_surface.boundary_documented ? "yes" : "no"}\` |`,
+  );
   lines.push(
     "",
     "## Storage Contract",

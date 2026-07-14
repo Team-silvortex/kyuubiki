@@ -55,6 +55,7 @@ help:
 	@echo "  make check-module-topology Verify strict architecture module topology, benchmark lanes, and security lanes"
 	@echo "  make check-module-function-matrix Verify module x function-paradigm coverage matrix"
 	@echo "  make check-module-function-coverage-tensor Build module x function x evidence-depth coverage tensor"
+	@echo "  make check-module-extension-standard Verify the standard flow for adding modules, paradigms, surfaces, lanes, and contracts"
 	@echo "  make check-contracts-runtime-api-surface Verify shared contracts runtime API source/client surface index"
 	@echo "  make check-verification-evidence-surface Verify verification evidence commands, artifacts, and central readiness report coverage"
 	@echo "  make check-central-store-contract Verify central store schemas, backend surface, frontend client, and docs"

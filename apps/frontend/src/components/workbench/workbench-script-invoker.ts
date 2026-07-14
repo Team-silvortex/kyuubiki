@@ -19,6 +19,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
       source,
       note,
       language: options.language,
+      uxGuardrailSummary: options.uxGuardrailSummary,
       recordSecurityAuditEvent: options.recordSecurityAuditEvent,
       appendScriptActionLog: options.appendScriptActionLog,
       handleWorkbenchScriptNavAction,

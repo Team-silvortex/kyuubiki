@@ -18,6 +18,10 @@ The coverage tensor is
 `config/architecture/module-function-coverage-tensor.json`; it combines the
 module topology, function matrix, benchmark lanes, and security lanes into a
 three-axis gap map.
+The extension standard is
+`config/architecture/module-extension-standard.json`; it defines the repeatable
+process for adding new modules, paradigms, service surfaces, evidence lanes, or
+contract families.
 
 ## Architecture Principle
 
@@ -131,6 +135,17 @@ does not replace detailed tests. It points each weak coordinate at the relevant
 benchmark and security lanes so the next task can pick a concrete module,
 function paradigm, and evidence path.
 
+`covered` is not enough by itself. Required cells that have neither runnable
+test commands nor contract evidence are reported as `weak_evidence`, so a
+module cannot look healthy only because the two-dimensional matrix says it is
+covered.
+
+For contract-heavy paradigms, the tensor also carries `contract_evidence`.
+The `runtime_api` coordinate includes the contracts runtime API surface schema,
+the central self-host service-surface binding, and the readiness-report service
+surface anchors. This makes `central-web-service` visible in the project tensor
+status instead of only in central-server docs.
+
 Run `make check-contracts-runtime-api-surface` when shared contracts gain or
 move runtime API sources. It validates
 `config/architecture/contracts-runtime-api-surface.json`, including the
@@ -141,6 +156,22 @@ can tell whether a build carries the expected persistence surface before any
 write-side publishing is enabled. Run `make check-central-store-contract` when
 changing the future center-server catalog, login/session policy, language-pack
 distribution, database policy/status, or matching frontend client surface.
+
+## Extension Standard
+
+Use [architecture-extension-standard.md](architecture-extension-standard.md)
+before adding new architecture surface area. The standard is intentionally
+machine-readable through
+`config/architecture/module-extension-standard.json` and guarded by
+`make check-module-extension-standard`.
+
+The flow keeps future growth boring in the good way:
+
+- add ownership to topology
+- add participation to the matrix
+- prove depth through the tensor
+- attach runnable gates or contract evidence
+- document non-ownership boundaries
 
 ## Product Shells
 

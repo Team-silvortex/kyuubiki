@@ -43,12 +43,23 @@ the profile commands themselves should be executed.
   module has explicit coverage status across product surface, runtime API,
   solver execution, workflow composition, validation, benchmark, security,
   persistence, deployment, and headless SDK paradigms.
+- `architecture/module-extension-standard.json`
+  Machine-readable onboarding standard for new modules, function paradigms,
+  service surfaces, evidence lanes, and contract families. It keeps future
+  architecture growth tied to topology, matrix, tensor, docs, and gates.
 - `architecture/central-store-contract.json`
   Central-server store contract checker input. It lists the schemas, backend
   surfaces, frontend API surfaces, docs, readiness scripts, and text checks
   that keep the future catalog/auth/publish/provenance/database plane aligned
   before write-side publishing exists. Its shape is guarded by
   `schemas/central-store-contract-check.schema.json`.
+- `architecture/contracts-runtime-api-surface.json`
+  Shared runtime API family map. It records frontend, protocol, orchestra, and
+  central-store API sources plus client surfaces and internal service-surface
+  bindings such as `central-web-service` under `orchestra-control-plane`.
+  Its shape is guarded by `schemas/contracts-runtime-api-surface.schema.json`.
+  Use `node scripts/check-contracts-runtime-api-surface.mjs --surface tmp/file.json`
+  for fixture or negative checks.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
 - `dependency-audit-lockfiles.json`
@@ -56,6 +67,7 @@ the profile commands themselves should be executed.
 
 Run `make check-module-topology` after changing architecture topology. Run
 `make check-module-function-matrix` after changing module/function coverage.
+Run `make check-module-extension-standard` after changing the extension flow.
 Run `make audit-dependencies` after changing dependency-audit lanes.
 
 ## Toolchains

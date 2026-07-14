@@ -64,6 +64,8 @@
     "scripts/build-central-readiness-report.mjs",
     "scripts/check-central-readiness-report.mjs",
     "schemas/central-readiness-report.schema.json",
+    "schemas/contracts-runtime-api-surface.schema.json",
+    "config/architecture/module-function-coverage-tensor.json",
     "config/architecture/module-topology.json",
     "config/architecture/contracts-runtime-api-surface.json",
     "docs/central-server-components.md"
@@ -105,11 +107,19 @@
     { "file": "scripts/run-remote-central-database-smoke.mjs", "text": "run-central-database-smoke.mjs", "label": "remote central database smoke wrapper" },
     { "file": "scripts/build-central-readiness-report.mjs", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema" },
     { "file": "scripts/build-central-readiness-report.mjs", "text": "/api/v1/central/database-status", "label": "central readiness report database status endpoint" },
+    { "file": "scripts/build-central-readiness-report.mjs", "text": "service_surface", "label": "central readiness report self-host service surface" },
     { "file": "scripts/check-central-readiness-report.mjs", "text": "unsafe text detected", "label": "central readiness report secret guard" },
     { "file": "schemas/central-readiness-report.schema.json", "text": "kyuubiki.central-readiness-report/v1", "label": "central readiness report schema file" },
+    { "file": "schemas/central-readiness-report.schema.json", "text": "service_surface", "label": "central readiness report service surface schema" },
     { "file": "config/architecture/module-topology.json", "text": "central-web-service", "label": "central self-host web service surface topology" },
     { "file": "config/architecture/module-topology.json", "text": "self_host_web", "label": "central self-host web service kind" },
+    { "file": "config/architecture/contracts-runtime-api-surface.json", "text": "service_surfaces", "label": "central runtime API service surface binding" },
     { "file": "config/architecture/contracts-runtime-api-surface.json", "text": "self-hosted website service surface", "label": "central runtime API self-host web surface contract" },
+    { "file": "schemas/contracts-runtime-api-surface.schema.json", "text": "serviceSurface", "label": "central runtime API service surface schema" },
+    { "file": "scripts/check-contracts-runtime-api-surface.mjs", "text": "requireServiceSurface", "label": "central runtime API service surface checker" },
+    { "file": "config/architecture/module-function-coverage-tensor.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
+    { "file": "config/architecture/module-function-coverage-tensor.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
+    { "file": "scripts/build-module-function-coverage-tensor.mjs", "text": "contract_evidence_count", "label": "tensor contract evidence count" },
     { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" }
   ]
 }

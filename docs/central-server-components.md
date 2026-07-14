@@ -128,8 +128,9 @@ LLM ingestion need one machine-readable summary. The report is written under
 `tmp/central-readiness-report.json` by default, with a compact Markdown summary
 at `tmp/central-readiness-report.md`. It combines DB readiness, central API
 endpoint coverage, schema file coverage, storage table-contract presence, and
-central contract config coverage, plus safe runbook commands. It intentionally
-does not store credentials or live database connection strings. Its schema is
+central contract config coverage, self-hosted website service-surface coverage,
+plus safe runbook commands. It intentionally does not store credentials or live
+database connection strings. Its schema is
 `schemas/central-readiness-report.schema.json`.
 
 ## Auth Boundary

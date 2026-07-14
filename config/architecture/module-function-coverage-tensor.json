@@ -8,7 +8,39 @@
     "status": "The direct matrix coverage state for the module/paradigm pair.",
     "benchmark_evidence": "Relevant benchmark lanes and lane test commands from the module topology.",
     "security_evidence": "Relevant security lanes and lane test commands from the module topology.",
-    "gap": "Derived action level for locating weak or uncovered coordinates."
+    "contract_evidence": "Required schemas, config contracts, and text anchors that prove a paradigm has machine-readable release gates.",
+    "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
+  },
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "contracts-runtime-api-surface",
+        "files": [
+          "config/architecture/contracts-runtime-api-surface.json",
+          "schemas/contracts-runtime-api-surface.schema.json",
+          "scripts/check-contracts-runtime-api-surface.mjs"
+        ],
+        "required_text": [
+          "central-web-service",
+          "service_surfaces",
+          "self_host_web",
+          "kyuubiki.contracts-runtime-api-surface/v1"
+        ]
+      },
+      {
+        "id": "central-self-host-service-readiness",
+        "files": [
+          "schemas/central-readiness-report.schema.json",
+          "scripts/build-central-readiness-report.mjs",
+          "scripts/check-central-readiness-report.mjs"
+        ],
+        "required_text": [
+          "service_surface",
+          "central-web-service",
+          "orchestra-control-plane"
+        ]
+      }
+    ]
   },
   "paradigm_lanes": {
     "product_surface": {
@@ -56,6 +88,7 @@
     "covered": "ok",
     "required_partial": "weak",
     "required_missing_or_planned": "required_gap",
+    "required_covered_without_evidence": "weak_evidence",
     "optional_partial": "watch",
     "optional_planned": "planned",
     "not_applicable": "not_applicable"

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/module-extension-standard.schema.json",
+  "title": "Kyuubiki Module Extension Standard",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema_version",
+    "version_line",
+    "summary",
+    "source_of_truth",
+    "evidence_rules",
+    "extension_types",
+    "gates"
+  ],
+  "properties": {
+    "$schema": { "const": "../../schemas/module-extension-standard.schema.json" },
+    "schema_version": { "const": "kyuubiki.module-extension-standard/v1" },
+    "version_line": { "type": "string", "pattern": "^tamamono 1\\.19\\.x$" },
+    "summary": { "type": "string", "minLength": 24 },
+    "source_of_truth": {
+      "type": "object",
+      "required": ["topology", "matrix", "tensor", "docs"],
+      "additionalProperties": false,
+      "properties": {
+        "topology": { "$ref": "#/$defs/repoPath" },
+        "matrix": { "$ref": "#/$defs/repoPath" },
+        "tensor": { "$ref": "#/$defs/repoPath" },
+        "docs": { "$ref": "#/$defs/repoPath" }
+      }
+    },
+    "evidence_rules": {
+      "type": "object",
+      "required": [
+        "required_cell_without_evidence",
+        "minimum_required_cell_evidence",
+        "service_surface_rule",
+        "path_rule",
+        "file_size_rule"
+      ],
+      "additionalProperties": { "type": "string", "minLength": 8 },
+      "properties": {
+        "required_cell_without_evidence": { "const": "weak_evidence" },
+        "minimum_required_cell_evidence": { "type": "string", "minLength": 8 },
+        "service_surface_rule": { "type": "string", "minLength": 8 },
+        "path_rule": { "type": "string", "minLength": 8 },
+        "file_size_rule": { "type": "string", "minLength": 8 }
+      }
+    },
+    "extension_types": {
+      "type": "array",
+      "minItems": 5,
+      "items": { "$ref": "#/$defs/extensionType" }
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/gate" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "extensionType": {
+      "type": "object",
+      "required": ["id", "required_files", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": ["module", "function_paradigm", "service_surface", "evidence_lane", "contract_family"]
+        },
+        "required_files": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string", "minLength": 12 }
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["id", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "command": { "type": "string", "pattern": "^make [a-z0-9][a-z0-9-]*$" }
+      }
+    }
+  }
+}

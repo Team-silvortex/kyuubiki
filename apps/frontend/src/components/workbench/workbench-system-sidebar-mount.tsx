@@ -13,6 +13,8 @@ import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system
 import { buildWorkbenchLanguagePackPresentation } from "@/components/workbench/system/workbench-system-language-pack-presentation";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
+import { WorkbenchUxGuardrailCard } from "@/components/workbench/workbench-ux-guardrail-card";
+import { buildWorkbenchUxGuardrailSummary } from "@/components/workbench/workbench-ux-guardrails";
 import { applyWorkbenchGovernancePatch, buildWorkbenchGovernanceConfig, buildWorkbenchGovernanceRows } from "@/lib/workbench/governance";
 import {
   persistWorkbenchApiBaseUrl,
@@ -175,6 +177,19 @@ export function WorkbenchSystemSidebarMount({
   const [backendApiBaseUrl, setBackendApiBaseUrl] = useState(readPersistedWorkbenchApiBaseUrl);
   const backendTarget = resolveWorkbenchBackendTarget();
   const backendTargetCopy = buildWorkbenchSystemBackendTargetCopy(language);
+  const uxGuardrailSummary = buildWorkbenchUxGuardrailSummary({
+    frontendRuntimeMode,
+    healthStatus,
+    protocolOnline: healthProtocolOnline,
+    watchdogOnline: healthWatchdogOnline,
+    controlPlaneApiToken,
+    clusterApiToken,
+    directMeshApiToken,
+    directMeshEndpointsText,
+    selectedProjectId,
+    selectedVersionId,
+    languagePackCount: languagePacks.length,
+  });
 
   const handleBackendApiBaseUrlChange = (value: string) => {
     const nextValue = persistWorkbenchApiBaseUrl(value);
@@ -196,6 +211,12 @@ export function WorkbenchSystemSidebarMount({
       scriptsOverviewHint={t.settingsScriptsHint}
       configContent={
         <div className="sidebar-stack">
+          <WorkbenchUxGuardrailCard
+            language={language}
+            onOpenRuntime={() => handleSystemPanelTabChange("runtime")}
+            onOpenWorkflow={() => { setSidebarSection("workflow"); handleWorkflowPanelTabChange("catalog"); }}
+            summary={uxGuardrailSummary}
+          />
           <WorkbenchSystemConfigCard
             title={t.settings}
             status={healthStatus === "ok" ? t.online : t.offline}
