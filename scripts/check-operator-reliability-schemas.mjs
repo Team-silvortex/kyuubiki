@@ -138,6 +138,10 @@ function sortedStrings(values) {
   return [...values].sort((left, right) => left.localeCompare(right));
 }
 
+function makeTarget(command) {
+  return command?.match(/^make ([a-zA-Z0-9_.-]+)$/)?.[1] ?? null;
+}
+
 function checkQualificationRoadmapClosure() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
   const evidenceKits = readJson(operatorReliabilityPaths.evidenceKits);
@@ -177,7 +181,7 @@ function checkQualificationRoadmapClosure() {
 
   const makeTargets = listMakeTargets();
   for (const candidate of candidates.values()) {
-    const target = candidate.preferred_validation_lane?.match(/^make ([a-zA-Z0-9_.-]+)$/)?.[1];
+    const target = makeTarget(candidate.preferred_validation_lane);
     if (!target) {
       fail(`${candidate.candidate_id}: preferred_validation_lane must be a make target`);
     }
@@ -196,9 +200,14 @@ function checkQualificationRoadmapClosure() {
         }
       }
       if (artifact.artifact_command) {
-        const target = artifact.artifact_command.match(/^make ([a-zA-Z0-9_.-]+)$/)?.[1];
+        const target = makeTarget(artifact.artifact_command);
         if (!target) fail(`${kit.candidate_id}/${artifact.artifact_id}: artifact_command must be a make target`);
         if (!makeTargets.has(target)) fail(`${kit.candidate_id}/${artifact.artifact_id}: unknown make target ${target}`);
+      }
+      if (artifact.artifact_check_command) {
+        const target = makeTarget(artifact.artifact_check_command);
+        if (!target) fail(`${kit.candidate_id}/${artifact.artifact_id}: artifact_check_command must be a make target`);
+        if (!makeTargets.has(target)) fail(`${kit.candidate_id}/${artifact.artifact_id}: unknown check make target ${target}`);
       }
     }
   }
@@ -243,6 +252,9 @@ function runSelfTest() {
   }
   if (!sameItems(sortedStrings(["b", "a"]), ["a", "b"])) {
     fail("self-test sorted string comparison failed");
+  }
+  if (makeTarget("make check-sample") !== "check-sample" || makeTarget("make check-sample EXTRA=1") !== null || makeTarget("cargo test") !== null) {
+    fail("self-test make target parser failed");
   }
   console.log("operator reliability schema smoke self-test passed");
 }

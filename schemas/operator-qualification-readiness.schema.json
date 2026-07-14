@@ -157,6 +157,7 @@
         "artifact_state",
         "artifact_kind",
         "command",
+        "check_command",
         "path",
         "gate",
         "preferred_validation_lane",

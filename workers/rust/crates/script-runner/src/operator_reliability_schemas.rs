@@ -217,20 +217,38 @@ fn check_artifact_requirements(
             }
             let command = field(artifact, "artifact_command");
             if !command.is_empty() {
-                let Some(target) = command.strip_prefix("make ") else {
+                let Some(target) = make_target(command) else {
                     return Ok(Some(format!(
                         "{candidate_id}/{artifact_id}: artifact_command must be a make target"
                     )));
                 };
-                if target.split_whitespace().count() != 1 || !make_targets.contains(target) {
+                if !make_targets.contains(target) {
                     return Ok(Some(format!(
                         "{candidate_id}/{artifact_id}: unknown make target {target}"
+                    )));
+                }
+            }
+            let check_command = field(artifact, "artifact_check_command");
+            if !check_command.is_empty() {
+                let Some(target) = make_target(check_command) else {
+                    return Ok(Some(format!(
+                        "{candidate_id}/{artifact_id}: artifact_check_command must be a make target"
+                    )));
+                };
+                if !make_targets.contains(target) {
+                    return Ok(Some(format!(
+                        "{candidate_id}/{artifact_id}: unknown check make target {target}"
                     )));
                 }
             }
         }
     }
     Ok(None)
+}
+
+fn make_target(command: &str) -> Option<&str> {
+    let target = command.strip_prefix("make ")?;
+    (target.split_whitespace().count() == 1).then_some(target)
 }
 
 fn required_field_errors(value: &Value, schema: &Value, context: &str) -> Vec<String> {
@@ -324,6 +342,12 @@ fn run_self_test() -> RunnerResult<()> {
     if sorted_vec(vec!["b".to_string(), "a".to_string()]) != vec!["a", "b"] {
         return Err("self-test sorted string comparison failed".to_string());
     }
+    if make_target("make check-sample") != Some("check-sample")
+        || make_target("make check-sample EXTRA=1").is_some()
+        || make_target("cargo test").is_some()
+    {
+        return Err("self-test make target parser failed".to_string());
+    }
     Ok(())
 }
 
@@ -400,7 +424,7 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use super::{required_field_errors, sorted_vec};
+    use super::{make_target, required_field_errors, sorted_vec};
 
     #[test]
     fn required_field_errors_recurse_into_arrays() {
@@ -423,5 +447,12 @@ mod tests {
     #[test]
     fn sorted_vec_orders_strings() {
         assert_eq!(sorted_vec(vec!["b".into(), "a".into()]), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn make_target_rejects_extra_arguments() {
+        assert_eq!(make_target("make check-sample"), Some("check-sample"));
+        assert_eq!(make_target("make check-sample EXTRA=1"), None);
+        assert_eq!(make_target("cargo test"), None);
     }
 }
