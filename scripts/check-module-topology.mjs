@@ -23,6 +23,7 @@ const ALLOWED_SERVICE_SURFACE_KINDS = new Set([
 ]);
 const ALLOWED_COMMAND_PREFIXES = [
   "make ",
+  "./scripts/kyuubiki ",
   "node ",
   "cd apps/frontend && npm run ",
   "cd apps/web && mix ",
@@ -283,7 +284,7 @@ function runSelfTest() {
         ui_startup: [{ id: "smoke", command: "make smoke", scope: "local" }],
       },
       security: {
-        ui_boundary: [{ id: "audit", command: "node scripts/audit-local-paths.mjs", scope: "local" }],
+        ui_boundary: [{ id: "audit", command: "./scripts/kyuubiki audit-local-paths", scope: "local" }],
       },
     },
     modules: [

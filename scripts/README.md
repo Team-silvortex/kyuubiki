@@ -6,6 +6,12 @@ This directory contains host-native operational entry points.
   Thin compatibility shim for the native Rust `kyuubiki-script-runner`
   binary. New operational command logic should land in
   `workers/rust/crates/script-runner`, not in shell.
+- `kyuubiki-script-runner frontend-file-lines` and
+  `kyuubiki-script-runner frontend-storage-security`
+  Native Rust replacements for the former frontend Node check scripts. The
+  npm `check:file-lines` and `check:storage-security` entries still exist as
+  developer-friendly package scripts, but their implementation now lives in
+  `workers/rust/crates/script-runner/src/frontend_checks.rs`.
 - `kyuubiki-lab`
   Thin operational wrapper for the shared Ubuntu lab machine that now hosts
   the standard download/deploy server plus the shared solver-agent test node.
@@ -33,9 +39,22 @@ This directory contains host-native operational entry points.
   docs mirrors, update catalogs, shipped language-pack catalog versions, and
   hand-maintained Markdown facts such as `current-line.md` and
   `version-line.md`.
-- `audit-rust-line-counts.mjs`
-  Enforce the Rust source line-count ceiling, currently `600` lines per file,
-  so crate and test modules stay split before they become hard to review.
+- `kyuubiki-script-runner rust-line-audit`
+  Native Rust source line-count audit, currently `600` lines per file by
+  default, so crate and test modules stay split before they become hard to
+  review. The command keeps the old `--root`, `--max`, and `--json` options.
+- `kyuubiki-script-runner audit-local-paths`
+  Native tracked-file scan that rejects local machine absolute paths such as
+  user-home paths, macOS temporary-folder paths, mounted-volume paths, and
+  host package-manager prefixes in source, docs, schemas, and scripts.
+- `kyuubiki-script-runner check-module-extension-standard`
+  Native contract check for the standard flow used when adding modules,
+  function paradigms, service surfaces, evidence lanes, and contract families.
+  It preserves the `--self-test` lane used by `make check-module-extension-standard`.
+- `kyuubiki-script-runner validate-material-score-contract`
+  Native material-scoring contract check. It keeps the manifest, Markdown,
+  Elixir runtime, Rust TaskIR runtime, and tests aligned around
+  `transform.score_material_candidates`.
 - `audit-project-organization.mjs`
   Enforce the repository-wide source organization guard. New source and docs
   files, including untracked files that are not ignored, stay under the shared
@@ -60,10 +79,11 @@ This directory contains host-native operational entry points.
 - `check-elixir-self-host.mjs`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
-- `check-make-modules.mjs`
-  Verify that the root `Makefile` stays as a small include-based entrypoint,
-  that every `make/*.mk` module is included, and that retired catch-all modules
-  do not come back.
+- `kyuubiki-script-runner check-make-modules`
+  Native Rust check that verifies the root `Makefile` stays as a small
+  include-based entrypoint, that every `make/*.mk` module is included, and
+  that retired catch-all modules do not come back. The `make
+  check-make-modules` target calls this runner command directly.
 - `validate-language-packs.mjs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current release index version in the `tamamono 1.x` line,
@@ -344,12 +364,12 @@ Useful smoke wrappers:
   Current Elixir -> Rust integration smoke flow.
 - `./scripts/kyuubiki sdk-smoke`
   Python / Elixir / Rust headless SDK smoke suite.
-- `./scripts/kyuubiki agent-capability-smoke --host 192.168.1.12 --port 5001 --output tmp/agent-capability-smoke-5001.json`
+- `./scripts/kyuubiki agent-capability-smoke --host 192.0.2.12 --port 5001 --output tmp/agent-capability-smoke-5001.json`
   Probe a running solver agent, read its advertised RPC methods, and run the
   matching minimal Python SDK solver fixtures. This is the preferred quick
   check for installer-managed lab agents because it reports both tested and
   untested advertised methods without mutating the remote service.
-- `AGENT_HOST=192.168.1.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
+- `AGENT_HOST=192.0.2.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
   `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.19.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use

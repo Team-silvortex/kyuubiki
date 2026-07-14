@@ -13,12 +13,18 @@ mod desktop_linux_remote;
 mod desktop_release_upload_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
+mod frontend_checks;
 mod lab;
+mod local_path_audit;
+mod make_modules;
+mod material_score_contract;
+mod module_extension_standard;
 mod native_script_audit;
 mod native_time;
 mod operator_package_dynamic_smoke;
 mod remote_host;
 mod remote_ssh_fixture;
+mod rust_line_counts;
 mod standard_benchmark_remote;
 mod workflow_catalog_remote;
 mod workflow_mesh;
@@ -163,9 +169,9 @@ fn run() -> RunnerResult<u8> {
             if status != 0 {
                 return Ok(status);
             }
-            run_node_script(&paths.root, "audit-rust-line-counts.mjs", Vec::new())
+            rust_line_counts::run_rust_line_audit(&paths.root, Vec::new())
         }
-        "rust-line-audit" => run_node_script(&paths.root, "audit-rust-line-counts.mjs", rest),
+        "rust-line-audit" => rust_line_counts::run_rust_line_audit(&paths.root, rest),
         "frontend-test" => {
             let typecheck = run_command(
                 &paths.frontend,
@@ -207,6 +213,18 @@ fn run() -> RunnerResult<u8> {
             "npm",
             ["run", "check:workflow-preflight"].map(OsString::from),
         ),
+        "check-make-modules" => make_modules::run_check_make_modules(&paths.root, rest),
+        "check-module-extension-standard" => {
+            module_extension_standard::run_check_module_extension_standard(&paths.root, rest)
+        }
+        "validate-material-score-contract" => {
+            material_score_contract::run_validate_material_score_contract(&paths.root, rest)
+        }
+        "audit-local-paths" => local_path_audit::run_audit_local_paths(&paths.root, rest),
+        "frontend-file-lines" => frontend_checks::run_frontend_file_lines(&paths.frontend, rest),
+        "frontend-storage-security" => {
+            frontend_checks::run_frontend_storage_security(&paths.frontend, rest)
+        }
         "benchmark-profile-remote" => {
             benchmark_profile_remote::run_benchmark_profile_remote(&paths.root, rest)
         }
@@ -308,16 +326,6 @@ fn run_installer(paths: &RepoPaths, subcommand: &str, rest: Vec<OsString>) -> Ru
     )
 }
 
-fn run_node_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {
-    run_command(
-        root,
-        "node",
-        [root.join("scripts").join(script).into_os_string()]
-            .into_iter()
-            .chain(rest),
-    )
-}
-
 fn run_python_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {
     run_with_env(
         root,
@@ -405,6 +413,11 @@ generate-desktop-icon-variants\n  \
 lab remote-ssh-fixture\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
+  check-make-modules\n  \
+  check-module-extension-standard\n  \
+  validate-material-score-contract\n  \
+  audit-local-paths\n  \
+  frontend-file-lines frontend-storage-security\n  \
   benchmark-profile-remote\n  \
   benchmark-profile-plan\n  \
   direct-mesh-benchmark-container\n  \

@@ -48,7 +48,8 @@ Minimum Ubuntu setup:
 ```bash
 sudo apt update
 sudo apt install -y build-essential pkg-config libssl-dev screen curl git
-curl https://sh.rustup.rs -sSf | sh -s -- -y
+curl --proto '=https' --tlsv1.2 -sSf -o /tmp/rustup-init.sh https://sh.rustup.rs
+sh /tmp/rustup-init.sh -y
 source "$HOME/.cargo/env"
 git clone <your-repo-url> ~/kyuubiki
 cd ~/kyuubiki

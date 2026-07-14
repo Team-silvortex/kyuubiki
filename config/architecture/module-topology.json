@@ -95,7 +95,7 @@
         { "id": "central-store-contract", "command": "make check-central-store-contract", "scope": "local" },
         { "id": "central-db-readiness", "command": "make check-central-database-readiness MODE=local BACKEND=sqlite", "scope": "local" },
         { "id": "doc-book", "command": "make check-doc-book", "scope": "local" },
-        { "id": "local-path-audit", "command": "node scripts/audit-local-paths.mjs", "scope": "local" }
+        { "id": "local-path-audit", "command": "./scripts/kyuubiki audit-local-paths", "scope": "local" }
       ]
     }
   },

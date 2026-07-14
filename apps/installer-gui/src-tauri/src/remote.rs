@@ -538,9 +538,9 @@ mod tests {
     fn rejects_target_host_outside_allowlist() {
         let _guard = TEST_ENV_LOCK.lock().unwrap();
         unsafe {
-            env::set_var(REMOTE_ALLOWED_HOSTS_ENV, "192.168.1.12,solver-a");
+            env::set_var(REMOTE_ALLOWED_HOSTS_ENV, "192.0.2.12,solver-a");
         }
-        let error = validate_target_host("192.168.1.99").unwrap_err();
+        let error = validate_target_host("192.0.2.99").unwrap_err();
         assert!(error.contains("installer remote policy"));
         unsafe {
             env::remove_var(REMOTE_ALLOWED_HOSTS_ENV);

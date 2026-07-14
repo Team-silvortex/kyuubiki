@@ -32,7 +32,7 @@ check-install-update-disk-hygiene:
 	@node ./scripts/check-install-update-disk-hygiene.mjs
 
 check-make-modules:
-	@node ./scripts/check-make-modules.mjs
+	@./scripts/kyuubiki check-make-modules
 
 check-module-topology:
 	@node ./scripts/check-module-topology.mjs --self-test
@@ -47,8 +47,8 @@ check-module-function-coverage-tensor:
 	@node ./scripts/build-module-function-coverage-tensor.mjs
 
 check-module-extension-standard:
-	@node ./scripts/check-module-extension-standard.mjs --self-test
-	@node ./scripts/check-module-extension-standard.mjs
+	@$(ENTRYPOINT) check-module-extension-standard --self-test
+	@$(ENTRYPOINT) check-module-extension-standard
 
 check-contracts-runtime-api-surface:
 	@node ./scripts/check-contracts-runtime-api-surface.mjs --self-test
@@ -80,6 +80,7 @@ build-module-topology-report:
 
 check-native-script-audit:
 	@$(ENTRYPOINT) native-script-audit --self-test
+	@$(ENTRYPOINT) native-script-audit
 
 check-language-packs:
 	@node ./scripts/validate-language-packs.mjs
@@ -102,7 +103,7 @@ check-workflow-dataset-contract:
 	@node ./scripts/check-workflow-dataset-contract.mjs
 
 check-material-score-contract:
-	@node ./scripts/validate-material-score-contract.mjs
+	@$(ENTRYPOINT) validate-material-score-contract
 
 check-materialization-plan-contract:
 	@node ./scripts/check-materialization-plan-contract.mjs --self-test
@@ -199,11 +200,11 @@ remote-material-research-summary:
 	@node ./scripts/check-remote-material-stage-health.mjs --self-test
 	@node ./scripts/check-remote-material-stage-health.mjs
 
-check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline
+check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness
 	@node ./scripts/check-operator-reliability.mjs
 
 audit-rust-lines:
-	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
+	@$(ENTRYPOINT) rust-line-audit --max $${MAX_LINES:-600}
 
 audit-project-organization:
 	@node ./scripts/audit-project-organization.mjs --self-test

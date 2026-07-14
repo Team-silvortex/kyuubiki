@@ -66,7 +66,7 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
-For `tamamono 1.15.x`, the manifest also declares
+For `tamamono 1.19.x`, the manifest also declares
 `minimum_coverage_level: review`. `make check-operator-reliability` treats this
 as a release gate, so future edits cannot silently downgrade a covered operator
 back to `baseline` or `smoke`. The Make target runs the checker self-test first
@@ -112,6 +112,9 @@ started. The generated report also includes a `next_actions` queue so release
 owners can see the highest-priority evidence collection step without manually
 diffing every candidate kit. The make target validates the generated report so
 the queue stays machine-consumable for release gates and future UI surfaces.
+`make check-operator-reliability` builds and validates this readiness report
+before checking the release manifest, so the qualification queue stays visible
+without pretending that planning artifacts are qualification evidence.
 
 ## CFD Stokes Screening Scope
 
@@ -206,7 +209,7 @@ stress tolerances are valid.
 
 ## Current State
 
-The first `tamamono 1.15.x` manifest covers all 37 solve operators in the
+The current `tamamono 1.19.x` manifest covers all 38 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring at least
 `review` evidence for every covered operator.
 
@@ -214,7 +217,7 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 37 operators
+- `review`: 38 operators
 - `qualification`: 0 operators
 
 This is intentionally conservative. The platform has broad executable

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-qualification-readiness.schema.json",
+  "title": "Kyuubiki Operator Qualification Readiness Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "version_line",
+    "generated_at_utc",
+    "summary",
+    "next_actions",
+    "candidates"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v1" },
+    "version_line": { "type": "string", "pattern": "^tamamono 1\\.19\\.x$" },
+    "generated_at_utc": { "type": "string", "minLength": 10 },
+    "summary": {
+      "type": "object",
+      "required": ["candidates", "collecting", "planned", "with_entries", "not_started", "broken", "next_action_count"],
+      "additionalProperties": false,
+      "properties": {
+        "candidates": { "type": "integer", "minimum": 1 },
+        "collecting": { "type": "integer", "minimum": 0 },
+        "planned": { "type": "integer", "minimum": 0 },
+        "with_entries": { "type": "integer", "minimum": 0 },
+        "not_started": { "type": "integer", "minimum": 0 },
+        "broken": { "type": "integer", "minimum": 0 },
+        "next_action_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
+    "candidates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/candidate" } }
+  },
+  "$defs": {
+    "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "broken", "blocked"] },
+    "artifactState": { "enum": ["present", "missing", "command_available", "not_started"] },
+    "candidate": {
+      "type": "object",
+      "required": ["candidate_id", "priority", "domain", "status", "readiness", "operator_ids", "artifact_counts", "artifacts", "evidence_gaps", "graduation_gate"],
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "priority": { "enum": ["p0", "p1", "p2", "p3"] },
+        "domain": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["planned", "collecting", "ready_for_review", "blocked", "missing_kit"] },
+        "readiness": { "$ref": "#/$defs/readiness" },
+        "operator_ids": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^solve\\.[a-z0-9_]+$" } },
+        "artifact_counts": {
+          "type": "object",
+          "required": ["total", "present", "command_available", "missing", "not_started"],
+          "additionalProperties": false,
+          "properties": {
+            "total": { "type": "integer", "minimum": 0 },
+            "present": { "type": "integer", "minimum": 0 },
+            "command_available": { "type": "integer", "minimum": 0 },
+            "missing": { "type": "integer", "minimum": 0 },
+            "not_started": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "graduation_gate": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["artifact_id", "kind", "state", "gate"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "kind": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/$defs/artifactState" },
+        "path": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 },
+        "gate": { "type": "string", "minLength": 1 }
+      }
+    },
+    "nextAction": {
+      "type": "object",
+      "required": ["candidate_id", "priority", "readiness", "action_kind", "artifact_id", "artifact_state", "artifact_kind", "command", "path", "gate"],
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "priority": { "enum": ["p0", "p1", "p2", "p3"] },
+        "readiness": { "$ref": "#/$defs/readiness" },
+        "action_kind": { "enum": ["collect_artifact", "restore_or_generate_artifact", "run_command", "review"] },
+        "artifact_id": { "type": ["string", "null"] },
+        "artifact_state": { "type": ["string", "null"] },
+        "artifact_kind": { "type": ["string", "null"] },
+        "command": { "type": ["string", "null"] },
+        "path": { "type": ["string", "null"] },
+        "gate": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

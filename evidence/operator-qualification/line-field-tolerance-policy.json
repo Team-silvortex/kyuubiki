@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-qualification-tolerance-policy/v1",
-  "version_line": "tamamono 1.15.x",
+  "version_line": "tamamono 1.19.x",
   "candidate_id": "line-field-closed-form",
   "status": "collecting",
   "scope": {

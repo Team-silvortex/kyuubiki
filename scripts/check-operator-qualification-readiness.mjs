@@ -4,6 +4,7 @@ import path from "node:path";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultInput = "tmp/operator-qualification-readiness.json";
+const schemaPath = "schemas/operator-qualification-readiness.schema.json";
 const priorityOrder = new Map([
   ["p0", 0],
   ["p1", 1],
@@ -97,8 +98,15 @@ function actionErrors(action, index) {
 
 function readinessErrors(report, relativeInput) {
   const errors = [];
+  const schema = JSON.parse(fs.readFileSync(path.join(repoRoot, schemaPath), "utf8"));
+  if (schema.properties?.schema_version?.const !== "kyuubiki.operator-qualification-readiness/v1") {
+    errors.push(`${schemaPath}: schema_version const is wrong`);
+  }
   if (report.schema_version !== "kyuubiki.operator-qualification-readiness/v1") {
     errors.push(`${relativeInput}: unexpected schema_version`);
+  }
+  if (typeof report.version_line !== "string" || report.version_line.length === 0) {
+    errors.push(`${relativeInput}: version_line must be non-empty`);
   }
   if (!Array.isArray(report.candidates) || report.candidates.length === 0) {
     errors.push(`${relativeInput}: candidates must be non-empty`);
@@ -110,6 +118,19 @@ function readinessErrors(report, relativeInput) {
   if (report.summary?.next_action_count !== report.next_actions.length) {
     errors.push(`${relativeInput}: summary.next_action_count must match next_actions length`);
   }
+  if (report.summary?.candidates !== report.candidates?.length) {
+    errors.push(`${relativeInput}: summary.candidates must match candidates length`);
+  }
+  const collecting = report.candidates.filter((candidate) => candidate.status === "collecting").length;
+  const planned = report.candidates.filter((candidate) => candidate.status === "planned").length;
+  const withEntries = report.candidates.filter((candidate) =>
+    candidate.artifact_counts?.present > 0 || candidate.artifact_counts?.command_available > 0
+  ).length;
+  const broken = report.candidates.filter((candidate) => candidate.readiness === "broken").length;
+  if (report.summary?.collecting !== collecting) errors.push(`${relativeInput}: summary.collecting is stale`);
+  if (report.summary?.planned !== planned) errors.push(`${relativeInput}: summary.planned is stale`);
+  if (report.summary?.with_entries !== withEntries) errors.push(`${relativeInput}: summary.with_entries is stale`);
+  if (report.summary?.broken !== broken) errors.push(`${relativeInput}: summary.broken is stale`);
   report.next_actions.forEach((action, index) => {
     errors.push(...actionErrors(action, index));
   });
@@ -132,8 +153,21 @@ const args = parseArgs(process.argv);
 if (args.selfTest) {
   const sample = {
     schema_version: "kyuubiki.operator-qualification-readiness/v1",
-    summary: { next_action_count: 2 },
-    candidates: [{ candidate_id: "sample", readiness: "planned" }],
+    version_line: "tamamono 1.19.x",
+    generated_at_utc: "2026-01-01T00:00:00.000Z",
+    summary: { candidates: 1, collecting: 0, planned: 1, with_entries: 0, not_started: 1, broken: 0, next_action_count: 2 },
+    candidates: [{
+      candidate_id: "sample",
+      priority: "p0",
+      domain: "sample",
+      status: "planned",
+      readiness: "planned",
+      operator_ids: ["solve.sample"],
+      artifact_counts: { total: 1, present: 0, command_available: 0, missing: 0, not_started: 1 },
+      artifacts: [],
+      evidence_gaps: ["sample"],
+      graduation_gate: "sample gate",
+    }],
     next_actions: [
       {
         candidate_id: "candidate_a",

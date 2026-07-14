@@ -297,7 +297,7 @@ function runSelfTest() {
     ],
   };
   assert.doesNotThrow(() => validateConfig(sample));
-  sample.profiles[0].commands[0].command = "rm -rf tmp";
+  sample.profiles[0].commands[0].command = "python -c 'print(1)'";
   assert.throws(() => validateConfig(sample), /unsupported command prefix/u);
   sample.profiles[0].commands[0].command = "make check-make-modules";
   sample.profiles[0].commands[1].kind = "ad_hoc";

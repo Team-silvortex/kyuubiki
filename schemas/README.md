@@ -83,6 +83,9 @@ README.
 - `operator-qualification-evidence-kits.schema.json` is for the planning-grade
   artifact kits attached to qualification roadmap candidates before any of
   those artifacts are promoted into manifest-level `evidence.qualification`
+- `operator-qualification-readiness.schema.json` is for the generated
+  qualification readiness report that turns roadmap candidates and evidence
+  kits into a sorted next-action queue
 - `operator-validation-profiles.schema.json` is for the input profile contract
   consumed by `make check-operator-validation`, including grouped operators,
   evidence paths, validation methods, formal invariants, and controlled command

@@ -28,7 +28,7 @@ export function mountRemotePanel() {
     <div class="form-shell">
       <div class="panel-header"><h2>Remote policy</h2></div>
       <div class="field-grid">
-        <label class="field field-span-2"><span>Allowed hosts</span><input id="remote-policy-allowed-hosts" type="text" placeholder="192.168.1.12,solver-a" /></label>
+        <label class="field field-span-2"><span>Allowed hosts</span><input id="remote-policy-allowed-hosts" type="text" placeholder="192.0.2.12,solver-a" /></label>
         <label class="field field-span-2"><span>Allowed workspace roots</span><input id="remote-policy-allowed-workspaces" type="text" placeholder="/opt/kyuubiki,/srv/kyuubiki" /></label>
       </div>
       <div class="field-grid">
@@ -77,8 +77,8 @@ export function mountRemotePanel() {
       <div class="panel-header"><h2>Node certificate issue</h2></div>
       <div class="field-grid">
         <label class="field"><span>Label</span><input id="certificate-issue-label" type="text" placeholder="lab-a" /></label>
-        <label class="field"><span>Target host</span><input id="certificate-issue-target-host" type="text" placeholder="192.168.1.12" /></label>
-        <label class="field"><span>Advertise host</span><input id="certificate-issue-advertise-host" type="text" placeholder="192.168.1.12" /></label>
+        <label class="field"><span>Target host</span><input id="certificate-issue-target-host" type="text" placeholder="192.0.2.12" /></label>
+        <label class="field"><span>Advertise host</span><input id="certificate-issue-advertise-host" type="text" placeholder="192.0.2.12" /></label>
         <label class="field"><span>Agent id</span><input id="certificate-issue-agent-id" type="text" placeholder="solver-lab-a" /></label>
         <label class="field"><span>Control mode</span><select id="certificate-issue-control-mode"><option value="orchestrated">Orchestrated</option><option value="offline_mesh">Offline mesh</option></select></label>
         <label class="field"><span>Override validity days</span><input id="certificate-issue-validity-days" type="number" min="1" max="3650" placeholder="use policy default" /></label>
@@ -103,7 +103,7 @@ export function mountRemotePanel() {
 
     <div class="form-shell">
       <div class="panel-header"><h2>Remote nodes</h2></div>
-      <label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.168.1.12","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.168.1.10:4000","agent_id":"solver-lab-a","advertise_host":"192.168.1.12","agent_port":5001,"certificate_id":"lab-a-1720000000000"},{"label":"mesh-b","target_host":"192.168.1.22","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.168.1.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.168.1.22","agent_port":5001,"certificate_id":"mesh-b-1720000000001"}]'></textarea></label>
+      <label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.0.2.12","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.0.2.10:4000","agent_id":"solver-lab-a","advertise_host":"192.0.2.12","agent_port":5001,"certificate_id":"lab-a-1720000000000"},{"label":"mesh-b","target_host":"192.0.2.22","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.0.2.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.0.2.22","agent_port":5001,"certificate_id":"mesh-b-1720000000001"}]'></textarea></label>
       <pre id="remote-node-summary"></pre>
       <div class="field-grid">
         <label class="field"><span>Search nodes</span><input id="remote-node-search" type="text" placeholder="label, host, agent, cluster" /></label>

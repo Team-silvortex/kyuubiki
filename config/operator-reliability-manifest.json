@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-reliability-manifest/v1",
-  "version_line": "tamamono 1.15.x",
+  "version_line": "tamamono 1.19.x",
   "coverage_matrix": "physics-coverage",
   "minimum_coverage_level": "review",
   "levels": [

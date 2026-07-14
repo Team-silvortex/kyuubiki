@@ -164,6 +164,9 @@ function buildNextActions(candidates) {
 function buildReport() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
   const kits = readJson(operatorReliabilityPaths.evidenceKits);
+  if (roadmap.version_line !== kits.version_line) {
+    fail("roadmap and evidence kits version_line must match");
+  }
   const kitByCandidate = new Map(kits.kits.map((kit) => [kit.candidate_id, kit]));
   const candidates = roadmap.candidates.map((candidate) =>
     readinessFor(candidate, kitByCandidate.get(candidate.candidate_id))

@@ -32,6 +32,15 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
 }
 
+function repoPath(relativePath) {
+  const absolute = path.resolve(repoRoot, relativePath);
+  const relative = path.relative(repoRoot, absolute);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    fail(`path escapes repository: ${relativePath}`);
+  }
+  return absolute;
+}
+
 function schemaValueAt(schema, valuePath) {
   return valuePath.reduce((value, key) => value?.[key], schema);
 }
@@ -110,6 +119,82 @@ function checkReliabilityShards() {
   }
 }
 
+function listMakeTargets() {
+  const targets = new Set();
+  for (const file of ["Makefile", "make/checks.mk", "make/benchmarks.mk", "make/tests.mk", "make/help.mk"]) {
+    const absolute = path.join(repoRoot, file);
+    if (!fs.existsSync(absolute)) continue;
+    const text = fs.readFileSync(absolute, "utf8");
+    for (const match of text.matchAll(/^([a-zA-Z0-9_.-]+):/gm)) targets.add(match[1]);
+  }
+  return targets;
+}
+
+function sameItems(left, right) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+function sortedStrings(values) {
+  return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+function checkQualificationRoadmapClosure() {
+  const roadmap = readJson(operatorReliabilityPaths.roadmap);
+  const evidenceKits = readJson(operatorReliabilityPaths.evidenceKits);
+  if (roadmap.version_line !== evidenceKits.version_line) {
+    fail(`${operatorReliabilityPaths.roadmap}: version_line must match evidence kits`);
+  }
+
+  const candidates = new Map();
+  for (const candidate of roadmap.candidates ?? []) {
+    if (candidates.has(candidate.candidate_id)) {
+      fail(`${operatorReliabilityPaths.roadmap}: duplicate candidate ${candidate.candidate_id}`);
+    }
+    candidates.set(candidate.candidate_id, candidate);
+  }
+
+  const kits = new Map();
+  for (const kit of evidenceKits.kits ?? []) {
+    if (kits.has(kit.candidate_id)) {
+      fail(`${operatorReliabilityPaths.evidenceKits}: duplicate kit ${kit.candidate_id}`);
+    }
+    kits.set(kit.candidate_id, kit);
+  }
+
+  for (const [candidateId, candidate] of candidates) {
+    const kit = kits.get(candidateId);
+    if (!kit) fail(`${candidateId}: missing evidence kit`);
+    if (!sameItems(sortedStrings(candidate.operator_ids), sortedStrings(kit.operator_ids))) {
+      fail(`${candidateId}: roadmap operator_ids must match evidence kit operator_ids`);
+    }
+    if (kit.artifact_requirements.length < candidate.required_artifacts.length) {
+      fail(`${candidateId}: evidence kit must not have fewer artifact requirements than roadmap required_artifacts`);
+    }
+  }
+  for (const candidateId of kits.keys()) {
+    if (!candidates.has(candidateId)) fail(`${candidateId}: evidence kit has no roadmap candidate`);
+  }
+
+  const makeTargets = listMakeTargets();
+  for (const kit of kits.values()) {
+    for (const artifact of kit.artifact_requirements) {
+      if (artifact.artifact_path) {
+        if (artifact.artifact_path.startsWith("/") || artifact.artifact_path.includes("..")) {
+          fail(`${kit.candidate_id}/${artifact.artifact_id}: artifact_path must be repository-relative`);
+        }
+        if (["collecting", "ready_for_review"].includes(kit.status) && !fs.existsSync(repoPath(artifact.artifact_path))) {
+          fail(`${kit.candidate_id}/${artifact.artifact_id}: collecting artifact_path does not exist`);
+        }
+      }
+      if (artifact.artifact_command) {
+        const target = artifact.artifact_command.match(/^make ([a-zA-Z0-9_.-]+)$/)?.[1];
+        if (!target) fail(`${kit.candidate_id}/${artifact.artifact_id}: artifact_command must be a make target`);
+        if (!makeTargets.has(target)) fail(`${kit.candidate_id}/${artifact.artifact_id}: unknown make target ${target}`);
+      }
+    }
+  }
+}
+
 function runSelfTest() {
   const schema = {
     type: "object",
@@ -147,6 +232,9 @@ function runSelfTest() {
   if (requiredFieldErrors({ schema_version: "self-test/v1", items: [] }, schema, "self").length > 0) {
     fail("self-test valid sample should not report required-field errors");
   }
+  if (!sameItems(sortedStrings(["b", "a"]), ["a", "b"])) {
+    fail("self-test sorted string comparison failed");
+  }
   console.log("operator reliability schema smoke self-test passed");
 }
 
@@ -159,5 +247,6 @@ for (const contract of schemaContracts) {
   checkSchemaContract(contract);
 }
 checkReliabilityShards();
+checkQualificationRoadmapClosure();
 
 console.log("operator reliability schema smoke passed");

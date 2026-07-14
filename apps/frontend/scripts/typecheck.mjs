@@ -50,4 +50,4 @@ if (!appTypesReady()) {
 }
 
 run("npx", ["tsc", "--noEmit", "--incremental", "false"]);
-run("node", ["./scripts/check-file-lines.mjs"]);
+run("npm", ["run", "check:file-lines"]);
