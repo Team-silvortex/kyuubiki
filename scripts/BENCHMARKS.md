@@ -28,9 +28,9 @@ Focused reference for benchmark and regression script entry points.
   compatibility shim for `./scripts/kyuubiki workflow-mesh-regression-remote`.
   It syncs the mesh workflow regression tests to `kyuubiki-lab`, runs them
   there, and pulls summary artifacts back.
-- `./scripts/build-workflow-mesh-regression-summary.mjs --log tmp/workflow-mesh-regression/<slug>/run.log --output-dir tmp/workflow-mesh-regression/<slug>`
+- `./scripts/kyuubiki build-workflow-mesh-regression-summary --log tmp/workflow-mesh-regression/<slug>/run.log --output-dir tmp/workflow-mesh-regression/<slug>`
   rebuilds summary artifacts from a captured workflow mesh TAP log.
-- `./scripts/build-workflow-mesh-regression-index.mjs --root tmp/workflow-mesh-regression`
+- `./scripts/kyuubiki build-workflow-mesh-regression-index --root tmp/workflow-mesh-regression`
   rebuilds the retained workflow mesh index.
 - `make test-integration-workflow-mesh`
   local distributed workflow mesh regression trio.
@@ -80,7 +80,7 @@ Focused reference for benchmark and regression script entry points.
   local hot-case comparison before using the remote lane. Case-filtered
   baseline/report targets use case-suffixed filenames to avoid overwriting
   full-matrix artifacts.
-- `./scripts/build-standard-benchmark-index.mjs`
+- `./scripts/kyuubiki build-standard-benchmark-index`
   rebuilds the local standard benchmark index under `tmp/standard-benchmark/`.
 - `./scripts/build-nightly-artifact-overview.mjs`
   rebuilds the top-level `tmp/` nightly artifact overview.

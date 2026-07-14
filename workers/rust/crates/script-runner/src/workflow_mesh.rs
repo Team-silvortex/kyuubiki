@@ -46,9 +46,8 @@ pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
     }
 
     log_line(&mut log, "workflow mesh regression completed")?;
-    let summary = run_node_script(
+    let summary = crate::workflow_mesh_summary::run_build_workflow_mesh_regression_summary(
         root,
-        "build-workflow-mesh-regression-summary.mjs",
         vec![
             OsString::from("--log"),
             log_path.clone().into_os_string(),
@@ -59,9 +58,8 @@ pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
     if summary != 0 {
         return Ok(summary);
     }
-    let index = run_node_script(
+    let index = crate::workflow_mesh_index::run_build_workflow_mesh_regression_index(
         root,
-        "build-workflow-mesh-regression-index.mjs",
         vec![
             OsString::from("--root"),
             root.join("tmp/workflow-mesh-regression").into_os_string(),
@@ -72,16 +70,6 @@ pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
     }
     println!("workflow mesh regression log: {}", log_path.display());
     Ok(0)
-}
-
-fn run_node_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {
-    let status = Command::new("node")
-        .arg(root.join("scripts").join(script))
-        .args(rest)
-        .current_dir(root)
-        .status()
-        .map_err(|error| format!("failed to run node script {script}: {error}"))?;
-    Ok(status.code().unwrap_or(1) as u8)
 }
 
 fn run_logged_command<I>(

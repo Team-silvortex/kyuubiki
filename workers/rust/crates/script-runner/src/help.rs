@@ -23,6 +23,7 @@ operator-package-dynamic-smoke\n  \
   check-operator-qualification-readiness\n  \
 project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
+sync-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
 desktop-release desktop-verify\n  \
 desktop-linux-remote\n  \
@@ -87,11 +88,19 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   compare-direct-mesh-benchmark\n  \
   direct-mesh-benchmark-regression\n  \
   standard-benchmark-regression\n  \
+  build-standard-benchmark-index\n  \
   workflow-catalog-benchmark-regression\n  \
   workflow-mesh-regression-remote\n  \
+  build-workflow-mesh-regression-index\n  \
+  build-workflow-mesh-regression-summary\n  \
   workflow-mesh-regression\n  \
   build-standard-benchmark-report\n  \
   compare-workflow-catalog-benchmark\n  \
+  frontend-cli frontend-typecheck frontend-unit-test\n  \
+  frontend-unit-headless-test frontend-unit-headless-live-test\n  \
+  frontend-unit-workflow-test frontend-ui-layout-check\n  \
+  frontend-workflow-search-layout-check frontend-workflow-topology-check\n  \
+  frontend-workflow-benchmark\n  \
   playground-fem-node-test\n  \
   hub-gui-compile-ui\n  \
   hub-gui-smoke-node-test\n  \

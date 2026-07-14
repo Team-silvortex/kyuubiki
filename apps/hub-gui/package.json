@@ -8,7 +8,7 @@
   },
   "scripts": {
     "compile:ui": "../../scripts/kyuubiki hub-gui-compile-ui",
-    "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",
+    "sync:shared": "../../scripts/kyuubiki sync-desktop-shared",
     "test:smoke": "../../scripts/kyuubiki hub-gui-smoke-node-test",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

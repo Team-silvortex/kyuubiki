@@ -39,7 +39,7 @@ jobs:
       - name: Evaluate unified regression gate
         if: always()
         run: |
-          node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
+          ./scripts/kyuubiki build-regression-gate-report --tmp-root ./tmp
 
       - name: Upload standard benchmark comparison artifacts
         if: always()

@@ -19,6 +19,7 @@ mod desktop;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;
+mod desktop_shared_sync;
 mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
 mod direct_mesh_remote;
@@ -77,6 +78,7 @@ mod remote_material_stage_health;
 mod remote_material_summary;
 mod remote_ssh_fixture;
 mod rust_line_counts;
+mod standard_benchmark_index;
 mod standard_benchmark_remote;
 mod standard_benchmark_report;
 mod toolchain_contract;
@@ -88,7 +90,9 @@ mod workflow_catalog_benchmark_compare;
 mod workflow_catalog_remote;
 mod workflow_dataset_contract;
 mod workflow_mesh;
+mod workflow_mesh_index;
 mod workflow_mesh_remote;
+mod workflow_mesh_summary;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -139,6 +143,9 @@ fn run() -> RunnerResult<u8> {
         &command,
         rest.clone(),
     ) {
+        return result;
+    }
+    if let Some(result) = node_tests::run_node_command(&paths, &command, rest.clone()) {
         return result;
     }
 
@@ -291,6 +298,7 @@ fn run() -> RunnerResult<u8> {
         "build-hub-gui" => run_desktop_build(&paths, DesktopApp::Hub, rest),
         "build-installer-gui" => run_desktop_build(&paths, DesktopApp::Installer, rest),
         "build-workbench-gui" => run_desktop_build(&paths, DesktopApp::Workbench, rest),
+        "sync-desktop-shared" => desktop_shared_sync::run_sync_desktop_shared(&paths.root),
         "package-desktop" => run_package_desktop(&paths, rest),
         "desktop-status" => run_desktop_status(&paths, rest),
         "desktop-stage" => run_desktop_stage(&paths, rest),
@@ -317,25 +325,19 @@ fn run() -> RunnerResult<u8> {
         }
         "rust-line-audit" => rust_line_counts::run_rust_line_audit(&paths.root, rest),
         "frontend-test" => {
-            let typecheck = run_command(
-                &paths.frontend,
-                "npm",
-                ["run", "typecheck"].map(OsString::from),
-            )?;
+            let typecheck = node_tests::run_frontend_typecheck(&paths.frontend, Vec::new())?;
             if typecheck != 0 {
                 return Ok(typecheck);
             }
             run_command(&paths.frontend, "npm", ["run", "build"].map(OsString::from))
         }
-        "headless-test" => run_command(
+        "headless-test" => {
+            node_tests::run_frontend_unit_test(&paths.frontend, &["headless"], Vec::new())
+        }
+        "headless-live-test" => node_tests::run_frontend_unit_test(
             &paths.frontend,
-            "npm",
-            ["run", "test:unit:headless"].map(OsString::from),
-        ),
-        "headless-live-test" => run_command(
-            &paths.frontend,
-            "npm",
-            ["run", "test:unit:headless-live"].map(OsString::from),
+            &["kyuubiki-headless-live"],
+            Vec::new(),
         ),
         "headless-rust-live-test" => run_command(
             &paths.rust,
@@ -351,50 +353,25 @@ fn run() -> RunnerResult<u8> {
             ]
             .map(OsString::from),
         ),
-        "playground-fem-node-test" => {
-            node_tests::run_node_test(&paths.root, &["apps/web/playground/test/fem.test.mjs"])
-        }
-        "hub-gui-compile-ui" => node_tests::run_hub_gui_compile(&paths.hub_gui),
-        "hub-gui-smoke-node-test" => node_tests::run_hub_gui_smoke(&paths.hub_gui),
-        "installer-gui-smoke-node-test" => node_tests::run_app_smoke(&paths.installer_gui),
-        "workbench-gui-smoke-node-test" => node_tests::run_app_smoke(&paths.workbench_gui),
-        "integration-api-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/orchestrator-agent-api-smoke.test.mjs"],
-        ),
-        "integration-cluster-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/distributed-control-plane-smoke.test.mjs"],
-        ),
-        "integration-direct-mesh-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/direct-mesh-gui-smoke.test.mjs"],
-        ),
-        "integration-desktop-gui-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &[
-                "tests/integration/desktop-shell-regression.test.mjs",
-                "tests/integration/workbench-shell-regression.test.mjs",
-            ],
-        ),
-        "integration-benchmark-profile-index-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/benchmark-profile-index.test.mjs"],
-        ),
-        "integration-ui-mechanical-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/workbench-ui-mechanical-smoke.test.mjs"],
-        ),
-        "integration-ui-thermal-node-test" => node_tests::run_node_test(
-            &paths.root,
-            &["tests/integration/workbench-ui-thermal-smoke.test.mjs"],
-        ),
         "sdk-smoke" => run_sdk_smoke(&paths),
-        "workflow-preflight" => run_command(
-            &paths.frontend,
-            "npm",
-            ["run", "check:workflow-preflight"].map(OsString::from),
-        ),
+        "workflow-preflight" => {
+            let unit =
+                node_tests::run_frontend_unit_test(&paths.frontend, &["workflow"], Vec::new())?;
+            if unit != 0 {
+                return Ok(unit);
+            }
+            let topology = node_tests::run_frontend_check(
+                &paths.frontend,
+                "./scripts/check-workflow-topology-regression.mjs",
+            )?;
+            if topology != 0 {
+                return Ok(topology);
+            }
+            node_tests::run_frontend_check(
+                &paths.frontend,
+                "./scripts/check-workflow-search-layout.mjs",
+            )
+        }
         "benchmark-profile-remote" => {
             benchmark_profile_remote::run_benchmark_profile_remote(&paths.root, rest)
         }
@@ -425,6 +402,9 @@ fn run() -> RunnerResult<u8> {
         "standard-benchmark-regression" => {
             standard_benchmark_remote::run_standard_benchmark_regression(&paths.root, rest)
         }
+        "build-standard-benchmark-index" => {
+            standard_benchmark_index::run_build_standard_benchmark_index(&paths.root, rest)
+        }
         "build-standard-benchmark-report" => {
             standard_benchmark_report::run_build_standard_benchmark_report(&paths.root, rest)
         }
@@ -439,6 +419,12 @@ fn run() -> RunnerResult<u8> {
         }
         "workflow-mesh-regression-remote" => {
             workflow_mesh_remote::run_workflow_mesh_remote(&paths.root, rest)
+        }
+        "build-workflow-mesh-regression-index" => {
+            workflow_mesh_index::run_build_workflow_mesh_regression_index(&paths.root, rest)
+        }
+        "build-workflow-mesh-regression-summary" => {
+            workflow_mesh_summary::run_build_workflow_mesh_regression_summary(&paths.root, rest)
         }
         "workflow-mesh-regression" => workflow_mesh::run_workflow_mesh_regression(&paths.root),
         "agent-capability-smoke" => {

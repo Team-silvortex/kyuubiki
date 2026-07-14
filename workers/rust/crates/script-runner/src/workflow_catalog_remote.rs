@@ -3,7 +3,6 @@ use crate::remote_host::{remote_shell_path, scp_from, shell_escape, ssh_status};
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -60,19 +59,16 @@ pub(crate) fn run_workflow_catalog_remote(root: &Path, args: Vec<OsString>) -> R
 
     for status in [
         run_compare(root, &options)?,
-        run_node(
+        crate::regression_lane_catalog::run_build_regression_lane_catalog(
             root,
-            "build-regression-lane-catalog.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
-        run_node(
+        crate::regression_gate_report::run_build_regression_gate_report(
             root,
-            "build-regression-gate-report.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
-        run_node(
+        crate::nightly_artifact_overview::run_build_nightly_artifact_overview(
             root,
-            "build-nightly-artifact-overview.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
     ] {
@@ -150,28 +146,6 @@ fn run_compare(root: &Path, options: &Options) -> RunnerResult<u8> {
             OsString::from(&options.workflow_avg_threshold),
         ],
     )
-}
-
-fn run_node(root: &Path, script: &str, args: Vec<OsString>) -> RunnerResult<u8> {
-    run_status(
-        "node",
-        [root.join("scripts").join(script).into_os_string()]
-            .into_iter()
-            .chain(args),
-        root,
-    )
-}
-
-fn run_status<I>(program: &str, args: I, cwd: &Path) -> RunnerResult<u8>
-where
-    I: IntoIterator<Item = OsString>,
-{
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .map_err(|error| format!("failed to run {program}: {error}"))?;
-    Ok(status.code().unwrap_or(1) as u8)
 }
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {

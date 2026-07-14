@@ -75,27 +75,23 @@ pub(crate) fn run_workflow_mesh_remote(root: &Path, args: Vec<OsString>) -> Runn
             &options.local_output_dir.join("README.md"),
             root,
         )?,
-        run_node(
+        crate::workflow_mesh_index::run_build_workflow_mesh_regression_index(
             root,
-            "build-workflow-mesh-regression-index.mjs",
             vec![
                 "--root".into(),
                 root.join("tmp/workflow-mesh-regression").into_os_string(),
             ],
         )?,
-        run_node(
+        crate::regression_lane_catalog::run_build_regression_lane_catalog(
             root,
-            "build-regression-lane-catalog.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
-        run_node(
+        crate::regression_gate_report::run_build_regression_gate_report(
             root,
-            "build-regression-gate-report.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
-        run_node(
+        crate::nightly_artifact_overview::run_build_nightly_artifact_overview(
             root,
-            "build-nightly-artifact-overview.mjs",
             vec!["--tmp-root".into(), root.join("tmp").into_os_string()],
         )?,
     ] {
@@ -312,28 +308,6 @@ fn copy_remote(
             .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
     }
     scp_from(root, &options.remote_host, remote_path, local_path)
-}
-
-fn run_node(root: &Path, script: &str, args: Vec<OsString>) -> RunnerResult<u8> {
-    run_status(
-        "node",
-        [root.join("scripts").join(script).into_os_string()]
-            .into_iter()
-            .chain(args),
-        root,
-    )
-}
-
-fn run_status<I>(program: &str, args: I, cwd: &Path) -> RunnerResult<u8>
-where
-    I: IntoIterator<Item = OsString>,
-{
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .map_err(|error| format!("failed to run {program}: {error}"))?;
-    Ok(status.code().unwrap_or(1) as u8)
 }
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {

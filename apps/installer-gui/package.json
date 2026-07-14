@@ -7,7 +7,7 @@
     "node": ">=20.19.2 <25"
   },
   "scripts": {
-    "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",
+    "sync:shared": "../../scripts/kyuubiki sync-desktop-shared",
     "test:smoke": "../../scripts/kyuubiki installer-gui-smoke-node-test",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

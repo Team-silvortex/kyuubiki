@@ -33,7 +33,7 @@ check-operator-package-dynamic-smoke:
 	@$(ENTRYPOINT) check-operator-package-dynamic-smoke --in $${IN:-tmp/operator-package-dynamic-smoke.json}
 
 sync-desktop-shared:
-	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs
+	@$(ENTRYPOINT) sync-desktop-shared
 
 build-installation-docs:
 	@$(ENTRYPOINT) build-installation-integrity-docs
