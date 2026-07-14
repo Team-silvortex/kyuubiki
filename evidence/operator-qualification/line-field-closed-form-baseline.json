@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-qualification-baseline/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "candidate_id": "line-field-closed-form",
   "status": "collecting",
   "artifact_profile": "analytic_closed_form",
@@ -25,11 +25,11 @@
         ]
       },
       "inputs": {
-        "length": 1.0,
+        "length": 1,
         "area": 0.01,
-        "youngs_modulus": 210000000000.0,
+        "youngs_modulus": 210000000000,
         "elements": 1,
-        "tip_force": 1000.0
+        "tip_force": 1000
       },
       "expectations": [
         {
@@ -42,18 +42,18 @@
         },
         {
           "field": "max_stress",
-          "value": 100000.0,
+          "value": 100000,
           "tolerance": {
             "kind": "absolute",
-            "value": 1e-6
+            "value": 0.000001
           }
         },
         {
           "field": "reaction_force",
-          "value": -1000.0,
+          "value": -1000,
           "tolerance": {
             "kind": "absolute",
-            "value": 1e-6
+            "value": 0.000001
           }
         }
       ]
@@ -71,17 +71,17 @@
         ]
       },
       "inputs": {
-        "length": 1.0,
+        "length": 1,
         "area": 0.01,
-        "youngs_modulus": 210000000000.0,
+        "youngs_modulus": 210000000000,
         "thermal_expansion": 0.000012,
-        "temperature_delta": 40.0,
+        "temperature_delta": 40,
         "end_constraints": "both_ends_fixed"
       },
       "expectations": [
         {
           "field": "max_displacement",
-          "value": 0.0,
+          "value": 0,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -89,7 +89,7 @@
         },
         {
           "field": "max_stress",
-          "value": 100800000.0,
+          "value": 100800000,
           "tolerance": {
             "kind": "relative",
             "value": 1e-9
@@ -97,7 +97,7 @@
         },
         {
           "field": "max_axial_force",
-          "value": 1008000.0,
+          "value": 1008000,
           "tolerance": {
             "kind": "relative",
             "value": 1e-9
@@ -105,7 +105,7 @@
         },
         {
           "field": "max_temperature_delta",
-          "value": 40.0,
+          "value": 40,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -134,19 +134,27 @@
         ]
       },
       "inputs": {
-        "node_positions": [0.0, 1.0, 2.0],
+        "node_positions": [
+          0,
+          1,
+          2
+        ],
         "fixed_temperatures": {
-          "left": 100.0,
-          "right": 20.0
+          "left": 100,
+          "right": 20
         },
         "area": 0.01,
-        "conductivity": 45.0,
-        "heat_loads": [0.0, 0.0, 0.0]
+        "conductivity": 45,
+        "heat_loads": [
+          0,
+          0,
+          0
+        ]
       },
       "expectations": [
         {
           "field": "max_temperature",
-          "value": 100.0,
+          "value": 100,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -154,7 +162,7 @@
         },
         {
           "field": "max_heat_flux",
-          "value": 1800.0,
+          "value": 1800,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-9
@@ -162,7 +170,7 @@
         },
         {
           "field": "node_1_temperature",
-          "value": 60.0,
+          "value": 60,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -170,7 +178,7 @@
         },
         {
           "field": "element_0_temperature_gradient",
-          "value": -40.0,
+          "value": -40,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -178,7 +186,7 @@
         },
         {
           "field": "element_1_temperature_gradient",
-          "value": -40.0,
+          "value": -40,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -199,19 +207,27 @@
         ]
       },
       "inputs": {
-        "node_positions": [0.0, 1.0, 2.0],
+        "node_positions": [
+          0,
+          1,
+          2
+        ],
         "fixed_potentials": {
-          "left": 12.0,
-          "right": 4.0
+          "left": 12,
+          "right": 4
         },
         "area": 0.01,
-        "permittivity": 3.0,
-        "charge_density": [0.0, 0.0, 0.0]
+        "permittivity": 3,
+        "charge_density": [
+          0,
+          0,
+          0
+        ]
       },
       "expectations": [
         {
           "field": "max_potential",
-          "value": 12.0,
+          "value": 12,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -219,7 +235,7 @@
         },
         {
           "field": "max_electric_field",
-          "value": 4.0,
+          "value": 4,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -227,7 +243,7 @@
         },
         {
           "field": "max_flux_density",
-          "value": 12.0,
+          "value": 12,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -235,7 +251,7 @@
         },
         {
           "field": "node_1_potential",
-          "value": 8.0,
+          "value": 8,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -243,7 +259,7 @@
         },
         {
           "field": "element_0_electric_field",
-          "value": 4.0,
+          "value": 4,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12
@@ -251,7 +267,7 @@
         },
         {
           "field": "element_1_electric_field",
-          "value": 4.0,
+          "value": 4,
           "tolerance": {
             "kind": "absolute",
             "value": 1e-12

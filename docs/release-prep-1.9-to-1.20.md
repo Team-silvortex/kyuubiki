@@ -320,19 +320,23 @@ What not to optimize for here:
 ### 1.20.x
 
 Primary theme:
-pre-`2.0` boundary freeze
+final pre-`2.0` boundary freeze and `tamamono 1.x` closeout
 
 Focus:
 
 - freeze the core contract, asset, runtime, and operator-boundary surfaces
 - run one system-wide audit of what is truly stable enough for `2.0`
 - explicitly decide what belongs in `2.0` and what should wait for `2.1+`
+- avoid starting a `1.21.x` line unless a narrow stabilization emergency makes
+  it unavoidable
 
 What should be true before moving on:
 
 - core product boundaries can be described cleanly without heavy caveats
 - major workflow and runtime semantics are no longer shifting every cycle
 - `2.0` can mean maturity instead of “another rewrite starts now”
+- remaining unfinished work has an explicit destination: `moxi 2.0.0`,
+  post-`2.0`, experimental, or retired
 
 What not to optimize for here:
 
@@ -426,6 +430,7 @@ In short:
 Use this document when:
 
 - planning the next `1.x` minor
+- opening a new `1.x` feature backlog after the `1.20.x` closeout
 - deciding whether a change belongs before `2.0`
 - checking whether a proposed capability is strengthening the industrial
   baseline or just widening scope

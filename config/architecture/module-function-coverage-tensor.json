@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "depth_axes": {
@@ -44,44 +44,110 @@
   },
   "paradigm_lanes": {
     "product_surface": {
-      "benchmark": ["ui_startup"],
-      "security": ["ui_boundary"]
+      "benchmark": [
+        "ui_startup"
+      ],
+      "security": [
+        "ui_boundary"
+      ]
     },
     "runtime_api": {
-      "benchmark": ["control_plane", "runtime_solver", "mesh", "sdk_headless"],
-      "security": ["api_auth", "data_contract"]
+      "benchmark": [
+        "control_plane",
+        "runtime_solver",
+        "mesh",
+        "sdk_headless"
+      ],
+      "security": [
+        "api_auth",
+        "data_contract"
+      ]
     },
     "solver_execution": {
-      "benchmark": ["runtime_solver"],
-      "security": ["runtime_sandbox", "data_contract"]
+      "benchmark": [
+        "runtime_solver"
+      ],
+      "security": [
+        "runtime_sandbox",
+        "data_contract"
+      ]
     },
     "workflow_composition": {
-      "benchmark": ["workflow_catalog", "sdk_headless"],
-      "security": ["data_contract", "runtime_sandbox"]
+      "benchmark": [
+        "workflow_catalog",
+        "sdk_headless"
+      ],
+      "security": [
+        "data_contract",
+        "runtime_sandbox"
+      ]
     },
     "validation": {
-      "benchmark": ["runtime_solver", "sdk_headless"],
-      "security": ["data_contract", "runtime_sandbox"]
+      "benchmark": [
+        "runtime_solver",
+        "sdk_headless"
+      ],
+      "security": [
+        "data_contract",
+        "runtime_sandbox"
+      ]
     },
     "benchmark": {
-      "benchmark": ["ui_startup", "workflow_catalog", "control_plane", "runtime_solver", "mesh", "sdk_headless", "installer_release"],
+      "benchmark": [
+        "ui_startup",
+        "workflow_catalog",
+        "control_plane",
+        "runtime_solver",
+        "mesh",
+        "sdk_headless",
+        "installer_release"
+      ],
       "security": []
     },
     "security": {
       "benchmark": [],
-      "security": ["ui_boundary", "api_auth", "runtime_sandbox", "supply_chain", "credential_storage", "remote_deploy", "data_contract"]
+      "security": [
+        "ui_boundary",
+        "api_auth",
+        "runtime_sandbox",
+        "supply_chain",
+        "credential_storage",
+        "remote_deploy",
+        "data_contract"
+      ]
     },
     "persistence_provenance": {
-      "benchmark": ["control_plane", "workflow_catalog", "installer_release"],
-      "security": ["data_contract", "supply_chain"]
+      "benchmark": [
+        "control_plane",
+        "workflow_catalog",
+        "installer_release"
+      ],
+      "security": [
+        "data_contract",
+        "supply_chain"
+      ]
     },
     "deployment_update": {
-      "benchmark": ["installer_release", "mesh"],
-      "security": ["remote_deploy", "supply_chain", "credential_storage"]
+      "benchmark": [
+        "installer_release",
+        "mesh"
+      ],
+      "security": [
+        "remote_deploy",
+        "supply_chain",
+        "credential_storage"
+      ]
     },
     "sdk_headless": {
-      "benchmark": ["sdk_headless", "runtime_solver"],
-      "security": ["api_auth", "credential_storage", "data_contract"]
+      "benchmark": [
+        "sdk_headless",
+        "runtime_solver"
+      ],
+      "security": [
+        "api_auth",
+        "credential_storage",
+        "data_contract"
+      ]
     }
   },
   "gap_policy": {

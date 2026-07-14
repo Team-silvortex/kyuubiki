@@ -5,7 +5,7 @@
 .PHONY: benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 regression-gate-report:
-	@node ./scripts/build-module-topology-report.mjs --out-dir ./tmp/module-topology
+	@$(ENTRYPOINT) build-module-topology-report --out-dir ./tmp/module-topology
 	@node ./scripts/build-benchmark-profile-index.mjs
 	@node ./scripts/build-regression-lane-catalog.mjs --tmp-root ./tmp
 	@node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp

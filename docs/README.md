@@ -33,12 +33,16 @@ Read these first, in order:
 14. `minimal-industrial-closure.md`
 15. `weakness-roadmap.md`
 
-For the current `1.19.x` hardening path, keep four threads mentally linked:
+For the current `1.20.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
 - Installer-owned remote control
 - orchestrated and direct-mesh runtime posture
+
+`1.20.x` is the final planned `tamamono 1.x` minor. Documentation changes in
+this window should make the handoff to `moxi 2.0.0` clearer rather than create
+a new `1.21.x` planning lane.
 
 ## Central Book
 
@@ -74,7 +78,7 @@ Then branch by intent:
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
 - `weakness-roadmap.md`
-  Current weak-spot roadmap from `tamamono 1.19.x` through the `moxi 2.0.0`
+  Current weak-spot roadmap from `tamamono 1.20.x` through the `moxi 2.0.0`
   trust boundary, covering numerical trust, operator SDK industrialization,
   agent/orchestra/mesh reliability, TaskIR stability, frontend/runtime
   consistency, security fuzz coverage, and the flagship material research loop.
@@ -126,8 +130,8 @@ Then branch by intent:
   Cross-runtime result contract for material candidate scoring, including
   criteria, ranges, feasibility policy, ranking semantics, and stable errors.
 - `physics-coverage-map.md`
-  `1.19.x` coverage map for broad solver-family execution coverage and the
-  review-level reliability gate before the `1.19.x` and `1.19.x`
+  `1.20.x` coverage map for broad solver-family execution coverage and the
+  review-level reliability gate before the `1.20.x` and `1.20.x`
   engine/task-format contract freeze.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
@@ -135,7 +139,7 @@ Then branch by intent:
   ONNX-like cross-operator data contract for workflow-carried values.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the `1.19.x` preparation line.
+  control-surface note for the `1.20.x` preparation line.
 - `remote-deployment-roadmap.html`
   Maturity roadmap for moving Installer remote deployment from policy-bounded
   SSH transport to a deployment service with plans, journals, artifact
@@ -186,7 +190,7 @@ Then branch by intent:
 - `repository-structure.md`
   Directory ownership, generated-path boundaries, and source-of-truth rules.
 - `project-architecture-organization.md`
-  Current `1.19.x` architecture organization map for Hub, Workbench,
+  Current `1.20.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and 600-line cleanup
   boundaries.
 - `minimal-industrial-closure.md`
@@ -236,7 +240,7 @@ Then branch by intent:
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `1.19.x` trust-hardening and asset-formalization path.
+  inside the `1.20.x` trust-hardening and asset-formalization path.
 - `component-integrity-protocol.html`
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.

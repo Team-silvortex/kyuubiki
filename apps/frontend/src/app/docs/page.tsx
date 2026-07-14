@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Workflow Docs | tamamono 1.19.0",
+  title: "Workflow Docs | tamamono 1.20.0",
   description: "Architecture and contract references for the tamamono workflow system.",
 };
 
@@ -38,7 +38,7 @@ export default function DocsPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.19.0</p>
+        <p style={eyebrowStyle}>tamamono 1.20.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Docs
         </h1>

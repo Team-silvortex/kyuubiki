@@ -55,6 +55,44 @@ This directory contains host-native operational entry points.
   Native material-scoring contract check. It keeps the manifest, Markdown,
   Elixir runtime, Rust TaskIR runtime, and tests aligned around
   `transform.score_material_candidates`.
+- `kyuubiki-script-runner check-doc-book`
+  Native docs-book and Hub mirror check. It replaces the Make-level Node
+  invocation for centralized book version alignment, required chapter markers,
+  local-link validation, and legacy wording rejection. The old
+  `check-doc-book.mjs` remains as a compatibility script for direct callers.
+- `kyuubiki-script-runner sync-doc-book-version`
+  Native docs-book version synchronizer used by `make sync-doc-book-version`.
+  It keeps the `--version` and `--line` options from the legacy Node script
+  while making the standard Make path independent of Node.
+- `kyuubiki-script-runner check-toolchain-contract`
+  Native toolchain drift check for `config/toolchains.json`, Rust toolchain
+  pins, Docker bases, Elixir constraints, embedded runtime references, remote
+  defaults, and package Node engines. The legacy
+  `check-toolchain-contract.mjs` remains available for direct compatibility.
+- `kyuubiki-script-runner check-install-update-disk-hygiene`
+  Native install/update disk-use contract check. It keeps release upload,
+  remote artifact authority, local purge allowlists, rollback visibility, and
+  installation-integrity references aligned while preserving the old
+  `--self-test` lane.
+- `kyuubiki-script-runner check-module-topology`
+  Native architecture topology check for module layers, ownership paths,
+  benchmark/security lanes, lane test plans, service surfaces, and acyclic
+  module dependencies. It preserves the old `--self-test` lane while moving the
+  Make-level path off Node.
+- `kyuubiki-script-runner build-module-topology-report`
+  Native module topology report generator. It writes the retained JSON,
+  Markdown, and HTML topology report while preserving `--topology` and
+  `--out-dir`.
+- `kyuubiki-script-runner check-module-function-matrix`
+  Native module x function-paradigm coverage matrix check. It validates module
+  rows against the topology, required paradigm cells, status values, and writes
+  the retained JSON/Markdown matrix report while preserving `--out` and
+  `--self-test`.
+- `kyuubiki-script-runner check-module-function-coverage-tensor`
+  Native module x function-paradigm x evidence-depth tensor generator. It
+  validates tensor lane mappings and contract evidence, derives gap severity,
+  and writes the retained JSON/Markdown tensor report while preserving `--out`
+  and `--self-test`.
 - `audit-project-organization.mjs`
   Enforce the repository-wide source organization guard. New source and docs
   files, including untracked files that are not ignored, stay under the shared
@@ -74,8 +112,9 @@ This directory contains host-native operational entry points.
   external operator package preflight, docs manifest JSON validation, focused
   Operator TaskIR API tests, and the Rust headless live operator task test.
 - `check-doc-book.mjs`
-  Verify the centralized docs book and Hub mirrors for version alignment,
-  broken local links, required chapter markers, and old legacy wording.
+  Legacy compatibility entry for the docs-book check. Prefer
+  `./scripts/kyuubiki check-doc-book` or `make check-doc-book` for new
+  automation.
 - `check-elixir-self-host.mjs`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
@@ -84,37 +123,57 @@ This directory contains host-native operational entry points.
   include-based entrypoint, that every `make/*.mk` module is included, and
   that retired catch-all modules do not come back. The `make
   check-make-modules` target calls this runner command directly.
-- `validate-language-packs.mjs`
+- `kyuubiki-script-runner validate-language-packs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current release index version in the `tamamono 1.x` line,
   including exact parity with
-  `config/localization/mainstream-language-pack-locales.json`.
-- `check-central-store-contract.mjs`
+  `config/localization/mainstream-language-pack-locales.json`. Make now uses
+  the native runner; the retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner check-ui-automation-contract`
+  Verify the product-owned Workbench UI automation selector contract across the
+  JSON contract, HTML documentation, TypeScript helper, and implementation
+  files. Make now uses the native runner; the retained `.mjs` script is only a
+  parity reference.
+- `kyuubiki-script-runner check-gui-runtime-capability-contract`
+  Verify GUI-to-runtime capability manifests, mobile WebView boundaries,
+  frontend capability helpers, and Workbench backend-service indirection. Make
+  now uses the native runner; the retained `.mjs` script is only a parity
+  reference.
+- `kyuubiki-script-runner check-contracts-runtime-api-surface`
+  Verify the contracts-owned runtime API surface, including required contract
+  families, central self-host service surface binding, repo-relative evidence
+  paths, and schema-side service surface/repo path guards. Make now uses the
+  native runner; the retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner check-central-store-contract`
   Verify the future central-server store contract across JSON schemas, Elixir
   API surface, frontend API client/types, tests, and docs. It also keeps the
   read-only central database status and provenance policy endpoints aligned
   with the storage table, publish-readiness, and artifact verification
   contracts before write-side publishing exists. The checked surface is driven
   by `config/architecture/central-store-contract.json` so new center-server
-  routes can be added without growing the script itself.
-- `check-central-database-readiness.mjs`
+  routes can be added without growing the script itself. Make now uses the
+  native runner; the retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner check-central-database-readiness`
   Verify central-server database readiness before local or server deployment
   smoke tests. It checks storage mode, required env, and DB policy surfaces
-  without opening a network/database connection.
-- `build-central-readiness-report.mjs`
+  without opening a network/database connection. Make now uses the native
+  runner; the retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner build-central-readiness-report`
   Write a retained machine-readable central readiness report under `tmp/`.
   The report combines central DB readiness, API endpoint coverage, schema file
   presence, storage table-contract presence, and safe runbook commands without
   storing credentials. It also writes a compact Markdown summary for human
-  review.
-- `check-central-readiness-report.mjs`
+  review. Make now uses the native runner; the retained `.mjs` script is only a
+  parity reference.
+- `kyuubiki-script-runner check-central-readiness-report`
   Validate a retained central readiness report, including required endpoints,
   schema coverage, storage table-contract coverage, and absence of obvious
-  inline credential material.
-- `check-verification-evidence-surface.mjs`
+  inline credential material. Make now uses the native runner.
+- `kyuubiki-script-runner check-verification-evidence-surface`
   Verify the verification-evidence runtime surface, including stable evidence
   commands, generated artifacts under `tmp/`, and the central readiness report
-  generation/check pair.
+  generation/check pair. The retained `.mjs` script is kept only as a parity
+  reference while Make uses the native runner.
 - `run-central-database-smoke.mjs`
   Run the central-store database smoke wrapper. It always runs readiness first;
   by default it is a dry-run, and only executes Postgres-backed Elixir tests
@@ -124,11 +183,12 @@ This directory contains host-native operational entry points.
   and run the same central DB readiness/smoke pair on that machine. It uses a
   relative scratch directory, excludes generated build outputs, and never
   stores SSH credentials or `DATABASE_URL` in the repository.
-- `check-ui-automation-contract.mjs`
+- `kyuubiki-script-runner check-ui-automation-contract`
   Verify the product-owned Workbench automation selector contract. It compares
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and
   the component implementation anchors used by wasm-python and UI smoke tests.
-  Use `--self-test` when changing selector coverage.
+  Use `--self-test` when changing selector coverage. The retained `.mjs` script
+  is only a parity reference.
 - `check-operator-task-ir-contract.mjs`
   Verify the language-neutral TaskIR schema extension and shipped TaskIR
   examples. It checks that mirrored fields such as operator kind, package ref,
@@ -371,7 +431,7 @@ Useful smoke wrappers:
   untested advertised methods without mutating the remote service.
 - `AGENT_HOST=192.0.2.12 AGENT_PORT=5001 AGENT_SMOKE_PROFILE=lab-legacy-26 make test-agent-capability-smoke`
   Run the same check through Make with an explicit release gate. Raise
-  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.19.x` agent with the
+  `AGENT_SMOKE_PROFILE` to `current-40` for a local `1.20.x` agent with the
   newer dynamic, acoustic, magnetic, fluid, and solid solver RPC surface. Use
   `AGENT_SMOKE_ARGS="--expect-kind solid_tetra_3d"` for additional one-off
   release assertions.

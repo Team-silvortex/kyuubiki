@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-topology/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "benchmark_lanes": {
     "ui_startup": "WebView, layout, workflow UI, and desktop shell startup/render cost.",
     "workflow_catalog": "Workflow catalog search, topology, package, and graph authoring cost.",
@@ -22,80 +22,264 @@
   "lane_test_plan": {
     "benchmark": {
       "ui_startup": [
-        { "id": "ui-layout", "command": "cd apps/frontend && npm run check:ui-layout", "scope": "local" },
-        { "id": "ui-mechanical-smoke", "command": "make test-integration-ui-mechanical", "scope": "integration" },
-        { "id": "ui-thermal-smoke", "command": "make test-integration-ui-thermal", "scope": "integration" }
+        {
+          "id": "ui-layout",
+          "command": "cd apps/frontend && npm run check:ui-layout",
+          "scope": "local"
+        },
+        {
+          "id": "ui-mechanical-smoke",
+          "command": "make test-integration-ui-mechanical",
+          "scope": "integration"
+        },
+        {
+          "id": "ui-thermal-smoke",
+          "command": "make test-integration-ui-thermal",
+          "scope": "integration"
+        }
       ],
       "workflow_catalog": [
-        { "id": "workflow-preflight", "command": "make workflow-preflight", "scope": "local" },
-        { "id": "workflow-catalog-report", "command": "make test-integration-workflow-catalog-report", "scope": "integration" },
-        { "id": "workflow-catalog-nightly", "command": "make test-integration-workflow-catalog-nightly", "scope": "remote" }
+        {
+          "id": "workflow-preflight",
+          "command": "make workflow-preflight",
+          "scope": "local"
+        },
+        {
+          "id": "workflow-catalog-report",
+          "command": "make test-integration-workflow-catalog-report",
+          "scope": "integration"
+        },
+        {
+          "id": "workflow-catalog-nightly",
+          "command": "make test-integration-workflow-catalog-nightly",
+          "scope": "remote"
+        }
       ],
       "control_plane": [
-        { "id": "web-tests", "command": "make test-web", "scope": "local" },
-        { "id": "central-db-readiness", "command": "make check-central-database-readiness MODE=local BACKEND=sqlite", "scope": "local" },
-        { "id": "central-db-remote-dry-run", "command": "make remote-central-database-smoke REMOTE=kyuubiki-lab", "scope": "remote" },
-        { "id": "api-smoke", "command": "make test-integration-api", "scope": "integration" },
-        { "id": "cluster-smoke", "command": "make test-integration-cluster", "scope": "integration" }
+        {
+          "id": "web-tests",
+          "command": "make test-web",
+          "scope": "local"
+        },
+        {
+          "id": "central-db-readiness",
+          "command": "make check-central-database-readiness MODE=local BACKEND=sqlite",
+          "scope": "local"
+        },
+        {
+          "id": "central-db-remote-dry-run",
+          "command": "make remote-central-database-smoke REMOTE=kyuubiki-lab",
+          "scope": "remote"
+        },
+        {
+          "id": "api-smoke",
+          "command": "make test-integration-api",
+          "scope": "integration"
+        },
+        {
+          "id": "cluster-smoke",
+          "command": "make test-integration-cluster",
+          "scope": "integration"
+        }
       ],
       "runtime_solver": [
-        { "id": "rust-tests", "command": "make test-rust", "scope": "local" },
-        { "id": "physics-coverage", "command": "make benchmark-physics-coverage", "scope": "benchmark" },
-        { "id": "standard-compare", "command": "make benchmark-standard-compare", "scope": "benchmark" }
+        {
+          "id": "rust-tests",
+          "command": "make test-rust",
+          "scope": "local"
+        },
+        {
+          "id": "physics-coverage",
+          "command": "make benchmark-physics-coverage",
+          "scope": "benchmark"
+        },
+        {
+          "id": "standard-compare",
+          "command": "make benchmark-standard-compare",
+          "scope": "benchmark"
+        }
       ],
       "mesh": [
-        { "id": "direct-mesh-smoke", "command": "make test-integration-direct-mesh", "scope": "integration" },
-        { "id": "direct-mesh-docker-report", "command": "make test-integration-direct-mesh-docker-report", "scope": "benchmark" },
-        { "id": "workflow-mesh", "command": "make test-integration-workflow-mesh", "scope": "integration" }
+        {
+          "id": "direct-mesh-smoke",
+          "command": "make test-integration-direct-mesh",
+          "scope": "integration"
+        },
+        {
+          "id": "direct-mesh-docker-report",
+          "command": "make test-integration-direct-mesh-docker-report",
+          "scope": "benchmark"
+        },
+        {
+          "id": "workflow-mesh",
+          "command": "make test-integration-workflow-mesh",
+          "scope": "integration"
+        }
       ],
       "sdk_headless": [
-        { "id": "sdk-smoke", "command": "make test-sdk", "scope": "local" },
-        { "id": "material-sdk-examples", "command": "make check-material-study-sdk-examples", "scope": "local" },
-        { "id": "material-research-example", "command": "make verify-material-research-example", "scope": "integration" }
+        {
+          "id": "sdk-smoke",
+          "command": "make test-sdk",
+          "scope": "local"
+        },
+        {
+          "id": "material-sdk-examples",
+          "command": "make check-material-study-sdk-examples",
+          "scope": "local"
+        },
+        {
+          "id": "material-research-example",
+          "command": "make verify-material-research-example",
+          "scope": "integration"
+        }
       ],
       "installer_release": [
-        { "id": "install-disk-hygiene", "command": "make check-install-update-disk-hygiene", "scope": "local" },
-        { "id": "operator-package-preflight", "command": "make operator-package-preflight", "scope": "local" },
-        { "id": "remote-ssh-fixture", "command": "make test-integration-remote-ssh-fixture", "scope": "integration" }
+        {
+          "id": "install-disk-hygiene",
+          "command": "make check-install-update-disk-hygiene",
+          "scope": "local"
+        },
+        {
+          "id": "operator-package-preflight",
+          "command": "make operator-package-preflight",
+          "scope": "local"
+        },
+        {
+          "id": "remote-ssh-fixture",
+          "command": "make test-integration-remote-ssh-fixture",
+          "scope": "integration"
+        }
       ]
     },
     "security": {
       "ui_boundary": [
-        { "id": "ui-automation-contract", "command": "make check-ui-automation-contract", "scope": "local" },
-        { "id": "gui-runtime-capability", "command": "make check-gui-runtime-capability-contract", "scope": "local" },
-        { "id": "frontend-storage-security", "command": "cd apps/frontend && npm run check:storage-security", "scope": "local" }
+        {
+          "id": "ui-automation-contract",
+          "command": "make check-ui-automation-contract",
+          "scope": "local"
+        },
+        {
+          "id": "gui-runtime-capability",
+          "command": "make check-gui-runtime-capability-contract",
+          "scope": "local"
+        },
+        {
+          "id": "frontend-storage-security",
+          "command": "cd apps/frontend && npm run check:storage-security",
+          "scope": "local"
+        }
       ],
       "api_auth": [
-        { "id": "web-auth-tests", "command": "make test-web", "scope": "local" },
-        { "id": "cluster-smoke", "command": "make test-integration-cluster", "scope": "integration" },
-        { "id": "direct-mesh-smoke", "command": "make test-integration-direct-mesh", "scope": "integration" }
+        {
+          "id": "web-auth-tests",
+          "command": "make test-web",
+          "scope": "local"
+        },
+        {
+          "id": "cluster-smoke",
+          "command": "make test-integration-cluster",
+          "scope": "integration"
+        },
+        {
+          "id": "direct-mesh-smoke",
+          "command": "make test-integration-direct-mesh",
+          "scope": "integration"
+        }
       ],
       "runtime_sandbox": [
-        { "id": "fuzz-smoke", "command": "make fuzz-smoke", "scope": "local" },
-        { "id": "operator-task-ir", "command": "make check-operator-task-ir-contract", "scope": "local" },
-        { "id": "operator-reliability", "command": "make check-operator-reliability", "scope": "local" }
+        {
+          "id": "fuzz-smoke",
+          "command": "make fuzz-smoke",
+          "scope": "local"
+        },
+        {
+          "id": "operator-task-ir",
+          "command": "make check-operator-task-ir-contract",
+          "scope": "local"
+        },
+        {
+          "id": "operator-reliability",
+          "command": "make check-operator-reliability",
+          "scope": "local"
+        }
       ],
       "supply_chain": [
-        { "id": "dependency-audit", "command": "make audit-dependencies", "scope": "local" },
-        { "id": "version-line", "command": "make check-version-line", "scope": "local" },
-        { "id": "update-disk-hygiene", "command": "make check-install-update-disk-hygiene", "scope": "local" }
+        {
+          "id": "dependency-audit",
+          "command": "make audit-dependencies",
+          "scope": "local"
+        },
+        {
+          "id": "version-line",
+          "command": "make check-version-line",
+          "scope": "local"
+        },
+        {
+          "id": "update-disk-hygiene",
+          "command": "make check-install-update-disk-hygiene",
+          "scope": "local"
+        }
       ],
       "credential_storage": [
-        { "id": "frontend-storage-security", "command": "cd apps/frontend && npm run check:storage-security", "scope": "local" },
-        { "id": "installer-credential-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture", "scope": "local" },
-        { "id": "remote-host-trust-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture", "scope": "local" }
+        {
+          "id": "frontend-storage-security",
+          "command": "cd apps/frontend && npm run check:storage-security",
+          "scope": "local"
+        },
+        {
+          "id": "installer-credential-fuzz",
+          "command": "cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture",
+          "scope": "local"
+        },
+        {
+          "id": "remote-host-trust-fuzz",
+          "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture",
+          "scope": "local"
+        }
       ],
       "remote_deploy": [
-        { "id": "remote-ssh-fixture", "command": "make test-integration-remote-ssh-fixture", "scope": "integration" },
-        { "id": "remote-deploy-fuzz", "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture", "scope": "local" },
-        { "id": "deploy-server-tests", "command": "cd workers/rust && cargo test -p kyuubiki-deploy-server -- --nocapture", "scope": "local" }
+        {
+          "id": "remote-ssh-fixture",
+          "command": "make test-integration-remote-ssh-fixture",
+          "scope": "integration"
+        },
+        {
+          "id": "remote-deploy-fuzz",
+          "command": "cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture",
+          "scope": "local"
+        },
+        {
+          "id": "deploy-server-tests",
+          "command": "cd workers/rust && cargo test -p kyuubiki-deploy-server -- --nocapture",
+          "scope": "local"
+        }
       ],
       "data_contract": [
-        { "id": "architecture-check", "command": "make architecture-check", "scope": "release" },
-        { "id": "central-store-contract", "command": "make check-central-store-contract", "scope": "local" },
-        { "id": "central-db-readiness", "command": "make check-central-database-readiness MODE=local BACKEND=sqlite", "scope": "local" },
-        { "id": "doc-book", "command": "make check-doc-book", "scope": "local" },
-        { "id": "local-path-audit", "command": "./scripts/kyuubiki audit-local-paths", "scope": "local" }
+        {
+          "id": "architecture-check",
+          "command": "make architecture-check",
+          "scope": "release"
+        },
+        {
+          "id": "central-store-contract",
+          "command": "make check-central-store-contract",
+          "scope": "local"
+        },
+        {
+          "id": "central-db-readiness",
+          "command": "make check-central-database-readiness MODE=local BACKEND=sqlite",
+          "scope": "local"
+        },
+        {
+          "id": "doc-book",
+          "command": "make check-doc-book",
+          "scope": "local"
+        },
+        {
+          "id": "local-path-audit",
+          "command": "./scripts/kyuubiki audit-local-paths",
+          "scope": "local"
+        }
       ]
     }
   },
@@ -104,47 +288,116 @@
       "id": "contracts",
       "layer": "contract",
       "summary": "Shared schemas, manifests, architecture docs, language packs, and machine-readable policy.",
-      "owned_paths": ["schemas", "config", "docs"],
+      "owned_paths": [
+        "schemas",
+        "config",
+        "docs"
+      ],
       "depends_on": [],
-      "benchmark_lanes": ["workflow_catalog", "runtime_solver", "sdk_headless"],
-      "security_lanes": ["data_contract", "supply_chain"],
-      "risk_tags": ["contract_drift", "local_path_leak", "schema_gap"]
+      "benchmark_lanes": [
+        "workflow_catalog",
+        "runtime_solver",
+        "sdk_headless"
+      ],
+      "security_lanes": [
+        "data_contract",
+        "supply_chain"
+      ],
+      "risk_tags": [
+        "contract_drift",
+        "local_path_leak",
+        "schema_gap"
+      ]
     },
     {
       "id": "hub-shell",
       "layer": "product_shell",
       "summary": "Desktop entrypoint, workload overview, docs shelf, runtime posture, and navigation shell.",
-      "owned_paths": ["apps/hub-gui", "apps/desktop-shared", "assets"],
-      "depends_on": ["contracts"],
-      "benchmark_lanes": ["ui_startup"],
-      "security_lanes": ["ui_boundary", "credential_storage"],
-      "risk_tags": ["gui_runtime_coupling", "desktop_action_boundary", "language_pack_drift"]
+      "owned_paths": [
+        "apps/hub-gui",
+        "apps/desktop-shared",
+        "assets"
+      ],
+      "depends_on": [
+        "contracts"
+      ],
+      "benchmark_lanes": [
+        "ui_startup"
+      ],
+      "security_lanes": [
+        "ui_boundary",
+        "credential_storage"
+      ],
+      "risk_tags": [
+        "gui_runtime_coupling",
+        "desktop_action_boundary",
+        "language_pack_drift"
+      ]
     },
     {
       "id": "workbench-shell",
       "layer": "product_shell",
       "summary": "Project workflow UX, operator graph authoring, study setup, result inspection, and WebView automation.",
-      "owned_paths": ["apps/frontend", "apps/workbench-gui"],
-      "depends_on": ["contracts", "sdk-headless"],
-      "benchmark_lanes": ["ui_startup", "workflow_catalog", "sdk_headless"],
-      "security_lanes": ["ui_boundary", "credential_storage", "data_contract"],
-      "risk_tags": ["large_ui_graph", "browser_storage", "frontend_runtime_assumption"]
+      "owned_paths": [
+        "apps/frontend",
+        "apps/workbench-gui"
+      ],
+      "depends_on": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "benchmark_lanes": [
+        "ui_startup",
+        "workflow_catalog",
+        "sdk_headless"
+      ],
+      "security_lanes": [
+        "ui_boundary",
+        "credential_storage",
+        "data_contract"
+      ],
+      "risk_tags": [
+        "large_ui_graph",
+        "browser_storage",
+        "frontend_runtime_assumption"
+      ]
     },
     {
       "id": "installer-shell",
       "layer": "product_shell",
       "summary": "Install, update, repair, cleanup, component integrity, and remote deployment UX.",
-      "owned_paths": ["apps/installer-gui", "deploy", "releases"],
-      "depends_on": ["contracts", "runtime-installer"],
-      "benchmark_lanes": ["ui_startup", "installer_release"],
-      "security_lanes": ["ui_boundary", "remote_deploy", "credential_storage", "supply_chain"],
-      "risk_tags": ["residual_cleanup", "remote_host_trust", "release_artifact_drift"]
+      "owned_paths": [
+        "apps/installer-gui",
+        "deploy",
+        "releases"
+      ],
+      "depends_on": [
+        "contracts",
+        "runtime-installer"
+      ],
+      "benchmark_lanes": [
+        "ui_startup",
+        "installer_release"
+      ],
+      "security_lanes": [
+        "ui_boundary",
+        "remote_deploy",
+        "credential_storage",
+        "supply_chain"
+      ],
+      "risk_tags": [
+        "residual_cleanup",
+        "remote_host_trust",
+        "release_artifact_drift"
+      ]
     },
     {
       "id": "orchestra-control-plane",
       "layer": "control_plane",
       "summary": "Phoenix APIs, orchestration, job lifecycle, persistence, workflow catalog, central self-host service surfaces, and security events.",
-      "owned_paths": ["apps/web"],
+      "owned_paths": [
+        "apps/web"
+      ],
       "service_surfaces": [
         {
           "id": "orchestra-api-service",
@@ -157,20 +410,52 @@
           "summary": "Self-hosted central-server website/API surface for stores, login/session policy, language packs, signed downloads, and research-team distribution."
         }
       ],
-      "depends_on": ["contracts", "runtime-protocol"],
-      "benchmark_lanes": ["control_plane", "workflow_catalog", "mesh"],
-      "security_lanes": ["api_auth", "data_contract", "credential_storage"],
-      "risk_tags": ["auth_regression", "persistence_drift", "catalog_hot_path", "self_host_boundary"]
+      "depends_on": [
+        "contracts",
+        "runtime-protocol"
+      ],
+      "benchmark_lanes": [
+        "control_plane",
+        "workflow_catalog",
+        "mesh"
+      ],
+      "security_lanes": [
+        "api_auth",
+        "data_contract",
+        "credential_storage"
+      ],
+      "risk_tags": [
+        "auth_regression",
+        "persistence_drift",
+        "catalog_hot_path",
+        "self_host_boundary"
+      ]
     },
     {
       "id": "runtime-protocol",
       "layer": "runtime_data_plane",
       "summary": "Protocol types, TaskIR, RPC envelopes, digest contracts, and cross-language execution meaning.",
-      "owned_paths": ["workers/rust/crates/protocol"],
-      "depends_on": ["contracts"],
-      "benchmark_lanes": ["runtime_solver", "mesh", "sdk_headless"],
-      "security_lanes": ["runtime_sandbox", "data_contract", "api_auth"],
-      "risk_tags": ["task_ir_drift", "rpc_decode", "digest_mismatch"]
+      "owned_paths": [
+        "workers/rust/crates/protocol"
+      ],
+      "depends_on": [
+        "contracts"
+      ],
+      "benchmark_lanes": [
+        "runtime_solver",
+        "mesh",
+        "sdk_headless"
+      ],
+      "security_lanes": [
+        "runtime_sandbox",
+        "data_contract",
+        "api_auth"
+      ],
+      "risk_tags": [
+        "task_ir_drift",
+        "rpc_decode",
+        "digest_mismatch"
+      ]
     },
     {
       "id": "runtime-engine-solver",
@@ -182,10 +467,23 @@
         "workers/rust/crates/benchmark",
         "workers/rust/benchmarks"
       ],
-      "depends_on": ["contracts", "runtime-protocol"],
-      "benchmark_lanes": ["runtime_solver", "mesh"],
-      "security_lanes": ["runtime_sandbox", "data_contract"],
-      "risk_tags": ["solver_accuracy", "panic_recovery", "json_budget"]
+      "depends_on": [
+        "contracts",
+        "runtime-protocol"
+      ],
+      "benchmark_lanes": [
+        "runtime_solver",
+        "mesh"
+      ],
+      "security_lanes": [
+        "runtime_sandbox",
+        "data_contract"
+      ],
+      "risk_tags": [
+        "solver_accuracy",
+        "panic_recovery",
+        "json_budget"
+      ]
     },
     {
       "id": "runtime-agent-cli",
@@ -198,10 +496,25 @@
         "workers/rust/crates/platform",
         "workers/rust/crates/desktop-runtime"
       ],
-      "depends_on": ["runtime-protocol", "runtime-engine-solver"],
-      "benchmark_lanes": ["runtime_solver", "mesh", "installer_release"],
-      "security_lanes": ["api_auth", "runtime_sandbox", "remote_deploy"],
-      "risk_tags": ["agent_watchdog", "network_auth", "native_process_boundary"]
+      "depends_on": [
+        "runtime-protocol",
+        "runtime-engine-solver"
+      ],
+      "benchmark_lanes": [
+        "runtime_solver",
+        "mesh",
+        "installer_release"
+      ],
+      "security_lanes": [
+        "api_auth",
+        "runtime_sandbox",
+        "remote_deploy"
+      ],
+      "risk_tags": [
+        "agent_watchdog",
+        "network_auth",
+        "native_process_boundary"
+      ]
     },
     {
       "id": "runtime-installer",
@@ -212,27 +525,65 @@
         "workers/rust/crates/operator-sdk",
         "workers/rust/templates"
       ],
-      "depends_on": ["contracts", "runtime-protocol"],
-      "benchmark_lanes": ["installer_release"],
-      "security_lanes": ["supply_chain", "credential_storage", "remote_deploy", "runtime_sandbox"],
-      "risk_tags": ["package_admission", "credential_vault", "update_integrity"]
+      "depends_on": [
+        "contracts",
+        "runtime-protocol"
+      ],
+      "benchmark_lanes": [
+        "installer_release"
+      ],
+      "security_lanes": [
+        "supply_chain",
+        "credential_storage",
+        "remote_deploy",
+        "runtime_sandbox"
+      ],
+      "risk_tags": [
+        "package_admission",
+        "credential_vault",
+        "update_integrity"
+      ]
     },
     {
       "id": "sdk-headless",
       "layer": "sdk",
       "summary": "Rust/Python/Elixir headless SDK surfaces and examples for open-ended automation and research flows.",
-      "owned_paths": ["sdks", "workers/rust/crates/headless-sdk"],
-      "depends_on": ["contracts", "runtime-protocol"],
-      "benchmark_lanes": ["sdk_headless", "runtime_solver"],
-      "security_lanes": ["data_contract", "api_auth", "credential_storage"],
-      "risk_tags": ["sdk_parity_gap", "example_drift", "credential_handoff"]
+      "owned_paths": [
+        "sdks",
+        "workers/rust/crates/headless-sdk"
+      ],
+      "depends_on": [
+        "contracts",
+        "runtime-protocol"
+      ],
+      "benchmark_lanes": [
+        "sdk_headless",
+        "runtime_solver"
+      ],
+      "security_lanes": [
+        "data_contract",
+        "api_auth",
+        "credential_storage"
+      ],
+      "risk_tags": [
+        "sdk_parity_gap",
+        "example_drift",
+        "credential_handoff"
+      ]
     },
     {
       "id": "verification-evidence",
       "layer": "verification",
       "summary": "Make modules, scripts, integration tests, fuzz smoke, evidence capture, and benchmark comparison reports.",
-      "owned_paths": ["make", "scripts", "tests", "evidence"],
-      "depends_on": ["contracts"],
+      "owned_paths": [
+        "make",
+        "scripts",
+        "tests",
+        "evidence"
+      ],
+      "depends_on": [
+        "contracts"
+      ],
       "benchmark_lanes": [
         "ui_startup",
         "workflow_catalog",
@@ -251,7 +602,11 @@
         "remote_deploy",
         "data_contract"
       ],
-      "risk_tags": ["coverage_gap", "benchmark_blind_spot", "audit_drift"]
+      "risk_tags": [
+        "coverage_gap",
+        "benchmark_blind_spot",
+        "audit_drift"
+      ]
     }
   ]
 }

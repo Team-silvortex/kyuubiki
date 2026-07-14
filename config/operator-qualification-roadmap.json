@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-qualification-roadmap/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "minimum_candidate_level": "review",
   "candidates": [
     {

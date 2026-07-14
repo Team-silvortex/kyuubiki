@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/module-extension-standard.schema.json",
   "schema_version": "kyuubiki.module-extension-standard/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "summary": "Standard onboarding flow for new architecture modules, function paradigms, service surfaces, evidence lanes, and contract families.",
   "source_of_truth": {
     "topology": "config/architecture/module-topology.json",
@@ -91,11 +91,29 @@
     }
   ],
   "gates": [
-    { "id": "topology", "command": "make check-module-topology" },
-    { "id": "matrix", "command": "make check-module-function-matrix" },
-    { "id": "tensor", "command": "make check-module-function-coverage-tensor" },
-    { "id": "runtime-api-surface", "command": "make check-contracts-runtime-api-surface" },
-    { "id": "central-store", "command": "make check-central-store-contract" },
-    { "id": "full-architecture", "command": "make architecture-check" }
+    {
+      "id": "topology",
+      "command": "make check-module-topology"
+    },
+    {
+      "id": "matrix",
+      "command": "make check-module-function-matrix"
+    },
+    {
+      "id": "tensor",
+      "command": "make check-module-function-coverage-tensor"
+    },
+    {
+      "id": "runtime-api-surface",
+      "command": "make check-contracts-runtime-api-surface"
+    },
+    {
+      "id": "central-store",
+      "command": "make check-central-store-contract"
+    },
+    {
+      "id": "full-architecture",
+      "command": "make architecture-check"
+    }
   ]
 }

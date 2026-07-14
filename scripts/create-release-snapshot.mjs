@@ -126,12 +126,12 @@ function runSelfTest() {
   assert(RELEASE_REPO_CHECKS.includes("make architecture-check"));
   assert.equal(new Set(RELEASE_REPO_CHECKS).size, RELEASE_REPO_CHECKS.length);
   assert.deepEqual(
-    collectSourceVersionIssues("1.19.0", [
-      { path: "ok.json", field: "version", actual: "1.19.0" },
-      { path: "brand.json", field: "releaseVersion", actual: "1.19.0" },
+    collectSourceVersionIssues("1.20.0", [
+      { path: "ok.json", field: "version", actual: "1.20.0" },
+      { path: "brand.json", field: "releaseVersion", actual: "1.20.0" },
       { path: "stale.json", field: "version", actual: "1.17.8" },
     ]),
-    [{ path: "stale.json", field: "version", actual: "1.17.8", expected: "1.19.0" }],
+    [{ path: "stale.json", field: "version", actual: "1.17.8", expected: "1.20.0" }],
   );
   console.log("release snapshot self-test passed");
 }

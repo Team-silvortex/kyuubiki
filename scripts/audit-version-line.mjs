@@ -499,7 +499,7 @@ function printHumanReport(report) {
 }
 
 function runSelfTest() {
-  const checks = markdownFactChecks("1.19.0", "tamamono", (file) => {
+  const checks = markdownFactChecks("1.20.0", "tamamono", (file) => {
     if (file === "docs/version-line.md") {
       return "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line";
     }

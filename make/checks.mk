@@ -13,13 +13,13 @@
 .PHONY: audit-dependencies fuzz-smoke architecture-check verify
 
 check-doc-book:
-	@node ./scripts/check-doc-book.mjs
+	@$(ENTRYPOINT) check-doc-book
 
 sync-doc-book-version:
-	@node ./scripts/sync-doc-book-version.mjs
+	@$(ENTRYPOINT) sync-doc-book-version
 
 check-toolchains:
-	@node ./scripts/check-toolchain-contract.mjs
+	@$(ENTRYPOINT) check-toolchain-contract
 
 check-elixir-self-host:
 	@node ./scripts/check-elixir-self-host.mjs
@@ -28,70 +28,70 @@ check-commercial-readiness:
 	@node ./scripts/validate-commercial-readiness.mjs
 
 check-install-update-disk-hygiene:
-	@node ./scripts/check-install-update-disk-hygiene.mjs --self-test
-	@node ./scripts/check-install-update-disk-hygiene.mjs
+	@$(ENTRYPOINT) check-install-update-disk-hygiene --self-test
+	@$(ENTRYPOINT) check-install-update-disk-hygiene
 
 check-make-modules:
 	@./scripts/kyuubiki check-make-modules
 
 check-module-topology:
-	@node ./scripts/check-module-topology.mjs --self-test
-	@node ./scripts/check-module-topology.mjs
+	@$(ENTRYPOINT) check-module-topology --self-test
+	@$(ENTRYPOINT) check-module-topology
 
 check-module-function-matrix:
-	@node ./scripts/check-module-function-matrix.mjs --self-test
-	@node ./scripts/check-module-function-matrix.mjs
+	@$(ENTRYPOINT) check-module-function-matrix --self-test
+	@$(ENTRYPOINT) check-module-function-matrix
 
 check-module-function-coverage-tensor:
-	@node ./scripts/build-module-function-coverage-tensor.mjs --self-test
-	@node ./scripts/build-module-function-coverage-tensor.mjs
+	@$(ENTRYPOINT) check-module-function-coverage-tensor --self-test
+	@$(ENTRYPOINT) check-module-function-coverage-tensor
 
 check-module-extension-standard:
 	@$(ENTRYPOINT) check-module-extension-standard --self-test
 	@$(ENTRYPOINT) check-module-extension-standard
 
 check-contracts-runtime-api-surface:
-	@node ./scripts/check-contracts-runtime-api-surface.mjs --self-test
-	@node ./scripts/check-contracts-runtime-api-surface.mjs
+	@$(ENTRYPOINT) check-contracts-runtime-api-surface --self-test
+	@$(ENTRYPOINT) check-contracts-runtime-api-surface
 
 check-verification-evidence-surface:
-	@node ./scripts/check-verification-evidence-surface.mjs
+	@$(ENTRYPOINT) check-verification-evidence-surface
 
 check-central-store-contract:
-	@node ./scripts/check-central-store-contract.mjs --self-test
-	@node ./scripts/check-central-store-contract.mjs
+	@$(ENTRYPOINT) check-central-store-contract --self-test
+	@$(ENTRYPOINT) check-central-store-contract
 
 check-central-database-readiness:
-	@node ./scripts/check-central-database-readiness.mjs --self-test
-	@node ./scripts/check-central-database-readiness.mjs --mode $${MODE:-local} --backend $${BACKEND:-sqlite}
+	@$(ENTRYPOINT) check-central-database-readiness --self-test
+	@$(ENTRYPOINT) check-central-database-readiness --mode $${MODE:-local} --backend $${BACKEND:-sqlite}
 
 build-central-readiness-report:
-	@node ./scripts/build-central-readiness-report.mjs --self-test
-	@node ./scripts/build-central-readiness-report.mjs --mode $${MODE:-local} --backend $${BACKEND:-sqlite} --out $${OUT:-tmp/central-readiness-report.json} --markdown-out $${MARKDOWN_OUT:-tmp/central-readiness-report.md}
-	@node ./scripts/check-central-readiness-report.mjs --self-test
-	@node ./scripts/check-central-readiness-report.mjs --in $${OUT:-tmp/central-readiness-report.json} --markdown-in $${MARKDOWN_OUT:-tmp/central-readiness-report.md}
+	@$(ENTRYPOINT) build-central-readiness-report --self-test
+	@$(ENTRYPOINT) build-central-readiness-report --mode $${MODE:-local} --backend $${BACKEND:-sqlite} --out $${OUT:-tmp/central-readiness-report.json} --markdown-out $${MARKDOWN_OUT:-tmp/central-readiness-report.md}
+	@$(ENTRYPOINT) check-central-readiness-report --self-test
+	@$(ENTRYPOINT) check-central-readiness-report --in $${OUT:-tmp/central-readiness-report.json} --markdown-in $${MARKDOWN_OUT:-tmp/central-readiness-report.md}
 
 check-central-readiness-report:
-	@node ./scripts/check-central-readiness-report.mjs --self-test
-	@node ./scripts/check-central-readiness-report.mjs --in $${IN:-tmp/central-readiness-report.json} --markdown-in $${MARKDOWN_IN:-tmp/central-readiness-report.md}
+	@$(ENTRYPOINT) check-central-readiness-report --self-test
+	@$(ENTRYPOINT) check-central-readiness-report --in $${IN:-tmp/central-readiness-report.json} --markdown-in $${MARKDOWN_IN:-tmp/central-readiness-report.md}
 
 build-module-topology-report:
-	@node ./scripts/build-module-topology-report.mjs --out-dir $${OUT_DIR:-tmp/module-topology}
+	@$(ENTRYPOINT) build-module-topology-report --out-dir $${OUT_DIR:-tmp/module-topology}
 
 check-native-script-audit:
 	@$(ENTRYPOINT) native-script-audit --self-test
 	@$(ENTRYPOINT) native-script-audit
 
 check-language-packs:
-	@node ./scripts/validate-language-packs.mjs
+	@$(ENTRYPOINT) validate-language-packs
 
 check-ui-automation-contract:
-	@node ./scripts/check-ui-automation-contract.mjs --self-test
-	@node ./scripts/check-ui-automation-contract.mjs
+	@$(ENTRYPOINT) check-ui-automation-contract --self-test
+	@$(ENTRYPOINT) check-ui-automation-contract
 
 check-gui-runtime-capability-contract:
-	@node ./scripts/check-gui-runtime-capability-contract.mjs --self-test
-	@node ./scripts/check-gui-runtime-capability-contract.mjs
+	@$(ENTRYPOINT) check-gui-runtime-capability-contract --self-test
+	@$(ENTRYPOINT) check-gui-runtime-capability-contract
 
 check-version-line:
 	@node ./scripts/create-release-snapshot.mjs --self-test

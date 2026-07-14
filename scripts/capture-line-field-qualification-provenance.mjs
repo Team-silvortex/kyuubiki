@@ -56,7 +56,7 @@ function buildProvenance() {
   const gitStatus = run("git", ["status", "--short"]) ?? "";
   return {
     schema_version: "kyuubiki.operator-qualification-provenance/v1",
-    version_line: "tamamono 1.19.x",
+    version_line: "tamamono 1.20.x",
     candidate_id: "line-field-closed-form",
     generated_at_utc: new Date().toISOString(),
     commands: {

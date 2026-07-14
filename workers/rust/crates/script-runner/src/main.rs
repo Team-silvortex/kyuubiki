@@ -7,18 +7,30 @@ mod agent_registry_sync;
 mod benchmark_profile_plan;
 mod benchmark_profile_remote;
 mod benchmark_profile_remote_summary;
+mod central_database_readiness;
+mod central_readiness_report;
+mod central_store_contract;
+mod contracts_runtime_api_surface;
 mod desktop;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
+mod docs_book;
 mod frontend_checks;
+mod gui_runtime_capability_contract;
+mod install_update_disk_hygiene;
 mod lab;
+mod language_packs;
 mod local_path_audit;
 mod make_modules;
 mod material_score_contract;
 mod module_extension_standard;
+mod module_function_matrix;
+mod module_function_tensor;
+mod module_topology;
+mod module_topology_report;
 mod native_script_audit;
 mod native_time;
 mod operator_package_dynamic_smoke;
@@ -26,6 +38,9 @@ mod remote_host;
 mod remote_ssh_fixture;
 mod rust_line_counts;
 mod standard_benchmark_remote;
+mod toolchain_contract;
+mod ui_automation_contract;
+mod verification_evidence_surface;
 mod workflow_catalog_remote;
 mod workflow_mesh;
 mod workflow_mesh_remote;
@@ -214,8 +229,60 @@ fn run() -> RunnerResult<u8> {
             ["run", "check:workflow-preflight"].map(OsString::from),
         ),
         "check-make-modules" => make_modules::run_check_make_modules(&paths.root, rest),
+        "check-doc-book" => docs_book::run_check_doc_book(&paths.root, rest),
+        "sync-doc-book-version" => docs_book::run_sync_doc_book_version(&paths.root, rest),
+        "check-toolchain-contract" => {
+            toolchain_contract::run_check_toolchain_contract(&paths.root, rest)
+        }
+        "check-install-update-disk-hygiene" => {
+            install_update_disk_hygiene::run_check_install_update_disk_hygiene(&paths.root, rest)
+        }
+        "check-module-topology" => module_topology::run_check_module_topology(&paths.root, rest),
+        "build-module-topology-report" => {
+            module_topology_report::run_build_module_topology_report(&paths.root, rest)
+        }
+        "check-module-function-matrix" => {
+            module_function_matrix::run_check_module_function_matrix(&paths.root, rest)
+        }
+        "check-module-function-coverage-tensor" => {
+            module_function_tensor::run_check_module_function_tensor(&paths.root, rest)
+        }
         "check-module-extension-standard" => {
             module_extension_standard::run_check_module_extension_standard(&paths.root, rest)
+        }
+        "check-verification-evidence-surface" => {
+            verification_evidence_surface::run_check_verification_evidence_surface(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-central-store-contract" => {
+            central_store_contract::run_check_central_store_contract(&paths.root, rest)
+        }
+        "check-central-database-readiness" => {
+            central_database_readiness::run_check_central_database_readiness(&paths.root, rest)
+        }
+        "build-central-readiness-report" => {
+            central_readiness_report::run_build_central_readiness_report(&paths.root, rest)
+        }
+        "check-central-readiness-report" => {
+            central_readiness_report::run_check_central_readiness_report(&paths.root, rest)
+        }
+        "check-contracts-runtime-api-surface" => {
+            contracts_runtime_api_surface::run_check_contracts_runtime_api_surface(
+                &paths.root,
+                rest,
+            )
+        }
+        "validate-language-packs" => language_packs::run_validate_language_packs(&paths.root, rest),
+        "check-ui-automation-contract" => {
+            ui_automation_contract::run_check_ui_automation_contract(&paths.root, rest)
+        }
+        "check-gui-runtime-capability-contract" => {
+            gui_runtime_capability_contract::run_check_gui_runtime_capability_contract(
+                &paths.root,
+                rest,
+            )
         }
         "validate-material-score-contract" => {
             material_score_contract::run_validate_material_score_contract(&paths.root, rest)
@@ -414,7 +481,24 @@ lab remote-ssh-fixture\n  \
 web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   check-make-modules\n  \
+  check-doc-book\n  \
+  sync-doc-book-version\n  \
+  check-toolchain-contract\n  \
+  check-install-update-disk-hygiene\n  \
+  check-module-topology\n  \
+  build-module-topology-report\n  \
+  check-module-function-matrix\n  \
+  check-module-function-coverage-tensor\n  \
   check-module-extension-standard\n  \
+  check-verification-evidence-surface\n  \
+  check-central-store-contract\n  \
+  check-central-database-readiness\n  \
+  build-central-readiness-report\n  \
+  check-central-readiness-report\n  \
+  check-contracts-runtime-api-surface\n  \
+  validate-language-packs\n  \
+  check-ui-automation-contract\n  \
+  check-gui-runtime-capability-contract\n  \
   validate-material-score-contract\n  \
   audit-local-paths\n  \
   frontend-file-lines frontend-storage-security\n  \

@@ -48,12 +48,18 @@
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "workflow builder release metadata was aligned with the 1.8.0 kickoff line",
+      "generated docs and update surfaces carried the same workflow-facing version"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "operator SDK release metadata was tracked as part of the 1.8.0 runtime alignment",
+      "desktop and control-plane contracts preserved the same operator-facing version line"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",

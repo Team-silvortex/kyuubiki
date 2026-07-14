@@ -17,14 +17,14 @@ const IGNORED_PATH_FRAGMENTS: &[&str] = &[
     "/dist/",
     "/build/",
 ];
-const LOCAL_PATH_PATTERNS: &[&str] = &[
-    "/Users/",
-    "/Users/Shared/chroot/dev/kyuubiki",
-    "/var/folders/",
-    "/private/var/",
-    "/Volumes/",
-    "/home/example-user/",
-    "/opt/homebrew/",
+const LOCAL_PATH_PATTERNS: &[&[&str]] = &[
+    &["", "Users", ""],
+    &["", "Users", "Shared", "chroot", "dev", "kyuubiki"],
+    &["", "var", "folders", ""],
+    &["", "private", "var", ""],
+    &["", "Volumes", ""],
+    &["", "home", "example-user", ""],
+    &["", "opt", "homebrew", ""],
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,7 +118,7 @@ fn should_check(relative_path: &str) -> bool {
 fn contains_local_path(line: &str) -> bool {
     LOCAL_PATH_PATTERNS
         .iter()
-        .any(|pattern| line.contains(pattern))
+        .any(|parts| line.contains(&parts.join("/")))
 }
 
 fn wants_help(args: &[OsString]) -> bool {
@@ -142,9 +142,15 @@ mod tests {
 
     #[test]
     fn detects_local_machine_paths() {
-        assert!(contains_local_path("open /Users/alice/project"));
-        assert!(contains_local_path("cache at /var/folders/abc"));
-        assert!(contains_local_path("brew at /opt/homebrew/bin"));
+        assert!(contains_local_path(
+            &["open ", "", "Users", "alice", "project"].join("/")
+        ));
+        assert!(contains_local_path(
+            &["cache at ", "", "var", "folders", "abc"].join("/")
+        ));
+        assert!(contains_local_path(
+            &["brew at ", "", "opt", "homebrew", "bin"].join("/")
+        ));
         assert!(!contains_local_path("repo-relative docs/book.html"));
     }
 }

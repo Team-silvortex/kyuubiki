@@ -98,7 +98,7 @@ Main UI controllers:
 - `ui/remote-node-timeline.js`
 
 That split keeps remote deployment logic, certificate state, mesh rollout, and
-workflow snapshot rendering understandable as the `1.19.x` line hardens the
+workflow snapshot rendering understandable as the `1.20.x` line hardens the
 operator-facing remote control model.
 
 Deeper source note:

@@ -5,7 +5,9 @@ evolve across many minor releases without turning into an unbounded feature
 grab.
 
 This is not a locked release train. It is a guidance map for what each stretch
-of the `1.x` line is supposed to improve.
+of the `1.x` line is supposed to improve. As of `tamamono 1.20.0`, this map is
+also a closure map: `1.20.x` is the last planned `tamamono 1.x` minor before
+the `moxi 2.0.0` handoff.
 
 ## Why this exists
 
@@ -109,7 +111,7 @@ Success looks like:
 
 ### `1.17` to `1.20`
 
-Primary goal: pre-`moxi` industrialization.
+Primary goal: final pre-`moxi` industrialization and line closure.
 
 Expected emphasis:
 
@@ -117,12 +119,16 @@ Expected emphasis:
 - decide what absolutely must be true before `moxi`
 - freeze or retire low-value experiments that do not strengthen the line
 - make release decisions depend more on quality evidence than on new capability
+- avoid opening a `1.21.x` backlog for work that should either ship in the
+  bounded `1.20.x` closeout or move to `moxi` / `2.x`
 
 Success looks like:
 
 - `tamamono` ends with clear industrial habits
 - the `moxi` line can begin from a hard baseline instead of a cleanup backlog
 - the project knows what it trusts, what it supports, and what it still avoids
+- remaining unresolved work has an explicit fate: `moxi 2.0.0`, later `2.x`,
+  experimental, or retired
 
 ## What should not define a minor release
 
@@ -150,6 +156,11 @@ When deciding whether work belongs in the current line, ask:
 
 If the answer is only “it adds one more thing,” it is probably not the right
 default for `tamamono`.
+
+For `1.20.x`, add one more question:
+
+4. does this help close the `1.x` line, or is it really a `moxi` / `2.x`
+   concern?
 
 ## Related docs
 

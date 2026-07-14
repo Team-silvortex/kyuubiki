@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-07-13T03:19:01.975Z",
-  "shipping_version": "1.19.0",
+  "generated_at": "2026-07-14T03:55:02.738Z",
+  "shipping_version": "1.20.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.19",
-        "tamamono:1.19.0"
+        "tamamono:1.20",
+        "tamamono:1.20.0"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.19.0",
-      "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
-      "date": "2026-07-13",
+      "version": "1.20.0",
+      "summary": "tamamono 1.20.0 starts the final tamamono 1.x minor, closing the pre-moxi bridge with native operational checks, 1.20-aligned release contracts, and visible installation/update surfaces.",
+      "date": "2026-07-14",
       "notes": [
         "Primary operator-facing update track for the current pre-moxi development line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.19.0.json",
+      "snapshot_path": "releases/snapshots/1.20.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,38 +69,40 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.19.0",
+          "version": "1.20.0",
           "notes": [
-            "Aligned Workbench-visible version strings, language-pack targets, workflow fixtures, and docs entrypoints to tamamono 1.19.0.",
-            "Keeps workflow automation surfaces aligned with the shared backend contracts instead of UI-only version state."
+            "Aligned Workbench-visible version strings, workflow fixtures, language-pack targets, and docs entrypoints to tamamono 1.20.0.",
+            "Keeps workflow automation, local storage, and headless-facing contracts on the same release line.",
+            "Marks Workbench-facing 1.x work as closeout-oriented rather than a new feature-expansion lane."
           ]
         },
         "hub_gui": {
-          "version": "1.19.0",
+          "version": "1.20.0",
           "notes": [
-            "Aligned Hub desktop version branding, docs mirrors, update catalog visibility, and language-pack smoke expectations to tamamono 1.19.0.",
-            "Keeps update and installation contract mirrors visible from the Hub documentation surface."
+            "Aligned Hub desktop branding, docs mirrors, update catalog visibility, and language-pack surfaces to tamamono 1.20.0.",
+            "Keeps the Hub documentation and release-channel entrypoints tied to the current install contract."
           ]
         },
         "workbench_gui": {
-          "version": "1.19.0",
+          "version": "1.20.0",
           "notes": [
-            "Aligned Workbench desktop package, Tauri, brand, and smoke-test metadata to tamamono 1.19.0.",
-            "Keeps the desktop shell version in sync with the shared release contract."
+            "Aligned Workbench desktop package, Tauri, brand, and bundle metadata to tamamono 1.20.0.",
+            "Preserves the desktop shell as a versioned GUI surface rather than a runtime authority."
           ]
         },
         "installer_gui": {
-          "version": "1.19.0",
+          "version": "1.20.0",
           "notes": [
-            "Aligned Installer desktop version metadata, visible install integrity copy, and update-panel defaults to tamamono 1.19.0.",
-            "Keeps installation, update, cleanup, and rollback visibility tied to the current release contract."
+            "Aligned Installer desktop package metadata, update defaults, integrity copy, and remote-control panels to tamamono 1.20.0.",
+            "Keeps installation, update, cleanup, rollback, and remote deployment behavior visible to operators."
           ]
         },
         "web_api": {
-          "version": "1.19.0",
+          "version": "1.20.0",
           "notes": [
-            "Keeps the current release catalog and deploy/update channels aligned for operator-facing update flows.",
-            "Preserves historical 1.18.0 snapshot records while making 1.19.0 the current channel target."
+            "Keeps deploy/update channels, release catalog, and central contract surfaces aligned for the 1.20.0 current target.",
+            "Preserves historical 1.19.0 records while making 1.20.0 the current channel target.",
+            "Treats 1.20.x as the last planned tamamono 1.x minor before moxi 2.0.0."
           ]
         }
       },
@@ -116,7 +118,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.19.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.20.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -151,7 +153,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.19.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.20.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -186,7 +188,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.19.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.20.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -215,12 +217,12 @@
   ],
   "versions": [
     {
-      "version": "1.19.0",
+      "version": "1.20.0",
       "line": "1.x",
       "status": "current",
-      "date": "2026-07-13",
-      "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
-      "snapshot_path": "releases/snapshots/1.19.0.json",
+      "date": "2026-07-14",
+      "summary": "tamamono 1.20.0 starts the final tamamono 1.x minor, closing the pre-moxi bridge with native operational checks, 1.20-aligned release contracts, and visible installation/update surfaces.",
+      "snapshot_path": "releases/snapshots/1.20.0.json",
       "channels": [
         "stable"
       ],
@@ -228,9 +230,165 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.19",
-        "tamamono:1.19.0"
+        "tamamono:1.20",
+        "tamamono:1.20.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "1.20.0",
+          "notes": [
+            "Aligned Workbench-visible version strings, workflow fixtures, language-pack targets, and docs entrypoints to tamamono 1.20.0.",
+            "Keeps workflow automation, local storage, and headless-facing contracts on the same release line.",
+            "Marks Workbench-facing 1.x work as closeout-oriented rather than a new feature-expansion lane."
+          ]
+        },
+        "hub_gui": {
+          "version": "1.20.0",
+          "notes": [
+            "Aligned Hub desktop branding, docs mirrors, update catalog visibility, and language-pack surfaces to tamamono 1.20.0.",
+            "Keeps the Hub documentation and release-channel entrypoints tied to the current install contract."
+          ]
+        },
+        "workbench_gui": {
+          "version": "1.20.0",
+          "notes": [
+            "Aligned Workbench desktop package, Tauri, brand, and bundle metadata to tamamono 1.20.0.",
+            "Preserves the desktop shell as a versioned GUI surface rather than a runtime authority."
+          ]
+        },
+        "installer_gui": {
+          "version": "1.20.0",
+          "notes": [
+            "Aligned Installer desktop package metadata, update defaults, integrity copy, and remote-control panels to tamamono 1.20.0.",
+            "Keeps installation, update, cleanup, rollback, and remote deployment behavior visible to operators."
+          ]
+        },
+        "web_api": {
+          "version": "1.20.0",
+          "notes": [
+            "Keeps deploy/update channels, release catalog, and central contract surfaces aligned for the 1.20.0 current target.",
+            "Preserves historical 1.19.0 records while making 1.20.0 the current channel target.",
+            "Treats 1.20.x as the last planned tamamono 1.x minor before moxi 2.0.0."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.20.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/hub-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.20.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/workbench-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.20.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/installer-gui/manifest.json",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "exists": false
+        }
+      ]
+    },
+    {
+      "version": "1.19.0",
+      "line": "1.x",
+      "status": "archived",
+      "date": "2026-07-13",
+      "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",
+      "snapshot_path": "releases/snapshots/1.19.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "1.19.0",
@@ -381,7 +539,7 @@
       "line": "1.x",
       "status": "archived",
       "date": "2026-07-11",
-      "summary": "TODO: summarize tamamono 1.18.0.",
+      "summary": "tamamono 1.18.0 archived the pre-1.19 bridge, with version discipline, workflow reliability, and desktop release metadata aligned across the product surfaces.",
       "snapshot_path": "releases/snapshots/1.18.0.json",
       "channels": [],
       "tags": [],
@@ -389,31 +547,31 @@
         "frontend_workbench": {
           "version": "1.18.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Archived Workbench-facing version strings, workflow fixtures, and language-pack targets for 1.18.0."
           ]
         },
         "hub_gui": {
           "version": "1.18.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Archived Hub desktop version branding, docs mirrors, and update catalog visibility for 1.18.0."
           ]
         },
         "workbench_gui": {
           "version": "1.18.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Archived Workbench desktop package, Tauri, brand, and smoke-test metadata for 1.18.0."
           ]
         },
         "installer_gui": {
           "version": "1.18.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Archived Installer desktop version metadata, install integrity copy, and update-panel defaults for 1.18.0."
           ]
         },
         "web_api": {
           "version": "1.18.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Archived control-plane release catalog metadata and generated update surfaces for 1.18.0."
           ]
         }
       },
@@ -530,7 +688,7 @@
       "line": "1.x",
       "status": "archived",
       "date": "2026-07-11",
-      "summary": "TODO: summarize tamamono 1.17.8.",
+      "summary": "tamamono 1.17.8 archived the late-line reliability pass before 1.18, with version contracts, language-pack targets, and desktop release metadata aligned.",
       "snapshot_path": "releases/snapshots/1.17.8.json",
       "channels": [],
       "tags": [],
@@ -538,31 +696,31 @@
         "frontend_workbench": {
           "version": "1.17.8",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Archived Workbench-facing version alignment, language-pack targets, and workflow fixtures for 1.17.8."
           ]
         },
         "hub_gui": {
           "version": "1.17.8",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Archived Hub desktop metadata, docs mirrors, and catalog visibility for 1.17.8."
           ]
         },
         "workbench_gui": {
           "version": "1.17.8",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Archived Workbench desktop package metadata and smoke expectations for 1.17.8."
           ]
         },
         "installer_gui": {
           "version": "1.17.8",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Archived Installer version metadata and integrity-surface defaults for 1.17.8."
           ]
         },
         "web_api": {
           "version": "1.17.8",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Archived control-plane release metadata and generated catalog surfaces for 1.17.8."
           ]
         }
       },
@@ -679,7 +837,7 @@
       "line": "1.x",
       "status": "archived",
       "date": "2026-07-07",
-      "summary": "TODO: summarize tamamono 1.16.0.",
+      "summary": "tamamono 1.16.0 archived the reliability and recovery pass, with release contracts, desktop metadata, and operator validation surfaces kept on the same line.",
       "snapshot_path": "releases/snapshots/1.16.0.json",
       "channels": [],
       "tags": [],
@@ -687,31 +845,31 @@
         "frontend_workbench": {
           "version": "1.16.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Archived Workbench-facing version alignment and reliability workflow copy for the 1.16.0 line."
           ]
         },
         "hub_gui": {
           "version": "1.16.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Archived Hub desktop metadata and docs mirror alignment for 1.16.0."
           ]
         },
         "workbench_gui": {
           "version": "1.16.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Archived Workbench desktop package metadata and smoke expectations for 1.16.0."
           ]
         },
         "installer_gui": {
           "version": "1.16.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Archived Installer version metadata and integrity-surface copy for 1.16.0."
           ]
         },
         "web_api": {
           "version": "1.16.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Archived control-plane release catalog metadata and recovery-facing contracts for 1.16.0."
           ]
         }
       },
@@ -828,7 +986,7 @@
       "line": "1.x",
       "status": "archived",
       "date": "2026-07-04",
-      "summary": "TODO: summarize tamamono 1.15.0.",
+      "summary": "tamamono 1.15.0 archived the operator industrialization push, reliability hardening, and release-line metadata needed before the late tamamono bridge.",
       "snapshot_path": "releases/snapshots/1.15.0.json",
       "channels": [],
       "tags": [],
@@ -836,31 +994,31 @@
         "frontend_workbench": {
           "version": "1.15.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Archived Workbench-facing version alignment and workflow fixtures for the 1.15.0 operator industrialization window."
           ]
         },
         "hub_gui": {
           "version": "1.15.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Archived Hub desktop metadata and docs mirror alignment for the 1.15.0 line."
           ]
         },
         "workbench_gui": {
           "version": "1.15.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Archived Workbench desktop package metadata and smoke expectations for 1.15.0."
           ]
         },
         "installer_gui": {
           "version": "1.15.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Archived Installer version metadata and integrity-surface copy for 1.15.0."
           ]
         },
         "web_api": {
           "version": "1.15.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Archived control-plane and release catalog metadata for the 1.15.0 line."
           ]
         }
       },

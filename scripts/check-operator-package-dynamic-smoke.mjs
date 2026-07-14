@@ -187,7 +187,7 @@ function runSelfTest() {
     ok: true,
     package_id: "operator.template.summary",
     operator_ids: ["extract.template_summary"],
-    host_version: "1.19.0",
+    host_version: "1.20.0",
     sdk_api_version: "kyuubiki.operator-sdk/v1",
     template_manifest: "workers/rust/templates/operator-crate-template/Cargo.toml",
     package_manifest: "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",

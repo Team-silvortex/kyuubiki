@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-qualification-tolerance-policy/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "candidate_id": "line-field-closed-form",
   "status": "collecting",
   "scope": {
@@ -24,11 +24,13 @@
       "rationale": "Absolute tolerances are allowed for exact small closed-form values and result-shape regression checks."
     },
     "relative": {
-      "max_value": 0.000000001,
+      "max_value": 1e-9,
       "rationale": "Relative tolerance is allowed for large restrained thermoelastic force or stress magnitudes."
     },
     "sign": {
-      "allowed_values": ["compression"],
+      "allowed_values": [
+        "compression"
+      ],
       "rationale": "Sign checks are allowed only for qualitative direction claims paired with numeric magnitude checks."
     }
   },
@@ -36,20 +38,20 @@
     {
       "field": "max_heat_flux",
       "allowed_kind": "absolute",
-      "max_value": 0.000000001,
+      "max_value": 1e-9,
       "rationale": "Heat flux is pinned tightly because the two-element gradient is exactly hand-checkable."
     },
     {
       "field": "max_stress",
       "allowed_kind": "relative",
-      "max_value": 0.000000001,
+      "max_value": 1e-9,
       "operator_id": "solve.thermal_bar_1d",
       "rationale": "Thermal stress uses relative tolerance because the expected restrained magnitude is large."
     },
     {
       "field": "max_axial_force",
       "allowed_kind": "relative",
-      "max_value": 0.000000001,
+      "max_value": 1e-9,
       "operator_id": "solve.thermal_bar_1d",
       "rationale": "Thermal axial force uses relative tolerance because the expected restrained magnitude is large."
     }

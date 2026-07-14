@@ -17,7 +17,7 @@ delivery.
 ## Shipped support packs
 
 The repo now keeps distributable support packs under
-[`language-packs`](../language-packs/). As of `tamamono 1.19.x`, the shipped
+[`language-packs`](../language-packs/). As of `tamamono 1.20.x`, the shipped
 catalog covers 30 mainstream starter locales for both Workbench and Hub:
 
 - target contract:

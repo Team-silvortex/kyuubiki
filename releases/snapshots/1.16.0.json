@@ -5,7 +5,7 @@
   "status": "archived",
   "date": "2026-07-07",
   "git_commit": "7be074376c0fe7ca3326c6eb1a2f4e516d2d52e7",
-  "summary": "TODO: summarize tamamono 1.16.0.",
+  "summary": "tamamono 1.16.0 archived the reliability and recovery pass, with release contracts, desktop metadata, and operator validation surfaces kept on the same line.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -19,41 +19,47 @@
     "frontend_workbench": {
       "version": "1.16.0",
       "notes": [
-        "TODO: describe frontend/workbench changes."
+        "Archived Workbench-facing version alignment and reliability workflow copy for the 1.16.0 line."
       ]
     },
     "hub_gui": {
       "version": "1.16.0",
       "notes": [
-        "TODO: describe Hub desktop-shell changes."
+        "Archived Hub desktop metadata and docs mirror alignment for 1.16.0."
       ]
     },
     "workbench_gui": {
       "version": "1.16.0",
       "notes": [
-        "TODO: describe Workbench desktop-shell changes."
+        "Archived Workbench desktop package metadata and smoke expectations for 1.16.0."
       ]
     },
     "installer_gui": {
       "version": "1.16.0",
       "notes": [
-        "TODO: describe Installer desktop-shell changes."
+        "Archived Installer version metadata and integrity-surface copy for 1.16.0."
       ]
     },
     "web_api": {
       "version": "1.16.0",
       "notes": [
-        "TODO: describe API/control-plane changes."
+        "Archived control-plane release catalog metadata and recovery-facing contracts for 1.16.0."
       ]
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "workflow validation and docs surfaces were kept release-visible for 1.16.0",
+      "recovery-oriented operator flow checks stayed connected to generated release metadata"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "operator SDK metadata and fuzz-facing manifests were tracked for the 1.16.0 line",
+      "release checks preserved the SDK and engine boundary while hardening recovery behavior"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",

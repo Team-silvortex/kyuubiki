@@ -14,7 +14,7 @@
   },
   "elixir": {
     "constraint": "~> 1.19",
-    "minimum": "1.19.0",
+    "minimum": "1.20.0",
     "otp_minimum": "28.0",
     "container_base": "elixir:1.19",
     "lab_otp": "28.4",

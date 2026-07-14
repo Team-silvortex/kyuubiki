@@ -1,0 +1,258 @@
+{
+  "version": "1.20.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-07-14",
+  "git_commit": "4263d0c99889172d3289df19f8997bb84fc6db5c",
+  "summary": "tamamono 1.20.0 starts the final tamamono 1.x minor, closing the pre-moxi bridge with native operational checks, 1.20-aligned release contracts, and visible installation/update surfaces.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.20.0",
+      "notes": [
+        "Aligned Workbench-visible version strings, workflow fixtures, language-pack targets, and docs entrypoints to tamamono 1.20.0.",
+        "Keeps workflow automation, local storage, and headless-facing contracts on the same release line.",
+        "Marks Workbench-facing 1.x work as closeout-oriented rather than a new feature-expansion lane."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.20.0",
+      "notes": [
+        "Aligned Hub desktop branding, docs mirrors, update catalog visibility, and language-pack surfaces to tamamono 1.20.0.",
+        "Keeps the Hub documentation and release-channel entrypoints tied to the current install contract."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.20.0",
+      "notes": [
+        "Aligned Workbench desktop package, Tauri, brand, and bundle metadata to tamamono 1.20.0.",
+        "Preserves the desktop shell as a versioned GUI surface rather than a runtime authority."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.20.0",
+      "notes": [
+        "Aligned Installer desktop package metadata, update defaults, integrity copy, and remote-control panels to tamamono 1.20.0.",
+        "Keeps installation, update, cleanup, rollback, and remote deployment behavior visible to operators."
+      ]
+    },
+    "web_api": {
+      "version": "1.20.0",
+      "notes": [
+        "Keeps deploy/update channels, release catalog, and central contract surfaces aligned for the 1.20.0 current target.",
+        "Preserves historical 1.19.0 records while making 1.20.0 the current channel target.",
+        "Treats 1.20.x as the last planned tamamono 1.x minor before moxi 2.0.0."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "review",
+    "capabilities": [
+      "workflow and operator contract gates remain available through native runner-backed checks",
+      "Workbench versioned workflow fixtures and local graph defaults are aligned to 1.20.0",
+      "UI and headless workflow surfaces share release-visible version metadata"
+    ]
+  },
+  "operator_sdk": {
+    "status": "review",
+    "capabilities": [
+      "Rust native script-runner now owns more operational contract checks formerly implemented as Node scripts",
+      "operator package and material score contract checks remain part of the release gate surface",
+      "1.20.0 keeps the worker SDK and agent-facing package boundaries on the same tamamono line"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.20.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.20.0_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.20.0_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        " M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/public/brand.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.lock",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.lock",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.lock",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M assets/brand/brand.json",
+        " M config/architecture/module-extension-standard.json",
+        " M config/architecture/module-function-coverage-matrix.json",
+        " M config/architecture/module-function-coverage-tensor.json",
+        " M config/architecture/module-topology.json",
+        " M config/operator-qualification-evidence-kits.json",
+        " M config/operator-qualification-roadmap.json",
+        " M config/operator-reliability-manifest.json",
+        " M config/toolchains.json",
+        " M docs/README.md",
+        " M docs/book-manifest.json",
+        " M docs/component-integrity-protocol.html",
+        " M docs/current-line.md",
+        " M docs/language-packs.md",
+        " M docs/module-architecture.md",
+        " M docs/navigation-matrix.html",
+        " M docs/operator-reliability.md",
+        " M docs/testing-and-ci.md",
+        " M docs/ui-automation-contract.json",
+        " M docs/version-line.md",
+        " M evidence/operator-qualification/line-field-closed-form-baseline.json",
+        " M evidence/operator-qualification/line-field-tolerance-policy.json",
+        " M language-packs/catalog.json",
+        " M language-packs/hub/ar.json",
+        " M language-packs/hub/bn.json",
+        " M language-packs/hub/cs.json",
+        " M language-packs/hub/da.json",
+        " M language-packs/hub/de.json",
+        " M language-packs/hub/el.json",
+        " M language-packs/hub/fa.json",
+        " M language-packs/hub/fi.json",
+        " M language-packs/hub/fr.json",
+        " M language-packs/hub/he.json",
+        " M language-packs/hub/hi.json",
+        " M language-packs/hub/id.json",
+        " M language-packs/hub/it.json",
+        " M language-packs/hub/ko.json",
+        " M language-packs/hub/ms.json",
+        " M language-packs/hub/nl.json",
+        " M language-packs/hub/no.json",
+        " M language-packs/hub/pl.json",
+        " M language-packs/hub/pt-br.json",
+        " M language-packs/hub/ro.json",
+        " M language-packs/hub/ru.json",
+        " M language-packs/hub/sv.json",
+        " M language-packs/hub/sw.json",
+        " M language-packs/hub/ta.json",
+        " M language-packs/hub/th.json",
+        " M language-packs/hub/tr.json",
+        " M language-packs/hub/uk.json",
+        " M language-packs/hub/ur.json",
+        " M language-packs/hub/vi.json",
+        " M language-packs/hub/zh-tw.json",
+        " M language-packs/workbench/ar.json",
+        " M language-packs/workbench/bn.json",
+        " M language-packs/workbench/cs.json",
+        " M language-packs/workbench/da.json",
+        " M language-packs/workbench/de.json",
+        " M language-packs/workbench/el.json",
+        " M language-packs/workbench/fa.json",
+        " M language-packs/workbench/fi.json",
+        " M language-packs/workbench/fr.json",
+        " M language-packs/workbench/he.json",
+        " M language-packs/workbench/hi.json",
+        " M language-packs/workbench/id.json",
+        " M language-packs/workbench/it.json",
+        " M language-packs/workbench/ko.json",
+        " M language-packs/workbench/ms.json",
+        " M language-packs/workbench/nl.json",
+        " M language-packs/workbench/no.json",
+        " M language-packs/workbench/pl.json",
+        " M language-packs/workbench/pt-br.json",
+        " M language-packs/workbench/ro.json",
+        " M language-packs/workbench/ru.json",
+        " M language-packs/workbench/sv.json",
+        " M language-packs/workbench/sw.json",
+        " M language-packs/workbench/ta.json",
+        " M language-packs/workbench/th.json",
+        " M language-packs/workbench/tr.json",
+        " M language-packs/workbench/uk.json",
+        " M language-packs/workbench/ur.json",
+        " M language-packs/workbench/vi.json",
+        " M language-packs/workbench/zh-tw.json",
+        " M scripts/README.md",
+        " M scripts/audit-version-line.mjs",
+        " M scripts/capture-line-field-qualification-provenance.mjs",
+        " M scripts/capture-line-field-qualification-release-evidence.mjs",
+        " M scripts/check-install-update-disk-hygiene.mjs",
+        " M scripts/check-line-field-closed-form-baseline.mjs",
+        " M scripts/check-line-field-qualification-release-evidence.mjs",
+        " M scripts/check-operator-package-dynamic-smoke.mjs",
+        " M scripts/check-operator-qualification-readiness.mjs",
+        " M scripts/create-release-snapshot.mjs",
+        " M workers/rust/Cargo.lock",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+        " M workers/rust/crates/installer/src/remote_deployment_artifacts_fuzz.rs",
+        " M workers/rust/crates/installer/src/tests/control_update.rs",
+        " M workers/rust/crates/installer/src/update_catalog_fuzz.rs",
+        " M workers/rust/crates/operator-sdk/src/manifest_fuzz.rs"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.20.0",
+      "workbench": "1.20.0",
+      "installer": "1.20.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check",
+      "make audit-project-organization",
+      "make operator-package-preflight",
+      "make check-operator-package-dynamic-smoke-contract",
+      "make operator-package-dynamic-smoke",
+      "make architecture-check"
+    ]
+  }
+}

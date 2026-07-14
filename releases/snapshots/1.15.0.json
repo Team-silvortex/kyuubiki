@@ -5,7 +5,7 @@
   "status": "archived",
   "date": "2026-07-04",
   "git_commit": "113151de1fa9dff0fe155fd5d4ee0f0b61274144",
-  "summary": "TODO: summarize tamamono 1.15.0.",
+  "summary": "tamamono 1.15.0 archived the operator industrialization push, reliability hardening, and release-line metadata needed before the late tamamono bridge.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -19,41 +19,47 @@
     "frontend_workbench": {
       "version": "1.15.0",
       "notes": [
-        "TODO: describe frontend/workbench changes."
+        "Archived Workbench-facing version alignment and workflow fixtures for the 1.15.0 operator industrialization window."
       ]
     },
     "hub_gui": {
       "version": "1.15.0",
       "notes": [
-        "TODO: describe Hub desktop-shell changes."
+        "Archived Hub desktop metadata and docs mirror alignment for the 1.15.0 line."
       ]
     },
     "workbench_gui": {
       "version": "1.15.0",
       "notes": [
-        "TODO: describe Workbench desktop-shell changes."
+        "Archived Workbench desktop package metadata and smoke expectations for 1.15.0."
       ]
     },
     "installer_gui": {
       "version": "1.15.0",
       "notes": [
-        "TODO: describe Installer desktop-shell changes."
+        "Archived Installer version metadata and integrity-surface copy for 1.15.0."
       ]
     },
     "web_api": {
       "version": "1.15.0",
       "notes": [
-        "TODO: describe API/control-plane changes."
+        "Archived control-plane and release catalog metadata for the 1.15.0 line."
       ]
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "workflow fixtures and preflight checks were kept aligned with the 1.15.0 release line",
+      "operator-facing workflow surfaces remained visible through Workbench and generated docs"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "operator SDK package boundaries and release metadata were tracked as part of the industrialization pass",
+      "reliability checks stayed wired into the release validation surface"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",

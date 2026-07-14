@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-matrix/v1",
-  "version_line": "tamamono 1.19.x",
+  "version_line": "tamamono 1.20.x",
   "topology": "config/architecture/module-topology.json",
   "paradigms": {
     "product_surface": "User-facing shell, navigation, UX, and stable UI automation anchors.",
@@ -15,17 +15,71 @@
     "sdk_headless": "Rust, Python, Elixir, or protocol-first headless automation access."
   },
   "required_by_module": {
-    "contracts": ["validation", "security", "persistence_provenance"],
-    "hub-shell": ["product_surface", "security", "deployment_update"],
-    "workbench-shell": ["product_surface", "workflow_composition", "validation", "sdk_headless"],
-    "installer-shell": ["product_surface", "deployment_update", "security", "persistence_provenance"],
-    "orchestra-control-plane": ["runtime_api", "workflow_composition", "security", "persistence_provenance"],
-    "runtime-protocol": ["runtime_api", "solver_execution", "validation", "security"],
-    "runtime-engine-solver": ["solver_execution", "validation", "benchmark", "security"],
-    "runtime-agent-cli": ["runtime_api", "solver_execution", "benchmark", "security", "deployment_update"],
-    "runtime-installer": ["deployment_update", "security", "validation", "persistence_provenance"],
-    "sdk-headless": ["runtime_api", "workflow_composition", "validation", "sdk_headless"],
-    "verification-evidence": ["validation", "benchmark", "security", "persistence_provenance"]
+    "contracts": [
+      "validation",
+      "security",
+      "persistence_provenance"
+    ],
+    "hub-shell": [
+      "product_surface",
+      "security",
+      "deployment_update"
+    ],
+    "workbench-shell": [
+      "product_surface",
+      "workflow_composition",
+      "validation",
+      "sdk_headless"
+    ],
+    "installer-shell": [
+      "product_surface",
+      "deployment_update",
+      "security",
+      "persistence_provenance"
+    ],
+    "orchestra-control-plane": [
+      "runtime_api",
+      "workflow_composition",
+      "security",
+      "persistence_provenance"
+    ],
+    "runtime-protocol": [
+      "runtime_api",
+      "solver_execution",
+      "validation",
+      "security"
+    ],
+    "runtime-engine-solver": [
+      "solver_execution",
+      "validation",
+      "benchmark",
+      "security"
+    ],
+    "runtime-agent-cli": [
+      "runtime_api",
+      "solver_execution",
+      "benchmark",
+      "security",
+      "deployment_update"
+    ],
+    "runtime-installer": [
+      "deployment_update",
+      "security",
+      "validation",
+      "persistence_provenance"
+    ],
+    "sdk-headless": [
+      "runtime_api",
+      "workflow_composition",
+      "validation",
+      "sdk_headless"
+    ],
+    "verification-evidence": [
+      "validation",
+      "benchmark",
+      "security",
+      "persistence_provenance"
+    ]
   },
   "cells": {
     "contracts": {

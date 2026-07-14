@@ -2,7 +2,7 @@
   "version": "1.19.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-07-13",
   "git_commit": "3a2cd68207482bd946743436a2cf4c7dbe98f04d",
   "summary": "tamamono 1.19.0 aligns release discipline, version contracts, coupled-readiness workflow automation, and documentation surfaces for the final pre-moxi hardening window.",

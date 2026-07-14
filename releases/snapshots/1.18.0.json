@@ -5,7 +5,7 @@
   "status": "archived",
   "date": "2026-07-11",
   "git_commit": "619446009b7a587e2392ba607236906ebf0bc393",
-  "summary": "TODO: summarize tamamono 1.18.0.",
+  "summary": "tamamono 1.18.0 archived the pre-1.19 bridge, with version discipline, workflow reliability, and desktop release metadata aligned across the product surfaces.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -19,41 +19,47 @@
     "frontend_workbench": {
       "version": "1.18.0",
       "notes": [
-        "TODO: describe frontend/workbench changes."
+        "Archived Workbench-facing version strings, workflow fixtures, and language-pack targets for 1.18.0."
       ]
     },
     "hub_gui": {
       "version": "1.18.0",
       "notes": [
-        "TODO: describe Hub desktop-shell changes."
+        "Archived Hub desktop version branding, docs mirrors, and update catalog visibility for 1.18.0."
       ]
     },
     "workbench_gui": {
       "version": "1.18.0",
       "notes": [
-        "TODO: describe Workbench desktop-shell changes."
+        "Archived Workbench desktop package, Tauri, brand, and smoke-test metadata for 1.18.0."
       ]
     },
     "installer_gui": {
       "version": "1.18.0",
       "notes": [
-        "TODO: describe Installer desktop-shell changes."
+        "Archived Installer desktop version metadata, install integrity copy, and update-panel defaults for 1.18.0."
       ]
     },
     "web_api": {
       "version": "1.18.0",
       "notes": [
-        "TODO: describe API/control-plane changes."
+        "Archived control-plane release catalog metadata and generated update surfaces for 1.18.0."
       ]
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "workflow builder fixtures and preflight contracts were aligned to 1.18.0",
+      "release-visible workflow docs and local storage defaults carried the same version line"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "archived",
+    "capabilities": [
+      "operator SDK manifests and package metadata were kept aligned for 1.18.0",
+      "engine and installer validation fixtures stayed connected to the release gate surface"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
