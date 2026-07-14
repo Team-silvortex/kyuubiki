@@ -33,6 +33,7 @@ mod line_field_release_evidence;
 mod local_path_audit;
 mod make_modules;
 mod material_exploration_chain_contract;
+mod material_research_bundle;
 mod material_research_bundle_contract;
 mod material_score_contract;
 mod material_study_execution_plan_contract;
@@ -47,11 +48,13 @@ mod native_script_audit;
 mod native_time;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_readiness;
+mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod project_organization_audit;
+mod release_snapshot;
 mod remote_host;
 mod remote_ssh_fixture;
 mod rust_line_counts;
@@ -59,6 +62,7 @@ mod standard_benchmark_remote;
 mod toolchain_contract;
 mod ui_automation_contract;
 mod verification_evidence_surface;
+mod version_line_audit;
 mod workflow_catalog_remote;
 mod workflow_dataset_contract;
 mod workflow_mesh;
@@ -112,6 +116,8 @@ fn run() -> RunnerResult<u8> {
             host_platform().as_str(),
             rest,
         ),
+        "audit-version-line" => version_line_audit::run_audit_version_line(&paths.root, rest),
+        "create-release-snapshot" => release_snapshot::run_create_release_snapshot(rest),
         "status"
         | "start"
         | "start-local"
@@ -167,11 +173,20 @@ fn run() -> RunnerResult<u8> {
         "check-operator-validation" => {
             operator_validation::run_check_operator_validation(&paths.root, rest)
         }
+        "check-operator-reliability" => {
+            operator_reliability::run_check_operator_reliability(&paths.root, rest)
+        }
         "check-line-field-closed-form-baseline" => {
             line_field_baseline::run_check_line_field_closed_form_baseline(&paths.root, rest)
         }
         "capture-line-field-qualification-provenance" => {
             line_field_provenance::run_capture_line_field_qualification_provenance(
+                &paths.root,
+                rest,
+            )
+        }
+        "capture-line-field-qualification-release-evidence" => {
+            line_field_release_evidence::run_capture_line_field_qualification_release_evidence(
                 &paths.root,
                 rest,
             )
@@ -385,6 +400,9 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "check-material-research-bundle" => {
+            material_research_bundle::run_check_material_research_bundle(&paths.root, rest)
         }
         "check-operator-task-ir-contract" => {
             operator_task_ir_contract::run_check_operator_task_ir_contract(&paths.root, rest)

@@ -1,10 +1,14 @@
-use serde_json::Value;
+use crate::{line_field_provenance, native_time::utc_iso_timestamp};
+use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::Instant;
 
 const DEFAULT_INPUT: &str = "tmp/line-field-qualification-release-evidence.json";
+const DEFAULT_OUT: &str = "tmp/line-field-qualification-release-evidence.json";
 const REQUIRED_COMMAND_IDS: &[&str] = &["evidence_check", "solver_baseline"];
 const REQUIRED_TRACKED_INPUTS: &[&str] = &[
     "evidence/operator-qualification/line-field-closed-form-baseline.json",
@@ -15,6 +19,53 @@ const REQUIRED_TRACKED_INPUTS: &[&str] = &[
 ];
 
 type RunnerResult<T> = Result<T, String>;
+
+struct CaptureOptions {
+    out: String,
+    allow_failure: bool,
+}
+
+struct EvidenceCommand {
+    id: &'static str,
+    cwd: &'static str,
+    command: &'static str,
+    args: &'static [&'static str],
+}
+
+const EVIDENCE_COMMANDS: &[EvidenceCommand] = &[
+    EvidenceCommand {
+        id: "evidence_check",
+        cwd: ".",
+        command: "./scripts/kyuubiki",
+        args: &["check-line-field-closed-form-baseline"],
+    },
+    EvidenceCommand {
+        id: "solver_baseline",
+        cwd: "workers/rust",
+        command: "cargo",
+        args: &[
+            "test",
+            "-p",
+            "kyuubiki-solver",
+            "--test",
+            "accuracy_baselines",
+            "line_1d",
+        ],
+    },
+];
+
+pub(crate) fn run_capture_line_field_qualification_release_evidence(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let options = parse_capture_args(args)?;
+    let (absolute, relative) = repo_local_path(root, &options.out, "--out")?;
+    let evidence = build_release_evidence(root)?;
+    write_json(&absolute, &evidence)?;
+    println!("line-field qualification release evidence wrote {relative}");
+    let ok = evidence.pointer("/summary/ok").and_then(Value::as_bool) == Some(true);
+    Ok(if ok || options.allow_failure { 0 } else { 1 })
+}
 
 pub(crate) fn run_check_line_field_qualification_release_evidence(
     root: &Path,
@@ -35,6 +86,36 @@ pub(crate) fn run_check_line_field_qualification_release_evidence(
     }
     println!("line-field qualification release evidence ok: {input}");
     Ok(0)
+}
+
+fn parse_capture_args(args: Vec<OsString>) -> RunnerResult<CaptureOptions> {
+    let mut options = CaptureOptions {
+        out: DEFAULT_OUT.to_string(),
+        allow_failure: false,
+    };
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.to_string_lossy().as_ref() {
+            "--help" | "-h" => {
+                println!(
+                    "usage: kyuubiki-script-runner capture-line-field-qualification-release-evidence [--out tmp/file.json] [--allow-failure]"
+                );
+                return Ok(options);
+            }
+            "--out" => {
+                let Some(value) = iter.next() else {
+                    return Err("--out requires a repo-local path".to_string());
+                };
+                options.out = value.to_string_lossy().to_string();
+            }
+            "--allow-failure" => options.allow_failure = true,
+            other => return Err(format!("unknown argument {other}")),
+        }
+    }
+    if options.out.is_empty() {
+        return Err("--out requires a repo-local path".to_string());
+    }
+    Ok(options)
 }
 
 fn parse_input(args: Vec<OsString>) -> RunnerResult<String> {
@@ -61,6 +142,77 @@ fn parse_input(args: Vec<OsString>) -> RunnerResult<String> {
         return Err("--in requires a repo-local path".to_string());
     }
     Ok(input)
+}
+
+fn build_release_evidence(root: &Path) -> RunnerResult<Value> {
+    let commands = EVIDENCE_COMMANDS
+        .iter()
+        .map(|command| run_evidence_command(root, command))
+        .collect::<Vec<_>>();
+    let passed = commands
+        .iter()
+        .filter(|command| command.get("ok").and_then(Value::as_bool) == Some(true))
+        .count();
+    let failed = commands.len().saturating_sub(passed);
+    Ok(json!({
+        "schema_version": "kyuubiki.operator-qualification-release-evidence/v1",
+        "version_line": "tamamono 1.20.x",
+        "candidate_id": "line-field-closed-form",
+        "generated_at_utc": utc_iso_timestamp(),
+        "release_retention": {
+            "intended_release_artifact": true,
+            "repo_relative_paths_only": true,
+            "generated_output_should_not_be_committed_directly": true,
+        },
+        "provenance": line_field_provenance::build_provenance(root)?,
+        "commands": commands,
+        "summary": {
+            "command_count": commands.len(),
+            "passed": passed,
+            "failed": failed,
+            "ok": failed == 0,
+        },
+    }))
+}
+
+fn run_evidence_command(root: &Path, spec: &EvidenceCommand) -> Value {
+    let started = Instant::now();
+    let output = Command::new(spec.command)
+        .args(spec.args)
+        .current_dir(root.join(spec.cwd))
+        .output();
+    match output {
+        Ok(output) => json!({
+            "id": spec.id,
+            "cwd": spec.cwd,
+            "argv": std::iter::once(spec.command).chain(spec.args.iter().copied()).collect::<Vec<_>>(),
+            "status": output.status.code().unwrap_or(1),
+            "signal": Value::Null,
+            "duration_ms": started.elapsed().as_millis(),
+            "stdout": sanitize_output(root, &String::from_utf8_lossy(&output.stdout)),
+            "stderr": sanitize_output(root, &String::from_utf8_lossy(&output.stderr)),
+            "ok": output.status.success(),
+        }),
+        Err(error) => json!({
+            "id": spec.id,
+            "cwd": spec.cwd,
+            "argv": std::iter::once(spec.command).chain(spec.args.iter().copied()).collect::<Vec<_>>(),
+            "status": 1,
+            "signal": Value::Null,
+            "duration_ms": started.elapsed().as_millis(),
+            "stdout": "",
+            "stderr": sanitize_output(root, &error.to_string()),
+            "ok": false,
+        }),
+    }
+}
+
+fn sanitize_output(root: &Path, text: &str) -> String {
+    let mut sanitized = text.replace(root.to_string_lossy().as_ref(), "$REPO_ROOT");
+    if let Ok(canonical) = root.canonicalize() {
+        sanitized = sanitized.replace(canonical.to_string_lossy().as_ref(), "$REPO_ROOT");
+    }
+    sanitized
 }
 
 fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
@@ -254,6 +406,17 @@ fn read_json_path(path: &Path, label: &str) -> RunnerResult<Value> {
     let text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {label}: {error}"))?;
     serde_json::from_str(&text).map_err(|error| format!("{label}: invalid json: {error}"))
+}
+
+fn write_json(path: &Path, value: &Value) -> RunnerResult<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    let text = serde_json::to_string_pretty(value)
+        .map_err(|error| format!("failed to encode release evidence: {error}"))?;
+    fs::write(path, format!("{text}\n"))
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
 fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {

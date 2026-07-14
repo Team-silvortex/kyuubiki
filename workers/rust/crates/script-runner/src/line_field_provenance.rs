@@ -60,7 +60,7 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Option<String>> {
     Ok(out)
 }
 
-fn build_provenance(root: &Path) -> RunnerResult<Value> {
+pub(crate) fn build_provenance(root: &Path) -> RunnerResult<Value> {
     let git_status = run(root, "git", &["status", "--short"]).unwrap_or_default();
     let status_entry_count = git_status
         .lines()

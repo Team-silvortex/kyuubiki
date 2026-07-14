@@ -15,8 +15,10 @@ This directory contains host-native operational entry points.
 - `kyuubiki-lab`
   Thin operational wrapper for the shared Ubuntu lab machine that now hosts
   the standard download/deploy server plus the shared solver-agent test node.
-- `create-release-snapshot.mjs`
-  Scaffold a new lightweight release snapshot manifest and update the release
+- `kyuubiki-script-runner create-release-snapshot --self-test`
+  Native release-snapshot gate self-test for required frontend/repo checks and
+  source-version issue shape. The retained `.mjs` script still owns scaffold
+  writes for now: it creates a release snapshot manifest and updates the release
   index. When a snapshot is marked `current`, it also advances the shared
   shipping-version contracts. Current snapshots require package, Tauri, brand,
   and Rust workspace source versions to match the requested version before the
@@ -32,13 +34,13 @@ This directory contains host-native operational entry points.
   Upload generated desktop bundles, staged `dist/` outputs, and release
   metadata to a remote download server, with an optional post-upload local
   cleanup path for disk-constrained workstations.
-- `audit-version-line.mjs`
+- `kyuubiki-script-runner audit-version-line`
   Audit repository-wide version contracts and inventory visible version
   references before advancing a shipping line such as `tamamono 1.7.0`. The
   exact-contract lane includes release metadata, package metadata, generated
   docs mirrors, update catalogs, shipped language-pack catalog versions, and
   hand-maintained Markdown facts such as `current-line.md` and
-  `version-line.md`.
+  `version-line.md`. The retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner rust-line-audit`
   Native Rust source line-count audit, currently `600` lines per file by
   default, so crate and test modules stay split before they become hard to
@@ -216,7 +218,7 @@ This directory contains host-native operational entry points.
   with headless SDK and remote scheduler expectations before solver dispatch.
   Make now uses the native runner; the retained `.mjs` script is only a parity
   reference.
-- `build-material-research-bundle.mjs`, `check-material-research-bundle.mjs`,
+- `build-material-research-bundle.mjs`, `kyuubiki-script-runner check-material-research-bundle`,
   `build-material-research-bundle-index.mjs`, and
   `check-material-research-bundle-contract.mjs`
   Build and verify the first retained material research bundle. The bundle
@@ -232,8 +234,8 @@ This directory contains host-native operational entry points.
   contract check keeps
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
-  sync without running the solver. Make now uses the native runner for the
-  contract check; the retained `.mjs` checker is only a parity reference.
+  sync without running the solver. Make now uses the native runner for runtime
+  and contract checks; retained `.mjs` checkers are only parity references.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,
@@ -272,11 +274,10 @@ This directory contains host-native operational entry points.
   output records revision state, toolchain versions, platform metadata, command
   contracts, and hashes of the evidence inputs without embedding local absolute
   paths. The retained `.mjs` script is only a parity reference.
-- `capture-line-field-qualification-release-evidence.mjs`
+- `kyuubiki-script-runner capture-line-field-qualification-release-evidence`
   Run the line-field evidence checker and Rust solver baseline, then retain
-  command status, duration, output, and provenance in a repo-local JSON bundle.
-  It is intended for release artifacts under `tmp/` or a release staging area,
-  not for direct Git commits.
+  sanitized command status, duration, output, and provenance in a repo-local
+  JSON bundle. The retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-line-field-qualification-release-evidence`
   Validate a retained line-field release evidence bundle. It checks schema
   version, command success, provenance inputs, SHA-256 shape, release-retention

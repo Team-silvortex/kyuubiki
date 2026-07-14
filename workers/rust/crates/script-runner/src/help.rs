@@ -5,15 +5,19 @@ Native commands:\n  \
 status/start/stop/restart/export-db/hot-status\n  \
 doctor validate-env install package cross-platform-audit\n  \
 check-elixir-self-host\n  \
+audit-version-line\n  \
+create-release-snapshot\n  \
 operator-package-preflight\n  \
 operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke-contract\n  \
   check-operator-reliability-rules\n  \
+  check-operator-reliability\n  \
   check-operator-reliability-schemas\n  \
   check-operator-validation\n  \
   check-line-field-closed-form-baseline\n  \
   capture-line-field-qualification-provenance\n  \
+  capture-line-field-qualification-release-evidence\n  \
   check-line-field-qualification-release-evidence\n  \
   build-operator-qualification-readiness\n  \
   check-operator-qualification-readiness\n  \
@@ -53,6 +57,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   check-material-study-execution-plan-contract\n  \
   check-material-exploration-chain-contract\n  \
   check-material-research-bundle-contract\n  \
+  check-material-research-bundle\n  \
   check-operator-task-ir-contract\n  \
   validate-material-score-contract\n  \
   audit-local-paths\n  \

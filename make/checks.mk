@@ -94,9 +94,9 @@ check-gui-runtime-capability-contract:
 	@$(ENTRYPOINT) check-gui-runtime-capability-contract
 
 check-version-line:
-	@node ./scripts/create-release-snapshot.mjs --self-test
-	@node ./scripts/audit-version-line.mjs --self-test
-	@node ./scripts/audit-version-line.mjs
+	@$(ENTRYPOINT) create-release-snapshot --self-test
+	@$(ENTRYPOINT) audit-version-line --self-test
+	@$(ENTRYPOINT) audit-version-line
 
 check-workflow-dataset-contract:
 	@$(ENTRYPOINT) check-workflow-dataset-contract --self-test
@@ -156,7 +156,7 @@ capture-line-field-qualification-provenance:
 	@$(ENTRYPOINT) capture-line-field-qualification-provenance --out $${OUT:-tmp/line-field-qualification-provenance.json}
 
 capture-line-field-qualification-release-evidence:
-	@node ./scripts/capture-line-field-qualification-release-evidence.mjs --out $${OUT:-tmp/line-field-qualification-release-evidence.json}
+	@$(ENTRYPOINT) capture-line-field-qualification-release-evidence --out $${OUT:-tmp/line-field-qualification-release-evidence.json}
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline
@@ -178,8 +178,8 @@ build-material-research-bundle:
 	@node ./scripts/build-material-research-bundle.mjs --study $${STUDY:-heat-spreader} --out $${OUT:-tmp/material-research-bundle.json}
 
 check-material-research-bundle:
-	@node ./scripts/check-material-research-bundle.mjs --self-test
-	@node ./scripts/check-material-research-bundle.mjs --in $${IN:-tmp/material-research-bundle.json}
+	@$(ENTRYPOINT) check-material-research-bundle --self-test
+	@$(ENTRYPOINT) check-material-research-bundle --in $${IN:-tmp/material-research-bundle.json}
 
 verify-material-research-bundle:
 	@$(MAKE) build-material-research-bundle OUT=$${OUT:-tmp/material-research-bundle.json}
@@ -201,7 +201,7 @@ remote-material-research-summary:
 	@node ./scripts/check-remote-material-stage-health.mjs
 
 check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness
-	@node ./scripts/check-operator-reliability.mjs
+	@$(ENTRYPOINT) check-operator-reliability
 
 audit-rust-lines:
 	@$(ENTRYPOINT) rust-line-audit --max $${MAX_LINES:-600}

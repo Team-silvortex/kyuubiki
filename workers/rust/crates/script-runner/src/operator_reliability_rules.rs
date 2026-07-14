@@ -6,8 +6,8 @@ type RunnerResult<T> = Result<T, String>;
 
 mod self_test;
 
-pub(super) const ROADMAP_SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-roadmap/v1";
-pub(super) const EVIDENCE_KITS_SCHEMA_VERSION: &str =
+pub(crate) const ROADMAP_SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-roadmap/v1";
+pub(crate) const EVIDENCE_KITS_SCHEMA_VERSION: &str =
     "kyuubiki.operator-qualification-evidence-kits/v1";
 const ORDERED_LEVELS: &[&str] = &["smoke", "baseline", "review", "qualification"];
 const ALLOWED_KIT_STATUSES: &[&str] = &["planned", "collecting", "ready_for_review", "blocked"];
@@ -36,11 +36,11 @@ pub(super) fn level_rank(level: &str) -> isize {
         .unwrap_or(-1)
 }
 
-pub(super) fn is_below_minimum_coverage_level(level: &str, minimum_level: &str) -> bool {
+pub(crate) fn is_below_minimum_coverage_level(level: &str, minimum_level: &str) -> bool {
     level_rank(level) < level_rank(minimum_level)
 }
 
-pub(super) fn qualification_evidence_errors(entry: &Value) -> Vec<String> {
+pub(crate) fn qualification_evidence_errors(entry: &Value) -> Vec<String> {
     let Some(qualification) = entry.pointer("/evidence/qualification") else {
         return vec![
             "qualification-level operators must declare evidence.qualification".to_string(),
@@ -61,7 +61,7 @@ pub(super) fn qualification_evidence_errors(entry: &Value) -> Vec<String> {
     errors
 }
 
-pub(super) fn qualification_roadmap_errors<'a>(
+pub(crate) fn qualification_roadmap_errors<'a>(
     roadmap: &Value,
     manifest: &Value,
     seen_operators: &HashSet<&'a str>,
@@ -129,7 +129,7 @@ pub(super) fn qualification_roadmap_errors<'a>(
     errors
 }
 
-pub(super) fn qualification_evidence_kit_errors(
+pub(crate) fn qualification_evidence_kit_errors(
     kits: &Value,
     roadmap: &Value,
     manifest: &Value,
