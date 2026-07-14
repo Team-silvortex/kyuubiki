@@ -10,7 +10,9 @@ mod benchmark_profile_remote_summary;
 mod central_database_readiness;
 mod central_readiness_report;
 mod central_store_contract;
+mod commercial_readiness;
 mod contracts_runtime_api_surface;
+mod dependency_audit;
 mod desktop;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
@@ -18,14 +20,24 @@ mod desktop_release_upload_remote;
 mod direct_mesh_container;
 mod direct_mesh_remote;
 mod docs_book;
+mod elixir_self_host;
 mod frontend_checks;
 mod gui_runtime_capability_contract;
+mod help;
 mod install_update_disk_hygiene;
 mod lab;
 mod language_packs;
+mod line_field_baseline;
+mod line_field_provenance;
+mod line_field_release_evidence;
 mod local_path_audit;
 mod make_modules;
+mod material_exploration_chain_contract;
+mod material_research_bundle_contract;
 mod material_score_contract;
+mod material_study_execution_plan_contract;
+mod materialization_plan_contract;
+mod minimal_industrial_closure;
 mod module_extension_standard;
 mod module_function_matrix;
 mod module_function_tensor;
@@ -34,6 +46,12 @@ mod module_topology_report;
 mod native_script_audit;
 mod native_time;
 mod operator_package_dynamic_smoke;
+mod operator_qualification_readiness;
+mod operator_reliability_rules;
+mod operator_reliability_schemas;
+mod operator_task_ir_contract;
+mod operator_validation;
+mod project_organization_audit;
 mod remote_host;
 mod remote_ssh_fixture;
 mod rust_line_counts;
@@ -42,6 +60,7 @@ mod toolchain_contract;
 mod ui_automation_contract;
 mod verification_evidence_surface;
 mod workflow_catalog_remote;
+mod workflow_dataset_contract;
 mod workflow_mesh;
 mod workflow_mesh_remote;
 
@@ -52,6 +71,7 @@ use desktop::{
     run_desktop_release, run_desktop_stage, run_desktop_status, run_desktop_verify,
     run_package_desktop,
 };
+use help::print_help;
 
 struct RepoPaths {
     root: PathBuf,
@@ -121,9 +141,58 @@ fn run() -> RunnerResult<u8> {
         "doctor" => run_installer(&paths, "doctor", rest),
         "validate-env" => run_installer(&paths, "validate-env", rest),
         "cross-platform-audit" => run_installer(&paths, "cross-platform-audit", rest),
+        "check-elixir-self-host" => elixir_self_host::run_check_elixir_self_host(&paths.root, rest),
         "operator-package-preflight" => run_installer(&paths, "operator-package-preflight", rest),
         "operator-package-dynamic-smoke" => {
             operator_package_dynamic_smoke::run_operator_package_dynamic_smoke(&paths, rest)
+        }
+        "check-operator-package-dynamic-smoke" => {
+            operator_package_dynamic_smoke::run_check_operator_package_dynamic_smoke(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-operator-package-dynamic-smoke-contract" => {
+            operator_package_dynamic_smoke::run_check_operator_package_dynamic_smoke_contract(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-operator-reliability-rules" => {
+            operator_reliability_rules::run_check_operator_reliability_rules(rest)
+        }
+        "check-operator-reliability-schemas" => {
+            operator_reliability_schemas::run_check_operator_reliability_schemas(&paths.root, rest)
+        }
+        "check-operator-validation" => {
+            operator_validation::run_check_operator_validation(&paths.root, rest)
+        }
+        "check-line-field-closed-form-baseline" => {
+            line_field_baseline::run_check_line_field_closed_form_baseline(&paths.root, rest)
+        }
+        "capture-line-field-qualification-provenance" => {
+            line_field_provenance::run_capture_line_field_qualification_provenance(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-line-field-qualification-release-evidence" => {
+            line_field_release_evidence::run_check_line_field_qualification_release_evidence(
+                &paths.root,
+                rest,
+            )
+        }
+        "build-operator-qualification-readiness" => {
+            operator_qualification_readiness::run_build_operator_qualification_readiness(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-operator-qualification-readiness" => {
+            operator_qualification_readiness::run_check_operator_qualification_readiness(
+                &paths.root,
+                rest,
+            )
         }
         "install" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-installer", rest)),
         "package" | "package-runtime" => {
@@ -275,6 +344,12 @@ fn run() -> RunnerResult<u8> {
             )
         }
         "validate-language-packs" => language_packs::run_validate_language_packs(&paths.root, rest),
+        "validate-commercial-readiness" => {
+            commercial_readiness::run_validate_commercial_readiness(&paths.root, rest)
+        }
+        "validate-minimal-industrial-closure" => {
+            minimal_industrial_closure::run_validate_minimal_industrial_closure(&paths.root, rest)
+        }
         "check-ui-automation-contract" => {
             ui_automation_contract::run_check_ui_automation_contract(&paths.root, rest)
         }
@@ -284,10 +359,44 @@ fn run() -> RunnerResult<u8> {
                 rest,
             )
         }
+        "check-workflow-dataset-contract" => {
+            workflow_dataset_contract::run_check_workflow_dataset_contract(&paths.root, rest)
+        }
+        "check-materialization-plan-contract" => {
+            materialization_plan_contract::run_check_materialization_plan_contract(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-material-study-execution-plan-contract" => {
+            material_study_execution_plan_contract::run_check_material_study_execution_plan_contract(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-material-exploration-chain-contract" => {
+            material_exploration_chain_contract::run_check_material_exploration_chain_contract(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-material-research-bundle-contract" => {
+            material_research_bundle_contract::run_check_material_research_bundle_contract(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-operator-task-ir-contract" => {
+            operator_task_ir_contract::run_check_operator_task_ir_contract(&paths.root, rest)
+        }
         "validate-material-score-contract" => {
             material_score_contract::run_validate_material_score_contract(&paths.root, rest)
         }
         "audit-local-paths" => local_path_audit::run_audit_local_paths(&paths.root, rest),
+        "audit-project-organization" => {
+            project_organization_audit::run_audit_project_organization(&paths.root, rest)
+        }
+        "audit-dependencies" => dependency_audit::run_audit_dependencies(&paths.root, rest),
         "frontend-file-lines" => frontend_checks::run_frontend_file_lines(&paths.frontend, rest),
         "frontend-storage-security" => {
             frontend_checks::run_frontend_storage_security(&paths.frontend, rest)
@@ -460,59 +569,4 @@ fn cargo_run(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsStrin
 
 fn prepend(value: &str, rest: Vec<OsString>) -> Vec<OsString> {
     std::iter::once(OsString::from(value)).chain(rest).collect()
-}
-
-fn print_help() {
-    println!(
-        "Kyuubiki native script runner\n\n\
-Native commands:\n  \
-status/start/stop/restart/export-db/hot-status\n  \
-doctor validate-env install package cross-platform-audit\n  \
-operator-package-preflight\n  \
-operator-package-dynamic-smoke\n  \
-project macro build-frontend build-orchestrator build-agent\n  \
-build-hub-gui build-installer-gui build-workbench-gui\n  \
-package-desktop desktop-status desktop-stage desktop-build-host\n  \
-desktop-release desktop-verify\n  \
-desktop-linux-remote\n  \
-desktop-upload-remote desktop-release-upload-remote\n  \
-generate-desktop-icon-variants\n  \
-lab remote-ssh-fixture\n  \
-web-test rust-test rust-line-audit frontend-test headless-test\n  \
-  headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
-  check-make-modules\n  \
-  check-doc-book\n  \
-  sync-doc-book-version\n  \
-  check-toolchain-contract\n  \
-  check-install-update-disk-hygiene\n  \
-  check-module-topology\n  \
-  build-module-topology-report\n  \
-  check-module-function-matrix\n  \
-  check-module-function-coverage-tensor\n  \
-  check-module-extension-standard\n  \
-  check-verification-evidence-surface\n  \
-  check-central-store-contract\n  \
-  check-central-database-readiness\n  \
-  build-central-readiness-report\n  \
-  check-central-readiness-report\n  \
-  check-contracts-runtime-api-surface\n  \
-  validate-language-packs\n  \
-  check-ui-automation-contract\n  \
-  check-gui-runtime-capability-contract\n  \
-  validate-material-score-contract\n  \
-  audit-local-paths\n  \
-  frontend-file-lines frontend-storage-security\n  \
-  benchmark-profile-remote\n  \
-  benchmark-profile-plan\n  \
-  direct-mesh-benchmark-container\n  \
-  direct-mesh-benchmark-regression\n  \
-  standard-benchmark-regression\n  \
-  workflow-catalog-benchmark-regression\n  \
-  workflow-mesh-regression-remote\n  \
-  workflow-mesh-regression\n  \
-  agent-capability-smoke\n  \
-worker benchmark agent frontend format\n  \
-hub-gui-dev installer-gui-dev workbench-gui-dev\n  \
-native-script-audit\n"
-    );
 }

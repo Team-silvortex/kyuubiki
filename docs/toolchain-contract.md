@@ -24,8 +24,8 @@ installer-managed control-plane host. That check verifies the actual `elixir`,
 `mix`, and OTP versions against `config/toolchains.json`, then confirms the
 orchestrator self-host environment keys are referenced by `apps/web/config`.
 For image-building stages where Elixir is not installed yet, use
-`node ./scripts/check-elixir-self-host.mjs --static-only --json` to validate the
-static contract without probing the runtime.
+`./scripts/kyuubiki check-elixir-self-host --static-only --json` to validate
+the static contract without probing the runtime.
 
 Portable releases also generate
 `dist/<platform>/manifests/embedded-runtimes.json` from this same contract. That

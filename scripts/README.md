@@ -93,14 +93,14 @@ This directory contains host-native operational entry points.
   validates tensor lane mappings and contract evidence, derives gap severity,
   and writes the retained JSON/Markdown tensor report while preserving `--out`
   and `--self-test`.
-- `audit-project-organization.mjs`
+- `kyuubiki-script-runner audit-project-organization`
   Enforce the repository-wide source organization guard. New source and docs
   files, including untracked files that are not ignored, stay under the shared
   line ceiling, while explicitly tracked historical debt files are allowed only
   up to their current debt limit. It also keeps installer `tests.rs` as a
   module index instead of a growing test bucket. Use `--self-test` to verify
   the audit helper rules themselves.
-- `audit-dependencies.mjs`
+- `kyuubiki-script-runner audit-dependencies`
   Run the security dependency audit lanes that require lockfiles: npm
   production audits for frontend/desktop packages plus RustSec audits for the
   Rust workspace, Rust SDK, and Tauri desktop shells. Use `--self-test` when
@@ -115,7 +115,7 @@ This directory contains host-native operational entry points.
   Legacy compatibility entry for the docs-book check. Prefer
   `./scripts/kyuubiki check-doc-book` or `make check-doc-book` for new
   automation.
-- `check-elixir-self-host.mjs`
+- `kyuubiki-script-runner check-elixir-self-host`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
 - `kyuubiki-script-runner check-make-modules`
@@ -189,28 +189,33 @@ This directory contains host-native operational entry points.
   the component implementation anchors used by wasm-python and UI smoke tests.
   Use `--self-test` when changing selector coverage. The retained `.mjs` script
   is only a parity reference.
-- `check-operator-task-ir-contract.mjs`
+- `kyuubiki-script-runner check-operator-task-ir-contract`
   Verify the language-neutral TaskIR schema extension and shipped TaskIR
   examples. It checks that mirrored fields such as operator kind, package ref,
   and package version stay consistent across descriptor, execution program, and
   runtime hints, and recomputes canonical `descriptor_digest` and `task_digest`
   values, including a fractional-number fixture, before agent or SDK tests need
-  to run.
-- `check-workflow-dataset-contract.mjs`
+  to run. Make now uses the native runner; the retained `.mjs` script is only a
+  parity reference.
+- `kyuubiki-script-runner check-workflow-dataset-contract`
   Verify the ONNX-like workflow dataset schema, standalone example, workflow
   graph embedded dataset contract, graph port/edge dataset references, and the
   runtime rule documentation. It mirrors the Rust engine's dataset-contract
   validation so broken cross-operator value metadata is caught before workflow
-  execution.
-- `check-materialization-plan-contract.mjs`
+  execution. Make now uses the native runner; the retained `.mjs` script is
+  only a parity reference.
+- `kyuubiki-script-runner check-materialization-plan-contract`
   Verify the shared material candidate materialization plan schema, fixture,
   and SDK documentation links. It keeps reviewed agent/lab materialization
   output aligned with the solver-rerun runner contract before SDK parity work
-  consumes the same artifact.
-- `check-material-study-execution-plan-contract.mjs`
+  consumes the same artifact. Make now uses the native runner; the retained
+  `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner check-material-study-execution-plan-contract`
   Verify the shared non-executing material study execution plan schema,
   fixture, and SDK documentation links. It keeps `--plan-study` output aligned
   with headless SDK and remote scheduler expectations before solver dispatch.
+  Make now uses the native runner; the retained `.mjs` script is only a parity
+  reference.
 - `build-material-research-bundle.mjs`, `check-material-research-bundle.mjs`,
   `build-material-research-bundle-index.mjs`, and
   `check-material-research-bundle-contract.mjs`
@@ -227,14 +232,16 @@ This directory contains host-native operational entry points.
   contract check keeps
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
-  sync without running the solver.
+  sync without running the solver. Make now uses the native runner for the
+  contract check; the retained `.mjs` checker is only a parity reference.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,
   `operator-reliability-rules.mjs` owns pure trust-level and qualification
-  rules, `test-operator-reliability-rules.mjs` tests those rules,
-  `check-operator-reliability-schemas.mjs` runs the zero-dependency schema
-  smoke, and `check-operator-reliability.mjs` performs the manifest,
+  rules, `kyuubiki-script-runner check-operator-reliability-rules` tests those
+  rules with a native parity self-test,
+  `kyuubiki-script-runner check-operator-reliability-schemas` runs the
+  zero-dependency schema smoke, and `check-operator-reliability.mjs` performs the manifest,
   benchmark, workflow payload, evidence-file, roadmap, and evidence-kit gate.
 - `build-remote-material-benchmark-summary.mjs` and helpers
   Retained lab benchmark evidence summarizer. The builder reads
@@ -253,37 +260,40 @@ This directory contains host-native operational entry points.
   their `--self-test` lanes when changing threshold logic. The preconditioner
   economics table reports the extra sweep cost versus the non-preconditioner
   time saved, so SGS-style changes can be judged by net solver value.
-- `check-line-field-closed-form-baseline.mjs`
+- `kyuubiki-script-runner check-line-field-closed-form-baseline`
   Verify the first versioned qualification evidence artifact for the
   `line-field-closed-form` candidate. It checks that all four 1D closed-form
   operator baselines are present, finite, tolerance-bearing, and linked to the
   Rust accuracy-baseline tests. It also checks the candidate tolerance policy
   so tight closed-form tolerances cannot silently expand into broader claims.
-- `capture-line-field-qualification-provenance.mjs`
+  The retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner capture-line-field-qualification-provenance`
   Emit a repo-relative provenance JSON envelope for the same candidate. The
   output records revision state, toolchain versions, platform metadata, command
   contracts, and hashes of the evidence inputs without embedding local absolute
-  paths.
+  paths. The retained `.mjs` script is only a parity reference.
 - `capture-line-field-qualification-release-evidence.mjs`
   Run the line-field evidence checker and Rust solver baseline, then retain
   command status, duration, output, and provenance in a repo-local JSON bundle.
   It is intended for release artifacts under `tmp/` or a release staging area,
   not for direct Git commits.
-- `check-line-field-qualification-release-evidence.mjs`
+- `kyuubiki-script-runner check-line-field-qualification-release-evidence`
   Validate a retained line-field release evidence bundle. It checks schema
   version, command success, provenance inputs, SHA-256 shape, release-retention
-  flags, and absence of local absolute repository paths.
-- `build-operator-qualification-readiness.mjs`
+  flags, and absence of local absolute repository paths. The retained `.mjs`
+  script is only a parity reference.
+- `kyuubiki-script-runner build-operator-qualification-readiness`
   Build a repo-local JSON readiness report for all qualification roadmap
   candidates, including artifact state, graduation gates, and a sorted
   `next_actions` queue for the highest-priority evidence collection steps.
-- `check-operator-qualification-readiness.mjs`
+- `kyuubiki-script-runner check-operator-qualification-readiness`
   Validate the generated readiness report and its `next_actions` queue. Use
   `--self-test` when changing readiness sorting or action-kind requirements.
-- `validate-commercial-readiness.mjs`
+  The retained `.mjs` scripts are parity references.
+- `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
-- `validate-minimal-industrial-closure.mjs`
+- `kyuubiki-script-runner validate-minimal-industrial-closure`
   Verify the narrower `1.15.x -> 1.20.x` minimum industrial closure manifest
   against its Markdown gate, including gate count, evidence links, supported
   state values, and the shared exit statement.
@@ -360,7 +370,8 @@ Useful checks:
   first.
 - `make check-operator-reliability-rules`
   Run only the pure reliability rule self-test without loading benchmark
-  catalogs, workflow payloads, manifest shards, or evidence files.
+  catalogs, workflow payloads, manifest shards, or evidence files. Make now
+  uses the native runner; the retained `.mjs` test is only a parity reference.
 - `make remote-material-research-summary`
   Run the remote material benchmark summary self-test, then summarize retained
   lab evidence under `tmp/remote-material-research/`. Use this after targeted
@@ -372,7 +383,8 @@ Useful checks:
   Run only the operator reliability schema/config version smoke without loading
   benchmark catalogs, workflow payloads, or evidence files. This covers
   schema-version alignment and required-field presence, not full JSON Schema
-  validation.
+  validation. Make now uses the native runner; the retained `.mjs` script is
+  only a parity reference.
 - `make check-materialization-plan-contract`
   Run the zero-dependency materialized candidate plan contract check and its
   self-test. Use this after changing
@@ -384,13 +396,15 @@ Useful checks:
   self-test. Use this after changing
   `schemas/material-exploration-chain.schema.json`,
   `schemas/examples.material-exploration-chain.json`, chain convergence
-  fields, optimization trace fields, or SDK chain documentation.
+  fields, optimization trace fields, or SDK chain documentation. Make now uses
+  the native runner; the retained `.mjs` script is only a parity reference.
 - `make check-material-research-bundle-contract`
   Run the zero-dependency retained material research bundle contract check and
   its self-test. Use this after changing
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, retained summary fields,
-  next-round execution-plan fields, or bundle documentation.
+  next-round execution-plan fields, or bundle documentation. Make now uses the
+  native runner; the retained `.mjs` script is only a parity reference.
 - `make material-research-bundle-index`
   Build the retained heat-spreader and composite thermo-electric panel bundles,
   validate them, and write `tmp/material-research-bundles/index.json` plus a
@@ -399,7 +413,8 @@ Useful checks:
 - `make build-operator-qualification-readiness`
   Write and validate a readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay
-  out of Git unless deliberately retained with a release.
+  out of Git unless deliberately retained with a release. Make now uses the
+  native runner for both build and validation.
 - `make capture-line-field-qualification-provenance`
   Write a release-retainable provenance JSON envelope for the first
   qualification candidate. Override `OUT=tmp/name.json`; the output path must
@@ -414,9 +429,9 @@ Useful checks:
   `IN=tmp/name.json` when checking a release-staging copy.
 - `make check-elixir-self-host`
   Check the current machine's Elixir, Mix, OTP, and orchestrator environment
-  contract against `config/toolchains.json`. Use `node
-  ./scripts/check-elixir-self-host.mjs --static-only --json` when preparing an
-  installer image where Elixir is not yet installed.
+  contract against `config/toolchains.json`. Use `./scripts/kyuubiki
+  check-elixir-self-host --static-only --json` when preparing an installer
+  image where Elixir is not yet installed.
 
 Useful smoke wrappers:
 
@@ -488,9 +503,11 @@ Useful smoke wrappers:
   Validates the retained dynamic-smoke report schema, package/operator
   summary, stage order, stage descriptions, repo-local working directories,
   reproducible command vectors, stage success, and repo-local evidence paths.
+  Make now uses the native runner; the retained `.mjs` script is only a parity
+  reference.
 - `make check-operator-package-dynamic-smoke-contract`
   Validates the shared dynamic-smoke schema and fixture without requiring a
-  freshly generated `tmp/` report.
+  freshly generated `tmp/` report. Make now uses the native runner.
 - `./scripts/kyuubiki desktop-upload-remote macos`
   Upload the current shipping-version desktop release outputs to the remote
   download server. Override the target with
@@ -557,42 +574,15 @@ Useful smoke wrappers:
   Lower-level host script path for replaying the catalog-backed composite
   workflow benchmark without going through a dedicated `mix test` report case.
 
-Examples now include:
-
-- `hot-local`
-- `hot-cloud`
-- `hot-distributed`
-- `hot-web`
-- `hot-agent`
-- `hot-hub-gui`
-- `hot-installer-gui`
-- `hot-workbench-gui`
-- `build-frontend`
-- `build-orchestrator`
-- `build-agent`
-- `build-hub-gui`
-- `build-installer-gui`
-- `build-workbench-gui`
-- `package-runtime`
-- `package-desktop`
-- `desktop-upload-remote`
-- `desktop-status`
-- `desktop-stage`
-- `desktop-build-host`
-- `desktop-release`
-- `desktop-verify`
-- `desktop-linux-remote`
-  Sync and run the Linux desktop packaging lane on `kyuubiki-lab`; use
-  `desktop-linux-remote preflight` before the full build to check Node and
-  Linux Tauri system dependencies.
-- `desktop-linux-remote install-deps`
-  Installer-aligned privileged dependency lane for the lab host. It uses
-  `sudo -n`, so it fails cleanly instead of prompting for or storing a
-  password.
-- `sync-desktop-shared`
-- `test-hub-gui`
-- `test-installer-gui`
-- `test-workbench-gui`
+Examples include `hot-local`, `hot-cloud`, `hot-distributed`, `hot-web`,
+`hot-agent`, desktop GUI hot loops, component builds, `package-runtime`,
+`package-desktop`, desktop release/status/stage/verify commands, shared desktop
+sync, and GUI smoke-test wrappers. `desktop-linux-remote` syncs and runs the
+Linux desktop packaging lane on `kyuubiki-lab`; use
+`desktop-linux-remote preflight` before the full build, and
+`desktop-linux-remote install-deps` for the installer-aligned privileged
+dependency lane. It uses `sudo -n`, so it fails cleanly instead of prompting for
+or storing a password.
 
 Keep these scripts thin. Product logic should live in the application/runtime
 code, not in shell branching.

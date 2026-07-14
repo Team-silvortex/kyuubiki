@@ -84,7 +84,7 @@ Then branch by intent:
   consistency, security fuzz coverage, and the flagship material research loop.
 - `commercial-readiness-2.0.manifest.json`
   Machine-readable gate map for the same `2.0` checklist, validated by
-  `node ./scripts/validate-commercial-readiness.mjs`.
+  `./scripts/kyuubiki validate-commercial-readiness`.
 - `minimal-industrial-closure.md`
   The narrower `1.15.x -> 1.20.x` bridge checklist for closing the first
   bounded industrial workflow before broader `2.0` commercial claims.
@@ -93,7 +93,7 @@ Then branch by intent:
   plane, SDKs, contracts, verification gates, and where new work belongs.
 - `minimal-industrial-closure.manifest.json`
   Machine-readable gate map for the same minimum industrial loop, validated by
-  `node ./scripts/validate-minimal-industrial-closure.mjs`.
+  `./scripts/kyuubiki validate-minimal-industrial-closure`.
 - `fem-blender-roadmap.md`
   Product north star and staged path toward becoming the Blender of FEM,
   including the `2.0` early-commercial trust line and `3.0`

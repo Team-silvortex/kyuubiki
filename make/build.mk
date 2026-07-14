@@ -29,8 +29,8 @@ operator-package-dynamic-smoke:
 	@$(MAKE) check-operator-package-dynamic-smoke $(if $(OUT),IN=$(abspath $(OUT)),IN=tmp/operator-package-dynamic-smoke.json)
 
 check-operator-package-dynamic-smoke:
-	@node ./scripts/check-operator-package-dynamic-smoke.mjs --self-test
-	@node ./scripts/check-operator-package-dynamic-smoke.mjs --in $${IN:-tmp/operator-package-dynamic-smoke.json}
+	@$(ENTRYPOINT) check-operator-package-dynamic-smoke --self-test
+	@$(ENTRYPOINT) check-operator-package-dynamic-smoke --in $${IN:-tmp/operator-package-dynamic-smoke.json}
 
 sync-desktop-shared:
 	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs

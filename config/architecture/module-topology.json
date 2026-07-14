@@ -576,36 +576,21 @@
       "layer": "verification",
       "summary": "Make modules, scripts, integration tests, fuzz smoke, evidence capture, and benchmark comparison reports.",
       "owned_paths": [
-        "make",
-        "scripts",
-        "tests",
-        "evidence"
+        "make", "scripts", "tests", "evidence"
       ],
       "depends_on": [
         "contracts"
       ],
       "benchmark_lanes": [
-        "ui_startup",
-        "workflow_catalog",
-        "control_plane",
-        "runtime_solver",
-        "mesh",
-        "sdk_headless",
-        "installer_release"
+        "ui_startup", "workflow_catalog", "control_plane", "runtime_solver",
+        "mesh", "sdk_headless", "installer_release"
       ],
       "security_lanes": [
-        "ui_boundary",
-        "api_auth",
-        "runtime_sandbox",
-        "supply_chain",
-        "credential_storage",
-        "remote_deploy",
-        "data_contract"
+        "ui_boundary", "api_auth", "runtime_sandbox", "supply_chain",
+        "credential_storage", "remote_deploy", "data_contract"
       ],
       "risk_tags": [
-        "coverage_gap",
-        "benchmark_blind_spot",
-        "audit_drift"
+        "coverage_gap", "benchmark_blind_spot", "audit_drift"
       ]
     }
   ]

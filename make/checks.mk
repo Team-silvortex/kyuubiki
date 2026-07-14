@@ -10,7 +10,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies fuzz-smoke architecture-check verify
+.PHONY: audit-dependencies fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -22,10 +22,10 @@ check-toolchains:
 	@$(ENTRYPOINT) check-toolchain-contract
 
 check-elixir-self-host:
-	@node ./scripts/check-elixir-self-host.mjs
+	@$(ENTRYPOINT) check-elixir-self-host
 
 check-commercial-readiness:
-	@node ./scripts/validate-commercial-readiness.mjs
+	@$(ENTRYPOINT) validate-commercial-readiness
 
 check-install-update-disk-hygiene:
 	@$(ENTRYPOINT) check-install-update-disk-hygiene --self-test
@@ -99,70 +99,70 @@ check-version-line:
 	@node ./scripts/audit-version-line.mjs
 
 check-workflow-dataset-contract:
-	@node ./scripts/check-workflow-dataset-contract.mjs --self-test
-	@node ./scripts/check-workflow-dataset-contract.mjs
+	@$(ENTRYPOINT) check-workflow-dataset-contract --self-test
+	@$(ENTRYPOINT) check-workflow-dataset-contract
 
 check-material-score-contract:
 	@$(ENTRYPOINT) validate-material-score-contract
 
 check-materialization-plan-contract:
-	@node ./scripts/check-materialization-plan-contract.mjs --self-test
-	@node ./scripts/check-materialization-plan-contract.mjs
+	@$(ENTRYPOINT) check-materialization-plan-contract --self-test
+	@$(ENTRYPOINT) check-materialization-plan-contract
 
 check-material-study-execution-plan-contract:
-	@node ./scripts/check-material-study-execution-plan-contract.mjs --self-test
-	@node ./scripts/check-material-study-execution-plan-contract.mjs
+	@$(ENTRYPOINT) check-material-study-execution-plan-contract --self-test
+	@$(ENTRYPOINT) check-material-study-execution-plan-contract
 
 check-material-exploration-chain-contract:
-	@node ./scripts/check-material-exploration-chain-contract.mjs --self-test
-	@node ./scripts/check-material-exploration-chain-contract.mjs
+	@$(ENTRYPOINT) check-material-exploration-chain-contract --self-test
+	@$(ENTRYPOINT) check-material-exploration-chain-contract
 
 check-material-research-bundle-contract:
-	@node ./scripts/check-material-research-bundle-contract.mjs --self-test
-	@node ./scripts/check-material-research-bundle-contract.mjs
+	@$(ENTRYPOINT) check-material-research-bundle-contract --self-test
+	@$(ENTRYPOINT) check-material-research-bundle-contract
 
 check-material-study-sdk-examples:
 	@node ./scripts/check-material-study-sdk-examples.mjs --self-test
 	@node ./scripts/check-material-study-sdk-examples.mjs
 
 check-operator-task-ir-contract:
-	@node ./scripts/check-operator-task-ir-contract.mjs --self-test
-	@node ./scripts/check-operator-task-ir-contract.mjs
+	@$(ENTRYPOINT) check-operator-task-ir-contract --self-test
+	@$(ENTRYPOINT) check-operator-task-ir-contract
 
 check-operator-package-dynamic-smoke-contract:
-	@node ./scripts/check-operator-package-dynamic-smoke.mjs --self-test
+	@$(ENTRYPOINT) check-operator-package-dynamic-smoke-contract --self-test
 
 check-operator-reliability-rules:
-	@node ./scripts/test-operator-reliability-rules.mjs
+	@$(ENTRYPOINT) check-operator-reliability-rules
 
 check-operator-reliability-schemas:
-	@node ./scripts/check-operator-reliability-schemas.mjs --self-test
-	@node ./scripts/check-operator-reliability-schemas.mjs
+	@$(ENTRYPOINT) check-operator-reliability-schemas --self-test
+	@$(ENTRYPOINT) check-operator-reliability-schemas
 
 check-operator-validation:
-	@node ./scripts/check-operator-validation.mjs --self-test
-	@node ./scripts/check-operator-validation.mjs
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation
 
 verify-operator-validation:
-	@node ./scripts/check-operator-validation.mjs --self-test
-	@node ./scripts/check-operator-validation.mjs --execute
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute
 
 build-operator-qualification-readiness:
-	@node ./scripts/check-operator-qualification-readiness.mjs --self-test
-	@node ./scripts/build-operator-qualification-readiness.mjs --out $${OUT:-tmp/operator-qualification-readiness.json}
-	@node ./scripts/check-operator-qualification-readiness.mjs --in $${OUT:-tmp/operator-qualification-readiness.json}
+	@$(ENTRYPOINT) check-operator-qualification-readiness --self-test
+	@$(ENTRYPOINT) build-operator-qualification-readiness --out $${OUT:-tmp/operator-qualification-readiness.json}
+	@$(ENTRYPOINT) check-operator-qualification-readiness --in $${OUT:-tmp/operator-qualification-readiness.json}
 
 capture-line-field-qualification-provenance:
-	@node ./scripts/capture-line-field-qualification-provenance.mjs --out $${OUT:-tmp/line-field-qualification-provenance.json}
+	@$(ENTRYPOINT) capture-line-field-qualification-provenance --out $${OUT:-tmp/line-field-qualification-provenance.json}
 
 capture-line-field-qualification-release-evidence:
 	@node ./scripts/capture-line-field-qualification-release-evidence.mjs --out $${OUT:-tmp/line-field-qualification-release-evidence.json}
 
 check-line-field-closed-form-baseline:
-	@node ./scripts/check-line-field-closed-form-baseline.mjs
+	@$(ENTRYPOINT) check-line-field-closed-form-baseline
 
 check-line-field-qualification-release-evidence:
-	@node ./scripts/check-line-field-qualification-release-evidence.mjs --in $${IN:-tmp/line-field-qualification-release-evidence.json}
+	@$(ENTRYPOINT) check-line-field-qualification-release-evidence --in $${IN:-tmp/line-field-qualification-release-evidence.json}
 
 capture-material-research-example:
 	@node ./scripts/capture-material-research-example.mjs --out $${OUT:-tmp/material-research-example.json}
@@ -207,12 +207,15 @@ audit-rust-lines:
 	@$(ENTRYPOINT) rust-line-audit --max $${MAX_LINES:-600}
 
 audit-project-organization:
-	@node ./scripts/audit-project-organization.mjs --self-test
-	@node ./scripts/audit-project-organization.mjs
+	@$(ENTRYPOINT) audit-project-organization --self-test
+	@$(ENTRYPOINT) audit-project-organization
 
 audit-dependencies:
-	@node ./scripts/audit-dependencies.mjs --self-test
-	@node ./scripts/audit-dependencies.mjs
+	@$(ENTRYPOINT) audit-dependencies --self-test
+	@$(ENTRYPOINT) audit-dependencies
+
+check-minimal-industrial-closure:
+	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
 fuzz-smoke:
 	@cd workers/rust && cargo test -p kyuubiki-engine workflow_security_fuzz_smoke -- --nocapture
@@ -260,7 +263,7 @@ architecture-check:
 	@$(MAKE) operator-package-preflight
 	@$(MAKE) operator-package-dynamic-smoke
 	@jq empty docs/book-manifest.json
-	@node ./scripts/validate-minimal-industrial-closure.mjs
+	@$(MAKE) check-minimal-industrial-closure
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
 	@cd workers/rust && cargo test -p kyuubiki-cli operator_task_ir_rpc
 	@cd workers/rust && cargo test -p kyuubiki-cli --test operator_task_live

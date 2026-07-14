@@ -173,7 +173,7 @@ Verification is part of the architecture, not an afterthought.
 Core gates:
 
 - `make architecture-check`
-- `node scripts/audit-project-organization.mjs`
+- `./scripts/kyuubiki audit-project-organization`
 - `make check-ui-automation-contract`
 - `make check-operator-reliability`
 - `make audit-dependencies`

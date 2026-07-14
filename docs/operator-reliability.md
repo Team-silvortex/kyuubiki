@@ -42,7 +42,8 @@ The input profile shape is retained as
 `make check-operator-validation` validates the profile contract and writes
 `tmp/operator-validation-report.json` without running heavy commands.
 `make verify-operator-validation` executes the declared commands and writes the
-same report with command status and output tails. This is not a whole-system
+same report with command status and output tails. Both targets now use the
+native `kyuubiki-script-runner check-operator-validation` path. This is not a whole-system
 formal proof; it is a practical lane for accumulating executable local
 invariants and cross-validation evidence per operator family.
 The report shape is retained as
@@ -110,7 +111,8 @@ prevents operators from drifting into the wrong qualification group.
 summarizes which roadmap artifacts are present, command-backed, missing, or not
 started. The generated report also includes a `next_actions` queue so release
 owners can see the highest-priority evidence collection step without manually
-diffing every candidate kit. The make target validates the generated report so
+diffing every candidate kit. The make target uses the native script runner and
+validates the generated report so
 the queue stays machine-consumable for release gates and future UI surfaces.
 `make check-operator-reliability` builds and validates this readiness report
 before checking the release manifest, so the qualification queue stays visible

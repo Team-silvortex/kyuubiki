@@ -140,7 +140,7 @@ line, split by responsibility rather than by arbitrary chunks.
 
 Current source-side posture:
 
-- `node ./scripts/audit-project-organization.mjs` is the repository-wide guard
+- `./scripts/kyuubiki audit-project-organization` is the repository-wide guard
   for this rule and should report `tracked debt 0`. It checks tracked files
   and untracked files that are not ignored, so new source modules are covered
   before they are staged. Run it with `--self-test` when changing audit helper
@@ -209,7 +209,7 @@ matters; do not move source boundaries just to reduce generated output.
 
 ## Near-Term Cleanup Queue
 
-- Keep `node ./scripts/audit-project-organization.mjs` green before adding
+- Keep `./scripts/kyuubiki audit-project-organization` green before adding
   new architecture or workflow files.
 - Run `make architecture-check` after changing TaskIR, materialization plan
   contracts, orchestration boundary code, external operator package admission

@@ -10,7 +10,7 @@ It is a trust checklist.
 The paired machine-readable source is
 [commercial-readiness-2.0.manifest.json](commercial-readiness-2.0.manifest.json).
 Keep the checklist and manifest aligned with
-`node ./scripts/validate-commercial-readiness.mjs`.
+`./scripts/kyuubiki validate-commercial-readiness`.
 
 ## Commercial Posture
 

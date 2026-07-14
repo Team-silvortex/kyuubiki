@@ -483,7 +483,7 @@ Sensitivity levels:
 | `apps/frontend/src/lib/models/model-import.ts` | Imports external model JSON into solver/project state. | Schema validation, size limits, numeric bounds, and safe evolution across model schema versions. |
 | `apps/frontend/src/lib/projects/**` | Project bundle import/export. | Archive/file parsing, path traversal prevention, payload size, and result/data export scope. |
 | `apps/frontend/src/lib/materials/material-library.ts` | External material library import. | CSV/JSON parsing, numeric bounds, duplicate IDs, and maliciously large files. |
-| `scripts/audit-dependencies.mjs` and checked JS/Rust lockfiles | Supply-chain gate for npm production dependencies and RustSec advisories. | Keep lane coverage, `--package-lock-only`, self-test behavior, and lockfile tracking aligned with shipped app/runtime surfaces. |
+| `kyuubiki-script-runner audit-dependencies` and checked JS/Rust lockfiles | Supply-chain gate for npm production dependencies, RustSec advisories, and Hex advisories. | Keep lane coverage, `--package-lock-only`, self-test behavior, and lockfile tracking aligned with shipped app/runtime surfaces. |
 | `sdks/python/kyuubiki_sdk/auth.py`, `sdks/elixir/lib/kyuubiki_sdk/auth.ex`, `sdks/rust/src/auth.rs` | Token/header construction used by external automation and AI clients. | Header parity with control plane, token scoping, and clear examples that avoid hardcoding secrets. |
 | `deploy/agents.*.json` and `schemas/agent-manifest.schema.json` | Static distributed-agent manifests. | Do not commit real hostnames/secrets; validate endpoint shape and intended deployment mode. |
 
