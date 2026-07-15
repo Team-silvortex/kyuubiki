@@ -7,13 +7,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 mod args;
+mod operator_trust_summary;
 mod release_records;
+mod review_summary;
 mod self_test;
 #[cfg(test)]
 mod unit_tests;
 
 use args::{parse_check_args, parse_out};
+use operator_trust_summary::operator_trust_level_counts;
 use release_records::{ReleaseRecord, release_records_by_candidate};
+use review_summary::{count_release_review_decisions, count_release_review_statuses};
 
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
@@ -26,14 +30,6 @@ const ALLOWED_ACTION_KINDS: &[&str] = &["collect_artifact", "restore_or_generate
 const TARGET_LEVELS: &[&str] = &["baseline", "review", "qualification"];
 const EVIDENCE_PHASES: &[&str] = &["planned", "collecting", "ready_for_review", "blocked"];
 const RELEASE_GATE_IMPACTS: &[&str] = &["release_blocker", "release_watch", "experimental_only"];
-const RELEASE_REVIEW_STATUSES: &[&str] = &[
-    "missing",
-    "pending_signoff",
-    "approved",
-    "blocked_scope",
-    "rejected",
-];
-
 pub(crate) fn run_build_operator_qualification_readiness(
     root: &Path,
     args: Vec<OsString>,
@@ -128,9 +124,11 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
                 .iter().any(|profile| field(profile, "profile_role") == "release_candidate")).count(),
             "next_action_count": next_actions.len(),
             "target_levels": count_by(&candidates, "target_level", TARGET_LEVELS),
+            "operator_trust_levels": operator_trust_level_counts(root)?,
             "evidence_phases": count_by(&candidates, "evidence_phase", EVIDENCE_PHASES),
             "release_gate_impacts": count_by(&candidates, "release_gate_impact", RELEASE_GATE_IMPACTS),
             "release_review_statuses": count_release_review_statuses(&candidates),
+            "release_review_decisions": count_release_review_decisions(root, &candidates),
         },
         "next_actions": next_actions,
         "candidates": candidates,
@@ -200,13 +198,16 @@ fn validation_profiles_by_candidate(root: &Path) -> RunnerResult<HashMap<String,
     let mut grouped: HashMap<String, Vec<Value>> = HashMap::new();
     for profile in array(&source, "profiles") {
         let candidate_id = field(profile, "qualification_candidate_id");
-        grouped.entry(candidate_id.to_string()).or_default().push(json!({
-            "profile_id": field(profile, "profile_id"),
-            "profile_role": field(profile, "profile_role"),
-            "trust_goal": field(profile, "trust_goal"),
-            "operator_count": array(profile, "operators").len(),
-            "command_count": array(profile, "commands").len(),
-        }));
+        grouped
+            .entry(candidate_id.to_string())
+            .or_default()
+            .push(json!({
+                "profile_id": field(profile, "profile_id"),
+                "profile_role": field(profile, "profile_role"),
+                "trust_goal": field(profile, "trust_goal"),
+                "operator_count": array(profile, "operators").len(),
+                "command_count": array(profile, "commands").len(),
+            }));
     }
     for profiles in grouped.values_mut() {
         profiles.sort_by(|left, right| {
@@ -264,14 +265,17 @@ fn artifact_state(
 fn build_next_actions(candidates: &[Value]) -> Vec<Value> {
     let mut actions = candidates
         .iter()
-        .map(|candidate| {
+        .filter_map(|candidate| {
             let artifact = first_actionable_artifact(candidate);
+            if artifact.is_none() && has_approved_release_review(candidate) {
+                return None;
+            }
             let validation_profiles = array(candidate, "validation_profiles");
             let release_profiles = validation_profiles
                 .iter()
                 .filter(|profile| field(profile, "profile_role") == "release_candidate")
                 .count();
-            json!({
+            Some(json!({
                 "candidate_id": field(candidate, "candidate_id"),
                 "priority": field(candidate, "priority"),
                 "target_level": field(candidate, "target_level"),
@@ -290,7 +294,7 @@ fn build_next_actions(candidates: &[Value]) -> Vec<Value> {
                 "release_candidate_profile_count": release_profiles,
                 "preferred_validation_lane": field(candidate, "preferred_validation_lane"),
                 "release_gate_impact": field(candidate, "release_gate_impact"),
-            })
+            }))
         })
         .filter(|action| {
             action.get("artifact_id") != Some(&Value::Null)
@@ -330,6 +334,7 @@ pub(super) fn readiness_errors(
     };
     let candidates = array(report, "candidates");
     check_summary(
+        root,
         report,
         &candidates,
         next_actions,
@@ -350,6 +355,7 @@ pub(super) fn readiness_errors(
 }
 
 fn check_summary(
+    root: &Path,
     report: &Value,
     candidates: &[&Value],
     next_actions: &[Value],
@@ -464,6 +470,17 @@ fn check_summary(
         "summary.target_levels",
         errors,
     );
+    match operator_trust_level_counts(root) {
+        Ok(expected) => check_count_map(
+            report,
+            "/summary/operator_trust_levels",
+            &expected,
+            relative_input,
+            "summary.operator_trust_levels",
+            errors,
+        ),
+        Err(error) => errors.push(format!("{relative_input}: {error}")),
+    }
     check_count_map(
         report,
         "/summary/evidence_phases",
@@ -486,6 +503,14 @@ fn check_summary(
         &count_release_review_statuses(candidates),
         relative_input,
         "summary.release_review_statuses",
+        errors,
+    );
+    check_count_map(
+        report,
+        "/summary/release_review_decisions",
+        &count_release_review_decisions(root, candidates),
+        relative_input,
+        "summary.release_review_decisions",
         errors,
     );
 }
@@ -514,7 +539,12 @@ fn action_errors(action: &Value, index: usize) -> Vec<String> {
         require_string(action.get("path"), "path", &context, &mut errors);
     }
     if action_kind == "review" {
-        require_string(action.get("review_reason"), "review_reason", &context, &mut errors);
+        require_string(
+            action.get("review_reason"),
+            "review_reason",
+            &context,
+            &mut errors,
+        );
     }
     require_u64(
         action.get("validation_profile_count"),
@@ -555,26 +585,6 @@ where
             .filter(|candidate| field(candidate.borrow(), field_name) == *value)
             .count();
         map.insert((*value).to_string(), Value::from(count));
-    }
-    Value::Object(map)
-}
-
-fn count_release_review_statuses<T>(candidates: &[T]) -> Value
-where
-    T: std::borrow::Borrow<Value>,
-{
-    let mut map = serde_json::Map::new();
-    for status in RELEASE_REVIEW_STATUSES {
-        let count = candidates
-            .iter()
-            .flat_map(|candidate| array(candidate.borrow(), "artifacts"))
-            .filter(|artifact| field(artifact, "kind") == "release_retained_regression_output")
-            .filter(|artifact| {
-                let review_status = field(artifact, "release_review_status");
-                (review_status.is_empty() && *status == "missing") || review_status == *status
-            })
-            .count();
-        map.insert((*status).to_string(), Value::from(count));
     }
     Value::Object(map)
 }
@@ -620,6 +630,13 @@ fn first_actionable_artifact(candidate: &Value) -> Option<&Value> {
         .find(|artifact| field(artifact, "state") != "present")
 }
 
+fn has_approved_release_review(candidate: &Value) -> bool {
+    array(candidate, "artifacts").into_iter().any(|artifact| {
+        field(artifact, "kind") == "release_retained_regression_output"
+            && field(artifact, "release_review_status") == "approved"
+    })
+}
+
 fn action_kind_for_artifact(artifact: Option<&Value>) -> &'static str {
     match artifact.map(|artifact| field(artifact, "state")) {
         None => "review",
@@ -663,7 +680,11 @@ fn require_u64(value: Option<&Value>, field_name: &str, context: &str, errors: &
     }
 }
 
-fn repo_local_path(root: &Path, path: &str, label: &str) -> RunnerResult<(PathBuf, String)> {
+pub(super) fn repo_local_path(
+    root: &Path,
+    path: &str,
+    label: &str,
+) -> RunnerResult<(PathBuf, String)> {
     let absolute = root.join(path);
     let relative = absolute
         .strip_prefix(root)

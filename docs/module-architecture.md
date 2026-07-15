@@ -140,6 +140,11 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
+Validation contract evidence includes both readiness reports and release
+review gates. Operator qualification records, retained review decisions, and
+their Node/Rust checkers are part of the validation tensor so a candidate
+cannot appear mature only because release evidence exists.
+
 The generated tensor report also assigns a maturity label to every required
 covered coordinate:
 

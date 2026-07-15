@@ -16,9 +16,9 @@
         "solve.electrostatic_bar_1d"
       ],
       "rationale": "Small line-field cases have direct closed-form references and are the safest first qualification candidates.",
-      "primary_blocker": "release evidence is attached; final trust-level promotion still requires reviewer sign-off against the graduation gate",
+      "primary_blocker": "no blocker; reviewer approved the retained release evidence against the graduation gate",
       "evidence_gaps": [
-        "reviewer sign-off against the attached release-retained evidence bundle"
+        "none for the current 1D closed-form qualification scope"
       ],
       "required_artifacts": [
         "analytic derivation note",

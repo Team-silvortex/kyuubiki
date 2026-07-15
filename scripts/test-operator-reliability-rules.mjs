@@ -4,6 +4,7 @@ import {
   levelRank,
   qualificationEvidenceErrors,
   qualificationEvidenceKitErrors,
+  qualificationPromotionErrors,
   qualificationRoadmapErrors,
 } from "./operator-reliability-rules.mjs";
 import { operatorReliabilitySchemaVersions } from "./operator-reliability-contracts.mjs";
@@ -244,6 +245,63 @@ function run() {
       "kits must be non-empty"
     ),
     "empty qualification evidence kits must fail"
+  );
+
+  const promotedOperator = {
+    operator_id: "solve.ok",
+    coverage_level: "qualification",
+    evidence: {
+      qualification: {
+        provenance: [
+          "releases/qualification-evidence/2.0.0/self-test.json",
+          "releases/qualification-review-decisions/2.0.0/self-test.json",
+        ],
+        release_gates: ["releases/qualification-records/1.20.0.json"],
+      },
+    },
+  };
+  const releaseRecords = {
+    records: [{
+      candidate_id: "self-test",
+      evidence_path: "releases/qualification-evidence/2.0.0/self-test.json",
+      review_status: "approved",
+      review_decision_path: "releases/qualification-review-decisions/2.0.0/self-test.json",
+    }],
+  };
+  const releaseKit = {
+    ...kits,
+    kits: [{
+      ...kits.kits[0],
+      artifact_requirements: [{
+        artifact_id: "release-output",
+        kind: "release_retained_regression_output",
+        gate: "gate",
+        artifact_path: "releases/qualification-evidence/2.0.0/self-test.json",
+        path_policy: "repo-relative-required-before-qualification",
+      }],
+    }],
+  };
+  assert(
+    qualificationPromotionErrors([promotedOperator], roadmap, releaseKit, releaseRecords).length === 0,
+    "approved qualification promotion must pass"
+  );
+  assert(
+    qualificationPromotionErrors(
+      [promotedOperator],
+      roadmap,
+      releaseKit,
+      { records: [{ ...releaseRecords.records[0], review_status: "pending_signoff" }] },
+    ).some((error) => error.includes("must be approved")),
+    "qualification promotion without approved release record must fail"
+  );
+  assert(
+    qualificationPromotionErrors(
+      [{ ...promotedOperator, evidence: { qualification: { provenance: [], release_gates: [] } } }],
+      roadmap,
+      releaseKit,
+      releaseRecords,
+    ).some((error) => error.includes("release evidence")),
+    "qualification promotion without retained provenance must fail"
   );
 }
 

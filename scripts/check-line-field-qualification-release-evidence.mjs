@@ -5,6 +5,15 @@ import path from "node:path";
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultInput = "tmp/line-field-qualification-release-evidence.json";
 const requiredCommandIds = new Set(["evidence_check", "solver_baseline"]);
+const requiredPromotedOperatorIds = new Set([
+  "solve.bar_1d",
+  "solve.thermal_bar_1d",
+  "solve.heat_bar_1d",
+  "solve.electrostatic_bar_1d",
+]);
+const expectedReleaseRecordPath = "releases/qualification-records/1.20.0.json";
+const expectedReviewDecisionPath =
+  "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json";
 const requiredTrackedInputs = new Set([
   "evidence/operator-qualification/line-field-closed-form-baseline.json",
   "evidence/operator-qualification/line-field-closed-form-derivation.md",
@@ -44,6 +53,18 @@ function readEvidence(inputPath) {
     fail(`input does not exist: ${relativeInput}`);
   }
   return JSON.parse(fs.readFileSync(absoluteInput, "utf8"));
+}
+
+function readRepoJson(relativePath, context) {
+  const absolutePath = path.resolve(repoRoot, relativePath);
+  const repoRelativePath = path.relative(repoRoot, absolutePath);
+  if (repoRelativePath.startsWith("..") || path.isAbsolute(repoRelativePath)) {
+    fail(`${context}: path must stay inside the repository`);
+  }
+  if (!fs.existsSync(absolutePath)) {
+    fail(`${context}: missing ${relativePath}`);
+  }
+  return JSON.parse(fs.readFileSync(absolutePath, "utf8"));
 }
 
 function assertNoAbsoluteRepoPath(value, context) {
@@ -114,6 +135,75 @@ function validateProvenance(provenance) {
   }
 }
 
+function validatePromotionSummary(summary, evidencePath) {
+  if (!summary || typeof summary !== "object") {
+    fail("promotion_summary: must be present");
+  }
+  if (summary.candidate_id !== "line-field-closed-form") {
+    fail("promotion_summary: candidate_id must be line-field-closed-form");
+  }
+  if (summary.release_version !== "2.0.0") {
+    fail("promotion_summary: release_version must be 2.0.0");
+  }
+  if (summary.approved_coverage_level !== "qualification") {
+    fail("promotion_summary: approved_coverage_level must be qualification");
+  }
+  if (
+    summary.retained_evidence_path !==
+    "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json"
+  ) {
+    fail("promotion_summary: retained_evidence_path must point to the retained moxi 2.0.0 evidence");
+  }
+  if (summary.release_record_path !== expectedReleaseRecordPath) {
+    fail(`promotion_summary: release_record_path must be ${expectedReleaseRecordPath}`);
+  }
+  if (summary.review_decision_path !== expectedReviewDecisionPath) {
+    fail(`promotion_summary: review_decision_path must be ${expectedReviewDecisionPath}`);
+  }
+  if (
+    !Array.isArray(summary.promoted_operator_ids) ||
+    summary.promoted_operator_ids.length !== requiredPromotedOperatorIds.size
+  ) {
+    fail(`promotion_summary: expected ${requiredPromotedOperatorIds.size} promoted operators`);
+  }
+  for (const operatorId of summary.promoted_operator_ids) {
+    if (!requiredPromotedOperatorIds.has(operatorId)) {
+      fail(`promotion_summary: unexpected promoted operator ${operatorId}`);
+    }
+  }
+
+  const releaseRecords = readRepoJson(summary.release_record_path, "promotion_summary.release_record_path");
+  const releaseRecord = releaseRecords.records?.find(
+    (record) => record.candidate_id === summary.candidate_id,
+  );
+  if (!releaseRecord) {
+    fail("promotion_summary: release record is missing line-field-closed-form");
+  }
+  if (releaseRecord.review_status !== "approved") {
+    fail("promotion_summary: release record review_status must be approved");
+  }
+  if (releaseRecord.evidence_path !== summary.retained_evidence_path) {
+    fail("promotion_summary: release record evidence_path must match retained evidence");
+  }
+  if (releaseRecord.review_decision_path !== summary.review_decision_path) {
+    fail("promotion_summary: release record review_decision_path mismatch");
+  }
+
+  const reviewDecision = readRepoJson(summary.review_decision_path, "promotion_summary.review_decision_path");
+  if (reviewDecision.candidate_id !== summary.candidate_id) {
+    fail("promotion_summary: review decision candidate_id mismatch");
+  }
+  if (reviewDecision.release_version !== summary.release_version) {
+    fail("promotion_summary: review decision release_version mismatch");
+  }
+  if (reviewDecision.decision !== "approve_promotion") {
+    fail("promotion_summary: review decision must approve promotion");
+  }
+  if (reviewDecision.evidence_path !== summary.retained_evidence_path) {
+    fail("promotion_summary: review decision evidence_path must match retained evidence");
+  }
+}
+
 function validateEvidence(evidence) {
   if (evidence.schema_version !== "kyuubiki.operator-qualification-release-evidence/v1") {
     fail("unexpected schema_version");
@@ -149,6 +239,7 @@ function validateEvidence(evidence) {
       fail(`missing command ${expected}`);
     }
   }
+  validatePromotionSummary(evidence.promotion_summary, args.input);
   validateProvenance(evidence.provenance);
   assertNoAbsoluteRepoPath(evidence, "evidence");
 }

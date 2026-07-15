@@ -41,15 +41,49 @@
           "config/operator-qualification-evidence-kits.json",
           "schemas/operator-qualification-readiness.schema.json",
           "scripts/build-operator-qualification-readiness.mjs",
-          "scripts/check-operator-qualification-readiness.mjs"
+          "scripts/check-operator-qualification-readiness.mjs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness/operator_trust_summary.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness/review_summary.rs"
         ],
         "required_text": [
           "kyuubiki.operator-qualification-readiness/v1",
           "target_levels",
+          "operator_trust_levels",
+          "operator_trust_level_counts",
+          "release_review_decisions",
           "evidence_phases",
           "release_gate_impacts",
           "primary_blocker",
           "preferred_validation_lane"
+        ]
+      },
+      {
+        "id": "operator-qualification-release-review-gate",
+        "files": [
+          "releases/qualification-records/1.20.0.json",
+          "schemas/operator-qualification-release-records.schema.json",
+          "schemas/operator-qualification-review-decision.schema.json",
+          "schemas/examples.operator-qualification-review-decision.json",
+          "scripts/check-operator-qualification-review-decision.mjs",
+          "scripts/operator-reliability-rules.mjs",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records/review_decision.rs"
+        ],
+        "required_text": [
+          "review_status",
+          "review_gate",
+          "review_decision_path",
+          "kyuubiki.operator-qualification-review-decision/v1",
+          "validate_review_decision_path",
+          "validate_review_status_transition",
+          "qualificationPromotionErrors",
+          "release record must be approved before qualification",
+          "review decision reviewer id and display_name must be non-empty",
+          "approve_promotion",
+          "request_changes",
+          "block_scope",
+          "operator qualification review decisions ok"
         ]
       },
       {

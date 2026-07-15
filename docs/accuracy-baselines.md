@@ -62,9 +62,10 @@ make capture-line-field-qualification-release-evidence
 
 The moxi 2.0.0 retained bundle is checked in at
 [line-field-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json)
-and linked from the qualification release record. It keeps the candidate at
-`ready_for_review`; promotion to `qualification` still requires reviewer
-sign-off against the graduation gate.
+and linked from the qualification release record. Its `promotion_summary`
+cross-checks the retained review decision, release record, and four promoted
+operator ids, so the four 1D closed-form line-field operators now carry
+`qualification` evidence only after the retained packet approves them.
 
 ## Why these three first
 

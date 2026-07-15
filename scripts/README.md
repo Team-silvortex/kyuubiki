@@ -282,13 +282,14 @@ This directory contains host-native operational entry points.
   paths. The retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner capture-line-field-qualification-release-evidence`
   Run the line-field evidence checker and Rust solver baseline, then retain
-  sanitized command status, duration, output, and provenance in a repo-local
-  JSON bundle. The retained `.mjs` script is only a parity reference.
+  sanitized command status, duration, output, provenance, and promotion summary
+  in a repo-local JSON bundle. The retained `.mjs` script is only a parity
+  reference.
 - `kyuubiki-script-runner check-line-field-qualification-release-evidence`
   Validate a retained line-field release evidence bundle. It checks schema
   version, command success, provenance inputs, SHA-256 shape, release-retention
-  flags, and absence of local absolute repository paths. The retained `.mjs`
-  script is only a parity reference.
+  flags, promotion summary links, and absence of local absolute repository
+  paths. The retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-operator-validation --in report.json --profile name`
   Validate a retained operator-validation report without rerunning its
   commands. This is the generic release-evidence checker for profile-backed
@@ -306,10 +307,10 @@ This directory contains host-native operational entry points.
   `--self-test` when changing readiness sorting or action-kind requirements.
   The retained `.mjs` scripts are parity references.
 - `make check-operator-qualification-review-decision`
-  Validate an operator qualification review decision against the release
+  Validate retained operator qualification review decisions against the release
   record, evidence path, review gate, reviewer identity, and allowed decision
-  transition rules. By default it checks the retained beam/frame review
-  decision under `releases/qualification-review-decisions/2.0.0/`.
+  transition rules. By default it checks every decision path declared by the
+  qualification release records; set `IN=<path>` to check one decision.
 - `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.

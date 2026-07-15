@@ -10,6 +10,17 @@ use std::time::Instant;
 const DEFAULT_INPUT: &str = "tmp/line-field-qualification-release-evidence.json";
 const DEFAULT_OUT: &str = "tmp/line-field-qualification-release-evidence.json";
 const REQUIRED_COMMAND_IDS: &[&str] = &["evidence_check", "solver_baseline"];
+const REQUIRED_PROMOTED_OPERATOR_IDS: &[&str] = &[
+    "solve.bar_1d",
+    "solve.thermal_bar_1d",
+    "solve.heat_bar_1d",
+    "solve.electrostatic_bar_1d",
+];
+const RETAINED_EVIDENCE_PATH: &str =
+    "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json";
+const RELEASE_RECORD_PATH: &str = "releases/qualification-records/1.20.0.json";
+const REVIEW_DECISION_PATH: &str =
+    "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json";
 const REQUIRED_TRACKED_INPUTS: &[&str] = &[
     "evidence/operator-qualification/line-field-closed-form-baseline.json",
     "evidence/operator-qualification/line-field-closed-form-derivation.md",
@@ -164,6 +175,15 @@ fn build_release_evidence(root: &Path) -> RunnerResult<Value> {
             "repo_relative_paths_only": true,
             "generated_output_should_not_be_committed_directly": true,
         },
+        "promotion_summary": {
+            "candidate_id": "line-field-closed-form",
+            "release_version": "2.0.0",
+            "approved_coverage_level": "qualification",
+            "retained_evidence_path": RETAINED_EVIDENCE_PATH,
+            "release_record_path": RELEASE_RECORD_PATH,
+            "review_decision_path": REVIEW_DECISION_PATH,
+            "promoted_operator_ids": REQUIRED_PROMOTED_OPERATOR_IDS,
+        },
         "provenance": line_field_provenance::build_provenance(root)?,
         "commands": commands,
         "summary": {
@@ -265,8 +285,114 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
             return Err(format!("missing command {expected}"));
         }
     }
+    validate_promotion_summary(root, evidence.get("promotion_summary").unwrap_or(&Value::Null))?;
     validate_provenance(evidence.get("provenance").unwrap_or(&Value::Null))?;
     assert_no_absolute_repo_path(root, evidence, "evidence")
+}
+
+fn validate_promotion_summary(root: &Path, summary: &Value) -> RunnerResult<()> {
+    if !summary.is_object() {
+        return Err("promotion_summary: must be present".to_string());
+    }
+    require_eq(
+        field(summary, "candidate_id"),
+        "line-field-closed-form",
+        "promotion_summary: candidate_id must be line-field-closed-form",
+    )?;
+    require_eq(
+        field(summary, "release_version"),
+        "2.0.0",
+        "promotion_summary: release_version must be 2.0.0",
+    )?;
+    require_eq(
+        field(summary, "approved_coverage_level"),
+        "qualification",
+        "promotion_summary: approved_coverage_level must be qualification",
+    )?;
+    require_eq(
+        field(summary, "retained_evidence_path"),
+        RETAINED_EVIDENCE_PATH,
+        "promotion_summary: retained_evidence_path must point to the retained moxi 2.0.0 evidence",
+    )?;
+    require_eq(
+        field(summary, "release_record_path"),
+        RELEASE_RECORD_PATH,
+        "promotion_summary: release_record_path mismatch",
+    )?;
+    require_eq(
+        field(summary, "review_decision_path"),
+        REVIEW_DECISION_PATH,
+        "promotion_summary: review_decision_path mismatch",
+    )?;
+
+    let promoted = array(summary, "promoted_operator_ids");
+    if promoted.len() != REQUIRED_PROMOTED_OPERATOR_IDS.len() {
+        return Err(format!(
+            "promotion_summary: expected {} promoted operators",
+            REQUIRED_PROMOTED_OPERATOR_IDS.len()
+        ));
+    }
+    let promoted_ids = promoted
+        .iter()
+        .map(|operator| operator.as_str().unwrap_or_default())
+        .collect::<BTreeSet<_>>();
+    for expected in REQUIRED_PROMOTED_OPERATOR_IDS {
+        if !promoted_ids.contains(expected) {
+            return Err(format!(
+                "promotion_summary: missing promoted operator {expected}"
+            ));
+        }
+    }
+
+    let release_records = read_repo_json(root, field(summary, "release_record_path"))?;
+    let release_record = release_records
+        .get("records")
+        .and_then(Value::as_array)
+        .and_then(|records| {
+            records
+                .iter()
+                .find(|record| field(record, "candidate_id") == field(summary, "candidate_id"))
+        })
+        .ok_or_else(|| {
+            "promotion_summary: release record is missing line-field-closed-form".to_string()
+        })?;
+    require_eq(
+        field(release_record, "review_status"),
+        "approved",
+        "promotion_summary: release record review_status must be approved",
+    )?;
+    require_eq(
+        field(release_record, "evidence_path"),
+        field(summary, "retained_evidence_path"),
+        "promotion_summary: release record evidence_path must match retained evidence",
+    )?;
+    require_eq(
+        field(release_record, "review_decision_path"),
+        field(summary, "review_decision_path"),
+        "promotion_summary: release record review_decision_path mismatch",
+    )?;
+
+    let review_decision = read_repo_json(root, field(summary, "review_decision_path"))?;
+    require_eq(
+        field(&review_decision, "candidate_id"),
+        field(summary, "candidate_id"),
+        "promotion_summary: review decision candidate_id mismatch",
+    )?;
+    require_eq(
+        field(&review_decision, "release_version"),
+        field(summary, "release_version"),
+        "promotion_summary: review decision release_version mismatch",
+    )?;
+    require_eq(
+        field(&review_decision, "decision"),
+        "approve_promotion",
+        "promotion_summary: review decision must approve promotion",
+    )?;
+    require_eq(
+        field(&review_decision, "evidence_path"),
+        field(summary, "retained_evidence_path"),
+        "promotion_summary: review decision evidence_path must match retained evidence",
+    )
 }
 
 fn validate_command(command: &Value) -> RunnerResult<()> {
@@ -406,6 +532,14 @@ fn read_json_path(path: &Path, label: &str) -> RunnerResult<Value> {
     let text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {label}: {error}"))?;
     serde_json::from_str(&text).map_err(|error| format!("{label}: invalid json: {error}"))
+}
+
+fn read_repo_json(root: &Path, relative_path: &str) -> RunnerResult<Value> {
+    let (absolute, normalized) = repo_local_path(root, relative_path, "promotion_summary path")?;
+    if !absolute.exists() {
+        return Err(format!("promotion_summary: missing {normalized}"));
+    }
+    read_json_path(&absolute, &normalized)
 }
 
 fn write_json(path: &Path, value: &Value) -> RunnerResult<()> {

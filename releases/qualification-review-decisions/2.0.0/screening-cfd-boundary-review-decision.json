@@ -1,0 +1,21 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "screening-cfd-boundary",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
+  "review_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence",
+  "decision": "block_scope",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Keep this candidate blocked as review-screening scope until convergence or external-reference evidence is retained.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes"
+  ],
+  "requested_changes": [
+    "add convergence or external-reference evidence before this scope can become a qualification candidate"
+  ],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

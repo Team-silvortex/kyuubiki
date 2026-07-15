@@ -1,0 +1,21 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "thermal-plane-patch",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
+  "review_gate": "mesh and boundary evidence must be linked from the operator reliability entry",
+  "decision": "request_changes",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Keep promotion pending until mesh and boundary evidence links are reviewed from the operator reliability entry.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes"
+  ],
+  "requested_changes": [
+    "record reviewer sign-off for mesh and boundary evidence linkage before setting review_status=approved"
+  ],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

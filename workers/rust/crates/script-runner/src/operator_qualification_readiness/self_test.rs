@@ -1,11 +1,13 @@
-use super::{array, compare_actions, readiness_errors};
+use super::{
+    array, compare_actions, operator_trust_summary::operator_trust_level_counts, readiness_errors,
+};
 use crate::RunnerResult;
 use serde_json::{Value, json};
 use std::cmp::Ordering;
 use std::path::Path;
 
 pub(super) fn run_self_test(root: &Path) -> RunnerResult<()> {
-    let sample = sample_report();
+    let sample = sample_report(root)?;
     if let Some(issue) = readiness_errors(root, &sample, "self-test")?
         .into_iter()
         .next()
@@ -47,8 +49,8 @@ pub(super) fn run_self_test(root: &Path) -> RunnerResult<()> {
     Ok(())
 }
 
-fn sample_report() -> Value {
-    json!({
+fn sample_report(root: &Path) -> RunnerResult<Value> {
+    Ok(json!({
         "schema_version": "kyuubiki.operator-qualification-readiness/v1",
         "version_line": "moxi 2.0.x",
         "generated_at_utc": "2026-01-01T00:00:00.000Z",
@@ -65,6 +67,7 @@ fn sample_report() -> Value {
             "candidates_missing_release_profile": 0,
             "next_action_count": 2,
             "target_levels": { "baseline": 0, "review": 0, "qualification": 1 },
+            "operator_trust_levels": operator_trust_level_counts(root)?,
             "evidence_phases": { "planned": 1, "collecting": 0, "ready_for_review": 0, "blocked": 0 },
             "release_gate_impacts": { "release_blocker": 1, "release_watch": 0, "experimental_only": 0 },
             "release_review_statuses": {
@@ -73,6 +76,12 @@ fn sample_report() -> Value {
                 "approved": 0,
                 "blocked_scope": 0,
                 "rejected": 0
+            },
+            "release_review_decisions": {
+                "required": 0,
+                "declared": 0,
+                "retained": 0,
+                "missing": 0
             }
         },
         "candidates": [{
@@ -140,5 +149,5 @@ fn sample_report() -> Value {
                 "release_gate_impact": "release_watch"
             }
         ]
-    })
+    }))
 }

@@ -158,12 +158,17 @@ candidate with a `release_candidate` validation profile because the executable
 validation lane has not yet been promoted to the same granularity as the
 release qualification record.
 Release-retained artifacts also carry `release_review_status` and
-`release_review_gate` in readiness output. This keeps pending reviewer
-sign-off and scope-blocked screening claims visible without promoting any
-operator trust level prematurely.
+`release_review_gate` in readiness output, plus a retained decision path when
+the release record has one. This keeps pending reviewer sign-off and
+scope-blocked screening claims visible without promoting any operator trust
+level prematurely.
 The readiness summary rolls these into `release_review_statuses`, so release
 owners can see pending sign-off, approved, rejected, missing, and scope-blocked
 release artifacts without scanning every candidate.
+It also reports `release_review_decisions`, which counts required, declared,
+retained, and missing review decision records for release-retained artifacts.
+The same summary includes `operator_trust_levels`, so UI and CI surfaces can
+show the current manifest distribution without reparsing reliability shards.
 `make check-operator-reliability` builds and validates this readiness report
 before checking the release manifest, so the qualification queue stays visible
 without pretending that planning artifacts are qualification evidence.
@@ -314,11 +319,11 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 38 operators
-- `qualification`: 0 operators
+- `review`: 34 operators
+- `qualification`: 4 operators
 
-This is intentionally conservative. The platform has broad executable
-coverage, but most evidence is still regression-oriented rather than
+This remains intentionally conservative. The platform has broad executable
+coverage, and only the 1D closed-form line-field subset has crossed into
 engineering-qualification evidence.
 
 The CFD-facing Stokes operators are still `screening_only`, but the
@@ -332,9 +337,8 @@ now acts as the release-candidate aggregation lane, while
 still need mesh-convergence or external-reference evidence before any stronger
 claim.
 
-The first qualification evidence collection track is now active for
-`line-field-closed-form` and has reached `ready_for_review`. Its versioned
-baseline artifact lives at
+The first qualification evidence collection track, `line-field-closed-form`,
+is now approved for qualification. Its versioned baseline artifact lives at
 `evidence/operator-qualification/line-field-closed-form-baseline.json` and is
 paired with
 `evidence/operator-qualification/line-field-closed-form-derivation.md` plus
@@ -342,16 +346,21 @@ paired with
 checked by `make check-line-field-closed-form-baseline`. This pins the
 closed-form expected values, tolerances, and tolerance scope for `solve.bar_1d`,
 `solve.thermal_bar_1d`, `solve.heat_bar_1d`, and
-`solve.electrostatic_bar_1d`, but it is not a trust-level promotion by itself.
+`solve.electrostatic_bar_1d`; those four operators now carry
+`evidence.qualification` entries in the reliability shards.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
 runs the evidence checker and solver baseline and writes the release-retained
-regression bundle. For the moxi 2.0.0 line, that retained bundle is attached at
+regression bundle. The bundle now includes a `promotion_summary` tying the
+approved review decision, release record, and four promoted operator ids to the
+same retained evidence path. For the moxi 2.0.0 line, that retained bundle is
+attached at
 `releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json`
-and referenced by `releases/qualification-records/1.20.0.json`. The remaining
-blocker is reviewer sign-off against the graduation gate before any manifest
-entry becomes `qualification`.
+and referenced by `releases/qualification-records/1.20.0.json`. The retained
+review decision at
+`releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json`
+approves the promotion against the graduation gate.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
 solid-tetra benchmark template and a solver-level review fixture for a
@@ -421,12 +430,12 @@ The most useful next upgrades are:
 
 - harden selected review operators toward `qualification` with external,
   convergence, or literature-backed evidence
-- turn the `line-field-closed-form` baseline artifact into a complete
-  qualification packet with derivation and provenance notes
+- use the approved `line-field-closed-form` packet as the template for the
+  next small, analytic qualification candidates
 - add mesh, boundary, and material-assumption evidence where review coverage is
   still based on compact screening fixtures
 - expand Stokes-flow screening evidence beyond the second boundary-response
   fixture and screening tolerance policy into convergence or reference-tool
   evidence
-- keep `qualification` empty until external, convergence, or literature
-  evidence exists
+- keep future qualification promotions blocked until external, convergence,
+  literature, or analytic evidence exists

@@ -207,3 +207,57 @@ export function qualificationEvidenceKitErrors(kits, roadmap, manifest) {
   }
   return errors;
 }
+
+export function qualificationPromotionErrors(operators, roadmap, kits, records) {
+  const errors = [];
+  const candidateByOperator = new Map();
+  for (const candidate of roadmap.candidates ?? []) {
+    for (const operatorId of candidate.operator_ids ?? []) {
+      candidateByOperator.set(operatorId, candidate);
+    }
+  }
+  const kitByCandidate = new Map((kits.kits ?? []).map((kit) => [kit.candidate_id, kit]));
+  const recordByCandidate = new Map((records.records ?? []).map((record) => [record.candidate_id, record]));
+  for (const operator of operators ?? []) {
+    if (operator.coverage_level !== "qualification") continue;
+    const context = `qualification promotion ${operator.operator_id}`;
+    const candidate = candidateByOperator.get(operator.operator_id);
+    if (!candidate) {
+      errors.push(`${context}: operator is not attached to a qualification roadmap candidate`);
+      continue;
+    }
+    const kit = kitByCandidate.get(candidate.candidate_id);
+    const record = recordByCandidate.get(candidate.candidate_id);
+    if (!kit) {
+      errors.push(`${context}: candidate ${candidate.candidate_id} has no evidence kit`);
+      continue;
+    }
+    if (!record) {
+      errors.push(`${context}: candidate ${candidate.candidate_id} has no release record`);
+      continue;
+    }
+    if (candidate.target_level !== "qualification") {
+      errors.push(`${context}: roadmap candidate target_level must be qualification`);
+    }
+    if (record.review_status !== "approved") {
+      errors.push(`${context}: release record must be approved before qualification`);
+    }
+    const qualification = operator.evidence?.qualification;
+    const releaseRequirement = (kit.artifact_requirements ?? []).find(
+      (requirement) => requirement.kind === "release_retained_regression_output"
+    );
+    if (releaseRequirement && record.evidence_path !== releaseRequirement.artifact_path) {
+      errors.push(`${context}: release record evidence_path must match release evidence kit`);
+    }
+    if (!qualification?.provenance?.includes(record.evidence_path)) {
+      errors.push(`${context}: qualification provenance must include release evidence`);
+    }
+    if (!qualification?.provenance?.includes(record.review_decision_path)) {
+      errors.push(`${context}: qualification provenance must include review decision`);
+    }
+    if (!qualification?.release_gates?.includes("releases/qualification-records/1.20.0.json")) {
+      errors.push(`${context}: qualification release_gates must include release records`);
+    }
+  }
+  return errors;
+}

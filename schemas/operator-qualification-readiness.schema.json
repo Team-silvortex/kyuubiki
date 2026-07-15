@@ -31,9 +31,11 @@
         "candidates_missing_release_profile",
         "next_action_count",
         "target_levels",
+        "operator_trust_levels",
         "evidence_phases",
         "release_gate_impacts",
-        "release_review_statuses"
+        "release_review_statuses",
+        "release_review_decisions"
       ],
       "additionalProperties": false,
       "properties": {
@@ -49,9 +51,11 @@
         "candidates_missing_release_profile": { "type": "integer", "minimum": 0 },
         "next_action_count": { "type": "integer", "minimum": 0 },
         "target_levels": { "$ref": "#/$defs/targetLevelCounts" },
+        "operator_trust_levels": { "$ref": "#/$defs/operatorTrustLevelCounts" },
         "evidence_phases": { "$ref": "#/$defs/evidencePhaseCounts" },
         "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" },
-        "release_review_statuses": { "$ref": "#/$defs/releaseReviewStatusCounts" }
+        "release_review_statuses": { "$ref": "#/$defs/releaseReviewStatusCounts" },
+        "release_review_decisions": { "$ref": "#/$defs/releaseReviewDecisionCounts" }
       }
     },
     "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
@@ -63,6 +67,17 @@
       "required": ["baseline", "review", "qualification"],
       "additionalProperties": false,
       "properties": {
+        "baseline": { "type": "integer", "minimum": 0 },
+        "review": { "type": "integer", "minimum": 0 },
+        "qualification": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "operatorTrustLevelCounts": {
+      "type": "object",
+      "required": ["smoke", "baseline", "review", "qualification"],
+      "additionalProperties": false,
+      "properties": {
+        "smoke": { "type": "integer", "minimum": 0 },
         "baseline": { "type": "integer", "minimum": 0 },
         "review": { "type": "integer", "minimum": 0 },
         "qualification": { "type": "integer", "minimum": 0 }
@@ -99,6 +114,17 @@
         "approved": { "type": "integer", "minimum": 0 },
         "blocked_scope": { "type": "integer", "minimum": 0 },
         "rejected": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "releaseReviewDecisionCounts": {
+      "type": "object",
+      "required": ["required", "declared", "retained", "missing"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "integer", "minimum": 0 },
+        "declared": { "type": "integer", "minimum": 0 },
+        "retained": { "type": "integer", "minimum": 0 },
+        "missing": { "type": "integer", "minimum": 0 }
       }
     },
     "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "ready_for_review", "broken", "blocked"] },

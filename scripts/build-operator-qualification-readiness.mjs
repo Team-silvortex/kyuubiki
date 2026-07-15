@@ -7,6 +7,7 @@ const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultOut = "tmp/operator-qualification-readiness.json";
 const validationProfilesPath = "config/operator-validation-profiles.json";
 const releaseReviewStatuses = ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"];
+const operatorTrustLevels = ["smoke", "baseline", "review", "qualification"];
 
 function fail(message) {
   console.error(`operator qualification readiness build failed: ${message}`);
@@ -71,6 +72,15 @@ function validationProfilesByCandidate() {
     );
   }
   return grouped;
+}
+
+function operatorTrustLevelCounts() {
+  const manifest = readJson(operatorReliabilityPaths.manifest);
+  const operators = (manifest.shards ?? []).flatMap((shardPath) => readJson(shardPath).operators ?? []);
+  return Object.fromEntries(operatorTrustLevels.map((level) => [
+    level,
+    operators.filter((operator) => operator.coverage_level === level).length,
+  ]));
 }
 
 function artifactState(requirement, releaseRecord) {
@@ -184,13 +194,23 @@ function actionKindForArtifact(artifact) {
   return "collect_artifact";
 }
 
+function hasApprovedReleaseReview(candidate) {
+  return (candidate.artifacts ?? []).some((artifact) =>
+    artifact.kind === "release_retained_regression_output"
+    && artifact.release_review_status === "approved"
+  );
+}
+
 function buildNextActions(candidates) {
   return candidates
-    .map((candidate) => {
+    .flatMap((candidate) => {
       const artifact = firstActionableArtifact(candidate);
+      if (!artifact && hasApprovedReleaseReview(candidate)) {
+        return [];
+      }
       const validationProfiles = candidate.validation_profiles ?? [];
       const releaseProfiles = validationProfiles.filter((profile) => profile.profile_role === "release_candidate");
-      return {
+      return [{
         candidate_id: candidate.candidate_id,
         priority: candidate.priority,
         target_level: candidate.target_level,
@@ -209,7 +229,7 @@ function buildNextActions(candidates) {
         release_candidate_profile_count: releaseProfiles.length,
         preferred_validation_lane: candidate.preferred_validation_lane,
         release_gate_impact: candidate.release_gate_impact,
-      };
+      }];
     })
     .filter((action) => action.artifact_id !== null || action.readiness !== "collecting_with_entries")
     .sort((left, right) =>
@@ -234,6 +254,22 @@ function countReleaseReviewStatuses(candidates) {
     status,
     releaseArtifacts.filter((artifact) => (artifact.release_review_status ?? "missing") === status).length,
   ]));
+}
+
+function countReleaseReviewDecisions(candidates) {
+  const releaseArtifacts = candidates.flatMap((candidate) =>
+    candidate.artifacts.filter((artifact) => artifact.kind === "release_retained_regression_output")
+  );
+  const withDecisionPath = releaseArtifacts.filter((artifact) => artifact.release_review_decision_path);
+  const retained = withDecisionPath.filter((artifact) =>
+    fs.existsSync(path.join(repoRoot, artifact.release_review_decision_path))
+  );
+  return {
+    required: releaseArtifacts.length,
+    declared: withDecisionPath.length,
+    retained: retained.length,
+    missing: releaseArtifacts.length - retained.length,
+  };
 }
 
 function buildReport() {
@@ -276,6 +312,7 @@ function buildReport() {
       ).length,
       next_action_count: nextActions.length,
       target_levels: countBy(candidates, "target_level", ["baseline", "review", "qualification"]),
+      operator_trust_levels: operatorTrustLevelCounts(),
       evidence_phases: countBy(candidates, "evidence_phase", ["planned", "collecting", "ready_for_review", "blocked"]),
       release_gate_impacts: countBy(candidates, "release_gate_impact", [
         "release_blocker",
@@ -283,6 +320,7 @@ function buildReport() {
         "experimental_only",
       ]),
       release_review_statuses: countReleaseReviewStatuses(candidates),
+      release_review_decisions: countReleaseReviewDecisions(candidates),
     },
     next_actions: nextActions,
     candidates,

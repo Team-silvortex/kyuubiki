@@ -20,11 +20,13 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const args = { input: defaultInput };
+  const args = { input: defaultInput, all: false };
   for (let index = 2; index < argv.length; index += 1) {
     if (argv[index] === "--in") {
       args.input = argv[index + 1];
       index += 1;
+    } else if (argv[index] === "--all") {
+      args.all = true;
     } else {
       fail(`unknown argument ${argv[index]}`);
     }
@@ -59,6 +61,22 @@ function checkRequiredFields(decision) {
   for (const field of schema.required ?? []) {
     if (!(field in decision)) fail(`missing required field ${field}`);
   }
+}
+
+function checkAllDecisions() {
+  const records = readJson(operatorReliabilityPaths.releaseRecords);
+  const decisionPaths = (records.records ?? []).map((record) => {
+    requireString(record.review_decision_path, `${record.candidate_id}.review_decision_path`);
+    return record.review_decision_path;
+  });
+  const uniquePaths = [...new Set(decisionPaths)];
+  if (uniquePaths.length !== decisionPaths.length) {
+    fail("release records must not reuse review_decision_path values");
+  }
+  for (const decisionPath of uniquePaths) {
+    checkDecision(readJson(decisionPath), decisionPath);
+  }
+  console.log(`operator qualification review decisions ok: ${uniquePaths.length} decision(s)`);
 }
 
 function checkDecision(decision, inputPath) {
@@ -99,11 +117,15 @@ function checkAgainstReleaseRecord(decision, inputPath) {
     fail("approve_promotion cannot override blocked_scope release record");
   }
   const expectedStatus = decisionToReviewStatus[decision.decision];
-  if (decision.decision !== "request_changes" && record.review_status !== expectedStatus) {
+  if (record.review_status !== expectedStatus) {
     fail(`decision ${decision.decision} requires release record review_status=${expectedStatus}`);
   }
 }
 
 const args = parseArgs(process.argv);
-checkDecision(readJson(args.input), args.input);
-console.log(`operator qualification review decision ok: ${args.input}`);
+if (args.all) {
+  checkAllDecisions();
+} else {
+  checkDecision(readJson(args.input), args.input);
+  console.log(`operator qualification review decision ok: ${args.input}`);
+}

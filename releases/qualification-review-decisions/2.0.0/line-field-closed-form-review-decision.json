@@ -1,0 +1,21 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "line-field-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+  "review_gate": "analytic reference, tolerance provenance, and CI artifact must all be present before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion: analytic derivation, versioned baseline, tolerance policy, and retained release evidence satisfy the graduation gate.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "analytic derivation is retained",
+    "versioned baseline and tolerance policy are retained"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

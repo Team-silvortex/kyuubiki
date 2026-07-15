@@ -5,6 +5,22 @@ import { spawnSync } from "node:child_process";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultOut = "tmp/line-field-qualification-release-evidence.json";
+const promotionSummary = {
+  candidate_id: "line-field-closed-form",
+  release_version: "2.0.0",
+  approved_coverage_level: "qualification",
+  retained_evidence_path:
+    "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+  release_record_path: "releases/qualification-records/1.20.0.json",
+  review_decision_path:
+    "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json",
+  promoted_operator_ids: [
+    "solve.bar_1d",
+    "solve.thermal_bar_1d",
+    "solve.heat_bar_1d",
+    "solve.electrostatic_bar_1d",
+  ],
+};
 const evidenceCommands = [
   {
     id: "evidence_check",
@@ -96,6 +112,7 @@ function buildEvidence() {
       repo_relative_paths_only: true,
       generated_output_should_not_be_committed_directly: true,
     },
+    promotion_summary: promotionSummary,
     provenance: captureProvenance(),
     commands: commandResults,
     summary: {

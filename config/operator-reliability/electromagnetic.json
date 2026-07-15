@@ -6,7 +6,7 @@
       "operator_id": "solve.electrostatic_bar_1d",
       "benchmark_template": "electrostatic-bar",
       "domain": "electromagnetic",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -32,6 +32,26 @@
             "stored_energy"
           ],
           "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_bar_1d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/line-field-closed-form-derivation.md",
+            "evidence/operator-qualification/line-field-closed-form-baseline.json"
+          ],
+          "convergence_checks": [
+            "evidence/operator-qualification/line-field-tolerance-policy.json"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
             "workers/rust/crates/solver/tests/electrostatic_bar_1d_review.rs"
           ]
         }

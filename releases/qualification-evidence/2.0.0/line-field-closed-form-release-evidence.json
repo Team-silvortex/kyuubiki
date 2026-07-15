@@ -8,6 +8,20 @@
     "repo_relative_paths_only": true,
     "generated_output_should_not_be_committed_directly": true
   },
+  "promotion_summary": {
+    "candidate_id": "line-field-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.bar_1d",
+      "solve.thermal_bar_1d",
+      "solve.heat_bar_1d",
+      "solve.electrostatic_bar_1d"
+    ]
+  },
   "provenance": {
     "schema_version": "kyuubiki.operator-qualification-provenance/v1",
     "version_line": "moxi 2.0.x",

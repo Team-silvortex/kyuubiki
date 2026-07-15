@@ -10,6 +10,7 @@ import {
   isBelowMinimumCoverageLevel,
   qualificationEvidenceErrors,
   qualificationEvidenceKitErrors,
+  qualificationPromotionErrors,
   qualificationRoadmapErrors,
 } from "./operator-reliability-rules.mjs";
 
@@ -306,6 +307,7 @@ function validateQualificationEvidenceKits(manifest, roadmap) {
     }
   }
   validateQualificationReleaseRecords(kits, roadmap);
+  return kits;
 }
 
 function validateQualificationReleaseRecords(kits, roadmap) {
@@ -340,6 +342,7 @@ function validateQualificationReleaseRecords(kits, roadmap) {
       fail(`qualification release records: ${record.candidate_id} check_command must match evidence kit`);
     }
   }
+  return records;
 }
 
 function validateQualificationRoadmap(manifest, seenOperators, operatorLevels) {
@@ -349,7 +352,9 @@ function validateQualificationRoadmap(manifest, seenOperators, operatorLevels) {
   if (errors.length > 0) {
     fail(`qualification roadmap: ${errors[0]}`);
   }
-  validateQualificationEvidenceKits(manifest, roadmap);
+  const kits = validateQualificationEvidenceKits(manifest, roadmap);
+  const records = readJson(operatorReliabilityPaths.releaseRecords);
+  return { roadmap, kits, records };
 }
 
 function validate() {
@@ -437,7 +442,16 @@ function validate() {
   if (missing.length > 0) {
     fail(`physics-coverage templates missing from manifest: ${missing.join(", ")}`);
   }
-  validateQualificationRoadmap(manifest, seenOperators, operatorLevels);
+  const qualificationContracts = validateQualificationRoadmap(manifest, seenOperators, operatorLevels);
+  const promotionErrors = qualificationPromotionErrors(
+    manifest.operators,
+    qualificationContracts.roadmap,
+    qualificationContracts.kits,
+    qualificationContracts.records,
+  );
+  if (promotionErrors.length > 0) {
+    fail(promotionErrors[0]);
+  }
 
   console.log(
     `operator reliability manifest ok: ${manifest.operators.length} operators, ` +

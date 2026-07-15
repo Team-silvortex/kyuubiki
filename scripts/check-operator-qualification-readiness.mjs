@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { operatorReliabilityPaths } from "./operator-reliability-contracts.mjs";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultInput = "tmp/operator-qualification-readiness.json";
@@ -29,6 +30,7 @@ const targetLevels = ["baseline", "review", "qualification"];
 const evidencePhases = ["planned", "collecting", "ready_for_review", "blocked"];
 const releaseGateImpacts = ["release_blocker", "release_watch", "experimental_only"];
 const releaseReviewStatuses = ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"];
+const operatorTrustLevels = ["smoke", "baseline", "review", "qualification"];
 
 function fail(message) {
   console.error(`operator qualification readiness check failed: ${message}`);
@@ -134,6 +136,35 @@ function countReleaseReviewStatuses(candidates) {
   ]));
 }
 
+function countReleaseReviewDecisions(candidates) {
+  const releaseArtifacts = candidates.flatMap((candidate) =>
+    (candidate.artifacts ?? []).filter((artifact) => artifact.kind === "release_retained_regression_output")
+  );
+  const withDecisionPath = releaseArtifacts.filter((artifact) => artifact.release_review_decision_path);
+  const retained = withDecisionPath.filter((artifact) =>
+    fs.existsSync(path.join(repoRoot, artifact.release_review_decision_path))
+  );
+  return {
+    required: releaseArtifacts.length,
+    declared: withDecisionPath.length,
+    retained: retained.length,
+    missing: releaseArtifacts.length - retained.length,
+  };
+}
+
+function readJson(relativePath) {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
+}
+
+function operatorTrustLevelCounts() {
+  const manifest = readJson(operatorReliabilityPaths.manifest);
+  const operators = (manifest.shards ?? []).flatMap((shardPath) => readJson(shardPath).operators ?? []);
+  return Object.fromEntries(operatorTrustLevels.map((level) => [
+    level,
+    operators.filter((operator) => operator.coverage_level === level).length,
+  ]));
+}
+
 function countMapErrors(actual, expected, field, context) {
   const errors = [];
   if (!actual || typeof actual !== "object" || Array.isArray(actual)) {
@@ -193,9 +224,11 @@ function readinessErrors(report, relativeInput) {
   if (report.summary?.component_profiles !== validationProfileCount - releaseCandidateProfiles) errors.push(`${relativeInput}: summary.component_profiles is stale`);
   if (report.summary?.candidates_missing_release_profile !== missingReleaseProfiles) errors.push(`${relativeInput}: summary.candidates_missing_release_profile is stale`);
   errors.push(...countMapErrors(report.summary?.target_levels, countBy(report.candidates, "target_level", targetLevels), "target_levels", relativeInput));
+  errors.push(...countMapErrors(report.summary?.operator_trust_levels, operatorTrustLevelCounts(), "operator_trust_levels", relativeInput));
   errors.push(...countMapErrors(report.summary?.evidence_phases, countBy(report.candidates, "evidence_phase", evidencePhases), "evidence_phases", relativeInput));
   errors.push(...countMapErrors(report.summary?.release_gate_impacts, countBy(report.candidates, "release_gate_impact", releaseGateImpacts), "release_gate_impacts", relativeInput));
   errors.push(...countMapErrors(report.summary?.release_review_statuses, countReleaseReviewStatuses(report.candidates), "release_review_statuses", relativeInput));
+  errors.push(...countMapErrors(report.summary?.release_review_decisions, countReleaseReviewDecisions(report.candidates), "release_review_decisions", relativeInput));
   report.next_actions.forEach((action, index) => {
     errors.push(...actionErrors(action, index));
   });
@@ -233,9 +266,11 @@ if (args.selfTest) {
       candidates_missing_release_profile: 0,
       next_action_count: 2,
       target_levels: { baseline: 0, review: 0, qualification: 1 },
+      operator_trust_levels: operatorTrustLevelCounts(),
       evidence_phases: { planned: 1, collecting: 0, ready_for_review: 0, blocked: 0 },
       release_gate_impacts: { release_blocker: 1, release_watch: 0, experimental_only: 0 },
       release_review_statuses: { missing: 0, pending_signoff: 0, approved: 0, blocked_scope: 0, rejected: 0 },
+      release_review_decisions: { required: 0, declared: 0, retained: 0, missing: 0 },
     },
     candidates: [{
       candidate_id: "sample",
