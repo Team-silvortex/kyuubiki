@@ -19,6 +19,7 @@ const SDK_README_PATHS: &[&str] = &[
     "sdks/elixir/README.md",
 ];
 const PLAN_SCHEMA_VERSION: &str = "kyuubiki.material-study-execution-plan/v1";
+const MATERIAL_CARD_SCHEMA_VERSION: &str = "kyuubiki.material-card/v1";
 
 pub(crate) fn run_check_material_study_execution_plan_contract(
     root: &Path,
@@ -76,6 +77,9 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
     }
     for field in [
         "study_id",
+        "material_card_contract_required",
+        "material_card_schema_version",
+        "material_card_ref_count",
         "step_count",
         "solve_step_count",
         "candidate_count",
@@ -89,6 +93,15 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
+    }
+    if schema
+        .pointer("/properties/material_card_schema_version/const")
+        .and_then(Value::as_str)
+        != Some(MATERIAL_CARD_SCHEMA_VERSION)
+    {
+        issues.push(format!(
+            "{SCHEMA_PATH}: material_card_schema_version const must be {MATERIAL_CARD_SCHEMA_VERSION}"
+        ));
     }
     if schema
         .pointer("/$defs/workflowStep/properties/action/type")
@@ -108,6 +121,20 @@ fn check_example(example: &Value, issues: &mut Vec<String>) {
         ));
     }
     require_string(example.get("study_id"), "study_id", EXAMPLE_PATH, issues);
+    if example
+        .get("material_card_contract_required")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: material_card_contract_required must be true"
+        ));
+    }
+    if field(example, "material_card_schema_version") != MATERIAL_CARD_SCHEMA_VERSION {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: material_card_schema_version must be {MATERIAL_CARD_SCHEMA_VERSION}"
+        ));
+    }
     let steps = array_field(example, "steps");
     if steps.is_empty() {
         issues.push(format!("{EXAMPLE_PATH}: steps must be a non-empty array"));
@@ -136,6 +163,15 @@ fn check_example(example: &Value, issues: &mut Vec<String>) {
     if example.get("candidate_count").and_then(Value::as_u64) != Some(candidate_ids.len() as u64) {
         issues.push(format!(
             "{EXAMPLE_PATH}: candidate_count must match candidate_ids length"
+        ));
+    }
+    if example
+        .get("material_card_ref_count")
+        .and_then(Value::as_u64)
+        != Some(candidate_ids.len() as u64)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: material_card_ref_count must match candidate_ids length"
         ));
     }
     for (index, step) in steps.iter().enumerate() {

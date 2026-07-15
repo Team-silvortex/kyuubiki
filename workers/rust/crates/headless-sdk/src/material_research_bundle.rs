@@ -49,6 +49,8 @@ pub struct MaterialResearchBundleReproducibility {
 pub struct MaterialResearchBundleSummary {
     pub winner_candidate_id: String,
     pub reliability_decision: String,
+    pub material_card_ref_count: usize,
+    pub material_card_refs: Vec<MaterialResearchBundleMaterialCardRef>,
     pub next_round_decision: String,
     #[serde(default)]
     pub runnable_next_step_count: Option<usize>,
@@ -59,6 +61,18 @@ pub struct MaterialResearchBundleSummary {
     pub chain_convergence_state: Option<String>,
     #[serde(default)]
     pub chain_round_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialResearchBundleMaterialCardRef {
+    pub material_card_id: String,
+    pub schema_version: String,
+    pub candidate_id: String,
+    pub confidence: String,
+    pub unit_system: String,
+    pub parameter_scope: String,
+    #[serde(default)]
+    pub source: String,
 }
 
 pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Result<(), String> {
@@ -106,6 +120,7 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
         &bundle.summary.reliability_decision,
         "summary.reliability_decision",
     )?;
+    validate_material_card_refs(&bundle.summary)?;
     require_non_empty(
         &bundle.summary.next_round_decision,
         "summary.next_round_decision",
@@ -114,6 +129,37 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
         &bundle.summary.chain_stop_reason,
         "summary.chain_stop_reason",
     )?;
+    Ok(())
+}
+
+fn validate_material_card_refs(summary: &MaterialResearchBundleSummary) -> Result<(), String> {
+    if summary.material_card_ref_count == 0 {
+        return Err("summary.material_card_ref_count must be at least 1".to_string());
+    }
+    if summary.material_card_refs.len() != summary.material_card_ref_count {
+        return Err(
+            "summary.material_card_refs length must match material_card_ref_count".to_string(),
+        );
+    }
+    for (index, reference) in summary.material_card_refs.iter().enumerate() {
+        let label = format!("summary.material_card_refs[{index}]");
+        require_non_empty(
+            &reference.material_card_id,
+            &format!("{label}.material_card_id"),
+        )?;
+        require_equal(
+            &reference.schema_version,
+            "kyuubiki.material-card/v1",
+            &format!("{label}.schema_version"),
+        )?;
+        require_non_empty(&reference.candidate_id, &format!("{label}.candidate_id"))?;
+        require_non_empty(&reference.confidence, &format!("{label}.confidence"))?;
+        require_non_empty(&reference.unit_system, &format!("{label}.unit_system"))?;
+        require_non_empty(
+            &reference.parameter_scope,
+            &format!("{label}.parameter_scope"),
+        )?;
+    }
     Ok(())
 }
 

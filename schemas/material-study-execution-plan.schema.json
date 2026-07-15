@@ -7,6 +7,9 @@
   "required": [
     "schema_version",
     "study_id",
+    "material_card_contract_required",
+    "material_card_schema_version",
+    "material_card_ref_count",
     "step_count",
     "solve_step_count",
     "candidate_count",
@@ -23,6 +26,16 @@
     "study_id": {
       "type": "string",
       "minLength": 1
+    },
+    "material_card_contract_required": {
+      "type": "boolean"
+    },
+    "material_card_schema_version": {
+      "const": "kyuubiki.material-card/v1"
+    },
+    "material_card_ref_count": {
+      "type": "integer",
+      "minimum": 1
     },
     "step_count": {
       "type": "integer",

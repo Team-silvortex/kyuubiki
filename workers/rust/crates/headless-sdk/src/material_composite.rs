@@ -1,3 +1,4 @@
+use crate::material_card_refs::built_in_material_card_ref;
 use crate::material_composite_candidates::{CompositePanelCandidate, composite_panel_candidates};
 use crate::material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, assess_composite_interfaces,
@@ -7,7 +8,7 @@ use crate::material_composite_models::{
     composite_research_metadata, electrostatic_model, heat_model, thermal_model,
 };
 use crate::{
-    HeadlessWorkflowStep, MaterialEvidenceRef, MaterialModelAssumption,
+    HeadlessWorkflowStep, MaterialCardReference, MaterialEvidenceRef, MaterialModelAssumption,
     MaterialOptimizationProfile, MaterialOptimizationTerm, MaterialQualityGate,
     MaterialReliabilityEnvelope, MaterialResearchMetricSpec, material_evidence_ref,
     material_model_assumption, material_optimization_constraint, material_optimization_profile,
@@ -44,6 +45,7 @@ pub struct CompositePanelReport {
     pub optimization: MaterialOptimizationProfile,
     pub reliability: MaterialReliabilityEnvelope,
     pub metric_specs: Vec<MaterialResearchMetricSpec>,
+    pub material_card_refs: Vec<MaterialCardReference>,
     pub candidates: Vec<CompositePanelCandidateReport>,
     pub winner_candidate_id: Option<String>,
     pub warnings: Vec<String>,
@@ -167,10 +169,25 @@ pub fn build_composite_panel_report(
         optimization,
         reliability: composite_reliability_envelope(&rows),
         metric_specs: composite_panel_metric_specs(),
+        material_card_refs: composite_material_card_refs(),
         winner_candidate_id: rows.first().map(|row| row.candidate_id.clone()),
         candidates: rows,
         warnings,
     })
+}
+
+fn composite_material_card_refs() -> Vec<MaterialCardReference> {
+    composite_panel_candidates()
+        .iter()
+        .map(|candidate| {
+            built_in_material_card_ref(
+                candidate.id,
+                composite_material_card_confidence(candidate),
+                "room-temperature scalar composite stack screening values",
+                "kyuubiki built-in composite thermo-electric panel fixture",
+            )
+        })
+        .collect()
 }
 
 fn composite_candidate_report(
@@ -522,4 +539,11 @@ fn value_range(values: &[f64]) -> (f64, f64) {
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), value| {
             (min.min(*value), max.max(*value))
         })
+}
+
+fn composite_material_card_confidence(candidate: &CompositePanelCandidate) -> &'static str {
+    match candidate.id {
+        "copper_polyimide_aluminum" | "aluminum_alumina_aluminum" => "medium",
+        _ => "low",
+    }
 }

@@ -10,6 +10,7 @@ use kyuubiki_solver::{
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
 };
+use crate::runner_hotspot::summarize_hotspot;
 use crate::runner_metrics::apply_metrics;
 use crate::runner_preconditioner::{
     effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
@@ -550,6 +551,8 @@ pub(crate) fn run_case_with_preconditioner(
     } else {
         durations.iter().copied().sum::<f64>() / durations.len() as f64
     };
+    let median_ms = percentile(&sorted, 0.5);
+    let hotspot = summarize_hotspot(&memory_stages, median_ms);
 
     BenchmarkResult {
         id: case.id.clone(),
@@ -558,7 +561,7 @@ pub(crate) fn run_case_with_preconditioner(
         error,
         repeat,
         min_ms: if min_ms.is_finite() { min_ms } else { 0.0 },
-        median_ms: percentile(&sorted, 0.5),
+        median_ms,
         mean_ms,
         p95_ms: percentile(&sorted, 0.95),
         max_ms,
@@ -571,6 +574,10 @@ pub(crate) fn run_case_with_preconditioner(
         solver_matrix_non_zero_count,
         solver_residual_norm,
         solver_preconditioner: solver_preconditioner_name,
+        hotspot_label: hotspot.as_ref().map(|summary| summary.label.clone()),
+        hotspot_elapsed_ms: hotspot.as_ref().map(|summary| summary.elapsed_ms),
+        hotspot_share_pct: hotspot.as_ref().map(|summary| summary.share_pct),
+        hotspot_hint: hotspot.map(|summary| summary.hint),
         max_displacement,
         max_stress,
     }

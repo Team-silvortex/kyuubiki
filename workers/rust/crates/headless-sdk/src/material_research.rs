@@ -38,6 +38,17 @@ pub struct MaterialResearchCandidateReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MaterialCardReference {
+    pub material_card_id: String,
+    pub schema_version: String,
+    pub candidate_id: String,
+    pub confidence: String,
+    pub unit_system: String,
+    pub parameter_scope: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialResearchReport {
     pub schema_version: String,
     pub study: String,
@@ -45,6 +56,7 @@ pub struct MaterialResearchReport {
     pub optimization: MaterialOptimizationProfile,
     pub reliability: MaterialReliabilityEnvelope,
     pub metric_specs: Vec<MaterialResearchMetricSpec>,
+    pub material_card_refs: Vec<MaterialCardReference>,
     pub candidates: Vec<MaterialResearchCandidateReport>,
     pub winner_candidate_id: Option<String>,
     pub warnings: Vec<String>,
@@ -178,6 +190,7 @@ pub fn build_heat_spreader_screening_report_with_optimization(
         optimization,
         reliability: build_heat_spreader_reliability_envelope(&rows),
         metric_specs: heat_spreader_screening_metric_specs(),
+        material_card_refs: heat_spreader_material_card_refs(),
         winner_candidate_id: rows.first().map(|row| row.candidate_id.clone()),
         candidates: rows,
         warnings,
@@ -198,6 +211,25 @@ fn build_heat_spreader_research_metadata(candidate: &MaterialResearchCandidate) 
         "parameter_scope": "room-temperature scalar conductivity and density screening values",
         "note": candidate.note,
     })
+}
+
+fn heat_spreader_material_card_refs() -> Vec<MaterialCardReference> {
+    heat_spreader_screening_candidates()
+        .iter()
+        .map(material_card_ref)
+        .collect()
+}
+
+fn material_card_ref(candidate: &MaterialResearchCandidate) -> MaterialCardReference {
+    MaterialCardReference {
+        material_card_id: material_card_id(candidate),
+        schema_version: "kyuubiki.material-card/v1".to_string(),
+        candidate_id: candidate.id.to_string(),
+        confidence: material_card_confidence(candidate).to_string(),
+        unit_system: "si".to_string(),
+        parameter_scope: "room-temperature scalar screening values".to_string(),
+        source: "kyuubiki built-in heat-spreader screening fixture".to_string(),
+    }
 }
 
 fn heat_spreader_quad_model(candidate: &MaterialResearchCandidate) -> Value {

@@ -29,6 +29,7 @@ pub struct MaterialExplorationRun {
     pub study: String,
     pub template_id: String,
     pub candidate_count: usize,
+    pub material_card_refs: Vec<Value>,
     pub result_payloads: Vec<Value>,
     pub report: Value,
     pub next_round: MaterialExplorationNextRoundPlan,
@@ -52,6 +53,7 @@ pub struct MaterialExplorationNextRoundExecutionPlan {
     pub iteration: usize,
     pub decision: String,
     pub focus_candidate_ids: Vec<String>,
+    pub material_card_refs: Vec<Value>,
     pub actions: Vec<String>,
     pub runnable_step_count: usize,
     pub steps: Vec<HeadlessWorkflowStep>,
@@ -94,6 +96,7 @@ pub fn build_material_exploration_run_for_iteration(
     let description = describe_material_study(study)
         .ok_or_else(|| format!("unsupported material study: {study}"))?;
     let report = build_material_report(&description.id, &result_payloads)?;
+    let material_card_refs = material_card_refs_from_report(&report);
     let next_round = build_material_exploration_next_round_plan(&report, iteration);
     Ok(MaterialExplorationRun {
         schema_version: MATERIAL_EXPLORATION_SCHEMA_VERSION.to_string(),
@@ -102,6 +105,7 @@ pub fn build_material_exploration_run_for_iteration(
         study: description.id,
         template_id: description.template_id,
         candidate_count: result_payloads.len(),
+        material_card_refs,
         result_payloads,
         report,
         next_round,
@@ -212,6 +216,7 @@ pub fn build_material_exploration_next_round_execution_plan(
         .get("report")
         .cloned()
         .unwrap_or_else(|| Value::Object(Default::default()));
+    let material_card_refs = material_card_refs_from_report(&report);
     let steps = match decision.as_str() {
         "expand_around_winner" => material_exploration_steps(study)?,
         "repair_or_rerun" | "repair_validation" | "mitigate_design_risk" => {
@@ -246,6 +251,7 @@ pub fn build_material_exploration_next_round_execution_plan(
         iteration,
         decision: decision.clone(),
         focus_candidate_ids,
+        material_card_refs,
         actions,
         runnable_step_count,
         steps,
@@ -256,6 +262,14 @@ pub fn build_material_exploration_next_round_execution_plan(
         draft_execution_batches,
         notes: execution_plan_notes(&decision),
     })
+}
+
+fn material_card_refs_from_report(report: &Value) -> Vec<Value> {
+    report
+        .get("material_card_refs")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
 }
 
 fn material_exploration_steps_by_id(study_id: &str) -> Result<Vec<HeadlessWorkflowStep>, String> {

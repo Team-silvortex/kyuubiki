@@ -384,6 +384,9 @@ Use these entrypoints:
   Execute a narrowed 500k plan sequentially. Each probe gets an isolated
   `OUTPUT_SLUG`, so retained `summary.json` files can be indexed without
   per-case overwrites.
+- `PROFILE=1m MATRIX=thermal-structural CASE=thermal-bar-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  Run the first exploratory one-million-node probe on `kyuubiki-lab`. Keep
+  `1m` as a single-case lab stress tier for now, not a scheduled coverage gate.
 
 Baseline and report surfaces:
 
@@ -440,13 +443,18 @@ Current behavior notes:
 - heat-plane quad profile reports include timed memory stages, so large 400k and
   500k thermal probes can distinguish assembly, reduction, solve, and result
   scatter hotspots instead of reporting RSS-only stages
+- benchmark result JSON now includes `hotspot_label`, `hotspot_elapsed_ms`,
+  `hotspot_share_pct`, and `hotspot_hint`. Solver-heavy cases prefer nested
+  `solve_spd_*` kernels over the outer `solve_system` wrapper, so large thermal
+  and structural probes point at the actual optimization target.
 - `SOLVER_PRECONDITIONER=auto` is available for exploratory large thermal
   structural and heat-plane quad probes; it selects symmetric Gauss-Seidel for
   heat-plane quad plus thermal plane triangle/quad cases and Jacobi elsewhere
 - current 500k heat-plane quad remote evidence is solver-bound: with `auto`,
   `heat-plane-quad-500k` completes in about `8.13 s` at roughly `596 MiB` peak
-  RSS, with most time under `solve_system`; the next optimization targets are
-  sparse preconditioning and sparse matrix-vector work
+  RSS, with most leaf solver time under `solve_spd_preconditioner`; the next
+  optimization targets are stencil-aware, multigrid, or parallel
+  preconditioning plus sparse matrix-vector work
 - local retained run folders are now indexed and pruned by retention count so
   nightly artifact history does not sprawl indefinitely on the runner workspace
 - `400k` is exploratory, not a default nightly tier. Use narrow thermal and
@@ -467,6 +475,14 @@ Current behavior notes:
   `65-67 s` for `truss-roof-500k`, `plane-panel-500k`, and
   `plane-quad-panel-500k`, with peak RSS around `1.7-2.1 GiB`. The dominant
   internal stages are sparse preconditioning and sparse matrix-vector work.
+- current 1m exploratory evidence covers two simple 1D probes:
+  `axial-bar-1m` completes on `kyuubiki-lab` in about `45 ms` at roughly
+  `1.49 GiB` peak RSS, and `thermal-bar-1m` completes in about `505 ms` at
+  roughly `2.68 GiB` peak RSS. The first 1m 2D thermal probe,
+  `heat-plane-quad-1m`, completes in about `21.0-21.3 s` at roughly `1.19 GiB`
+  peak RSS with `symmetric-gauss-seidel`; the retained hotspot-aware run marks
+  `solve_spd_preconditioner` at about `11.3 s`, roughly `54%` of total median
+  time. Treat 1m as exploratory lab evidence, not a scheduled coverage gate yet.
 - current 500k compound evidence matches the mechanical profile: the compound
   surface panel passes in about `67.7 s` at roughly `2.0 GiB` peak RSS, while
   the compound heat-plane quad passes in about `8.2 s`.

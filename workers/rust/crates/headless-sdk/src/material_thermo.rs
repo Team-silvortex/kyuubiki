@@ -1,8 +1,9 @@
+use crate::material_card_refs::built_in_material_card_ref;
 use crate::{
-    HeadlessWorkflowStep, MaterialOptimizationProfile, MaterialOptimizationTerm,
-    MaterialResearchMetricSpec, less_equal_status, material_optimization_constraint,
-    material_optimization_profile, material_optimization_term, material_optimization_weight,
-    profile_weight,
+    HeadlessWorkflowStep, MaterialCardReference, MaterialOptimizationProfile,
+    MaterialOptimizationTerm, MaterialResearchMetricSpec, less_equal_status,
+    material_optimization_constraint, material_optimization_profile, material_optimization_term,
+    material_optimization_weight, profile_weight,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -40,6 +41,7 @@ pub struct ThermoMaterialReport {
     pub objective: String,
     pub optimization: MaterialOptimizationProfile,
     pub metric_specs: Vec<MaterialResearchMetricSpec>,
+    pub material_card_refs: Vec<MaterialCardReference>,
     pub candidates: Vec<ThermoMaterialCandidateReport>,
     pub winner_candidate_id: Option<String>,
     pub warnings: Vec<String>,
@@ -214,10 +216,25 @@ pub fn build_thermo_shield_screening_report_with_optimization(
                 .to_string(),
         optimization,
         metric_specs: thermo_shield_metric_specs(),
+        material_card_refs: thermo_material_card_refs(),
         winner_candidate_id: rows.first().map(|row| row.candidate_id.clone()),
         candidates: rows,
         warnings,
     })
+}
+
+fn thermo_material_card_refs() -> Vec<MaterialCardReference> {
+    thermo_shield_screening_candidates()
+        .iter()
+        .map(|candidate| {
+            built_in_material_card_ref(
+                candidate.id,
+                thermo_material_card_confidence(candidate),
+                "room-temperature scalar thermo-mechanical screening values",
+                "kyuubiki built-in thermo-shield screening fixture",
+            )
+        })
+        .collect()
 }
 
 fn thermo_candidate_report(
@@ -446,6 +463,13 @@ fn thermo_shield_thickness_m() -> f64 {
     0.002
 }
 
+fn thermo_material_card_confidence(candidate: &ThermoMaterialCandidate) -> &'static str {
+    match candidate.id {
+        "aluminum_6061_t6" | "titanium_grade_5" => "medium",
+        _ => "low",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,6 +485,15 @@ mod tests {
 
         assert_eq!(report.schema_version, "kyuubiki.thermo-material-report/v1");
         assert_eq!(report.candidates.len(), 3);
+        assert_eq!(report.material_card_refs.len(), 3);
+        assert!(
+            report
+                .material_card_refs
+                .iter()
+                .any(|reference| reference.material_card_id
+                    == "kyuubiki.material_card.invar_36.v1"
+                    && reference.unit_system == "si")
+        );
         assert_eq!(report.winner_candidate_id.as_deref(), Some("invar_36"));
         assert_eq!(
             report.optimization.id,

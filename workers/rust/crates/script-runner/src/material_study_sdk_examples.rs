@@ -7,6 +7,7 @@ use std::process::Command;
 mod bundle;
 
 const PLAN_SCHEMA_VERSION: &str = "kyuubiki.material-study-execution-plan/v1";
+const MATERIAL_CARD_SCHEMA_VERSION: &str = "kyuubiki.material-card/v1";
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -303,6 +304,25 @@ fn check_plan(name: &str, plan: &Value) -> RunnerResult<()> {
     if array_len(plan, "candidate_ids") != candidate_count {
         return Err(format!(
             "{name}: candidate_count must match candidate_ids length"
+        ));
+    }
+    if plan
+        .get("material_card_contract_required")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        return Err(format!(
+            "{name}: material_card_contract_required must be true"
+        ));
+    }
+    if field(plan, "material_card_schema_version") != MATERIAL_CARD_SCHEMA_VERSION {
+        return Err(format!(
+            "{name}: material_card_schema_version must be {MATERIAL_CARD_SCHEMA_VERSION}"
+        ));
+    }
+    if plan.get("material_card_ref_count").and_then(Value::as_u64) != Some(candidate_count) {
+        return Err(format!(
+            "{name}: material_card_ref_count must match candidate_count"
         ));
     }
     if !plan

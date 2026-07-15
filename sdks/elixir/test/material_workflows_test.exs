@@ -41,6 +41,9 @@ defmodule KyuubikiSdk.MaterialWorkflowsTest do
     assert plan["step_count"] == length(plan["steps"])
     assert plan["solve_step_count"] == 3
     assert plan["candidate_count"] == 3
+    assert plan["material_card_contract_required"] == true
+    assert plan["material_card_schema_version"] == "kyuubiki.material-card/v1"
+    assert plan["material_card_ref_count"] == 3
     assert "copper_c110" in plan["candidate_ids"]
     assert plan["recommended_command"] =~ "heat-spreader"
   end

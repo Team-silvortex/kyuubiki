@@ -209,9 +209,19 @@ fn material_explore_template(args: &[&str]) -> Vec<String> {
 }
 
 fn bundle_summary(initial: &Value, plan: &Value, next: &Value, chain: &Value) -> Value {
+    let material_card_refs = initial
+        .pointer("/report/material_card_refs")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    let material_card_ref_count = material_card_refs
+        .as_array()
+        .map(|refs| refs.len())
+        .unwrap_or(0);
     json!({
         "winner_candidate_id": initial.pointer("/report/winner_candidate_id").cloned().unwrap_or(Value::Null),
         "reliability_decision": initial.pointer("/report/reliability/summary/decision").cloned().unwrap_or(Value::Null),
+        "material_card_ref_count": material_card_ref_count,
+        "material_card_refs": material_card_refs,
         "next_round_decision": plan.get("decision").cloned().unwrap_or(Value::Null),
         "runnable_next_step_count": plan.get("runnable_step_count").cloned().unwrap_or(Value::Null),
         "next_iteration": next.get("iteration").cloned().unwrap_or(Value::Null),

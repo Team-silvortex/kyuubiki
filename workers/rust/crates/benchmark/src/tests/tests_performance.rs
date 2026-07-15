@@ -172,6 +172,23 @@ fn heat_quad_benchmark_exposes_timed_memory_stages() {
             .all(|stage| stage.elapsed_ms.is_some_and(|elapsed| elapsed >= 0.0)),
         "heat quad profile should keep elapsed timings for every memory stage"
     );
+    assert!(
+        result.hotspot_label.is_some(),
+        "heat quad profile should expose the dominant benchmark hotspot"
+    );
+    assert!(
+        result.hotspot_elapsed_ms.unwrap_or_default() >= 0.0,
+        "hotspot should include elapsed time"
+    );
+    assert!(
+        result
+            .hotspot_hint
+            .as_deref()
+            .unwrap_or_default()
+            .contains("bound")
+            || result.hotspot_hint.as_deref().unwrap_or_default().contains("inspect"),
+        "hotspot should include an optimization hint"
+    );
 }
 
 #[test]

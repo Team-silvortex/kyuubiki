@@ -361,6 +361,11 @@ fn attach_next_round_lineage(payload: &mut Value, previous: &Value, plan: &Value
             .get("focus_candidate_ids")
             .cloned()
             .unwrap_or_else(|| serde_json::json!([])),
+        "material_card_refs": plan
+            .get("material_card_refs")
+            .cloned()
+            .or_else(|| previous.get("material_card_refs").cloned())
+            .unwrap_or_else(|| serde_json::json!([])),
         "optimization_objectives": plan
             .get("optimization_objectives")
             .cloned()

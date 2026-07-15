@@ -24,6 +24,15 @@ fn composite_report_exposes_regions_and_reliability() {
 
     assert_eq!(report.schema_version, "kyuubiki.composite-panel-report/v1");
     assert_eq!(report.material_regions.len(), 3);
+    assert_eq!(report.material_card_refs.len(), 3);
+    assert!(
+        report
+            .material_card_refs
+            .iter()
+            .any(|reference| reference.material_card_id
+                == "kyuubiki.material_card.copper_polyimide_aluminum.v1"
+                && reference.schema_version == "kyuubiki.material-card/v1")
+    );
     assert_eq!(report.reliability.posture, "prototype_screening_only");
     assert!(report.reliability.quality_gates.len() >= 5);
     assert!(

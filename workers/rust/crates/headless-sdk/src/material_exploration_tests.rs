@@ -40,6 +40,12 @@ fn builds_material_study_execution_plan_without_running_solver() {
     assert_eq!(plan.step_count, 3);
     assert_eq!(plan.solve_step_count, 3);
     assert_eq!(plan.candidate_count, 3);
+    assert!(plan.material_card_contract_required);
+    assert_eq!(
+        plan.material_card_schema_version,
+        "kyuubiki.material-card/v1"
+    );
+    assert_eq!(plan.material_card_ref_count, 3);
     assert!(
         plan.candidate_ids
             .contains(&"copper_ptfe_glass_epoxy".to_string())
@@ -54,6 +60,61 @@ fn builds_material_study_execution_plan_without_running_solver() {
             .contains("composite-thermo-electric-panel")
     );
     assert_eq!(plan.steps.len(), plan.step_count);
+}
+
+#[test]
+fn heat_spreader_exploration_run_promotes_material_card_refs() {
+    let run = build_material_exploration_run(
+        "heat-spreader",
+        "unit-test",
+        vec![
+            json!({ "max_temperature": 82.0, "max_heat_flux": 900.0 }),
+            json!({ "max_temperature": 64.0, "max_heat_flux": 1400.0 }),
+            json!({ "max_temperature": 58.0, "max_heat_flux": 1800.0 }),
+        ],
+    )
+    .expect("exploration run");
+
+    assert_eq!(run.material_card_refs.len(), 3);
+    assert!(
+        run.material_card_refs
+            .iter()
+            .any(|reference| reference["material_card_id"]
+                == "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1")
+    );
+
+    let plan = serde_json::to_value(&run)
+        .ok()
+        .and_then(|value| build_material_exploration_next_round_execution_plan(&value).ok())
+        .expect("next execution plan");
+    assert_eq!(plan.material_card_refs.len(), 3);
+}
+
+#[test]
+fn all_material_exploration_runs_promote_material_card_refs() {
+    for study in [
+        "heat-spreader",
+        "dielectric-screening",
+        "thermo-shield",
+        "structural-panel",
+        "composite-thermo-electric-panel",
+    ] {
+        let run = build_material_exploration_run(
+            study,
+            "unit-test",
+            sample_material_result_payloads(study),
+        )
+        .expect("exploration run");
+
+        assert_eq!(run.material_card_refs.len(), 3, "{study}");
+        assert!(
+            run.material_card_refs.iter().all(|reference| reference
+                .get("schema_version")
+                .and_then(Value::as_str)
+                == Some("kyuubiki.material-card/v1")),
+            "{study}"
+        );
+    }
 }
 
 #[test]
@@ -428,4 +489,35 @@ fn candidate_id_for_step(step: &HeadlessWorkflowStep) -> Option<&str> {
         .get("research")
         .and_then(|research| research.get("candidate_id"))
         .and_then(Value::as_str)
+}
+
+fn sample_material_result_payloads(study: &str) -> Vec<Value> {
+    match study {
+        "heat-spreader" => vec![
+            json!({ "max_temperature": 82.0, "max_heat_flux": 900.0 }),
+            json!({ "max_temperature": 64.0, "max_heat_flux": 1400.0 }),
+            json!({ "max_temperature": 58.0, "max_heat_flux": 1800.0 }),
+        ],
+        "dielectric-screening" => vec![
+            json!({ "max_electric_field": 42.0e6, "max_flux_density": 1.2e-3 }),
+            json!({ "max_electric_field": 38.0e6, "max_flux_density": 3.3e-3 }),
+            json!({ "max_electric_field": 48.0e6, "max_flux_density": 0.9e-3 }),
+        ],
+        "thermo-shield" => vec![
+            json!({ "max_stress": 180.0e6, "max_displacement": 0.00032, "max_temperature_delta": 110.0 }),
+            json!({ "max_stress": 90.0e6, "max_displacement": 0.00022, "max_temperature_delta": 110.0 }),
+            json!({ "max_stress": 35.0e6, "max_displacement": 0.00018, "max_temperature_delta": 110.0 }),
+        ],
+        "structural-panel" => vec![
+            json!({ "max_stress": 210.0e6, "max_displacement": 0.0009 }),
+            json!({ "max_stress": 160.0e6, "max_displacement": 0.00042 }),
+            json!({ "max_stress": 120.0e6, "max_displacement": 0.00055 }),
+        ],
+        "composite-thermo-electric-panel" => vec![
+            json!({ "electrostatic": { "max_electric_field": 42.0e6 }, "heat": { "max_temperature": 90.0 }, "thermal": { "max_stress": 120.0e6 } }),
+            json!({ "electrostatic": { "max_electric_field": 38.0e6 }, "heat": { "max_temperature": 105.0 }, "thermal": { "max_stress": 150.0e6 } }),
+            json!({ "electrostatic": { "max_electric_field": 48.0e6 }, "heat": { "max_temperature": 82.0 }, "thermal": { "max_stress": 95.0e6 } }),
+        ],
+        _ => Vec::new(),
+    }
 }

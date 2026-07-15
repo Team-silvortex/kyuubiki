@@ -63,6 +63,12 @@ class MaterialWorkflowTest(unittest.TestCase):
         self.assertEqual(plan["step_count"], len(plan["steps"]))
         self.assertEqual(plan["solve_step_count"], 3)
         self.assertEqual(plan["candidate_count"], 3)
+        self.assertEqual(plan["material_card_contract_required"], True)
+        self.assertEqual(
+            plan["material_card_schema_version"],
+            "kyuubiki.material-card/v1",
+        )
+        self.assertEqual(plan["material_card_ref_count"], 3)
         self.assertIn("copper_c110", plan["candidate_ids"])
         self.assertIn("heat-spreader", plan["recommended_command"])
 

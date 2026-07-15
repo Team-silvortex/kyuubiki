@@ -205,6 +205,8 @@
       "required": [
         "winner_candidate_id",
         "reliability_decision",
+        "material_card_ref_count",
+        "material_card_refs",
         "next_round_decision",
         "chain_stop_reason"
       ],
@@ -216,6 +218,17 @@
         "reliability_decision": {
           "type": "string",
           "minLength": 1
+        },
+        "material_card_ref_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "material_card_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/materialCardRef"
+          }
         },
         "next_round_decision": {
           "type": "string",
@@ -241,6 +254,43 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "materialCardRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "material_card_id",
+        "schema_version",
+        "candidate_id",
+        "confidence",
+        "unit_system",
+        "parameter_scope"
+      ],
+      "properties": {
+        "material_card_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_version": {
+          "const": "kyuubiki.material-card/v1"
+        },
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameter_scope": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "sha256": {

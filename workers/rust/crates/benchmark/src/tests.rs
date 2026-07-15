@@ -84,7 +84,7 @@ mod tests {
 
         assert_eq!(spec.templates.len(), 38);
         assert!(spec.matrices.len() >= 10);
-        assert_eq!(spec.profiles.len(), 11);
+        assert_eq!(spec.profiles.len(), 12);
         assert!(spec
             .profiles
             .iter()
@@ -105,6 +105,10 @@ mod tests {
             .profiles
             .iter()
             .any(|profile| profile.profile == BenchmarkProfile::FiveHundredK));
+        assert!(spec
+            .profiles
+            .iter()
+            .any(|profile| profile.profile == BenchmarkProfile::OneMillion));
     }
 
     #[test]
@@ -399,8 +403,23 @@ mod tests {
             "three_hundred_k" | "300k" => BenchmarkProfile::ThreeHundredK,
             "four_hundred_k" | "400k" => BenchmarkProfile::FourHundredK,
             "five_hundred_k" | "500k" => BenchmarkProfile::FiveHundredK,
+            "one_million" | "1m" | "1000k" => BenchmarkProfile::OneMillion,
             other => panic!("unsupported benchmark profile coverage target: {other}"),
         }
+    }
+
+    #[test]
+    fn one_million_profile_exposes_simple_probe_shapes_without_solving() {
+        let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
+        let case = cases
+            .iter()
+            .find(|case| case.id == "thermal-bar-1m")
+            .expect("thermal-bar 1m case should exist");
+        let (nodes, elements, dofs) = crate::runner_shape::workload_shape(&case.workload);
+
+        assert_eq!(nodes, 1_000_001);
+        assert_eq!(elements, 1_000_000);
+        assert_eq!(dofs, 1_000_001);
     }
 
     #[test]

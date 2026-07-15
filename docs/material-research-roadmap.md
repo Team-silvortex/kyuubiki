@@ -261,6 +261,16 @@ Current implementation note:
 - `schemas/examples.material-card.json` now provides the golden contract
   fixture, and `make check-material-card-contract` verifies the schema,
   fixture, workflow preflight anchors, and documentation stay aligned.
+- Heat-spreader material research reports now emit `material_card_refs`, and
+  retained research bundles mirror them in `summary.material_card_refs` for
+  fast provenance indexing without parsing the full report.
+- Material exploration runs, next-round lineage, and chain summaries now carry
+  material-card references forward so iterative repair/resume flows retain
+  material provenance across rounds.
+- Every built-in material study catalog entry now exposes whether the
+  material-card contract is required, the schema version, and the expected
+  material-card reference count so UI, headless SDK clients, and future store
+  indexes can detect provenance coverage before running a study.
 - `schemas/material-exploration-chain.schema.json` now defines the first
   repeated-run chain contract, including convergence assessment, optimization
   trace, repair planning, and retained per-round run artifacts.

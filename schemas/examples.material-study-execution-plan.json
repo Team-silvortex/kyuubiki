@@ -1,6 +1,9 @@
 {
   "schema_version": "kyuubiki.material-study-execution-plan/v1",
   "study_id": "material_heat_spreader_screening",
+  "material_card_contract_required": true,
+  "material_card_schema_version": "kyuubiki.material-card/v1",
+  "material_card_ref_count": 3,
   "step_count": 9,
   "solve_step_count": 3,
   "candidate_count": 3,
@@ -127,6 +130,7 @@
   "recommended_command": "kyuubiki-material-explore heat-spreader",
   "dispatch_notes": [
     "this plan does not execute solver kernels",
+    "material-card contract metadata is copied from the material study catalog",
     "service/headless dispatchers may schedule solve_* steps before job_wait/result_fetch steps",
     "candidate ids are extracted from step.payload.research.candidate_id"
   ]

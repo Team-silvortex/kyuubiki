@@ -38,6 +38,7 @@ pub(crate) enum BenchmarkProfile {
     ThreeHundredK,
     FourHundredK,
     FiveHundredK,
+    OneMillion,
 }
 
 impl BenchmarkProfile {
@@ -54,6 +55,7 @@ impl BenchmarkProfile {
             Self::ThreeHundredK => "300k",
             Self::FourHundredK => "400k",
             Self::FiveHundredK => "500k",
+            Self::OneMillion => "1m",
         }
     }
 }
@@ -119,7 +121,8 @@ impl BenchmarkConfig {
                             "300k" => BenchmarkProfile::ThreeHundredK,
                             "400k" => BenchmarkProfile::FourHundredK,
                             "500k" => BenchmarkProfile::FiveHundredK,
-                            _ => BenchmarkProfile::TenK,
+                            "1m" | "1000k" | "one_million" => BenchmarkProfile::OneMillion,
+                            other => panic!("unsupported benchmark profile: {other}"),
                         };
                     }
                 }

@@ -1,7 +1,7 @@
 use crate::{
     MaterialResearchBundle, MaterialResearchBundleArtifactChecksums,
-    MaterialResearchBundleReproducibility, MaterialResearchBundleSummary,
-    build_material_exploration_next_round_execution_plan,
+    MaterialResearchBundleMaterialCardRef, MaterialResearchBundleReproducibility,
+    MaterialResearchBundleSummary, build_material_exploration_next_round_execution_plan,
     build_material_exploration_next_round_plan, material_reliability_summary,
     material_validation_quality_gate, validate_material_research_bundle,
 };
@@ -23,6 +23,7 @@ fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
     let reliability_summary = material_reliability_summary(&quality_gates);
     let report = json!({
         "winner_candidate_id": "aluminum_6061",
+        "material_card_refs": material_card_refs(),
         "warnings": [],
         "candidates": [
             { "candidate_id": "aluminum_6061", "rank": 1, "score": 0.8 }
@@ -74,6 +75,8 @@ fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
         summary: MaterialResearchBundleSummary {
             winner_candidate_id: "aluminum_6061".to_string(),
             reliability_decision: "blocked_by_quality_gates".to_string(),
+            material_card_ref_count: 1,
+            material_card_refs: material_card_refs(),
             next_round_decision: execution_plan.decision.clone(),
             runnable_next_step_count: Some(execution_plan.runnable_step_count),
             next_iteration: Some(execution_plan.iteration),
@@ -88,6 +91,18 @@ fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
     };
 
     validate_material_research_bundle(&bundle).expect("validation repair bundle should validate");
+}
+
+fn material_card_refs() -> Vec<MaterialResearchBundleMaterialCardRef> {
+    vec![MaterialResearchBundleMaterialCardRef {
+        material_card_id: "kyuubiki.material_card.aluminum_6061.v1".to_string(),
+        schema_version: "kyuubiki.material-card/v1".to_string(),
+        candidate_id: "aluminum_6061".to_string(),
+        confidence: "medium".to_string(),
+        unit_system: "si".to_string(),
+        parameter_scope: "room-temperature scalar screening values".to_string(),
+        source: "validation fixture".to_string(),
+    }]
 }
 
 fn valid_checksums() -> MaterialResearchBundleArtifactChecksums {

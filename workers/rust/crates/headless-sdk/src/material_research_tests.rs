@@ -47,6 +47,16 @@ fn heat_spreader_report_ranks_by_result_and_material_metrics() {
         report.reliability.summary.decision,
         "blocked_by_quality_gates"
     );
+    assert_eq!(report.material_card_refs.len(), 3);
+    assert!(
+        report
+            .material_card_refs
+            .iter()
+            .any(
+                |reference| reference.schema_version == "kyuubiki.material-card/v1"
+                    && reference.material_card_id == "kyuubiki.material_card.aluminum_6061.v1"
+            )
+    );
     assert_eq!(report.reliability.summary.total_gate_count, 3);
     assert!(report.reliability.summary.pass_count >= 1);
     assert!(report.reliability.summary.violation_count >= 1);

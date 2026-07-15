@@ -102,6 +102,19 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
+    let summary_required = schema
+        .pointer("/$defs/summary/required")
+        .and_then(Value::as_array)
+        .map(|fields| fields.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    for field in ["material_card_ref_count", "material_card_refs"] {
+        if !summary_required.iter().any(|required| *required == field) {
+            issues.push(format!("{SCHEMA_PATH}: summary missing required {field}"));
+        }
+    }
+    if schema.pointer("/$defs/materialCardRef").is_none() {
+        issues.push(format!("{SCHEMA_PATH}: missing materialCardRef definition"));
+    }
     let checksum_required = schema
         .pointer("/$defs/artifactChecksums/required")
         .and_then(Value::as_array)
@@ -155,6 +168,7 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         EXAMPLE_PATH,
         issues,
     );
+    validate_material_card_refs(example, issues);
     require_string(
         example.pointer("/summary/next_round_decision"),
         "summary.next_round_decision",
@@ -241,6 +255,56 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     Ok(())
+}
+
+fn validate_material_card_refs(example: &Value, issues: &mut Vec<String>) {
+    let refs = example
+        .pointer("/summary/material_card_refs")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let expected_count = example
+        .pointer("/summary/material_card_ref_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    if refs.is_empty() {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: summary.material_card_refs must be non-empty"
+        ));
+    }
+    if refs.len() as u64 != expected_count {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: summary.material_card_ref_count must match material_card_refs length"
+        ));
+    }
+    for (index, reference) in refs.iter().enumerate() {
+        let label = format!("summary.material_card_refs/{index}");
+        require_string(
+            reference.get("material_card_id"),
+            &format!("{label}.material_card_id"),
+            EXAMPLE_PATH,
+            issues,
+        );
+        assert_schema_version(
+            reference.get("schema_version"),
+            "kyuubiki.material-card/v1",
+            &label,
+            issues,
+        );
+        for field in [
+            "candidate_id",
+            "confidence",
+            "unit_system",
+            "parameter_scope",
+        ] {
+            require_string(
+                reference.get(field),
+                &format!("{label}.{field}"),
+                EXAMPLE_PATH,
+                issues,
+            );
+        }
+    }
 }
 
 fn assert_checksum(

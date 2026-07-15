@@ -330,6 +330,7 @@ fn exploration_summary(exploration: &Value) -> Result<Value, String> {
             .get("lineage")
             .and_then(|lineage| lineage.get("source_iteration"))
             .and_then(Value::as_u64),
+        "material_card_refs": material_card_refs(exploration),
         "next_round_iteration": exploration
             .get("next_round")
             .and_then(|next_round| next_round.get("iteration"))
@@ -340,6 +341,25 @@ fn exploration_summary(exploration: &Value) -> Result<Value, String> {
             .and_then(Value::as_str),
         "optimization_objectives": plan.optimization_objectives,
     }))
+}
+
+fn material_card_refs(exploration: &Value) -> Value {
+    exploration
+        .get("material_card_refs")
+        .cloned()
+        .or_else(|| {
+            exploration
+                .get("lineage")
+                .and_then(|lineage| lineage.get("material_card_refs"))
+                .cloned()
+        })
+        .or_else(|| {
+            exploration
+                .get("report")
+                .and_then(|report| report.get("material_card_refs"))
+                .cloned()
+        })
+        .unwrap_or_else(|| json!([]))
 }
 
 fn winner_score(exploration: &Value, winner: Option<&str>) -> Option<f64> {

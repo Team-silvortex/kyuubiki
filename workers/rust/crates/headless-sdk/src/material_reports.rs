@@ -19,6 +19,9 @@ pub struct MaterialStudyDescriptor {
     pub aliases: &'static [&'static str],
     pub schema_version: &'static str,
     pub template_id: &'static str,
+    pub material_card_contract_required: bool,
+    pub material_card_schema_version: &'static str,
+    pub material_card_ref_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -30,6 +33,9 @@ pub struct MaterialStudyCatalogEntry {
     pub aliases: Vec<String>,
     pub schema_version: String,
     pub template_id: String,
+    pub material_card_contract_required: bool,
+    pub material_card_schema_version: String,
+    pub material_card_ref_count: usize,
     pub metric_specs: Vec<MaterialResearchMetricSpec>,
 }
 
@@ -46,6 +52,9 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         ],
         schema_version: "kyuubiki.material-research-report/v1",
         template_id: "material_heat_spreader_screening",
+        material_card_contract_required: true,
+        material_card_schema_version: "kyuubiki.material-card/v1",
+        material_card_ref_count: 3,
     },
     MaterialStudyDescriptor {
         id: "material_dielectric_screening",
@@ -59,6 +68,9 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         ],
         schema_version: "kyuubiki.dielectric-material-report/v1",
         template_id: "material_dielectric_screening",
+        material_card_contract_required: true,
+        material_card_schema_version: "kyuubiki.material-card/v1",
+        material_card_ref_count: 3,
     },
     MaterialStudyDescriptor {
         id: "material_thermo_shield_screening",
@@ -72,6 +84,9 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         ],
         schema_version: "kyuubiki.thermo-material-report/v1",
         template_id: "material_thermo_shield_screening",
+        material_card_contract_required: true,
+        material_card_schema_version: "kyuubiki.material-card/v1",
+        material_card_ref_count: 3,
     },
     MaterialStudyDescriptor {
         id: "material_structural_panel_screening",
@@ -85,6 +100,9 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         ],
         schema_version: "kyuubiki.structural-material-report/v1",
         template_id: "material_structural_panel_screening",
+        material_card_contract_required: true,
+        material_card_schema_version: "kyuubiki.material-card/v1",
+        material_card_ref_count: 3,
     },
     MaterialStudyDescriptor {
         id: "material_composite_thermo_electric_panel",
@@ -98,6 +116,9 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
         ],
         schema_version: "kyuubiki.composite-panel-report/v1",
         template_id: "material_composite_thermo_electric_panel",
+        material_card_contract_required: true,
+        material_card_schema_version: "kyuubiki.material-card/v1",
+        material_card_ref_count: 3,
     },
 ];
 
@@ -272,6 +293,9 @@ impl MaterialStudyCatalogEntry {
                 .collect(),
             schema_version: descriptor.schema_version.to_string(),
             template_id: descriptor.template_id.to_string(),
+            material_card_contract_required: descriptor.material_card_contract_required,
+            material_card_schema_version: descriptor.material_card_schema_version.to_string(),
+            material_card_ref_count: descriptor.material_card_ref_count,
             metric_specs: material_study_metric_specs(descriptor.id),
         }
     }
@@ -330,6 +354,11 @@ mod tests {
 
         assert_eq!(catalog.len(), 5);
         assert!(catalog.iter().all(|study| !study.metric_specs.is_empty()));
+        assert!(catalog.iter().all(|study| {
+            study.material_card_contract_required
+                && study.material_card_schema_version == "kyuubiki.material-card/v1"
+                && study.material_card_ref_count == 3
+        }));
         assert!(catalog.iter().any(|study| {
             study.id == "material_dielectric_screening"
                 && study.domain == "electromagnetic"

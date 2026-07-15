@@ -87,6 +87,7 @@ fn validate_material_research_example(
         expected.get("winner_candidate_id"),
         "summary winner",
     )?;
+    validate_material_card_refs(value(evidence, "summary"), "summary")?;
     assert_eq_value(
         evidence.pointer("/summary/iteration"),
         expected.get("initial_iteration"),
@@ -108,6 +109,38 @@ fn validate_material_research_example(
     validate_next_round_command(root, input, manifest)?;
     validate_run_next_command(root, input, manifest)?;
     validate_chain_next_command(root, input, manifest)
+}
+
+fn validate_material_card_refs(value: &Value, label: &str) -> RunnerResult<()> {
+    let refs = array(value, "material_card_refs");
+    if refs.is_empty() {
+        return Err(format!("{label}.material_card_refs must be non-empty"));
+    }
+    let declared_count = value.get("material_card_ref_count").and_then(Value::as_u64);
+    if declared_count.is_some_and(|count| count != refs.len() as u64) {
+        return Err(format!(
+            "{label}.material_card_ref_count must match material_card_refs length"
+        ));
+    }
+    for (index, reference) in refs.iter().enumerate() {
+        let context = format!("{label}.material_card_refs[{index}]");
+        assert_eq_str(
+            field(reference, "schema_version"),
+            "kyuubiki.material-card/v1",
+            &format!("{context}.schema_version"),
+        )?;
+        for field_name in [
+            "material_card_id",
+            "candidate_id",
+            "confidence",
+            "unit_system",
+        ] {
+            if field(reference, field_name).is_empty() {
+                return Err(format!("{context}.{field_name} must be non-empty"));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_command(command: &Value, manifest: &Value) -> RunnerResult<()> {
@@ -348,7 +381,9 @@ fn validate_run_next_command(root: &Path, input: &str, manifest: &Value) -> Runn
         expected.get("next_run_next_round_iteration"),
         "run-next next_round iteration",
     )?;
-    validate_next_round_lineage(value(&exploration, "lineage"), manifest)
+    let lineage = value(&exploration, "lineage");
+    validate_next_round_lineage(lineage, manifest)?;
+    validate_material_card_refs(lineage, "run-next.lineage")
 }
 
 fn validate_chain_next_command(root: &Path, input: &str, manifest: &Value) -> RunnerResult<()> {
@@ -435,6 +470,7 @@ fn validate_chain_next_command(root: &Path, input: &str, manifest: &Value) -> Ru
             manifest,
             &format!("chain.summaries[{index}]"),
         )?;
+        validate_material_card_refs(summary, &format!("chain.summaries[{index}]"))?;
         assert_finite(
             summary.get("winner_score"),
             &format!("chain.summaries[{index}].winner_score"),

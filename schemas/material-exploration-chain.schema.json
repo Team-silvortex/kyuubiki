@@ -186,6 +186,7 @@
         "iteration",
         "winner_candidate_id",
         "winner_score",
+        "material_card_refs",
         "next_round_iteration",
         "next_round_decision",
         "optimization_objectives"
@@ -201,6 +202,12 @@
         },
         "winner_score": {
           "type": "number"
+        },
+        "material_card_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/materialCardRef"
+          }
         },
         "next_round_iteration": {
           "type": "integer",
@@ -275,6 +282,43 @@
           }
         },
         "guidance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "materialCardRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "material_card_id",
+        "schema_version",
+        "candidate_id",
+        "confidence",
+        "unit_system",
+        "parameter_scope"
+      ],
+      "properties": {
+        "material_card_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_version": {
+          "const": "kyuubiki.material-card/v1"
+        },
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameter_scope": {
           "type": "string",
           "minLength": 1
         }

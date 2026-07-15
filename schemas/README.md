@@ -36,8 +36,8 @@ README.
   wrapper and are ready for solver rerun by any headless runner
 - `material-study-execution-plan.schema.json` is for non-executing material
   study plans emitted before solver dispatch, including action order, solve
-  step counts, candidate IDs, and concrete workflow steps shared by CLI, SDK,
-  and remote scheduling layers
+  step counts, candidate IDs, material-card contract metadata, and concrete
+  workflow steps shared by CLI, SDK, and remote scheduling layers
 - `material-exploration-chain.schema.json` is for repeated material
   exploration runs, including convergence assessment, optimization trace,
   repair planning, compact summaries, and retained per-round exploration
@@ -46,9 +46,9 @@ README.
   material research artifact, tying an initial exploration, next-round
   execution plan, rerun, chained rounds, artifact checksums, and reproducible
   commands into one screening-level review bundle. Its summary mirrors the
-  embedded next-round decision, next iteration, runnable step count, and chain
-  stop reason so agents can read the top-level state without losing artifact
-  consistency.
+  material-card references, embedded next-round decision, next iteration,
+  runnable step count, and chain stop reason so agents can read the top-level
+  state without losing artifact consistency.
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
@@ -152,8 +152,9 @@ README.
   materialization fixture for passing reviewed composite-material candidates
   from an agent or custom wrapper into a solver rerun stage
 - `examples.material-study-execution-plan.json` is the shared material study
-  execution-plan fixture for validating `--plan-study` output before solver
-  dispatch or remote agent scheduling
+  execution-plan fixture for validating `--plan-study` output, material-card
+  contract metadata, and dispatch shape before solver dispatch or remote agent
+  scheduling
 - `examples.material-exploration-chain.json` is the shared chain fixture for
   validating `--chain-next` output, convergence assessment, optimization trace,
   and summary/run count alignment

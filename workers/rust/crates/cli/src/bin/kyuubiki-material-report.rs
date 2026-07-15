@@ -156,6 +156,10 @@ fn print_study_list(json: bool) -> Result<(), String> {
         println!("  {}", study.objective);
         println!("  template: {}", study.template_id);
         println!("  metrics: {}", study.metric_specs.len());
+        println!(
+            "  material cards: {} refs via {}",
+            study.material_card_ref_count, study.material_card_schema_version
+        );
     }
     Ok(())
 }
@@ -173,6 +177,16 @@ fn print_study_description(study: &str, json: bool) -> Result<(), String> {
     println!("Schema: {}", description.schema_version);
     println!("Template: {}", description.template_id);
     println!("Aliases: {}", description.aliases.join(", "));
+    println!(
+        "Material cards: {} refs via {}{}",
+        description.material_card_ref_count,
+        description.material_card_schema_version,
+        if description.material_card_contract_required {
+            " (required)"
+        } else {
+            ""
+        }
+    );
     println!("Metrics: {}", description.metric_specs.len());
     for metric in description.metric_specs {
         println!(

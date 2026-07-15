@@ -66,6 +66,19 @@ Focused reference for benchmark and regression script entry points.
   executes the first two selected remote probes sequentially. Each case receives
   its own `OUTPUT_SLUG`, so retained profile summaries do not overwrite each
   other.
+- `PROFILE=1m MATRIX=thermal-structural CASE=thermal-bar-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the first one-million-node exploratory probe. This is intentionally a
+  narrow lab stress test, not part of the 400k/500k coverage manifest yet.
+- `PROFILE=1m MATRIX=mechanical-core CASE=axial-bar-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the matching one-million-node mechanical 1D sanity probe before trying
+  more expensive 1m surface, truss, or frame cases.
+- `PROFILE=1m MATRIX=thermal-core CASE=heat-plane-quad-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the first one-million-node 2D thermal probe. Expect this to be
+  solver-bound, with preconditioner and matrix-vector stages dominating.
+- benchmark JSON and table output include `hotspot_label`, `hotspot_elapsed_ms`,
+  `hotspot_share_pct`, and `hotspot_hint`. When nested `solve_spd_*` stages are
+  present, the hotspot prefers the leaf solver kernel over the outer
+  `solve_system` wrapper so large runs point at the actual optimization target.
 - `./scripts/build-benchmark-profile-index.mjs`
   rebuilds the exploratory benchmark profile index from retained
   `summary.json` files under `tmp/benchmark-profile/`. Coverage summaries

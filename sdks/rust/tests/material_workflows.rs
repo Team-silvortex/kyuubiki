@@ -78,6 +78,12 @@ fn material_study_execution_plan_example_matches_shared_contract() {
     assert_eq!(plan["step_count"], plan["steps"].as_array().unwrap().len());
     assert_eq!(plan["solve_step_count"], 3);
     assert_eq!(plan["candidate_count"], 3);
+    assert_eq!(plan["material_card_contract_required"], true);
+    assert_eq!(
+        plan["material_card_schema_version"],
+        "kyuubiki.material-card/v1"
+    );
+    assert_eq!(plan["material_card_ref_count"], 3);
     assert!(
         plan["candidate_ids"]
             .as_array()

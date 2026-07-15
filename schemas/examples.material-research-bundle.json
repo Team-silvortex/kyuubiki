@@ -80,6 +80,36 @@
   "summary": {
     "winner_candidate_id": "pyrolytic_graphite_in_plane",
     "reliability_decision": "blocked_by_quality_gates",
+    "material_card_ref_count": 3,
+    "material_card_refs": [
+      {
+        "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+        "schema_version": "kyuubiki.material-card/v1",
+        "candidate_id": "aluminum_6061",
+        "confidence": "medium",
+        "unit_system": "si",
+        "parameter_scope": "room-temperature scalar screening values",
+        "source": "kyuubiki built-in heat-spreader screening fixture"
+      },
+      {
+        "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+        "schema_version": "kyuubiki.material-card/v1",
+        "candidate_id": "copper_c110",
+        "confidence": "medium",
+        "unit_system": "si",
+        "parameter_scope": "room-temperature scalar screening values",
+        "source": "kyuubiki built-in heat-spreader screening fixture"
+      },
+      {
+        "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+        "schema_version": "kyuubiki.material-card/v1",
+        "candidate_id": "pyrolytic_graphite_in_plane",
+        "confidence": "low",
+        "unit_system": "si",
+        "parameter_scope": "room-temperature scalar screening values",
+        "source": "kyuubiki built-in heat-spreader screening fixture"
+      }
+    ],
     "next_round_decision": "mitigate_design_risk",
     "runnable_next_step_count": 3,
     "next_iteration": 2,

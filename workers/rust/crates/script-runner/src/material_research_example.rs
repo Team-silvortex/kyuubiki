@@ -99,6 +99,8 @@ fn build_evidence(root: &Path, study: &str) -> RunnerResult<Value> {
             "candidate_count": exploration.get("candidate_count").cloned().unwrap_or(Value::Null),
             "result_payload_count": exploration.get("result_payloads").and_then(Value::as_array).map_or(0, Vec::len),
             "winner_candidate_id": report.get("winner_candidate_id").cloned().unwrap_or(Value::Null),
+            "material_card_ref_count": report.get("material_card_refs").and_then(Value::as_array).map_or(0, Vec::len),
+            "material_card_refs": report.get("material_card_refs").cloned().unwrap_or_else(|| json!([])),
             "reliability_posture": report.pointer("/reliability/posture").cloned().unwrap_or(Value::Null),
             "optimization_id": report.pointer("/optimization/id").cloned().unwrap_or(Value::Null),
             "candidates": candidate_summary(report),

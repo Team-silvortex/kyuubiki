@@ -114,6 +114,14 @@ pub(crate) struct BenchmarkResult {
     pub(crate) solver_residual_norm: Option<f64>,
     #[serde(default)]
     pub(crate) solver_preconditioner: Option<String>,
+    #[serde(default)]
+    pub(crate) hotspot_label: Option<String>,
+    #[serde(default)]
+    pub(crate) hotspot_elapsed_ms: Option<f64>,
+    #[serde(default)]
+    pub(crate) hotspot_share_pct: Option<f64>,
+    #[serde(default)]
+    pub(crate) hotspot_hint: Option<String>,
     pub(crate) max_displacement: f64,
     pub(crate) max_stress: f64,
 }

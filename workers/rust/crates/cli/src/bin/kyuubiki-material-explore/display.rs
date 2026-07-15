@@ -74,6 +74,17 @@ pub(crate) fn print_catalog_summary(catalog: &Value) {
                     .and_then(Value::as_str)
                     .unwrap_or("--")
             );
+            println!(
+                "  material cards: {} refs via {}",
+                study
+                    .get("material_card_ref_count")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+                study
+                    .get("material_card_schema_version")
+                    .and_then(Value::as_str)
+                    .unwrap_or("--")
+            );
         }
     }
 }
@@ -102,6 +113,17 @@ pub(crate) fn print_study_summary(study: &Value) {
             .unwrap_or("--")
     );
     println!(
+        "Material cards: {} refs via {}",
+        study
+            .pointer("/study/material_card_ref_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        study
+            .pointer("/study/material_card_schema_version")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
+    );
+    println!(
         "Metrics: {}",
         study
             .get("metric_specs")
@@ -122,6 +144,15 @@ pub(crate) fn print_study_plan_summary(plan: &Value) {
         plan.get("solve_step_count")
             .and_then(Value::as_u64)
             .unwrap_or(0)
+    );
+    println!(
+        "Material cards: {} refs via {}",
+        plan.get("material_card_ref_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        plan.get("material_card_schema_version")
+            .and_then(Value::as_str)
+            .unwrap_or("--")
     );
     if let Some(candidate_ids) = plan.get("candidate_ids").and_then(Value::as_array) {
         let candidates = candidate_ids

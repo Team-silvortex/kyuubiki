@@ -86,6 +86,15 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             "{SCHEMA_PATH}: objectives schema_version const must be {OBJECTIVES_SCHEMA_VERSION}"
         ));
     }
+    if schema
+        .pointer("/$defs/materialCardRef/properties/schema_version/const")
+        .and_then(Value::as_str)
+        != Some("kyuubiki.material-card/v1")
+    {
+        issues.push(format!(
+            "{SCHEMA_PATH}: materialCardRef schema_version const must be kyuubiki.material-card/v1"
+        ));
+    }
     for field in [
         "convergence_assessment",
         "optimization_trace",
@@ -174,6 +183,34 @@ fn check_example(example: &Value, issues: &mut Vec<String>) {
             .get("optimization_objectives")
             .unwrap_or(&Value::Null);
         non_empty_array(objectives, "primary_metric_ids", &context, issues);
+        for (ref_index, reference) in
+            non_empty_array(summary, "material_card_refs", &context, issues)
+                .iter()
+                .enumerate()
+        {
+            let ref_context = format!("{context}.material_card_refs/{ref_index}");
+            require_string(
+                reference.get("material_card_id"),
+                "material_card_id",
+                &ref_context,
+                issues,
+            );
+            if reference.get("schema_version").and_then(Value::as_str)
+                != Some("kyuubiki.material-card/v1")
+            {
+                issues.push(format!(
+                    "{ref_context}: schema_version must be kyuubiki.material-card/v1"
+                ));
+            }
+            for field in [
+                "candidate_id",
+                "confidence",
+                "unit_system",
+                "parameter_scope",
+            ] {
+                require_string(reference.get(field), field, &ref_context, issues);
+            }
+        }
     }
 }
 

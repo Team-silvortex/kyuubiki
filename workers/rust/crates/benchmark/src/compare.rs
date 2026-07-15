@@ -212,6 +212,15 @@ pub(crate) fn render_table(
         if !result.memory_stages.is_empty() {
             lines.push(format!("  stage rss: {}", format_memory_stages(result)));
         }
+        if let Some(label) = &result.hotspot_label {
+            lines.push(format!(
+                "  hotspot: {} {:.3} ms ({:.1}%) | {}",
+                label,
+                result.hotspot_elapsed_ms.unwrap_or(0.0),
+                result.hotspot_share_pct.unwrap_or(0.0),
+                result.hotspot_hint.as_deref().unwrap_or("inspect stage")
+            ));
+        }
         if let Some(iterations) = result.solver_iterations {
             lines.push(format!(
                 "  solver: preconditioner={} iterations={} residual={:.3e}",
@@ -324,6 +333,10 @@ mod tests {
             solver_matrix_non_zero_count: None,
             solver_residual_norm: None,
             solver_preconditioner: None,
+            hotspot_label: None,
+            hotspot_elapsed_ms: None,
+            hotspot_share_pct: None,
+            hotspot_hint: None,
             max_displacement: 0.0,
             max_stress: 0.0,
         }

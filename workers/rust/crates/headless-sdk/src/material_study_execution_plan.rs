@@ -9,6 +9,9 @@ pub const MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION: &str =
 pub struct MaterialStudyExecutionPlan {
     pub schema_version: String,
     pub study_id: String,
+    pub material_card_contract_required: bool,
+    pub material_card_schema_version: String,
+    pub material_card_ref_count: usize,
     pub step_count: usize,
     pub solve_step_count: usize,
     pub candidate_count: usize,
@@ -49,7 +52,10 @@ pub fn build_material_study_execution_plan(
     );
     Ok(MaterialStudyExecutionPlan {
         schema_version: MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION.to_string(),
-        study_id: description.id,
+        study_id: description.id.clone(),
+        material_card_contract_required: description.material_card_contract_required,
+        material_card_schema_version: description.material_card_schema_version,
+        material_card_ref_count: description.material_card_ref_count,
         step_count: steps.len(),
         solve_step_count,
         candidate_count: candidate_ids.len(),
@@ -59,6 +65,7 @@ pub fn build_material_study_execution_plan(
         recommended_command,
         dispatch_notes: vec![
             "this plan does not execute solver kernels".to_string(),
+            "material-card contract metadata is copied from the material study catalog".to_string(),
             "service/headless dispatchers may schedule solve_* steps before job_wait/result_fetch steps"
                 .to_string(),
             "candidate ids are extracted from step.payload.research.candidate_id".to_string(),

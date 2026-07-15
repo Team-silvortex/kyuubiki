@@ -77,6 +77,17 @@
       "winner_score": 0.872,
       "lineage_schema_version": "kyuubiki.material-next-round-lineage/v1",
       "source_iteration": 1,
+      "material_card_refs": [
+        {
+          "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+          "schema_version": "kyuubiki.material-card/v1",
+          "candidate_id": "pyrolytic_graphite_in_plane",
+          "confidence": "low",
+          "unit_system": "si",
+          "parameter_scope": "room-temperature scalar screening values",
+          "source": "kyuubiki built-in heat-spreader screening fixture"
+        }
+      ],
       "next_round_iteration": 3,
       "next_round_decision": "mitigate_design_risk",
       "optimization_objectives": {

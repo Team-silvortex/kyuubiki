@@ -53,6 +53,10 @@ fn material_catalog_exposes_study_entrypoints() {
             .as_array()
             .is_some_and(|studies| studies.iter().any(|study| {
                 study["id"].as_str() == Some("material_composite_thermo_electric_panel")
+                    && study["material_card_contract_required"].as_bool() == Some(true)
+                    && study["material_card_schema_version"].as_str()
+                        == Some("kyuubiki.material-card/v1")
+                    && study["material_card_ref_count"].as_u64() == Some(3)
             }))
     );
     assert!(
@@ -79,6 +83,14 @@ fn material_study_description_resolves_aliases_and_metrics() {
         Some("kyuubiki.material-research-report/v1")
     );
     assert_eq!(study["metric_count"].as_u64(), Some(4));
+    assert_eq!(
+        study["study"]["material_card_schema_version"].as_str(),
+        Some("kyuubiki.material-card/v1")
+    );
+    assert_eq!(
+        study["study"]["material_card_contract_required"].as_bool(),
+        Some(true)
+    );
     assert!(
         study["recommended_flow"]
             .as_array()
@@ -103,6 +115,11 @@ fn material_study_plan_previews_steps_without_running_solver() {
     );
     assert_eq!(plan["solve_step_count"].as_u64(), Some(3));
     assert_eq!(plan["candidate_count"].as_u64(), Some(3));
+    assert_eq!(
+        plan["material_card_schema_version"].as_str(),
+        Some("kyuubiki.material-card/v1")
+    );
+    assert_eq!(plan["material_card_ref_count"].as_u64(), Some(3));
     assert!(plan["candidate_ids"].as_array().is_some_and(|ids| {
         ids.iter()
             .any(|id| id.as_str() == Some("copper_ptfe_glass_epoxy"))
@@ -171,7 +188,7 @@ fn plans_next_round_from_previous_exploration_json() {
         "kyuubiki-material-exploration-{}.json",
         std::process::id()
     ));
-    let exploration = run_material_exploration("dielectric-screening").expect("exploration");
+    let exploration = run_material_exploration("heat-spreader").expect("exploration");
     fs::write(&path, serde_json::to_vec(&exploration).expect("json")).expect("write");
 
     let plan = plan_next_round(path.to_str().expect("utf8 path")).expect("plan");
@@ -215,7 +232,7 @@ fn runs_next_round_from_previous_exploration_json() {
         "kyuubiki-material-exploration-run-next-{}.json",
         std::process::id()
     ));
-    let exploration = run_material_exploration("dielectric-screening").expect("exploration");
+    let exploration = run_material_exploration("heat-spreader").expect("exploration");
     fs::write(&path, serde_json::to_vec(&exploration).expect("json")).expect("write");
 
     let next = run_next_round(path.to_str().expect("utf8 path")).expect("next run");
@@ -241,6 +258,11 @@ fn runs_next_round_from_previous_exploration_json() {
     assert_eq!(
         next["lineage"]["optimization_objectives"]["schema_version"].as_str(),
         Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
+    assert!(
+        next["lineage"]["material_card_refs"]
+            .as_array()
+            .is_some_and(|refs| !refs.is_empty())
     );
     let _ = fs::remove_file(path);
 }
@@ -330,6 +352,11 @@ fn chains_next_rounds_from_previous_exploration_json() {
     assert_eq!(
         chain["summaries"][0]["optimization_objectives"]["schema_version"].as_str(),
         Some("kyuubiki.material-next-round-optimization-objectives/v1")
+    );
+    assert!(
+        chain["summaries"][0]["material_card_refs"]
+            .as_array()
+            .is_some_and(|refs| !refs.is_empty())
     );
     assert_eq!(
         chain["optimization_trace"].as_array().map(Vec::len),
