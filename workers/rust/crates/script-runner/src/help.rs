@@ -61,6 +61,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   check-ui-automation-contract\n  \
   check-gui-runtime-capability-contract\n  \
   check-workflow-dataset-contract\n  \
+  check-material-card-contract\n  \
   check-materialization-plan-contract\n  \
   check-material-study-execution-plan-contract\n  \
   check-material-exploration-chain-contract\n  \

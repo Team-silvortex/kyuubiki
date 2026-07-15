@@ -1,0 +1,46 @@
+{
+  "schema_version": "kyuubiki.material-card/v1",
+  "material_id": "al-6061-t6",
+  "display_name": "Aluminum 6061-T6",
+  "family": "metal",
+  "unit_system": "si",
+  "provenance": {
+    "source_id": "kyuubiki.reference.demo.aluminum.6061_t6",
+    "source_label": "Kyuubiki demo reference card",
+    "revision": "tamamono-1.20",
+    "notes": "Screening fixture; not a certified material datasheet."
+  },
+  "confidence": {
+    "level": "screening",
+    "rationale": "Representative values for workflow validation only."
+  },
+  "applicability": {
+    "temperature_range_c": [20, 120],
+    "processing_notes": "Assumes standard T6 temper for screening comparisons.",
+    "environment": "dry air"
+  },
+  "parameters": {
+    "thermal_conductivity": {
+      "kind": "scalar",
+      "value": 167,
+      "unit": "W/(m*K)",
+      "confidence": "screening",
+      "source_field": "thermal_conductivity",
+      "temperature_range_c": [20, 120]
+    },
+    "youngs_modulus": {
+      "kind": "scalar",
+      "value": 68900000000,
+      "unit": "Pa",
+      "confidence": "screening",
+      "source_field": "youngs_modulus"
+    },
+    "thermal_expansion": {
+      "kind": "scalar",
+      "value": 0.0000236,
+      "unit": "1/K",
+      "confidence": "screening",
+      "source_field": "thermal_expansion"
+    }
+  }
+}

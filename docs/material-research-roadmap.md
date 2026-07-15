@@ -258,6 +258,9 @@ Current implementation note:
 
 - `schemas/material-card.schema.json` now defines the first versioned
   material-card contract.
+- `schemas/examples.material-card.json` now provides the golden contract
+  fixture, and `make check-material-card-contract` verifies the schema,
+  fixture, workflow preflight anchors, and documentation stay aligned.
 - `schemas/material-exploration-chain.schema.json` now defines the first
   repeated-run chain contract, including convergence assessment, optimization
   trace, repair planning, and retained per-round run artifacts.

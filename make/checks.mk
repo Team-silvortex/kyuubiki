@@ -1,7 +1,7 @@
 .PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
-.PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
+.PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
@@ -107,6 +107,10 @@ check-workflow-dataset-contract:
 	@$(ENTRYPOINT) check-workflow-dataset-contract --self-test
 	@$(ENTRYPOINT) check-workflow-dataset-contract
 
+check-material-card-contract:
+	@$(ENTRYPOINT) check-material-card-contract --self-test
+	@$(ENTRYPOINT) check-material-card-contract
+
 check-material-score-contract:
 	@$(ENTRYPOINT) validate-material-score-contract
 
@@ -197,6 +201,7 @@ check-material-research-bundle:
 	@$(ENTRYPOINT) check-material-research-bundle --in $${IN:-tmp/material-research-bundle.json}
 
 verify-material-research-bundle:
+	@$(MAKE) check-material-card-contract
 	@$(MAKE) build-material-research-bundle OUT=$${OUT:-tmp/material-research-bundle.json}
 	@$(MAKE) check-material-research-bundle IN=$${OUT:-tmp/material-research-bundle.json}
 

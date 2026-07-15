@@ -1,8 +1,8 @@
 use crate::{
-    material_research_bundle, material_research_bundle_build, material_research_bundle_contract,
-    material_research_bundle_index, material_research_example, material_study_sdk_examples,
-    remote_material_health, remote_material_research_example, remote_material_stage_health,
-    remote_material_summary,
+    material_card_contract, material_research_bundle, material_research_bundle_build,
+    material_research_bundle_contract, material_research_bundle_index, material_research_example,
+    material_study_sdk_examples, remote_material_health, remote_material_research_example,
+    remote_material_stage_health, remote_material_summary,
 };
 use std::ffi::OsString;
 use std::path::Path;
@@ -15,6 +15,9 @@ pub(crate) fn run_material_research_command(
     args: Vec<OsString>,
 ) -> Option<RunnerResult<u8>> {
     Some(match command {
+        "check-material-card-contract" => {
+            material_card_contract::run_check_material_card_contract(root, args)
+        }
         "check-material-research-bundle-contract" => {
             material_research_bundle_contract::run_check_material_research_bundle_contract(
                 root, args,

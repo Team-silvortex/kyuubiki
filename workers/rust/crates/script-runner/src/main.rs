@@ -40,6 +40,7 @@ mod line_field_provenance;
 mod line_field_release_evidence;
 mod local_path_audit;
 mod make_modules;
+mod material_card_contract;
 mod material_exploration_chain_contract;
 mod material_research;
 mod material_research_bundle;

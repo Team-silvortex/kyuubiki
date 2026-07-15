@@ -71,7 +71,11 @@ test-integration-benchmark-profile-index:
 	@$(ENTRYPOINT) integration-benchmark-profile-index-node-test
 
 test-integration-direct-mesh-docker:
-	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
+	@if [ "$${LOCAL_DOCKER:-0}" = "1" ]; then \
+		DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}; \
+	else \
+		$(ENTRYPOINT) direct-mesh-benchmark-regression; \
+	fi
 
 test-integration-remote-ssh-fixture:
 	@$(ENTRYPOINT) remote-ssh-fixture
@@ -86,8 +90,12 @@ test-integration-direct-mesh-docker-compare:
 	@$(ENTRYPOINT) compare-direct-mesh-benchmark --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}
 
 test-integration-direct-mesh-docker-report:
-	@$(MAKE) test-integration-direct-mesh-docker REPEAT=$${REPEAT:-3} OUTPUT_DIR=$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
-	@$(MAKE) test-integration-direct-mesh-docker-compare CURRENT=$${CURRENT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/summary.json} COMPARE_OUT=$${COMPARE_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.json} REPORT_OUT=$${REPORT_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.md}
+	@if [ "$${LOCAL_DOCKER:-0}" = "1" ]; then \
+		DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} $(ENTRYPOINT) direct-mesh-benchmark-container --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}; \
+		$(ENTRYPOINT) compare-direct-mesh-benchmark --current $${CURRENT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.json} --report-out $${REPORT_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}; \
+	else \
+		$(ENTRYPOINT) direct-mesh-benchmark-regression; \
+	fi
 
 test-integration-direct-mesh-docker-nightly:
 	@$(ENTRYPOINT) direct-mesh-benchmark-regression

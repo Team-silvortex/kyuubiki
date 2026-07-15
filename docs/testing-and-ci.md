@@ -251,16 +251,20 @@ Current GitHub Actions jobs are intentionally separated:
 ## Direct-mesh Docker regression lane
 
 The repository now keeps a dedicated direct-mesh Docker regression path for the
-shared LAN solver setup.
+shared LAN solver setup. Docker-heavy direct-mesh work defaults to the
+`kyuubiki-lab` server so local laptops do not become build farms. Local Docker
+is still available as an explicit debug path with `LOCAL_DOCKER=1`.
 
 Use these entrypoints:
 
 - `make test-integration-direct-mesh-docker`
-  Run the Docker direct-mesh benchmark locally or from an operator shell.
+  Run the remote `kyuubiki-lab` direct-mesh Docker regression wrapper by
+  default. Use `LOCAL_DOCKER=1` only for local reproduction.
 - `make test-integration-direct-mesh-docker-compare CURRENT=tmp/direct-mesh-benchmark-container/latest/summary.json`
   Compare an existing benchmark summary against the checked-in baseline.
 - `make test-integration-direct-mesh-docker-report REPEAT=3`
-  Run a fresh benchmark and emit comparison artifacts beside the summary.
+  Run the remote direct-mesh Docker regression and emit comparison artifacts.
+  With `LOCAL_DOCKER=1`, run the local container and compare its summary.
 - `make test-integration-direct-mesh-docker-nightly`
   Run the remote `kyuubiki-lab` regression wrapper and fail on threshold regressions.
 
@@ -272,6 +276,10 @@ Baseline and report surfaces:
   `tmp/direct-mesh-benchmark-container/latest/summary.json`
 - local/latest comparison report:
   `tmp/direct-mesh-benchmark-container/latest/compare.md`
+
+The `test-integration-remote-ssh-fixture` target remains a deliberately local
+Docker fixture for SSH deployment protocol testing. It should be treated as a
+small fixture, not as the default path for benchmark or release workloads.
 
 Current behavior notes:
 

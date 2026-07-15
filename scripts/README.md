@@ -521,7 +521,9 @@ Useful smoke wrappers:
   `./scripts/kyuubiki direct-mesh-benchmark-container --repeat 3`. It builds
   the dedicated Docker harness, runs the direct-mesh integration suite multiple
   times, and writes JSON plus Markdown summaries under
-  `tmp/direct-mesh-benchmark-container/`. For LAN agent discovery, prefer
+  `tmp/direct-mesh-benchmark-container/`. This is the explicit local Docker
+  debug path; Make targets default to the remote `kyuubiki-lab` regression
+  wrapper unless `LOCAL_DOCKER=1` is set. For LAN agent discovery, prefer
   `DOCKER_RUN_NETWORK=host`. The current checked-in baseline snapshot is
   `tests/integration/benchmarks/direct-mesh-docker-baseline.json`.
 - `./scripts/kyuubiki compare-direct-mesh-benchmark --current tmp/direct-mesh-benchmark-container/latest/summary.json --baseline tests/integration/benchmarks/direct-mesh-docker-baseline.json --report-out tmp/direct-mesh-benchmark-container/latest/compare.md --json-out tmp/direct-mesh-benchmark-container/latest/compare.json`

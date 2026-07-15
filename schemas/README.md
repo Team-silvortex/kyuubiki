@@ -9,6 +9,9 @@ README.
 - `material-library.schema.json` is for reusable material library import/export payloads
 - `material-card.schema.json` is for first-class material cards with
   provenance, confidence, unit-system, parameter, and applicability metadata
+- `examples.material-card.json` is the golden material-card fixture used by
+  `make check-material-card-contract` to keep material provenance, units,
+  confidence, and parameter shape aligned with workflow preflight
 - `project.schema.json` is for portable `.kyuubiki.json` project bundles and
   standardized `.kyuubiki` archive manifests, including asset catalogs and meta
   sidecars plus guid reference graphs
