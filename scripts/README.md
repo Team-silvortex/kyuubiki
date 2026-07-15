@@ -62,6 +62,10 @@ This directory contains host-native operational entry points.
   invocation for centralized book version alignment, required chapter markers,
   local-link validation, and legacy wording rejection. The old
   `check-doc-book.mjs` remains as a compatibility script for direct callers.
+- `check-doc-inventory.mjs`
+  Lightweight inventory guard that verifies every local `docs/*.md/html/json`
+  file is mentioned in `docs/README.md` and every Hub shelf page is mentioned
+  in `apps/hub-gui/ui/docs/README.md`.
 - `kyuubiki-script-runner sync-doc-book-version`
   Native docs-book version synchronizer used by `make sync-doc-book-version`.
   It keeps the `--version` and `--line` options from the legacy Node script
@@ -294,6 +298,10 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
+- `check-moxi-handoff.mjs`
+  Verify the final `tamamono 1.x` to `moxi 2.0.0` handoff manifest against its
+  Markdown gate. This keeps the last `1.x` patch focused on closing, proving,
+  deferring, or retiring work before the major-version boundary.
 - `kyuubiki-script-runner validate-minimal-industrial-closure`
   Verify the narrower `1.15.x -> 1.20.x` minimum industrial closure manifest
   against its Markdown gate, including gate count, evidence links, supported

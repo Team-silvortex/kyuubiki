@@ -67,7 +67,7 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
-For `tamamono 1.20.x`, the manifest also declares
+For `moxi 2.0.x`, the manifest also declares
 `minimum_coverage_level: review`. `make check-operator-reliability` treats this
 as a release gate, so future edits cannot silently downgrade a covered operator
 back to `baseline` or `smoke`. The Make target runs the checker self-test first
@@ -236,7 +236,7 @@ stress tolerances are valid.
 
 ## Current State
 
-The current `tamamono 1.20.x` manifest covers all 38 solve operators in the
+The current `moxi 2.0.x` manifest covers all 38 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring at least
 `review` evidence for every covered operator.
 

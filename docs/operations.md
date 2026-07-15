@@ -30,7 +30,7 @@ Those belong to:
 - [packaging-and-deployment.md](packaging-and-deployment.md)
 - [desktop-release-checklist.md](desktop-release-checklist.md)
 
-It now reflects the `tamamono 1.x` product shape:
+It now reflects the `moxi 2.x` product shape:
 
 - `Hub` as the desktop operator shell
 - `Workbench` as the focused modeling and analysis surface

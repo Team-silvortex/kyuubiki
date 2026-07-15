@@ -174,8 +174,8 @@ function validate() {
   if (artifact.schema_version !== "kyuubiki.operator-qualification-baseline/v1") {
     fail("unexpected schema_version");
   }
-  if (artifact.version_line !== "tamamono 1.20.x") {
-    fail("version_line must match tamamono 1.20.x");
+  if (artifact.version_line !== "moxi 2.0.x") {
+    fail("version_line must match moxi 2.0.x");
   }
   if (artifact.candidate_id !== "line-field-closed-form") {
     fail("candidate_id must be line-field-closed-form");

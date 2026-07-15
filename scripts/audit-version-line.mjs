@@ -7,12 +7,12 @@ import { markdownFactChecks } from "./version-line-markdown-facts.mjs";
 
 function usage() {
   console.log(`Usage:
-  node ./scripts/audit-version-line.mjs [--expected 1.6.0] [--next 1.7.0] [--codename tamamono] [--json]
+  node ./scripts/audit-version-line.mjs [--expected 2.0.0] [--next 2.0.1] [--codename moxi] [--json]
 
 Examples:
   node ./scripts/audit-version-line.mjs
-  node ./scripts/audit-version-line.mjs --expected 1.6.0 --next 1.7.0
-  node ./scripts/audit-version-line.mjs --expected 1.6.0 --json
+  node ./scripts/audit-version-line.mjs --expected 2.0.0 --next 2.0.1
+  node ./scripts/audit-version-line.mjs --expected 2.0.0 --json
 `);
 }
 
@@ -20,7 +20,7 @@ function parseArgs(argv) {
   const options = {
     expected: null,
     next: null,
-    codename: "tamamono",
+    codename: "moxi",
     json: false,
     selfTest: false,
   };
@@ -133,10 +133,10 @@ function walk(relativePath, results = []) {
   return results;
 }
 
-function exactChecks(expectedVersion) {
+function exactChecks(expectedVersion, codename) {
   const expectedMinorLine = versionMinorLine(expectedVersion);
-  const expectedDisplayVersion = versionDisplay("tamamono", expectedVersion);
-  const expectedDisplayMinorLine = versionDisplay("tamamono", expectedMinorLine);
+  const expectedDisplayVersion = versionDisplay(codename, expectedVersion);
+  const expectedDisplayMinorLine = versionDisplay(codename, expectedMinorLine);
   const files = [
     "apps/frontend/package.json",
     "apps/frontend/public/brand.json",
@@ -303,7 +303,7 @@ function exactChecks(expectedVersion) {
     });
   }
 
-  checks.push(...markdownFactChecks(expectedVersion, "tamamono", readText));
+  checks.push(...markdownFactChecks(expectedVersion, codename, readText));
 
   const currentSnapshots = (releaseIndex.snapshots ?? [])
     .filter((snapshot) => snapshot.status === "current")
@@ -533,7 +533,7 @@ function main() {
     codename: options.codename,
     expected: expectedVersion,
     next_version: options.next,
-    exact_checks: exactChecks(expectedVersion),
+    exact_checks: exactChecks(expectedVersion, options.codename),
     reference_inventory: searchInventory(expectedVersion, options.codename),
     next_candidates: nextVersionCandidates(expectedVersion, options.next, options.codename),
   };

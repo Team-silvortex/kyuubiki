@@ -1,7 +1,7 @@
 # Testing And CI
 
 This document is the quick map for how Kyuubiki currently validates itself in
-the `tamamono 1.x` line.
+the `moxi 2.x` line.
 
 ## Why the test stack is layered
 
@@ -35,7 +35,7 @@ The repository now keeps validation split by responsibility.
   installer `tests.rs` as a module index. The Make target runs the audit
   script self-test before scanning the repository.
 - `make architecture-check`
-  Lightweight new-architecture guard for the `1.20.x` line. It runs the
+  Lightweight new-architecture guard for the `2.0.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
   chain contract checks, TaskIR mirror and digest contract checks, dependency
@@ -66,7 +66,7 @@ The repository now keeps validation split by responsibility.
   solve operator has a machine-readable manifest shard entry with benchmark
   coverage, headless workflow support, evidence files, trust level, and visible
   limits. It also runs a checker self-test and enforces the manifest's
-  `minimum_coverage_level`, currently `review` for the `tamamono 1.20.x`
+  `minimum_coverage_level`, currently `review` for the `moxi 2.0.x`
   physics-coverage gate.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
@@ -320,9 +320,9 @@ Use these entrypoints:
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
 - `make benchmark-physics-coverage`
-  Run the `1.20.x` broad physics smoke matrix across every built-in benchmark
+  Run the `2.0.x` broad physics smoke matrix across every built-in benchmark
   template. This is the quickest product-level check that the main physics
-  families still have real solver execution paths before `1.20.x` and `1.20.x`
+  families still have real solver execution paths before `2.0.x` and `2.0.x`
   contract work hardens engine/task formats.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression

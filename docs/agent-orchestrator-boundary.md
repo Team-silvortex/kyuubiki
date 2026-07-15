@@ -16,7 +16,7 @@ Those are not the same claim.
 
 ## Hard Statement
 
-In `tamamono 1.x`, the intended boundary is:
+In `moxi 2.x`, the intended boundary is:
 
 - `solver agent = Rust compute peer`
 - `orchestrator = Elixir control plane`

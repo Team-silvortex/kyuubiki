@@ -1,7 +1,7 @@
 # Operator SDK
 
 This document defines the intended extension contract for new operator
-capabilities in the `tamamono 1.x` line.
+capabilities in the `moxi 2.x` line.
 
 The goal is not to create a plugin marketplace first. The goal is to stop
 adding new operators as one-off vertical slices and instead give them a stable
@@ -194,7 +194,7 @@ The SDK should support three operator origins:
 - `external_remote`
   discovered through a trusted remote catalog or runtime registry
 
-`tamamono 1.x` should prioritize `built_in` and `external_local` first.
+`moxi 2.x` should prioritize `built_in` and `external_local` first.
 
 Remote operator discovery should only be added when:
 
@@ -467,7 +467,7 @@ The public protocol should grow toward:
 This can live alongside the current explicit solver RPC methods while the SDK
 is still maturing.
 
-`tamamono 1.x` does not need to delete the current explicit methods first.
+`moxi 2.x` does not need to delete the current explicit methods first.
 It needs to stop painting itself into a corner when operator count grows.
 
 ## First 1.x priorities

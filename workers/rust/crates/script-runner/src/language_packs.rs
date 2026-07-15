@@ -10,7 +10,7 @@ type RunnerResult<T> = Result<T, String>;
 const PACK_SCHEMA: &str = "kyuubiki.language-pack/v1";
 const CATALOG_SCHEMA: &str = "kyuubiki.language-pack-catalog/v1";
 const LOCALE_TARGET_SCHEMA: &str = "kyuubiki.localization-mainstream-locales/v1";
-const VERSION_LINE: &str = "tamamono 1.x";
+const VERSION_LINE: &str = "moxi 2.x";
 const SURFACES: &[&str] = &["workbench", "hub"];
 
 pub(crate) fn run_validate_language_packs(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {

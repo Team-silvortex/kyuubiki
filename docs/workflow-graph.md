@@ -1,7 +1,7 @@
 # Workflow Graph
 
 This document defines the intended multi-operator workflow model for
-`tamamono 1.x`.
+`moxi 2.x`.
 
 The target is closer to a shader-style graph than to a pile of disconnected
 buttons:
@@ -74,7 +74,7 @@ The first useful node kinds are:
 - `output`
   explicit graph exitpoint
 
-`tamamono 1.x` should probably avoid a large branching/control-flow language
+`moxi 2.x` should probably avoid a large branching/control-flow language
 at first. Linear and lightly branched graphs are enough to start.
 
 ## Typed ports
@@ -363,7 +363,7 @@ The current execution-hint split is:
 
 ## 1.x delivery order
 
-Suggested order for `tamamono 1.x`:
+Suggested order for `moxi 2.x`:
 
 1. define operator descriptors and typed run contract
 2. define minimal workflow schema

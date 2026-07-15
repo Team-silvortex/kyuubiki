@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-qualification-baseline/v1",
-  "version_line": "tamamono 1.20.x",
+  "version_line": "moxi 2.0.x",
   "candidate_id": "line-field-closed-form",
   "status": "collecting",
   "artifact_profile": "analytic_closed_form",

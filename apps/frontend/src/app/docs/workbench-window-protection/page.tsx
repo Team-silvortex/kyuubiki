@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Workbench Window Protection | tamamono 1.20.0",
-  description: "Responsive protection rules for the built-in tamamono workbench shell.",
+  title: "Workbench Window Protection | moxi 2.0.0",
+  description: "Responsive protection rules for the built-in moxi workbench shell.",
 };
 
 const LAYERS = [
@@ -95,12 +95,12 @@ export default function WorkbenchWindowProtectionPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.20.0</p>
+        <p style={eyebrowStyle}>moxi 2.0.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workbench Window Protection
         </h1>
         <p style={copyStyle}>
-          The tamamono workbench now treats narrow layouts as a first-class architectural concern.
+          The moxi workbench now treats narrow layouts as a first-class architectural concern.
           The goal is not merely to avoid overlap. The goal is to preserve the built-in automation-safe
           UI while the window shrinks, panels reflow, and low-priority information yields in a
           predictable order.

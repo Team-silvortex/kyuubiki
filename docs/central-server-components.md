@@ -1,6 +1,6 @@
 # Central Server Components
 
-`tamamono 1.x` now has a preview contract for the future Kyuubiki central
+`moxi 2.x` now has a preview contract for the future Kyuubiki central
 server. The central server is not the solver engine and not the desktop Hub. It
 is the distribution and identity plane that can later back hosted stores,
 publisher accounts, language-pack delivery, and signed downloads.

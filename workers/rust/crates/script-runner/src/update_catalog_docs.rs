@@ -481,9 +481,9 @@ fn run_self_test() -> RunnerResult<()> {
     }
     let catalog = json!({
         "schema_version": "kyuubiki.update-catalog/v1",
-        "shipping_version": "1.20.0",
+        "shipping_version": "2.0.0",
         "default_channel": "stable",
-        "line": "tamamono 1.x",
+        "line": "moxi 2.x",
         "source": {
             "release_index": RELEASE_INDEX,
             "channel_contract": CHANNELS_PATH
@@ -491,9 +491,9 @@ fn run_self_test() -> RunnerResult<()> {
         "channels": [{
             "id": "stable",
             "label": "Stable",
-            "tag": "tamamono:stable",
-            "aliases": ["tamamono:latest"],
-            "version": "1.20.0",
+            "tag": "moxi:stable",
+            "aliases": ["moxi:latest"],
+            "version": "2.0.0",
             "status": "current",
             "summary": "Current line.",
             "visible_rules": [{
@@ -514,8 +514,8 @@ fn run_self_test() -> RunnerResult<()> {
         },
     );
     for token in [
-        "tamamono 1.x delivery channels",
-        "Shipping version: 1.20.0",
+        "moxi 2.x delivery channels",
+        "Shipping version: 2.0.0",
         "preflight integrity",
         "hub",
         "declared",

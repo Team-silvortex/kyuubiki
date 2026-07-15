@@ -10,7 +10,7 @@ contract surface:
 - `Solver data plane`
   Rust engine crates and headless Rust agents.
 
-In the `tamamono 1.x` line, those programs now carry a broader operator
+In the `moxi 2.x` line, those programs now carry a broader operator
 family than the early truss-only baseline. The shared stack spans:
 
 - axial and thermal bars

@@ -118,8 +118,8 @@ function validateEvidence(evidence) {
   if (evidence.schema_version !== "kyuubiki.operator-qualification-release-evidence/v1") {
     fail("unexpected schema_version");
   }
-  if (evidence.version_line !== "tamamono 1.20.x") {
-    fail("version_line must match tamamono 1.20.x");
+  if (evidence.version_line !== "moxi 2.0.x") {
+    fail("version_line must match moxi 2.0.x");
   }
   if (evidence.candidate_id !== "line-field-closed-form") {
     fail("candidate_id must be line-field-closed-form");

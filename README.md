@@ -1,282 +1,221 @@
-# kyuubiki tamamono 1.x
+# Kyuubiki
 
-Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
+Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
+runtime control plane.
 
-- `Next.js` workbench UI for modeling, project management, result review, and immersive 3D editing
-- `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
-- `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
-- an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
+The active repository line is `moxi 2.x`. The current development snapshot is
+`moxi 2.0.0`, the first formal Kyuubiki 2.x line after the `tamamono 1.x`
+industrialization bridge.
 
-`tamamono 1.x` is the active repository-wide version line.
-
-The current repository-wide development snapshot is `tamamono 1.20.0`, while
-the documentation posture is aligned for the `1.20.x` preparation window
-inside the final `tamamono 1.x` minor before the pre-`moxi` handoff. There is
-no planned `1.21.x` line; work that does not close the 1.x industrial baseline
-should be deferred to `moxi 2.0.0` or later `2.x` follow-up work.
-
-It also now has an explicit deployment split:
-
-- `local workstation`: frontend + orchestrator + local Rust agents
-- `cloud control plane`: frontend + orchestrator + PostgreSQL
-- `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
-
-On the desktop side, `Kyuubiki Hub` sits above those runtime shapes. The Hub is
-the operator-facing shell; the orchestrator is one managed runtime workload that
-the Hub can start locally, connect to remotely, or switch between across
-targets.
-- `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
-
-For local iteration, the repo-level hot-reload entrypoints are:
-
-- `make hot-local`
-- `make hot-cloud`
-- `make hot-distributed`
-
-These commands keep Next.js/Tauri HMR where it already exists and add the
-missing restart-on-change loop for the non-Phoenix Elixir control plane and
-Rust solver agents.
-
-Frontend runtime modes are explicitly split:
-
-- `orchestrated_gui`
-  the current workbench mode, where the editor talks to Phoenix and Phoenix
-  talks to solver agents
-- `direct_mesh_gui`
-  a future mode where the editor can operate directly against a LAN peer mesh
-  of headless Rust agents without requiring Phoenix on the solver hot path
-
-Protocol boundaries are explicit:
-
-- `kyuubiki.control-plane/http-v1`
-- `kyuubiki.solver-rpc/v1`
-
-## Repository Shape
-
-The monorepo is intentionally split by responsibility:
+## What This Repo Contains
 
 - `apps/`
-  Product-facing surfaces such as the browser workbench, orchestrator API, and
-  installer GUI
+  Browser Workbench, Elixir control plane, and Tauri desktop shells.
 - `workers/`
-  Rust data-plane crates, solver runtime, benchmark tooling, and installer CLI
+  Rust solver/runtime crates, agent binaries, installer logic, and benchmarks.
 - `sdks/`
-  Headless protocol clients for automation, AI agents, and external tools
+  Rust, Python, and Elixir headless SDK surfaces.
 - `schemas/`
-  Versioned JSON contracts shared across the whole stack
+  Shared JSON contracts for workflows, materials, packages, and release assets.
 - `deploy/`
-  Deployment descriptors such as agent manifests
+  Deployment, update, agent, and install/integrity descriptors.
 - `docs/`
-  Architecture, development, and repository-structure references
+  Source-of-truth architecture, operations, verification, and release docs.
 - `scripts/`
-  Host-native launch and workflow entry points
+  Host-facing operational launchers and compatibility wrappers.
 
-Start here if you need orientation:
+## System Shape
 
-- [docs/book.html](docs/book.html)
-  Single-entry HTML book for understanding the whole project before deep diving.
-- [docs/book-manifest.json](docs/book-manifest.json)
-  Machine-readable chapter and reading-path manifest for assistants and tooling.
-- [docs/README.md](docs/README.md)
-  Full current documentation map.
-- [docs/current-line.md](docs/current-line.md)
-  Short current-line posture for `tamamono 1.x`.
-- [docs/current-architecture-map.md](docs/current-architecture-map.md)
-  Compact current architecture map across product shells, control plane,
-  runtime data plane, SDKs, contracts, verification, and authority modes.
-- [docs/system-overview.md](docs/system-overview.md)
-  Runtime map across GUI, control plane, and solver data plane.
-- [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
-  Current `1.15.x` organization map for product shells, Orchestra, Agent,
-  SDKs, schemas, TaskIR, and cleanup boundaries.
-- [docs/installer-remote-control.md](docs/installer-remote-control.md)
-  Installer remote deployment and runtime-control source note for the new
-  operator-facing remote surface.
-- [docs/fem-blender-roadmap.md](docs/fem-blender-roadmap.md)
-  Product north star for becoming the Blender of FEM.
-- [docs/physics-coverage-map.md](docs/physics-coverage-map.md)
-  `1.15.x` physics coverage map for broad solver-family smoke coverage before
-  `1.15.x` and `1.16.x` engine/task-format contracts harden.
-
-## Read By Intent
-
-- new to the project:
-  [docs/README.md](docs/README.md),
-  [docs/current-architecture-map.md](docs/current-architecture-map.md),
-  [docs/system-overview.md](docs/system-overview.md),
-  [docs/project-architecture-organization.md](docs/project-architecture-organization.md),
-  [docs/repository-structure.md](docs/repository-structure.md)
-- changing protocols or automation surfaces:
-  [docs/philosophy.md](docs/philosophy.md),
-  [docs/protocols.md](docs/protocols.md),
-  [docs/headless-sdks.md](docs/headless-sdks.md)
-- changing tests, CI, or release flow:
-  [docs/testing-and-ci.md](docs/testing-and-ci.md),
-  [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md),
-  [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
-- changing workbench UX or visual language:
-  [docs/philosophy.md](docs/philosophy.md),
-  [docs/frontend-style.md](docs/frontend-style.md),
-  [docs/frontend-implementation.md](docs/frontend-implementation.md),
-  [apps/frontend/README.md](apps/frontend/README.md)
-
-## What tamamono 1.x Currently Covers
-
-### Supported analysis domains
-
-- `Mechanical`
-  axial, spring, beam, torsion, truss, frame, and plane studies
-- `Thermal`
-  heat-bar and heat-plane studies with temperature and flux review
-- `Thermo-mechanical`
-  thermal bar, beam, frame, truss, and plane response paths
-- `Electromagnetic fields`
-  electrostatic and magnetostatic bar/plane smoke paths
-- `Transport and flow`
-  1D advection-diffusion concentration transport and simplified Stokes plane flow
-- `Acoustic and modal`
-  acoustic bar and modal frame smoke paths
-
-### Supported study families
-
-The strongest currently verified families are:
-
-- `axial_bar_1d`, `spring_1d`, `beam_1d`, `torsion_1d`
-- `frame_2d`, `frame_3d`
-- `truss_2d`, `truss_3d`
-- `plane_triangle_2d`, `plane_quad_2d`
-- `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`
-- `thermal_bar_1d`, `thermal_beam_1d`, `thermal_frame_2d`, `thermal_frame_3d`
-- `thermal_truss_2d`, `thermal_truss_3d`
-- `thermal_plane_triangle_2d`, `thermal_plane_quad_2d`
-
-Lighter but supported operator families:
-
-- `advection_diffusion_bar_1d`
-- `acoustic_bar_1d`
-- `electrostatic_bar_1d`, `electrostatic_plane_triangle_2d`, `electrostatic_plane_quad_2d`
-- `magnetostatic_bar_1d`, `magnetostatic_plane_triangle_2d`, `magnetostatic_plane_quad_2d`
-- `stokes_flow_plane_quad_2d`
-- `modal_frame_2d`, `modal_frame_3d`
-- `spring_2d`
-- `spring_3d`
-
-### Product Surfaces
+Kyuubiki is intentionally split into product, control, and data-plane layers:
 
 - `Workbench`
-  modeling, materials, results, and analysis workflows
+  Project modeling, workflow authoring, material studies, and result review.
 - `Hub`
-  desktop entry shell, runtime control, bundle tools, and operator guidance
+  Desktop entry shell for runtime posture, project launch, docs, and operator
+  guidance.
 - `Installer`
-  bootstrap, deployment, and packaging setup
+  Runtime deployment, repair, update, packaging, and remote-node preparation.
+- `Orchestra`
+  Elixir control plane for jobs, persistence, chunked results, and scheduling.
+- `Agent`
+  Rust solver/runtime host with one local engine instance per running agent.
+- `SDKs`
+  Headless automation surfaces for CI, AI agents, and research scripts.
 
-### Current validation posture
+Supported runtime postures are documented rather than implied:
 
-- formal solver accuracy baselines for the current verified families
-- orchestrated and direct-mesh smoke for supported study families
-- Workbench sample open, report, and export coverage across the main domains
-- repo-level validation through web, Rust, frontend, SDK, integration, and desktop baselines
+- `local workstation`: frontend, control plane, and local Rust agents
+- `cloud control plane`: frontend/control plane backed by PostgreSQL
+- `distributed control plane`: control plane scheduling remote solver nodes
+- `direct mesh`: offline or LAN peer mode without ambiguous multi-orchestra
+  authority
 
-For the current product-line posture, major-version policy, and quality
-direction, use:
+Start with:
 
 - [docs/current-line.md](docs/current-line.md)
-- [docs/version-line.md](docs/version-line.md)
-- [docs/tamamono-minor-lines.md](docs/tamamono-minor-lines.md)
+- [docs/current-architecture-map.md](docs/current-architecture-map.md)
+- [docs/system-overview.md](docs/system-overview.md)
+- [docs/app-runtime-boundaries.md](docs/app-runtime-boundaries.md)
+- [docs/agent-control-authority.md](docs/agent-control-authority.md)
+
+## Moxi Baseline
+
+`moxi 2.0.0` is not a reset. It carries forward the stabilized `tamamono 1.x`
+contracts and makes them the baseline for the first formal 2.x product line.
+
+The 2.x rule is:
+
+`preserve the engine contracts, prove the computations, and keep UI/runtime
+authority separated`.
+
+Use these gates when deciding whether a new 2.x change is safe to treat as
+part of the industrial baseline:
+
+- [docs/commercial-readiness-2.0.md](docs/commercial-readiness-2.0.md)
+- [docs/minimal-industrial-closure.md](docs/minimal-industrial-closure.md)
+- [docs/weakness-roadmap.md](docs/weakness-roadmap.md)
+- [docs/moxi-handoff.md](docs/moxi-handoff.md)
+
+## Documentation Entrypoints
+
+Use the book and manifest when you need the whole picture:
+
+- [docs/book.html](docs/book.html)
+- [docs/book-manifest.json](docs/book-manifest.json)
+- [docs/navigation-matrix.html](docs/navigation-matrix.html)
+- [docs/README.md](docs/README.md)
+- [docs/documentation-system.md](docs/documentation-system.md)
+
+Read by job:
+
+- Architecture: [docs/module-architecture.md](docs/module-architecture.md),
+  [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
+- Runtime authority: [docs/agent-orchestrator-boundary.md](docs/agent-orchestrator-boundary.md),
+  [docs/headless-agent-contract.md](docs/headless-agent-contract.md)
+- Workflows: [docs/workflow-graph.md](docs/workflow-graph.md),
+  [docs/workflow-dataset.md](docs/workflow-dataset.md)
+- Operators: [docs/operator-sdk.md](docs/operator-sdk.md),
+  [docs/operator-task-ir-digest.md](docs/operator-task-ir-digest.md)
+- Material research:
+  [docs/automated-material-research-example.md](docs/automated-material-research-example.md),
+  [docs/material-research-roadmap.md](docs/material-research-roadmap.md)
+- Verification: [docs/testing-and-ci.md](docs/testing-and-ci.md),
+  [docs/accuracy-baselines.md](docs/accuracy-baselines.md)
+- Security and operations: [docs/security.md](docs/security.md),
+  [docs/operations.md](docs/operations.md)
+- Packaging: [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md),
+  [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
+
+## Quick Commands
+
+Local development:
+
+```sh
+make hot-local
+make hot-cloud
+make hot-distributed
+```
+
+Focused checks:
+
+```sh
+make check-version-line
+make check-doc-inventory
+make check-doc-book
+make check-commercial-readiness
+make check-module-function-coverage-tensor
+make check-operator-reliability
+```
+
+Security and reliability:
+
+```sh
+make audit-dependencies
+make fuzz-smoke
+make check-install-update-disk-hygiene
+make check-component-integrity-protocol
+```
+
+Broader validation:
+
+```sh
+make test-web
+make test-rust
+make test-frontend
+make test-sdk
+make test-integration
+make verify
+```
+
+Benchmark and lab evidence:
+
+```sh
+make benchmark-profile-plan PROFILE=500k SHAPES=1
+make benchmark-profile-remote PROFILE=500k MATRIX=thermal-core CASE=heat-plane-quad-500k
+make benchmark-profile-index
+```
+
+## Current Capability Posture
+
+Kyuubiki already covers broad FEM and adjacent simulation surfaces at varying
+trust levels:
+
+- structural mechanics, truss/frame/beam/plane studies
+- thermal and thermo-mechanical studies
+- electrostatic and magnetostatic field studies
+- acoustic, modal, transport, simplified Stokes, nonlinear, and contact paths
+- composite workflow and material research prototypes
+- headless Rust-led material study workflows with retained evidence bundles
+- 500k/1m exploratory benchmark lanes on the shared lab host
+
+Do not infer equal maturity from equal visibility. The reliability posture is
+tracked in:
+
+- [docs/physics-coverage-map.md](docs/physics-coverage-map.md)
+- [docs/operator-reliability.md](docs/operator-reliability.md)
 - [docs/accuracy-plan.md](docs/accuracy-plan.md)
-- [docs/accuracy-baselines.md](docs/accuracy-baselines.md)
-
-Packaging and deployment paths are now documented centrally in:
-
-- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
-- [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
-- [releases/README.md](releases/README.md)
-
-Desktop release planning and platform bundle checks now live in the two docs
-above, while versioned release snapshots now live under `releases/`.
-
-Unified update channel metadata now lives across:
-
-- `deploy/update-channels.json`
-- `releases/update-catalog.json`
-- `docs/update-catalog.html`
-
-The channel contract is human-owned; the catalog and HTML view are generated.
-
-## Verification
-
-The main repo-level verification entrypoints are:
-
-- `make test-web`
-- `make test-rust`
-- `make test-frontend`
-- `make workflow-preflight`
-- `make test-sdk`
-- `make test-integration`
-- `make test-hub-gui`
-- `make test-installer-gui`
-- `make test-workbench-gui`
-- `make desktop-status PLATFORM=all`
-- `make build-workbench-gui`
-- `make package-runtime`
-- `make package-desktop`
-
-The packaging/output map and smoke breakdown live in:
-
-- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
 - [docs/testing-and-ci.md](docs/testing-and-ci.md)
-- [tests/integration/README.md](tests/integration/README.md)
-
-For workflow-heavy frontend changes, `workflow-preflight` is the release-facing
-guard for topology, search, and layout regressions. It is intentionally kept
-separate from `test-frontend` and expects `npm run dev` to be running under
-`apps/frontend`.
 
 ## Deployment Notes
 
-Kyuubiki supports two SQL-backed storage modes:
+Local defaults are intentionally lightweight:
 
-- `sqlite`
-  Best default for local single-machine work. Minimal host burden.
-- `postgres`
-  Recommended for cloud, multi-node, and distributed deployments.
-
-Persisted entities include:
-
-- projects
-- models
-- model versions
-- jobs
-- results
-
-Recommended local setup:
-
-```bash
+```sh
 KYUUBIKI_DEPLOYMENT_MODE=local
 KYUUBIKI_AGENT_DISCOVERY=static
 KYUUBIKI_STORAGE_BACKEND=sqlite
 SQLITE_DATABASE_PATH=./tmp/data/kyuubiki_dev.sqlite3
-KYUUBIKI_AGENT_ENDPOINTS=127.0.0.1:5001,127.0.0.1:5002
 ```
 
-Recommended cloud/distributed setup:
+Cloud and distributed deployments should use explicit runtime configuration
+and untracked secret storage. Do not commit real `DATABASE_URL`, SSH
+credentials, tokens, private keys, or server-local configuration.
 
-```bash
-KYUUBIKI_DEPLOYMENT_MODE=distributed
-KYUUBIKI_AGENT_DISCOVERY=registry
-KYUUBIKI_AGENT_MANIFEST_PATH=./deploy/agents.distributed.example.json
-KYUUBIKI_STORAGE_BACKEND=postgres
-DATABASE_URL=ecto://postgres@127.0.0.1:5432/kyuubiki_dev
-```
+Deployment and update details live in:
 
-Keep real database passwords in your local secret store or untracked shell
-environment, not in documentation, examples, or committed env files.
-
-Current security notes, project format details, installer flows, benchmark usage, and local development commands live in dedicated docs:
-
-- [docs/security.md](docs/security.md)
 - [docs/operations.md](docs/operations.md)
+- [docs/installer-remote-control.md](docs/installer-remote-control.md)
 - [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
-- [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
-- [docs/repository-structure.md](docs/repository-structure.md)
-- [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
+- [docs/security.md](docs/security.md)
+- [releases/README.md](releases/README.md)
+
+## Repository Rules
+
+- Keep source files under the current `800` line ceiling.
+- Keep docs under the current `2000` line ceiling.
+- Prefer native Rust operational checks over new shell or Node scripts when the
+  work is cross-platform and long-lived.
+- Keep GUI, SDK, and runtime semantics aligned; UI convenience must not become
+  hidden runtime meaning.
+- Keep generated or mirrored docs secondary to source-of-truth documents.
+- Keep real secrets out of tracked files.
+
+Before a handoff or large patch, run:
+
+```sh
+make check-version-line
+make check-doc-inventory
+make audit-project-organization
+make audit-dependencies
+git diff --check
+```

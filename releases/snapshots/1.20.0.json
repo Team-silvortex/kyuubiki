@@ -2,7 +2,7 @@
   "version": "1.20.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-07-14",
   "git_commit": "4263d0c99889172d3289df19f8997bb84fc6db5c",
   "summary": "tamamono 1.20.0 starts the final tamamono 1.x minor, closing the pre-moxi bridge with native operational checks, 1.20-aligned release contracts, and visible installation/update surfaces.",

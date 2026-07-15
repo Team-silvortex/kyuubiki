@@ -129,7 +129,7 @@ test("workflow backend service exposes injectable preflight seam", async () => {
       name: "Ready",
       output_artifacts: [],
       summary: "ready",
-      version: "1.20.0",
+      version: "2.0.0",
     },
   });
 
@@ -153,7 +153,7 @@ test("workflow backend service reports unconfigured preflight seam", async () =>
       name: "Not configured",
       output_artifacts: [],
       summary: "blocked",
-      version: "1.20.0",
+      version: "2.0.0",
     },
   });
 

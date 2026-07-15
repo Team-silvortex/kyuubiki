@@ -156,7 +156,7 @@ fn build_release_evidence(root: &Path) -> RunnerResult<Value> {
     let failed = commands.len().saturating_sub(passed);
     Ok(json!({
         "schema_version": "kyuubiki.operator-qualification-release-evidence/v1",
-        "version_line": "tamamono 1.20.x",
+        "version_line": "moxi 2.0.x",
         "candidate_id": "line-field-closed-form",
         "generated_at_utc": utc_iso_timestamp(),
         "release_retention": {
@@ -223,8 +223,8 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
     )?;
     require_eq(
         field(evidence, "version_line"),
-        "tamamono 1.20.x",
-        "version_line must match tamamono 1.20.x",
+        "moxi 2.0.x",
+        "version_line must match moxi 2.0.x",
     )?;
     require_eq(
         field(evidence, "candidate_id"),

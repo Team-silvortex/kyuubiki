@@ -58,7 +58,7 @@ const RELEASE_REPO_CHECKS = [
 
 function usage() {
   console.log(`Usage:
-  node ./scripts/create-release-snapshot.mjs <version> [--status current|staged|archived] [--codename tamamono] [--line 1.x] [--dry-run] [--force]
+  node ./scripts/create-release-snapshot.mjs <version> [--status current|staged|archived] [--codename moxi] [--line 2.x] [--dry-run] [--force]
 
 Examples:
   node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged --dry-run
@@ -70,8 +70,8 @@ function parseArgs(argv) {
   const options = {
     version: null,
     status: "staged",
-    codename: "tamamono",
-    line: "1.x",
+    codename: "moxi",
+    line: "2.x",
     dryRun: false,
     force: false,
   };

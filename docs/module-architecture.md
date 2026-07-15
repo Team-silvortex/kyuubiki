@@ -1,6 +1,6 @@
 # Module Architecture
 
-This document is the high-level module map for the `tamamono 1.20.x` line.
+This document is the high-level module map for the `moxi 2.0.x` line.
 It explains how the current Kyuubiki system is split into product shells,
 control-plane services, runtime engines, SDKs, contracts, and verification
 gates.

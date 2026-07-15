@@ -1,4 +1,4 @@
-.PHONY: check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-install-update-disk-hygiene check-component-integrity-protocol
+.PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
@@ -16,6 +16,9 @@
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
 
+check-doc-inventory:
+	@node ./scripts/check-doc-inventory.mjs
+
 sync-doc-book-version:
 	@$(ENTRYPOINT) sync-doc-book-version
 
@@ -27,6 +30,9 @@ check-elixir-self-host:
 
 check-commercial-readiness:
 	@$(ENTRYPOINT) validate-commercial-readiness
+
+check-moxi-handoff:
+	@node ./scripts/check-moxi-handoff.mjs
 
 check-install-update-disk-hygiene:
 	@$(ENTRYPOINT) check-install-update-disk-hygiene --self-test

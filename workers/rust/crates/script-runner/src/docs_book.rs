@@ -87,7 +87,7 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
     let options = SyncOptions::parse(args)?;
     if options.help {
         println!(
-            "Usage:\n  kyuubiki-script-runner sync-doc-book-version\n  kyuubiki-script-runner sync-doc-book-version --version 1.20.0 --line \"tamamono 1.20.0\""
+            "Usage:\n  kyuubiki-script-runner sync-doc-book-version\n  kyuubiki-script-runner sync-doc-book-version --version 2.0.0 --line \"moxi 2.0.0\""
         );
         return Ok(0);
     }
@@ -105,7 +105,7 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
     };
     let version_line = options
         .line
-        .unwrap_or_else(|| format!("tamamono {shipping_version}"));
+        .unwrap_or_else(|| format!("moxi {shipping_version}"));
     let minor_line = semver_minor(&shipping_version)?;
 
     let replacements = sync_replacements(&shipping_version, &version_line, &minor_line);
@@ -388,15 +388,15 @@ fn sync_replacements(
     minor_line: &str,
 ) -> Vec<(&'static str, Vec<ReplacementRule>)> {
     let display_version = version_line
-        .strip_prefix("tamamono ")
+        .strip_prefix("moxi ")
         .unwrap_or(version_line)
         .to_string();
     vec![
         (
             "docs/book.html",
             vec![
-                semver_rule("One book for tamamono ", "", &display_version),
-                semver_rule("Version line: tamamono ", "", &display_version),
+                semver_rule("One book for moxi ", "", &display_version),
+                semver_rule("Version line: moxi ", "", &display_version),
                 semver_rule("Shipping version: ", "", shipping_version),
                 minor_rule("Current prep: ", "", &format!("{minor_line}.x")),
             ],
@@ -404,20 +404,20 @@ fn sync_replacements(
         (
             "docs/book-manifest.json",
             vec![
-                semver_rule("\"version_line\": \"tamamono ", "\"", &display_version),
+                semver_rule("\"version_line\": \"moxi ", "\"", &display_version),
                 semver_rule("\"shipping_version\": \"", "\"", shipping_version),
             ],
         ),
         (
             "apps/hub-gui/ui/docs/index.html",
             vec![
-                semver_rule("Desktop reading entry for tamamono ", "", &display_version),
-                semver_rule("Current line: tamamono ", "", &display_version),
+                semver_rule("Desktop reading entry for moxi ", "", &display_version),
+                semver_rule("Current line: moxi ", "", &display_version),
             ],
         ),
         (
             "apps/hub-gui/ui/docs/current-line.html",
-            vec![semver_rule(">tamamono ", "<", &display_version)],
+            vec![semver_rule(">moxi ", "<", &display_version)],
         ),
     ]
 }
@@ -507,14 +507,14 @@ mod tests {
     #[test]
     fn replacement_rule_updates_semver_tokens() {
         let rule = ReplacementRule {
-            prefix: "Current line: tamamono ",
+            prefix: "Current line: moxi ",
             suffix: "<",
-            replacement: "1.20.0".to_string(),
+            replacement: "2.0.0".to_string(),
             version_kind: VersionKind::Semver,
         };
         assert_eq!(
-            rule.apply("Current line: tamamono 1.19.0<"),
-            "Current line: tamamono 1.20.0<"
+            rule.apply("Current line: moxi 1.19.0<"),
+            "Current line: moxi 2.0.0<"
         );
     }
 

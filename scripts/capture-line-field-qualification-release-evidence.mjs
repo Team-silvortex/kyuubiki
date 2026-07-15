@@ -88,7 +88,7 @@ function buildEvidence() {
   const commandResults = evidenceCommands.map(run);
   return {
     schema_version: "kyuubiki.operator-qualification-release-evidence/v1",
-    version_line: "tamamono 1.20.x",
+    version_line: "moxi 2.0.x",
     candidate_id: "line-field-closed-form",
     generated_at_utc: new Date().toISOString(),
     release_retention: {

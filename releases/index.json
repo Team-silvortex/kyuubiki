@@ -1,10 +1,18 @@
 {
-  "line": "tamamono 1.x",
-  "current_version": "1.20.0",
+  "line": "moxi 2.x",
+  "current_version": "2.0.0",
   "snapshots": [
     {
-      "version": "1.20.0",
+      "version": "2.0.0",
       "status": "current",
+      "date": "2026-07-15",
+      "codename": "moxi",
+      "line": "2.x",
+      "snapshot_path": "snapshots/2.0.0.json"
+    },
+    {
+      "version": "1.20.0",
+      "status": "archived",
       "date": "2026-07-14",
       "codename": "tamamono",
       "line": "1.x",

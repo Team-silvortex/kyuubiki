@@ -45,8 +45,8 @@ fn validate(root: &Path, artifact: &Value) -> RunnerResult<()> {
     )?;
     require_eq(
         field(artifact, "version_line"),
-        "tamamono 1.20.x",
-        "version_line must match tamamono 1.20.x",
+        "moxi 2.0.x",
+        "version_line must match moxi 2.0.x",
     )?;
     require_eq(
         field(artifact, "candidate_id"),

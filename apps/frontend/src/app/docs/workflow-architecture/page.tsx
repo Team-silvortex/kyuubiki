@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Workflow Architecture | tamamono 1.20.0",
-  description: "Architecture overview for the tamamono workflow operator system.",
+  title: "Workflow Architecture | moxi 2.0.0",
+  description: "Architecture overview for the moxi workflow operator system.",
 };
 
 const LAYERS = [
@@ -79,7 +79,7 @@ const PEAK_DIAGNOSTICS_FLOW = [
   "Peak diagnostics flows are not a separate execution architecture. They are a specialized reporting family built on the same operator descriptors, workflow graph model, dataset contracts, and runtime records as standard diagnostics flows.",
   "The dedicated peak extracts narrow each domain down to a few contract-stable extrema: electrostatic field peak, thermal flux peak, and thermo-mechanical displacement or stress peaks. That makes them better suited for limit review, release checks, and concise operator comparisons.",
   "The bundle, guard, report, and markdown export stages stay shared. What changes is the meaning of the upstream summaries and the ordering of the resulting focus metrics and highlights.",
-  "In practice this gives tamamono two complementary inspection lanes: full diagnostics for broader field review, and peak diagnostics for fast threshold-oriented review.",
+  "In practice this gives moxi two complementary inspection lanes: full diagnostics for broader field review, and peak diagnostics for fast threshold-oriented review.",
 ];
 
 const PEAK_REFERENCES = [
@@ -119,12 +119,12 @@ export default function WorkflowArchitecturePage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>tamamono 1.20.0</p>
+        <p style={eyebrowStyle}>moxi 2.0.0</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Architecture
         </h1>
         <p style={copyStyle}>
-          tamamono is no longer just a FEM frontend. It is evolving into a contract-driven operator
+          moxi is no longer just a FEM frontend. It is evolving into a contract-driven operator
           platform where graphs, artifacts, runtime traces, and inspection surfaces align around a
           shared composition model.
         </p>
@@ -182,7 +182,7 @@ export default function WorkflowArchitecturePage() {
         <section style={{ marginTop: 32 }}>
           <h2>Peak Diagnostics Flow</h2>
           <p style={copyStyle}>
-            Peak diagnostics is now a first-class workflow pattern inside tamamono. It exists for
+            Peak diagnostics is now a first-class workflow pattern inside moxi. It exists for
             cases where users care more about extrema and guard thresholds than about carrying the
             entire diagnostic field narrative through every surface.
           </p>

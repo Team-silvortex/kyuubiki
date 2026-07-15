@@ -1,7 +1,7 @@
 # Kyuubiki Language Packs
 
 This directory contains distributable UI language support packs for the
-`tamamono 1.x` line. The catalog currently ships 30 mainstream starter packs
+`moxi 2.x` line. The catalog currently ships 30 mainstream starter packs
 for both Workbench and Hub, so the pack contract is already exercised across
 desktop, webview, and future remote-store delivery paths.
 

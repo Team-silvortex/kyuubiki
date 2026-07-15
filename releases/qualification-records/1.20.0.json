@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.operator-qualification-release-records/v1",
-  "release_version": "1.20.0",
-  "version_line": "tamamono 1.20.x",
-  "snapshot_path": "releases/snapshots/1.20.0.json",
+  "release_version": "2.0.0",
+  "version_line": "moxi 2.0.x",
+  "snapshot_path": "releases/snapshots/2.0.0.json",
   "records": [
     {
       "candidate_id": "line-field-closed-form",

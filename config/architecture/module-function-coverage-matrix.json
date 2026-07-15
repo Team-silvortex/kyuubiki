@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-matrix/v1",
-  "version_line": "tamamono 1.20.x",
+  "version_line": "moxi 2.0.x",
   "topology": "config/architecture/module-topology.json",
   "paradigms": {
     "product_surface": "User-facing shell, navigation, UX, and stable UI automation anchors.",

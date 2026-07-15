@@ -1,7 +1,7 @@
 # Workflow Dataset Contract
 
 This document defines the storage philosophy for workflow-carried data in
-`tamamono 1.x`.
+`moxi 2.x`.
 
 The goal is intentionally close to the ONNX idea:
 
@@ -257,7 +257,7 @@ It should be possible to store this contract:
 - alongside a workflow definition
 - or inside future workflow catalog and project bundle artifacts
 
-## `tamamono 1.x` priorities
+## `moxi 2.x` priorities
 
 The current line should keep this contract narrow and useful:
 

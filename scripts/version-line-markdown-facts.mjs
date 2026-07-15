@@ -35,7 +35,7 @@ export function markdownFactChecks(expectedVersion, codename, reader) {
     textIncludesCheck(
       "docs/version-line.md",
       "current documentation target",
-      `current documentation target: \`${expectedDisplayMinorLine}\` pre-\`moxi\` line`,
+      `current documentation target: \`${expectedDisplayMinorLine}\` line`,
       reader,
     ),
     textIncludesCheck(
@@ -47,7 +47,7 @@ export function markdownFactChecks(expectedVersion, codename, reader) {
     textIncludesCheck(
       "docs/installer-remote-control.md",
       "preparation line",
-      `\`${expectedDisplayMinorLine}\` preparation line`,
+      `\`${expectedDisplayMinorLine}\` line`,
       reader,
     ),
     textIncludesCheck(

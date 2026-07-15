@@ -16,14 +16,14 @@ test("buildWorkbenchWorkflowPreflightReport accepts valid headless-ready workflo
   const workflow = {
     id: "workflow.preflight-ready",
     name: "Preflight ready",
-    version: "1.20.0",
+    version: "2.0.0",
     summary: "ready",
     entry_inputs: [],
     output_artifacts: [],
     graph: {
       schema_version: "kyuubiki.workflow-graph/v1",
       id: "workflow.preflight-ready",
-      version: "1.20.0",
+      version: "2.0.0",
       dispatch_policy: "inline_graph",
       nodes: [
         {
@@ -54,14 +54,14 @@ test("buildWorkbenchWorkflowPreflightReport blocks ui-only workflow", () => {
   const workflow = {
     id: "workflow.ui-only",
     name: "UI only",
-    version: "1.20.0",
+    version: "2.0.0",
     summary: "blocked",
     entry_inputs: [],
     output_artifacts: [],
     graph: {
       schema_version: "kyuubiki.workflow-graph/v1",
       id: "workflow.ui-only",
-      version: "1.20.0",
+      version: "2.0.0",
       dispatch_policy: "ui_only",
       nodes: [],
       edges: [],
@@ -82,7 +82,7 @@ test("buildWorkbenchWorkflowPreflightReport reports missing graph", () => {
     workflow: {
       id: "workflow.missing-graph",
       name: "Missing graph",
-      version: "1.20.0",
+      version: "2.0.0",
       summary: "missing",
       entry_inputs: [],
       output_artifacts: [],

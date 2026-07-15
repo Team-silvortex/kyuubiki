@@ -1,22 +1,22 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "1.20.0",
+  "shipping_version": "2.0.0",
   "default_channel": "stable",
-  "line": "tamamono 1.x",
+  "line": "moxi 2.x",
   "channels": [
     {
       "id": "stable",
       "label": "Stable",
-      "tag": "tamamono:stable",
-      "version": "1.20.0",
+      "tag": "moxi:stable",
+      "version": "2.0.0",
       "aliases": [
-        "tamamono:latest",
-        "tamamono:1",
-        "tamamono:1.20",
-        "tamamono:1.20.0"
+        "moxi:latest",
+        "moxi:2",
+        "moxi:2.0",
+        "moxi:2.0.0"
       ],
       "notes": [
-        "Primary operator-facing update track for the current pre-moxi development line.",
+        "Primary operator-facing update track for the current moxi 2.x line.",
         "Targets standard installs that follow the visible installation contract."
       ],
       "visible_rules": [

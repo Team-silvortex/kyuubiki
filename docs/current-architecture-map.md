@@ -1,6 +1,6 @@
 # Current Architecture Map
 
-This is the compact architecture map for the current `tamamono 1.20.x` line.
+This is the compact architecture map for the current `moxi 2.0.x` line.
 Use it before diving into the deeper boundary documents.
 
 Kyuubiki is not one application. It is a contract-first FEM system made of

@@ -43,7 +43,7 @@
     },
     "versionLine": {
       "type": "string",
-      "description": "Optional product line target such as tamamono 1.x."
+      "description": "Optional product line target such as moxi 2.x."
     },
     "targetAppVersion": {
       "type": "string",

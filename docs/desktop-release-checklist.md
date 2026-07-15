@@ -37,12 +37,12 @@ Use a predictable versioned prefix for all desktop-facing outputs:
 - `kyuubiki-hub-v<version>-<platform>-<bundle>`
 - `kyuubiki-workbench-v<version>-<platform>-<bundle>`
 
-Examples for the current `1.20.0` workspace-prep line:
+Examples for the current `2.0.0` workspace-prep line:
 
-- `kyuubiki-installer-v1.20.0-macos-dmg`
-- `kyuubiki-hub-v1.20.0-linux-appimage`
-- `kyuubiki-workbench-v1.20.0-linux-appimage`
-- `kyuubiki-installer-v1.20.0-windows-msi`
+- `kyuubiki-installer-v2.0.0-macos-dmg`
+- `kyuubiki-hub-v2.0.0-linux-appimage`
+- `kyuubiki-workbench-v2.0.0-linux-appimage`
+- `kyuubiki-installer-v2.0.0-windows-msi`
 
 Keep these names aligned with:
 

@@ -68,7 +68,7 @@ pub(crate) fn build_provenance(root: &Path) -> RunnerResult<Value> {
         .count();
     Ok(json!({
         "schema_version": "kyuubiki.operator-qualification-provenance/v1",
-        "version_line": "tamamono 1.20.x",
+        "version_line": "moxi 2.0.x",
         "candidate_id": "line-field-closed-form",
         "generated_at_utc": utc_iso_timestamp(),
         "commands": {

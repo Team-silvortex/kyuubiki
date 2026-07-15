@@ -33,14 +33,14 @@ Read these first, in order:
 14. `minimal-industrial-closure.md`
 15. `weakness-roadmap.md`
 
-For the current `1.20.x` hardening path, keep four threads mentally linked:
+For the current `2.0.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
 - Installer-owned remote control
 - orchestrated and direct-mesh runtime posture
 
-`1.20.x` is the final planned `tamamono 1.x` minor. Documentation changes in
+`2.0.x` is the final planned `moxi 2.x` minor. Documentation changes in
 this window should make the handoff to `moxi 2.0.0` clearer rather than create
 a new `1.21.x` planning lane.
 
@@ -58,6 +58,14 @@ a new `1.21.x` planning lane.
 - `book-ch*.html`
   Chapter pages for the centralized book, so the book can grow by section
   without turning the main entrypoint back into one oversized page.
+- `book-ch01-what-is-kyuubiki.html`
+- `book-ch02-tamamono-line.html`
+- `book-ch03-architecture-boundaries.html`
+- `book-ch04-runtime-modes.html`
+- `book-ch05-workflow-and-operators.html`
+- `book-ch06-sdk-surfaces.html`
+- `book-ch07-trust-and-safety.html`
+- `book-ch08-reading-paths.html`
 - `../apps/hub-gui/ui/docs/index.html`
   Desktop-facing mirror entry for the same narrative, tuned for the Hub shelf.
 
@@ -69,24 +77,33 @@ a new `1.21.x` planning lane.
 - `runtime-doc-ownership.md`
   Runtime, authority, mesh, and Installer remote-control documentation
   ownership map for avoiding duplicate narrative drift.
+- `documentation-system.md`
+  System-level documentation topology, inventory guard, and source/mirror
+  ownership rules.
 
 Then branch by intent:
 
 - `tamamono-minor-lines.md`
-  Long-range `tamamono 1.x` roadmap.
+  Long-range `moxi 2.x` roadmap.
 - `commercial-readiness-2.0.md`
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
+- `moxi-handoff.md`
+  Final `moxi 2.x` patch handoff gate for closing, proving, deferring, or
+  retiring work before the `moxi 2.0.0` line opens.
 - `weakness-roadmap.md`
-  Current weak-spot roadmap from `tamamono 1.20.x` through the `moxi 2.0.0`
+  Current weak-spot roadmap from `moxi 2.0.x` through the `moxi 2.0.0`
   trust boundary, covering numerical trust, operator SDK industrialization,
   agent/orchestra/mesh reliability, TaskIR stability, frontend/runtime
   consistency, security fuzz coverage, and the flagship material research loop.
 - `commercial-readiness-2.0.manifest.json`
   Machine-readable gate map for the same `2.0` checklist, validated by
   `./scripts/kyuubiki validate-commercial-readiness`.
+- `moxi-handoff.manifest.json`
+  Machine-readable gate map for the final `tamamono -> moxi` handoff checklist,
+  validated by `make check-moxi-handoff`.
 - `minimal-industrial-closure.md`
-  The narrower `1.15.x -> 1.20.x` bridge checklist for closing the first
+  The narrower `1.15.x -> 2.0.x` bridge checklist for closing the first
   bounded industrial workflow before broader `2.0` commercial claims.
 - `module-architecture.md`
   System-wide module map for product shells, control plane, runtime data
@@ -106,6 +123,8 @@ Then branch by intent:
   into typed contracts without destabilizing Tauri packaging.
 - `ui-automation-contract.html`
   Product-owned DOM automation contract for the built-in workbench shell.
+- `ui-automation-contract.json`
+  Machine-readable selector contract paired with the UI automation HTML page.
 - `accuracy-plan.md`
   Quality direction and verification policy.
 - `accuracy-baselines.md`
@@ -113,12 +132,21 @@ Then branch by intent:
 - `solver-matrix-optimization-pack.md`
   Benchmark-backed note for the retained Rust solver matrix optimizations and
   the experiments that should not be repeated blindly.
+- `solver-matrix-optimization-pack.html`
+  HTML mirror for the retained solver optimization pack.
 - `operator-sdk.md`
   Current extension-contract direction for new operator capabilities.
 - `operator-reliability.md`
   Machine-readable reliability manifest policy for solve operators, including
   trust levels, evidence expectations, and the current release minimum coverage
   gate.
+- `operator-category-taxonomy.md`
+  Operator-family taxonomy for keeping the growing operator catalog organized.
+- `operator-library-centralization.md`
+  Central operator-library ownership and pull/cache policy for distributed
+  agents.
+- `operator-task-ir-digest.md`
+  TaskIR digest and mirror-field contract for executable operator task files.
 - `material-research-roadmap.md`
   Reliability roadmap for moving material studies from runnable prototypes to
   reproducible screening, review, and eventual qualification workflows.
@@ -126,12 +154,17 @@ Then branch by intent:
   First executable heat-spreader material research loop with real solver
   outputs, optimization metrics, chain convergence assessment, and a
   machine-checkable evidence artifact.
+- `automated-material-research-example.manifest.json`
+  Machine-readable evidence envelope for the automated material research
+  example.
 - `material-score-contract.md`
   Cross-runtime result contract for material candidate scoring, including
   criteria, ranges, feasibility policy, ranking semantics, and stable errors.
+- `material-score-contract.manifest.json`
+  Machine-readable material scoring contract paired with the Markdown note.
 - `physics-coverage-map.md`
-  `1.20.x` coverage map for broad solver-family execution coverage and the
-  review-level reliability gate before the `1.20.x` and `1.20.x`
+  `2.0.x` coverage map for broad solver-family execution coverage and the
+  review-level reliability gate before the `2.0.x` and `2.0.x`
   engine/task-format contract freeze.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
@@ -139,7 +172,7 @@ Then branch by intent:
   ONNX-like cross-operator data contract for workflow-carried values.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the `1.20.x` preparation line.
+  control-surface note for the `2.0.x` preparation line.
 - `remote-deployment-roadmap.html`
   Maturity roadmap for moving Installer remote deployment from policy-bounded
   SSH transport to a deployment service with plans, journals, artifact
@@ -174,6 +207,9 @@ Then branch by intent:
 - `mobile-gui-runtime-boundary.md`
   Mobile WebView GUI contract: remote-control only, no local agent/orchestra
   hosting.
+- `agent-control-authority.md`
+  Agent binding-state and one-authority policy for orchestrated, direct-mesh,
+  and offline modes.
 - `agent-orchestrator-boundary.md`
   Runtime-side contract for keeping Rust agents, Elixir orchestration, and UI shells decoupled.
   Also includes the current transitional inventory and convergence checklist.
@@ -183,14 +219,19 @@ Then branch by intent:
   protocols and frontend-owned gateways.
 - `architecture-red-lines.md`
   Practical do-not-cross checklist for keeping product and runtime layers clean.
+- `architecture-extension-standard.md`
+  Standard flow for adding modules, paradigms, service surfaces, evidence
+  lanes, and contract families.
 - `philosophy.md`
   Shared product, engineering, and review principles across all layers.
 - `hub-architecture.md`
   Hub-specific entrypoint and operator-shell rationale.
 - `repository-structure.md`
   Directory ownership, generated-path boundaries, and source-of-truth rules.
+- `browser-storage-security-audit.html`
+  Browser storage security review for frontend persistence and local state.
 - `project-architecture-organization.md`
-  Current `1.20.x` architecture organization map for Hub, Workbench,
+  Current `2.0.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and line-limit cleanup
   boundaries.
 - `minimal-industrial-closure.md`
@@ -228,26 +269,32 @@ Then branch by intent:
 ### Verify changes
 
 - `version-line.md`
-  Current version-line note for `tamamono 1.x`, including codename and major
+  Current version-line note for `moxi 2.x`, including codename and major
   version policy.
 - `release-prep-1.9-to-1.20.md`
-  Industrialization roadmap for the second half of `tamamono 1.x`, covering
-  the boundary-hardening path from `1.15.x` through `1.20.x` before `2.0`,
+  Industrialization roadmap for the second half of `moxi 2.x`, covering
+  the boundary-hardening path from `1.15.x` through `2.0.x` before `2.0`,
   plus the commercial distinction between `2.0`, `2.x`, and `3.0`.
+- `release-prep-1.7.md`
+  Historical release-prep checklist retained for older tamamono context.
+- `release-prep-1.8.md`
+  Historical release-prep checklist retained for older tamamono context.
 - `commercial-readiness-2.0.md`
   Commercial trust-gate checklist for numerical confidence, workflow assets,
   SDK credibility, installer/update hygiene, agent authority, security, UX, and
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `1.20.x` trust-hardening and asset-formalization path.
+  inside the `2.0.x` trust-hardening and asset-formalization path.
 - `component-integrity-protocol.html`
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.
 - `tamamono-minor-lines.md`
-  Suggested long-range grouping for the `tamamono 1.x` minor releases.
+  Suggested long-range grouping for the `moxi 2.x` minor releases.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
+- `toolchain-contract.md`
+  Rust, Node, Elixir, OTP, Docker, and lab default toolchain expectations.
 - frontend and Rust headless live execution now sit here as first-class
   service-executor validation paths for `service_health`,
   `workflow_submit_catalog`, and `workflow_submit_graph`
@@ -290,6 +337,9 @@ Then branch by intent:
 - `rendering-roadmap.html`
   Concrete rendering-capability staging for `1.6.x` through later `1.x`
   minors, including what can ship before a dedicated field renderer exists.
+- `troubleshooting.md`
+  First-line operational recovery guide for startup, runtime, packaging, and
+  verification failures.
 
 ### Operate and deploy
 
@@ -315,6 +365,9 @@ Then branch by intent:
 - `update-catalog.html`
   Generated operator-facing view of the unified update tags, release channels,
   and shipped version bindings.
+- `installation-integrity-contract.html`
+  Generated installation integrity contract view for required paths, protected
+  state, cleanup policy, and version alignment.
 - `rendering-roadmap.html`
   Human-facing staging map for viewport limits, field-render priorities, and
   future multi-physics visualization work.

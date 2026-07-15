@@ -73,6 +73,12 @@ reading surfaces, not the deeper repository narrative source.
    polishing mirrors or shelf pages.
 5. If a doc stops matching the current version line, either refresh it in the
    same change or mark it explicitly stale.
+6. If a new `docs/*.md/html/json` file is added, add it to `docs/README.md` in
+   the same patch.
+7. If a new Hub shelf page is added under `apps/hub-gui/ui/docs/`, add it to
+   that directory's `README.md` in the same patch.
+
+Run `make check-doc-inventory` to catch invisible local docs before review.
 
 ## Current overlap watchlist
 

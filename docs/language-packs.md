@@ -1,6 +1,6 @@
 # Workbench Language Packs
 
-Workbench language packs let `tamamono 1.x` grow beyond the built-in `en`,
+Workbench language packs let `moxi 2.x` grow beyond the built-in `en`,
 `zh`, `ja`, and `es` copy sets without hard-wiring every future language into the
 repo first.
 
@@ -17,7 +17,7 @@ delivery.
 ## Shipped support packs
 
 The repo now keeps distributable support packs under
-[`language-packs`](../language-packs/). As of `tamamono 1.20.x`, the shipped
+[`language-packs`](../language-packs/). As of `moxi 2.0.x`, the shipped
 catalog covers 30 mainstream starter locales for both Workbench and Hub:
 
 - target contract:
@@ -106,7 +106,7 @@ to replace the keys it cares about.
   "targetSurface": "workbench",
   "name": "French custom pack",
   "version": "1.6.0",
-  "versionLine": "tamamono 1.x",
+  "versionLine": "moxi 2.x",
   "targetAppVersion": "1.15.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
@@ -148,7 +148,7 @@ in.
 
 ## Recommended packaging posture
 
-- keep `versionLine` aligned with the active line such as `tamamono 1.x`
+- keep `versionLine` aligned with the active line such as `moxi 2.x`
 - set `targetSurface` to `workbench` or `hub` for every newly generated pack
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
   build such as `1.15.0`

@@ -1,7 +1,7 @@
 # Weakness Roadmap To Moxi 2.0
 
 This document turns the current weak spots into a concrete roadmap for the
-remaining `tamamono 1.x` hardening line.
+remaining `moxi 2.x` hardening line.
 
 It complements:
 
@@ -32,7 +32,7 @@ Current weak point:
   electromagnetic, CFD/transport, and coupled workflows
 - add explicit failure and limitation notes to weak solver families
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - add convergence checks for selected families
 - add cross-checks against analytic, literature, or independent reference
@@ -66,7 +66,7 @@ Current weak point:
 - document the separation between operator SDK and headless SDK everywhere it
   matters
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - build one complete external-local operator package example
 - prove package preflight, package loading, registry binding, run dispatch, and
@@ -99,7 +99,7 @@ Current weak point:
 - continue remote-server tests through Installer-owned paths instead of ad-hoc
   SSH operations
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - add fault-injection tests for agent disconnect, package rejection, runtime
   crash, and scheduler retry
@@ -133,7 +133,7 @@ Current weak point:
 - make package fetch, readiness, dispatch, and result serialization visible in
   task previews
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - freeze the first executable TaskIR compatibility surface
 - add golden TaskIR examples for Rust-authored and Elixir-authored tasks
@@ -165,7 +165,7 @@ Current weak point:
 - continue modular UI loading and layout safety work without hiding backend
   state behind UI-only behavior
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - add one obvious Workbench path: prepare model, choose workflow, preflight,
   run, inspect, export, recover
@@ -196,7 +196,7 @@ Current weak point:
 - keep credential storage sandboxed and visible
 - add more manifest and workflow malformed-input fixtures
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - fuzz TaskIR, workflow dataset contracts, operator manifests, and package
   preflight parsing
@@ -229,7 +229,7 @@ Current weak point:
 - expand score contracts and feasibility explanations
 - connect headless SDK output, evidence bundles, and report artifacts
 
-`1.19.x -> 1.20.x` focus:
+`1.19.x -> 2.0.x` focus:
 
 - add a coupled multiphysics material exploration example
 - include parameter sweep, optimization objectives, ranking, failure

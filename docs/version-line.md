@@ -1,4 +1,4 @@
-# Version Line: tamamono 1.x
+# Version Line: moxi 2.x
 
 Use this page as the short formal note for the active Kyuubiki version line.
 
@@ -7,30 +7,28 @@ For the broader product narrative, release posture, and reading path, use
 
 ## Formal line record
 
-- codename: `tamamono`
-- active line: `1.x`
-- current development point: `tamamono 1.20.0`
-- current documentation target: `tamamono 1.20.x` pre-`moxi` line
-- final minor policy:
-  `tamamono 1.20.x` is the final planned `tamamono 1.x` minor before the
-  pre-`moxi` handoff
-- formal public release target: `moxi 2.0.0`
-- major-version policy:
-  `tamamono` remains on major version `1`; `moxi 2.0.0` is the intended first
-  formal release handoff after the pre-release industrialization line.
-- line-closure policy:
-  `1.20.x` is the last planned `tamamono 1.x` minor. After this point, the
-  default choice is to close, prove, defer, or retire work rather than open a
-  new `1.21.x` feature cycle.
+- codename: `moxi`
+- active line: `2.x`
+- current development point: `moxi 2.0.0`
+- current documentation target: `moxi 2.0.x` line
+- first 2.x baseline:
+  `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
+  `tamamono 1.x` industrialization bridge
+- inherited baseline:
+  operator contracts, workflow contracts, installer integrity, release
+  metadata, and documentation structure are carried forward from the final
+  `tamamono 1.20.x` closeout window
+- line policy:
+  new work should strengthen the 2.x industrial baseline rather than reopen
+  broad pre-release feature sprawl
 
 ## What this page is for
 
 - confirming the current formal line name
 - confirming the current development point in that line
-- confirming that formal public release is reserved for `moxi 2.0.0`
-- confirming that `1.20.x` is the last planned `tamamono 1.x` minor
-- checking the major-version policy without reading the broader narrative first
-- checking which preparation window the docs are currently being aligned for
+- confirming that the active codename is now `moxi`
+- confirming that `tamamono 1.x` is now historical preparation context
+- checking which documentation window the repo is currently aligned for
 
 ## What this page is not for
 
@@ -42,6 +40,7 @@ For the broader product narrative, release posture, and reading path, use
 ## Related docs
 
 - [current-line.md](current-line.md)
-- [tamamono-minor-lines.md](tamamono-minor-lines.md)
+- [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
+- [minimal-industrial-closure.md](minimal-industrial-closure.md)
 - [accuracy-plan.md](accuracy-plan.md)
 - [accuracy-baselines.md](accuracy-baselines.md)

@@ -50,7 +50,7 @@ pub(super) fn run_self_test(root: &Path) -> RunnerResult<()> {
 fn sample_report() -> Value {
     json!({
         "schema_version": "kyuubiki.operator-qualification-readiness/v1",
-        "version_line": "tamamono 1.20.x",
+        "version_line": "moxi 2.0.x",
         "generated_at_utc": "2026-01-01T00:00:00.000Z",
         "summary": {
             "candidates": 1,

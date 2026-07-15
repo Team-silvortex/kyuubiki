@@ -9,7 +9,7 @@ mod report;
 use inventory::{next_version_candidates, search_inventory};
 use report::print_human_report;
 
-const DEFAULT_CODENAME: &str = "tamamono";
+const DEFAULT_CODENAME: &str = "moxi";
 const EXACT_VERSION_FILES: &[&str] = &[
     "apps/frontend/package.json",
     "apps/frontend/public/brand.json",
@@ -49,7 +49,7 @@ pub(crate) fn run_audit_version_line(root: &Path, args: Vec<OsString>) -> Runner
         "codename": options.codename,
         "expected": expected,
         "next_version": options.next,
-        "exact_checks": exact_checks(root, &expected)?,
+        "exact_checks": exact_checks(root, &expected, &options.codename)?,
         "reference_inventory": search_inventory(root, &expected, &options.codename)?,
         "next_candidates": next_version_candidates(root, &expected, options.next.as_deref(), &options.codename)?,
     });
@@ -78,7 +78,7 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
         match arg.to_string_lossy().as_ref() {
             "--help" | "-h" => {
                 println!(
-                    "usage: kyuubiki-script-runner audit-version-line [--expected 1.20.0] [--next 1.21.0] [--codename tamamono] [--json] [--self-test]"
+                    "usage: kyuubiki-script-runner audit-version-line [--expected 2.0.0] [--next 2.0.1] [--codename moxi] [--json] [--self-test]"
                 );
                 return Ok(options);
             }
@@ -104,10 +104,10 @@ fn current_release_version(root: &Path) -> RunnerResult<String> {
     Ok(field(&read_json(root, "releases/index.json")?, "current_version").to_string())
 }
 
-fn exact_checks(root: &Path, expected: &str) -> RunnerResult<Vec<Value>> {
+fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec<Value>> {
     let minor = version_minor_line(expected);
-    let display = version_display(DEFAULT_CODENAME, expected);
-    let display_minor = version_display(DEFAULT_CODENAME, &minor);
+    let display = version_display(codename, expected);
+    let display_minor = version_display(codename, &minor);
     let mut checks = Vec::new();
     for file in EXACT_VERSION_FILES {
         if file.ends_with("package.json") || file.ends_with("tauri.conf.json") {
@@ -201,7 +201,7 @@ fn exact_checks(root: &Path, expected: &str) -> RunnerResult<Vec<Value>> {
         json_field(root, "releases/update-catalog.json", "shipping_version")?,
     ));
     add_language_pack_checks(root, expected, &mut checks)?;
-    checks.extend(markdown_fact_checks(root, expected, DEFAULT_CODENAME)?);
+    checks.extend(markdown_fact_checks(root, expected, codename)?);
     checks.push(check(
         "release_current_snapshot",
         "releases/index.json",
@@ -294,7 +294,7 @@ fn markdown_fact_checks(root: &Path, expected: &str, codename: &str) -> RunnerRe
         (
             "docs/version-line.md",
             "current documentation target",
-            format!("current documentation target: `{display_minor}` pre-`moxi` line"),
+            format!("current documentation target: `{display_minor}` line"),
         ),
         (
             "docs/current-line.md",
@@ -303,8 +303,8 @@ fn markdown_fact_checks(root: &Path, expected: &str, codename: &str) -> RunnerRe
         ),
         (
             "docs/installer-remote-control.md",
-            "preparation line",
-            format!("`{display_minor}` preparation line"),
+            "runtime control line",
+            format!("`{display_minor}` line"),
         ),
         (
             "docs/desktop-release-checklist.md",
@@ -332,7 +332,7 @@ fn markdown_fact_checks(root: &Path, expected: &str, codename: &str) -> RunnerRe
 }
 
 fn run_self_test() -> RunnerResult<u8> {
-    let checks = self_test_markdown_checks("1.20.0", DEFAULT_CODENAME);
+    let checks = self_test_markdown_checks("2.0.0", DEFAULT_CODENAME);
     let failed = checks
         .iter()
         .filter(|check| check.get("actual") != check.get("expected"))
@@ -351,9 +351,9 @@ fn self_test_markdown_checks(expected: &str, codename: &str) -> Vec<Value> {
     let display_minor = version_display(codename, &minor);
     [
         ("docs/version-line.md", "current development point", format!("current development point: `{display}`"), "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line"),
-        ("docs/version-line.md", "current documentation target", format!("current documentation target: `{display_minor}` pre-`moxi` line"), "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line"),
+        ("docs/version-line.md", "current documentation target", format!("current documentation target: `{display_minor}` line"), "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line"),
         ("docs/current-line.md", "current development point", format!("current development point in this line is `{display}`"), "The current development point in this line is `tamamono 1.15.0`."),
-        ("docs/installer-remote-control.md", "preparation line", format!("`{display_minor}` preparation line"), "remote runtime control surface in the `tamamono 1.15.x` preparation line."),
+        ("docs/installer-remote-control.md", "runtime control line", format!("`{display_minor}` line"), "remote runtime control surface in the `tamamono 1.15.x` preparation line."),
         ("docs/desktop-release-checklist.md", "workspace-prep line", format!("current `{expected}` workspace-prep line"), "Examples for the current `1.15.0` workspace-prep line:"),
     ]
     .into_iter()

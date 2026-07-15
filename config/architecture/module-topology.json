@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-topology/v1",
-  "version_line": "tamamono 1.20.x",
+  "version_line": "moxi 2.0.x",
   "benchmark_lanes": {
     "ui_startup": "WebView, layout, workflow UI, and desktop shell startup/render cost.",
     "workflow_catalog": "Workflow catalog search, topology, package, and graph authoring cost.",

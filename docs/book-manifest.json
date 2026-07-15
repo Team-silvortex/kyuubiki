@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.docs-book/v1",
   "title": "Kyuubiki Book",
-  "version_line": "tamamono 1.x",
-  "current_development_version": "1.20.0",
+  "version_line": "moxi 2.x",
+  "current_development_version": "2.0.0",
   "formal_release_target": "moxi 2.0.0",
   "entry_html": "docs/book.html",
   "purpose": "Single-entry documentation guide for humans and large models.",
@@ -21,13 +21,14 @@
     },
     {
       "id": "tamamono-line",
-      "title": "What tamamono 1.x is optimizing for",
+      "title": "What moxi 2.x is optimizing for",
       "chapter_page": "docs/book-ch02-tamamono-line.html",
       "summary": "Current-line posture and the trust-first philosophy for 1.x.",
       "sources": [
         "docs/current-line.md",
         "docs/version-line.md",
-        "docs/tamamono-minor-lines.md"
+        "docs/tamamono-minor-lines.md",
+        "docs/moxi-handoff.md"
       ]
     },
     {
@@ -161,6 +162,8 @@
       "docs/testing-and-ci.md"
     ],
     "release_owner": [
+      "docs/moxi-handoff.md",
+      "docs/commercial-readiness-2.0.md",
       "docs/packaging-and-deployment.md",
       "docs/testing-and-ci.md",
       "docs/desktop-release-checklist.md",
@@ -175,6 +178,7 @@
       "docs/system-overview.md",
       "docs/project-architecture-organization.md",
       "docs/app-runtime-boundaries.md",
+      "docs/moxi-handoff.md",
       "docs/protocols.md",
       "docs/headless-sdks.md",
       "docs/operator-sdk.md"

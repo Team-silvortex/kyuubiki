@@ -32,7 +32,7 @@ export function WorkbenchAppRail({
       <div className="rail-brand">
         <img alt={`${shortTitle} mark`} className="rail-brand__mark" src="/kyuubiki.png" />
         <strong>{shortTitle}</strong>
-        <span>tamamono 1.20.0</span>
+        <span>moxi 2.0.0</span>
       </div>
       <div className="rail-nav">
         {railItems.map((item) => (

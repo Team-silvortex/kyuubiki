@@ -1,66 +1,68 @@
-# tamamono 1.x
+# moxi 2.x
 
 This is the single entrypoint for the current Kyuubiki product line.
 
 Use it when you want the shortest answer to:
 
-- what `tamamono 1.x` means
-- what this line is optimizing for
-- where to go next inside the current `1.x` documentation set
+- what `moxi 2.x` means
+- what `moxi 2.0.0` inherits from the `tamamono 1.x` bridge
+- where to go next inside the current documentation set
 
-## What defines this line
+## What Defines This Line
 
-`tamamono 1.x` is the point where Kyuubiki stops defining progress mainly by
-new operator families and starts defining it by industrial qualities:
+`moxi 2.x` is the point where Kyuubiki treats its core contracts as product
+baseline rather than loose prototypes.
 
-- numerical trust
-- repeatable validation
-- bug fixing and consistency
-- smoother operator and modeling experience
+The current development point in this line is `moxi 2.0.0`.
 
-## What not to expect
+The 2.x line optimizes for:
 
-This line should not grow by default through feature-count inflation.
+- numerical trust over demo breadth
+- repeatable validation over anecdotal confidence
+- explicit workflow and task contracts over ad hoc payloads
+- runtime recovery over cascading failure
+- visible installer/update/integrity behavior over hidden residue
+- GUI/runtime decoupling so headless SDKs can exercise the same capabilities
 
-The default posture is:
+## What Carries Forward
 
-- keep the major version at `1`
-- improve confidence before widening scope
-- only add new capability when it strengthens the industrial baseline
+`moxi 2.0.0` carries forward the final `tamamono 1.20.x` closeout work:
 
-The current development point in this line is `tamamono 1.20.0`.
+- versioned desktop shells and release metadata
+- operator reliability shards and qualification evidence
+- TaskIR, workflow graph, workflow dataset, and material study schemas
+- installer integrity, update, cleanup, and remote deployment contracts
+- language pack catalog and product-owned UI automation selectors
+- benchmark and fuzz-smoke entrypoints
+- documentation inventory, book manifest, and module coverage tensor
 
-This is still a pre-`moxi` industrialization line, not the formal public
-launch line. `moxi 2.0.0` is the intended first formal release line.
-`tamamono 1.20.x` is also the last planned `tamamono 1.x` minor, so its job is
-not to open another broad feature cycle. Its job is to close the line: harden
-trust, contracts, operator-visible runtime behavior, and release evidence
-before the handoff.
+The old `tamamono` documents are still useful as historical preparation
+records. They are no longer the active version line.
 
-The immediate hardening focus is:
+## What Not To Expect
 
-- benchmark-backed accuracy claims instead of anecdotal confidence
-- broad `1.15.x` physics smoke coverage before task-file and engine contracts
-  harden in `1.15.x` and `1.20.x`
-- clearer task, failure, and recovery semantics across runtime surfaces
-- stronger workflow and asset contracts instead of ad hoc payload growth
-- more explicit Installer-side remote deployment and runtime-control behavior
+`moxi 2.0.0` does not mean every solver is equally mature.
 
-These expectations are meant to remain true across later `1.x` releases too.
-In practice, there should not be a later `1.21.x` planning lane unless a
-release-blocking emergency forces a narrow stabilization exception.
+The current rule is:
 
-## Current backend momentum
+- keep broad physics coverage visible
+- mark weak operators honestly
+- improve reliability evidence before widening claims
+- keep GUI convenience separate from runtime authority
+- keep agent/orchestra/mesh behavior protocol-driven
 
-Recent operator work and runtime-control work are following the `tamamono 1.x`
-rule in the right order:
+## Current Backend Momentum
+
+Recent operator work and runtime-control work now follow the `moxi 2.x` rule:
 
 - add the solver and protocol path
 - add agent/runtime support
 - add sample-backed orchestrated smoke
+- add benchmark or accuracy evidence
 - then decide whether wider UI exposure is worth it
 
-The current example is the now-verified `frame_3d` / `thermal_frame_3d` / `thermal_truss_3d` backend line:
+The verified `frame_3d`, `thermal_frame_3d`, and `thermal_truss_3d` backend
+line is the model:
 
 - Rust solver support exists
 - protocol and engine paths exist
@@ -68,50 +70,35 @@ The current example is the now-verified `frame_3d` / `thermal_frame_3d` / `therm
 - formal accuracy baselines exist
 - official-sample orchestrated API smoke exists for all three studies
 
-That is the kind of growth this line should prefer: narrower, more verified,
-less speculative, and easier to explain across Workbench, Installer, SDK, and
-agent surfaces.
-
-## Current reading path
+## Current Reading Path
 
 1. [version-line.md](version-line.md)
    Formal version-line note, codename, and major-version policy.
-2. [tamamono-minor-lines.md](tamamono-minor-lines.md)
-   Suggested long-range grouping for the `1.x` minors.
-3. [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
-   Trust-gate checklist for deciding whether the line is ready to become a
-   credible `moxi 2.0.0` early-commercial product.
+2. [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
+   Trust-gate checklist for deciding whether the line is credible as an early
+   commercial product.
+3. [minimal-industrial-closure.md](minimal-industrial-closure.md)
+   Minimum industrial loop for research, validation, recovery, and packaging.
 4. [weakness-roadmap.md](weakness-roadmap.md)
-   Current weak-spot roadmap from `tamamono 1.20.x` through the `moxi 2.0.0`
-   trust boundary.
+   Current weak-spot roadmap for the `moxi 2.0.x` trust boundary.
 5. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.
 6. [material-research-roadmap.md](material-research-roadmap.md)
    Reliability roadmap for turning material studies from runnable prototypes
    into reproducible screening, review, and qualification-oriented workflows.
 7. [physics-coverage-map.md](physics-coverage-map.md)
-   `1.15.x` solver-family coverage map and the benchmark lane used to keep
-   broad physics support visible.
+   Solver-family coverage map and the benchmark lane used to keep broad
+   physics support visible.
 8. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
 9. [operator-sdk.md](operator-sdk.md)
    Current extension-contract direction for growing operator capabilities
    without turning every family into a one-off vertical slice.
 10. [workflow-graph.md](workflow-graph.md)
-   Multi-operator composition direction for shader-like workflow growth.
-   The first headless reference runner now exists for
-   `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
-   exposes a first built-in workflow catalog entry for
-   `workflow.heat-to-thermo-quad-2d`. This runner validates the portable graph
-   contract rather than replacing the peer Rust, Python, and Elixir SDK
-   surfaces.
+    Multi-operator composition direction for shader-like workflow growth.
 11. [workflow-dataset.md](workflow-dataset.md)
-   ONNX-like cross-operator data contract for workflow-carried values, with
-   named datasets, shape semantics, and schema references shared across nodes.
+    ONNX-like cross-operator data contract for workflow-carried values.
 12. [installer-remote-control.md](installer-remote-control.md)
-   Installer-owned remote deployment and runtime-control surface, including
-   workflow snapshots, certificate alignment, and mesh-oriented operator
-   guidance.
+    Installer-owned remote deployment and runtime-control surface.
 13. [language-packs.md](language-packs.md)
-   Local-first multilingual extension path for the Workbench UI, with a stable
-   schema ready before remote delivery lands.
+    Local-first multilingual extension path for product-owned UI surfaces.

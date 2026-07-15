@@ -1,7 +1,7 @@
 # Installer Remote Control Surface
 
 Use this page as the source-of-truth note for the Installer remote deployment
-and remote runtime control surface in the `tamamono 1.20.x` preparation line.
+and remote runtime control surface in the `moxi 2.0.x` line.
 
 For maturity tracking, pair this control-surface note with
 [remote-deployment-roadmap.html](remote-deployment-roadmap.html). The current
@@ -236,7 +236,7 @@ instead of generic “something failed” messaging.
 
 ## Relationship to `1.15.x`
 
-Inside the `1.15.x` to `1.20.x` industrialization range, this surface is
+Inside the `1.15.x` to `2.0.x` industrialization range, this surface is
 especially relevant to the `1.15.x` trust-hardening and remote-deployment
 themes:
 

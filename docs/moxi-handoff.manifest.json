@@ -1,0 +1,132 @@
+{
+  "schema_version": "kyuubiki.moxi-handoff/v1",
+  "from_line": "tamamono 1.20.x",
+  "handoff_patch_role": "final tamamono 1.x stabilization patch",
+  "to_line": "moxi 2.0.0",
+  "handoff_statement": "The last tamamono patch should close, prove, defer, or retire work so moxi 2.0.0 can start from stable contracts instead of inherited ambiguity.",
+  "allowed_gate_states": [
+    "ready",
+    "active",
+    "watch",
+    "defer_to_2x"
+  ],
+  "gates": [
+    {
+      "id": "release_identity",
+      "title": "Release Identity",
+      "state": "active",
+      "handoff_question": "Can a human or tool tell whether a file belongs to the final tamamono line or the moxi 2.0.0 target?",
+      "must_close": [
+        "keep current 1.x documents explicit that tamamono 1.20.x is the final planned minor",
+        "avoid renaming active runtime versions to moxi before release metadata actually advances",
+        "prepare the exact documents and catalogs that must change when 2.0.0 is cut"
+      ],
+      "evidence_docs": [
+        "version-line.md",
+        "current-line.md",
+        "release-prep-1.9-to-1.20.md"
+      ]
+    },
+    {
+      "id": "contract_freeze",
+      "title": "Contract Freeze",
+      "state": "active",
+      "handoff_question": "Are workflow graphs, datasets, TaskIR, operator descriptors, and material study bundles stable enough to explain before 2.0.0?",
+      "must_close": [
+        "turn remaining shared payload shortcuts into documented contracts or explicit deferred work",
+        "keep SDK, agent, and Workbench meanings aligned for workflow and operator data",
+        "ensure moxi-facing task and bundle examples are machine-checkable"
+      ],
+      "evidence_docs": [
+        "workflow-graph.md",
+        "workflow-dataset.md",
+        "operator-task-ir-digest.md",
+        "material-score-contract.md"
+      ]
+    },
+    {
+      "id": "research_loop_evidence",
+      "title": "Research Loop Evidence",
+      "state": "active",
+      "handoff_question": "Can the flagship automated material research loop be reproduced and audited without private context?",
+      "must_close": [
+        "retain machine-readable material research bundles for at least one bounded study",
+        "keep optimization metrics, score explanations, and next-step planning visible",
+        "separate Rust-led headless proof from Python and Elixir parity gaps"
+      ],
+      "evidence_docs": [
+        "automated-material-research-example.md",
+        "material-research-roadmap.md",
+        "headless-sdks.md"
+      ]
+    },
+    {
+      "id": "runtime_authority",
+      "title": "Runtime Authority",
+      "state": "active",
+      "handoff_question": "Can agent, orchestra, direct mesh, and installer-controlled remote modes be distinguished without UI-only assumptions?",
+      "must_close": [
+        "keep one-orchestrator authority and offline mesh mode documented as product rules",
+        "make installer remote deployment and runtime-control boundaries explicit",
+        "keep GUI shells decoupled from runtime ownership so mobile WebView control remains plausible"
+      ],
+      "evidence_docs": [
+        "agent-control-authority.md",
+        "agent-orchestrator-boundary.md",
+        "installer-remote-control.md",
+        "mobile-gui-runtime-boundary.md"
+      ]
+    },
+    {
+      "id": "qualification_and_benchmark",
+      "title": "Qualification And Benchmark",
+      "state": "watch",
+      "handoff_question": "Are numerical claims bounded by retained evidence instead of broad ambition?",
+      "must_close": [
+        "keep review-level physics coverage separate from qualification claims",
+        "retain release evidence for qualification candidates before promotion",
+        "keep 500k and 1m benchmark evidence labeled as exploratory unless promoted into scheduled gates"
+      ],
+      "evidence_docs": [
+        "accuracy-plan.md",
+        "accuracy-baselines.md",
+        "operator-reliability.md",
+        "testing-and-ci.md"
+      ]
+    },
+    {
+      "id": "install_update_security",
+      "title": "Install Update Security",
+      "state": "watch",
+      "handoff_question": "Can installation, update, cleanup, credential, and remote artifact behavior be audited before moxi?",
+      "must_close": [
+        "keep standard paths and cleanup rules visible",
+        "avoid committing local server credentials or machine-specific config",
+        "keep privileged deployment and update actions covered by audit-friendly reports"
+      ],
+      "evidence_docs": [
+        "packaging-and-deployment.md",
+        "desktop-release-checklist.md",
+        "security.md",
+        "installation-integrity-contract.html"
+      ]
+    },
+    {
+      "id": "documentation_entrypoint",
+      "title": "Documentation Entrypoint",
+      "state": "active",
+      "handoff_question": "Can a teammate or model enter the project and understand what remains before moxi 2.0.0?",
+      "must_close": [
+        "keep docs book, navigation matrix, current line, commercial readiness, and this handoff note linked",
+        "keep limitations close to the feature surfaces that expose them",
+        "make the final 1.x patch explain what is closed, deferred, or intentionally not part of moxi"
+      ],
+      "evidence_docs": [
+        "README.md",
+        "book.html",
+        "navigation-matrix.html",
+        "commercial-readiness-2.0.md"
+      ]
+    }
+  ]
+}

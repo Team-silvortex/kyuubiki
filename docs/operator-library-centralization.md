@@ -1,6 +1,6 @@
 # Operator Library Centralization
 
-This document defines the intended `tamamono 1.x` rule for operator library
+This document defines the intended `moxi 2.x` rule for operator library
 ownership in distributed agent deployments.
 
 The short version is simple:
@@ -94,7 +94,7 @@ An agent should not be responsible for:
 
 Agent-side operator caching is allowed only as an execution optimization.
 
-The default expectation for `tamamono 1.x` should be:
+The default expectation for `moxi 2.x` should be:
 
 - cache scope is explicit
 - cache entries are attributable to fetched operator refs
@@ -204,7 +204,7 @@ same vocabulary for deciding where an operator belongs.
 
 ## Non-goals for now
 
-`tamamono 1.x` does not need all of the following before using this model:
+`moxi 2.x` does not need all of the following before using this model:
 
 - a public marketplace
 - remote third-party operator installation
