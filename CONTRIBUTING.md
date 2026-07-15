@@ -52,9 +52,12 @@ Example:
 ```bash
 cd <repo>
 KYUUBIKI_STORAGE_BACKEND=postgres \
-DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
+DATABASE_URL=ecto://postgres@127.0.0.1:5432/kyuubiki_dev \
 zsh ./scripts/kyuubiki start
 ```
+
+If your local database requires a password, inject it from an untracked local
+environment or secret store instead of committing it into examples.
 
 If those environment variables are not set, local development falls back to the
 lightweight memory/json backend so tests and quick UI iteration keep working.

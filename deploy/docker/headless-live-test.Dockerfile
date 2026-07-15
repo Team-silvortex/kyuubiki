@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=elixir:1.19
+ARG BASE_IMAGE=elixir:1.20
 ARG RUST_IMAGE=rust:1.88.0
 
 FROM ${RUST_IMAGE} AS rust-toolchain

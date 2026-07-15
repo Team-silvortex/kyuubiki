@@ -176,6 +176,15 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
             ),
         ],
     )?;
+    require_file_tokens(
+        root,
+        &mut issues,
+        "workers/rust/crates/script-runner/src/direct_mesh_container.rs",
+        &[(
+            required_str(elixir, "container_base")?,
+            "direct mesh container default Elixir base",
+        )],
+    )?;
 
     let expected_node_engine = required_str(node, "package_engine")?;
     for package_file in PACKAGE_FILES {

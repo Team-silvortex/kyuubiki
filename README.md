@@ -266,8 +266,11 @@ KYUUBIKI_DEPLOYMENT_MODE=distributed
 KYUUBIKI_AGENT_DISCOVERY=registry
 KYUUBIKI_AGENT_MANIFEST_PATH=./deploy/agents.distributed.example.json
 KYUUBIKI_STORAGE_BACKEND=postgres
-DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
+DATABASE_URL=ecto://postgres@127.0.0.1:5432/kyuubiki_dev
 ```
+
+Keep real database passwords in your local secret store or untracked shell
+environment, not in documentation, examples, or committed env files.
 
 Current security notes, project format details, installer flows, benchmark usage, and local development commands live in dedicated docs:
 

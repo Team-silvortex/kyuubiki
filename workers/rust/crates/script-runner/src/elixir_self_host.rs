@@ -87,8 +87,17 @@ fn build_report(root: &Path, options: &Options) -> RunnerResult<Value> {
             "elixir_minimum": field(elixir, "minimum"),
             "otp_minimum": field(elixir, "otp_minimum"),
             "container_base": field(elixir, "container_base"),
+            "lab_elixir": field(elixir, "lab_elixir"),
+            "lab_otp": field(elixir, "lab_otp"),
             "required_env": string_array(elixir, "self_host_required_env"),
             "optional_env": string_array(elixir, "self_host_optional_env"),
+        },
+        "recommended_runtime": {
+            "source": "installer-managed runtime payload",
+            "elixir": field(elixir, "lab_elixir"),
+            "otp": field(elixir, "lab_otp"),
+            "container_base": field(elixir, "container_base"),
+            "strict_mode_env": "KYUUBIKI_RUNTIME_STRICT=1"
         },
         "detected": {},
         "env": {},
@@ -155,6 +164,13 @@ fn build_report(root: &Path, options: &Options) -> RunnerResult<Value> {
             detected_otp.as_deref(),
             field(elixir, "otp_minimum"),
         );
+        if !issues.is_empty() {
+            issues.push(format!(
+                "Use installer-managed Elixir {} / OTP {} or prepend those runtime bin paths before self-host launch",
+                field(elixir, "lab_elixir"),
+                field(elixir, "lab_otp")
+            ));
+        }
     }
     report["status"] = Value::from(if issues.is_empty() { "ok" } else { "fail" });
     report["issues"] = Value::Array(issues.into_iter().map(Value::from).collect());

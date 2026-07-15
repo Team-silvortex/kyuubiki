@@ -16,7 +16,7 @@
     "constraint": "~> 1.19",
     "minimum": "1.20.0",
     "otp_minimum": "28.0",
-    "container_base": "elixir:1.19",
+    "container_base": "elixir:1.20",
     "lab_otp": "28.4",
     "lab_elixir": "1.20.1-otp-28",
     "self_host_required_env": [

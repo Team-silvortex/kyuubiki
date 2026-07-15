@@ -75,8 +75,17 @@ async function main() {
       elixir_minimum: contract.elixir.minimum,
       otp_minimum: contract.elixir.otp_minimum,
       container_base: contract.elixir.container_base,
+      lab_elixir: contract.elixir.lab_elixir,
+      lab_otp: contract.elixir.lab_otp,
       required_env: contract.elixir.self_host_required_env,
       optional_env: contract.elixir.self_host_optional_env,
+    },
+    recommended_runtime: {
+      source: "installer-managed runtime payload",
+      elixir: contract.elixir.lab_elixir,
+      otp: contract.elixir.lab_otp,
+      container_base: contract.elixir.container_base,
+      strict_mode_env: "KYUUBIKI_RUNTIME_STRICT=1",
     },
     detected: {},
     env: {},
@@ -123,6 +132,11 @@ async function main() {
     pushVersionIssue(issues, "Elixir", report.detected.elixir, contract.elixir.minimum);
     pushVersionIssue(issues, "Mix", report.detected.mix, contract.elixir.minimum);
     pushVersionIssue(issues, "OTP", report.detected.otp, contract.elixir.otp_minimum);
+    if (issues.length > 0) {
+      issues.push(
+        `Use installer-managed Elixir ${contract.elixir.lab_elixir} / OTP ${contract.elixir.lab_otp} or prepend those runtime bin paths before self-host launch`,
+      );
+    }
   }
 
   report.status = issues.length === 0 ? "ok" : "fail";

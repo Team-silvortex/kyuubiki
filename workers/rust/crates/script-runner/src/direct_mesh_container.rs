@@ -87,7 +87,7 @@ pub(crate) fn run_direct_mesh_benchmark_container(
 fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<Options> {
     let timestamp = utc_timestamp_slug();
     let mut options = Options {
-        base_image: env::var("BASE_IMAGE").unwrap_or_else(|_| "elixir:1.19".to_string()),
+        base_image: env::var("BASE_IMAGE").unwrap_or_else(|_| "elixir:1.20".to_string()),
         docker_build_network: env_nonempty("DOCKER_BUILD_NETWORK"),
         docker_run_network: env_nonempty("DOCKER_RUN_NETWORK"),
         http_proxy: env_nonempty("HTTP_PROXY").or_else(|| env_nonempty("http_proxy")),

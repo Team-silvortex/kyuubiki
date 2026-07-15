@@ -13,6 +13,7 @@
     "required_layout_count",
     "covered_required_layout_count",
     "central_components",
+    "central_required_coverage",
     "issues"
   ],
   "additionalProperties": false,
@@ -29,6 +30,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/componentSummary" }
     },
+    "central_required_coverage": { "$ref": "#/$defs/requiredCoverage" },
     "issues": { "type": "array", "items": { "type": "string" } }
   },
   "$defs": {
@@ -44,6 +46,19 @@
         "owned_paths": { "type": "array", "items": { "type": "string" } },
         "required_paths": { "type": "array", "items": { "type": "string" } },
         "check_commands": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "requiredCoverage": {
+      "type": "object",
+      "required": ["required", "covered", "missing", "required_count", "covered_count", "complete"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "covered": { "type": "array", "items": { "type": "string" } },
+        "missing": { "type": "array", "items": { "type": "string" } },
+        "required_count": { "type": "integer", "minimum": 0 },
+        "covered_count": { "type": "integer", "minimum": 0 },
+        "complete": { "type": "boolean" }
       }
     }
   }

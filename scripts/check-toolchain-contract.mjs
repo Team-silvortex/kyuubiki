@@ -114,6 +114,15 @@ async function main() {
   requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "KYUUBIKI_REMOTE_OTP_VERSION", "remote OTP default key");
   requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "KYUUBIKI_REMOTE_ELIXIR_VERSION", "remote Elixir default key");
 
+  const directMeshContainer = await readText("workers/rust/crates/script-runner/src/direct_mesh_container.rs");
+  requireContains(
+    issues,
+    "workers/rust/crates/script-runner/src/direct_mesh_container.rs",
+    directMeshContainer,
+    contract.elixir.container_base,
+    "direct mesh container default Elixir base",
+  );
+
   for (const file of [
     "apps/frontend/package.json",
     "apps/hub-gui/package.json",

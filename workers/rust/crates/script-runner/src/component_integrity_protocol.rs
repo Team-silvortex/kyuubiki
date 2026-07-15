@@ -10,7 +10,11 @@ const CONTRACT_PATH: &str = "deploy/installation-integrity-contract.json";
 const INSTALL_SCHEMA: &str = "kyuubiki.installation-contract/v1";
 const COMPONENT_PROTOCOL: &str = "kyuubiki.component-integrity/v1";
 const REPORT_SCHEMA: &str = "kyuubiki.component-integrity-report/v1";
-const REQUIRED_CENTRAL_COMPONENTS: &[&str] = &["central.store.api", "central.store.contracts"];
+const REQUIRED_CENTRAL_COMPONENTS: &[&str] = &[
+    "central.store.api",
+    "central.store.contracts",
+    "central.store.readiness",
+];
 
 pub(crate) fn run_check_component_integrity_protocol(
     root: &Path,
@@ -260,6 +264,10 @@ fn build_report(contract: &Value, issues: &[String]) -> Value {
         })
         .map(|component| component_summary(component))
         .collect::<Vec<_>>();
+    let seen_ids = components
+        .iter()
+        .filter_map(|component| string_at(component, "/id").map(str::to_string))
+        .collect::<BTreeSet<_>>();
 
     json!({
         "schema_version": REPORT_SCHEMA,
@@ -271,7 +279,34 @@ fn build_report(contract: &Value, issues: &[String]) -> Value {
         "required_layout_count": required_paths.len(),
         "covered_required_layout_count": covered_required_path_count,
         "central_components": central_components,
+        "central_required_coverage": central_required_coverage(&seen_ids),
         "issues": issues,
+    })
+}
+
+fn central_required_coverage(seen_ids: &BTreeSet<String>) -> Value {
+    let required = REQUIRED_CENTRAL_COMPONENTS
+        .iter()
+        .map(|id| (*id).to_string())
+        .collect::<Vec<_>>();
+    let covered = required
+        .iter()
+        .filter(|id| seen_ids.contains(*id))
+        .cloned()
+        .collect::<Vec<_>>();
+    let missing = required
+        .iter()
+        .filter(|id| !seen_ids.contains(*id))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    json!({
+        "required": required,
+        "covered": covered,
+        "missing": missing,
+        "required_count": REQUIRED_CENTRAL_COMPONENTS.len(),
+        "covered_count": covered.len(),
+        "complete": missing.is_empty()
     })
 }
 
@@ -419,6 +454,13 @@ fn self_test_contract() -> Value {
                 ["config/architecture/central-store-contract.json"],
                 ["config/architecture/central-store-contract.json"],
                 ["make check-central-readiness-report"]
+            ),
+            component_fixture(
+                "central.store.readiness",
+                "central-readiness",
+                ["workers/rust/crates/script-runner/src/central_readiness_report.rs"],
+                ["workers/rust/crates/script-runner/src/central_readiness_report.rs"],
+                ["make build-central-readiness-report"]
             )
         ]
     })
@@ -492,7 +534,19 @@ mod tests {
                 .pointer("/central_components")
                 .and_then(Value::as_array)
                 .map(Vec::len),
-            Some(2)
+            Some(3)
+        );
+        assert_eq!(
+            report
+                .pointer("/central_required_coverage/complete")
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            report
+                .pointer("/central_required_coverage/covered_count")
+                .and_then(Value::as_u64),
+            Some(3)
         );
     }
 }
