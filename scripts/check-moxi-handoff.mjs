@@ -20,12 +20,12 @@ if (manifest.schema_version !== "kyuubiki.moxi-handoff/v1") {
   issues.push(`${manifestRelativePath}: unexpected schema_version`);
 }
 
-if (manifest.from_line !== "tamamono 1.20.x") {
-  issues.push(`${manifestRelativePath}: from_line must stay tamamono 1.20.x`);
+if (manifest.from_line !== "moxi 2.0.0") {
+  issues.push(`${manifestRelativePath}: from_line must stay moxi 2.0.0`);
 }
 
-if (manifest.to_line !== "moxi 2.0.0") {
-  issues.push(`${manifestRelativePath}: to_line must stay moxi 2.0.0`);
+if (manifest.to_line !== "moxi 2.x") {
+  issues.push(`${manifestRelativePath}: to_line must stay moxi 2.x`);
 }
 
 if (!sameStrings(manifest.allowed_gate_states, expectedStates)) {

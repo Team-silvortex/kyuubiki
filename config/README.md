@@ -66,8 +66,9 @@ the profile commands themselves should be executed.
   central-store API sources plus client surfaces and internal service-surface
   bindings such as `central-web-service` under `orchestra-control-plane`.
   Its shape is guarded by `schemas/contracts-runtime-api-surface.schema.json`.
-  Use `node scripts/check-contracts-runtime-api-surface.mjs --surface tmp/file.json`
-  for fixture or negative checks.
+  Use `./scripts/kyuubiki check-contracts-runtime-api-surface` for the native
+  gate; the retained `.mjs` script is only a parity helper for explicit
+  fixture or negative checks.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
 - `dependency-audit-lockfiles.json`

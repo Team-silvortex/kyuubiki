@@ -38,6 +38,17 @@ fn run(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
         println!("operator validation self-test passed");
         return Ok(0);
     }
+    if let Some(input_report) = &options.input_report {
+        let report = read_json(root, input_report)?;
+        validate_report(&report, &options)?;
+        validate_input_report(&report, &options)?;
+        let profile_count = report
+            .get("profile_count")
+            .and_then(Value::as_u64)
+            .unwrap_or_default();
+        println!("operator validation report ok: {input_report} ({profile_count} profile(s))");
+        return Ok(0);
+    }
     let config = read_json(root, &options.config)?;
     validate_config(root, &config)?;
     let report = build_report(root, &config, &options)?;
@@ -59,6 +70,7 @@ fn run(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
 #[derive(Debug, Clone)]
 struct Options {
     config: String,
+    input_report: Option<String>,
     out: String,
     profile: Option<String>,
     execute: bool,
@@ -68,6 +80,7 @@ struct Options {
 fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
     let mut options = Options {
         config: DEFAULT_CONFIG.to_string(),
+        input_report: None,
         out: DEFAULT_OUT.to_string(),
         profile: None,
         execute: false,
@@ -81,6 +94,12 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
                     return Err("missing value for --config".to_string());
                 };
                 options.config = value.to_string_lossy().to_string();
+            }
+            "--in" => {
+                let Some(value) = iter.next() else {
+                    return Err("missing value for --in".to_string());
+                };
+                options.input_report = Some(value.to_string_lossy().to_string());
             }
             "--out" => {
                 let Some(value) = iter.next() else {
@@ -307,6 +326,27 @@ fn validate_report(report: &Value, options: &Options) -> RunnerResult<()> {
     Ok(())
 }
 
+fn validate_input_report(report: &Value, options: &Options) -> RunnerResult<()> {
+    if report.get("executed").and_then(Value::as_bool) != Some(true) {
+        return Err("input report must be executed=true".to_string());
+    }
+    if report.get("ok").and_then(Value::as_bool) != Some(true) {
+        return Err("input report must be ok=true".to_string());
+    }
+    if let Some(expected_profile) = options.profile.as_deref() {
+        let profiles = report
+            .get("profiles")
+            .and_then(Value::as_array)
+            .ok_or_else(|| "report profiles must be an array".to_string())?;
+        if profiles.len() != 1 || field(&profiles[0], "profile_id") != expected_profile {
+            return Err(format!(
+                "input report must contain only profile {expected_profile}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn validate_report_profile(profile: &Value, executed: bool, index: usize) -> RunnerResult<()> {
     let context = format!("report.profiles/{index}");
     require_string(profile.get("profile_id"), "profile_id", &context)?;
@@ -405,6 +445,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         &sample,
         &Options {
             config: "config/sample.json".to_string(),
+            input_report: None,
             out: DEFAULT_OUT.to_string(),
             profile: None,
             execute: false,
@@ -415,6 +456,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         &report,
         &Options {
             config: "config/sample.json".to_string(),
+            input_report: None,
             out: DEFAULT_OUT.to_string(),
             profile: None,
             execute: false,
@@ -427,6 +469,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
             &sample,
             &Options {
                 config: "config/sample.json".to_string(),
+                input_report: None,
                 out: DEFAULT_OUT.to_string(),
                 profile: Some("missing".to_string()),
                 execute: false,
@@ -442,6 +485,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
             &report,
             &Options {
                 config: "config/sample.json".to_string(),
+                input_report: None,
                 out: DEFAULT_OUT.to_string(),
                 profile: None,
                 execute: false,

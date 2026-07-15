@@ -34,9 +34,14 @@ function assertPathExists(relativePath, label) {
 }
 
 function assertCommand(command) {
-  const [binary, script] = command.split(/\s+/u);
-  if (binary !== "node") throw new Error(`runtime command must use node: ${command}`);
-  assertPathExists(script, "runtime command script");
+  const [binary, subcommand] = command.split(/\s+/u);
+  if (binary !== "./scripts/kyuubiki") {
+    throw new Error(`runtime command must use native wrapper: ${command}`);
+  }
+  if (!subcommand) {
+    throw new Error(`runtime command missing runner subcommand: ${command}`);
+  }
+  assertPathExists("scripts/kyuubiki", "runtime command wrapper");
 }
 
 function assertEvidenceSource(source) {
@@ -62,12 +67,12 @@ function assertSurface(surface) {
   }
   assertIncludes(
     surface.runtime_api?.stable_commands ?? [],
-    "node scripts/build-central-readiness-report.mjs",
+    "./scripts/kyuubiki build-central-readiness-report",
     "stable command",
   );
   assertIncludes(
     surface.runtime_api?.stable_commands ?? [],
-    "node scripts/check-central-readiness-report.mjs",
+    "./scripts/kyuubiki check-central-readiness-report",
     "stable command",
   );
   assertIncludes(

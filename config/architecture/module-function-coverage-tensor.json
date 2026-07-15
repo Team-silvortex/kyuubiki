@@ -102,6 +102,108 @@
         ]
       }
     ],
+    "solver_execution": [
+      {
+        "id": "operator-task-ir-execution-contract",
+        "files": [
+          "schemas/operator-task-ir.schema.json",
+          "schemas/examples.operator-task-ir.json",
+          "workers/rust/crates/protocol/src/operator_task_ir.rs",
+          "workers/rust/crates/script-runner/src/operator_task_ir_contract.rs",
+          "scripts/check-operator-task-ir-contract.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.operator-task-ir/v1",
+          "x-kyuubiki-mirror_constraints",
+          "descriptor_authoring",
+          "execution_program",
+          "runtime_hints",
+          "integrity",
+          "OPERATOR_TASK_DIGEST_FIELDS",
+          "check-operator-task-ir-contract"
+        ]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "workflow-graph-dataset-contract",
+        "files": [
+          "schemas/workflow-graph.schema.json",
+          "schemas/workflow-dataset.schema.json",
+          "schemas/examples.workflow-graph.json",
+          "schemas/examples.workflow-dataset.json",
+          "workers/rust/crates/script-runner/src/workflow_dataset_contract.rs",
+          "sdks/rust/src/workflow_contracts.rs",
+          "sdks/rust/src/workflow_contract_validation.rs",
+          "scripts/check-workflow-dataset-contract.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.workflow-graph/v1",
+          "kyuubiki.workflow-dataset/v1",
+          "dataset_contract",
+          "operator_fetch_plan",
+          "dispatch_policy",
+          "WORKFLOW_GRAPH_SCHEMA_VERSION",
+          "WORKFLOW_DATASET_SCHEMA_VERSION",
+          "check-workflow-dataset-contract"
+        ]
+      }
+    ],
+    "sdk_headless": [
+      {
+        "id": "headless-service-action-contract",
+        "files": [
+          "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
+          "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
+          "apps/frontend/test/headless/kyuubiki-headless-cli.test.mjs",
+          "apps/frontend/test/headless/kyuubiki-headless-live.test.mjs",
+          "sdks/rust/src/workflow_contracts.rs",
+          "sdks/python/kyuubiki_sdk/workflow_contracts.py",
+          "sdks/elixir/lib/kyuubiki_sdk/workflow_contracts.ex"
+        ],
+        "required_text": [
+          "service_health",
+          "workflow_submit_graph",
+          "direct_mesh_solve",
+          "requiresConfirmation",
+          "HeadlessActionContract",
+          "kyuubiki.headless-workflow/v1",
+          "kyuubiki.workflow-graph/v1",
+          "kyuubiki.workflow-dataset/v1"
+        ]
+      }
+    ],
+    "persistence_provenance": [
+      {
+        "id": "persistence-provenance-contract",
+        "files": [
+          "config/architecture/central-store-contract.json",
+          "deploy/installation-integrity-contract.json",
+          "releases/index.json",
+          "releases/snapshots/2.0.0.json",
+          "workers/rust/crates/script-runner/src/central_store_contract.rs",
+          "workers/rust/crates/script-runner/src/release_snapshot.rs",
+          "workers/rust/crates/script-runner/src/install_update_disk_hygiene.rs",
+          "apps/frontend/src/components/workbench/system/workbench-system-storage-contract.ts",
+          "apps/frontend/test/workflow/workbench-system-storage.test.ts",
+          "scripts/check-central-store-contract.mjs",
+          "scripts/create-release-snapshot.mjs",
+          "scripts/check-install-update-disk-hygiene.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.central-store-contract-check/v1",
+          "kyuubiki.central-provenance-policy/v1",
+          "releases/snapshots",
+          "retentionPolicy",
+          "snapshotPayloadPrefix",
+          "source_of_truth",
+          "safe storage cleanup preserves careful source-of-truth buckets",
+          "check-central-store-contract",
+          "create-release-snapshot",
+          "check-install-update-disk-hygiene"
+        ]
+      }
+    ],
     "deployment_update": [
       {
         "id": "install-update-integrity-contract",
@@ -121,6 +223,25 @@
           "same-channel reinstall",
           "remote_artifact_policy",
           "protected_roots"
+        ]
+      }
+    ],
+    "benchmark": [
+      {
+        "id": "benchmark-profile-coverage-contract",
+        "files": [
+          "config/benchmark-profile-coverage.json",
+          "workers/rust/crates/script-runner/src/benchmark_profile_index.rs",
+          "workers/rust/crates/script-runner/src/benchmark_profile_index/markdown.rs",
+          "tests/integration/benchmark-profile-index.test.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.benchmark-profile-coverage/v1",
+          "kyuubiki.benchmark-profile-index/v1",
+          "expected_cases",
+          "coverage_summaries",
+          "gate",
+          "no retained benchmark profile runs"
         ]
       }
     ],

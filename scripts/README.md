@@ -97,8 +97,10 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-module-function-coverage-tensor`
   Native module x function-paradigm x evidence-depth tensor generator. It
   validates tensor lane mappings and contract evidence, derives gap severity,
-  and writes the retained JSON/Markdown tensor report while preserving `--out`
-  and `--self-test`.
+  marks required covered cells as `strong`, `medium`, or `thin`, and writes the
+  retained JSON/Markdown tensor report while preserving `--out` and
+  `--self-test`. The retained Node script mirrors these fields for compatibility
+  while Make uses the native runner.
 - `kyuubiki-script-runner audit-project-organization`
   Enforce the repository-wide source organization guard. New source and docs
   files, including untracked files that are not ignored, stay under the shared
@@ -299,11 +301,11 @@ This directory contains host-native operational entry points.
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
 - `check-moxi-handoff.mjs`
-  Verify the final `tamamono 1.x` to `moxi 2.0.0` handoff manifest against its
-  Markdown gate. This keeps the last `1.x` patch focused on closing, proving,
-  deferring, or retiring work before the major-version boundary.
+  Verify the `moxi 2.0.0` to `moxi 2.x` status handoff manifest against its
+  Markdown gate. This keeps the current hardening work focused on preserving
+  stable contracts while improving evidence, recovery, and user-facing trust.
 - `kyuubiki-script-runner validate-minimal-industrial-closure`
-  Verify the narrower `1.15.x -> 1.20.x` minimum industrial closure manifest
+  Verify the narrower `moxi 2.x` minimum industrial closure manifest
   against its Markdown gate, including gate count, evidence links, supported
   state values, and the shared exit statement.
 - `sync-doc-book-version.mjs`
@@ -560,7 +562,7 @@ Useful smoke wrappers:
   the source organization line limit. Project organization uses an `800` line
   default for source-like files and a `2000` line default for documentation
   files such as Markdown and HTML.
-- `./scripts/build-regression-gate-report.mjs --tmp-root tmp`
+- `./scripts/kyuubiki build-regression-gate-report --tmp-root tmp`
   Collapse the shared regression lane catalog into a CI/installer-friendly gate
   output. This emits `tmp/regression-gate-report.json` plus
   `tmp/regression-gate-report.md`, prints the overall gate status, exits `2`

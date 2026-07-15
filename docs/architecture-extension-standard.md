@@ -31,8 +31,10 @@ contract evidence, the tensor reports `weak_evidence`.
 5. Attach benchmark lanes and security lanes.
 6. Add risk tags that describe how the module can fail.
 7. Add required paradigms and cell statuses in the matrix.
-8. Run `make check-module-function-coverage-tensor`.
-9. Add prose ownership and non-ownership notes.
+8. Add tensor lane mappings and contract evidence until required covered cells
+   are not left as unexplained `thin` evidence.
+9. Run `make check-module-function-coverage-tensor`.
+10. Add prose ownership and non-ownership notes.
 
 Do not create a top-level module for an internal service face. Use a service
 surface when the code and ownership remain inside an existing module.
@@ -46,6 +48,9 @@ surface when the code and ownership remain inside an existing module.
    `module-function-coverage-tensor.json`.
 4. Ensure every required covered cell has runnable evidence or contract
    evidence.
+5. Prefer a `strong` maturity coordinate before using the paradigm in release
+   claims. If the coordinate is intentionally `medium` or `thin`, document the
+   next hardening gate.
 
 ## Adding A Service Surface
 

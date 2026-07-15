@@ -19,8 +19,8 @@ if (manifest.schema_version !== "kyuubiki.minimal-industrial-closure/v1") {
   issues.push(`${manifestRelativePath}: unexpected schema_version`);
 }
 
-if (manifest.release_line !== "1.15.x -> 1.20.x") {
-  issues.push(`${manifestRelativePath}: release_line must stay on the 1.15.x -> 1.20.x bridge`);
+if (manifest.release_line !== "moxi 2.x") {
+  issues.push(`${manifestRelativePath}: release_line must stay on the moxi 2.x bridge`);
 }
 
 if (!sameStrings(manifest.state_values, expectedStates)) {

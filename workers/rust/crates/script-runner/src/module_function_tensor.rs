@@ -185,6 +185,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
     }
     let mut cells = serde_json::Map::new();
     let mut gaps = Vec::new();
+    let mut thin_points = Vec::new();
 
     for module in modules(topology) {
         let module_id = string_field(module, "id").unwrap_or_default();
@@ -225,6 +226,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                 "test_command_count": benchmark_tests.len() + security_tests.len()
             });
             let gap = derive_evidence_aware_gap(status, required, &evidence_depth);
+            let maturity = derive_maturity(paradigm, status, required, &evidence_depth);
             increment(&mut module_counts, gap);
             if let Some(counts) = paradigm_summary.get_mut(paradigm) {
                 increment_value_counts(counts, gap);
@@ -240,12 +242,24 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                     "security_lanes": security_lanes
                 }));
             }
+            if required && status == "covered" && maturity != "strong" {
+                thin_points.push(json!({
+                    "maturity": maturity,
+                    "module_id": module_id,
+                    "paradigm": paradigm,
+                    "benchmark_lanes": benchmark_lanes,
+                    "security_lanes": security_lanes,
+                    "contract_evidence_count": contract_evidence.len(),
+                    "test_command_count": benchmark_tests.len() + security_tests.len()
+                }));
+            }
             module_cells.insert(
                 paradigm.clone(),
                 json!({
                     "status": status,
                     "required": required,
                     "gap": gap,
+                    "maturity": maturity,
                     "benchmark_lanes": benchmark_lanes,
                     "security_lanes": security_lanes,
                     "benchmark_tests": benchmark_tests,
@@ -266,6 +280,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
     }
 
     gaps.sort_by(|left, right| gap_sort_key(left).cmp(&gap_sort_key(right)));
+    thin_points.sort_by(|left, right| maturity_sort_key(left).cmp(&maturity_sort_key(right)));
     let blocking_gap_count = gaps
         .iter()
         .filter(|gap| matches!(string_field(gap, "gap"), Some("required_gap" | "missing")))
@@ -287,6 +302,8 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         "gap_count": gaps.len(),
         "blocking_gap_count": blocking_gap_count,
         "gaps": gaps,
+        "thin_evidence_count": thin_points.len(),
+        "thin_points": thin_points,
         "cells": cells
     })
 }
@@ -348,6 +365,56 @@ fn derive_evidence_aware_gap(status: &str, required: bool, evidence_depth: &Valu
         "ok"
     } else {
         "weak_evidence"
+    }
+}
+
+fn derive_maturity(
+    paradigm: &str,
+    status: &str,
+    required: bool,
+    evidence_depth: &Value,
+) -> &'static str {
+    if !required {
+        return "optional";
+    }
+    if status != "covered" {
+        return "not_ready";
+    }
+    let benchmark_count = evidence_depth
+        .get("benchmark_lane_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let security_count = evidence_depth
+        .get("security_lane_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let contract_count = evidence_depth
+        .get("contract_evidence_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let has_benchmark = benchmark_count > 0;
+    let has_security = security_count > 0;
+    let has_contract = contract_count > 0;
+    match paradigm {
+        "benchmark" => {
+            if has_benchmark && has_contract {
+                "strong"
+            } else {
+                "thin"
+            }
+        }
+        "security" => {
+            if has_security && has_contract {
+                "strong"
+            } else {
+                "thin"
+            }
+        }
+        _ => match (has_benchmark, has_security, has_contract) {
+            (true, true, true) => "strong",
+            (true, true, false) | (true, false, true) | (false, true, true) => "medium",
+            _ => "thin",
+        },
     }
 }
 
@@ -422,6 +489,23 @@ fn increment_value_counts(counts: &mut Value, key: &str) {
 fn gap_sort_key(value: &Value) -> (usize, String) {
     let gap = string_field(value, "gap").unwrap_or_default();
     let order = GAP_ORDER.iter().position(|item| *item == gap).unwrap_or(99);
+    let label = format!(
+        "{}/{}",
+        string_field(value, "module_id").unwrap_or_default(),
+        string_field(value, "paradigm").unwrap_or_default()
+    );
+    (order, label)
+}
+
+fn maturity_sort_key(value: &Value) -> (usize, String) {
+    let maturity = string_field(value, "maturity").unwrap_or_default();
+    let order = match maturity {
+        "thin" => 0,
+        "medium" => 1,
+        "not_ready" => 2,
+        "strong" => 3,
+        _ => 9,
+    };
     let label = format!(
         "{}/{}",
         string_field(value, "module_id").unwrap_or_default(),

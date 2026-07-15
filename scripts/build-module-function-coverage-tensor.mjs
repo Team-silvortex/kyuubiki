@@ -21,6 +21,12 @@ const GAP_ORDER = new Map([
   ["ok", 6],
   ["not_applicable", 7],
 ]);
+const MATURITY_ORDER = new Map([
+  ["thin", 0],
+  ["medium", 1],
+  ["not_ready", 2],
+  ["strong", 3],
+]);
 
 function parseArgs(argv) {
   const options = { out: DEFAULT_OUT };
@@ -151,6 +157,24 @@ function deriveEvidenceAwareGap(status, required, evidenceDepth) {
   return hasRunnableEvidence || hasContractEvidence ? "ok" : "weak_evidence";
 }
 
+function deriveMaturity(paradigm, status, required, evidenceDepth) {
+  if (!required) return "optional";
+  if (status !== "covered") return "not_ready";
+  const hasBenchmark = evidenceDepth.benchmark_lane_count > 0;
+  const hasSecurity = evidenceDepth.security_lane_count > 0;
+  const hasContract = evidenceDepth.contract_evidence_count > 0;
+  if (paradigm === "benchmark") {
+    return hasBenchmark && hasContract ? "strong" : "thin";
+  }
+  if (paradigm === "security") {
+    return hasSecurity && hasContract ? "strong" : "thin";
+  }
+  const familyCount = [hasBenchmark, hasSecurity, hasContract].filter(Boolean).length;
+  if (familyCount === 3) return "strong";
+  if (familyCount === 2) return "medium";
+  return "thin";
+}
+
 function contractEvidenceFor(tensor, paradigm) {
   return (tensor.paradigm_contract_evidence?.[paradigm] ?? []).map((entry) => ({
     id: entry.id,
@@ -183,6 +207,7 @@ function buildTensorReport(tensor, topology, matrix) {
   const paradigmSummary = Object.fromEntries(paradigms.map((paradigm) => [paradigm, emptyCounts()]));
   const cells = {};
   const gaps = [];
+  const thinPoints = [];
 
   for (const module of topology.modules) {
     const moduleCells = {};
@@ -204,10 +229,12 @@ function buildTensorReport(tensor, topology, matrix) {
           getLaneTests(topology, "security", securityLanes).length,
       };
       const gap = deriveEvidenceAwareGap(status, required, evidenceDepth);
+      const maturity = deriveMaturity(paradigm, status, required, evidenceDepth);
       const cell = {
         status,
         required,
         gap,
+        maturity,
         benchmark_lanes: benchmarkLanes,
         security_lanes: securityLanes,
         benchmark_tests: getLaneTests(topology, "benchmark", benchmarkLanes),
@@ -229,6 +256,17 @@ function buildTensorReport(tensor, topology, matrix) {
           security_lanes: securityLanes,
         });
       }
+      if (required && status === "covered" && maturity !== "strong") {
+        thinPoints.push({
+          maturity,
+          module_id: module.id,
+          paradigm,
+          benchmark_lanes: benchmarkLanes,
+          security_lanes: securityLanes,
+          contract_evidence_count: contractEvidence.length,
+          test_command_count: evidenceDepth.test_command_count,
+        });
+      }
     }
     cells[module.id] = moduleCells;
     moduleSummary[module.id] = {
@@ -239,6 +277,11 @@ function buildTensorReport(tensor, topology, matrix) {
 
   gaps.sort((left, right) => {
     const severity = (GAP_ORDER.get(left.gap) ?? 99) - (GAP_ORDER.get(right.gap) ?? 99);
+    if (severity !== 0) return severity;
+    return `${left.module_id}/${left.paradigm}`.localeCompare(`${right.module_id}/${right.paradigm}`);
+  });
+  thinPoints.sort((left, right) => {
+    const severity = (MATURITY_ORDER.get(left.maturity) ?? 99) - (MATURITY_ORDER.get(right.maturity) ?? 99);
     if (severity !== 0) return severity;
     return `${left.module_id}/${left.paradigm}`.localeCompare(`${right.module_id}/${right.paradigm}`);
   });
@@ -260,6 +303,8 @@ function buildTensorReport(tensor, topology, matrix) {
     gap_count: gaps.length,
     blocking_gap_count: gaps.filter((gap) => gap.gap === "required_gap" || gap.gap === "missing").length,
     gaps,
+    thin_evidence_count: thinPoints.length,
+    thin_points: thinPoints,
     cells,
   };
 }
@@ -276,6 +321,7 @@ function renderMarkdown(report) {
     `- Paradigms: \`${report.axes.paradigms.length}\``,
     `- Depth axes: \`${report.axes.depth.join("`, `")}\``,
     `- Blocking gaps: \`${report.blocking_gap_count}\``,
+    `- Thin evidence points: \`${report.thin_evidence_count}\``,
     "",
     "## Module Summary",
     "",
@@ -314,6 +360,19 @@ function renderMarkdown(report) {
     }
   }
 
+  lines.push("", "## Thin Evidence Points", "");
+  if (report.thin_points.length === 0) {
+    lines.push("No thin evidence points.");
+  } else {
+    lines.push("| Maturity | Module | Paradigm | Benchmark Lanes | Security Lanes | Contract Evidence | Test Commands |");
+    lines.push("| --- | --- | --- | --- | --- | ---: | ---: |");
+    for (const point of report.thin_points) {
+      lines.push(
+        `| \`${point.maturity}\` | \`${point.module_id}\` | \`${point.paradigm}\` | \`${point.benchmark_lanes.join(", ") || "-"}\` | \`${point.security_lanes.join(", ") || "-"}\` | ${point.contract_evidence_count} | ${point.test_command_count} |`,
+      );
+    }
+  }
+
   lines.push("", "## Gaps", "");
   if (report.gaps.length === 0) {
     lines.push("No gaps.");
@@ -340,6 +399,22 @@ function runSelfTest() {
   assert.equal(deriveGap("covered", true), "ok");
   assert.equal(deriveEvidenceAwareGap("covered", true, { test_command_count: 0, contract_evidence_count: 0 }), "weak_evidence");
   assert.equal(deriveEvidenceAwareGap("covered", true, { test_command_count: 1, contract_evidence_count: 0 }), "ok");
+  assert.equal(
+    deriveMaturity("solver_execution", "covered", true, {
+      benchmark_lane_count: 1,
+      security_lane_count: 1,
+      contract_evidence_count: 1,
+    }),
+    "strong",
+  );
+  assert.equal(
+    deriveMaturity("benchmark", "covered", true, {
+      benchmark_lane_count: 1,
+      security_lane_count: 0,
+      contract_evidence_count: 1,
+    }),
+    "strong",
+  );
   assert.equal(deriveGap("partial", true), "weak");
   assert.equal(deriveGap("partial", false), "watch");
   assert.equal(deriveGap("planned", true), "required_gap");
@@ -378,6 +453,7 @@ function runSelfTest() {
   assert.equal(report.blocking_gap_count, 0);
   assert.equal(report.module_summary.engine.counts.weak, 1);
   assert.equal(report.cells.engine.solver_execution.evidence_depth.test_command_count, 2);
+  assert.equal(report.cells.engine.solver_execution.maturity, "not_ready");
   console.log("module function coverage tensor self-test passed");
 }
 

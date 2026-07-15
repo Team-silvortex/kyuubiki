@@ -69,8 +69,7 @@ struct RenderOptions<'a> {
 
 fn render_html(contract: &Value, options: RenderOptions<'_>) -> String {
     let version = escape_html(string_field(contract, "shipping_version").unwrap_or("unknown"));
-    let product_line =
-        escape_html(string_field(contract, "product_line").unwrap_or("moxi 2.x"));
+    let product_line = escape_html(string_field(contract, "product_line").unwrap_or("moxi 2.x"));
     let schema_version = escape_html(
         string_field(contract, "schema_version").unwrap_or("kyuubiki.installation-contract/v1"),
     );

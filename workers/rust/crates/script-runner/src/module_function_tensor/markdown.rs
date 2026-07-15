@@ -34,6 +34,13 @@ pub(super) fn render_markdown(report: &Value) -> String {
                 .and_then(Value::as_u64)
                 .unwrap_or(0)
         ),
+        format!(
+            "- Thin evidence points: `{}`",
+            report
+                .get("thin_evidence_count")
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        ),
         String::new(),
         "## Module Summary".to_string(),
         String::new(),
@@ -59,6 +66,7 @@ pub(super) fn render_markdown(report: &Value) -> String {
     }
     render_paradigm_summary(report, &mut lines);
     render_contract_evidence(report, &mut lines);
+    render_thin_points(report, &mut lines);
     render_gaps(report, &mut lines);
     format!("{}\n", lines.join("\n").trim_end())
 }
@@ -152,6 +160,46 @@ fn render_gaps(report: &Value, lines: &mut Vec<String>) {
                 .unwrap_or(false),
             joined_or_dash(&string_array(&gap, "benchmark_lanes")),
             joined_or_dash(&string_array(&gap, "security_lanes"))
+        ));
+    }
+}
+
+fn render_thin_points(report: &Value, lines: &mut Vec<String>) {
+    lines.extend([
+        String::new(),
+        "## Thin Evidence Points".to_string(),
+        String::new(),
+    ]);
+    let points = report
+        .get("thin_points")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if points.is_empty() {
+        lines.push("No thin evidence points.".to_string());
+        return;
+    }
+    lines.push(
+        "| Maturity | Module | Paradigm | Benchmark Lanes | Security Lanes | Contract Evidence | Test Commands |"
+            .to_string(),
+    );
+    lines.push("| --- | --- | --- | --- | --- | ---: | ---: |".to_string());
+    for point in points {
+        lines.push(format!(
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | {} | {} |",
+            string_field(&point, "maturity").unwrap_or_default(),
+            string_field(&point, "module_id").unwrap_or_default(),
+            string_field(&point, "paradigm").unwrap_or_default(),
+            joined_or_dash(&string_array(&point, "benchmark_lanes")),
+            joined_or_dash(&string_array(&point, "security_lanes")),
+            point
+                .get("contract_evidence_count")
+                .and_then(Value::as_u64)
+                .unwrap_or(0),
+            point
+                .get("test_command_count")
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
         ));
     }
 }

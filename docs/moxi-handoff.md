@@ -1,7 +1,7 @@
 # Moxi 2.0.0 Handoff
 
-This document is the focused handoff checklist for the last `tamamono 1.x`
-patch before the `moxi 2.0.0` line.
+This document is the focused status baseline for the `moxi 2.0.0` line and the
+next `moxi 2.x` hardening work.
 
 The paired machine-readable source is
 [moxi-handoff.manifest.json](moxi-handoff.manifest.json). Keep this document
@@ -9,26 +9,27 @@ and the manifest aligned with `make check-moxi-handoff`.
 
 ## Handoff Statement
 
-`The last tamamono patch should close, prove, defer, or retire work so moxi
-2.0.0 can start from stable contracts instead of inherited ambiguity.`
+`Moxi 2.0.0 starts from stable contracts; the next work should preserve that
+baseline while hardening evidence, recovery, and user-facing trust.`
 
-This is not a feature wishlist. It is the bridge from the final
-`tamamono 1.20.x` stabilization patch into `moxi 2.0.0`.
+This is not a feature wishlist. It is the bridge from the first moxi baseline
+into a more reliable `2.x` engineering line.
 
 ## Patch Posture
 
-The final `1.x` patch should prefer:
+The moxi hardening line should prefer:
 
 - contract freeze over new payload shapes
 - retained evidence over anecdotal confidence
 - explicit limitations over broad claims
-- release identity clarity over premature version renaming
+- release identity clarity over scattered version drift
 - operational recovery over hidden local heroics
 
-The final `1.x` patch should avoid:
+The moxi hardening line should avoid:
 
-- opening a `1.21.x` planning lane by accident
-- renaming active runtime versions to `moxi` before release metadata advances
+- treating historical tamamono snapshots as active version truth
+- adding new product claims before the coverage tensor and evidence reports can
+  back them
 - adding major UI, solver, or runtime surfaces without matching checks
 - leaving important operational knowledge only in chat history
 
@@ -37,21 +38,21 @@ The final `1.x` patch should avoid:
 - `ready`: sufficient for the handoff boundary
 - `active`: work is underway and should close before the patch is considered done
 - `watch`: risk-bearing area that needs explicit evidence or a documented limit
-- `defer_to_2x`: intentionally outside the final `1.x` patch scope
+- `defer_to_2x`: intentionally outside the immediate moxi baseline and tracked
+  as later `2.x` work
 
 ## Handoff Gates
 
 ### 1. Release Identity
 
 Question:
-Can a human or tool tell whether a file belongs to the final tamamono line or
-the moxi 2.0.0 target?
+Can a human or tool tell that the repository is now on the moxi 2.0.0 line?
 
 Must close:
 
-- keep current 1.x documents explicit that tamamono 1.20.x is the final planned minor
-- avoid renaming active runtime versions to moxi before release metadata actually advances
-- prepare the exact documents and catalogs that must change when 2.0.0 is cut
+- keep moxi 2.0.0 release identity aligned across docs, catalogs, app metadata, and version checks
+- keep historical tamamono snapshots as provenance instead of active version truth
+- make future patch bumps flow through the same version-line audit
 
 Evidence:
 
@@ -63,11 +64,11 @@ Evidence:
 
 Question:
 Are workflow graphs, datasets, TaskIR, operator descriptors, and material study
-bundles stable enough to explain before 2.0.0?
+bundles stable enough to preserve during moxi hardening?
 
 Must close:
 
-- turn remaining shared payload shortcuts into documented contracts or explicit deferred work
+- turn remaining shared payload shortcuts into documented contracts or explicit deferred work before they spread
 - keep SDK, agent, and Workbench meanings aligned for workflow and operator data
 - ensure moxi-facing task and bundle examples are machine-checkable
 
@@ -137,7 +138,7 @@ Evidence:
 
 Question:
 Can installation, update, cleanup, credential, and remote artifact behavior be
-audited before moxi?
+audited during moxi hardening?
 
 Must close:
 
@@ -155,14 +156,14 @@ Evidence:
 ### 7. Documentation Entrypoint
 
 Question:
-Can a teammate or model enter the project and understand what remains before
-moxi 2.0.0?
+Can a teammate or model enter the project and understand what moxi 2.0.0 can do
+and what remains for 2.x?
 
 Must close:
 
 - keep docs book, navigation matrix, current line, commercial readiness, and this handoff note linked
 - keep limitations close to the feature surfaces that expose them
-- make the final 1.x patch explain what is closed, deferred, or intentionally not part of moxi
+- make moxi status explain what is closed, deferred, or intentionally scoped as 2.x hardening
 
 Evidence:
 
@@ -176,11 +177,11 @@ Evidence:
 [commercial-readiness-2.0.md](commercial-readiness-2.0.md) answers whether
 `moxi 2.0.0` can honestly ship as a credible early commercial trust line.
 
-This handoff document answers the narrower final-patch question:
+This handoff document answers the narrower moxi-baseline question:
 
-`What must the last tamamono patch close so the 2.0.0 readiness gate can be
-evaluated cleanly?`
+`What must stay stable after moxi 2.0.0 so 2.x hardening can proceed without
+reintroducing inherited ambiguity?`
 
 If a task does not map to one of these gates, it should be deferred, retired,
-or moved into an explicit `2.x` backlog rather than squeezed into the final
-`1.x` patch.
+or moved into an explicit `2.x` backlog rather than squeezed into the current
+hardening pass.

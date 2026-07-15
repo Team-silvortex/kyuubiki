@@ -1,9 +1,9 @@
 {
   "schema_version": "kyuubiki.moxi-handoff/v1",
-  "from_line": "tamamono 1.20.x",
-  "handoff_patch_role": "final tamamono 1.x stabilization patch",
-  "to_line": "moxi 2.0.0",
-  "handoff_statement": "The last tamamono patch should close, prove, defer, or retire work so moxi 2.0.0 can start from stable contracts instead of inherited ambiguity.",
+  "from_line": "moxi 2.0.0",
+  "handoff_patch_role": "moxi 2.x hardening status baseline",
+  "to_line": "moxi 2.x",
+  "handoff_statement": "Moxi 2.0.0 starts from stable contracts; the next work should preserve that baseline while hardening evidence, recovery, and user-facing trust.",
   "allowed_gate_states": [
     "ready",
     "active",
@@ -14,12 +14,12 @@
     {
       "id": "release_identity",
       "title": "Release Identity",
-      "state": "active",
-      "handoff_question": "Can a human or tool tell whether a file belongs to the final tamamono line or the moxi 2.0.0 target?",
+      "state": "ready",
+      "handoff_question": "Can a human or tool tell that the repository is now on the moxi 2.0.0 line?",
       "must_close": [
-        "keep current 1.x documents explicit that tamamono 1.20.x is the final planned minor",
-        "avoid renaming active runtime versions to moxi before release metadata actually advances",
-        "prepare the exact documents and catalogs that must change when 2.0.0 is cut"
+        "keep moxi 2.0.0 release identity aligned across docs, catalogs, app metadata, and version checks",
+        "keep historical tamamono snapshots as provenance instead of active version truth",
+        "make future patch bumps flow through the same version-line audit"
       ],
       "evidence_docs": [
         "version-line.md",
@@ -31,9 +31,9 @@
       "id": "contract_freeze",
       "title": "Contract Freeze",
       "state": "active",
-      "handoff_question": "Are workflow graphs, datasets, TaskIR, operator descriptors, and material study bundles stable enough to explain before 2.0.0?",
+      "handoff_question": "Are workflow graphs, datasets, TaskIR, operator descriptors, and material study bundles stable enough to preserve during moxi hardening?",
       "must_close": [
-        "turn remaining shared payload shortcuts into documented contracts or explicit deferred work",
+        "turn remaining shared payload shortcuts into documented contracts or explicit deferred work before they spread",
         "keep SDK, agent, and Workbench meanings aligned for workflow and operator data",
         "ensure moxi-facing task and bundle examples are machine-checkable"
       ],
@@ -98,7 +98,7 @@
       "id": "install_update_security",
       "title": "Install Update Security",
       "state": "watch",
-      "handoff_question": "Can installation, update, cleanup, credential, and remote artifact behavior be audited before moxi?",
+      "handoff_question": "Can installation, update, cleanup, credential, and remote artifact behavior be audited during moxi hardening?",
       "must_close": [
         "keep standard paths and cleanup rules visible",
         "avoid committing local server credentials or machine-specific config",
@@ -115,11 +115,11 @@
       "id": "documentation_entrypoint",
       "title": "Documentation Entrypoint",
       "state": "active",
-      "handoff_question": "Can a teammate or model enter the project and understand what remains before moxi 2.0.0?",
+      "handoff_question": "Can a teammate or model enter the project and understand what moxi 2.0.0 can do and what remains for 2.x?",
       "must_close": [
         "keep docs book, navigation matrix, current line, commercial readiness, and this handoff note linked",
         "keep limitations close to the feature surfaces that expose them",
-        "make the final 1.x patch explain what is closed, deferred, or intentionally not part of moxi"
+        "make moxi status explain what is closed, deferred, or intentionally scoped as 2.x hardening"
       ],
       "evidence_docs": [
         "README.md",

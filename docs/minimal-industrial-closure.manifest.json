@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.minimal-industrial-closure/v1",
-  "release_line": "1.15.x -> 1.20.x",
+  "release_line": "moxi 2.x",
   "posture": "minimum bounded industrial workflow closure",
   "exit_statement": "A bounded FEM workflow can be installed, prepared, executed on local or agent-backed runtimes, audited, repeated, updated, and cleaned without hidden UI state or private operational knowledge.",
   "state_values": [
@@ -21,7 +21,7 @@
         "external operator packages pass host-side admission and workflow security preflight before execution"
       ],
       "next_closure_work": [
-        "freeze the 1.16 executable task IR compatibility surface",
+        "preserve the moxi executable task IR compatibility surface",
         "add golden examples for Rust-native and Elixir-authored task descriptors",
         "make package fetch, integrity, dispatch, and result serialization visible in agent execute mode"
       ],

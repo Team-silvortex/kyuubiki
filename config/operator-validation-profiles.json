@@ -137,6 +137,67 @@
       ]
     },
     {
+      "profile_id": "electromagnetic-plane-patch",
+      "trust_goal": "qualification_collecting",
+      "operators": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "field_energy_cross_check",
+        "triangle_quad_patch_comparison",
+        "rotated_orientation_regression",
+        "material_parameter_provenance"
+      ],
+      "formal_invariants": [
+        "electric_field_equals_negative_potential_gradient",
+        "electric_flux_density_scales_with_permittivity",
+        "magnetic_flux_density_scales_with_permeability",
+        "field_components_rotate_without_energy_drift",
+        "stored_energy_scales_with_area_and_thickness"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md",
+        "evidence/operator-qualification/electromagnetic-plane-material-provenance.json",
+        "workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "electrostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "electrostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "electromagnetic-orientation-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electromagnetic_plane_orientation_regression -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "heat-plane-patch",
       "trust_goal": "review_cross_check",
       "operators": [
@@ -177,6 +238,112 @@
           "id": "heat-quad-review",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-plane-patch",
+      "trust_goal": "qualification_collecting",
+      "operators": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d",
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "mesh_refinement_equivalence",
+        "thermal_boundary_coverage",
+        "thermoelastic_stress_cross_check",
+        "material_parameter_provenance"
+      ],
+      "formal_invariants": [
+        "fixed_hot_and_cold_boundaries",
+        "free_node_temperature_resolution",
+        "temperature_gradient_drives_heat_flux",
+        "triangle_split_matches_quad_patch_response",
+        "restrained_thermal_strain_drives_compressive_stress",
+        "stored_strain_energy_is_non_negative"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+        "evidence/operator-qualification/thermal-plane-material-provenance.json",
+        "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+        "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "heat-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "heat-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-plane-mesh-refinement-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_mesh_refinement_regression -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "modal-frame-sanity",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.modal_frame_2d",
+        "solve.modal_frame_3d"
+      ],
+      "validation_methods": [
+        "frequency_length_scaling",
+        "mode_order_regression",
+        "mode_shape_normalization"
+      ],
+      "formal_invariants": [
+        "positive_finite_natural_frequencies",
+        "mode_order_is_stable",
+        "restrained_dofs_are_zero",
+        "participation_norm_is_unit",
+        "shorter_cantilever_has_higher_frequency"
+      ],
+      "evidence_paths": [
+        "evidence/operator-qualification/modal-frame-frequency-convergence.md",
+        "evidence/operator-qualification/modal-frame-normalization-policy.md",
+        "workers/rust/crates/solver/tests/modal_frame_2d_review.rs",
+        "workers/rust/crates/solver/tests/modal_frame_3d_review.rs",
+        "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+      ],
+      "commands": [
+        {
+          "id": "modal-frame-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_2d_review -- --nocapture"
+        },
+        {
+          "id": "modal-frame-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_3d_review -- --nocapture"
+        },
+        {
+          "id": "modal-frame-sanity-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_sanity_regression -- --nocapture"
         }
       ]
     },

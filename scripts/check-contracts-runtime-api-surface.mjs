@@ -62,7 +62,7 @@ if (args.has("--self-test")) {
           ],
         },
       ],
-      verification_commands: ["node scripts/check-contracts-runtime-api-surface.mjs"],
+      verification_commands: ["./scripts/kyuubiki check-contracts-runtime-api-surface"],
     },
   });
 
@@ -217,7 +217,7 @@ function validateSurface(surface) {
     }
   }
   for (const command of surface.runtime_api?.verification_commands ?? []) {
-    if (!command.startsWith("node ") && !command.startsWith("make ")) {
+    if (!command.startsWith("./scripts/kyuubiki ") && !command.startsWith("make ")) {
       errors.push(`unsupported verification command prefix: ${command}`);
     }
   }

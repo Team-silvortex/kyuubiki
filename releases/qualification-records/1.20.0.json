@@ -6,19 +6,43 @@
   "records": [
     {
       "candidate_id": "line-field-closed-form",
-      "status": "staged_for_review",
-      "evidence_path": "tmp/line-field-qualification-release-evidence.json",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
       "capture_command": "make capture-line-field-qualification-release-evidence",
       "check_command": "make check-line-field-qualification-release-evidence",
-      "promotion_blocker": "attach the checked evidence bundle to the final release artifact store before qualification promotion"
+      "promotion_blocker": "release evidence is attached; qualification promotion still requires review sign-off against the roadmap graduation gate"
     },
     {
       "candidate_id": "beam-frame-classic",
-      "status": "staged_for_review",
-      "evidence_path": "tmp/beam-frame-classic-qualification-release-evidence.json",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
       "capture_command": "make capture-beam-frame-qualification-release-evidence",
       "check_command": "make check-beam-frame-qualification-release-evidence",
-      "promotion_blocker": "attach the checked evidence bundle to the final release artifact store before qualification promotion"
+      "promotion_blocker": "release evidence is attached; qualification promotion still requires review sign-off against the roadmap graduation gate"
+    },
+    {
+      "candidate_id": "thermal-plane-patch",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
+      "capture_command": "make capture-thermal-plane-qualification-release-evidence",
+      "check_command": "make check-thermal-plane-qualification-release-evidence",
+      "promotion_blocker": "release evidence is attached; qualification promotion still requires review sign-off against the roadmap graduation gate"
+    },
+    {
+      "candidate_id": "electromagnetic-plane-patch",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+      "capture_command": "make capture-electromagnetic-plane-qualification-release-evidence",
+      "check_command": "make check-electromagnetic-plane-qualification-release-evidence",
+      "promotion_blocker": "release evidence is attached; qualification promotion still requires review sign-off against the roadmap graduation gate"
+    },
+    {
+      "candidate_id": "modal-frame-sanity",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
+      "capture_command": "make capture-modal-frame-qualification-release-evidence",
+      "check_command": "make check-modal-frame-qualification-release-evidence",
+      "promotion_blocker": "release evidence is attached; qualification promotion still requires review sign-off against the roadmap graduation gate"
     }
   ]
 }

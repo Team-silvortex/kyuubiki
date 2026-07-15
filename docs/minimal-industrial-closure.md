@@ -1,7 +1,7 @@
 # Minimal Industrial Closure
 
-This document defines the smallest honest industrial loop for the `tamamono
-1.15.x` to `1.20.x` line.
+This document defines the smallest honest industrial loop for the `moxi 2.x`
+hardening line.
 
 It is intentionally narrower than the `2.0` commercial-readiness checklist.
 The goal here is not to claim broad CAE parity. The goal is to make one bounded
@@ -56,7 +56,7 @@ Required closure:
 
 Next closure work:
 
-- freeze the `1.16` executable task IR compatibility surface
+- preserve the moxi executable task IR compatibility surface
 - add golden examples for Rust-native and Elixir-authored task descriptors
 - make package fetch, integrity, dispatch, and result serialization visible in
   agent execute mode
@@ -253,18 +253,19 @@ Evidence:
 
 ## Release-Line Use
 
-Use this file as the `1.16` to `1.20` bridge:
+Use this file as the `moxi 2.x` industrial hardening bridge:
 
-- `1.16`
-  freeze the executable task IR and operator package boundary
-- `1.17`
-  close the installer-managed agent/orchestra execution loop
-- `1.18`
-  make persistence, snapshots, provenance, and credentials default contracts
-- `1.19`
-  turn benchmark and qualification evidence into repeatable release gates
-- `1.20`
-  run the bounded industrial workflow as an end-to-end release candidate
+- `2.0`
+  preserve the stable contract baseline and close stale 1.x transition docs
+- `2.x hardening`
+  turn the bounded workflow into a repeatable installer-managed product path
+- `2.x evidence`
+  promote selected operator families from review-level to qualification-ready
+- `2.x recovery`
+  prove runtime, package, snapshot, and remote-agent recovery under failure
+- `2.x usability`
+  make the Workbench main loop obvious without giving the GUI hidden runtime
+  ownership
 
 The `2.0` commercial-readiness checklist should remain stricter. This document
 answers whether the first bounded industrial loop is closed, not whether the

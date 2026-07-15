@@ -5,7 +5,9 @@
 .PHONY: build-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
+.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
+.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
@@ -180,8 +182,29 @@ capture-beam-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --self-test
 	@$(ENTRYPOINT) check-operator-validation --execute --profile beam-frame-classic --out $${OUT:-tmp/beam-frame-classic-qualification-release-evidence.json}
 
+capture-thermal-plane-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-plane-patch --out $${OUT:-tmp/thermal-plane-patch-qualification-release-evidence.json}
+
+capture-electromagnetic-plane-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile electromagnetic-plane-patch --out $${OUT:-tmp/electromagnetic-plane-patch-qualification-release-evidence.json}
+
+capture-modal-frame-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile modal-frame-sanity --out $${OUT:-tmp/modal-frame-sanity-qualification-release-evidence.json}
+
 check-beam-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-beam-frame-qualification-release-evidence --in $${IN:-tmp/beam-frame-classic-qualification-release-evidence.json}
+
+check-thermal-plane-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-plane-patch-qualification-release-evidence.json} --profile thermal-plane-patch
+
+check-electromagnetic-plane-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/electromagnetic-plane-patch-qualification-release-evidence.json} --profile electromagnetic-plane-patch
+
+check-modal-frame-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/modal-frame-sanity-qualification-release-evidence.json} --profile modal-frame-sanity
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline

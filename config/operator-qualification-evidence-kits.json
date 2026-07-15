@@ -4,7 +4,7 @@
   "kits": [
     {
       "candidate_id": "line-field-closed-form",
-      "status": "collecting",
+      "status": "ready_for_review",
       "artifact_profile": "analytic_closed_form",
       "operator_ids": [
         "solve.bar_1d",
@@ -37,7 +37,8 @@
         {
           "artifact_id": "release-regression-output",
           "kind": "release_retained_regression_output",
-          "gate": "retain output from make capture-line-field-qualification-release-evidence with the release record before promotion",
+          "gate": "review the retained output from make capture-line-field-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
           "artifact_command": "make capture-line-field-qualification-release-evidence",
           "artifact_check_command": "make check-line-field-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
@@ -46,7 +47,7 @@
     },
     {
       "candidate_id": "beam-frame-classic",
-      "status": "collecting",
+      "status": "ready_for_review",
       "artifact_profile": "canonical_structural_benchmark",
       "operator_ids": [
         "solve.beam_1d",
@@ -78,7 +79,8 @@
         {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
-          "gate": "retain output from make capture-beam-frame-qualification-release-evidence with the release record before promotion",
+          "gate": "review the retained output from make capture-beam-frame-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
           "artifact_command": "make capture-beam-frame-qualification-release-evidence",
           "artifact_check_command": "make check-beam-frame-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
@@ -87,7 +89,7 @@
     },
     {
       "candidate_id": "thermal-plane-patch",
-      "status": "planned",
+      "status": "ready_for_review",
       "artifact_profile": "mesh_boundary_convergence",
       "operator_ids": [
         "solve.thermal_plane_triangle_2d",
@@ -100,25 +102,37 @@
           "artifact_id": "mesh-refinement-report",
           "kind": "convergence_report",
           "gate": "show stable thermal and thermoelastic response under refinement",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "boundary-coverage",
           "kind": "boundary_report",
           "gate": "cover Dirichlet, Neumann, and mixed thermal boundary assumptions",
+          "artifact_path": "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "material-card-linked-fixture",
           "kind": "material_fixture",
           "gate": "link thermal and thermoelastic patch assumptions to material-card data",
+          "artifact_path": "evidence/operator-qualification/thermal-plane-material-provenance.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-plane-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
+          "artifact_command": "make capture-thermal-plane-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-plane-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
     },
     {
       "candidate_id": "electromagnetic-plane-patch",
-      "status": "planned",
+      "status": "ready_for_review",
       "artifact_profile": "field_energy_orientation",
       "operator_ids": [
         "solve.electrostatic_plane_triangle_2d",
@@ -131,25 +145,37 @@
           "artifact_id": "rotated-patch-regression",
           "kind": "orientation_regression",
           "gate": "compare field, flux, and stored energy across two orientations",
+          "artifact_path": "workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "field-energy-derivation",
           "kind": "derivation_note",
           "gate": "derive stored field energy checks and tolerances for electrostatic and magnetostatic patches",
+          "artifact_path": "evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "material-field-provenance",
           "kind": "material_provenance",
           "gate": "link permittivity or permeability assumptions to material-card data",
+          "artifact_path": "evidence/operator-qualification/electromagnetic-plane-material-provenance.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-electromagnetic-plane-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+          "artifact_command": "make capture-electromagnetic-plane-qualification-release-evidence",
+          "artifact_check_command": "make check-electromagnetic-plane-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
     },
     {
       "candidate_id": "modal-frame-sanity",
-      "status": "planned",
+      "status": "ready_for_review",
       "artifact_profile": "modal_convergence",
       "operator_ids": [
         "solve.modal_frame_2d",
@@ -160,25 +186,37 @@
           "artifact_id": "frequency-convergence",
           "kind": "convergence_report",
           "gate": "show frequency stability and documented mode ordering under refinement",
+          "artifact_path": "evidence/operator-qualification/modal-frame-frequency-convergence.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "mode-order-regression",
           "kind": "regression_test",
           "gate": "retain mode-order regression fixtures for 2D and 3D frame modal operators",
+          "artifact_path": "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "mode-normalization",
           "kind": "scope_note",
           "gate": "document mode-shape normalization and degenerate-mode handling",
+          "artifact_path": "evidence/operator-qualification/modal-frame-normalization-policy.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-modal-frame-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
+          "artifact_command": "make capture-modal-frame-qualification-release-evidence",
+          "artifact_check_command": "make check-modal-frame-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
     },
     {
       "candidate_id": "screening-cfd-boundary",
-      "status": "collecting",
+      "status": "ready_for_review",
       "artifact_profile": "screening_scope_boundary",
       "operator_ids": [
         "solve.stokes_flow_quad_2d",

@@ -1,0 +1,106 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "electromagnetic-plane-patch",
+      "trust_goal": "qualification_collecting",
+      "operators": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "field_energy_cross_check",
+        "triangle_quad_patch_comparison",
+        "rotated_orientation_regression",
+        "material_parameter_provenance"
+      ],
+      "formal_invariants": [
+        "electric_field_equals_negative_potential_gradient",
+        "electric_flux_density_scales_with_permittivity",
+        "magnetic_flux_density_scales_with_permeability",
+        "field_components_rotate_without_energy_drift",
+        "stored_energy_scales_with_area_and_thickness"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md",
+        "evidence/operator-qualification/electromagnetic-plane-material-provenance.json",
+        "workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "electrostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 626,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "electrostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 388,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "magnetostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 477,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "magnetostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 266,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "electromagnetic-orientation-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electromagnetic_plane_orientation_regression -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 205,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

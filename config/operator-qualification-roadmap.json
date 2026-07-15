@@ -8,7 +8,7 @@
       "priority": "p0",
       "domain": "core_line_fields",
       "target_level": "qualification",
-      "evidence_phase": "collecting",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.bar_1d",
         "solve.thermal_bar_1d",
@@ -16,10 +16,9 @@
         "solve.electrostatic_bar_1d"
       ],
       "rationale": "Small line-field cases have direct closed-form references and are the safest first qualification candidates.",
-      "primary_blocker": "release-retained evidence bundle must be attached to an actual release record before trust-level promotion",
+      "primary_blocker": "release evidence is attached; final trust-level promotion still requires reviewer sign-off against the graduation gate",
       "evidence_gaps": [
-        "release-retained regression output",
-        "environment and solver-version provenance attached to the retained run"
+        "reviewer sign-off against the attached release-retained evidence bundle"
       ],
       "required_artifacts": [
         "analytic derivation note",
@@ -35,16 +34,16 @@
       "priority": "p0",
       "domain": "structural",
       "target_level": "qualification",
-      "evidence_phase": "collecting",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.beam_1d",
         "solve.torsion_1d",
         "solve.frame_2d"
       ],
       "rationale": "Classic beam, torsion, and frame cases are central to engineering trust and have textbook references.",
-      "primary_blocker": "release-retained regression provenance must be attached before trust-level promotion",
+      "primary_blocker": "release evidence is attached; final trust-level promotion still requires reviewer sign-off against the graduation gate",
       "evidence_gaps": [
-        "release-retained regression provenance"
+        "reviewer sign-off against the attached release-retained structural validation bundle"
       ],
       "required_artifacts": [
         "canonical benchmark note",
@@ -61,7 +60,7 @@
       "priority": "p1",
       "domain": "thermal_structural",
       "target_level": "qualification",
-      "evidence_phase": "planned",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.thermal_plane_triangle_2d",
         "solve.thermal_plane_quad_2d",
@@ -69,11 +68,9 @@
         "solve.heat_plane_quad_2d"
       ],
       "rationale": "2D thermal and thermoelastic patches are needed before material heat-spreader claims can mature.",
-      "primary_blocker": "mesh refinement and boundary-condition coverage are not yet retained as qualification artifacts",
+      "primary_blocker": "mesh refinement, boundary coverage, and material provenance evidence are present; final trust-level promotion still requires reviewer sign-off",
       "evidence_gaps": [
-        "mesh convergence record",
-        "boundary coverage fingerprint",
-        "material assumption provenance"
+        "reviewer sign-off against the thermal plane evidence bundle"
       ],
       "required_artifacts": [
         "mesh refinement report",
@@ -89,7 +86,7 @@
       "priority": "p1",
       "domain": "electromagnetic",
       "target_level": "qualification",
-      "evidence_phase": "planned",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.electrostatic_plane_triangle_2d",
         "solve.electrostatic_plane_quad_2d",
@@ -97,11 +94,9 @@
         "solve.magnetostatic_plane_quad_2d"
       ],
       "rationale": "Plane electromagnetic patches are important for dielectric and magnetic material screening.",
-      "primary_blocker": "orientation and field-energy tolerance evidence are not yet paired with material provenance",
+      "primary_blocker": "field-energy, material provenance, and orientation regression evidence are present; final trust-level promotion still requires reviewer sign-off",
       "evidence_gaps": [
-        "energy-density tolerance derivation",
-        "independent patch orientation case",
-        "material permittivity or permeability provenance"
+        "reviewer sign-off against the electromagnetic plane evidence bundle"
       ],
       "required_artifacts": [
         "rotated patch regression",
@@ -117,17 +112,15 @@
       "priority": "p2",
       "domain": "modal",
       "target_level": "qualification",
-      "evidence_phase": "planned",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.modal_frame_2d",
         "solve.modal_frame_3d"
       ],
       "rationale": "Modal workflows need convergence and mode-order evidence before serious vibration claims.",
-      "primary_blocker": "mode-shape normalization and refinement stability are not yet captured as release evidence",
+      "primary_blocker": "mode-shape normalization, ordering, and length-scaling evidence are present; final trust-level promotion still requires reviewer sign-off",
       "evidence_gaps": [
-        "mode-shape normalization policy",
-        "mesh or discretization convergence",
-        "degenerate-mode handling note"
+        "reviewer sign-off against the modal frame evidence bundle"
       ],
       "required_artifacts": [
         "frequency convergence report",
@@ -143,16 +136,15 @@
       "priority": "p2",
       "domain": "cfd",
       "target_level": "review",
-      "evidence_phase": "collecting",
+      "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.stokes_flow_quad_2d",
         "solve.stokes_flow_triangle_2d"
       ],
-      "rationale": "The Stokes operator is intentionally screening-grade; it now has a second boundary response but still needs explicit scope and qualification evidence before higher trust.",
-      "primary_blocker": "Stokes-only screening scope must remain explicit until convergence or external-reference evidence exists",
+      "rationale": "The Stokes operators are intentionally screening-grade; their quad and triangle fixtures now have explicit scope, boundary, and tolerance evidence for review.",
+      "primary_blocker": "higher trust remains blocked until convergence or external-reference evidence exists",
       "evidence_gaps": [
-        "mesh-convergence or external-reference evidence",
-        "scope note explaining Stokes-only limits beyond screening fixtures"
+        "mesh-convergence or external-reference evidence for any claim beyond review-screening"
       ],
       "required_artifacts": [
         "alternate boundary response regression",

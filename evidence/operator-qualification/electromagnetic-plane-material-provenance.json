@@ -1,0 +1,42 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-material-provenance/v1",
+  "candidate_id": "electromagnetic-plane-patch",
+  "scope": "review_fixture_material_parameters",
+  "version_line": "moxi 2.0.x",
+  "materials": [
+    {
+      "operator_family": "electrostatic_plane",
+      "parameter": "permittivity",
+      "value": 3.0,
+      "unit": "relative_fixture_scalar",
+      "used_by": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs"
+      ]
+    },
+    {
+      "operator_family": "magnetostatic_plane",
+      "parameter": "permeability",
+      "value": 0.0000012566370614359173,
+      "unit": "henry_per_meter_fixture_scalar",
+      "used_by": [
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+      ]
+    }
+  ],
+  "limitations": [
+    "linear scalar material parameters only",
+    "single-patch review fixtures only",
+    "not a material-card qualification record",
+    "not valid for nonlinear, anisotropic, dispersive, or high-frequency coupled electromagnetic claims"
+  ]
+}

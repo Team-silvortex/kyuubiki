@@ -1,0 +1,105 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-release-evidence/v1",
+  "version_line": "moxi 2.0.x",
+  "candidate_id": "line-field-closed-form",
+  "generated_at_utc": "2026-07-15T09:44:40Z",
+  "release_retention": {
+    "intended_release_artifact": true,
+    "repo_relative_paths_only": true,
+    "generated_output_should_not_be_committed_directly": true
+  },
+  "provenance": {
+    "schema_version": "kyuubiki.operator-qualification-provenance/v1",
+    "version_line": "moxi 2.0.x",
+    "candidate_id": "line-field-closed-form",
+    "generated_at_utc": "2026-07-15T09:44:40Z",
+    "commands": {
+      "evidence_check": "./scripts/kyuubiki check-line-field-closed-form-baseline",
+      "solver_baseline": "cargo test -p kyuubiki-solver --test accuracy_baselines line_1d"
+    },
+    "source_revision": {
+      "git_commit": "a30c62c5e842ef136bffa345b00466b68f9ddeed",
+      "git_branch": "main",
+      "working_tree_clean": false,
+      "status_entry_count": 22
+    },
+    "toolchain": {
+      "node": "v24.6.0",
+      "rustc": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+      "cargo": "cargo 1.88.0 (873a06493 2025-05-10)"
+    },
+    "platform": {
+      "os": "macos",
+      "arch": "aarch64",
+      "release": "25.5.0"
+    },
+    "tracked_inputs": [
+      {
+        "path": "evidence/operator-qualification/line-field-closed-form-baseline.json",
+        "sha256": "193424d7ce202d1127880845b9ba99ccbed05c4ee8096dbc0f7fb049799e16aa"
+      },
+      {
+        "path": "evidence/operator-qualification/line-field-closed-form-derivation.md",
+        "sha256": "4fa07473b1726b22c0372534a1b4f93b0d249b101fb2162ecc0413adb46ae8f2"
+      },
+      {
+        "path": "evidence/operator-qualification/line-field-tolerance-policy.json",
+        "sha256": "0cb418d41ed2ed25823fbba6aeaae5873e2959425ad3356907ea9273f4888e86"
+      },
+      {
+        "path": "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+        "sha256": "b1c8b8693e156f5be6100ed7cec4a7c78d3e64f4e2fea26d8cf588aeba5c7472"
+      },
+      {
+        "path": "scripts/check-line-field-closed-form-baseline.mjs",
+        "sha256": "cd69dcf1521c84658e34df9980dea3ae8f6e637bd7e468d2da15d8e780d5fdda"
+      }
+    ],
+    "retention_policy": {
+      "release_artifact": true,
+      "repo_relative_paths_only": true,
+      "no_local_absolute_paths": true
+    }
+  },
+  "commands": [
+    {
+      "id": "evidence_check",
+      "cwd": ".",
+      "argv": [
+        "./scripts/kyuubiki",
+        "check-line-field-closed-form-baseline"
+      ],
+      "status": 0,
+      "signal": null,
+      "duration_ms": 67,
+      "stdout": "line-field closed-form baseline ok: 4 operators\n",
+      "stderr": "",
+      "ok": true
+    },
+    {
+      "id": "solver_baseline",
+      "cwd": "workers/rust",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-solver",
+        "--test",
+        "accuracy_baselines",
+        "line_1d"
+      ],
+      "status": 0,
+      "signal": null,
+      "duration_ms": 445,
+      "stdout": "\nrunning 6 tests\ntest accuracy_baselines::line_1d::accuracy_baseline_electrostatic_bar_1d_two_element_gradient ... ok\ntest accuracy_baselines::line_1d::accuracy_baseline_spring_1d_chain_fixture ... ok\ntest accuracy_baselines::line_1d::accuracy_baseline_axial_bar_1d_closed_form ... ok\ntest accuracy_baselines::line_1d::accuracy_baseline_heat_bar_1d_two_element_gradient ... ok\ntest accuracy_baselines::line_1d::accuracy_baseline_thermal_bar_1d_restrained_uniform_rise ... ok\ntest accuracy_baselines::line_1d::accuracy_baseline_thermal_beam_1d_free_gradient_response ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.01s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.19s\n     Running tests/accuracy_baselines.rs (target/debug/deps/accuracy_baselines-bb6ca9c9e985a9d5)\n",
+      "ok": true
+    }
+  ],
+  "summary": {
+    "command_count": 2,
+    "passed": 2,
+    "failed": 0,
+    "ok": true
+  }
+}

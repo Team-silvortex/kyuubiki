@@ -1,0 +1,80 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-material-provenance/v1",
+  "candidate_id": "thermal-plane-patch",
+  "scope": "review_fixture_material_parameters",
+  "version_line": "moxi 2.0.x",
+  "materials": [
+    {
+      "operator_family": "heat_plane",
+      "parameter": "conductivity",
+      "value": 45.0,
+      "unit": "watt_per_meter_kelvin_fixture_scalar",
+      "used_by": [
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs"
+      ]
+    },
+    {
+      "operator_family": "thermal_plane_triangle",
+      "parameter": "thermal_expansion",
+      "value": 0.000012,
+      "unit": "per_kelvin_fixture_scalar",
+      "used_by": [
+        "solve.thermal_plane_triangle_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs"
+      ]
+    },
+    {
+      "operator_family": "thermal_plane_quad",
+      "parameter": "thermal_expansion",
+      "value": 0.000011,
+      "unit": "per_kelvin_fixture_scalar",
+      "used_by": [
+        "solve.thermal_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+      ]
+    },
+    {
+      "operator_family": "thermal_plane",
+      "parameter": "youngs_modulus",
+      "value": 70000000000.0,
+      "unit": "pascal_fixture_scalar",
+      "used_by": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+      ]
+    },
+    {
+      "operator_family": "thermal_plane",
+      "parameter": "poisson_ratio",
+      "value": 0.33,
+      "unit": "dimensionless_fixture_scalar",
+      "used_by": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+      ]
+    }
+  ],
+  "limitations": [
+    "linear scalar thermal and thermoelastic material parameters only",
+    "compact review fixtures only",
+    "not a material-card qualification record",
+    "not valid for nonlinear, temperature-dependent, anisotropic, or coupled transient claims"
+  ]
+}

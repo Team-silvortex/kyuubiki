@@ -140,11 +140,47 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
+The generated tensor report also assigns a maturity label to every required
+covered coordinate:
+
+- `strong`
+  Benchmark lane, security lane, and contract evidence are all present.
+- `medium`
+  At least two evidence families are present, but one side still needs a
+  stronger anchor.
+- `thin`
+  The coordinate is covered, but its evidence is one-sided. These entries are
+  listed under `thin_points` and should be treated as the next mainline
+  hardening queue after blocking gaps are gone.
+
+This distinction matters for moxi because a `0` gap count only means no
+required coordinate is missing. It does not mean the coordinate is mature
+enough for a stronger public claim.
+
 For contract-heavy paradigms, the tensor also carries `contract_evidence`.
 The `runtime_api` coordinate includes the contracts runtime API surface schema,
 the central self-host service-surface binding, and the readiness-report service
 surface anchors. This makes `central-web-service` visible in the project tensor
 status instead of only in central-server docs.
+
+The moxi tensor now treats the following coordinates as contract-backed strong
+paths when their benchmark and security lanes are present:
+
+- `benchmark`
+  Benchmark profile coverage, profile index generation, and retained-run
+  hygiene checks.
+- `solver_execution`
+  Operator TaskIR schema, digest, mirror constraints, execution program, and
+  runtime hints.
+- `workflow_composition`
+  Workflow graph and workflow dataset contracts shared by frontend and
+  headless SDKs.
+- `sdk_headless`
+  Headless service-action contracts plus Rust, Python, and Elixir workflow
+  contract bindings.
+- `persistence_provenance`
+  Central-store provenance, release snapshots, installer disk hygiene, and
+  bounded workbench storage retention.
 
 Run `make check-contracts-runtime-api-surface` when shared contracts gain or
 move runtime API sources. It validates

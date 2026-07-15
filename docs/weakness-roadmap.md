@@ -1,4 +1,4 @@
-# Weakness Roadmap To Moxi 2.0
+# Weakness Roadmap For Moxi 2.x
 
 This document turns the current weak spots into a concrete roadmap for the
 remaining `moxi 2.x` hardening line.
@@ -11,11 +11,29 @@ It complements:
 
 ## Roadmap Principle
 
-The goal before `moxi 2.0.0` is not to maximize feature count.
+The goal after `moxi 2.0.0` is not to maximize feature count.
 
 The goal is to make the strongest current capabilities repeatable, explainable,
 recoverable, and honest enough for selected early research and industrial
 partners.
+
+## Current Tensor Status
+
+The module/function/evidence tensor is now the first navigation gate for this
+roadmap. Run `make check-module-function-coverage-tensor` before claiming a
+roadmap area is closed.
+
+Current moxi baseline:
+
+- `gap_count`: `0`
+- `blocking_gap_count`: `0`
+- `thin_evidence_count`: `0`
+
+This means required module/function coordinates are covered by benchmark,
+security, and contract evidence. It does not mean the physics and runtime
+claims are complete; it means the remaining work should move through concrete
+qualification, recovery, fuzz, and user-loop gates instead of architecture
+bookkeeping.
 
 ## 1. Numerical Trust
 

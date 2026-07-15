@@ -1,0 +1,107 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "thermal-plane-patch",
+      "trust_goal": "qualification_collecting",
+      "operators": [
+        "solve.thermal_plane_triangle_2d",
+        "solve.thermal_plane_quad_2d",
+        "solve.heat_plane_triangle_2d",
+        "solve.heat_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "mesh_refinement_equivalence",
+        "thermal_boundary_coverage",
+        "thermoelastic_stress_cross_check",
+        "material_parameter_provenance"
+      ],
+      "formal_invariants": [
+        "fixed_hot_and_cold_boundaries",
+        "free_node_temperature_resolution",
+        "temperature_gradient_drives_heat_flux",
+        "triangle_split_matches_quad_patch_response",
+        "restrained_thermal_strain_drives_compressive_stress",
+        "stored_strain_energy_is_non_negative"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+        "evidence/operator-qualification/thermal-plane-material-provenance.json",
+        "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+        "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "heat-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 469,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "heat-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 207,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 503,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 372,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-plane-mesh-refinement-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_mesh_refinement_regression -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 260,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

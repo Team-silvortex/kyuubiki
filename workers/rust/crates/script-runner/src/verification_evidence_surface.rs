@@ -82,12 +82,12 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
 
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
-        "node scripts/build-central-readiness-report.mjs",
+        "./scripts/kyuubiki build-central-readiness-report",
         "stable command",
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
-        "node scripts/check-central-readiness-report.mjs",
+        "./scripts/kyuubiki check-central-readiness-report",
         "stable command",
     )?;
     assert_includes(
@@ -122,11 +122,18 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
 fn assert_command(root: &Path, command: &str) -> RunnerResult<()> {
     let mut parts = command.split_whitespace();
     let binary = parts.next().unwrap_or_default();
-    let script = parts.next().unwrap_or_default();
-    if binary != "node" {
-        return Err(format!("runtime command must use node: {command}"));
+    if binary != "./scripts/kyuubiki" {
+        return Err(format!(
+            "runtime command must use native wrapper: {command}"
+        ));
     }
-    assert_path_exists(root, script, "runtime command script")
+    let command_name = parts.next().unwrap_or_default();
+    if command_name.is_empty() {
+        return Err(format!(
+            "runtime command missing runner subcommand: {command}"
+        ));
+    }
+    assert_path_exists(root, "scripts/kyuubiki", "runtime command wrapper")
 }
 
 fn assert_matrix_alignment(root: &Path, surface: &Value) -> RunnerResult<()> {

@@ -60,6 +60,12 @@ For the qualification-oriented subset, retain a release evidence bundle with:
 make capture-line-field-qualification-release-evidence
 ```
 
+The moxi 2.0.0 retained bundle is checked in at
+[line-field-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json)
+and linked from the qualification release record. It keeps the candidate at
+`ready_for_review`; promotion to `qualification` still requires reviewer
+sign-off against the graduation gate.
+
 ## Why these three first
 
 They are the best first return for `v1.x` accuracy work:

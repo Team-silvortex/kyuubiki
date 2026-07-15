@@ -100,7 +100,7 @@ fn validate_surface(root: &Path, surface: &Value) -> Report {
         validate_family(root, &mut errors, family);
     }
     for command in string_array_at(surface, "/runtime_api/verification_commands") {
-        if !command.starts_with("node ") && !command.starts_with("make ") {
+        if !command.starts_with("./scripts/kyuubiki ") && !command.starts_with("make ") {
             errors.push(format!(
                 "unsupported verification command prefix: {command}"
             ));
@@ -264,7 +264,7 @@ fn self_test_surface() -> Value {
                     ]
                 }
             ],
-            "verification_commands": ["node scripts/check-contracts-runtime-api-surface.mjs"]
+            "verification_commands": ["./scripts/kyuubiki check-contracts-runtime-api-surface"]
         }
     })
 }

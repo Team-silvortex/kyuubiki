@@ -6,11 +6,11 @@
   "runtime_api": {
     "owner": "verification-evidence",
     "stable_commands": [
-      "node scripts/check-module-function-matrix.mjs",
-      "node scripts/build-module-function-coverage-tensor.mjs",
-      "node scripts/build-regression-gate-report.mjs",
-      "node scripts/build-central-readiness-report.mjs",
-      "node scripts/check-central-readiness-report.mjs"
+      "./scripts/kyuubiki check-module-function-matrix",
+      "./scripts/kyuubiki check-module-function-coverage-tensor",
+      "./scripts/kyuubiki build-regression-gate-report",
+      "./scripts/kyuubiki build-central-readiness-report",
+      "./scripts/kyuubiki check-central-readiness-report"
     ],
     "generated_artifacts": [
       "tmp/module-function-matrix-report.json",

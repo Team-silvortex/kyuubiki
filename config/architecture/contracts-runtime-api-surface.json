@@ -90,9 +90,9 @@
       }
     ],
     "verification_commands": [
-      "node scripts/check-contracts-runtime-api-surface.mjs",
-      "node scripts/check-central-store-contract.mjs",
-      "node scripts/check-module-function-matrix.mjs"
+      "./scripts/kyuubiki check-contracts-runtime-api-surface",
+      "./scripts/kyuubiki check-central-store-contract",
+      "./scripts/kyuubiki check-module-function-matrix"
     ]
   }
 }

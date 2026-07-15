@@ -151,10 +151,11 @@ dissipation plumbing through the same headless workflow path as the other
 physics operators. It is not a general Navier-Stokes solver, turbulence model,
 compressible-flow solver, or industrial CFD validation claim.
 
-The current review evidence is limited to compact rectangular quad fixtures:
-one body-force response and one lid-driven shear boundary response. That is
-enough to catch shape, boundary, diagnostic, and non-finite input regressions,
-but not enough to claim mesh-converged CFD accuracy.
+The current review evidence covers compact quad and triangle fixtures: the
+quad lane checks body-force and lid-driven shear responses, while the triangle
+lane checks geometry rejection and heterogeneous viscosity response. That is
+enough to catch shape, boundary, diagnostic, and non-finite input regressions
+for review-screening, but not enough to claim mesh-converged CFD accuracy.
 
 ## CFD Stokes Divergence Tolerance
 
@@ -194,9 +195,15 @@ same headless workflow contract. They do not yet claim mesh convergence,
 rotated-patch orientation invariance, coupled high-frequency electromagnetics,
 or production qualification.
 
-The near-term qualification blocker is orientation evidence: the same field,
-flux, and stored-energy checks must pass across at least two patch
-orientations before these operators can graduate beyond review.
+The near-term qualification gate is review sign-off over the field-energy,
+material-provenance, and orientation evidence. The same field, flux, and
+stored-energy checks now run across two patch orientations. The
+`electromagnetic-plane-patch` evidence kit is now `ready_for_review`: it has a
+field-energy derivation note, a material-parameter provenance record, an
+orientation regression, and a validation profile that executes the
+electrostatic and magnetostatic triangle and quad review fixtures together.
+For the moxi 2.0.0 line, the retained validation report is attached at
+`releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json`.
 
 ## Electromagnetic Plane Material And Energy Notes
 
@@ -207,7 +214,15 @@ linear material path, not a broad material-card validation claim.
 
 Before qualification, these operators need material-card provenance for the
 permittivity or permeability values and an energy-density tolerance derivation
-that explains where the stored-energy comparison is valid.
+that explains where the stored-energy comparison is valid. The current
+evidence lives at
+`evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md`
+and
+`evidence/operator-qualification/electromagnetic-plane-material-provenance.json`;
+the orientation regression lives at
+`workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs`.
+It remains review evidence until the qualification promotion is explicitly
+signed off.
 
 ## Thermal Plane Review Scope
 
@@ -217,9 +232,14 @@ heat-flux diagnostics. Thermoelastic-plane fixtures exercise restrained
 thermal strain, mechanical strain, stress, and von Mises diagnostics. They are
 not yet mesh convergence, mixed-boundary coverage, or qualification evidence.
 
-The `thermal-plane-patch` roadmap candidate must stay below qualification
-until mesh convergence and boundary coverage artifacts are linked from the
-operator reliability entry.
+The `thermal-plane-patch` roadmap candidate is now `ready_for_review`:
+boundary coverage, material-parameter provenance, and a mesh/refinement
+equivalence regression are linked. Its validation profile executes the heat
+and thermoelastic triangle/quad review fixtures together, then checks that a
+two-triangle split matches the quad patch response for heat flow and restrained
+thermal stress.
+For the moxi 2.0.0 line, the retained validation report is attached at
+`releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
 
 ## Thermal Plane Material And Boundary Notes
 
@@ -229,10 +249,35 @@ linear plane stress plus positive elastic constants and thermal expansion
 coefficients. These material values are fixture parameters, not material-card
 provenance.
 
-Before qualification, the thermal plane group needs material-card linked
-benchmark fixtures, a boundary-condition coverage report, and a mesh
-refinement report that explains where the conductivity, thermal expansion, and
-stress tolerances are valid.
+Before qualification, the thermal plane group still needs reviewer sign-off
+against the current evidence bundle. The current boundary and material
+evidence lives at
+`evidence/operator-qualification/thermal-plane-boundary-coverage.md` and
+`evidence/operator-qualification/thermal-plane-material-provenance.json`; the
+mesh/refinement regression lives at
+`workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs`.
+
+## Modal Frame Review Scope
+
+The 2D and 3D modal-frame operators are review-grade cantilever modal checks.
+They verify positive finite natural frequencies, mode ordering, period/frequency
+conversion, restrained DOF zeroing, and expanded mode-shape normalization. The
+current shape normalization contract uses a unit Euclidean participation norm
+on the expanded shape vector.
+
+The `modal-frame-sanity` roadmap candidate is now `ready_for_review`: it has a
+normalization policy, a frequency-convergence note, and a regression that
+checks 2D and 3D cantilever mode ordering plus the expected frequency increase
+for shorter beams. Symmetric 3D bending modes may be near-degenerate, so the
+3D ordering contract is non-decreasing rather than strictly increasing.
+For the moxi 2.0.0 line, the retained validation report is attached at
+`releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json`.
+
+Before qualification, the modal frame group still needs reviewer sign-off
+against the current evidence bundle. The current modal evidence lives at
+`evidence/operator-qualification/modal-frame-normalization-policy.md`,
+`evidence/operator-qualification/modal-frame-frequency-convergence.md`, and
+`workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs`.
 
 ## Current State
 
@@ -251,16 +296,17 @@ This is intentionally conservative. The platform has broad executable
 coverage, but most evidence is still regression-oriented rather than
 engineering-qualification evidence.
 
-The CFD-facing Stokes quad operator is still `screening_only`, but it now has
-two review fixtures: the original body-force response and a lid-driven shear
-boundary response. That moves the `screening-cfd-boundary` evidence kit into
-`collecting`, not `qualification`. The test suite now encodes a screening
-divergence tolerance and the retained screening policy documents its current
-scope, but the operator still needs mesh-convergence or external-reference
-evidence before any stronger claim.
+The CFD-facing Stokes operators are still `screening_only`, but the
+`screening-cfd-boundary` evidence kit is now `ready_for_review`: the quad lane
+has body-force and lid-driven shear boundary fixtures, and the triangle lane
+adds geometry rejection plus heterogeneous viscosity response. The test suite
+encodes a screening divergence tolerance and the retained screening policy
+documents its current scope, but the operators still need mesh-convergence or
+external-reference evidence before any stronger claim.
 
 The first qualification evidence collection track is now active for
-`line-field-closed-form`. Its versioned baseline artifact lives at
+`line-field-closed-form` and has reached `ready_for_review`. Its versioned
+baseline artifact lives at
 `evidence/operator-qualification/line-field-closed-form-baseline.json` and is
 paired with
 `evidence/operator-qualification/line-field-closed-form-derivation.md` plus
@@ -273,16 +319,19 @@ closed-form expected values, tolerances, and tolerance scope for `solve.bar_1d`,
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
 runs the evidence checker and solver baseline and writes the release-retained
-regression bundle. The remaining blocker is attaching that generated bundle to
-the actual release record before any manifest entry becomes `qualification`.
+regression bundle. For the moxi 2.0.0 line, that retained bundle is attached at
+`releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json`
+and referenced by `releases/qualification-records/1.20.0.json`. The remaining
+blocker is reviewer sign-off against the graduation gate before any manifest
+entry becomes `qualification`.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
 solid-tetra benchmark template and a solver-level review fixture for a
 restrained single-tetra load path. It is still a screening fixture, not a
 mesh-convergence or qualification claim.
 
-The `beam-frame-classic` qualification candidate has now started evidence
-collection too. Its reference note is
+The `beam-frame-classic` qualification candidate has also reached
+`ready_for_review`. Its reference note is
 `evidence/operator-qualification/beam-frame-classic-reference-note.md`, and its
 first multi-case regression is
 `workers/rust/crates/solver/tests/beam_frame_classic_regression.rs`. That test
@@ -291,14 +340,15 @@ prismatic torsion shaft. Its sign convention note is
 `evidence/operator-qualification/beam-frame-force-sign-convention.md`. The
 `beam-frame-classic` profile is also part of `make verify-operator-validation`,
 so release validation output now executes the regression, beam review, torsion
-review, and frame review fixtures together. The remaining blocker is retaining
-that output with release provenance before any manifest entry is promoted.
-Use `make capture-beam-frame-qualification-release-evidence` to write the
-repo-local release-retained operator validation report for this candidate under
-`tmp/beam-frame-classic-qualification-release-evidence.json` by default.
-Use `make check-beam-frame-qualification-release-evidence` before attaching the
-file to a release record; it rejects non-executed reports, mixed-profile
-reports, missing evidence paths, and failed beam/frame/torsion commands.
+review, and frame review fixtures together. For the moxi 2.0.0 line, that
+retained output is attached at
+`releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json`
+and referenced by `releases/qualification-records/1.20.0.json`. Use
+`make check-beam-frame-qualification-release-evidence` before relying on the
+file; it rejects non-executed reports, mixed-profile reports, missing evidence
+paths, and failed beam/frame/torsion commands. The remaining blocker is
+reviewer sign-off against the graduation gate before any manifest entry is
+promoted.
 
 ## Smoke-Level Gaps
 
