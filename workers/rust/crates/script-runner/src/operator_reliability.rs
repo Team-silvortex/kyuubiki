@@ -9,8 +9,10 @@ use std::fs;
 use std::path::Path;
 
 mod extract;
+mod release_records;
 
 use extract::{physics_coverage_templates, workflow_operator_ids};
+use release_records::validate_qualification_release_records;
 
 const MANIFEST_PATH: &str = "config/operator-reliability-manifest.json";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
@@ -455,8 +457,17 @@ fn validate_roadmap(
                     field(requirement, "artifact_id")
                 ));
             }
+            let check_command = field(requirement, "artifact_check_command");
+            if !check_command.is_empty() && !make_sources.contains(check_command) {
+                return Err(format!(
+                    "qualification evidence kit {}:{}: artifact_check_command is not discoverable in Make target sources",
+                    field(kit, "candidate_id"),
+                    field(requirement, "artifact_id")
+                ));
+            }
         }
     }
+    validate_qualification_release_records(root, &roadmap, &kits)?;
     Ok(())
 }
 

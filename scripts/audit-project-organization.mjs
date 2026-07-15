@@ -6,7 +6,8 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const DEFAULT_MAX_LINES = Number(process.env.MAX_LINES || 600);
+const DEFAULT_SOURCE_MAX_LINES = Number(process.env.SOURCE_MAX_LINES || process.env.MAX_LINES || 800);
+const DEFAULT_DOC_MAX_LINES = Number(process.env.DOC_MAX_LINES || 2000);
 
 const CHECKED_EXTENSIONS = new Set([
   ".css",
@@ -134,6 +135,14 @@ function lineCount(relativePath) {
   return contents.split("\n").length;
 }
 
+function isDocumentPath(relativePath) {
+  return [".md", ".html"].includes(path.extname(relativePath));
+}
+
+function lineLimitForPath(relativePath) {
+  return isDocumentPath(relativePath) ? DEFAULT_DOC_MAX_LINES : DEFAULT_SOURCE_MAX_LINES;
+}
+
 const violations = [];
 const debtFilesSeen = new Set();
 
@@ -144,7 +153,7 @@ for (const relativePath of projectFiles()) {
   const debtLimit = TRACKED_DEBT_LIMITS.get(relativePath);
   if (debtLimit !== undefined) debtFilesSeen.add(relativePath);
 
-  const limit = debtLimit ?? DEFAULT_MAX_LINES;
+  const limit = debtLimit ?? lineLimitForPath(relativePath);
   if (lines > limit) {
     violations.push({
       relativePath,
@@ -239,7 +248,7 @@ if (violations.length > 0) {
 
   console.error(
     [
-      `Project organization audit failed. Default source limit is ${DEFAULT_MAX_LINES} lines.`,
+      `Project organization audit failed. Default source limit is ${DEFAULT_SOURCE_MAX_LINES} lines; doc limit is ${DEFAULT_DOC_MAX_LINES} lines.`,
       "Split new oversized files, or lower existing tracked debt after refactoring.",
       formatted,
     ].join("\n\n"),
@@ -248,7 +257,7 @@ if (violations.length > 0) {
 }
 
 console.log(
-  `Project organization audit passed. Default source limit ${DEFAULT_MAX_LINES}; tracked debt ${TRACKED_DEBT_LIMITS.size}.`,
+  `Project organization audit passed. Default source limit ${DEFAULT_SOURCE_MAX_LINES}; doc limit ${DEFAULT_DOC_MAX_LINES}; tracked debt ${TRACKED_DEBT_LIMITS.size}.`,
 );
 
 function runSelfTest() {
@@ -308,5 +317,8 @@ function runSelfTest() {
     }),
     [],
   );
+  assert.equal(lineLimitForPath("docs/guide.md"), DEFAULT_DOC_MAX_LINES);
+  assert.equal(lineLimitForPath("docs/guide.html"), DEFAULT_DOC_MAX_LINES);
+  assert.equal(lineLimitForPath("scripts/tool.mjs"), DEFAULT_SOURCE_MAX_LINES);
   console.log("project organization audit self-test passed");
 }

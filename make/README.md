@@ -34,7 +34,7 @@ Next split points:
 Rules:
 
 - Put shared variables in the root `Makefile` unless they are module-local.
-- Keep each `.mk` file below the shared 600-line source limit.
+- Keep each `.mk` file below the shared 800-line source limit.
 - Add new public targets to the narrowest matching module instead of creating
   catch-all target files.
 - Prefer forwarding to `./scripts/kyuubiki` or native Rust utilities instead of

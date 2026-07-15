@@ -21,6 +21,11 @@ const schemaContracts = [
     schema: operatorReliabilityPaths.evidenceKitsSchema,
     schemaVersionPath: ["properties", "schema_version", "const"],
   },
+  {
+    config: operatorReliabilityPaths.releaseRecords,
+    schema: operatorReliabilityPaths.releaseRecordsSchema,
+    schemaVersionPath: ["properties", "schema_version", "const"],
+  },
 ];
 
 function fail(message) {

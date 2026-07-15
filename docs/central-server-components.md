@@ -20,9 +20,11 @@ Architecture boundary: the website service is not a separate top-level module.
 - API fetch: `GET /api/v1/central/catalog/:kind/:entry_id`
 - Session policy: `GET /api/v1/central/session-policy`
 - Publish policy: `GET /api/v1/central/publish-policy`
+- Publisher policy: `GET /api/v1/central/publisher-policy`
 - Publish readiness: `GET /api/v1/central/publish-readiness`
 - Database policy: `GET /api/v1/central/database-policy`
 - Provenance policy: `GET /api/v1/central/provenance-policy`
+- Artifact admission policy: `GET /api/v1/central/artifact-admission-policy`
 - Database status: `GET /api/v1/central/database-status`
 - Backing module: `KyuubikiWeb.CentralStore`
 - Router module: `KyuubikiWeb.CentralStoreRouter`
@@ -30,9 +32,12 @@ Architecture boundary: the website service is not a separate top-level module.
 - Contract-check schema: `schemas/central-store-contract-check.schema.json`
 - Session schema: `schemas/central-session-policy.schema.json`
 - Publish schema: `schemas/central-publish-policy.schema.json`
+- Publisher schema: `schemas/central-publisher-policy.schema.json`
 - Publish readiness schema: `schemas/central-publish-readiness.schema.json`
 - Database schema: `schemas/central-database-policy.schema.json`
 - Provenance schema: `schemas/central-provenance-policy.schema.json`
+- Artifact admission schema:
+  `schemas/central-artifact-admission-policy.schema.json`
 - Database status schema: `schemas/central-database-status.schema.json`
 - Readiness report schema: `schemas/central-readiness-report.schema.json`
 - Contract-check config: `config/architecture/central-store-contract.json`
@@ -80,6 +85,12 @@ resource kinds, manifest schemas, review stages, and evidence requirements, but
 does not accept uploads yet. Write paths should wait until publisher accounts,
 token scopes, signing keys, and provenance checks are in place.
 
+The publisher policy is the read-only account and token-scope contract for that
+future write side. It keeps account creation and token issuance disabled, but
+defines the publisher lifecycle, planned login modes, token scopes, fingerprint
+storage table, rotation/revocation posture, and the rule that raw tokens are
+never stored by the central service.
+
 The publish readiness endpoint turns those blockers into a machine-readable
 matrix. It lists global blockers, per-resource readiness, provenance
 attestations, installer checks, storage tables, and the next unlocks required
@@ -93,6 +104,13 @@ immutable artifact metadata, required attestations, detached signature posture,
 yank/security-recall behavior, and installer verification rules. This lets the
 Installer, Workbench store, and headless SDKs agree on supply-chain checks
 without storing signing keys or release credentials in the repository.
+
+The artifact admission policy is the companion preflight contract for future
+write-side publishing. It keeps uploads disabled, but exposes the artifact
+envelope, resource-specific evidence, token scopes, review queue stages,
+signature/SBOM expectations, and blocking reasons that must be cleared before a
+real upload endpoint can exist. This gives SDKs and self-hosted deployments one
+machine-readable target without prematurely accepting packages.
 
 ## Database Policy
 

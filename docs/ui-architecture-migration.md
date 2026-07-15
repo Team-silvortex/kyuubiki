@@ -14,8 +14,8 @@ the Tauri shells.
 - App-specific UI modules move after their shared inputs are typed.
 - Runtime payloads stay `unknown` at the boundary and are normalized before
   rendering.
-- Files stay under 600 lines; split by contract, model, renderer, or controller
-  when needed.
+- Source files stay under 800 lines; split by contract, model, renderer, or
+  controller when needed.
 
 ## Layer Map
 

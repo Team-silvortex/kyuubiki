@@ -62,6 +62,7 @@ mod nightly_artifact_overview;
 mod node_tests;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_readiness;
+mod operator_qualification_release_records;
 mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
@@ -264,6 +265,12 @@ fn run() -> RunnerResult<u8> {
         }
         "check-operator-qualification-readiness" => {
             operator_qualification_readiness::run_check_operator_qualification_readiness(
+                &paths.root,
+                rest,
+            )
+        }
+        "check-operator-qualification-release-records" => {
+            operator_qualification_release_records::run_check_operator_qualification_release_records(
                 &paths.root,
                 rest,
             )

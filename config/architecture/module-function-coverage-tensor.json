@@ -12,6 +12,27 @@
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "paradigm_contract_evidence": {
+    "product_surface": [
+      {
+        "id": "gui-product-surface-automation-contract",
+        "files": [
+          "docs/ui-automation-contract.json",
+          "schemas/gui-runtime-capability-manifest.schema.json",
+          "schemas/examples.gui-runtime-capability-manifest.json",
+          "workers/rust/crates/script-runner/src/ui_automation_contract.rs",
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs"
+        ],
+        "required_text": [
+          "productOwned",
+          "userExtensible",
+          "product_owned_static_ui",
+          "wasm_python_stability_required",
+          "user_extensible_ui_allowed",
+          "headless_sdk_parity_required",
+          "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
+        ]
+      }
+    ],
     "validation": [
       {
         "id": "operator-qualification-readiness",
@@ -29,6 +50,26 @@
           "release_gate_impacts",
           "primary_blocker",
           "preferred_validation_lane"
+        ]
+      },
+      {
+        "id": "install-update-validation-contract",
+        "files": [
+          "deploy/installation-integrity-contract.json",
+          "deploy/install-update-disk-hygiene.json",
+          "scripts/check-install-update-disk-hygiene.mjs",
+          "workers/rust/crates/script-runner/src/install_update_disk_hygiene.rs",
+          "workers/rust/crates/script-runner/src/installation_integrity_docs.rs"
+        ],
+        "required_text": [
+          "kyuubiki.installation-contract/v1",
+          "kyuubiki.install-update-disk-hygiene/v1",
+          "validate_contract",
+          "validate_remote_policy",
+          "validate_local_retention",
+          "validate_update_visibility",
+          "protected_paths",
+          "removable_roots"
         ]
       }
     ],
@@ -58,6 +99,48 @@
           "service_surface",
           "central-web-service",
           "orchestra-control-plane"
+        ]
+      }
+    ],
+    "deployment_update": [
+      {
+        "id": "install-update-integrity-contract",
+        "files": [
+          "deploy/installation-integrity-contract.json",
+          "deploy/update-channels.json",
+          "deploy/install-update-disk-hygiene.json",
+          "releases/update-catalog.json",
+          "scripts/check-install-update-disk-hygiene.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.installation-contract/v1",
+          "kyuubiki.update-channels/v1",
+          "kyuubiki.install-update-disk-hygiene/v1",
+          "requires_integrity_contract",
+          "allowlisted",
+          "same-channel reinstall",
+          "remote_artifact_policy",
+          "protected_roots"
+        ]
+      }
+    ],
+    "security": [
+      {
+        "id": "gui-credential-boundary-contract",
+        "files": [
+          "docs/security.md",
+          "schemas/gui-runtime-capability-manifest.schema.json",
+          "workers/rust/crates/script-runner/src/frontend_checks.rs",
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs",
+          "scripts/check-gui-runtime-capability-contract.mjs"
+        ],
+        "required_text": [
+          ".kyuubiki/credentials",
+          "credential_surface",
+          "product_owned_static_ui",
+          "user_extensible_ui_allowed",
+          "Do not read or write token, password, credential, API key, or secret-shaped values through browser storage.",
+          "GUI code should select bindings by declared capability"
         ]
       }
     ]
@@ -105,7 +188,8 @@
     "validation": {
       "benchmark": [
         "runtime_solver",
-        "sdk_headless"
+        "sdk_headless",
+        "installer_release"
       ],
       "security": [
         "data_contract",

@@ -1,10 +1,12 @@
 import { requestJson } from "./core.ts";
 import type {
+  CentralArtifactAdmissionPolicyPayload,
   CentralDatabasePolicyPayload,
   CentralDatabaseStatusPayload,
   CentralProvenancePolicyPayload,
   CentralPublishPolicyPayload,
   CentralPublishReadinessPayload,
+  CentralPublisherPolicyPayload,
   CentralSessionPolicyPayload,
   CentralStoreCatalogPayload,
   CentralStoreEntryEnvelope,
@@ -62,6 +64,12 @@ export function createCentralStoreApiClient(request: CentralStoreRequestJson) {
         cache: "no-store",
       });
     },
+    fetchCentralPublisherPolicy() {
+      return request<CentralPublisherPolicyPayload>("/api/v1/central/publisher-policy", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
     fetchCentralPublishReadiness() {
       return request<CentralPublishReadinessPayload>("/api/v1/central/publish-readiness", {
         method: "GET",
@@ -79,6 +87,15 @@ export function createCentralStoreApiClient(request: CentralStoreRequestJson) {
         method: "GET",
         cache: "no-store",
       });
+    },
+    fetchCentralArtifactAdmissionPolicy() {
+      return request<CentralArtifactAdmissionPolicyPayload>(
+        "/api/v1/central/artifact-admission-policy",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
     },
     fetchCentralDatabaseStatus() {
       return request<CentralDatabaseStatusPayload>("/api/v1/central/database-status", {
@@ -109,6 +126,10 @@ export function fetchCentralPublishPolicy() {
   return defaultCentralStoreApiClient.fetchCentralPublishPolicy();
 }
 
+export function fetchCentralPublisherPolicy() {
+  return defaultCentralStoreApiClient.fetchCentralPublisherPolicy();
+}
+
 export function fetchCentralPublishReadiness() {
   return defaultCentralStoreApiClient.fetchCentralPublishReadiness();
 }
@@ -119,6 +140,10 @@ export function fetchCentralDatabasePolicy() {
 
 export function fetchCentralProvenancePolicy() {
   return defaultCentralStoreApiClient.fetchCentralProvenancePolicy();
+}
+
+export function fetchCentralArtifactAdmissionPolicy() {
+  return defaultCentralStoreApiClient.fetchCentralArtifactAdmissionPolicy();
 }
 
 export function fetchCentralDatabaseStatus() {

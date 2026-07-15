@@ -79,7 +79,7 @@
         "experimental_only": { "type": "integer", "minimum": 0 }
       }
     },
-    "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "broken", "blocked"] },
+    "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "ready_for_review", "broken", "blocked"] },
     "artifactState": { "enum": ["present", "missing", "command_available", "not_started"] },
     "candidate": {
       "type": "object",
@@ -141,6 +141,8 @@
         "path": { "type": "string", "minLength": 1 },
         "command": { "type": "string", "minLength": 1 },
         "check_command": { "type": ["string", "null"], "minLength": 1 },
+        "release_record_state": { "enum": ["missing", "staged_for_review", "attached_to_release", "rejected"] },
+        "release_record_path": { "type": "string" },
         "gate": { "type": "string", "minLength": 1 }
       }
     },

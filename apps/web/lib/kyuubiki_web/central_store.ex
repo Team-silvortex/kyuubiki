@@ -110,6 +110,58 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def publisher_policy do
+    %{
+      "schema_version" => "kyuubiki.central-publisher-policy/v1",
+      "status" => "preview_contract",
+      "accounts_enabled" => false,
+      "token_issuance_enabled" => false,
+      "storage_tables" => ["central_publishers", "central_publisher_tokens"],
+      "identity_modes" => [
+        %{
+          "id" => "oidc",
+          "status" => "planned",
+          "clients" => ["hub", "workbench", "headless_sdk"]
+        },
+        %{
+          "id" => "device_code",
+          "status" => "planned",
+          "clients" => ["cli", "installer", "headless_sdk"]
+        },
+        %{
+          "id" => "personal_access_token",
+          "status" => "planned",
+          "clients" => ["ci", "installer", "headless_sdk"]
+        }
+      ],
+      "account_lifecycle" => %{
+        "allowed_statuses" => ["pending_review", "active", "suspended", "revoked"],
+        "default_status" => "pending_review",
+        "manual_review_required" => true,
+        "anonymous_publish_allowed" => false
+      },
+      "token_policy" => %{
+        "raw_token_storage_allowed" => false,
+        "stored_secret_material" => "fingerprint_only",
+        "fingerprint_storage_table" => "central_publisher_tokens",
+        "rotation_required" => true,
+        "revocation_supported" => true,
+        "required_scopes" => [
+          "central:catalog:read",
+          "central:publish:submit",
+          "central:artifact:upload",
+          "central:artifact:yank",
+          "central:security:recall"
+        ]
+      },
+      "blocking_reasons" => [
+        "hosted_login_not_enabled",
+        "publisher_review_queue_not_enabled",
+        "token_issuer_not_configured"
+      ]
+    }
+  end
+
   def publish_readiness do
     provenance_gates = Map.new(provenance_policy()["resource_gates"], &{&1["kind"], &1})
 
@@ -126,7 +178,7 @@ defmodule KyuubikiWeb.CentralStore do
         Enum.map(@store_kinds, &publish_resource_readiness(&1, provenance_gates[&1])),
       "required_storage_tables" => ["central_publishers", "central_artifacts", "central_artifact_signatures"],
       "next_unlocks" => [
-        "enable publisher account storage and token scopes",
+        "enable publisher account storage, review, and token scopes",
         "configure detached artifact signing keys outside the repository",
         "enable write-side review queue after provenance smoke passes"
       ]
@@ -196,6 +248,56 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def artifact_admission_policy do
+    %{
+      "schema_version" => "kyuubiki.central-artifact-admission-policy/v1",
+      "status" => "blocked_preview",
+      "accepting_uploads" => false,
+      "write_endpoint_enabled" => false,
+      "resource_kinds" => Enum.map(@store_kinds, &artifact_resource_admission/1),
+      "artifact_envelope" => %{
+        "required_fields" => [
+          "artifact_id",
+          "kind",
+          "entry_id",
+          "version",
+          "digest",
+          "size_bytes",
+          "manifest",
+          "attestations"
+        ],
+        "digest_algorithms" => ["sha256", "blake3"],
+        "immutable_fields" => ["artifact_id", "kind", "entry_id", "version", "digest"],
+        "storage_tables" => ["central_artifacts", "central_artifact_signatures"]
+      },
+      "publisher_token_policy" => %{
+        "required_scopes" => ["central:publish:submit", "central:artifact:upload"],
+        "raw_token_storage_allowed" => false,
+        "fingerprint_storage_table" => "central_publisher_tokens",
+        "credential_storage" => "client_platform_keychain_or_memory_only"
+      },
+      "review_queue" => %{
+        "status" => "planned_required",
+        "stages" => [
+          "manifest_shape",
+          "schema_validation",
+          "provenance_check",
+          "security_scan",
+          "compatibility_smoke",
+          "signature_attestation",
+          "catalog_indexing"
+        ],
+        "manual_approval_required" => true
+      },
+      "blocking_reasons" => [
+        "publisher_accounts_not_enabled",
+        "signing_keys_not_configured",
+        "write_side_review_queue_not_enabled",
+        "artifact_upload_endpoint_disabled"
+      ]
+    }
+  end
+
   defp provenance_resource_gate(kind) do
     publish_policy = publish_resource_policy(kind)
 
@@ -221,6 +323,24 @@ defmodule KyuubikiWeb.CentralStore do
     ["manifest_schema", "compatibility_smoke", "security_scan", "signature"]
   end
 
+  defp artifact_resource_admission(kind) do
+    publish_policy = publish_resource_policy(kind)
+    provenance = provenance_resource_gate(kind)
+
+    %{
+      "kind" => kind,
+      "status" => "blocked_preview",
+      "manifest_schema" => publish_policy["manifest_schema"],
+      "required_evidence" => publish_policy["required_evidence"],
+      "required_attestations" => provenance["provenance_attestations"],
+      "installer_checks" => provenance["installer_checks"],
+      "distribution_modes" => publish_policy["distribution_modes"],
+      "mutable_after_publish" => false,
+      "yank_supported" => true,
+      "security_recall_supported" => true
+    }
+  end
+
   def database_status do
     CentralDatabase.status_report()
   end
@@ -239,7 +359,14 @@ defmodule KyuubikiWeb.CentralStore do
       "language_pack_store" => %{"status" => "ready", "backing" => "language-packs/catalog.json"},
       "login_system" => %{"status" => "preview_contract", "backing" => "Security.descriptor"},
       "signed_downloads" => %{"status" => "planned"},
-      "publisher_accounts" => %{"status" => "planned"},
+      "artifact_admission" => %{
+        "status" => "blocked_preview",
+        "backing" => "CentralStore.artifact_admission_policy"
+      },
+      "publisher_accounts" => %{
+        "status" => "preview_contract",
+        "backing" => "CentralStore.publisher_policy"
+      },
       "publish_policy" => %{
         "status" => "preview_contract",
         "backing" => "CentralStore.publish_policy"

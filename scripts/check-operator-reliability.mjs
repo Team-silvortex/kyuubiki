@@ -26,6 +26,15 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
 }
 
+function repoPath(relativePath) {
+  const absolute = path.resolve(repoRoot, relativePath);
+  const relative = path.relative(repoRoot, absolute);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    fail(`path escapes repository: ${relativePath}`);
+  }
+  return absolute;
+}
+
 function extractArrayBlock(source, marker) {
   const markerIndex = source.indexOf(marker);
   if (markerIndex < 0) {
@@ -288,6 +297,47 @@ function validateQualificationEvidenceKits(manifest, roadmap) {
             `artifact_command is not discoverable in Make target sources`
         );
       }
+      if (requirement.artifact_check_command && !makefile.includes(requirement.artifact_check_command)) {
+        fail(
+          `qualification evidence kit ${kit.candidate_id}:${requirement.artifact_id}: ` +
+            `artifact_check_command is not discoverable in Make target sources`
+        );
+      }
+    }
+  }
+  validateQualificationReleaseRecords(kits, roadmap);
+}
+
+function validateQualificationReleaseRecords(kits, roadmap) {
+  const records = readJson(operatorReliabilityPaths.releaseRecords);
+  if (records.schema_version !== operatorReliabilitySchemaVersions.releaseRecords) {
+    fail(`qualification release records: schema_version must be ${operatorReliabilitySchemaVersions.releaseRecords}`);
+  }
+  if (!fs.existsSync(repoPath(records.snapshot_path))) {
+    fail(`qualification release records: snapshot_path does not exist`);
+  }
+  const candidates = new Set((roadmap.candidates ?? []).map((candidate) => candidate.candidate_id));
+  const requirements = new Map();
+  for (const kit of kits.kits ?? []) {
+    for (const requirement of kit.artifact_requirements ?? []) {
+      if (requirement.kind === "release_retained_regression_output") {
+        requirements.set(kit.candidate_id, requirement);
+      }
+    }
+  }
+  for (const record of records.records ?? []) {
+    if (!candidates.has(record.candidate_id)) {
+      fail(`qualification release records: unknown candidate ${record.candidate_id}`);
+    }
+    const requirement = requirements.get(record.candidate_id);
+    if (!requirement) {
+      fail(`qualification release records: ${record.candidate_id} has no release-retained requirement`);
+    }
+    if (record.capture_command !== requirement.artifact_command) {
+      fail(`qualification release records: ${record.candidate_id} capture_command must match evidence kit`);
+    }
+    if (record.check_command !== requirement.artifact_check_command) {
+      fail(`qualification release records: ${record.candidate_id} check_command must match evidence kit`);
     }
   }
 }

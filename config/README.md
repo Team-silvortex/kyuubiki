@@ -29,6 +29,11 @@ contributors and automation.
   A kit describes what must be collected before real `evidence.qualification`
   can be added to the reliability shards. Command-backed artifacts can pair a
   capture command with a separate check command for generated release bundles.
+- `releases/qualification-records/<version>.json`
+  Release-bound staging records for qualification evidence bundles. These
+  records bind a release snapshot, candidate IDs, capture commands, check
+  commands, and evidence bundle paths before any operator trust-level
+  promotion.
 
 Run `make check-operator-reliability` and `make check-operator-validation`
 after changing any of these files. Use `make verify-operator-validation` when

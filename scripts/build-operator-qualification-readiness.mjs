@@ -40,7 +40,15 @@ function repoLocalOutput(outPath) {
   return { absoluteOut, relativeOut };
 }
 
-function artifactState(requirement) {
+function releaseRecordsByCandidate() {
+  const recordsPath = operatorReliabilityPaths.releaseRecords;
+  const absolute = path.join(repoRoot, recordsPath);
+  if (!fs.existsSync(absolute)) return new Map();
+  const records = readJson(recordsPath);
+  return new Map((records.records ?? []).map((record) => [record.candidate_id, record]));
+}
+
+function artifactState(requirement, releaseRecord) {
   if (requirement.artifact_path) {
     return {
       artifact_id: requirement.artifact_id,
@@ -51,12 +59,15 @@ function artifactState(requirement) {
     };
   }
   if (requirement.artifact_command) {
+    const releaseState = releaseRecord?.capture_command === requirement.artifact_command ? releaseRecord.status : null;
     return {
       artifact_id: requirement.artifact_id,
       kind: requirement.kind,
-      state: "command_available",
+      state: releaseState ? "present" : "command_available",
       command: requirement.artifact_command,
       check_command: requirement.artifact_check_command ?? null,
+      release_record_state: releaseState ?? "missing",
+      release_record_path: releaseRecord?.evidence_path ?? "",
       gate: requirement.gate,
     };
   }
@@ -68,8 +79,8 @@ function artifactState(requirement) {
   };
 }
 
-function readinessFor(candidate, kit) {
-  const artifacts = (kit?.artifact_requirements ?? []).map(artifactState);
+function readinessFor(candidate, kit, releaseRecord) {
+  const artifacts = (kit?.artifact_requirements ?? []).map((requirement) => artifactState(requirement, releaseRecord));
   const present = artifacts.filter((artifact) => artifact.state === "present").length;
   const commands = artifacts.filter((artifact) => artifact.state === "command_available").length;
   const missing = artifacts.filter((artifact) => artifact.state === "missing").length;
@@ -81,7 +92,7 @@ function readinessFor(candidate, kit) {
   } else if (missing > 0) {
     readiness = "broken";
   } else if (notStarted === 0 && artifacts.length > 0) {
-    readiness = "collecting_with_entries";
+    readiness = "ready_for_review";
   } else if (actionable > 0) {
     readiness = "partially_collecting";
   }
@@ -126,7 +137,8 @@ function readinessRank(readiness) {
     ["planned", 1],
     ["partially_collecting", 2],
     ["collecting_with_entries", 3],
-    ["blocked", 4],
+    ["ready_for_review", 4],
+    ["blocked", 5],
   ]);
   return ranks.get(readiness) ?? 99;
 }
@@ -186,8 +198,9 @@ function buildReport() {
     fail("roadmap and evidence kits version_line must match");
   }
   const kitByCandidate = new Map(kits.kits.map((kit) => [kit.candidate_id, kit]));
+  const releaseRecords = releaseRecordsByCandidate();
   const candidates = roadmap.candidates.map((candidate) =>
-    readinessFor(candidate, kitByCandidate.get(candidate.candidate_id))
+    readinessFor(candidate, kitByCandidate.get(candidate.candidate_id), releaseRecords.get(candidate.candidate_id))
   );
   const nextActions = buildNextActions(candidates);
   return {

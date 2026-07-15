@@ -466,7 +466,7 @@ The main risks to keep watching are:
 - frontend services growing hidden runtime assumptions
 - operator output contracts existing only in tests
 - Make targets growing back into the root `Makefile`
-- long files crossing the 600-line boundary
+- long files crossing the source or documentation line-count boundary
 - generated artifacts or local machine paths leaking into source control
 - headless SDKs lagging behind GUI-only capabilities
 

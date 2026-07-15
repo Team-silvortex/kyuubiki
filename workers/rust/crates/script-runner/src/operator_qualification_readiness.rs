@@ -1,13 +1,19 @@
 use crate::{RunnerResult, native_time::utc_iso_timestamp};
 use serde_json::{Value, json};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod args;
+mod release_records;
 mod self_test;
 #[cfg(test)]
 mod unit_tests;
+
+use args::{parse_check_args, parse_out};
+use release_records::{ReleaseRecord, release_records_by_candidate};
 
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
@@ -55,53 +61,6 @@ pub(crate) fn run_check_operator_qualification_readiness(
     Ok(0)
 }
 
-fn parse_out(args: Vec<OsString>) -> RunnerResult<String> {
-    let mut out = DEFAULT_OUT.to_string();
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.to_string_lossy().as_ref() {
-            "--out" => {
-                let Some(value) = iter.next() else {
-                    return Err("--out requires a repo-local path".to_string());
-                };
-                out = value.to_string_lossy().to_string();
-            }
-            other => return Err(format!("unknown argument {other}")),
-        }
-    }
-    if out.is_empty() {
-        return Err("--out requires a repo-local path".to_string());
-    }
-    Ok(out)
-}
-
-struct CheckOptions {
-    input: String,
-    self_test: bool,
-}
-
-fn parse_check_args(args: Vec<OsString>) -> RunnerResult<CheckOptions> {
-    let mut input = "tmp/operator-qualification-readiness.json".to_string();
-    let mut self_test = false;
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.to_string_lossy().as_ref() {
-            "--self-test" => self_test = true,
-            "--in" => {
-                let Some(value) = iter.next() else {
-                    return Err("--in requires a repo-local path".to_string());
-                };
-                input = value.to_string_lossy().to_string();
-            }
-            other => return Err(format!("unknown argument {other}")),
-        }
-    }
-    if !self_test && input.is_empty() {
-        return Err("--in requires a repo-local path".to_string());
-    }
-    Ok(CheckOptions { input, self_test })
-}
-
 fn build_report(root: &Path) -> RunnerResult<Value> {
     let roadmap = read_json(root, ROADMAP_PATH)?;
     let kits = read_json(root, EVIDENCE_KITS_PATH)?;
@@ -111,7 +70,8 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
     let kit_by_candidate = array(&kits, "kits")
         .into_iter()
         .map(|kit| (field(kit, "candidate_id").to_string(), kit))
-        .collect::<std::collections::HashMap<_, _>>();
+        .collect::<HashMap<_, _>>();
+    let release_records = release_records_by_candidate(root)?;
     let candidates = array(&roadmap, "candidates")
         .into_iter()
         .map(|candidate| {
@@ -121,6 +81,7 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
                 kit_by_candidate
                     .get(field(candidate, "candidate_id"))
                     .copied(),
+                release_records.get(field(candidate, "candidate_id")),
             )
         })
         .collect::<RunnerResult<Vec<_>>>()?;
@@ -148,12 +109,17 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
     }))
 }
 
-fn readiness_for(root: &Path, candidate: &Value, kit: Option<&Value>) -> RunnerResult<Value> {
+fn readiness_for(
+    root: &Path,
+    candidate: &Value,
+    kit: Option<&Value>,
+    release_record: Option<&ReleaseRecord>,
+) -> RunnerResult<Value> {
     let artifacts = kit
         .map(|kit| array(kit, "artifact_requirements"))
         .unwrap_or_default()
         .into_iter()
-        .map(|requirement| artifact_state(root, requirement))
+        .map(|requirement| artifact_state(root, requirement, release_record))
         .collect::<RunnerResult<Vec<_>>>()?;
     let present = count_state(&artifacts, "present");
     let commands = count_state(&artifacts, "command_available");
@@ -168,7 +134,7 @@ fn readiness_for(root: &Path, candidate: &Value, kit: Option<&Value>) -> RunnerR
     } else if missing > 0 {
         "broken"
     } else if not_started == 0 && !artifacts.is_empty() {
-        "collecting_with_entries"
+        "ready_for_review"
     } else if actionable > 0 {
         "partially_collecting"
     } else {
@@ -199,7 +165,11 @@ fn readiness_for(root: &Path, candidate: &Value, kit: Option<&Value>) -> RunnerR
     }))
 }
 
-fn artifact_state(root: &Path, requirement: &Value) -> RunnerResult<Value> {
+fn artifact_state(
+    root: &Path,
+    requirement: &Value,
+    release_record: Option<&ReleaseRecord>,
+) -> RunnerResult<Value> {
     let artifact_path = field(requirement, "artifact_path");
     if !artifact_path.is_empty() {
         return Ok(json!({
@@ -212,12 +182,17 @@ fn artifact_state(root: &Path, requirement: &Value) -> RunnerResult<Value> {
     }
     let command = field(requirement, "artifact_command");
     if !command.is_empty() {
+        let release_state = release_record
+            .filter(|record| record.capture_command == command)
+            .map(|record| record.status.as_str());
         return Ok(json!({
             "artifact_id": field(requirement, "artifact_id"),
             "kind": field(requirement, "kind"),
-            "state": "command_available",
+            "state": if release_state.is_some() { "present" } else { "command_available" },
             "command": command,
             "check_command": optional_field(requirement, "artifact_check_command"),
+            "release_record_state": release_state.unwrap_or("missing"),
+            "release_record_path": release_record.map(|record| record.evidence_path.as_str()).unwrap_or(""),
             "gate": field(requirement, "gate"),
         }));
     }
@@ -520,7 +495,7 @@ fn count_state(artifacts: &[Value], state: &str) -> usize {
 fn priority_rank(priority: &str) -> u8 { match priority { "p0" => 0, "p1" => 1, "p2" => 2, "p3" => 3, _ => 99 } }
 
 #[rustfmt::skip]
-fn readiness_rank(readiness: &str) -> u8 { match readiness { "broken" => 0, "planned" => 1, "partially_collecting" => 2, "collecting_with_entries" => 3, "blocked" => 4, _ => 99 } }
+fn readiness_rank(readiness: &str) -> u8 { match readiness { "broken" => 0, "planned" => 1, "partially_collecting" => 2, "collecting_with_entries" => 3, "ready_for_review" => 4, "blocked" => 5, _ => 99 } }
 
 fn require_string(
     value: Option<&Value>,

@@ -18,6 +18,10 @@ Instead, each snapshot records:
   Machine-readable list of known snapshots.
 - `snapshots/<version>.json`
   One structured snapshot manifest per version.
+- `qualification-records/<version>.json`
+  Staged qualification evidence records for a release. These bind candidate
+  IDs to capture/check commands and evidence bundle paths before any operator
+  is promoted beyond review.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

@@ -25,6 +25,8 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert Enum.any?(entries, &(&1["id"] == "workbench-fr-core-1.19"))
     assert Enum.any?(payload["sources"], &(&1["id"] == "builtin.language-packs"))
     assert payload["capabilities"]["login_system"]["status"] == "preview_contract"
+    assert payload["capabilities"]["publisher_accounts"]["status"] == "preview_contract"
+    assert payload["capabilities"]["artifact_admission"]["status"] == "blocked_preview"
   end
 
   test "central catalog filters and fetches language-pack entries" do
@@ -100,6 +102,31 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     assert "dynamic_smoke" in operator["required_evidence"]
     assert language_pack["manifest_schema"] == "schemas/language-pack.schema.json"
+  end
+
+  test "central publisher policy exposes account and token safety without issuance" do
+    conn =
+      :get
+      |> conn("/api/v1/central/publisher-policy")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    modes = MapSet.new(Enum.map(payload["identity_modes"], & &1["id"]))
+
+    assert payload["schema_version"] == "kyuubiki.central-publisher-policy/v1"
+    assert payload["accounts_enabled"] == false
+    assert payload["token_issuance_enabled"] == false
+    assert "central_publishers" in payload["storage_tables"]
+    assert "central_publisher_tokens" in payload["storage_tables"]
+    assert payload["account_lifecycle"]["manual_review_required"] == true
+    assert payload["account_lifecycle"]["anonymous_publish_allowed"] == false
+    assert payload["token_policy"]["raw_token_storage_allowed"] == false
+    assert payload["token_policy"]["stored_secret_material"] == "fingerprint_only"
+    assert payload["token_policy"]["revocation_supported"] == true
+    assert "central:security:recall" in payload["token_policy"]["required_scopes"]
+    assert "hosted_login_not_enabled" in payload["blocking_reasons"]
+    assert MapSet.subset?(MapSet.new(["oidc", "device_code", "personal_access_token"]), modes)
   end
 
   test "central publish readiness explains preview blockers per resource kind" do
@@ -179,6 +206,29 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
              MapSet.new(["manifest_schema", "compatibility_smoke", "security_scan", "signature"]),
              attestations
            )
+  end
+
+  test "central artifact admission policy exposes upload preflight without write access" do
+    conn =
+      :get
+      |> conn("/api/v1/central/artifact-admission-policy")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    resource_kinds = Map.new(payload["resource_kinds"], &{&1["kind"], &1})
+
+    assert payload["schema_version"] == "kyuubiki.central-artifact-admission-policy/v1"
+    assert payload["accepting_uploads"] == false
+    assert payload["write_endpoint_enabled"] == false
+    assert "artifact_upload_endpoint_disabled" in payload["blocking_reasons"]
+    assert "digest" in payload["artifact_envelope"]["immutable_fields"]
+    assert "central_artifact_signatures" in payload["artifact_envelope"]["storage_tables"]
+    assert payload["publisher_token_policy"]["raw_token_storage_allowed"] == false
+    assert "central:artifact:upload" in payload["publisher_token_policy"]["required_scopes"]
+    assert payload["review_queue"]["manual_approval_required"] == true
+    assert "sbom" in resource_kinds["operator"]["required_attestations"]
+    assert resource_kinds["language_pack"]["security_recall_supported"] == true
   end
 
   test "central database status exposes schema preview coverage" do

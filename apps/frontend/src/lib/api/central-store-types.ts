@@ -43,7 +43,8 @@ export type CentralStoreCapabilities = {
   language_pack_store: { status: string; backing?: string };
   login_system: { status: string; backing?: string };
   signed_downloads: { status: string };
-  publisher_accounts: { status: string };
+  artifact_admission: { status: string; backing?: string };
+  publisher_accounts: { status: string; backing?: string };
   publish_policy: { status: string; backing?: string };
   publish_readiness: { status: string; backing?: string };
   database_policy: { status: string; backing?: string };
@@ -114,6 +115,34 @@ export type CentralPublishPolicyPayload = {
     device_code_supported: boolean;
     anonymous_publish_allowed: boolean;
   };
+};
+
+export type CentralPublisherPolicyPayload = {
+  schema_version: "kyuubiki.central-publisher-policy/v1";
+  status: string;
+  accounts_enabled: boolean;
+  token_issuance_enabled: boolean;
+  storage_tables: string[];
+  identity_modes: Array<{
+    id: string;
+    status: string;
+    clients: string[];
+  }>;
+  account_lifecycle: {
+    allowed_statuses: string[];
+    default_status: string;
+    manual_review_required: boolean;
+    anonymous_publish_allowed: boolean;
+  };
+  token_policy: {
+    raw_token_storage_allowed: boolean;
+    stored_secret_material: string;
+    fingerprint_storage_table: string;
+    rotation_required: boolean;
+    revocation_supported: boolean;
+    required_scopes: string[];
+  };
+  blocking_reasons: string[];
 };
 
 export type CentralPublishReadinessPayload = {
@@ -232,4 +261,41 @@ export type CentralProvenancePolicyPayload = {
     checksum_required_before_install: boolean;
     installer_must_verify_signature: boolean;
   };
+};
+
+export type CentralArtifactAdmissionPolicyPayload = {
+  schema_version: "kyuubiki.central-artifact-admission-policy/v1";
+  status: string;
+  accepting_uploads: boolean;
+  write_endpoint_enabled: boolean;
+  resource_kinds: Array<{
+    kind: CentralStoreEntryKind;
+    status: string;
+    manifest_schema: string;
+    required_evidence: string[];
+    required_attestations: string[];
+    installer_checks: string[];
+    distribution_modes: string[];
+    mutable_after_publish: boolean;
+    yank_supported: boolean;
+    security_recall_supported: boolean;
+  }>;
+  artifact_envelope: {
+    required_fields: string[];
+    digest_algorithms: string[];
+    immutable_fields: string[];
+    storage_tables: string[];
+  };
+  publisher_token_policy: {
+    required_scopes: string[];
+    raw_token_storage_allowed: boolean;
+    fingerprint_storage_table: string;
+    credential_storage: string;
+  };
+  review_queue: {
+    status: string;
+    stages: string[];
+    manual_approval_required: boolean;
+  };
+  blocking_reasons: string[];
 };

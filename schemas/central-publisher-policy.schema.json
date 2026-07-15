@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-publisher-policy.schema.json",
+  "title": "Kyuubiki central publisher policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "accounts_enabled",
+    "token_issuance_enabled",
+    "storage_tables",
+    "identity_modes",
+    "account_lifecycle",
+    "token_policy",
+    "blocking_reasons"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-publisher-policy/v1" },
+    "status": { "type": "string" },
+    "accounts_enabled": { "type": "boolean" },
+    "token_issuance_enabled": { "type": "boolean" },
+    "storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "identity_modes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/identityMode" },
+      "minItems": 1
+    },
+    "account_lifecycle": {
+      "type": "object",
+      "required": [
+        "allowed_statuses",
+        "default_status",
+        "manual_review_required",
+        "anonymous_publish_allowed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "allowed_statuses": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "default_status": { "type": "string", "minLength": 1 },
+        "manual_review_required": { "type": "boolean" },
+        "anonymous_publish_allowed": { "type": "boolean" }
+      }
+    },
+    "token_policy": {
+      "type": "object",
+      "required": [
+        "raw_token_storage_allowed",
+        "stored_secret_material",
+        "fingerprint_storage_table",
+        "rotation_required",
+        "revocation_supported",
+        "required_scopes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "raw_token_storage_allowed": { "type": "boolean" },
+        "stored_secret_material": { "type": "string", "minLength": 1 },
+        "fingerprint_storage_table": { "type": "string", "minLength": 1 },
+        "rotation_required": { "type": "boolean" },
+        "revocation_supported": { "type": "boolean" },
+        "required_scopes": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  },
+  "$defs": {
+    "identityMode": {
+      "type": "object",
+      "required": ["id", "status", "clients"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "clients": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    }
+  }
+}

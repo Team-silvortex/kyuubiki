@@ -1,0 +1,24 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-release-records/v1",
+  "release_version": "1.20.0",
+  "version_line": "tamamono 1.20.x",
+  "snapshot_path": "releases/snapshots/1.20.0.json",
+  "records": [
+    {
+      "candidate_id": "line-field-closed-form",
+      "status": "staged_for_review",
+      "evidence_path": "tmp/line-field-qualification-release-evidence.json",
+      "capture_command": "make capture-line-field-qualification-release-evidence",
+      "check_command": "make check-line-field-qualification-release-evidence",
+      "promotion_blocker": "attach the checked evidence bundle to the final release artifact store before qualification promotion"
+    },
+    {
+      "candidate_id": "beam-frame-classic",
+      "status": "staged_for_review",
+      "evidence_path": "tmp/beam-frame-classic-qualification-release-evidence.json",
+      "capture_command": "make capture-beam-frame-qualification-release-evidence",
+      "check_command": "make check-beam-frame-qualification-release-evidence",
+      "promotion_blocker": "attach the checked evidence bundle to the final release artifact store before qualification promotion"
+    }
+  ]
+}

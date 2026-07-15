@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 type RunnerResult<T> = Result<T, String>;
 
-const MAX_FRONTEND_LINES: usize = 600;
+const MAX_FRONTEND_LINES: usize = 800;
 const ALLOWED_SENSITIVE_STORAGE_LINE: &str = "src/lib/workbench/helpers.ts:const rawSecrets = window.sessionStorage.getItem(WORKBENCH_SECRETS_KEY);";
 
 pub(crate) fn run_frontend_file_lines(

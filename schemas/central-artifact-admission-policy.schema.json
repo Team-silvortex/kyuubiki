@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-artifact-admission-policy.schema.json",
+  "title": "Kyuubiki central artifact admission policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "accepting_uploads",
+    "write_endpoint_enabled",
+    "resource_kinds",
+    "artifact_envelope",
+    "publisher_token_policy",
+    "review_queue",
+    "blocking_reasons"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-artifact-admission-policy/v1" },
+    "status": { "type": "string" },
+    "accepting_uploads": { "type": "boolean" },
+    "write_endpoint_enabled": { "type": "boolean" },
+    "resource_kinds": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resourceAdmission" },
+      "minItems": 1
+    },
+    "artifact_envelope": {
+      "type": "object",
+      "required": ["required_fields", "digest_algorithms", "immutable_fields", "storage_tables"],
+      "additionalProperties": false,
+      "properties": {
+        "required_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "digest_algorithms": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "immutable_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "publisher_token_policy": {
+      "type": "object",
+      "required": [
+        "required_scopes",
+        "raw_token_storage_allowed",
+        "fingerprint_storage_table",
+        "credential_storage"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required_scopes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "raw_token_storage_allowed": { "type": "boolean" },
+        "fingerprint_storage_table": { "type": "string", "minLength": 1 },
+        "credential_storage": { "type": "string", "minLength": 1 }
+      }
+    },
+    "review_queue": {
+      "type": "object",
+      "required": ["status", "stages", "manual_approval_required"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "type": "string" },
+        "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "manual_approval_required": { "type": "boolean" }
+      }
+    },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  },
+  "$defs": {
+    "resourceAdmission": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "manifest_schema",
+        "required_evidence",
+        "required_attestations",
+        "installer_checks",
+        "distribution_modes",
+        "mutable_after_publish",
+        "yank_supported",
+        "security_recall_supported"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "manifest_schema": { "type": "string", "minLength": 1 },
+        "required_evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "required_attestations": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "installer_checks": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "distribution_modes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "mutable_after_publish": { "type": "boolean" },
+        "yank_supported": { "type": "boolean" },
+        "security_recall_supported": { "type": "boolean" }
+      }
+    }
+  }
+}

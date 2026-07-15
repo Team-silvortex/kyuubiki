@@ -18,9 +18,11 @@ pub(super) const ENDPOINTS: &[&str] = &[
     "/api/v1/central/catalog",
     "/api/v1/central/session-policy",
     "/api/v1/central/publish-policy",
+    "/api/v1/central/publisher-policy",
     "/api/v1/central/publish-readiness",
     "/api/v1/central/database-policy",
     "/api/v1/central/provenance-policy",
+    "/api/v1/central/artifact-admission-policy",
     "/api/v1/central/database-status",
 ];
 pub(super) const SCHEMA_FILES: &[&str] = &[
@@ -28,9 +30,11 @@ pub(super) const SCHEMA_FILES: &[&str] = &[
     "schemas/central-store-catalog.schema.json",
     "schemas/central-session-policy.schema.json",
     "schemas/central-publish-policy.schema.json",
+    "schemas/central-publisher-policy.schema.json",
     "schemas/central-publish-readiness.schema.json",
     "schemas/central-database-policy.schema.json",
     "schemas/central-provenance-policy.schema.json",
+    "schemas/central-artifact-admission-policy.schema.json",
     "schemas/central-database-status.schema.json",
     "schemas/central-readiness-report.schema.json",
 ];

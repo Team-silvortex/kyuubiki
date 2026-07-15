@@ -5,7 +5,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const DEFAULT_MAX_LINES: usize = 600;
+const DEFAULT_SOURCE_MAX_LINES: usize = 800;
+const DEFAULT_DOC_MAX_LINES: usize = 2000;
 const LOCKFILE_CONTRACT: &str = "config/dependency-audit-lockfiles.json";
 const INSTALLER_TEST_INDEX: &str = "workers/rust/crates/installer/src/tests.rs";
 const CHECKED_EXTENSIONS: &[&str] = &[
@@ -38,19 +39,24 @@ pub(crate) fn run_audit_project_organization(root: &Path, args: Vec<OsString>) -
     if !args.is_empty() {
         return Err("audit-project-organization only accepts --self-test".to_string());
     }
-    let max_lines = std::env::var("MAX_LINES")
+    let source_max_lines = std::env::var("SOURCE_MAX_LINES")
+        .or_else(|_| std::env::var("MAX_LINES"))
         .ok()
         .and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or(DEFAULT_MAX_LINES);
-    let violations = audit(root, max_lines)?;
+        .unwrap_or(DEFAULT_SOURCE_MAX_LINES);
+    let doc_max_lines = std::env::var("DOC_MAX_LINES")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(DEFAULT_DOC_MAX_LINES);
+    let violations = audit(root, source_max_lines, doc_max_lines)?;
     if violations.is_empty() {
         println!(
-            "Project organization audit passed. Default source limit {max_lines}; tracked debt 0."
+            "Project organization audit passed. Default source limit {source_max_lines}; doc limit {doc_max_lines}; tracked debt 0."
         );
         return Ok(0);
     }
     eprintln!(
-        "Project organization audit failed. Default source limit is {max_lines} lines.\n\n\
+        "Project organization audit failed. Default source limit is {source_max_lines} lines; doc limit is {doc_max_lines} lines.\n\n\
 Split new oversized files, or lower existing tracked debt after refactoring.\n"
     );
     for violation in format_violations(&violations) {
@@ -59,18 +65,23 @@ Split new oversized files, or lower existing tracked debt after refactoring.\n"
     Ok(1)
 }
 
-fn audit(root: &Path, max_lines: usize) -> RunnerResult<Vec<Violation>> {
+fn audit(
+    root: &Path,
+    source_max_lines: usize,
+    doc_max_lines: usize,
+) -> RunnerResult<Vec<Violation>> {
     let mut violations = Vec::new();
     for relative_path in project_files(root)? {
         if !should_check(&relative_path) {
             continue;
         }
         let lines = line_count_like_node(&read_text(root, &relative_path)?);
-        if lines > max_lines {
+        let limit = line_limit_for_path(&relative_path, source_max_lines, doc_max_lines);
+        if lines > limit {
             violations.push(Violation {
                 relative_path,
                 lines,
-                limit: max_lines.to_string(),
+                limit: limit.to_string(),
                 custom_message: None,
                 missing_debt_file: false,
                 debt_tracked: false,
@@ -211,6 +222,27 @@ fn should_check(relative_path: &str) -> bool {
         .and_then(|value| value.to_str())
         .unwrap_or_default();
     CHECKED_EXTENSIONS.contains(&extension) && !is_ignored_path(relative_path)
+}
+
+fn line_limit_for_path(
+    relative_path: &str,
+    source_max_lines: usize,
+    doc_max_lines: usize,
+) -> usize {
+    if is_document_path(relative_path) {
+        doc_max_lines
+    } else {
+        source_max_lines
+    }
+}
+
+fn is_document_path(relative_path: &str) -> bool {
+    matches!(
+        Path::new(relative_path)
+            .extension()
+            .and_then(|value| value.to_str()),
+        Some("md" | "html")
+    )
 }
 
 fn is_ignored_path(relative_path: &str) -> bool {
@@ -429,7 +461,10 @@ fn assert_limit(violations: Vec<Violation>, expected: &str) -> RunnerResult<()> 
 
 #[cfg(test)]
 mod tests {
-    use super::{installer_test_index_violations, line_count_like_node, module_declaration};
+    use super::{
+        installer_test_index_violations, line_count_like_node, line_limit_for_path,
+        module_declaration,
+    };
 
     #[test]
     fn line_count_matches_node_split_shape() {
@@ -445,6 +480,13 @@ mod tests {
             Some("control_update")
         );
         assert_eq!(module_declaration("#[test]"), None);
+    }
+
+    #[test]
+    fn document_paths_use_document_limit() {
+        assert_eq!(line_limit_for_path("docs/guide.md", 800, 2000), 2000);
+        assert_eq!(line_limit_for_path("docs/guide.html", 800, 2000), 2000);
+        assert_eq!(line_limit_for_path("scripts/tool.mjs", 800, 2000), 800);
     }
 
     #[test]

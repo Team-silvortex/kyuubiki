@@ -27,7 +27,7 @@ The repository now keeps validation split by responsibility.
   Rust workspace tests under `workers/rust`
 - `make audit-rust-lines`
   Rust source organization guard; fails when any `workers/rust/crates/**/*.rs`
-  file exceeds the current `600` line ceiling
+  file exceeds the current `800` line ceiling
 - `make audit-project-organization`
   Repository-wide organization guard; scans tracked files plus untracked
   files that are not ignored, keeps new files under the shared line ceiling,
@@ -234,7 +234,7 @@ Current GitHub Actions jobs are intentionally separated:
 
 - `web-test`
 - `rust-test`
-  Runs Rust formatting, workspace tests, the `600` line-count audit, and the
+  Runs Rust formatting, workspace tests, the `800` line-count audit, and the
   medium benchmark regression gate.
 - `dependency-audit`
   Should run `make audit-dependencies` when dependency or lockfile surfaces

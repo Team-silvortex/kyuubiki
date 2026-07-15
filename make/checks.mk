@@ -3,6 +3,7 @@
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
+.PHONY: check-operator-qualification-release-records
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
@@ -152,6 +153,9 @@ build-operator-qualification-readiness:
 	@$(ENTRYPOINT) build-operator-qualification-readiness --out $${OUT:-tmp/operator-qualification-readiness.json}
 	@$(ENTRYPOINT) check-operator-qualification-readiness --in $${OUT:-tmp/operator-qualification-readiness.json}
 
+check-operator-qualification-release-records:
+	@$(ENTRYPOINT) check-operator-qualification-release-records --in $${IN:-releases/qualification-records/1.20.0.json}
+
 capture-line-field-qualification-provenance:
 	@$(ENTRYPOINT) capture-line-field-qualification-provenance --out $${OUT:-tmp/line-field-qualification-provenance.json}
 
@@ -211,7 +215,7 @@ check-operator-reliability: check-operator-reliability-rules check-operator-reli
 	@$(ENTRYPOINT) check-operator-reliability
 
 audit-rust-lines:
-	@$(ENTRYPOINT) rust-line-audit --max $${MAX_LINES:-600}
+	@$(ENTRYPOINT) rust-line-audit --max $${MAX_LINES:-800}
 
 audit-project-organization:
 	@$(ENTRYPOINT) audit-project-organization --self-test

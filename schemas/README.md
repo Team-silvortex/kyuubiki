@@ -88,6 +88,9 @@ README.
 - `operator-qualification-readiness.schema.json` is for the generated
   qualification readiness report that turns roadmap candidates and evidence
   kits into a sorted next-action queue
+- `operator-qualification-release-records.schema.json` is for release-bound
+  qualification evidence records that bind snapshot metadata, candidate IDs,
+  capture commands, check commands, and retained evidence bundle paths
 - `operator-validation-profiles.schema.json` is for the input profile contract
   consumed by `make check-operator-validation`, including grouped operators,
   evidence paths, validation methods, formal invariants, and controlled command

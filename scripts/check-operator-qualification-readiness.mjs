@@ -16,7 +16,8 @@ const readinessOrder = new Map([
   ["planned", 1],
   ["partially_collecting", 2],
   ["collecting_with_entries", 3],
-  ["blocked", 4],
+  ["ready_for_review", 4],
+  ["blocked", 5],
 ]);
 const allowedActionKinds = new Set([
   "collect_artifact",

@@ -22,6 +22,7 @@ operator-package-dynamic-smoke\n  \
   check-beam-frame-qualification-release-evidence\n  \
   build-operator-qualification-readiness\n  \
   check-operator-qualification-readiness\n  \
+  check-operator-qualification-release-records\n  \
 project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared\n  \

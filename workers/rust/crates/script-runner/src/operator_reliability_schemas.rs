@@ -13,6 +13,9 @@ const MANIFEST_SCHEMA_PATH: &str = "schemas/operator-reliability-manifest.schema
 const SHARD_SCHEMA_PATH: &str = "schemas/operator-reliability-shard.schema.json";
 const ROADMAP_SCHEMA_PATH: &str = "schemas/operator-qualification-roadmap.schema.json";
 const EVIDENCE_KITS_SCHEMA_PATH: &str = "schemas/operator-qualification-evidence-kits.schema.json";
+const RELEASE_RECORDS_PATH: &str = "releases/qualification-records/1.20.0.json";
+const RELEASE_RECORDS_SCHEMA_PATH: &str =
+    "schemas/operator-qualification-release-records.schema.json";
 const MAKE_FILES: &[&str] = &[
     "Makefile",
     "make/checks.mk",
@@ -71,6 +74,10 @@ fn schema_contracts() -> Vec<SchemaContract> {
         SchemaContract {
             config: EVIDENCE_KITS_PATH,
             schema: EVIDENCE_KITS_SCHEMA_PATH,
+        },
+        SchemaContract {
+            config: RELEASE_RECORDS_PATH,
+            schema: RELEASE_RECORDS_SCHEMA_PATH,
         },
     ]
 }

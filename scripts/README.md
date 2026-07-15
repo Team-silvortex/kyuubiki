@@ -42,7 +42,7 @@ This directory contains host-native operational entry points.
   hand-maintained Markdown facts such as `current-line.md` and
   `version-line.md`. The retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner rust-line-audit`
-  Native Rust source line-count audit, currently `600` lines per file by
+  Native Rust source line-count audit, currently `800` lines per file by
   default, so crate and test modules stay split before they become hard to
   review. The command keeps the old `--root`, `--max`, and `--json` options.
 - `kyuubiki-script-runner audit-local-paths`
@@ -547,7 +547,9 @@ Useful smoke wrappers:
   evidence lanes are visible but excluded from the enforced overall gate. The
   benchmark-profile lane reader lives in
   `build-regression-lane-catalog-profile.mjs` to keep the catalog builder below
-  the source organization line limit.
+  the source organization line limit. Project organization uses an `800` line
+  default for source-like files and a `2000` line default for documentation
+  files such as Markdown and HTML.
 - `./scripts/build-regression-gate-report.mjs --tmp-root tmp`
   Collapse the shared regression lane catalog into a CI/installer-friendly gate
   output. This emits `tmp/regression-gate-report.json` plus

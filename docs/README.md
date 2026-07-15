@@ -191,7 +191,7 @@ Then branch by intent:
   Directory ownership, generated-path boundaries, and source-of-truth rules.
 - `project-architecture-organization.md`
   Current `1.20.x` architecture organization map for Hub, Workbench,
-  Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and 600-line cleanup
+  Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and line-limit cleanup
   boundaries.
 - `minimal-industrial-closure.md`
   Current bounded industrial-loop closure map tying executable TaskIR,

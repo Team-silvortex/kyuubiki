@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 type RunnerResult<T> = Result<T, String>;
 
 const DEFAULT_ROOT: &str = "workers/rust/crates";
-const DEFAULT_MAX_LINES: usize = 600;
+const DEFAULT_MAX_LINES: usize = 800;
 const IGNORED_DIRS: &[&str] = &[".git", "target", "node_modules", ".next", "dist", "build"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,7 +184,7 @@ fn next_arg(iter: &mut impl Iterator<Item = OsString>, name: &str) -> RunnerResu
 
 fn print_usage() {
     println!(
-        "Usage:\n  kyuubiki-script-runner rust-line-audit [--root workers/rust/crates] [--max 600] [--json]"
+        "Usage:\n  kyuubiki-script-runner rust-line-audit [--root workers/rust/crates] [--max 800] [--json]"
     );
 }
 

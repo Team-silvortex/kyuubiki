@@ -322,7 +322,8 @@
         "contracts"
       ],
       "benchmark_lanes": [
-        "ui_startup"
+        "ui_startup",
+        "installer_release"
       ],
       "security_lanes": [
         "ui_boundary",

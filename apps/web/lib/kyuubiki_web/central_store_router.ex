@@ -28,6 +28,12 @@ defmodule KyuubikiWeb.CentralStoreRouter do
     end)
   end
 
+  get "/publisher-policy" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.publisher_policy())
+    end)
+  end
+
   get "/publish-readiness" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, CentralStore.publish_readiness())
@@ -43,6 +49,12 @@ defmodule KyuubikiWeb.CentralStoreRouter do
   get "/provenance-policy" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, CentralStore.provenance_policy())
+    end)
+  end
+
+  get "/artifact-admission-policy" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.artifact_admission_policy())
     end)
   end
 

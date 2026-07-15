@@ -132,11 +132,12 @@ The implementation anchors are:
   should hold source-of-truth architecture documents. Hub docs may mirror them
   for operator reading, but should not silently become the deeper source.
 
-## 600-Line Rule
+## Line-Count Rule
 
-Source files should stay below 600 lines unless they are generated, binary,
-lockfiles, or app-framework generated schemas. When a source file crosses the
-line, split by responsibility rather than by arbitrary chunks.
+Source files should stay below 800 lines and documentation files should stay
+below 2000 lines unless they are generated, binary, lockfiles, or
+app-framework generated schemas. When a file crosses the line, split by
+responsibility rather than by arbitrary chunks.
 
 Current source-side posture:
 
@@ -197,7 +198,8 @@ matters; do not move source boundaries just to reduce generated output.
    and Rust.
 2. Move repeated protocol validation into shared protocol modules before adding
    new SDK features.
-3. Split files that cross 600 lines only when touching their feature area.
+3. Split files that cross the source or documentation line limit when touching
+   their feature area.
 4. Keep Hub, Workbench, Installer, Orchestra, Agent, and SDK responsibilities
    visibly separate.
 5. Prefer adding examples and golden fixtures for protocol changes before
