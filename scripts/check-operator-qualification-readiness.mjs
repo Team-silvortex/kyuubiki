@@ -152,6 +152,52 @@ function countReleaseReviewDecisions(candidates) {
   };
 }
 
+function sameStrings(left, right) {
+  const sortedLeft = [...left].sort((a, b) => a.localeCompare(b));
+  const sortedRight = [...right].sort((a, b) => a.localeCompare(b));
+  return sortedLeft.length === sortedRight.length
+    && sortedLeft.every((item, index) => item === sortedRight[index]);
+}
+
+function countReleasePromotionSummaries(candidates) {
+  const releaseVersion = readJson(operatorReliabilityPaths.releaseRecords).release_version;
+  const approvedArtifacts = candidates.flatMap((candidate) =>
+    (candidate.artifacts ?? [])
+      .filter((artifact) =>
+        artifact.kind === "release_retained_regression_output"
+        && artifact.release_review_status === "approved"
+      )
+      .map((artifact) => ({ candidate, artifact }))
+  );
+  const retained = approvedArtifacts.filter(({ artifact }) =>
+    artifact.release_record_path && fs.existsSync(path.join(repoRoot, artifact.release_record_path))
+  );
+  const withSummary = retained
+    .map(({ candidate, artifact }) => ({
+      candidate,
+      artifact,
+      evidence: readJson(artifact.release_record_path),
+    }))
+    .filter(({ evidence }) => evidence.promotion_summary);
+  const matched = withSummary.filter(({ candidate, artifact, evidence }) => {
+    const summary = evidence.promotion_summary;
+    return summary.candidate_id === candidate.candidate_id
+      && summary.release_version === releaseVersion
+      && summary.approved_coverage_level === "qualification"
+      && summary.retained_evidence_path === artifact.release_record_path
+      && summary.release_record_path === operatorReliabilityPaths.releaseRecords
+      && summary.review_decision_path === artifact.release_review_decision_path
+      && sameStrings(summary.promoted_operator_ids ?? [], candidate.operator_ids ?? []);
+  });
+  return {
+    required: approvedArtifacts.length,
+    retained: retained.length,
+    declared: withSummary.length,
+    matched: matched.length,
+    missing: approvedArtifacts.length - matched.length,
+  };
+}
+
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
 }
@@ -229,6 +275,7 @@ function readinessErrors(report, relativeInput) {
   errors.push(...countMapErrors(report.summary?.release_gate_impacts, countBy(report.candidates, "release_gate_impact", releaseGateImpacts), "release_gate_impacts", relativeInput));
   errors.push(...countMapErrors(report.summary?.release_review_statuses, countReleaseReviewStatuses(report.candidates), "release_review_statuses", relativeInput));
   errors.push(...countMapErrors(report.summary?.release_review_decisions, countReleaseReviewDecisions(report.candidates), "release_review_decisions", relativeInput));
+  errors.push(...countMapErrors(report.summary?.release_promotion_summaries, countReleasePromotionSummaries(report.candidates), "release_promotion_summaries", relativeInput));
   report.next_actions.forEach((action, index) => {
     errors.push(...actionErrors(action, index));
   });
@@ -271,6 +318,7 @@ if (args.selfTest) {
       release_gate_impacts: { release_blocker: 1, release_watch: 0, experimental_only: 0 },
       release_review_statuses: { missing: 0, pending_signoff: 0, approved: 0, blocked_scope: 0, rejected: 0 },
       release_review_decisions: { required: 0, declared: 0, retained: 0, missing: 0 },
+      release_promotion_summaries: { required: 0, retained: 0, declared: 0, matched: 0, missing: 0 },
     },
     candidates: [{
       candidate_id: "sample",

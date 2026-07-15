@@ -21,7 +21,7 @@ pub(crate) fn run_check_operator_qualification_release_records(
     let input = parse_args(args)?;
     let (absolute, relative) = repo_local_path(root, &input, "--in")?;
     let records = read_json_path(&absolute, &relative)?;
-    match validate_records(root, &records) {
+    match validate_records(root, &records, &relative) {
         Ok(()) => {
             println!("operator qualification release records ok: {relative}");
             Ok(0)
@@ -56,7 +56,7 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<String> {
     Ok(input)
 }
 
-fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
+fn validate_records(root: &Path, records: &Value, records_path: &str) -> RunnerResult<()> {
     assert_eq(
         field(records, "schema_version"),
         SCHEMA_VERSION,
@@ -90,6 +90,7 @@ fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
                     target_level: field(candidate, "target_level").to_string(),
                     release_gate_impact: field(candidate, "release_gate_impact").to_string(),
                     graduation_gate: field(candidate, "graduation_gate").to_string(),
+                    operator_ids: string_array(candidate, "operator_ids"),
                 },
             )
         })
@@ -98,7 +99,14 @@ fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
     let mut seen = HashSet::new();
     let release_version = field(records, "release_version");
     for record in array(records, "records") {
-        validate_record(root, release_version, record, &candidates, &requirements)?;
+        validate_record(
+            root,
+            release_version,
+            records_path,
+            record,
+            &candidates,
+            &requirements,
+        )?;
         if !seen.insert(field(record, "candidate_id").to_string()) {
             return Err(format!(
                 "duplicate candidate_id {}",
@@ -112,6 +120,7 @@ fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
 fn validate_record(
     root: &Path,
     release_version: &str,
+    records_path: &str,
     record: &Value,
     candidates: &HashMap<String, CandidateGate>,
     requirements: &HashMap<String, ReleaseRequirement>,
@@ -172,7 +181,82 @@ fn validate_record(
             "{candidate_id}: evidence_path does not exist: {evidence_path}"
         ));
     }
+    let evidence = read_json_path(&evidence_absolute, evidence_path)?;
     run_check_command(root, field(record, "check_command"), evidence_path)?;
+    validate_approved_promotion_summary(
+        candidate_id,
+        release_version,
+        records_path,
+        record,
+        candidate,
+        &evidence,
+    )?;
+    Ok(())
+}
+
+fn validate_approved_promotion_summary(
+    candidate_id: &str,
+    release_version: &str,
+    records_path: &str,
+    record: &Value,
+    candidate: &CandidateGate,
+    evidence: &Value,
+) -> RunnerResult<()> {
+    if field(record, "review_status") != "approved" {
+        return Ok(());
+    }
+    assert_eq(
+        field(evidence, "schema_version"),
+        "kyuubiki.operator-qualification-release-evidence/v1",
+        "approved evidence schema_version",
+    )?;
+    let summary = evidence.get("promotion_summary").unwrap_or(&Value::Null);
+    if !summary.is_object() {
+        return Err(format!(
+            "{candidate_id}: approved evidence requires promotion_summary"
+        ));
+    }
+    assert_eq(
+        field(summary, "candidate_id"),
+        candidate_id,
+        "promotion_summary candidate_id",
+    )?;
+    assert_eq(
+        field(summary, "release_version"),
+        release_version,
+        "promotion_summary release_version",
+    )?;
+    assert_eq(
+        field(summary, "approved_coverage_level"),
+        "qualification",
+        "promotion_summary approved_coverage_level",
+    )?;
+    assert_eq(
+        field(summary, "retained_evidence_path"),
+        field(record, "evidence_path"),
+        "promotion_summary retained_evidence_path",
+    )?;
+    assert_eq(
+        field(summary, "release_record_path"),
+        records_path,
+        "promotion_summary release_record_path",
+    )?;
+    assert_eq(
+        field(summary, "review_decision_path"),
+        field(record, "review_decision_path"),
+        "promotion_summary review_decision_path",
+    )?;
+    let promoted = string_array(summary, "promoted_operator_ids");
+    if promoted.is_empty() {
+        return Err(format!(
+            "{candidate_id}: promotion_summary promoted_operator_ids must be non-empty"
+        ));
+    }
+    if sorted(promoted) != sorted(candidate.operator_ids.clone()) {
+        return Err(format!(
+            "{candidate_id}: promotion_summary promoted_operator_ids must match roadmap operator_ids"
+        ));
+    }
     Ok(())
 }
 
@@ -187,6 +271,7 @@ pub(super) struct CandidateGate {
     pub(super) target_level: String,
     pub(super) release_gate_impact: String,
     graduation_gate: String,
+    operator_ids: Vec<String>,
 }
 
 fn release_requirements_by_candidate(kits: &Value) -> HashMap<String, ReleaseRequirement> {
@@ -279,4 +364,88 @@ fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
 
 pub(super) fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
+}
+
+fn string_array(value: &Value, key: &str) -> Vec<String> {
+    value
+        .get(key)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(ToString::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn sorted(mut values: Vec<String>) -> Vec<String> {
+    values.sort();
+    values
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CandidateGate, validate_approved_promotion_summary};
+    use serde_json::json;
+
+    fn qualification_candidate() -> CandidateGate {
+        CandidateGate {
+            target_level: "qualification".to_string(),
+            release_gate_impact: "release_blocker".to_string(),
+            graduation_gate: "gate".to_string(),
+            operator_ids: vec!["solve.a".to_string(), "solve.b".to_string()],
+        }
+    }
+
+    #[test]
+    fn approved_promotion_summary_requires_matching_operator_ids() {
+        let record = json!({
+            "candidate_id": "candidate-a",
+            "review_status": "approved",
+            "evidence_path": "releases/evidence.json",
+            "review_decision_path": "releases/decision.json"
+        });
+        let evidence = json!({
+            "schema_version": "kyuubiki.operator-qualification-release-evidence/v1",
+            "promotion_summary": {
+                "candidate_id": "candidate-a",
+                "release_version": "2.0.0",
+                "approved_coverage_level": "qualification",
+                "retained_evidence_path": "releases/evidence.json",
+                "release_record_path": "releases/records.json",
+                "review_decision_path": "releases/decision.json",
+                "promoted_operator_ids": ["solve.a"]
+            }
+        });
+        let error = validate_approved_promotion_summary(
+            "candidate-a",
+            "2.0.0",
+            "releases/records.json",
+            &record,
+            &qualification_candidate(),
+            &evidence,
+        )
+        .expect_err("approved summary should match every roadmap operator");
+        assert!(error.contains("promoted_operator_ids"));
+    }
+
+    #[test]
+    fn pending_signoff_does_not_require_promotion_summary() {
+        let record = json!({
+            "candidate_id": "candidate-a",
+            "review_status": "pending_signoff",
+            "evidence_path": "releases/evidence.json"
+        });
+        validate_approved_promotion_summary(
+            "candidate-a",
+            "2.0.0",
+            "releases/records.json",
+            &record,
+            &qualification_candidate(),
+            &json!({}),
+        )
+        .expect("pending records should not require promotion_summary yet");
+    }
 }

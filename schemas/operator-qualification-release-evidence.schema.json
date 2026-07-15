@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-qualification-release-evidence.schema.json",
+  "title": "Kyuubiki Operator Qualification Release Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "version_line",
+    "candidate_id",
+    "generated_at_utc",
+    "release_retention",
+    "promotion_summary",
+    "provenance",
+    "commands",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-qualification-release-evidence/v1" },
+    "version_line": { "type": "string", "minLength": 1 },
+    "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "generated_at_utc": { "$ref": "#/$defs/utcSecond" },
+    "release_retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intended_release_artifact",
+        "repo_relative_paths_only",
+        "generated_output_should_not_be_committed_directly"
+      ],
+      "properties": {
+        "intended_release_artifact": { "const": true },
+        "repo_relative_paths_only": { "const": true },
+        "generated_output_should_not_be_committed_directly": { "const": true }
+      }
+    },
+    "promotion_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "release_version",
+        "approved_coverage_level",
+        "retained_evidence_path",
+        "release_record_path",
+        "review_decision_path",
+        "promoted_operator_ids"
+      ],
+      "properties": {
+        "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "release_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "approved_coverage_level": { "enum": ["qualification"] },
+        "retained_evidence_path": { "$ref": "#/$defs/repoPath" },
+        "release_record_path": { "$ref": "#/$defs/repoPath" },
+        "review_decision_path": { "$ref": "#/$defs/repoPath" },
+        "promoted_operator_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["schema_version", "candidate_id", "tracked_inputs", "retention_policy"],
+      "properties": {
+        "schema_version": { "type": "string", "minLength": 1 },
+        "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "tracked_inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/trackedInput" }
+        },
+        "retention_policy": {
+          "type": "object",
+          "required": ["repo_relative_paths_only", "no_local_absolute_paths"],
+          "properties": {
+            "repo_relative_paths_only": { "const": true },
+            "no_local_absolute_paths": { "const": true }
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/commandResult" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_count", "passed", "failed", "ok"],
+      "properties": {
+        "command_count": { "type": "integer", "minimum": 1 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "utcSecond": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "trackedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "commandResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cwd", "argv", "status", "signal", "duration_ms", "stdout", "stderr", "ok"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+        "cwd": { "$ref": "#/$defs/repoPath" },
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status": { "type": "integer" },
+        "signal": { "type": ["string", "null"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "stdout": { "type": "string" },
+        "stderr": { "type": "string" },
+        "ok": { "type": "boolean" }
+      }
+    }
+  }
+}

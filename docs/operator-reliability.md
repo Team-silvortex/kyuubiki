@@ -360,7 +360,13 @@ attached at
 and referenced by `releases/qualification-records/1.20.0.json`. The retained
 review decision at
 `releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json`
-approves the promotion against the graduation gate.
+approves the promotion against the graduation gate. The release-record checker
+also reads approved evidence bundles and requires their `promotion_summary` to
+match the release record, review decision path, release version, and roadmap
+operator IDs before an approved record can remain valid. The readiness report
+summarizes that same gate as `summary.release_promotion_summaries`, currently
+showing the one approved promotion as retained, declared, matched, and not
+missing.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
 solid-tetra benchmark template and a solver-level review fixture for a

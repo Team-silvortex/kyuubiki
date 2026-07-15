@@ -145,6 +145,7 @@ mod tests {
             target_level: "review".to_string(),
             release_gate_impact: "experimental_only".to_string(),
             graduation_gate: "scope gate".to_string(),
+            operator_ids: vec!["solve.example".to_string()],
         };
         let error = validate_review_status_transition("screening", "approved", &candidate)
             .expect_err("review-only candidate approval should fail");
@@ -159,6 +160,7 @@ mod tests {
             target_level: "qualification".to_string(),
             release_gate_impact: "release_blocker".to_string(),
             graduation_gate: "qualification gate".to_string(),
+            operator_ids: vec!["solve.example".to_string()],
         };
         let error = validate_review_status_transition("beam-frame", "blocked_scope", &candidate)
             .expect_err("qualification candidate scope block should fail");

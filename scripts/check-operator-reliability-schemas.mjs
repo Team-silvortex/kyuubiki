@@ -27,6 +27,11 @@ const schemaContracts = [
     schemaVersionPath: ["properties", "schema_version", "const"],
   },
   {
+    config: operatorReliabilityPaths.releaseEvidenceExample,
+    schema: operatorReliabilityPaths.releaseEvidenceSchema,
+    schemaVersionPath: ["properties", "schema_version", "const"],
+  },
+  {
     config: operatorReliabilityPaths.reviewDecisionExample,
     schema: operatorReliabilityPaths.reviewDecisionSchema,
     schemaVersionPath: ["properties", "schema_version", "const"],

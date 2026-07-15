@@ -35,7 +35,8 @@
         "evidence_phases",
         "release_gate_impacts",
         "release_review_statuses",
-        "release_review_decisions"
+        "release_review_decisions",
+        "release_promotion_summaries"
       ],
       "additionalProperties": false,
       "properties": {
@@ -55,7 +56,8 @@
         "evidence_phases": { "$ref": "#/$defs/evidencePhaseCounts" },
         "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" },
         "release_review_statuses": { "$ref": "#/$defs/releaseReviewStatusCounts" },
-        "release_review_decisions": { "$ref": "#/$defs/releaseReviewDecisionCounts" }
+        "release_review_decisions": { "$ref": "#/$defs/releaseReviewDecisionCounts" },
+        "release_promotion_summaries": { "$ref": "#/$defs/releasePromotionSummaryCounts" }
       }
     },
     "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
@@ -124,6 +126,18 @@
         "required": { "type": "integer", "minimum": 0 },
         "declared": { "type": "integer", "minimum": 0 },
         "retained": { "type": "integer", "minimum": 0 },
+        "missing": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "releasePromotionSummaryCounts": {
+      "type": "object",
+      "required": ["required", "retained", "declared", "matched", "missing"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "integer", "minimum": 0 },
+        "retained": { "type": "integer", "minimum": 0 },
+        "declared": { "type": "integer", "minimum": 0 },
+        "matched": { "type": "integer", "minimum": 0 },
         "missing": { "type": "integer", "minimum": 0 }
       }
     },

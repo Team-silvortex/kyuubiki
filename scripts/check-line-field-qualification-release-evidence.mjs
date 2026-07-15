@@ -214,6 +214,9 @@ function validateEvidence(evidence) {
   if (evidence.candidate_id !== "line-field-closed-form") {
     fail("candidate_id must be line-field-closed-form");
   }
+  if (evidence.promotion_summary?.candidate_id !== evidence.candidate_id) {
+    fail("promotion_summary: candidate_id must match top-level candidate_id");
+  }
   if (evidence.release_retention?.intended_release_artifact !== true) {
     fail("release_retention.intended_release_artifact must be true");
   }

@@ -251,6 +251,11 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
         "line-field-closed-form",
         "candidate_id must be line-field-closed-form",
     )?;
+    if evidence.pointer("/promotion_summary/candidate_id").and_then(Value::as_str)
+        != evidence.get("candidate_id").and_then(Value::as_str)
+    {
+        return Err("promotion_summary: candidate_id must match top-level candidate_id".to_string());
+    }
     require_true(
         evidence.pointer("/release_retention/intended_release_artifact"),
         "release_retention.intended_release_artifact must be true",

@@ -3,12 +3,14 @@ export const operatorReliabilityPaths = {
   roadmap: "config/operator-qualification-roadmap.json",
   evidenceKits: "config/operator-qualification-evidence-kits.json",
   releaseRecords: "releases/qualification-records/1.20.0.json",
+  releaseEvidenceExample: "schemas/examples.operator-qualification-release-evidence.json",
   reviewDecisionExample: "schemas/examples.operator-qualification-review-decision.json",
   manifestSchema: "schemas/operator-reliability-manifest.schema.json",
   shardSchema: "schemas/operator-reliability-shard.schema.json",
   roadmapSchema: "schemas/operator-qualification-roadmap.schema.json",
   evidenceKitsSchema: "schemas/operator-qualification-evidence-kits.schema.json",
   releaseRecordsSchema: "schemas/operator-qualification-release-records.schema.json",
+  releaseEvidenceSchema: "schemas/operator-qualification-release-evidence.schema.json",
   reviewDecisionSchema: "schemas/operator-qualification-review-decision.schema.json",
 };
 
@@ -18,5 +20,6 @@ export const operatorReliabilitySchemaVersions = {
   roadmap: "kyuubiki.operator-qualification-roadmap/v1",
   evidenceKits: "kyuubiki.operator-qualification-evidence-kits/v1",
   releaseRecords: "kyuubiki.operator-qualification-release-records/v1",
+  releaseEvidence: "kyuubiki.operator-qualification-release-evidence/v1",
   reviewDecision: "kyuubiki.operator-qualification-review-decision/v1",
 };

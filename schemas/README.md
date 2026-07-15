@@ -92,11 +92,18 @@ README.
   qualification readiness report that turns roadmap candidates and evidence
   kits into a sorted next-action queue; it also carries validation profile
   mapping counts so component profiles and release-candidate profiles do not
-  get conflated in coverage/status reporting
+  get conflated in coverage/status reporting. Its summary also exposes release
+  review decisions and approved promotion-summary matching counts so the
+  qualification gate can be audited without opening every evidence bundle.
 - `operator-qualification-release-records.schema.json` is for release-bound
   qualification evidence records that bind snapshot metadata, candidate IDs,
   capture commands, check commands, retained evidence bundle paths, and the
   structured review status/gate that blocks or permits later promotion
+- `operator-qualification-release-evidence.schema.json` is for retained
+  qualification evidence bundles. It keeps command results, provenance,
+  release-retention flags, and the promotion summary that binds retained
+  evidence paths to review decisions, release records, and promoted operator
+  IDs.
 - `operator-qualification-review-decision.schema.json` is for reviewer-authored
   promotion decisions. It binds candidate ID, release version, evidence path,
   review gate, reviewer identity, decision, rationale, and requested changes
@@ -203,6 +210,9 @@ README.
 - `examples.operator-qualification-review-decision.json` is the retained
   fixture for a reviewer decision that requests changes against a release
   qualification evidence bundle
+- `examples.operator-qualification-release-evidence.json` is the retained
+  fixture for the release evidence bundle contract, including the promotion
+  summary used by line-field qualification promotion checks
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

@@ -17,7 +17,10 @@ mod unit_tests;
 use args::{parse_check_args, parse_out};
 use operator_trust_summary::operator_trust_level_counts;
 use release_records::{ReleaseRecord, release_records_by_candidate};
-use review_summary::{count_release_review_decisions, count_release_review_statuses};
+use review_summary::{
+    count_release_promotion_summaries, count_release_review_decisions,
+    count_release_review_statuses,
+};
 
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
@@ -129,6 +132,7 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
             "release_gate_impacts": count_by(&candidates, "release_gate_impact", RELEASE_GATE_IMPACTS),
             "release_review_statuses": count_release_review_statuses(&candidates),
             "release_review_decisions": count_release_review_decisions(root, &candidates),
+            "release_promotion_summaries": count_release_promotion_summaries(root, &candidates),
         },
         "next_actions": next_actions,
         "candidates": candidates,
@@ -511,6 +515,14 @@ fn check_summary(
         &count_release_review_decisions(root, candidates),
         relative_input,
         "summary.release_review_decisions",
+        errors,
+    );
+    check_count_map(
+        report,
+        "/summary/release_promotion_summaries",
+        &count_release_promotion_summaries(root, candidates),
+        relative_input,
+        "summary.release_promotion_summaries",
         errors,
     );
 }

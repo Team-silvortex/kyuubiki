@@ -1,0 +1,58 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-release-evidence/v1",
+  "version_line": "moxi 2.0.x",
+  "candidate_id": "line-field-closed-form",
+  "generated_at_utc": "2026-07-15T09:44:40Z",
+  "release_retention": {
+    "intended_release_artifact": true,
+    "repo_relative_paths_only": true,
+    "generated_output_should_not_be_committed_directly": true
+  },
+  "promotion_summary": {
+    "candidate_id": "line-field-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.bar_1d",
+      "solve.thermal_bar_1d",
+      "solve.heat_bar_1d",
+      "solve.electrostatic_bar_1d"
+    ]
+  },
+  "provenance": {
+    "schema_version": "kyuubiki.operator-qualification-provenance/v1",
+    "candidate_id": "line-field-closed-form",
+    "tracked_inputs": [
+      {
+        "path": "evidence/operator-qualification/line-field-closed-form-baseline.json",
+        "sha256": "193424d7ce202d1127880845b9ba99ccbed05c4ee8096dbc0f7fb049799e16aa"
+      }
+    ],
+    "retention_policy": {
+      "repo_relative_paths_only": true,
+      "no_local_absolute_paths": true
+    }
+  },
+  "commands": [
+    {
+      "id": "evidence_check",
+      "cwd": ".",
+      "argv": ["./scripts/kyuubiki", "check-line-field-closed-form-baseline"],
+      "status": 0,
+      "signal": null,
+      "duration_ms": 67,
+      "stdout": "line-field closed-form baseline ok: 4 operators\n",
+      "stderr": "",
+      "ok": true
+    }
+  ],
+  "summary": {
+    "command_count": 1,
+    "passed": 1,
+    "failed": 0,
+    "ok": true
+  }
+}

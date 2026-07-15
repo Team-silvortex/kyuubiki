@@ -82,6 +82,13 @@ fn sample_report(root: &Path) -> RunnerResult<Value> {
                 "declared": 0,
                 "retained": 0,
                 "missing": 0
+            },
+            "release_promotion_summaries": {
+                "required": 0,
+                "retained": 0,
+                "declared": 0,
+                "matched": 0,
+                "missing": 0
             }
         },
         "candidates": [{
