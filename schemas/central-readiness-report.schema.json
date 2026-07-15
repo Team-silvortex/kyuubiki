@@ -15,6 +15,7 @@
     "config_surface",
     "service_surface",
     "storage_contract",
+    "publish_pipeline_contract",
     "runbook"
   ],
   "additionalProperties": false,
@@ -85,6 +86,37 @@
         "table_contract_present": { "type": "boolean" }
       }
     },
+    "publish_pipeline_contract": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "status",
+        "accepting_writes",
+        "stage_count",
+        "stages_present",
+        "blockers_present",
+        "readonly_guard_present",
+        "docs_present"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "const": "kyuubiki.central-publish-pipeline/v1" },
+        "status": { "type": "string" },
+        "accepting_writes": { "type": "boolean" },
+        "stage_count": { "type": "integer", "minimum": 1 },
+        "stages_present": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pipelineEvidence" },
+          "minItems": 1
+        },
+        "blockers_present": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pipelineEvidence" }
+        },
+        "readonly_guard_present": { "type": "boolean" },
+        "docs_present": { "type": "boolean" }
+      }
+    },
     "runbook": {
       "type": "object",
       "required": ["local_readiness", "remote_dry_run", "postgres_smoke"],
@@ -124,6 +156,15 @@
         "path": { "type": "string" },
         "present": { "type": "boolean" },
         "schema_version_present": { "type": "boolean" }
+      }
+    },
+    "pipelineEvidence": {
+      "type": "object",
+      "required": ["id", "present"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "present": { "type": "boolean" }
       }
     }
   }

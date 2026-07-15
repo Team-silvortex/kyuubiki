@@ -4,6 +4,7 @@ import type {
   CentralDatabasePolicyPayload,
   CentralDatabaseStatusPayload,
   CentralProvenancePolicyPayload,
+  CentralPublishPipelinePayload,
   CentralPublishPolicyPayload,
   CentralPublishReadinessPayload,
   CentralPublisherPolicyPayload,
@@ -97,6 +98,12 @@ export function createCentralStoreApiClient(request: CentralStoreRequestJson) {
         },
       );
     },
+    fetchCentralPublishPipeline() {
+      return request<CentralPublishPipelinePayload>("/api/v1/central/publish-pipeline", {
+        method: "GET",
+        cache: "no-store",
+      });
+    },
     fetchCentralDatabaseStatus() {
       return request<CentralDatabaseStatusPayload>("/api/v1/central/database-status", {
         method: "GET",
@@ -144,6 +151,10 @@ export function fetchCentralProvenancePolicy() {
 
 export function fetchCentralArtifactAdmissionPolicy() {
   return defaultCentralStoreApiClient.fetchCentralArtifactAdmissionPolicy();
+}
+
+export function fetchCentralPublishPipeline() {
+  return defaultCentralStoreApiClient.fetchCentralPublishPipeline();
 }
 
 export function fetchCentralDatabaseStatus() {

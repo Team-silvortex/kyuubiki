@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/central-publish-pipeline.schema.json",
+  "title": "Kyuubiki central publish pipeline",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "mode",
+    "accepting_writes",
+    "stage_count",
+    "blocked_stage_count",
+    "stages",
+    "handoff_contracts",
+    "unlock_order"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.central-publish-pipeline/v1" },
+    "status": { "type": "string" },
+    "mode": { "type": "string" },
+    "accepting_writes": { "type": "boolean" },
+    "stage_count": { "type": "integer", "minimum": 1 },
+    "blocked_stage_count": { "type": "integer", "minimum": 0 },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" },
+      "minItems": 1
+    },
+    "handoff_contracts": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "unlock_order": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "status",
+        "contract",
+        "blocking_reasons",
+        "writes_enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "contract": { "type": "string", "minLength": 1 },
+        "blocking_reasons": { "type": "array", "items": { "type": "string" } },
+        "writes_enabled": { "type": "boolean" }
+      }
+    }
+  }
+}

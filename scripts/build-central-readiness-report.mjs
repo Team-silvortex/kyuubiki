@@ -21,6 +21,7 @@ const endpoints = [
   "/api/v1/central/database-policy",
   "/api/v1/central/provenance-policy",
   "/api/v1/central/artifact-admission-policy",
+  "/api/v1/central/publish-pipeline",
   "/api/v1/central/database-status",
 ];
 
@@ -34,6 +35,7 @@ const schemaFiles = [
   "schemas/central-database-policy.schema.json",
   "schemas/central-provenance-policy.schema.json",
   "schemas/central-artifact-admission-policy.schema.json",
+  "schemas/central-publish-pipeline.schema.json",
   "schemas/central-database-status.schema.json",
   "schemas/central-readiness-report.schema.json",
 ];
@@ -41,6 +43,24 @@ const schemaFiles = [
 const configFiles = [
   "config/architecture/central-store-contract.json",
   "config/architecture/module-topology.json",
+];
+const pipelineStages = [
+  "publisher_identity",
+  "artifact_envelope",
+  "signature_attestation",
+  "review_queue",
+  "catalog_indexing",
+  "recall_and_yank",
+  "download_verification",
+];
+const pipelineBlockers = [
+  "publisher_accounts_not_enabled",
+  "token_issuer_not_configured",
+  "artifact_upload_endpoint_disabled",
+  "signing_keys_not_configured",
+  "write_side_review_queue_not_enabled",
+  "central_write_api_disabled",
+  "write_audit_log_not_enabled",
 ];
 
 if (args.has("--self-test")) {
@@ -54,13 +74,21 @@ if (args.has("--self-test")) {
     files: {
       "apps/web/lib/kyuubiki_web/central_store_router.ex": endpoints.join("\n"),
       "apps/frontend/src/lib/api/central-store-client.ts": endpoints.join("\n"),
+      "apps/web/lib/kyuubiki_web/central_store.ex": [
+        '"mode" => "read_only_contract"',
+        '"accepting_writes" => false',
+        '"writes_enabled" => false',
+        ...pipelineStages,
+        ...pipelineBlockers,
+      ].join("\n"),
       "apps/web/lib/kyuubiki_web/storage/central_database.ex":
         "kyuubiki.central-database-contract/v1 central_store_entries central_artifact_signatures",
       ...Object.fromEntries(schemaFiles.map((file) => [file, "{}"])),
       ...Object.fromEntries(configFiles.map((file) => [file, "kyuubiki.central-store-contract-check/v1"])),
       "config/architecture/module-topology.json":
         "kyuubiki.module-topology/v1 central-web-service self_host_web orchestra-control-plane",
-      "docs/central-server-components.md": "central-web-service not a separate top-level module",
+      "docs/central-server-components.md":
+        "central-web-service not a separate top-level module publish pipeline accepting_writes=false publisher identity installer download",
     },
   });
   const issues = validateReport(report);
@@ -90,6 +118,7 @@ function requiredFiles() {
   return [
     "apps/web/lib/kyuubiki_web/central_store_router.ex",
     "apps/frontend/src/lib/api/central-store-client.ts",
+    "apps/web/lib/kyuubiki_web/central_store.ex",
     "apps/web/lib/kyuubiki_web/storage/central_database.ex",
     "docs/central-server-components.md",
     ...schemaFiles,
@@ -169,6 +198,7 @@ function buildReport({ readiness, files }) {
         "central_artifact_signatures",
       ]),
     },
+    publish_pipeline_contract: pipelineContract(files),
     runbook: {
       local_readiness: "make check-central-database-readiness MODE=local BACKEND=sqlite",
       remote_dry_run: "make remote-central-database-smoke REMOTE=kyuubiki-lab",
@@ -183,6 +213,30 @@ function endpointStatus(endpoint, files) {
     path: endpoint,
     router_present: files["apps/web/lib/kyuubiki_web/central_store_router.ex"]?.includes(suffix) === true,
     client_present: files["apps/frontend/src/lib/api/central-store-client.ts"]?.includes(endpoint) === true,
+  };
+}
+
+function pipelineContract(files) {
+  const backend = files["apps/web/lib/kyuubiki_web/central_store.ex"];
+  const docs = files["docs/central-server-components.md"];
+  return {
+    schema_version: "kyuubiki.central-publish-pipeline/v1",
+    status: "blocked_preview",
+    accepting_writes: false,
+    stage_count: pipelineStages.length,
+    stages_present: pipelineStages.map((id) => ({ id, present: backend?.includes(id) === true })),
+    blockers_present: pipelineBlockers.map((id) => ({ id, present: backend?.includes(id) === true })),
+    readonly_guard_present: includesAll(backend, [
+      '"mode" => "read_only_contract"',
+      '"accepting_writes" => false',
+      '"writes_enabled" => false',
+    ]),
+    docs_present: includesAll(docs, [
+      "publish pipeline",
+      "accepting_writes=false",
+      "publisher identity",
+      "installer download",
+    ]),
   };
 }
 
@@ -215,6 +269,26 @@ function validateReport(report) {
   }
   if (report.service_surface.boundary_documented !== true) {
     issues.push("central self-host web service boundary missing from docs");
+  }
+  issues.push(...pipelineIssues(report.publish_pipeline_contract));
+  return issues;
+}
+
+function pipelineIssues(contract) {
+  const issues = [];
+  if (!contract) return ["publish pipeline contract missing"];
+  if (contract.schema_version !== "kyuubiki.central-publish-pipeline/v1") {
+    issues.push("publish pipeline schema version mismatch");
+  }
+  if (contract.status !== "blocked_preview") issues.push("publish pipeline status must remain blocked_preview");
+  if (contract.accepting_writes !== false) issues.push("publish pipeline must not accept writes yet");
+  if (contract.readonly_guard_present !== true) issues.push("publish pipeline readonly guard missing");
+  if (contract.docs_present !== true) issues.push("publish pipeline docs coverage missing");
+  for (const row of contract.stages_present ?? []) {
+    if (row.present !== true) issues.push(`publish pipeline stage missing ${row.id}`);
+  }
+  for (const row of contract.blockers_present ?? []) {
+    if (row.present !== true) issues.push(`publish pipeline blocker missing ${row.id}`);
   }
   return issues;
 }
@@ -278,6 +352,20 @@ function renderMarkdown(report) {
     "",
     `- Contract: \`${report.storage_contract.schema_version}\``,
     `- Table contract present: \`${report.storage_contract.table_contract_present ? "yes" : "no"}\``,
+    "",
+    "## Publish Pipeline Contract",
+    "",
+    `- Contract: \`${report.publish_pipeline_contract.schema_version}\``,
+    `- Status: \`${report.publish_pipeline_contract.status}\``,
+    `- Accepting writes: \`${report.publish_pipeline_contract.accepting_writes ? "yes" : "no"}\``,
+    `- Read-only guard: \`${report.publish_pipeline_contract.readonly_guard_present ? "yes" : "no"}\``,
+    `- Docs coverage: \`${report.publish_pipeline_contract.docs_present ? "yes" : "no"}\``,
+    "",
+    "| Stage | Present |",
+    "| --- | --- |",
+    ...report.publish_pipeline_contract.stages_present.map(
+      (stage) => `| \`${stage.id}\` | \`${stage.present ? "yes" : "no"}\` |`,
+    ),
     "",
     "## Runbook",
     "",

@@ -112,6 +112,14 @@ README.
   central store contract checker config. It keeps catalog, auth, publish,
   provenance, database, frontend client, docs, and readiness guard inputs
   project-relative and machine-checkable.
+- `central-publish-pipeline.schema.json` is for the center-store write-side
+  workflow contract that orders publisher identity, artifact envelope,
+  signature attestation, review queue, catalog indexing, recall/yank, and
+  installer verification before real upload endpoints are enabled.
+- `component-integrity-report.schema.json` is for the generated component
+  integrity report that turns `deploy/installation-integrity-contract.json`
+  into machine-readable component counts, required-layout coverage, central
+  service component summaries, and protocol issues.
 - `contracts-runtime-api-surface.schema.json` is for the shared runtime API
   family map, including source files, client surfaces, internal service-surface
   bindings, verification commands, and repository-relative path constraints.

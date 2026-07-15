@@ -39,6 +39,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   sync-doc-book-version\n  \
   check-toolchain-contract\n  \
   check-install-update-disk-hygiene\n  \
+  check-component-integrity-protocol\n  \
   build-installation-integrity-docs\n  \
   build-update-catalog\n  \
   check-module-topology\n  \

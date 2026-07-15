@@ -58,6 +58,12 @@ defmodule KyuubikiWeb.CentralStoreRouter do
     end)
   end
 
+  get "/publish-pipeline" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, CentralStore.publish_pipeline())
+    end)
+  end
+
   get "/database-status" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, CentralStore.database_status())

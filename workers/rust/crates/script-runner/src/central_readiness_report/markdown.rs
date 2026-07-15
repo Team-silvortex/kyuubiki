@@ -12,12 +12,16 @@ pub(super) fn validate_markdown(markdown: &str) -> Vec<String> {
         "## Config Surface",
         "## Service Surface",
         "## Storage Contract",
+        "## Publish Pipeline Contract",
         "## Runbook",
         REPORT_SCHEMA,
         STORAGE_SCHEMA,
+        "kyuubiki.central-publish-pipeline/v1",
         "central-web-service",
         "orchestra-control-plane",
         "self_host_web",
+        "publisher_identity",
+        "download_verification",
         "make check-central-database-readiness MODE=local BACKEND=sqlite",
         "make remote-central-database-smoke REMOTE=kyuubiki-lab",
         "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke",
@@ -62,6 +66,7 @@ pub(super) fn render_markdown(report: &Value) -> String {
     }
     render_schema_section(report, &mut lines);
     render_config_section(report, &mut lines);
+    render_pipeline_section(report, &mut lines);
     render_tail(report, &mut lines);
     lines.join("\n")
 }
@@ -101,6 +106,44 @@ fn render_config_section(report: &Value, lines: &mut Vec<String>) {
             str_field(config, "path"),
             yes(config, "present"),
             yes(config, "schema_version_present")
+        ));
+    }
+}
+
+fn render_pipeline_section(report: &Value, lines: &mut Vec<String>) {
+    lines.extend([
+        String::new(),
+        "## Publish Pipeline Contract".to_string(),
+        String::new(),
+        format!(
+            "- Contract: `{}`",
+            str_at(report, "/publish_pipeline_contract/schema_version")
+        ),
+        format!(
+            "- Status: `{}`",
+            str_at(report, "/publish_pipeline_contract/status")
+        ),
+        format!(
+            "- Accepting writes: `{}`",
+            yes_at(report, "/publish_pipeline_contract/accepting_writes")
+        ),
+        format!(
+            "- Read-only guard: `{}`",
+            yes_at(report, "/publish_pipeline_contract/readonly_guard_present")
+        ),
+        format!(
+            "- Docs coverage: `{}`",
+            yes_at(report, "/publish_pipeline_contract/docs_present")
+        ),
+        String::new(),
+        "| Stage | Present |".to_string(),
+        "| --- | --- |".to_string(),
+    ]);
+    for stage in array_at(report, "/publish_pipeline_contract/stages_present") {
+        lines.push(format!(
+            "| `{}` | `{}` |",
+            str_field(stage, "id"),
+            yes(stage, "present")
         ));
     }
 }

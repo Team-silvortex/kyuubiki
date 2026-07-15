@@ -23,6 +23,7 @@ pub(super) const ENDPOINTS: &[&str] = &[
     "/api/v1/central/database-policy",
     "/api/v1/central/provenance-policy",
     "/api/v1/central/artifact-admission-policy",
+    "/api/v1/central/publish-pipeline",
     "/api/v1/central/database-status",
 ];
 pub(super) const SCHEMA_FILES: &[&str] = &[
@@ -35,12 +36,31 @@ pub(super) const SCHEMA_FILES: &[&str] = &[
     "schemas/central-database-policy.schema.json",
     "schemas/central-provenance-policy.schema.json",
     "schemas/central-artifact-admission-policy.schema.json",
+    "schemas/central-publish-pipeline.schema.json",
     "schemas/central-database-status.schema.json",
     "schemas/central-readiness-report.schema.json",
 ];
 pub(super) const CONFIG_FILES: &[&str] = &[
     "config/architecture/central-store-contract.json",
     "config/architecture/module-topology.json",
+];
+const PIPELINE_STAGES: &[&str] = &[
+    "publisher_identity",
+    "artifact_envelope",
+    "signature_attestation",
+    "review_queue",
+    "catalog_indexing",
+    "recall_and_yank",
+    "download_verification",
+];
+const PIPELINE_BLOCKERS: &[&str] = &[
+    "publisher_accounts_not_enabled",
+    "token_issuer_not_configured",
+    "artifact_upload_endpoint_disabled",
+    "signing_keys_not_configured",
+    "write_side_review_queue_not_enabled",
+    "central_write_api_disabled",
+    "write_audit_log_not_enabled",
 ];
 
 pub(crate) fn run_build_central_readiness_report(
@@ -164,6 +184,7 @@ fn build_report(
             "schema_version": STORAGE_SCHEMA,
             "table_contract_present": includes_all(files.get("apps/web/lib/kyuubiki_web/storage/central_database.ex"), &[STORAGE_SCHEMA, "central_store_entries", "central_artifact_signatures"])
         },
+        "publish_pipeline_contract": pipeline_contract(&files),
         "runbook": {
             "local_readiness": "make check-central-database-readiness MODE=local BACKEND=sqlite",
             "remote_dry_run": "make remote-central-database-smoke REMOTE=kyuubiki-lab",
@@ -191,6 +212,36 @@ fn config_status(file: &str, files: &HashMap<String, String>) -> Value {
         "path": file,
         "present": files.contains_key(file),
         "schema_version_present": files.get(file).is_some_and(|text| text.contains(expected))
+    })
+}
+
+fn pipeline_contract(files: &HashMap<String, String>) -> Value {
+    let backend = files.get("apps/web/lib/kyuubiki_web/central_store.ex");
+    let docs = files.get("docs/central-server-components.md");
+    json!({
+        "schema_version": "kyuubiki.central-publish-pipeline/v1",
+        "status": "blocked_preview",
+        "accepting_writes": false,
+        "stage_count": PIPELINE_STAGES.len(),
+        "stages_present": PIPELINE_STAGES.iter().map(|stage| json!({
+            "id": stage,
+            "present": backend.is_some_and(|text| text.contains(stage))
+        })).collect::<Vec<_>>(),
+        "blockers_present": PIPELINE_BLOCKERS.iter().map(|blocker| json!({
+            "id": blocker,
+            "present": backend.is_some_and(|text| text.contains(blocker))
+        })).collect::<Vec<_>>(),
+        "readonly_guard_present": includes_all(backend, &[
+            "\"mode\" => \"read_only_contract\"",
+            "\"accepting_writes\" => false",
+            "\"writes_enabled\" => false"
+        ]),
+        "docs_present": includes_all(docs, &[
+            "publish pipeline",
+            "accepting_writes=false",
+            "publisher identity",
+            "installer download"
+        ])
     })
 }
 
@@ -237,6 +288,7 @@ fn validate_report(report: &Value) -> Vec<String> {
     {
         issues.push("storage table contract missing".to_string());
     }
+    validate_pipeline_contract(&mut issues, report.pointer("/publish_pipeline_contract"));
     for (pointer, expected, label) in [
         (
             "/service_surface/id",
@@ -274,6 +326,56 @@ fn validate_report(report: &Value) -> Vec<String> {
     }
     issues.extend(unsafe_text_issues(&report.to_string()));
     issues
+}
+
+fn validate_pipeline_contract(issues: &mut Vec<String>, contract: Option<&Value>) {
+    let Some(contract) = contract else {
+        issues.push("publish pipeline contract missing".to_string());
+        return;
+    };
+    if contract.get("schema_version").and_then(Value::as_str)
+        != Some("kyuubiki.central-publish-pipeline/v1")
+    {
+        issues.push("publish pipeline schema version mismatch".to_string());
+    }
+    if contract.get("status").and_then(Value::as_str) != Some("blocked_preview") {
+        issues.push("publish pipeline status must remain blocked_preview".to_string());
+    }
+    if contract.get("accepting_writes").and_then(Value::as_bool) != Some(false) {
+        issues.push("publish pipeline must not accept writes yet".to_string());
+    }
+    if contract.get("readonly_guard_present").and_then(Value::as_bool) != Some(true) {
+        issues.push("publish pipeline readonly guard missing".to_string());
+    }
+    if contract.get("docs_present").and_then(Value::as_bool) != Some(true) {
+        issues.push("publish pipeline docs coverage missing".to_string());
+    }
+    for row in contract
+        .get("stages_present")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        if row.get("present").and_then(Value::as_bool) != Some(true) {
+            issues.push(format!(
+                "publish pipeline stage missing {}",
+                row.get("id").and_then(Value::as_str).unwrap_or_default()
+            ));
+        }
+    }
+    for row in contract
+        .get("blockers_present")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        if row.get("present").and_then(Value::as_bool) != Some(true) {
+            issues.push(format!(
+                "publish pipeline blocker missing {}",
+                row.get("id").and_then(Value::as_str).unwrap_or_default()
+            ));
+        }
+    }
 }
 
 fn validate_items(
@@ -318,6 +420,7 @@ fn required_files() -> Vec<&'static str> {
     let mut files = vec![
         "apps/web/lib/kyuubiki_web/central_store_router.ex",
         "apps/frontend/src/lib/api/central-store-client.ts",
+        "apps/web/lib/kyuubiki_web/central_store.ex",
         "apps/web/lib/kyuubiki_web/storage/central_database.ex",
         "docs/central-server-components.md",
     ];
@@ -353,6 +456,29 @@ fn self_test_files() -> HashMap<String, String> {
         ENDPOINTS.join("\n"),
     );
     files.insert(
+        "apps/web/lib/kyuubiki_web/central_store.ex".to_string(),
+        [
+            "\"mode\" => \"read_only_contract\"",
+            "\"accepting_writes\" => false",
+            "\"writes_enabled\" => false",
+            "publisher_identity",
+            "artifact_envelope",
+            "signature_attestation",
+            "review_queue",
+            "catalog_indexing",
+            "recall_and_yank",
+            "download_verification",
+            "publisher_accounts_not_enabled",
+            "token_issuer_not_configured",
+            "artifact_upload_endpoint_disabled",
+            "signing_keys_not_configured",
+            "write_side_review_queue_not_enabled",
+            "central_write_api_disabled",
+            "write_audit_log_not_enabled",
+        ]
+        .join("\n"),
+    );
+    files.insert(
         "apps/web/lib/kyuubiki_web/storage/central_database.ex".to_string(),
         format!("{STORAGE_SCHEMA} central_store_entries central_artifact_signatures"),
     );
@@ -370,7 +496,15 @@ fn self_test_files() -> HashMap<String, String> {
     );
     files.insert(
         "docs/central-server-components.md".to_string(),
-        "central-web-service not a separate top-level module".to_string(),
+        [
+            "central-web-service",
+            "not a separate top-level module",
+            "publish pipeline",
+            "accepting_writes=false",
+            "publisher identity",
+            "installer download",
+        ]
+        .join("\n"),
     );
     files
 }

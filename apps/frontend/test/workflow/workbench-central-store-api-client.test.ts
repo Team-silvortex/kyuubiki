@@ -42,6 +42,7 @@ test("central store API client fetches entry and session policy", async () => {
   await client.fetchCentralDatabasePolicy();
   await client.fetchCentralProvenancePolicy();
   await client.fetchCentralArtifactAdmissionPolicy();
+  await client.fetchCentralPublishPipeline();
   await client.fetchCentralDatabaseStatus();
 
   assert.deepEqual(seen, [
@@ -75,6 +76,10 @@ test("central store API client fetches entry and session policy", async () => {
     },
     {
       url: "/api/v1/central/artifact-admission-policy",
+      method: "GET",
+    },
+    {
+      url: "/api/v1/central/publish-pipeline",
       method: "GET",
     },
     {

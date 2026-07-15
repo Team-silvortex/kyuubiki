@@ -176,7 +176,11 @@ defmodule KyuubikiWeb.CentralStore do
       ],
       "resource_readiness" =>
         Enum.map(@store_kinds, &publish_resource_readiness(&1, provenance_gates[&1])),
-      "required_storage_tables" => ["central_publishers", "central_artifacts", "central_artifact_signatures"],
+      "required_storage_tables" => [
+        "central_publishers",
+        "central_artifacts",
+        "central_artifact_signatures"
+      ],
       "next_unlocks" => [
         "enable publisher account storage, review, and token scopes",
         "configure detached artifact signing keys outside the repository",
@@ -219,7 +223,14 @@ defmodule KyuubikiWeb.CentralStore do
       "accepting_artifact_uploads" => false,
       "artifact_contract" => %{
         "digest_algorithms" => ["sha256", "blake3"],
-        "metadata_fields" => ["artifact_id", "kind", "entry_id", "version", "digest", "size_bytes"],
+        "metadata_fields" => [
+          "artifact_id",
+          "kind",
+          "entry_id",
+          "version",
+          "digest",
+          "size_bytes"
+        ],
         "immutable_fields" => ["artifact_id", "kind", "entry_id", "version", "digest"]
       },
       "resource_gates" => Enum.map(@store_kinds, &provenance_resource_gate/1),
@@ -298,6 +309,29 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  def publish_pipeline do
+    stages = publish_pipeline_stages()
+    blocked = Enum.filter(stages, &(&1["status"] != "ready"))
+
+    %{
+      "schema_version" => "kyuubiki.central-publish-pipeline/v1",
+      "status" => "blocked_preview",
+      "mode" => "read_only_contract",
+      "accepting_writes" => false,
+      "stage_count" => length(stages),
+      "blocked_stage_count" => length(blocked),
+      "stages" => stages,
+      "handoff_contracts" => [
+        "kyuubiki.central-publisher-policy/v1",
+        "kyuubiki.central-artifact-admission-policy/v1",
+        "kyuubiki.central-provenance-policy/v1",
+        "kyuubiki.central-database-contract/v1",
+        "kyuubiki.central-store-catalog/v1"
+      ],
+      "unlock_order" => Enum.map(blocked, & &1["id"])
+    }
+  end
+
   defp provenance_resource_gate(kind) do
     publish_policy = publish_resource_policy(kind)
 
@@ -341,6 +375,71 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
+  defp publish_pipeline_stages do
+    [
+      publish_pipeline_stage(
+        "publisher_identity",
+        "Publisher identity and account review",
+        "blocked_preview",
+        "central-publisher-policy",
+        ["publisher_accounts_not_enabled", "token_issuer_not_configured"]
+      ),
+      publish_pipeline_stage(
+        "artifact_envelope",
+        "Immutable artifact envelope and upload preflight",
+        "blocked_preview",
+        "central-artifact-admission-policy",
+        ["artifact_upload_endpoint_disabled"]
+      ),
+      publish_pipeline_stage(
+        "signature_attestation",
+        "Detached artifact signature verification",
+        "blocked_preview",
+        "central-provenance-policy",
+        ["signing_keys_not_configured"]
+      ),
+      publish_pipeline_stage(
+        "review_queue",
+        "Manual and automated review queue",
+        "blocked_preview",
+        "central-publish-readiness",
+        ["write_side_review_queue_not_enabled"]
+      ),
+      publish_pipeline_stage(
+        "catalog_indexing",
+        "Catalog entry indexing after approval",
+        "blocked_preview",
+        "central-store-catalog",
+        ["central_write_api_disabled"]
+      ),
+      publish_pipeline_stage(
+        "recall_and_yank",
+        "Yank and security recall controls",
+        "blocked_preview",
+        "central-provenance-policy",
+        ["write_audit_log_not_enabled"]
+      ),
+      publish_pipeline_stage(
+        "download_verification",
+        "Installer download verification contract",
+        "ready",
+        "central-provenance-policy",
+        []
+      )
+    ]
+  end
+
+  defp publish_pipeline_stage(id, label, status, contract, blockers) do
+    %{
+      "id" => id,
+      "label" => label,
+      "status" => status,
+      "contract" => contract,
+      "blocking_reasons" => blockers,
+      "writes_enabled" => false
+    }
+  end
+
   def database_status do
     CentralDatabase.status_report()
   end
@@ -362,6 +461,10 @@ defmodule KyuubikiWeb.CentralStore do
       "artifact_admission" => %{
         "status" => "blocked_preview",
         "backing" => "CentralStore.artifact_admission_policy"
+      },
+      "publish_pipeline" => %{
+        "status" => "blocked_preview",
+        "backing" => "CentralStore.publish_pipeline"
       },
       "publisher_accounts" => %{
         "status" => "preview_contract",

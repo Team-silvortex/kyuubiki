@@ -88,8 +88,21 @@
           <li>Add a <code>components[]</code> entry in <code>deploy/installation-integrity-contract.json</code>.</li>
           <li>Keep every required path inside the component's <code>owned_paths</code>.</li>
           <li>Add protected paths globally before declaring them in the component.</li>
-          <li>Run <code>cargo test -q -p kyuubiki-installer</code> and <code>cargo run -q -p kyuubiki-installer -- installation-integrity</code>.</li>
+          <li>Give user-visible behavior at least one non-editable <code>visible_rules[]</code> entry.</li>
+          <li>For central services, store surfaces, publishers, or artifact admission, add at least one <code>checks[]</code> command that keeps API, schema, frontend client, and readiness evidence aligned.</li>
+          <li>Run <code>make check-component-integrity-protocol</code>, <code>cargo test -q -p kyuubiki-installer</code>, and <code>cargo run -q -p kyuubiki-installer -- installation-integrity</code>.</li>
         </ol>
+      </section>
+      <section class="docs-card">
+        <h2>Current central-service coverage</h2>
+        <p>
+          Center-store growth is now covered by the same component integrity
+          protocol as desktop shells and runtime state. The current contract
+          includes <code>central.store.api</code> and
+          <code>central.store.contracts</code>, which bind the Web API,
+          frontend client, central schemas, readiness report, and self-host
+          service documentation to visible checks.
+        </p>
       </section>
     </main>
   </body>

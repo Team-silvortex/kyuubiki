@@ -44,6 +44,7 @@ export type CentralStoreCapabilities = {
   login_system: { status: string; backing?: string };
   signed_downloads: { status: string };
   artifact_admission: { status: string; backing?: string };
+  publish_pipeline: { status: string; backing?: string };
   publisher_accounts: { status: string; backing?: string };
   publish_policy: { status: string; backing?: string };
   publish_readiness: { status: string; backing?: string };
@@ -298,4 +299,25 @@ export type CentralArtifactAdmissionPolicyPayload = {
     manual_approval_required: boolean;
   };
   blocking_reasons: string[];
+};
+
+export type CentralPublishPipelineStage = {
+  id: string;
+  label: string;
+  status: string;
+  contract: string;
+  blocking_reasons: string[];
+  writes_enabled: boolean;
+};
+
+export type CentralPublishPipelinePayload = {
+  schema_version: "kyuubiki.central-publish-pipeline/v1";
+  status: string;
+  mode: "read_only_contract" | string;
+  accepting_writes: boolean;
+  stage_count: number;
+  blocked_stage_count: number;
+  stages: CentralPublishPipelineStage[];
+  handoff_contracts: string[];
+  unlock_order: string[];
 };

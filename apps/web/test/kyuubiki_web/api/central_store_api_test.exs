@@ -27,6 +27,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["capabilities"]["login_system"]["status"] == "preview_contract"
     assert payload["capabilities"]["publisher_accounts"]["status"] == "preview_contract"
     assert payload["capabilities"]["artifact_admission"]["status"] == "blocked_preview"
+    assert payload["capabilities"]["publish_pipeline"]["status"] == "blocked_preview"
   end
 
   test "central catalog filters and fetches language-pack entries" do
@@ -194,6 +195,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["signature_policy"]["detached_signature_required"] == true
     assert payload["download_rules"]["checksum_required_before_install"] == true
     assert payload["revocation_policy"]["supports_security_recall"] == true
+
     assert resource_gates["operator"]["storage_tables"] == [
              "central_artifacts",
              "central_artifact_signatures"
@@ -229,6 +231,39 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["review_queue"]["manual_approval_required"] == true
     assert "sbom" in resource_kinds["operator"]["required_attestations"]
     assert resource_kinds["language_pack"]["security_recall_supported"] == true
+  end
+
+  test "central publish pipeline exposes ordered write-side blockers without writes" do
+    conn =
+      :get
+      |> conn("/api/v1/central/publish-pipeline")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    stage_ids = Enum.map(payload["stages"], & &1["id"])
+    stages = Map.new(payload["stages"], &{&1["id"], &1})
+
+    assert payload["schema_version"] == "kyuubiki.central-publish-pipeline/v1"
+    assert payload["mode"] == "read_only_contract"
+    assert payload["accepting_writes"] == false
+    assert payload["stage_count"] == length(payload["stages"])
+    assert payload["blocked_stage_count"] == length(payload["unlock_order"])
+    assert "kyuubiki.central-provenance-policy/v1" in payload["handoff_contracts"]
+
+    assert stage_ids == [
+             "publisher_identity",
+             "artifact_envelope",
+             "signature_attestation",
+             "review_queue",
+             "catalog_indexing",
+             "recall_and_yank",
+             "download_verification"
+           ]
+
+    assert "signing_keys_not_configured" in stages["signature_attestation"]["blocking_reasons"]
+    assert stages["download_verification"]["status"] == "ready"
+    assert Enum.all?(payload["stages"], &(&1["writes_enabled"] == false))
   end
 
   test "central database status exposes schema preview coverage" do

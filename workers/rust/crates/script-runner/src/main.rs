@@ -14,6 +14,7 @@ mod central_database_smoke;
 mod central_readiness_report;
 mod central_store_contract;
 mod commercial_readiness;
+mod component_integrity_protocol;
 mod contracts_runtime_api_surface;
 mod dependency_audit;
 mod desktop;

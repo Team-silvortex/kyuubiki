@@ -16,6 +16,7 @@ const requiredEndpoints = [
   "/api/v1/central/database-policy",
   "/api/v1/central/provenance-policy",
   "/api/v1/central/artifact-admission-policy",
+  "/api/v1/central/publish-pipeline",
   "/api/v1/central/database-status",
 ];
 const requiredSchemas = [
@@ -28,12 +29,22 @@ const requiredSchemas = [
   "schemas/central-database-policy.schema.json",
   "schemas/central-provenance-policy.schema.json",
   "schemas/central-artifact-admission-policy.schema.json",
+  "schemas/central-publish-pipeline.schema.json",
   "schemas/central-database-status.schema.json",
   "schemas/central-readiness-report.schema.json",
 ];
 const requiredConfigs = [
   "config/architecture/central-store-contract.json",
   "config/architecture/module-topology.json",
+];
+const requiredPipelineStages = [
+  "publisher_identity",
+  "artifact_envelope",
+  "signature_attestation",
+  "review_queue",
+  "catalog_indexing",
+  "recall_and_yank",
+  "download_verification",
 ];
 
 if (process.argv.includes("--self-test")) {
@@ -67,6 +78,16 @@ if (process.argv.includes("--self-test")) {
     storage_contract: {
       schema_version: "kyuubiki.central-database-contract/v1",
       table_contract_present: true,
+    },
+    publish_pipeline_contract: {
+      schema_version: "kyuubiki.central-publish-pipeline/v1",
+      status: "blocked_preview",
+      accepting_writes: false,
+      stage_count: requiredPipelineStages.length,
+      stages_present: requiredPipelineStages.map((id) => ({ id, present: true })),
+      blockers_present: [],
+      readonly_guard_present: true,
+      docs_present: true,
     },
     runbook: {
       local_readiness: "make check-central-database-readiness MODE=local BACKEND=sqlite",
@@ -142,7 +163,26 @@ function validateReport(report) {
   if (report.service_surface?.boundary_documented !== true) {
     issues.push("central web service boundary documentation missing");
   }
+  issues.push(...pipelineIssues(report.publish_pipeline_contract));
   issues.push(...unsafeTextIssues(JSON.stringify(report)));
+  return issues;
+}
+
+function pipelineIssues(contract) {
+  const issues = [];
+  if (!contract) return ["publish pipeline contract missing"];
+  if (contract.schema_version !== "kyuubiki.central-publish-pipeline/v1") {
+    issues.push("publish pipeline schema version mismatch");
+  }
+  if (contract.status !== "blocked_preview") issues.push("publish pipeline status must remain blocked_preview");
+  if (contract.accepting_writes !== false) issues.push("publish pipeline must not accept writes yet");
+  if (contract.readonly_guard_present !== true) issues.push("publish pipeline readonly guard missing");
+  if (contract.docs_present !== true) issues.push("publish pipeline docs coverage missing");
+  for (const stage of requiredPipelineStages) {
+    const actual = contract.stages_present?.find((entry) => entry.id === stage);
+    if (!actual) issues.push(`publish pipeline stage missing ${stage}`);
+    if (actual && actual.present !== true) issues.push(`publish pipeline stage not present ${stage}`);
+  }
   return issues;
 }
 
@@ -167,12 +207,16 @@ function validateMarkdown(markdown) {
     "## Config Surface",
     "## Service Surface",
     "## Storage Contract",
+    "## Publish Pipeline Contract",
     "## Runbook",
     "kyuubiki.central-readiness-report/v1",
     "kyuubiki.central-database-contract/v1",
+    "kyuubiki.central-publish-pipeline/v1",
     "central-web-service",
     "orchestra-control-plane",
     "self_host_web",
+    "publisher_identity",
+    "download_verification",
     "make check-central-database-readiness MODE=local BACKEND=sqlite",
     "make remote-central-database-smoke REMOTE=kyuubiki-lab",
     "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke",
@@ -208,6 +252,11 @@ function markdownFixture() {
     "",
     "## Storage Contract",
     "- Contract: `kyuubiki.central-database-contract/v1`",
+    "",
+    "## Publish Pipeline Contract",
+    "- Contract: `kyuubiki.central-publish-pipeline/v1`",
+    "| `publisher_identity` | `yes` |",
+    "| `download_verification` | `yes` |",
     "",
     "## Runbook",
     "- Local readiness: `make check-central-database-readiness MODE=local BACKEND=sqlite`",

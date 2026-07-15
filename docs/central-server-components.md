@@ -25,6 +25,7 @@ Architecture boundary: the website service is not a separate top-level module.
 - Database policy: `GET /api/v1/central/database-policy`
 - Provenance policy: `GET /api/v1/central/provenance-policy`
 - Artifact admission policy: `GET /api/v1/central/artifact-admission-policy`
+- Publish pipeline: `GET /api/v1/central/publish-pipeline`
 - Database status: `GET /api/v1/central/database-status`
 - Backing module: `KyuubikiWeb.CentralStore`
 - Router module: `KyuubikiWeb.CentralStoreRouter`
@@ -38,6 +39,7 @@ Architecture boundary: the website service is not a separate top-level module.
 - Provenance schema: `schemas/central-provenance-policy.schema.json`
 - Artifact admission schema:
   `schemas/central-artifact-admission-policy.schema.json`
+- Publish pipeline schema: `schemas/central-publish-pipeline.schema.json`
 - Database status schema: `schemas/central-database-status.schema.json`
 - Readiness report schema: `schemas/central-readiness-report.schema.json`
 - Contract-check config: `config/architecture/central-store-contract.json`
@@ -111,6 +113,13 @@ envelope, resource-specific evidence, token scopes, review queue stages,
 signature/SBOM expectations, and blocking reasons that must be cleared before a
 real upload endpoint can exist. This gives SDKs and self-hosted deployments one
 machine-readable target without prematurely accepting packages.
+
+The publish pipeline endpoint ties the separate policies into one ordered
+read-only workflow: publisher identity, artifact envelope, detached signature,
+review queue, catalog indexing, yank/security recall, and installer download
+verification. It deliberately reports `accepting_writes=false` until those
+stages have real backing services, but gives Hub, Workbench, Installer, and
+headless SDKs one stable sequence for UI guidance and self-host readiness.
 
 ## Database Policy
 

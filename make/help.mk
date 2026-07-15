@@ -70,6 +70,7 @@ help:
 	@echo "  make check-version-line Verify release, snapshot, package, docs, and language-pack version contracts"
 	@echo "  make check-workflow-dataset-contract Verify workflow dataset schema, examples, and graph dataset references"
 	@echo "  make check-install-update-disk-hygiene Verify release upload, local purge, rollback, and cleanup disk-use contracts"
+	@echo "  make check-component-integrity-protocol Verify component ownership and write OUT=tmp/component-integrity-report.json"
 	@echo "  make check-materialization-plan-contract Verify materialized candidate schema/example contracts"
 	@echo "  make check-material-study-execution-plan-contract Verify non-executing material study plan schema/example contracts"
 	@echo "  make check-material-research-bundle-contract Verify retained material research bundle schema/example contracts"
