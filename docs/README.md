@@ -103,8 +103,8 @@ Then branch by intent:
   Machine-readable gate map for the final `tamamono -> moxi` handoff checklist,
   validated by `make check-moxi-handoff`.
 - `minimal-industrial-closure.md`
-  The narrower `1.15.x -> 2.0.x` bridge checklist for closing the first
-  bounded industrial workflow before broader `2.0` commercial claims.
+  Minimum industrial loop checklist carried into `moxi 2.x` as the practical
+  closure gate for bounded research and early partner workflows.
 - `module-architecture.md`
   System-wide module map for product shells, control plane, runtime data
   plane, SDKs, contracts, verification gates, and where new work belongs.
@@ -272,9 +272,8 @@ Then branch by intent:
   Current version-line note for `moxi 2.x`, including codename and major
   version policy.
 - `release-prep-1.9-to-1.20.md`
-  Industrialization roadmap for the second half of `moxi 2.x`, covering
-  the boundary-hardening path from `1.15.x` through `2.0.x` before `2.0`,
-  plus the commercial distinction between `2.0`, `2.x`, and `3.0`.
+  Historical late-`tamamono` industrialization roadmap for the boundary
+  hardening path that fed into `moxi 2.0.0`, retained as preparation context.
 - `release-prep-1.7.md`
   Historical release-prep checklist retained for older tamamono context.
 - `release-prep-1.8.md`

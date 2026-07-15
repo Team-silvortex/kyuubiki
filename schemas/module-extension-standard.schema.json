@@ -16,7 +16,7 @@
   "properties": {
     "$schema": { "const": "../../schemas/module-extension-standard.schema.json" },
     "schema_version": { "const": "kyuubiki.module-extension-standard/v1" },
-    "version_line": { "type": "string", "pattern": "^tamamono 1\\.19\\.x$" },
+    "version_line": { "type": "string", "pattern": "^moxi 2\\.0\\.x$" },
     "summary": { "type": "string", "minLength": 24 },
     "source_of_truth": {
       "type": "object",

@@ -59,10 +59,21 @@ fn sample_report() -> Value {
             "with_entries": 0,
             "not_started": 1,
             "broken": 0,
+            "validation_profile_count": 1,
+            "release_candidate_profiles": 1,
+            "component_profiles": 0,
+            "candidates_missing_release_profile": 0,
             "next_action_count": 2,
             "target_levels": { "baseline": 0, "review": 0, "qualification": 1 },
             "evidence_phases": { "planned": 1, "collecting": 0, "ready_for_review": 0, "blocked": 0 },
-            "release_gate_impacts": { "release_blocker": 1, "release_watch": 0, "experimental_only": 0 }
+            "release_gate_impacts": { "release_blocker": 1, "release_watch": 0, "experimental_only": 0 },
+            "release_review_statuses": {
+                "missing": 0,
+                "pending_signoff": 0,
+                "approved": 0,
+                "blocked_scope": 0,
+                "rejected": 0
+            }
         },
         "candidates": [{
             "candidate_id": "sample",
@@ -75,6 +86,13 @@ fn sample_report() -> Value {
             "operator_ids": ["solve.sample"],
             "artifact_counts": { "total": 1, "present": 0, "command_available": 0, "missing": 0, "not_started": 1 },
             "artifacts": [],
+            "validation_profiles": [{
+                "profile_id": "sample",
+                "profile_role": "release_candidate",
+                "trust_goal": "review",
+                "operator_count": 1,
+                "command_count": 1
+            }],
             "primary_blocker": "sample blocker",
             "evidence_gaps": ["sample"],
             "graduation_gate": "sample gate",
@@ -93,7 +111,11 @@ fn sample_report() -> Value {
                 "artifact_state": "not_started",
                 "artifact_kind": "reference_note",
                 "command": null,
+                "check_command": null,
                 "path": null,
+                "review_reason": null,
+                "validation_profile_count": 1,
+                "release_candidate_profile_count": 1,
                 "gate": "collect canonical reference note",
                 "preferred_validation_lane": "make sample-validation",
                 "release_gate_impact": "release_blocker"
@@ -110,6 +132,9 @@ fn sample_report() -> Value {
                 "artifact_kind": "release_output",
                 "command": "make sample-release-evidence",
                 "path": null,
+                "review_reason": null,
+                "validation_profile_count": 1,
+                "release_candidate_profile_count": 1,
                 "gate": "retain release evidence",
                 "preferred_validation_lane": "make sample-release-evidence",
                 "release_gate_impact": "release_watch"

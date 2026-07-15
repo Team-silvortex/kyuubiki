@@ -1,9 +1,11 @@
 {
   "schema_version": "kyuubiki.operator-validation-profiles/v1",
-  "version_line": "tamamono 1.16.x",
+  "version_line": "moxi 2.0.x",
   "profiles": [
     {
       "profile_id": "line-field-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "line-field-closed-form",
       "trust_goal": "qualification_input",
       "operators": [
         "solve.bar_1d",
@@ -43,6 +45,8 @@
     },
     {
       "profile_id": "stokes-flow-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "screening-cfd-boundary",
       "trust_goal": "review_screening",
       "operators": [
         "solve.stokes_flow_quad_2d",
@@ -75,6 +79,11 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture"
         },
         {
+          "id": "stokes-quad-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_reliability -- --nocapture"
+        },
+        {
           "id": "stokes-triangle-review-fixture",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_2d_review -- --nocapture"
@@ -87,12 +96,73 @@
         {
           "id": "reliability-contract",
           "kind": "contract",
-          "command": "make check-operator-reliability"
+          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json"
+        }
+      ]
+    },
+    {
+      "profile_id": "screening-cfd-boundary",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "screening-cfd-boundary",
+      "trust_goal": "review_screening_release_candidate",
+      "operators": [
+        "solve.stokes_flow_quad_2d",
+        "solve.stokes_flow_triangle_2d"
+      ],
+      "validation_methods": [
+        "boundary_response_cross_check",
+        "local_diagnostic_invariant",
+        "screening_tolerance_policy_check",
+        "release_candidate_scope_guard"
+      ],
+      "formal_invariants": [
+        "finite_velocity_pressure_fields",
+        "non_negative_divergence_error",
+        "non_negative_reynolds_number",
+        "non_negative_viscous_dissipation",
+        "explicit_non_navier_stokes_scope"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/cfd.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "stokes-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "stokes-quad-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_reliability -- --nocapture"
+        },
+        {
+          "id": "stokes-triangle-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "stokes-triangle-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture"
+        },
+        {
+          "id": "reliability-contract",
+          "kind": "contract",
+          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json"
         }
       ]
     },
     {
       "profile_id": "electrostatic-plane-patch",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "electromagnetic-plane-patch",
       "trust_goal": "review_cross_check",
       "operators": [
         "solve.electrostatic_plane_triangle_2d",
@@ -138,6 +208,8 @@
     },
     {
       "profile_id": "electromagnetic-plane-patch",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "electromagnetic-plane-patch",
       "trust_goal": "qualification_collecting",
       "operators": [
         "solve.electrostatic_plane_triangle_2d",
@@ -166,6 +238,8 @@
         "workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs",
         "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/field_plane_input_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
       ],
@@ -194,11 +268,23 @@
           "id": "electromagnetic-orientation-regression",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electromagnetic_plane_orientation_regression -- --nocapture"
+        },
+        {
+          "id": "electrostatic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test field_plane_input_reliability electrostatic_plane -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_input_reliability -- --nocapture"
         }
       ]
     },
     {
       "profile_id": "heat-plane-patch",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "thermal-plane-patch",
       "trust_goal": "review_cross_check",
       "operators": [
         "solve.heat_plane_triangle_2d",
@@ -243,6 +329,8 @@
     },
     {
       "profile_id": "thermal-plane-patch",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-plane-patch",
       "trust_goal": "qualification_collecting",
       "operators": [
         "solve.thermal_plane_triangle_2d",
@@ -272,6 +360,7 @@
         "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
         "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
       ],
@@ -300,11 +389,18 @@
           "id": "thermal-plane-mesh-refinement-regression",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_mesh_refinement_regression -- --nocapture"
+        },
+        {
+          "id": "thermal-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_input_reliability -- --nocapture"
         }
       ]
     },
     {
       "profile_id": "modal-frame-sanity",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "modal-frame-sanity",
       "trust_goal": "qualification_input",
       "operators": [
         "solve.modal_frame_2d",
@@ -327,6 +423,7 @@
         "evidence/operator-qualification/modal-frame-normalization-policy.md",
         "workers/rust/crates/solver/tests/modal_frame_2d_review.rs",
         "workers/rust/crates/solver/tests/modal_frame_3d_review.rs",
+        "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs",
         "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
       ],
       "commands": [
@@ -344,11 +441,18 @@
           "id": "modal-frame-sanity-regression",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_sanity_regression -- --nocapture"
+        },
+        {
+          "id": "modal-frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_input_reliability -- --nocapture"
         }
       ]
     },
     {
       "profile_id": "beam-frame-classic",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "beam-frame-classic",
       "trust_goal": "qualification_input",
       "operators": [
         "solve.beam_1d",
@@ -373,7 +477,10 @@
         "evidence/operator-qualification/beam-frame-force-sign-convention.md",
         "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
         "workers/rust/crates/solver/tests/beam_1d_review.rs",
+        "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
+        "workers/rust/crates/solver/tests/frame_input_reliability.rs",
         "workers/rust/crates/solver/tests/torsion_1d_review.rs",
+        "workers/rust/crates/solver/tests/torsion_input_reliability.rs",
         "workers/rust/crates/solver/tests/frame_2d_review.rs"
       ],
       "commands": [
@@ -396,6 +503,21 @@
           "id": "frame-review-fixture",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_review -- --nocapture"
+        },
+        {
+          "id": "beam-torsion-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_torsion_input_reliability -- --nocapture"
+        },
+        {
+          "id": "torsion-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test torsion_input_reliability -- --nocapture"
+        },
+        {
+          "id": "frame-2d-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_input_reliability frame_2d -- --nocapture"
         }
       ]
     }

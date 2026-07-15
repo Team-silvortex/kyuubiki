@@ -1,0 +1,104 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "screening-cfd-boundary",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "screening-cfd-boundary",
+      "trust_goal": "review_screening_release_candidate",
+      "operators": [
+        "solve.stokes_flow_quad_2d",
+        "solve.stokes_flow_triangle_2d"
+      ],
+      "validation_methods": [
+        "boundary_response_cross_check",
+        "local_diagnostic_invariant",
+        "screening_tolerance_policy_check",
+        "release_candidate_scope_guard"
+      ],
+      "formal_invariants": [
+        "finite_velocity_pressure_fields",
+        "non_negative_divergence_error",
+        "non_negative_reynolds_number",
+        "non_negative_viscous_dissipation",
+        "explicit_non_navier_stokes_scope"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/cfd.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "stokes-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 184,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "stokes-quad-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 55,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "stokes-triangle-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 89,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "stokes-triangle-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 58,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "reliability-contract",
+          "kind": "contract",
+          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 214,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

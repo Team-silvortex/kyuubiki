@@ -20,6 +20,7 @@ const ALLOWED_KINDS: &[&str] = &[
     "cross_check",
     "invariant",
 ];
+const ALLOWED_PROFILE_ROLES: &[&str] = &["release_candidate", "component_profile"];
 
 pub(crate) fn run_check_operator_validation(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     match run(root, args) {
@@ -146,7 +147,19 @@ fn validate_config(root: &Path, config: &Value) -> RunnerResult<()> {
 
 fn validate_profile(root: &Path, profile: &Value, context: &str) -> RunnerResult<()> {
     require_string(profile.get("profile_id"), "profile_id", context)?;
+    require_string(profile.get("profile_role"), "profile_role", context)?;
+    require_string(
+        profile.get("qualification_candidate_id"),
+        "qualification_candidate_id",
+        context,
+    )?;
     require_string(profile.get("trust_goal"), "trust_goal", context)?;
+    let profile_role = field(profile, "profile_role");
+    if !ALLOWED_PROFILE_ROLES.contains(&profile_role) {
+        return Err(format!(
+            "{context}: unsupported profile_role {profile_role}"
+        ));
+    }
     for field_name in [
         "operators",
         "validation_methods",
@@ -246,6 +259,8 @@ fn build_profile_report(root: &Path, profile: &Value, options: &Options) -> Runn
         .all(|command| command.pointer("/result/ok").and_then(Value::as_bool) != Some(false));
     Ok(json!({
         "profile_id": field(profile, "profile_id"),
+        "profile_role": field(profile, "profile_role"),
+        "qualification_candidate_id": field(profile, "qualification_candidate_id"),
         "trust_goal": field(profile, "trust_goal"),
         "operators": profile.get("operators").cloned().unwrap_or(Value::Array(Vec::new())),
         "validation_methods": profile.get("validation_methods").cloned().unwrap_or(Value::Array(Vec::new())),
@@ -418,6 +433,8 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         "version_line": "tamamono test",
         "profiles": [{
             "profile_id": "sample",
+            "profile_role": "release_candidate",
+            "qualification_candidate_id": "sample",
             "trust_goal": "review",
             "operators": ["solve.sample"],
             "validation_methods": ["analytic"],
@@ -462,6 +479,56 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
             execute: false,
             self_test: false,
         },
+    )?;
+    let mut executed_report = report.clone();
+    executed_report["executed"] = Value::from(true);
+    for command in executed_report["profiles"][0]["commands"]
+        .as_array_mut()
+        .ok_or_else(|| "self-test report commands must be an array".to_string())?
+    {
+        command["result"] = json!({
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1,
+            "stdout_tail": [],
+            "stderr_tail": [],
+        });
+    }
+    validate_report(
+        &executed_report,
+        &Options {
+            config: "config/sample.json".to_string(),
+            input_report: None,
+            out: DEFAULT_OUT.to_string(),
+            profile: Some("sample".to_string()),
+            execute: false,
+            self_test: false,
+        },
+    )?;
+    validate_input_report(
+        &executed_report,
+        &Options {
+            config: "config/sample.json".to_string(),
+            input_report: None,
+            out: DEFAULT_OUT.to_string(),
+            profile: Some("sample".to_string()),
+            execute: false,
+            self_test: false,
+        },
+    )?;
+    expect_error(
+        validate_input_report(
+            &report,
+            &Options {
+                config: "config/sample.json".to_string(),
+                input_report: None,
+                out: DEFAULT_OUT.to_string(),
+                profile: Some("sample".to_string()),
+                execute: false,
+                self_test: false,
+            },
+        ),
+        "executed=true",
     )?;
     expect_error(
         build_report(

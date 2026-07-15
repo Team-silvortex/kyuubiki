@@ -79,12 +79,22 @@ fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
     )?;
     let candidates = array(&roadmap, "candidates")
         .into_iter()
-        .map(|candidate| field(candidate, "candidate_id").to_string())
-        .collect::<HashSet<_>>();
+        .map(|candidate| {
+            (
+                field(candidate, "candidate_id").to_string(),
+                CandidateGate {
+                    target_level: field(candidate, "target_level").to_string(),
+                    release_gate_impact: field(candidate, "release_gate_impact").to_string(),
+                    graduation_gate: field(candidate, "graduation_gate").to_string(),
+                },
+            )
+        })
+        .collect::<HashMap<_, _>>();
     let requirements = release_requirements_by_candidate(&kits);
     let mut seen = HashSet::new();
+    let release_version = field(records, "release_version");
     for record in array(records, "records") {
-        validate_record(root, record, &candidates, &requirements)?;
+        validate_record(root, release_version, record, &candidates, &requirements)?;
         if !seen.insert(field(record, "candidate_id").to_string()) {
             return Err(format!(
                 "duplicate candidate_id {}",
@@ -97,22 +107,47 @@ fn validate_records(root: &Path, records: &Value) -> RunnerResult<()> {
 
 fn validate_record(
     root: &Path,
+    release_version: &str,
     record: &Value,
-    candidates: &HashSet<String>,
+    candidates: &HashMap<String, CandidateGate>,
     requirements: &HashMap<String, ReleaseRequirement>,
 ) -> RunnerResult<()> {
     let candidate_id = field(record, "candidate_id");
-    if !candidates.contains(candidate_id) {
+    let Some(candidate) = candidates.get(candidate_id) else {
         return Err(format!(
             "{candidate_id}: release record has no roadmap candidate"
         ));
-    }
+    };
     if !matches!(
         field(record, "status"),
         "staged_for_review" | "attached_to_release" | "rejected"
     ) {
         return Err(format!("{candidate_id}: unsupported release record status"));
     }
+    let review_status = field(record, "review_status");
+    if !matches!(
+        review_status,
+        "pending_signoff" | "approved" | "blocked_scope" | "rejected"
+    ) {
+        return Err(format!(
+            "{candidate_id}: unsupported release review_status"
+        ));
+    }
+    if field(record, "review_gate").is_empty() {
+        return Err(format!("{candidate_id}: review_gate must be non-empty"));
+    }
+    if field(record, "review_gate") != candidate.graduation_gate {
+        return Err(format!(
+            "{candidate_id}: review_gate must match roadmap graduation_gate"
+        ));
+    }
+    if field(record, "status") == "rejected" && review_status != "rejected" {
+        return Err(format!(
+            "{candidate_id}: rejected release records must use review_status=rejected"
+        ));
+    }
+    validate_review_status_transition(candidate_id, review_status, candidate)?;
+    validate_review_decision_path(root, release_version, record)?;
     let Some(requirement) = requirements.get(candidate_id) else {
         return Err(format!(
             "{candidate_id}: no release-retained evidence requirement"
@@ -144,6 +179,80 @@ struct ReleaseRequirement {
     capture_command: String,
     check_command: String,
 }
+
+#[derive(Debug)]
+struct CandidateGate {
+    target_level: String,
+    release_gate_impact: String,
+    graduation_gate: String,
+}
+
+fn validate_review_status_transition(
+    candidate_id: &str,
+    review_status: &str,
+    candidate: &CandidateGate,
+) -> RunnerResult<()> {
+    if review_status == "approved"
+        && (candidate.release_gate_impact == "experimental_only" || candidate.target_level == "review")
+    {
+        return Err(format!(
+            "{candidate_id}: review_status=approved is not allowed for review-only or experimental candidates"
+        ));
+    }
+    if review_status == "blocked_scope"
+        && candidate.release_gate_impact != "experimental_only"
+        && candidate.target_level != "review"
+    {
+        return Err(format!(
+            "{candidate_id}: blocked_scope is only for review-only or experimental candidates"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_review_decision_path(root: &Path, release_version: &str, record: &Value) -> RunnerResult<()> {
+    let decision_path = field(record, "review_decision_path");
+    if decision_path.is_empty() {
+        return Ok(());
+    }
+    let decision = read_json(root, decision_path)?;
+    let candidate_id = field(record, "candidate_id");
+    assert_eq(
+        field(&decision, "schema_version"),
+        "kyuubiki.operator-qualification-review-decision/v1",
+        "review decision schema_version",
+    )?;
+    assert_eq(field(&decision, "candidate_id"), candidate_id, "candidate_id")?;
+    assert_eq(
+        field(&decision, "release_version"),
+        release_version,
+        "release_version",
+    )?;
+    assert_eq(
+        field(&decision, "evidence_path"),
+        field(record, "evidence_path"),
+        "evidence_path",
+    )?;
+    assert_eq(
+        field(&decision, "review_gate"),
+        field(record, "review_gate"),
+        "review_gate",
+    )?;
+    let expected_status = match field(&decision, "decision") {
+        "approve_promotion" => "approved",
+        "request_changes" => "pending_signoff",
+        "reject_promotion" => "rejected",
+        "block_scope" => "blocked_scope",
+        other => return Err(format!("{candidate_id}: unsupported review decision {other}")),
+    };
+    if field(record, "review_status") != expected_status {
+        return Err(format!(
+            "{candidate_id}: review_decision_path decision does not match review_status"
+        ));
+    }
+    Ok(())
+}
+
 
 fn release_requirements_by_candidate(kits: &Value) -> HashMap<String, ReleaseRequirement> {
     let mut requirements = HashMap::new();
@@ -235,4 +344,37 @@ fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
 
 fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CandidateGate, validate_review_status_transition};
+
+    #[test]
+    fn review_only_candidate_cannot_be_approved() {
+        let candidate = CandidateGate {
+            target_level: "review".to_string(),
+            release_gate_impact: "experimental_only".to_string(),
+            graduation_gate: "scope gate".to_string(),
+        };
+        let error = validate_review_status_transition("screening", "approved", &candidate)
+            .expect_err("review-only candidate approval should fail");
+        assert!(error.contains("not allowed"));
+        validate_review_status_transition("screening", "blocked_scope", &candidate)
+            .expect("scope block should be valid for review-only candidates");
+    }
+
+    #[test]
+    fn qualification_candidate_cannot_use_scope_block() {
+        let candidate = CandidateGate {
+            target_level: "qualification".to_string(),
+            release_gate_impact: "release_blocker".to_string(),
+            graduation_gate: "qualification gate".to_string(),
+        };
+        let error = validate_review_status_transition("beam-frame", "blocked_scope", &candidate)
+            .expect_err("qualification candidate scope block should fail");
+        assert!(error.contains("blocked_scope"));
+        validate_review_status_transition("beam-frame", "pending_signoff", &candidate)
+            .expect("pending signoff should be valid for qualification candidates");
+    }
 }

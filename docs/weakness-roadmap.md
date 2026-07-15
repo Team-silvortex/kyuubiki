@@ -43,21 +43,21 @@ Current weak point:
 - smoke tests are broader than benchmark-backed accuracy evidence
 - some limitations are implicit instead of product-visible
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep every broad physics family at least smoke-covered
 - identify the first qualification candidates across mechanical, thermal,
   electromagnetic, CFD/transport, and coupled workflows
 - add explicit failure and limitation notes to weak solver families
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - add convergence checks for selected families
 - add cross-checks against analytic, literature, or independent reference
   cases where practical
 - retain evidence bundles for candidate operators
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - Kyuubiki can clearly separate verified, review-level, partial, and
   experimental solver claims.
@@ -77,21 +77,21 @@ Current weak point:
 - external packages need stronger end-to-end examples from authoring to
   package admission and execution
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
 - document the separation between operator SDK and headless SDK everywhere it
   matters
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - build one complete external-local operator package example
 - prove package preflight, package loading, registry binding, run dispatch, and
   failure reporting in one repeatable path
 - add operator package compatibility fixtures for future SDK API changes
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - a competent Rust developer can write, package, preflight, and run a custom
   operator without private project knowledge.
@@ -110,14 +110,14 @@ Current weak point:
 - distributed execution must prove recovery from partial failure, package
   fetch failure, node loss, and stale authority state
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep agent and orchestra authority modes explicit
 - ensure every agent execution failure reports a machine-readable reason
 - continue remote-server tests through Installer-owned paths instead of ad-hoc
   SSH operations
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - add fault-injection tests for agent disconnect, package rejection, runtime
   crash, and scheduler retry
@@ -126,7 +126,7 @@ Current weak point:
 - prove centralized and decentralized mesh modes without treating one as a
   second-class fallback
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - one bounded workflow can survive ordinary distributed-system failures without
   cascading into an unexplained global failure.
@@ -145,19 +145,19 @@ Current weak point:
   reaches agent engines must be language-neutral
 - the TaskIR surface still needs more golden examples and compatibility gates
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep TaskIR independent of UI, Phoenix, React, and Elixir-only runtime state
 - make package fetch, readiness, dispatch, and result serialization visible in
   task previews
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - freeze the first executable TaskIR compatibility surface
 - add golden TaskIR examples for Rust-authored and Elixir-authored tasks
 - add digest and replay checks for representative workflows
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - agent engines execute a stable task representation, not a private frontend or
   language-runtime convention.
@@ -176,20 +176,20 @@ Current weak point:
   backend capabilities, but experience parity is not fully proven
 - Workbench still needs an obvious main workflow loop for serious users
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep GUI actions, headless flows, and Installer preflight aligned around the
   same backend reports
 - continue modular UI loading and layout safety work without hiding backend
   state behind UI-only behavior
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - add one obvious Workbench path: prepare model, choose workflow, preflight,
   run, inspect, export, recover
 - make mobile/WebView frontend constraints compatible with remote runtime use
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - the GUI is a first-class client of the same system, not a special runtime
   that secretly owns core behavior.
@@ -208,20 +208,20 @@ Current weak point:
   systematic around manifests, TaskIR, workflow datasets, credentials, and
   package loading
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep dynamic library loading behind explicit host policy
 - keep credential storage sandboxed and visible
 - add more manifest and workflow malformed-input fixtures
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - fuzz TaskIR, workflow dataset contracts, operator manifests, and package
   preflight parsing
 - add red-line tests for path traversal, stale authority, invalid certificates,
   and unexpected runtime residue
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - common malformed or hostile inputs fail closed with useful diagnostics and no
   hidden residue burden.
@@ -241,20 +241,20 @@ Current weak point:
 - optimization metrics and reports need to feel like product primitives, not
   demo notes
 
-`1.19.x` focus:
+Current moxi hardening focus:
 
 - keep the heat-spreader example reproducible
 - expand score contracts and feasibility explanations
 - connect headless SDK output, evidence bundles, and report artifacts
 
-`1.19.x -> 2.0.x` focus:
+Qualification focus:
 
 - add a coupled multiphysics material exploration example
 - include parameter sweep, optimization objectives, ranking, failure
   explanations, and exported report artifacts
 - run the same example through CLI/headless and Workbench-facing paths
 
-`2.0` exit standard:
+Moxi readiness standard:
 
 - Kyuubiki can show one honest automated materials-research loop that is
   repeatable, inspectable, and useful even if still scoped.

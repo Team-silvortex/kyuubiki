@@ -31,6 +31,8 @@
         "evidence_path",
         "capture_command",
         "check_command",
+        "review_status",
+        "review_gate",
         "promotion_blocker"
       ],
       "properties": {
@@ -39,6 +41,9 @@
         "evidence_path": { "$ref": "#/$defs/repoPath" },
         "capture_command": { "$ref": "#/$defs/makeCommand" },
         "check_command": { "$ref": "#/$defs/makeCommand" },
+        "review_status": { "enum": ["pending_signoff", "approved", "blocked_scope", "rejected"] },
+        "review_gate": { "type": "string", "minLength": 1 },
+        "review_decision_path": { "$ref": "#/$defs/repoPath" },
         "promotion_blocker": { "type": "string", "minLength": 1 }
       }
     }

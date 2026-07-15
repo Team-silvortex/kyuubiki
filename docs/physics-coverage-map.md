@@ -1,13 +1,13 @@
 # Physics Coverage Map
 
-This document defines the `tamamono 1.15.x` physics-coverage push.
+This document defines the active `moxi 2.x` physics-coverage baseline.
 
 The goal is breadth with honest limits, not final numerical authority. The
-coverage created in this window prepares the `1.15.x` and `1.17.x` work on
-engine boundaries, executable task files, operator descriptors, and durable
+coverage carried forward from `tamamono 1.x` now prepares the `moxi 2.x` work
+on engine boundaries, executable task files, operator descriptors, and durable
 workflow contracts.
 
-## 1.15.x Rule
+## moxi 2.x Rule
 
 Every major simulation family should have at least one runnable path through
 the Rust solver and benchmark stack.
@@ -30,10 +30,9 @@ work. The reliability evidence index for that matrix starts at
 `config/operator-reliability/`, and is guarded by
 `make check-operator-reliability`.
 
-For `tamamono 1.15.x`, every covered solve operator now carries at least
-`review` evidence. The manifest's `minimum_coverage_level` is `review`, so the
-guard fails if a covered solver is accidentally downgraded to `baseline` or
-`smoke`.
+For `moxi 2.x`, every covered solve operator now carries at least `review`
+evidence. The manifest's `minimum_coverage_level` is `review`, so the guard
+fails if a covered solver is accidentally downgraded to `baseline` or `smoke`.
 
 It covers:
 
@@ -60,13 +59,12 @@ The matrix is not a claim that every family is industrial-grade. It is a
 contract that each family has a real execution path that future engine and task
 format work must preserve.
 
-## Why This Comes Before 1.15.x And 1.17.x
+## Why This Comes Before The 2.x Task Format Freeze
 
 The executable task format should not be designed around only one or two
 favorite solvers.
 
-By the end of the `1.15.x` window, the engine-facing task shape needs examples
-from:
+Before the engine-facing task shape is frozen, it needs examples from:
 
 - scalar field solves
 - vector or displacement solves
@@ -216,9 +214,8 @@ The Rust engine and Web/Elixir workflow runtime both expose these domain
 quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.
 
-That variety is what prevents `1.15.x` operator SDK work from hard-coding a
-single physics family, and it prevents `1.17.x` executable task files from
-becoming too narrow.
+That variety is what prevents operator SDK work from hard-coding a single
+physics family, and it prevents executable task files from becoming too narrow.
 
 ## Coverage Levels
 
@@ -235,11 +232,11 @@ Use these labels consistently:
   the family has external validation, convergence posture, and documented
   limits suitable for serious engineering claims
 
-The first `1.15.x` reliability pass now requires all covered solve operators
-to reach at least `review`. New experimental families may still start as
-`smoke` or `baseline` outside this release gate, but they should not be added
-to the release-gated `physics-coverage` manifest until their evidence satisfies
-the declared minimum.
+The current reliability pass requires all covered solve operators to reach at
+least `review`. New experimental families may still start as `smoke` or
+`baseline` outside this release gate, but they should not be added to the
+release-gated `physics-coverage` manifest until their evidence satisfies the
+declared minimum.
 
 The current machine-readable manifest should be treated as the source of truth
 for per-operator trust level. A solver family can only move from `smoke` to
@@ -248,7 +245,8 @@ benchmark, test, validation, and limitation evidence.
 
 ## Exit Criteria
 
-`1.15.x` is ready to hand off to the `1.15.x` and `1.17.x` contract work when:
+The physics-coverage baseline is ready to hand off to the 2.x contract work
+when:
 
 - the `physics-coverage` matrix runs all built-in benchmark templates
 - each `physics-coverage` solver family has a matching headless workflow solve
@@ -260,4 +258,4 @@ benchmark, test, validation, and limitation evidence.
 - material studies can point to the solver families they depend on
 - TaskIR and executable task design have examples from all major coverage
   classes, not only mechanical fixtures
-- `make check-operator-reliability` reports `37 operators, review=37`
+- `make check-operator-reliability` reports `38 operators, review=38`

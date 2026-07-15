@@ -22,6 +22,16 @@ Instead, each snapshot records:
   Staged qualification evidence records for a release. These bind candidate
   IDs to capture/check commands and evidence bundle paths before any operator
   is promoted beyond review.
+- `qualification-evidence/<version>/<candidate>-release-evidence.json`
+  Release-retained validation reports captured from the qualification commands.
+  These files are checked back through the validation profile runner so the
+  release record points at evidence that can be replayed without reopening the
+  full workflow UI.
+- `qualification-review-decisions/<version>/<candidate>-review-decision.json`
+  Reviewer-authored decision records for qualification candidates. These bind
+  the reviewer identity, decision, release version, evidence path, and review
+  gate before a release record can move from pending sign-off to another review
+  status.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

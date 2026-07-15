@@ -28,6 +28,7 @@ const allowedActionKinds = new Set([
 const targetLevels = ["baseline", "review", "qualification"];
 const evidencePhases = ["planned", "collecting", "ready_for_review", "blocked"];
 const releaseGateImpacts = ["release_blocker", "release_watch", "experimental_only"];
+const releaseReviewStatuses = ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"];
 
 function fail(message) {
   console.error(`operator qualification readiness check failed: ${message}`);
@@ -80,6 +81,13 @@ function requireStringErrors(value, field, context) {
   return [];
 }
 
+function requireIntegerErrors(value, field, context) {
+  if (!Number.isInteger(value) || value < 0) {
+    return [`${context}: ${field} must be a non-negative integer`];
+  }
+  return [];
+}
+
 function actionErrors(action, index) {
   const errors = [];
   const context = `next_actions[${index}]`;
@@ -98,6 +106,11 @@ function actionErrors(action, index) {
   if (action.action_kind === "restore_or_generate_artifact") {
     errors.push(...requireStringErrors(action.path, "path", context));
   }
+  if (action.action_kind === "review") {
+    errors.push(...requireStringErrors(action.review_reason, "review_reason", context));
+  }
+  errors.push(...requireIntegerErrors(action.validation_profile_count, "validation_profile_count", context));
+  errors.push(...requireIntegerErrors(action.release_candidate_profile_count, "release_candidate_profile_count", context));
   errors.push(...requireStringErrors(action.gate, "gate", context));
   errors.push(...requireStringErrors(action.preferred_validation_lane, "preferred_validation_lane", context));
   errors.push(...requireStringErrors(action.release_gate_impact, "release_gate_impact", context));
@@ -108,6 +121,16 @@ function countBy(candidates, field, values) {
   return Object.fromEntries(values.map((value) => [
     value,
     candidates.filter((candidate) => candidate[field] === value).length,
+  ]));
+}
+
+function countReleaseReviewStatuses(candidates) {
+  const releaseArtifacts = candidates.flatMap((candidate) =>
+    (candidate.artifacts ?? []).filter((artifact) => artifact.kind === "release_retained_regression_output")
+  );
+  return Object.fromEntries(releaseReviewStatuses.map((status) => [
+    status,
+    releaseArtifacts.filter((artifact) => (artifact.release_review_status ?? "missing") === status).length,
   ]));
 }
 
@@ -155,13 +178,24 @@ function readinessErrors(report, relativeInput) {
     candidate.artifact_counts?.present > 0 || candidate.artifact_counts?.command_available > 0
   ).length;
   const broken = report.candidates.filter((candidate) => candidate.readiness === "broken").length;
+  const validationProfileCount = report.candidates.reduce((count, candidate) => count + (candidate.validation_profiles?.length ?? 0), 0);
+  const releaseCandidateProfiles = report.candidates.reduce((count, candidate) =>
+    count + (candidate.validation_profiles ?? []).filter((profile) => profile.profile_role === "release_candidate").length, 0);
+  const missingReleaseProfiles = report.candidates.filter((candidate) =>
+    !(candidate.validation_profiles ?? []).some((profile) => profile.profile_role === "release_candidate")
+  ).length;
   if (report.summary?.collecting !== collecting) errors.push(`${relativeInput}: summary.collecting is stale`);
   if (report.summary?.planned !== planned) errors.push(`${relativeInput}: summary.planned is stale`);
   if (report.summary?.with_entries !== withEntries) errors.push(`${relativeInput}: summary.with_entries is stale`);
   if (report.summary?.broken !== broken) errors.push(`${relativeInput}: summary.broken is stale`);
+  if (report.summary?.validation_profile_count !== validationProfileCount) errors.push(`${relativeInput}: summary.validation_profile_count is stale`);
+  if (report.summary?.release_candidate_profiles !== releaseCandidateProfiles) errors.push(`${relativeInput}: summary.release_candidate_profiles is stale`);
+  if (report.summary?.component_profiles !== validationProfileCount - releaseCandidateProfiles) errors.push(`${relativeInput}: summary.component_profiles is stale`);
+  if (report.summary?.candidates_missing_release_profile !== missingReleaseProfiles) errors.push(`${relativeInput}: summary.candidates_missing_release_profile is stale`);
   errors.push(...countMapErrors(report.summary?.target_levels, countBy(report.candidates, "target_level", targetLevels), "target_levels", relativeInput));
   errors.push(...countMapErrors(report.summary?.evidence_phases, countBy(report.candidates, "evidence_phase", evidencePhases), "evidence_phases", relativeInput));
   errors.push(...countMapErrors(report.summary?.release_gate_impacts, countBy(report.candidates, "release_gate_impact", releaseGateImpacts), "release_gate_impacts", relativeInput));
+  errors.push(...countMapErrors(report.summary?.release_review_statuses, countReleaseReviewStatuses(report.candidates), "release_review_statuses", relativeInput));
   report.next_actions.forEach((action, index) => {
     errors.push(...actionErrors(action, index));
   });
@@ -193,10 +227,15 @@ if (args.selfTest) {
       with_entries: 0,
       not_started: 1,
       broken: 0,
+      validation_profile_count: 1,
+      release_candidate_profiles: 1,
+      component_profiles: 0,
+      candidates_missing_release_profile: 0,
       next_action_count: 2,
       target_levels: { baseline: 0, review: 0, qualification: 1 },
       evidence_phases: { planned: 1, collecting: 0, ready_for_review: 0, blocked: 0 },
       release_gate_impacts: { release_blocker: 1, release_watch: 0, experimental_only: 0 },
+      release_review_statuses: { missing: 0, pending_signoff: 0, approved: 0, blocked_scope: 0, rejected: 0 },
     },
     candidates: [{
       candidate_id: "sample",
@@ -209,6 +248,13 @@ if (args.selfTest) {
       operator_ids: ["solve.sample"],
       artifact_counts: { total: 1, present: 0, command_available: 0, missing: 0, not_started: 1 },
       artifacts: [],
+      validation_profiles: [{
+        profile_id: "sample",
+        profile_role: "release_candidate",
+        trust_goal: "review",
+        operator_count: 1,
+        command_count: 1,
+      }],
       primary_blocker: "sample blocker",
       evidence_gaps: ["sample"],
       graduation_gate: "sample gate",
@@ -227,7 +273,11 @@ if (args.selfTest) {
         artifact_state: "not_started",
         artifact_kind: "reference_note",
         command: null,
+        check_command: null,
         path: null,
+        review_reason: null,
+        validation_profile_count: 1,
+        release_candidate_profile_count: 1,
         gate: "collect canonical reference note",
         preferred_validation_lane: "make sample-validation",
         release_gate_impact: "release_blocker",
@@ -245,6 +295,9 @@ if (args.selfTest) {
         command: "make sample-release-evidence",
         check_command: "make check-sample-release-evidence",
         path: null,
+        review_reason: null,
+        validation_profile_count: 1,
+        release_candidate_profile_count: 1,
         gate: "retain release evidence",
         preferred_validation_lane: "make sample-release-evidence",
         release_gate_impact: "release_watch",

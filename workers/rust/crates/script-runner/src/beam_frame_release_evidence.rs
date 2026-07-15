@@ -15,13 +15,19 @@ const EXPECTED_COMMANDS: &[&str] = &[
     "beam-review-fixture",
     "torsion-review-fixture",
     "frame-review-fixture",
+    "beam-torsion-input-reliability",
+    "torsion-input-reliability",
+    "frame-2d-input-reliability",
 ];
 const EXPECTED_EVIDENCE_PATHS: &[&str] = &[
     "evidence/operator-qualification/beam-frame-classic-reference-note.md",
     "evidence/operator-qualification/beam-frame-force-sign-convention.md",
     "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
     "workers/rust/crates/solver/tests/beam_1d_review.rs",
+    "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
     "workers/rust/crates/solver/tests/torsion_1d_review.rs",
+    "workers/rust/crates/solver/tests/torsion_input_reliability.rs",
+    "workers/rust/crates/solver/tests/frame_input_reliability.rs",
     "workers/rust/crates/solver/tests/frame_2d_review.rs",
 ];
 

@@ -36,6 +36,7 @@
         "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
         "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
       ],
@@ -47,7 +48,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 469,
+            "duration_ms": 588,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -59,7 +60,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 207,
+            "duration_ms": 49,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -71,7 +72,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 503,
+            "duration_ms": 93,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -83,7 +84,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 372,
+            "duration_ms": 51,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -95,7 +96,19 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 260,
+            "duration_ms": 104,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1683,
             "stdout_tail": [],
             "stderr_tail": []
           }

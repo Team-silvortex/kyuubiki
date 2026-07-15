@@ -36,11 +36,12 @@ This directory contains host-native operational entry points.
   cleanup path for disk-constrained workstations.
 - `kyuubiki-script-runner audit-version-line`
   Audit repository-wide version contracts and inventory visible version
-  references before advancing a shipping line such as `tamamono 1.7.0`. The
-  exact-contract lane includes release metadata, package metadata, generated
-  docs mirrors, update catalogs, shipped language-pack catalog versions, and
-  hand-maintained Markdown facts such as `current-line.md` and
-  `version-line.md`. The retained `.mjs` script is only a parity reference.
+  references before advancing a shipping line such as `moxi 2.0.0` and later
+  release points. The exact-contract lane includes release metadata, package
+  metadata, generated docs mirrors, update catalogs, shipped language-pack
+  catalog versions, and hand-maintained Markdown facts such as
+  `current-line.md` and `version-line.md`. The retained `.mjs` script is only a
+  parity reference.
 - `kyuubiki-script-runner rust-line-audit`
   Native Rust source line-count audit, currently `800` lines per file by
   default, so crate and test modules stay split before they become hard to
@@ -133,8 +134,7 @@ This directory contains host-native operational entry points.
   check-make-modules` target calls this runner command directly.
 - `kyuubiki-script-runner validate-language-packs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
-  envelopes for the current release index version in the `tamamono 1.x` line,
-  including exact parity with
+  envelopes for the current release index version, including exact parity with
   `config/localization/mainstream-language-pack-locales.json`. Make now uses
   the native runner; the retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-ui-automation-contract`
@@ -289,14 +289,27 @@ This directory contains host-native operational entry points.
   version, command success, provenance inputs, SHA-256 shape, release-retention
   flags, and absence of local absolute repository paths. The retained `.mjs`
   script is only a parity reference.
+- `kyuubiki-script-runner check-operator-validation --in report.json --profile name`
+  Validate a retained operator-validation report without rerunning its
+  commands. This is the generic release-evidence checker for profile-backed
+  candidates such as thermal plane, electromagnetic plane, and modal frame. It
+  requires `executed=true`, `ok=true`, and a single matching profile when
+  `--profile` is supplied.
 - `kyuubiki-script-runner build-operator-qualification-readiness`
   Build a repo-local JSON readiness report for all qualification roadmap
   candidates, including artifact state, graduation gates, and a sorted
   `next_actions` queue for the highest-priority evidence collection steps.
+  Release-retained artifacts include their release record state, review
+  status, and review gate when a release record exists.
 - `kyuubiki-script-runner check-operator-qualification-readiness`
   Validate the generated readiness report and its `next_actions` queue. Use
   `--self-test` when changing readiness sorting or action-kind requirements.
   The retained `.mjs` scripts are parity references.
+- `make check-operator-qualification-review-decision`
+  Validate an operator qualification review decision against the release
+  record, evidence path, review gate, reviewer identity, and allowed decision
+  transition rules. By default it checks the retained beam/frame review
+  decision under `releases/qualification-review-decisions/2.0.0/`.
 - `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -438,6 +451,29 @@ Useful checks:
 - `make check-line-field-qualification-release-evidence`
   Validate the generated or staged line-field release evidence bundle. Override
   `IN=tmp/name.json` when checking a release-staging copy.
+- `make capture-thermal-plane-qualification-release-evidence`
+  Run and retain the `thermal-plane-patch` validation profile. Override
+  `OUT=tmp/name.json`; release copies should live under
+  `releases/qualification-evidence/<version>/`.
+- `make check-thermal-plane-qualification-release-evidence`
+  Validate a retained thermal-plane validation report with `IN=tmp/name.json`.
+- `make capture-electromagnetic-plane-qualification-release-evidence`
+  Run and retain the `electromagnetic-plane-patch` validation profile. Override
+  `OUT=tmp/name.json`.
+- `make check-electromagnetic-plane-qualification-release-evidence`
+  Validate a retained electromagnetic-plane validation report with
+  `IN=tmp/name.json`.
+- `make capture-modal-frame-qualification-release-evidence`
+  Run and retain the `modal-frame-sanity` validation profile. Override
+  `OUT=tmp/name.json`.
+- `make check-modal-frame-qualification-release-evidence`
+  Validate a retained modal-frame validation report with `IN=tmp/name.json`.
+- `make capture-stokes-flow-screening-release-evidence`
+  Run and retain the `screening-cfd-boundary` release-candidate validation
+  profile. Override `OUT=tmp/name.json`; this is evidence for the CFD
+  screening boundary, not a stronger CFD qualification claim.
+- `make check-stokes-flow-screening-release-evidence`
+  Validate a retained Stokes screening validation report with `IN=tmp/name.json`.
 - `make check-elixir-self-host`
   Check the current machine's Elixir, Mix, OTP, and orchestrator environment
   contract against `config/toolchains.json`. Use `./scripts/kyuubiki

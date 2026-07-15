@@ -234,16 +234,17 @@ Failure advice should prefer:
 
 instead of generic “something failed” messaging.
 
-## Relationship to `1.15.x`
+## Relationship To Moxi 2.x
 
-Inside the `1.15.x` to `2.0.x` industrialization range, this surface is
-especially relevant to the `1.15.x` trust-hardening and remote-deployment
-themes:
+Inside `moxi 2.x`, this surface remains the installer-owned path for
+trust-hardened remote deployment and runtime recovery. It carries forward the
+old industrialization work without treating ad-hoc SSH as the normal user
+experience:
 
-- `1.15.x`
+- trust hardening
   trust hardening, clearer operator-facing runtime claims, and fewer ambiguous
   control paths
-- `1.15.x`
+- asset and lineage formalization
   asset and lineage formalization, where remote workflow snapshots should stop
   being isolated UI history and become part of a clearer execution record
 

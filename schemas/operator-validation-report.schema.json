@@ -64,6 +64,13 @@
           "type": "string",
           "minLength": 1
         },
+        "profile_role": {
+          "enum": ["release_candidate", "component_profile"]
+        },
+        "qualification_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "trust_goal": {
           "type": "string",
           "minLength": 1

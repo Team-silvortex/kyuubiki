@@ -3,11 +3,11 @@
 .PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness
-.PHONY: check-operator-qualification-release-records
+.PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
-.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence
+.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence capture-stokes-flow-screening-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
-.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence
+.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
@@ -172,6 +172,9 @@ build-operator-qualification-readiness:
 check-operator-qualification-release-records:
 	@$(ENTRYPOINT) check-operator-qualification-release-records --in $${IN:-releases/qualification-records/1.20.0.json}
 
+check-operator-qualification-review-decision:
+	@node ./scripts/check-operator-qualification-review-decision.mjs --in $${IN:-releases/qualification-review-decisions/2.0.0/beam-frame-classic-review-decision.json}
+
 capture-line-field-qualification-provenance:
 	@$(ENTRYPOINT) capture-line-field-qualification-provenance --out $${OUT:-tmp/line-field-qualification-provenance.json}
 
@@ -194,6 +197,10 @@ capture-modal-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --self-test
 	@$(ENTRYPOINT) check-operator-validation --execute --profile modal-frame-sanity --out $${OUT:-tmp/modal-frame-sanity-qualification-release-evidence.json}
 
+capture-stokes-flow-screening-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile screening-cfd-boundary --out $${OUT:-tmp/stokes-flow-screening-release-evidence.json}
+
 check-beam-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-beam-frame-qualification-release-evidence --in $${IN:-tmp/beam-frame-classic-qualification-release-evidence.json}
 
@@ -205,6 +212,9 @@ check-electromagnetic-plane-qualification-release-evidence:
 
 check-modal-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/modal-frame-sanity-qualification-release-evidence.json} --profile modal-frame-sanity
+
+check-stokes-flow-screening-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/stokes-flow-screening-release-evidence.json} --profile screening-cfd-boundary
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline
@@ -249,7 +259,7 @@ remote-material-research-summary:
 	@$(ENTRYPOINT) check-remote-material-stage-health --self-test
 	@$(ENTRYPOINT) check-remote-material-stage-health
 
-check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness
+check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision
 	@$(ENTRYPOINT) check-operator-reliability
 
 audit-rust-lines:

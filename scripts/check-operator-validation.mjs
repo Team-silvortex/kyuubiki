@@ -11,6 +11,7 @@ const SCHEMA_VERSION = "kyuubiki.operator-validation-profiles/v1";
 const REPORT_SCHEMA_VERSION = "kyuubiki.operator-validation-report/v1";
 const ALLOWED_COMMAND_PREFIXES = ["make ", "cd workers/rust && cargo "];
 const ALLOWED_KINDS = new Set(["analytic", "boundary_regression", "contract", "cross_check", "invariant"]);
+const ALLOWED_PROFILE_ROLES = new Set(["release_candidate", "component_profile"]);
 const PROFILE_SCHEMA = "schemas/operator-validation-profiles.schema.json";
 const REPORT_SCHEMA = "schemas/operator-validation-report.schema.json";
 
@@ -21,6 +22,9 @@ function parseArgs(argv) {
     const next = argv[index + 1];
     if (arg === "--config" && next) {
       options.config = next;
+      index += 1;
+    } else if (arg === "--in" && next) {
+      options.inputReport = next;
       index += 1;
     } else if (arg === "--out" && next) {
       options.out = next;
@@ -101,7 +105,12 @@ function validateCommand(command, context) {
 
 function validateProfile(profile, context) {
   requireString(profile.profile_id, "profile_id", context);
+  requireString(profile.profile_role, "profile_role", context);
+  requireString(profile.qualification_candidate_id, "qualification_candidate_id", context);
   requireString(profile.trust_goal, "trust_goal", context);
+  if (!ALLOWED_PROFILE_ROLES.has(profile.profile_role)) {
+    throw new Error(`${context}: unsupported profile_role ${profile.profile_role}`);
+  }
   requireStringArray(profile.operators, "operators", context);
   requireStringArray(profile.validation_methods, "validation_methods", context);
   requireStringArray(profile.formal_invariants, "formal_invariants", context);
@@ -210,6 +219,20 @@ function validateReport(report, options) {
   }
 }
 
+function validateInputReport(report, options) {
+  if (report.executed !== true) {
+    throw new Error("input report must be executed=true");
+  }
+  if (report.ok !== true) {
+    throw new Error("input report must be ok=true");
+  }
+  if (options.profile) {
+    if (report.profiles.length !== 1 || report.profiles[0].profile_id !== options.profile) {
+      throw new Error(`input report must contain only profile ${options.profile}`);
+    }
+  }
+}
+
 function runCommand(command) {
   const startedAt = Date.now();
   let result;
@@ -253,6 +276,8 @@ function buildReport(config, options) {
     }));
     return {
       profile_id: profile.profile_id,
+      profile_role: profile.profile_role,
+      qualification_candidate_id: profile.qualification_candidate_id,
       trust_goal: profile.trust_goal,
       operators: profile.operators,
       validation_methods: profile.validation_methods,
@@ -287,6 +312,8 @@ function runSelfTest() {
     profiles: [
       {
         profile_id: "sample",
+        profile_role: "release_candidate",
+        qualification_candidate_id: "sample",
         trust_goal: "review",
         operators: ["solve.sample"],
         validation_methods: ["analytic"],
@@ -312,6 +339,14 @@ function runSelfTest() {
   sample.profiles[0].commands[1].kind = "boundary_regression";
   const report = buildReport(sample, { config: "config/sample.json", execute: false });
   assert.doesNotThrow(() => validateReport(report, { config: "config/sample.json" }));
+  const executedReport = buildReport(sample, { config: "config/sample.json", execute: false, profile: "sample" });
+  executedReport.executed = true;
+  executedReport.profiles[0].commands.forEach((command) => {
+    command.result = { ok: true, status: 0, duration_ms: 1, stdout_tail: [], stderr_tail: [] };
+  });
+  assert.doesNotThrow(() => validateReport(executedReport, { config: "config/sample.json", profile: "sample" }));
+  assert.doesNotThrow(() => validateInputReport(executedReport, { profile: "sample" }));
+  assert.throws(() => validateInputReport(report, { profile: "sample" }), /executed=true/u);
   assert.throws(
     () => buildReport(sample, { config: "config/sample.json", execute: false, profile: "missing" }),
     /no operator validation profiles matched/u,
@@ -325,6 +360,13 @@ try {
   const options = parseArgs(process.argv.slice(2));
   if (options.selfTest) {
     runSelfTest();
+    process.exit(0);
+  }
+  if (options.inputReport) {
+    const report = readJson(options.inputReport);
+    validateReport(report, options);
+    validateInputReport(report, options);
+    console.log(`operator validation report ok: ${options.inputReport} (${report.profile_count} profile(s))`);
     process.exit(0);
   }
   const config = readJson(options.config);

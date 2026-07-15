@@ -12,6 +12,9 @@ pub(super) struct ReleaseRecord {
     pub(super) status: String,
     pub(super) capture_command: String,
     pub(super) evidence_path: String,
+    pub(super) review_status: String,
+    pub(super) review_gate: String,
+    pub(super) review_decision_path: String,
 }
 
 pub(super) fn release_records_by_candidate(
@@ -34,6 +37,9 @@ fn record_from_value(record: &Value) -> (String, ReleaseRecord) {
             status: field(record, "status").to_string(),
             capture_command: field(record, "capture_command").to_string(),
             evidence_path: field(record, "evidence_path").to_string(),
+            review_status: field(record, "review_status").to_string(),
+            review_gate: field(record, "review_gate").to_string(),
+            review_decision_path: field(record, "review_decision_path").to_string(),
         },
     )
 }

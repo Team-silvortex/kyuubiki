@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-qualification-review-decision.schema.json",
+  "title": "Kyuubiki Operator Qualification Review Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "release_version",
+    "evidence_path",
+    "review_gate",
+    "decision",
+    "reviewer",
+    "reason",
+    "completed_gate_items",
+    "requested_changes",
+    "decided_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-qualification-review-decision/v1" },
+    "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "release_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "evidence_path": { "$ref": "#/$defs/repoPath" },
+    "review_gate": { "type": "string", "minLength": 1 },
+    "decision": { "enum": ["approve_promotion", "request_changes", "reject_promotion", "block_scope"] },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reason": { "type": "string", "minLength": 1 },
+    "completed_gate_items": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "requested_changes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "decided_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    }
+  }
+}

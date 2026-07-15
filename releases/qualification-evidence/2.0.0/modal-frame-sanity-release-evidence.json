@@ -29,6 +29,7 @@
         "evidence/operator-qualification/modal-frame-normalization-policy.md",
         "workers/rust/crates/solver/tests/modal_frame_2d_review.rs",
         "workers/rust/crates/solver/tests/modal_frame_3d_review.rs",
+        "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs",
         "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
       ],
       "commands": [
@@ -39,7 +40,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 243,
+            "duration_ms": 164,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -51,7 +52,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 190,
+            "duration_ms": 461,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -63,7 +64,19 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 186,
+            "duration_ms": 72,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "modal-frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1567,
             "stdout_tail": [],
             "stderr_tail": []
           }

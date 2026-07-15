@@ -36,6 +36,17 @@ Harness contract. It groups operators into validation profiles and records:
 - evidence paths that must remain repo-relative
 - commands that can execute the validation profile
 
+Each validation profile also declares its qualification mapping:
+
+- `profile_role=release_candidate` means the profile is itself the candidate
+  expected by release evidence and qualification records.
+- `profile_role=component_profile` means the profile is a narrower validation
+  lane that feeds a broader `qualification_candidate_id`.
+
+This keeps the status tensor from treating focused electrostatic, heat, or CFD
+screening lanes as missing release candidates when they are intentionally
+rolled into broader qualification kits.
+
 The input profile shape is retained as
 `schemas/operator-validation-profiles.schema.json`.
 
@@ -62,6 +73,8 @@ The first validation profiles cover:
 
 - `line-field-closed-form`: 1D analytic closed-form checks and tolerance policy
 - `stokes-flow-screening`: CFD Stokes screening boundary and tolerance checks
+- `screening-cfd-boundary`: release-candidate aggregation for the Stokes
+  screening boundary evidence kit
 - `electrostatic-plane-patch`: triangle/quad constant-gradient electric field
   and stored-energy patch checks
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
@@ -139,6 +152,18 @@ surfaces can distinguish release blockers from watch items without reparsing
 every candidate. The make target uses the native script runner and validates
 the generated report so the queue stays machine-consumable for release gates
 and future UI surfaces.
+Readiness also carries validation profile mappings. A candidate with only
+`component_profile` entries is not broken, but it is still weaker than a
+candidate with a `release_candidate` validation profile because the executable
+validation lane has not yet been promoted to the same granularity as the
+release qualification record.
+Release-retained artifacts also carry `release_review_status` and
+`release_review_gate` in readiness output. This keeps pending reviewer
+sign-off and scope-blocked screening claims visible without promoting any
+operator trust level prematurely.
+The readiness summary rolls these into `release_review_statuses`, so release
+owners can see pending sign-off, approved, rejected, missing, and scope-blocked
+release artifacts without scanning every candidate.
 `make check-operator-reliability` builds and validates this readiness report
 before checking the release manifest, so the qualification queue stays visible
 without pretending that planning artifacts are qualification evidence.
@@ -301,8 +326,11 @@ The CFD-facing Stokes operators are still `screening_only`, but the
 has body-force and lid-driven shear boundary fixtures, and the triangle lane
 adds geometry rejection plus heterogeneous viscosity response. The test suite
 encodes a screening divergence tolerance and the retained screening policy
-documents its current scope, but the operators still need mesh-convergence or
-external-reference evidence before any stronger claim.
+documents its current scope. The `screening-cfd-boundary` validation profile
+now acts as the release-candidate aggregation lane, while
+`stokes-flow-screening` remains the narrower component profile. The operators
+still need mesh-convergence or external-reference evidence before any stronger
+claim.
 
 The first qualification evidence collection track is now active for
 `line-field-closed-form` and has reached `ready_for_review`. Its versioned

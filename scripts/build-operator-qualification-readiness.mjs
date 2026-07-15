@@ -5,6 +5,8 @@ import { operatorReliabilityPaths } from "./operator-reliability-contracts.mjs";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const defaultOut = "tmp/operator-qualification-readiness.json";
+const validationProfilesPath = "config/operator-validation-profiles.json";
+const releaseReviewStatuses = ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"];
 
 function fail(message) {
   console.error(`operator qualification readiness build failed: ${message}`);
@@ -48,26 +50,53 @@ function releaseRecordsByCandidate() {
   return new Map((records.records ?? []).map((record) => [record.candidate_id, record]));
 }
 
-function artifactState(requirement, releaseRecord) {
-  if (requirement.artifact_path) {
-    return {
-      artifact_id: requirement.artifact_id,
-      kind: requirement.kind,
-      state: fs.existsSync(path.join(repoRoot, requirement.artifact_path)) ? "present" : "missing",
-      path: requirement.artifact_path,
-      gate: requirement.gate,
+function validationProfilesByCandidate() {
+  const source = readJson(validationProfilesPath);
+  const grouped = new Map();
+  for (const profile of source.profiles ?? []) {
+    const candidateId = profile.qualification_candidate_id ?? profile.profile_id;
+    const entry = {
+      profile_id: profile.profile_id,
+      profile_role: profile.profile_role ?? "component_profile",
+      trust_goal: profile.trust_goal,
+      operator_count: profile.operators?.length ?? 0,
+      command_count: profile.commands?.length ?? 0,
     };
+    grouped.set(candidateId, [...(grouped.get(candidateId) ?? []), entry]);
   }
+  for (const profiles of grouped.values()) {
+    profiles.sort((left, right) =>
+      left.profile_role.localeCompare(right.profile_role)
+      || left.profile_id.localeCompare(right.profile_id)
+    );
+  }
+  return grouped;
+}
+
+function artifactState(requirement, releaseRecord) {
   if (requirement.artifact_command) {
     const releaseState = releaseRecord?.capture_command === requirement.artifact_command ? releaseRecord.status : null;
     return {
       artifact_id: requirement.artifact_id,
       kind: requirement.kind,
       state: releaseState ? "present" : "command_available",
+      path: requirement.artifact_path ?? null,
       command: requirement.artifact_command,
       check_command: requirement.artifact_check_command ?? null,
       release_record_state: releaseState ?? "missing",
       release_record_path: releaseRecord?.evidence_path ?? "",
+      release_review_status: releaseRecord?.review_status ?? "missing",
+      release_review_gate: releaseRecord?.review_gate ?? "",
+      release_review_decision_path: releaseRecord?.review_decision_path ?? "",
+      gate: requirement.gate,
+    };
+  }
+  if (requirement.artifact_path) {
+    return {
+      artifact_id: requirement.artifact_id,
+      kind: requirement.kind,
+      state: fs.existsSync(path.join(repoRoot, requirement.artifact_path)) ? "present" : "missing",
+      path: requirement.artifact_path,
       gate: requirement.gate,
     };
   }
@@ -79,7 +108,7 @@ function artifactState(requirement, releaseRecord) {
   };
 }
 
-function readinessFor(candidate, kit, releaseRecord) {
+function readinessFor(candidate, kit, releaseRecord, validationProfiles) {
   const artifacts = (kit?.artifact_requirements ?? []).map((requirement) => artifactState(requirement, releaseRecord));
   const present = artifacts.filter((artifact) => artifact.state === "present").length;
   const commands = artifacts.filter((artifact) => artifact.state === "command_available").length;
@@ -113,6 +142,7 @@ function readinessFor(candidate, kit, releaseRecord) {
       not_started: notStarted,
     },
     artifacts,
+    validation_profiles: validationProfiles,
     primary_blocker: candidate.primary_blocker,
     evidence_gaps: candidate.evidence_gaps,
     graduation_gate: candidate.graduation_gate,
@@ -158,6 +188,8 @@ function buildNextActions(candidates) {
   return candidates
     .map((candidate) => {
       const artifact = firstActionableArtifact(candidate);
+      const validationProfiles = candidate.validation_profiles ?? [];
+      const releaseProfiles = validationProfiles.filter((profile) => profile.profile_role === "release_candidate");
       return {
         candidate_id: candidate.candidate_id,
         priority: candidate.priority,
@@ -172,6 +204,9 @@ function buildNextActions(candidates) {
         check_command: artifact?.check_command ?? null,
         path: artifact?.path ?? null,
         gate: artifact?.gate ?? candidate.graduation_gate,
+        review_reason: artifact ? null : candidate.primary_blocker,
+        validation_profile_count: validationProfiles.length,
+        release_candidate_profile_count: releaseProfiles.length,
         preferred_validation_lane: candidate.preferred_validation_lane,
         release_gate_impact: candidate.release_gate_impact,
       };
@@ -191,6 +226,16 @@ function countBy(candidates, field, values) {
   ]));
 }
 
+function countReleaseReviewStatuses(candidates) {
+  const releaseArtifacts = candidates.flatMap((candidate) =>
+    candidate.artifacts.filter((artifact) => artifact.kind === "release_retained_regression_output")
+  );
+  return Object.fromEntries(releaseReviewStatuses.map((status) => [
+    status,
+    releaseArtifacts.filter((artifact) => (artifact.release_review_status ?? "missing") === status).length,
+  ]));
+}
+
 function buildReport() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
   const kits = readJson(operatorReliabilityPaths.evidenceKits);
@@ -199,10 +244,19 @@ function buildReport() {
   }
   const kitByCandidate = new Map(kits.kits.map((kit) => [kit.candidate_id, kit]));
   const releaseRecords = releaseRecordsByCandidate();
+  const validationProfiles = validationProfilesByCandidate();
   const candidates = roadmap.candidates.map((candidate) =>
-    readinessFor(candidate, kitByCandidate.get(candidate.candidate_id), releaseRecords.get(candidate.candidate_id))
+    readinessFor(
+      candidate,
+      kitByCandidate.get(candidate.candidate_id),
+      releaseRecords.get(candidate.candidate_id),
+      validationProfiles.get(candidate.candidate_id) ?? []
+    )
   );
   const nextActions = buildNextActions(candidates);
+  const validationProfileCount = candidates.reduce((count, candidate) => count + candidate.validation_profiles.length, 0);
+  const releaseCandidateProfiles = candidates.reduce((count, candidate) =>
+    count + candidate.validation_profiles.filter((profile) => profile.profile_role === "release_candidate").length, 0);
   return {
     schema_version: "kyuubiki.operator-qualification-readiness/v1",
     version_line: roadmap.version_line,
@@ -214,6 +268,12 @@ function buildReport() {
       with_entries: candidates.filter((candidate) => candidate.artifact_counts.present > 0 || candidate.artifact_counts.command_available > 0).length,
       not_started: candidates.filter((candidate) => candidate.artifact_counts.not_started === candidate.artifact_counts.total).length,
       broken: candidates.filter((candidate) => candidate.readiness === "broken").length,
+      validation_profile_count: validationProfileCount,
+      release_candidate_profiles: releaseCandidateProfiles,
+      component_profiles: validationProfileCount - releaseCandidateProfiles,
+      candidates_missing_release_profile: candidates.filter((candidate) =>
+        !candidate.validation_profiles.some((profile) => profile.profile_role === "release_candidate")
+      ).length,
       next_action_count: nextActions.length,
       target_levels: countBy(candidates, "target_level", ["baseline", "review", "qualification"]),
       evidence_phases: countBy(candidates, "evidence_phase", ["planned", "collecting", "ready_for_review", "blocked"]),
@@ -222,6 +282,7 @@ function buildReport() {
         "release_watch",
         "experimental_only",
       ]),
+      release_review_statuses: countReleaseReviewStatuses(candidates),
     },
     next_actions: nextActions,
     candidates,

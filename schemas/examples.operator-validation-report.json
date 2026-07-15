@@ -7,6 +7,8 @@
   "profiles": [
     {
       "profile_id": "stokes-flow-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "screening-cfd-boundary",
       "trust_goal": "review_screening",
       "operators": [
         "solve.stokes_flow_triangle_2d"

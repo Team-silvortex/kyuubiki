@@ -9,6 +9,7 @@ type RunnerResult<T> = Result<T, String>;
 const STANDARD_PATH: &str = "config/architecture/module-extension-standard.json";
 const SCHEMA_PATH: &str = "schemas/module-extension-standard.schema.json";
 const SCHEMA_VERSION: &str = "kyuubiki.module-extension-standard/v1";
+const VERSION_LINE: &str = "moxi 2.0.x";
 const REQUIRED_TYPES: &[&str] = &[
     "module",
     "function_paradigm",
@@ -50,6 +51,11 @@ fn validate_standard(root: &Path, standard: &Value) -> RunnerResult<()> {
         standard.get("schema_version"),
         SCHEMA_VERSION,
         &format!("schema_version must be {SCHEMA_VERSION}"),
+    )?;
+    require_string_eq(
+        standard.get("version_line"),
+        VERSION_LINE,
+        &format!("version_line must be {VERSION_LINE}"),
     )?;
     assert_repo_file(root, SCHEMA_PATH)?;
 
@@ -141,6 +147,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     let fixture = serde_json::json!({
         "$schema": "../../schemas/module-extension-standard.schema.json",
         "schema_version": SCHEMA_VERSION,
+        "version_line": VERSION_LINE,
         "source_of_truth": {
             "topology": "config/architecture/module-topology.json",
             "matrix": "config/architecture/module-function-coverage-matrix.json",

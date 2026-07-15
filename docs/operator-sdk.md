@@ -304,8 +304,11 @@ The current package manifest contract is:
 }
 ```
 
-For `tamamono 1.15.x`, `validation_status` should normally stay `partial`
-unless the operator family has explicit baseline evidence and release checks.
+For `moxi 2.x`, `validation_status` should normally stay `partial` unless the
+operator family has explicit baseline evidence and release checks.
+The template keeps `minimum_host_version` at `1.15.0` as a backward-compatible
+floor for the sample package; new moxi-only packages may raise that floor to
+the first host line they actually require.
 The engine host checks `minimum_host_version` before activation, so an operator
 package built for a newer host line fails at load time instead of reaching an
 undefined runtime path.

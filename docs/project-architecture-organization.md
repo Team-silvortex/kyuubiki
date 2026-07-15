@@ -1,8 +1,9 @@
 # Project Architecture Organization
 
-This document is the working organization map for the `tamamono 1.15.x`
+This document is the working organization map for the active `moxi 2.x`
 architecture line. It exists to keep feature work, protocol work, and cleanup
-moving in the same direction.
+moving in the same direction after the `tamamono 1.x` bridge became historical
+preparation context.
 
 For a whole-system module map before diving into source ownership details, read
 [module-architecture.md](module-architecture.md) first.

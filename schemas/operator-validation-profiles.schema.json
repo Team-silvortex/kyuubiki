@@ -51,6 +51,8 @@
       "additionalProperties": false,
       "required": [
         "profile_id",
+        "profile_role",
+        "qualification_candidate_id",
         "trust_goal",
         "operators",
         "validation_methods",
@@ -60,6 +62,12 @@
       ],
       "properties": {
         "profile_id": {
+          "$ref": "#/$defs/id"
+        },
+        "profile_role": {
+          "enum": ["release_candidate", "component_profile"]
+        },
+        "qualification_candidate_id": {
           "$ref": "#/$defs/id"
         },
         "trust_goal": {

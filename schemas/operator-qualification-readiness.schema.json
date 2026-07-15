@@ -14,7 +14,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v1" },
-    "version_line": { "type": "string", "pattern": "^tamamono 1\\.20\\.x$" },
+    "version_line": { "type": "string", "pattern": "^moxi 2\\.0\\.x$" },
     "generated_at_utc": { "type": "string", "minLength": 10 },
     "summary": {
       "type": "object",
@@ -25,10 +25,15 @@
         "with_entries",
         "not_started",
         "broken",
+        "validation_profile_count",
+        "release_candidate_profiles",
+        "component_profiles",
+        "candidates_missing_release_profile",
         "next_action_count",
         "target_levels",
         "evidence_phases",
-        "release_gate_impacts"
+        "release_gate_impacts",
+        "release_review_statuses"
       ],
       "additionalProperties": false,
       "properties": {
@@ -38,10 +43,15 @@
         "with_entries": { "type": "integer", "minimum": 0 },
         "not_started": { "type": "integer", "minimum": 0 },
         "broken": { "type": "integer", "minimum": 0 },
+        "validation_profile_count": { "type": "integer", "minimum": 0 },
+        "release_candidate_profiles": { "type": "integer", "minimum": 0 },
+        "component_profiles": { "type": "integer", "minimum": 0 },
+        "candidates_missing_release_profile": { "type": "integer", "minimum": 0 },
         "next_action_count": { "type": "integer", "minimum": 0 },
         "target_levels": { "$ref": "#/$defs/targetLevelCounts" },
         "evidence_phases": { "$ref": "#/$defs/evidencePhaseCounts" },
-        "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" }
+        "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" },
+        "release_review_statuses": { "$ref": "#/$defs/releaseReviewStatusCounts" }
       }
     },
     "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
@@ -79,6 +89,18 @@
         "experimental_only": { "type": "integer", "minimum": 0 }
       }
     },
+    "releaseReviewStatusCounts": {
+      "type": "object",
+      "required": ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"],
+      "additionalProperties": false,
+      "properties": {
+        "missing": { "type": "integer", "minimum": 0 },
+        "pending_signoff": { "type": "integer", "minimum": 0 },
+        "approved": { "type": "integer", "minimum": 0 },
+        "blocked_scope": { "type": "integer", "minimum": 0 },
+        "rejected": { "type": "integer", "minimum": 0 }
+      }
+    },
     "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "ready_for_review", "broken", "blocked"] },
     "artifactState": { "enum": ["present", "missing", "command_available", "not_started"] },
     "candidate": {
@@ -94,6 +116,7 @@
         "operator_ids",
         "artifact_counts",
         "artifacts",
+        "validation_profiles",
         "primary_blocker",
         "evidence_gaps",
         "graduation_gate",
@@ -123,11 +146,24 @@
           }
         },
         "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "validation_profiles": { "type": "array", "items": { "$ref": "#/$defs/validationProfile" } },
         "primary_blocker": { "type": "string", "minLength": 1 },
         "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "graduation_gate": { "type": "string", "minLength": 1 },
         "preferred_validation_lane": { "type": "string", "pattern": "^make [a-zA-Z0-9_.-]+$" },
         "release_gate_impact": { "enum": ["release_blocker", "release_watch", "experimental_only"] }
+      }
+    },
+    "validationProfile": {
+      "type": "object",
+      "required": ["profile_id", "profile_role", "trust_goal", "operator_count", "command_count"],
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "profile_role": { "enum": ["release_candidate", "component_profile"] },
+        "trust_goal": { "type": "string", "minLength": 1 },
+        "operator_count": { "type": "integer", "minimum": 0 },
+        "command_count": { "type": "integer", "minimum": 0 }
       }
     },
     "artifact": {
@@ -143,6 +179,9 @@
         "check_command": { "type": ["string", "null"], "minLength": 1 },
         "release_record_state": { "enum": ["missing", "staged_for_review", "attached_to_release", "rejected"] },
         "release_record_path": { "type": "string" },
+        "release_review_status": { "enum": ["missing", "pending_signoff", "approved", "blocked_scope", "rejected"] },
+        "release_review_gate": { "type": "string" },
+        "release_review_decision_path": { "type": "string" },
         "gate": { "type": "string", "minLength": 1 }
       }
     },
@@ -162,6 +201,9 @@
         "check_command",
         "path",
         "gate",
+        "review_reason",
+        "validation_profile_count",
+        "release_candidate_profile_count",
         "preferred_validation_lane",
         "release_gate_impact"
       ],
@@ -180,6 +222,9 @@
         "check_command": { "type": ["string", "null"] },
         "path": { "type": ["string", "null"] },
         "gate": { "type": "string", "minLength": 1 },
+        "review_reason": { "type": ["string", "null"] },
+        "validation_profile_count": { "type": "integer", "minimum": 0 },
+        "release_candidate_profile_count": { "type": "integer", "minimum": 0 },
         "preferred_validation_lane": { "type": "string", "pattern": "^make [a-zA-Z0-9_.-]+$" },
         "release_gate_impact": { "enum": ["release_blocker", "release_watch", "experimental_only"] }
       }

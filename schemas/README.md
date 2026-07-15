@@ -90,14 +90,22 @@ README.
   generated bundle artifacts can include both capture and check commands
 - `operator-qualification-readiness.schema.json` is for the generated
   qualification readiness report that turns roadmap candidates and evidence
-  kits into a sorted next-action queue
+  kits into a sorted next-action queue; it also carries validation profile
+  mapping counts so component profiles and release-candidate profiles do not
+  get conflated in coverage/status reporting
 - `operator-qualification-release-records.schema.json` is for release-bound
   qualification evidence records that bind snapshot metadata, candidate IDs,
-  capture commands, check commands, and retained evidence bundle paths
+  capture commands, check commands, retained evidence bundle paths, and the
+  structured review status/gate that blocks or permits later promotion
+- `operator-qualification-review-decision.schema.json` is for reviewer-authored
+  promotion decisions. It binds candidate ID, release version, evidence path,
+  review gate, reviewer identity, decision, rationale, and requested changes
+  before release records are allowed to move out of pending sign-off.
 - `operator-validation-profiles.schema.json` is for the input profile contract
   consumed by `make check-operator-validation`, including grouped operators,
   evidence paths, validation methods, formal invariants, and controlled command
-  kinds
+  kinds; each profile declares whether it is a release candidate profile or a
+  component profile feeding a broader qualification candidate
 - `operator-package-dynamic-smoke.schema.json` is for the retained
   end-to-end external operator package smoke report, including template tests,
   strict package preflight, template `cdylib` build, and engine dynamic host
@@ -192,6 +200,9 @@ README.
 - `examples.operator-validation-report.json` is the retained fixture for the
   operator validation report shape, including the `boundary_regression` command
   kind and the non-executed `not_run` result form
+- `examples.operator-qualification-review-decision.json` is the retained
+  fixture for a reviewer decision that requests changes against a release
+  qualification evidence bundle
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

@@ -77,6 +77,20 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "beam-torsion-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for beam and torsion line operators",
+          "artifact_path": "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "frame-2d-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for frame 2D operator inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/frame_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-beam-frame-qualification-release-evidence before promotion",
@@ -117,6 +131,13 @@
           "kind": "material_fixture",
           "gate": "link thermal and thermoelastic patch assumptions to material-card data",
           "artifact_path": "evidence/operator-qualification/thermal-plane-material-provenance.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "thermal-plane-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for thermal triangle and quad plane operators",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -163,6 +184,20 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "electromagnetic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for electrostatic and magnetostatic plane operators",
+          "artifact_path": "workers/rust/crates/solver/tests/field_plane_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "magnetostatic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for magnetostatic triangle and quad plane operators",
+          "artifact_path": "workers/rust/crates/solver/tests/magnetostatic_plane_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-electromagnetic-plane-qualification-release-evidence before promotion",
@@ -201,6 +236,13 @@
           "kind": "scope_note",
           "gate": "document mode-shape normalization and degenerate-mode handling",
           "artifact_path": "evidence/operator-qualification/modal-frame-normalization-policy.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "modal-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for modal 2D and 3D frame operators",
+          "artifact_path": "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -249,6 +291,15 @@
           "kind": "tolerance_policy",
           "gate": "pin the screening divergence tolerance scope and explicitly block Navier-Stokes or mesh-convergence claims",
           "artifact_path": "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "stokes-screening-release-evidence",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-stokes-flow-screening-release-evidence before widening CFD screening claims",
+          "artifact_path": "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
+          "artifact_command": "make capture-stokes-flow-screening-release-evidence",
+          "artifact_check_command": "make check-stokes-flow-screening-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
