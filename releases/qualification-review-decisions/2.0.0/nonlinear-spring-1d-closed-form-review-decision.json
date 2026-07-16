@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "nonlinear-spring-1d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",
+  "review_gate": "single hardening spring Cardano root, Newton convergence, tangent stiffness, and force-balance evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained monotone hardening nonlinear spring scope after Cardano displacement, force balance, tangent stiffness, and load-step convergence evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "nonlinear spring 1D closed-form regression passes",
+    "nonlinear spring 1D review regression passes",
+    "nonlinear spring reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

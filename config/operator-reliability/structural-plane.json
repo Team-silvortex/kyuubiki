@@ -1,0 +1,132 @@
+{
+  "schema_version": "kyuubiki.operator-reliability-shard/v1",
+  "domain": "structural",
+  "operators": [
+    {
+      "operator_id": "solve.plane_triangle_2d",
+      "benchmark_template": "plane-panel",
+      "domain": "structural",
+      "coverage_level": "qualification",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs",
+          "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_plane_triangle_2d_small_patch",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "small_strain",
+            "constant_strain_triangle"
+          ],
+          "boundary_checks": [
+            "left_edge_x_constraint",
+            "bottom_edge_y_constraint",
+            "loaded_top_edge_response"
+          ],
+          "diagnostics": [
+            "nodal_displacement",
+            "element_strain",
+            "element_stress",
+            "principal_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_triangle_2d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/plane-2d-patch-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/plane-2d-patch-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/plane_input_reliability.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "small_strain",
+        "constant_strain_triangle",
+        "small_patch_reference_scope"
+      ]
+    },
+    {
+      "operator_id": "solve.plane_quad_2d",
+      "benchmark_template": "plane-quad-panel",
+      "domain": "structural",
+      "coverage_level": "qualification",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs",
+          "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+        ],
+        "accuracy_baseline": "accuracy_baseline_plane_quad_2d_sample_fixture",
+        "review": {
+          "assumptions": [
+            "linear_plane_stress",
+            "small_strain",
+            "quad_split_into_constant_strain_triangles"
+          ],
+          "boundary_checks": [
+            "left_edge_x_constraint",
+            "bottom_edge_y_constraint",
+            "loaded_top_edge_response"
+          ],
+          "diagnostics": [
+            "nodal_displacement",
+            "weighted_element_strain",
+            "weighted_element_stress",
+            "principal_stress",
+            "von_mises"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_quad_2d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/plane-2d-patch-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/plane-2d-patch-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/plane_input_reliability.rs"
+          ]
+        }
+      },
+      "limits": [
+        "linear_plane_stress",
+        "small_strain",
+        "quad_split_triangles",
+        "small_patch_reference_scope"
+      ]
+    }
+  ]
+}

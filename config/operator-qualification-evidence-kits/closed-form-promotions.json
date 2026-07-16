@@ -293,6 +293,111 @@
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
+    },
+    {
+      "candidate_id": "solid-tetra-3d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "unit_constant_strain_tetra_3d",
+      "operator_ids": [
+        "solve.solid_tetra_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive unit solid tetra reduced stiffness, stress, von Mises, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/solid-tetra-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-solid-tetra-3d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-solid-tetra-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-solid-tetra-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "nonlinear-spring-1d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "single_hardening_spring_cardano_root",
+      "operator_ids": [
+        "solve.nonlinear_spring_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the monotone hardening spring Cardano root and tangent stiffness invariant",
+          "artifact_path": "evidence/operator-qualification/nonlinear-spring-1d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-nonlinear-spring-1d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-nonlinear-spring-1d-qualification-release-evidence",
+          "artifact_check_command": "make check-nonlinear-spring-1d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "frame-3d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "single_member_3d_frame_cantilever",
+      "operator_ids": [
+        "solve.frame_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive 3D frame cantilever displacement, rotation, moment, stress, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/frame-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-frame-3d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-frame-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-frame-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "plane-2d-patch-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "small_plane_stress_patch",
+      "operator_ids": [
+        "solve.plane_triangle_2d",
+        "solve.plane_quad_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "retain plane triangle and split-triangle quad patch displacement, stress, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/plane-2d-patch-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-plane-2d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
+          "artifact_command": "make capture-plane-2d-qualification-release-evidence",
+          "artifact_check_command": "make check-plane-2d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
     }
   ]
 }

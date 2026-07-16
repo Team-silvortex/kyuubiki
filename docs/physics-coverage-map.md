@@ -37,7 +37,8 @@ fails if a covered solver is accidentally downgraded to `baseline` or `smoke`.
 It covers:
 
 - structural mechanics: axial bar, spring 1D/2D/3D, nonlinear spring, contact
-  gap, beam, truss, frame, solid tetra, plane triangle, and plane quad
+  gap, beam, truss, frame, qualification-scoped solid tetra, plane triangle,
+  and plane quad
 - thermal and heat transfer: thermal bar, heat bar, heat plane triangle, heat
   plane quad, thermal beam, thermal truss, thermal plane, and thermal frame
 - electrostatics: 1D bar plus 2D triangle and quad plane fields
@@ -258,4 +259,4 @@ when:
 - material studies can point to the solver families they depend on
 - TaskIR and executable task design have examples from all major coverage
   classes, not only mechanical fixtures
-- `make check-operator-reliability` reports `38 operators, review=5, qualification=33`
+- `make check-operator-reliability` reports `38 operators, qualification=38`

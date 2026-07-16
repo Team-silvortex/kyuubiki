@@ -470,13 +470,40 @@ also reads approved evidence bundles and requires their `promotion_summary` to
 match the release record, review decision path, release version, and roadmap
 operator IDs before an approved record can remain valid. The readiness report
 summarizes that same gate as `summary.release_promotion_summaries`, currently
-showing nineteen approved promotions as retained, declared, matched, and not
+showing twenty-three approved promotions as retained, declared, matched, and not
 missing.
 
-`solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
-solid-tetra benchmark template and a solver-level review fixture for a
-restrained single-tetra load path. It is still a screening fixture, not a
-mesh-convergence or qualification claim.
+`solve.solid_tetra_3d` is now qualified for the current unit constant-strain
+tetrahedron scope. The retained evidence derives the reduced stiffness for a
+three-node restrained base with one loaded free tip, then checks displacement,
+constitutive stress components, von Mises stress, and strain energy against
+`workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs`. This remains
+a single-element linear-elastic qualification, not a mesh-convergence,
+plasticity, contact, or large-deformation claim.
+
+`solve.nonlinear_spring_1d` is now qualified for the current single hardening
+spring scope. The retained evidence derives the Cardano root for
+`F = k u + c u^3`, then checks the Newton result, force balance, tangent
+stiffness, residuals, and monotonic load-step factors against
+`workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs`. This is
+a monotone one-dimensional hardening qualification, not a hysteresis,
+softening, snap-through, or dynamics claim.
+
+`solve.frame_3d` is now qualified for the current single-member cantilever
+scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
+root moment, bending stress, and strain-energy formulas for an x-aligned 3D
+frame, then checks them against
+`workers/rust/crates/solver/tests/frame_3d_closed_form.rs`. This remains a
+single-member linear static qualification, not a multi-member stability,
+geometric nonlinearity, warping, plastic-hinge, or dynamics claim.
+
+`solve.plane_triangle_2d` and `solve.plane_quad_2d` are now qualified for the
+current small plane-stress patch scope. The retained evidence checks the
+triangle direct-stiffness reference, the quad split-triangle weighted contract,
+stress diagnostics, von Mises handling, and strain-energy totals against
+`workers/rust/crates/solver/tests/plane_2d_closed_form.rs`. This remains a
+small-patch qualification, not a mesh-convergence, high-order quadrature,
+distorted-element, plasticity, buckling, or large-deformation claim.
 
 The `beam-frame-classic` qualification candidate is now approved for
 qualification. Its reference note is

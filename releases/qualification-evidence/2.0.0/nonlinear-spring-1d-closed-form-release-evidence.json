@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "nonlinear-spring-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "nonlinear-spring-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.nonlinear_spring_1d"
+      ],
+      "validation_methods": [
+        "cardano_closed_form_root",
+        "newton_convergence_cross_check",
+        "tangent_stiffness_invariant"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement_is_zero",
+        "tip_displacement_matches_cubic_closed_form_root",
+        "element_force_matches_external_load",
+        "tangent_stiffness_matches_derivative_of_force_law",
+        "load_step_factors_are_monotonic"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-nonlinear.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/nonlinear-spring-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "nonlinear-spring-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 4052,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "nonlinear-spring-1d-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1707,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "nonlinear-spring-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_1d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1587,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ],
+  "promotion_summary": {
+    "candidate_id": "nonlinear-spring-1d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/nonlinear-spring-1d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.nonlinear_spring_1d"
+    ]
+  }
+}

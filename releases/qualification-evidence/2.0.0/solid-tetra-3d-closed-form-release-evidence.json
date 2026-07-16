@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "solid-tetra-3d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "solid-tetra-3d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.solid_tetra_3d"
+      ],
+      "validation_methods": [
+        "analytic_single_free_node_solution",
+        "constitutive_stress_cross_check",
+        "von_mises_energy_invariant"
+      ],
+      "formal_invariants": [
+        "restrained_base_displacements_are_zero",
+        "tip_z_displacement_matches_reduced_stiffness_closed_form",
+        "stress_components_match_isotropic_elasticity_matrix",
+        "von_mises_matches_deviatoric_closed_form",
+        "strain_energy_matches_half_force_displacement_work"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-solid.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/solid-tetra-3d-closed-form.md",
+        "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "solid-tetra-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_3d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1948,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "solid-tetra-3d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_3d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 65,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "solid-tetra-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1304,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ],
+  "promotion_summary": {
+    "candidate_id": "solid-tetra-3d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/solid-tetra-3d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.solid_tetra_3d"
+    ]
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "plane-2d-patch-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "plane-2d-patch-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.plane_triangle_2d",
+        "solve.plane_quad_2d"
+      ],
+      "validation_methods": [
+        "direct_stiffness_patch_reference",
+        "constant_strain_triangle_invariant",
+        "split_triangle_quad_invariant"
+      ],
+      "formal_invariants": [
+        "fixed_support_displacements_are_zero",
+        "retained_patch_displacements_match_reference_values",
+        "triangle_planar_stress_metrics_match_closed_form",
+        "quad_split_triangle_weighted_result_matches_reference_values",
+        "strain_energy_matches_density_area_thickness_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-plane.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/plane-2d-patch-closed-form.md",
+        "workers/rust/crates/solver/tests/plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/plane_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "plane-triangle-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_triangle_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 4066,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "plane-quad-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_quad_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1643,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "plane-2d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_2d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1725,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1570,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ],
+  "promotion_summary": {
+    "candidate_id": "plane-2d-patch-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/plane-2d-patch-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.plane_triangle_2d",
+      "solve.plane_quad_2d"
+    ]
+  }
+}

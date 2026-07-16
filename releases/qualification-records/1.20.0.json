@@ -212,6 +212,50 @@
       "review_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
       "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-frame-3d-closed-form-review-decision.json",
       "promotion_blocker": "no blocker; reviewer approved promotion for the retained 3D fully restrained thermal-gradient frame scope"
+    },
+    {
+      "candidate_id": "solid-tetra-3d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
+      "capture_command": "make capture-solid-tetra-3d-qualification-release-evidence",
+      "check_command": "make check-solid-tetra-3d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "unit solid tetra reduced stiffness, constitutive stress, von Mises, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/solid-tetra-3d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained unit solid tetra single-free-node closed-form scope"
+    },
+    {
+      "candidate_id": "nonlinear-spring-1d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",
+      "capture_command": "make capture-nonlinear-spring-1d-qualification-release-evidence",
+      "check_command": "make check-nonlinear-spring-1d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "single hardening spring Cardano root, Newton convergence, tangent stiffness, and force-balance evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/nonlinear-spring-1d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained monotone hardening nonlinear spring scope"
+    },
+    {
+      "candidate_id": "frame-3d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json",
+      "capture_command": "make capture-frame-3d-qualification-release-evidence",
+      "check_command": "make check-frame-3d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "3D frame cantilever displacement, rotation, end moment, stress, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/frame-3d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained single-member 3D frame cantilever scope"
+    },
+    {
+      "candidate_id": "plane-2d-patch-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
+      "capture_command": "make capture-plane-2d-qualification-release-evidence",
+      "check_command": "make check-plane-2d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "plane triangle and split-triangle quad patch displacement, stress diagnostic, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/plane-2d-patch-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained plane 2D small patch scope"
     }
   ]
 }

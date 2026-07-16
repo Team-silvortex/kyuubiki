@@ -305,47 +305,6 @@
       ]
     },
     {
-      "operator_id": "solve.nonlinear_spring_1d",
-      "benchmark_template": "nonlinear-spring-chain",
-      "domain": "structural",
-      "coverage_level": "review",
-      "evidence": {
-        "benchmark_matrix": "physics-coverage",
-        "headless_workflow": true,
-        "tests": [
-          "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs"
-        ],
-        "reliability_suite": "nonlinear_spring_reliability",
-        "review": {
-          "assumptions": [
-            "hardening_cubic_spring_law",
-            "incremental_static_load",
-            "newton_equilibrium_iteration"
-          ],
-          "boundary_checks": [
-            "fixed_root_displacement",
-            "loaded_tip_response",
-            "monotonic_load_factor_steps"
-          ],
-          "diagnostics": [
-            "convergence_status",
-            "residual_norm",
-            "load_step_iterations",
-            "element_force",
-            "tangent_stiffness"
-          ],
-          "tests": [
-            "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs"
-          ]
-        }
-      },
-      "limits": [
-        "toy_nonlinear_law",
-        "screening_only",
-        "single_hardening_spring_fixture"
-      ]
-    },
-    {
       "operator_id": "solve.contact_gap_1d",
       "benchmark_template": "contact-gap-chain",
       "domain": "structural",
@@ -532,12 +491,13 @@
       "operator_id": "solve.frame_3d",
       "benchmark_template": "frame-3d",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs",
+          "workers/rust/crates/solver/tests/frame_3d_closed_form.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_frame_3d_tip_loaded_cantilever",
         "review": {
@@ -559,6 +519,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/frame_3d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/frame-3d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/frame_3d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/frame-3d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/frame_3d_review.rs",
+            "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
           ]
         }
       },
@@ -686,88 +666,6 @@
         "linear_truss",
         "pin_jointed",
         "small_displacement"
-      ]
-    },
-    {
-      "operator_id": "solve.plane_triangle_2d",
-      "benchmark_template": "plane-panel",
-      "domain": "structural",
-      "coverage_level": "review",
-      "evidence": {
-        "benchmark_matrix": "physics-coverage",
-        "headless_workflow": true,
-        "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
-        ],
-        "accuracy_baseline": "accuracy_baseline_plane_triangle_2d_small_patch",
-        "review": {
-          "assumptions": [
-            "linear_plane_stress",
-            "small_strain",
-            "constant_strain_triangle"
-          ],
-          "boundary_checks": [
-            "left_edge_x_constraint",
-            "bottom_edge_y_constraint",
-            "loaded_top_edge_response"
-          ],
-          "diagnostics": [
-            "nodal_displacement",
-            "element_strain",
-            "element_stress",
-            "principal_stress",
-            "von_mises"
-          ],
-          "tests": [
-            "workers/rust/crates/solver/tests/plane_triangle_2d_review.rs"
-          ]
-        }
-      },
-      "limits": [
-        "linear_plane_stress",
-        "small_strain",
-        "constant_strain_triangle"
-      ]
-    },
-    {
-      "operator_id": "solve.plane_quad_2d",
-      "benchmark_template": "plane-quad-panel",
-      "domain": "structural",
-      "coverage_level": "review",
-      "evidence": {
-        "benchmark_matrix": "physics-coverage",
-        "headless_workflow": true,
-        "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
-        ],
-        "accuracy_baseline": "accuracy_baseline_plane_quad_2d_sample_fixture",
-        "review": {
-          "assumptions": [
-            "linear_plane_stress",
-            "small_strain",
-            "quad_split_into_constant_strain_triangles"
-          ],
-          "boundary_checks": [
-            "left_edge_x_constraint",
-            "bottom_edge_y_constraint",
-            "loaded_top_edge_response"
-          ],
-          "diagnostics": [
-            "nodal_displacement",
-            "weighted_element_strain",
-            "weighted_element_stress",
-            "principal_stress",
-            "von_mises"
-          ],
-          "tests": [
-            "workers/rust/crates/solver/tests/plane_quad_2d_review.rs"
-          ]
-        }
-      },
-      "limits": [
-        "linear_plane_stress",
-        "small_strain",
-        "quad_split_triangles"
       ]
     }
   ]

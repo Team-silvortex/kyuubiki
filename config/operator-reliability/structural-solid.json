@@ -6,12 +6,13 @@
       "operator_id": "solve.solid_tetra_3d",
       "benchmark_template": "solid-tetra-3d",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs"
+          "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
+          "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs"
         ],
         "reliability_suite": "solid_tetra_3d_review",
         "review": {
@@ -35,13 +36,33 @@
           "tests": [
             "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/solid-tetra-3d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/solid-tetra-3d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
+            "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs"
+          ]
         }
       },
       "limits": [
         "linear_elastic",
         "small_strain",
         "single_constant_strain_tetra",
-        "screening_fixture"
+        "single_free_tip_load_fixture"
       ]
     }
   ]

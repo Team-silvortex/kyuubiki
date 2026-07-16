@@ -461,6 +461,95 @@
       "graduation_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
       "preferred_validation_lane": "make capture-thermal-frame-3d-qualification-release-evidence",
       "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "solid-tetra-3d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.solid_tetra_3d"
+      ],
+      "rationale": "The unit constant-strain tetrahedron with three restrained base nodes and one free loaded tip has a compact reduced-stiffness closed form.",
+      "primary_blocker": "no blocker; reviewer approved the retained solid tetra validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current solid-tetra-3d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "unit tetra reduced-stiffness derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "unit solid tetra reduced stiffness, constitutive stress, von Mises, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-solid-tetra-3d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "nonlinear-spring-1d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.nonlinear_spring_1d"
+      ],
+      "rationale": "The single hardening nonlinear spring has a monotone cubic force law with a Cardano closed-form root for the loaded one-degree fixture.",
+      "primary_blocker": "no blocker; reviewer approved the retained nonlinear spring validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current nonlinear-spring-1d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "Cardano hardening-root derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "single hardening spring Cardano root, Newton convergence, tangent stiffness, and force-balance evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-nonlinear-spring-1d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "frame-3d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.frame_3d"
+      ],
+      "rationale": "The x-aligned single-member 3D frame cantilever has compact closed forms for transverse displacement, slope, end moment, bending stress, and energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained frame 3D validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current frame-3d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "3D cantilever derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "3D frame cantilever displacement, rotation, end moment, stress, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-frame-3d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "plane-2d-patch-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.plane_triangle_2d",
+        "solve.plane_quad_2d"
+      ],
+      "rationale": "The plane triangle and split-triangle quad operators have retained small-patch direct-stiffness references with stress diagnostic and energy invariants.",
+      "primary_blocker": "no blocker; reviewer approved the retained plane 2D patch validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current plane-2d patch qualification scope"
+      ],
+      "required_artifacts": [
+        "plane 2D patch derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "plane triangle and split-triangle quad patch displacement, stress diagnostic, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-plane-2d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
     }
   ]
 }

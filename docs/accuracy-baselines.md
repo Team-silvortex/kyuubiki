@@ -174,6 +174,30 @@ It promotes `solve.thermal_frame_3d` for the retained fully restrained
 single-member thermal-gradient scope after strain split, curvature, moment,
 combined-stress, and strain-energy checks pass.
 
+The twentieth approved qualification packet is
+[solid-tetra-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json).
+It promotes `solve.solid_tetra_3d` for the retained unit constant-strain
+tetrahedron scope after reduced stiffness, tip displacement, constitutive
+stress, von Mises, and strain-energy checks pass.
+
+The twenty-first approved qualification packet is
+[nonlinear-spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json).
+It promotes `solve.nonlinear_spring_1d` for the retained monotone hardening
+spring scope after Cardano root, Newton convergence, force balance, tangent
+stiffness, and load-step checks pass.
+
+The twenty-second approved qualification packet is
+[frame-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json).
+It promotes `solve.frame_3d` for the retained single-member 3D cantilever
+scope after tip displacement, tip rotation, root moment, bending stress, and
+strain-energy checks pass.
+
+The twenty-third approved qualification packet is
+[plane-2d-patch-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json).
+It promotes `solve.plane_triangle_2d` and `solve.plane_quad_2d` for the
+retained small plane-stress patch scope after direct-stiffness displacement,
+stress diagnostic, split-triangle, and strain-energy checks pass.
+
 ## Why these three first
 
 They are the best first return for `v1.x` accuracy work:

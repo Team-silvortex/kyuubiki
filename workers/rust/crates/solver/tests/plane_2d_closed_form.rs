@@ -1,0 +1,181 @@
+use kyuubiki_protocol::{
+    PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolvePlaneQuad2dRequest,
+    SolvePlaneTriangle2dRequest,
+};
+use kyuubiki_solver::{solve_plane_quad_2d, solve_plane_triangle_2d};
+
+#[test]
+fn plane_triangle_2d_matches_retained_patch_stiffness_reference() {
+    let result = solve_plane_triangle_2d(&triangle_patch()).expect("triangle patch should solve");
+
+    assert_close(result.nodes[0].ux, 0.0, 1.0e-12);
+    assert_close(result.nodes[0].uy, 0.0, 1.0e-12);
+    assert_close(result.nodes[1].uy, 0.0, 1.0e-12);
+    assert_close(result.nodes[3].ux, 0.0, 1.0e-12);
+    assert_close(result.nodes[2].ux, 4.714_285_714_285_715e-7, 1.0e-12);
+    assert_close(result.nodes[2].uy, -1.428_571_428_571_429e-6, 1.0e-12);
+    assert_close(result.max_displacement, 1.504_347_441_414_315e-6, 1.0e-12);
+    assert_close(result.max_stress, 100_000.0, 1.0e-10);
+
+    let mut expected_total_energy = 0.0;
+    for (element, input) in result.elements.iter().zip(result.input.elements.iter()) {
+        assert_close(element.area, 0.5, 1.0e-12);
+        assert_planar_metrics(
+            element.stress_x,
+            element.stress_y,
+            element.tau_xy,
+            element.principal_stress_1,
+            element.principal_stress_2,
+            element.max_in_plane_shear,
+            element.von_mises,
+        );
+        let expected_density = 0.5
+            * ((element.stress_x * element.strain_x)
+                + (element.stress_y * element.strain_y)
+                + (element.tau_xy * element.gamma_xy));
+        assert_close(element.strain_energy_density, expected_density, 1.0e-12);
+        expected_total_energy += expected_density * element.area * input.thickness;
+    }
+    assert_close(result.elements[0].von_mises, 100_000.0, 1.0e-10);
+    assert_close(result.total_strain_energy, expected_total_energy, 1.0e-12);
+    assert_close(
+        result.max_strain_energy_density,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy_density.abs())
+            .fold(0.0_f64, f64::max),
+        1.0e-12,
+    );
+}
+
+#[test]
+fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
+    let result = solve_plane_quad_2d(&quad_patch()).expect("quad patch should solve");
+
+    assert_close(result.nodes[0].ux, 0.0, 1.0e-12);
+    assert_close(result.nodes[0].uy, 0.0, 1.0e-12);
+    assert_close(result.nodes[1].uy, 0.0, 1.0e-12);
+    assert_close(result.nodes[3].ux, 0.0, 1.0e-12);
+    assert_close(result.nodes[2].ux, 2.576_145_151_695_419e-7, 1.0e-12);
+    assert_close(result.nodes[2].uy, -4.670_094_331_605_336_6e-7, 1.0e-12);
+    assert_close(result.max_displacement, 5.333_507_749_004_975e-7, 1.0e-12);
+    assert_close(result.max_stress, 126_981.385_278_360_32, 1.0e-10);
+
+    let element = &result.elements[0];
+    assert_close(element.area, 0.8, 1.0e-12);
+    assert_close(element.stress_x, 12_500.0, 1.0e-10);
+    assert_close(element.stress_y, -120_000.0, 1.0e-10);
+    assert_close(element.tau_xy, 3_048.780_487_804_874_6, 1.0e-10);
+    assert!(element.principal_stress_1 >= element.principal_stress_2);
+    assert!(element.max_in_plane_shear >= 0.0);
+    assert_close(element.von_mises, result.max_stress, 1.0e-12);
+    assert_close(
+        result.total_strain_energy,
+        element.strain_energy_density * element.area * result.input.elements[0].thickness,
+        1.0e-12,
+    );
+    assert_close(
+        result.max_strain_energy_density,
+        element.strain_energy_density.abs(),
+        1.0e-12,
+    );
+}
+
+fn triangle_patch() -> SolvePlaneTriangle2dRequest {
+    SolvePlaneTriangle2dRequest {
+        nodes: vec![
+            node("bottom_left", 0.0, 0.0, true, true, 0.0, 0.0),
+            node("bottom_right", 1.0, 0.0, false, true, 0.0, 0.0),
+            node("top_right", 1.0, 1.0, false, false, 0.0, -1000.0),
+            node("top_left", 0.0, 1.0, true, false, 0.0, -1000.0),
+        ],
+        elements: vec![
+            triangle("tri_lower", 0, 1, 2),
+            triangle("tri_upper", 0, 2, 3),
+        ],
+    }
+}
+
+fn quad_patch() -> SolvePlaneQuad2dRequest {
+    SolvePlaneQuad2dRequest {
+        nodes: vec![
+            node("bottom_left", 0.0, 0.0, true, true, 0.0, 0.0),
+            node("bottom_right", 1.0, 0.0, false, true, 0.0, 0.0),
+            node("top_right", 1.0, 0.8, false, false, 200.0, -1200.0),
+            node("top_left", 0.0, 0.8, true, false, 200.0, -1200.0),
+        ],
+        elements: vec![PlaneQuadElementInput {
+            id: "quad_panel".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.02,
+            youngs_modulus: 210.0e9,
+            poisson_ratio: 0.3,
+        }],
+    }
+}
+
+fn node(
+    id: &str,
+    x: f64,
+    y: f64,
+    fix_x: bool,
+    fix_y: bool,
+    load_x: f64,
+    load_y: f64,
+) -> PlaneNodeInput {
+    PlaneNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        fix_x,
+        fix_y,
+        load_x,
+        load_y,
+    }
+}
+
+fn triangle(id: &str, node_i: usize, node_j: usize, node_k: usize) -> PlaneTriangleElementInput {
+    PlaneTriangleElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        node_k,
+        thickness: 0.02,
+        youngs_modulus: 70.0e9,
+        poisson_ratio: 0.33,
+    }
+}
+
+fn assert_planar_metrics(
+    sigma_x: f64,
+    sigma_y: f64,
+    tau_xy: f64,
+    principal_1: f64,
+    principal_2: f64,
+    max_shear: f64,
+    von_mises: f64,
+) {
+    let center = 0.5 * (sigma_x + sigma_y);
+    let radius = (((0.5 * (sigma_x - sigma_y)).powi(2)) + tau_xy.powi(2)).sqrt();
+    assert_close(principal_1, center + radius, 1.0e-12);
+    assert_close(principal_2, center - radius, 1.0e-12);
+    assert_close(max_shear, radius, 1.0e-12);
+    assert_close(
+        von_mises,
+        ((sigma_x * sigma_x) - (sigma_x * sigma_y) + (sigma_y * sigma_y) + 3.0 * tau_xy * tau_xy)
+            .sqrt(),
+        1.0e-12,
+    );
+}
+
+fn assert_close(actual: f64, expected: f64, tolerance: f64) {
+    let scale = expected.abs().max(1.0);
+    assert!(
+        (actual - expected).abs() <= tolerance * scale,
+        "expected {actual} to be close to {expected}",
+    );
+}

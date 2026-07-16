@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "solid-tetra-3d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
+  "review_gate": "unit solid tetra reduced stiffness, constitutive stress, von Mises, and energy evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained unit solid tetra single-free-node closed-form scope after displacement, stress, von Mises, and energy evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "solid tetra 3D closed-form regression passes",
+    "solid tetra 3D review regression passes",
+    "solid tetra input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

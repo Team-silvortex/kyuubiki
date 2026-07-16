@@ -3,6 +3,10 @@
   "version_line": "moxi 2.0.x",
   "profile_shards": [
     "config/operator-validation-profiles/structural.json",
+    "config/operator-validation-profiles/structural-frame.json",
+    "config/operator-validation-profiles/structural-nonlinear.json",
+    "config/operator-validation-profiles/structural-plane.json",
+    "config/operator-validation-profiles/structural-solid.json",
     "config/operator-validation-profiles/thermal-structural.json"
   ],
   "profiles": [
