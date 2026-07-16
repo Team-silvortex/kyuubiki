@@ -36,6 +36,7 @@
             <li><strong>Current delivery</strong>: packs are local-first today, imported as JSON through the Workbench system surface.</li>
             <li><strong>Hub alignment</strong>: Hub now resolves copy through a local override registry so future pack delivery has the same deep-merge seam.</li>
             <li><strong>Surface guard</strong>: new packs can declare <code>targetSurface</code> as <code>workbench</code> or <code>hub</code> to prevent cross-surface imports.</li>
+            <li><strong>Import safety</strong>: shipped packs, Workbench imports, and Hub override imports reject UI text that looks like HTML, JavaScript URLs, inline handlers, browser-storage access, or script evaluation.</li>
             <li><strong>Hub entry</strong>: the current management card lives at <strong>Home -> Guides -> Localization overrides</strong>.</li>
           </ul>
         </article>
@@ -52,6 +53,7 @@
             <li>surface target: optional <code>targetSurface</code>, required by convention for new packs</li>
             <li>recommended metadata: <code>versionLine</code> and <code>targetAppVersion</code></li>
             <li>fallback rule: missing keys keep using the built-in copy</li>
+            <li>release gate: run <code>make check-language-packs</code> before treating shipped packs as ready</li>
           </ul>
           <p class="docs-copy">
             In Hub, the same panel now accepts either one language-pack envelope
@@ -67,6 +69,7 @@
             <li>Edit the JSON locally for the target language.</li>
             <li>Import the pack into the current browser workspace.</li>
             <li>Check the displayed compatibility state before treating the pack as release-ready.</li>
+            <li>Reject and fix packs that contain executable-looking UI text before retrying import.</li>
             <li>Export or remove the installed pack from the same UI surface.</li>
           </ul>
         </article>
@@ -76,7 +79,7 @@
           <ul class="docs-list">
             <li>No remote language-pack catalog download flow yet.</li>
             <li>No signature or provenance chain yet.</li>
-            <li>No heavyweight browser-side schema validator dependency yet.</li>
+            <li>No heavyweight browser-side schema validator dependency yet; local import currently uses lightweight structural and unsafe-text checks.</li>
             <li>No multi-pack conflict manager or priority stack yet.</li>
           </ul>
           <p class="docs-copy">

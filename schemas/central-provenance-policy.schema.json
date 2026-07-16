@@ -83,6 +83,19 @@
     },
     "resourceGate": {
       "type": "object",
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "language_pack" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "publish_evidence": { "contains": { "const": "unsafe_text_scan" } }
+            }
+          }
+        }
+      ],
       "required": [
         "kind",
         "publish_evidence",

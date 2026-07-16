@@ -15,8 +15,8 @@
       "title": "Numerical Trust",
       "readiness_state": "partial",
       "next_1x_focus": [
-        "promote the first qualification candidates with retained release evidence",
-        "keep broad physics coverage explicitly below qualification where evidence is review-only"
+        "deepen retained qualification evidence beyond compact closed-form and patch fixtures",
+        "keep broad physics coverage at qualification while labeling any new experimental families outside the release gate"
       ],
       "required": [
         "core solver families have benchmark-backed baselines",

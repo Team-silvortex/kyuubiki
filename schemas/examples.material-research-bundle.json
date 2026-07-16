@@ -77,6 +77,37 @@
     "run_next_duration_ms": 1,
     "chain_next_duration_ms": 1
   },
+  "research_evidence": {
+    "schema_version": "kyuubiki.material-research-evidence/v1",
+    "candidate_count": 3,
+    "ranked_candidate_ids": [
+      "pyrolytic_graphite_in_plane",
+      "aluminum_6061",
+      "copper_c110"
+    ],
+    "winner_candidate_id": "pyrolytic_graphite_in_plane",
+    "optimization_profile_id": "material.heat_spreader_screening.optimization.v1",
+    "primary_metric_ids": [
+      "peak_temperature_c",
+      "areal_mass_kg_m2",
+      "conductivity_density_ratio"
+    ],
+    "metric_objective_count": 3,
+    "violated_quality_gate_ids": [
+      "gate.peak_temperature.warning",
+      "gate.areal_mass.warning"
+    ],
+    "focus_candidate_ids": [
+      "pyrolytic_graphite_in_plane",
+      "aluminum_6061"
+    ],
+    "quality_gate_decision": "blocked_by_quality_gates",
+    "plan_decision": "mitigate_design_risk",
+    "plan_step_count": 3,
+    "chain_round_count": 1,
+    "chain_trace_round_count": 1,
+    "final_winner_candidate_id": "pyrolytic_graphite_in_plane"
+  },
   "summary": {
     "winner_candidate_id": "pyrolytic_graphite_in_plane",
     "reliability_decision": "blocked_by_quality_gates",

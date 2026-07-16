@@ -1,6 +1,18 @@
 export const HUB_COPY_OVERRIDE_STORAGE_KEY = "hub.copy-overrides.v1";
 export const HUB_COPY_IMPORT_MANIFEST_STORAGE_KEY = "hub.copy-import-manifest.v1";
 export const HUB_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
+const UNSAFE_HUB_COPY_TEXT_PATTERNS = [
+    "<",
+    ">",
+    "javascript:",
+    "data:text/html",
+    "onerror=",
+    "onclick=",
+    "innerhtml",
+    "document.cookie",
+    "localstorage",
+    "eval(",
+];
 let cachedRegistryRaw = null;
 let cachedRegistryValue = createEmptyRegistry();
 let cachedManifestRaw = null;
@@ -21,6 +33,19 @@ function createEmptyImportManifest() {
 }
 function isPlainObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+function hasUnsafeHubCopyText(value) {
+    if (typeof value === "string") {
+        const normalized = value.toLowerCase();
+        return UNSAFE_HUB_COPY_TEXT_PATTERNS.some((pattern) => normalized.includes(pattern));
+    }
+    if (Array.isArray(value)) {
+        return value.some(hasUnsafeHubCopyText);
+    }
+    if (isPlainObject(value)) {
+        return Object.values(value).some(hasUnsafeHubCopyText);
+    }
+    return false;
 }
 function cloneValue(value) {
     if (Array.isArray(value)) {
@@ -267,6 +292,9 @@ export function clearHubCopyOverrideRegistry(storage = window.localStorage) {
     cachedManifestValue = createEmptyImportManifest();
 }
 export function importHubCopyPayload(payload, storage = window.localStorage) {
+    if (hasUnsafeHubCopyText(payload)) {
+        throw new Error("unsafe-hub-copy-text");
+    }
     const currentRegistry = loadHubCopyOverrideRegistry(storage);
     const currentManifest = loadHubCopyImportManifest(storage);
     const importedAt = new Date().toISOString();

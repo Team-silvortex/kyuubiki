@@ -90,12 +90,23 @@ agent, CI lane, or human reviewer. It contains:
 - command templates for reproducing the same loop
 - a summary with winner, reliability decision, next-round decision, chain stop
   reason, convergence state, next iteration, and runnable next-step count
+- `research_evidence`, a compact machine-checkable index of ranked candidates,
+  optimization metrics, violated quality gates, focus candidates, plan step
+  count, chain round count, and final chain winner
 
 The retained bundle checker cross-validates that `summary.next_round_decision`,
 `summary.next_iteration`, `summary.runnable_next_step_count`, and
 `summary.chain_stop_reason` match the embedded execution plan, next exploration,
-and chain artifacts. This keeps the single-file story honest when an agent or
-reviewer reads only the top-level summary first.
+and chain artifacts. It also verifies that `research_evidence` keeps the winner,
+ranked candidate set, focus candidates, quality-gate decision, plan decision,
+step count, and chain trace count aligned with the retained artifacts. This
+keeps the single-file story honest when an agent or reviewer reads only the
+top-level summary first.
+
+The initial winner and final chain winner are intentionally separate fields.
+For simple heat-spreader screening they may match; for broader coupled-material
+search they can diverge as the next-round loop finds a stronger candidate. That
+drift is evidence, not noise.
 
 The checker rejects local absolute repository paths and checksum drift. This is
 still a screening artifact, not a qualification package, but it is now a single
@@ -117,8 +128,12 @@ make material-research-bundle-index
 The index is written under `tmp/material-research-bundles/index.json` with a
 matching `README.md` summary. Each index row also carries the next iteration and
 runnable next-step count so CI lanes or agents can choose cheap repair runs
-before expensive exploration. It is a local generated artifact and should stay
-out of Git unless a release explicitly promotes it.
+before expensive exploration. It now also lifts the compact research evidence:
+initial winner, final chain winner, metric count, violated-gate count, focus
+candidates, chain round count, and chain trace count. Agents can triage drift or
+blocked quality gates from the index before opening the full retained bundle.
+It is a local generated artifact and should stay out of Git unless a release
+explicitly promotes it.
 
 ## Closed-Loop Step
 

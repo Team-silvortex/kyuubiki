@@ -112,3 +112,58 @@ test("central store requests reuse workbench API auth context", async () => {
     globalThis.fetch = previousFetch;
   }
 });
+
+test("central store language-pack policy carries unsafe text evidence", async () => {
+  const responses: Record<string, unknown> = {
+    "/api/v1/central/publish-policy": {
+      schema_version: "kyuubiki.central-publish-policy/v1",
+      status: "blocked_preview",
+      accepting_submissions: false,
+      reason: "preview",
+      resource_kinds: [
+        {
+          kind: "language_pack",
+          manifest_schema: "schemas/language-pack.schema.json",
+          required_evidence: ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
+          distribution_modes: ["language_pack_catalog", "local_import"],
+          mutable_after_publish: false,
+        },
+      ],
+      review_stages: [],
+      publisher_requirements: {
+        login_required: true,
+        publisher_account_required: true,
+        personal_access_token_supported: false,
+        device_code_supported: false,
+        anonymous_publish_allowed: false,
+      },
+    },
+    "/api/v1/central/publish-readiness": {
+      schema_version: "kyuubiki.central-publish-readiness/v1",
+      status: "blocked_preview",
+      accepting_submissions: false,
+      blocking_reasons: [],
+      resource_readiness: [
+        {
+          kind: "language_pack",
+          status: "blocked_preview",
+          publish_evidence: ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
+          provenance_attestations: [],
+          installer_checks: [],
+          blocking_reasons: [],
+        },
+      ],
+      required_storage_tables: [],
+      next_unlocks: [],
+    },
+  };
+  const client = createCentralStoreApiClient(async <T>(url: string) => responses[url] as T);
+
+  const publishPolicy = await client.fetchCentralPublishPolicy();
+  const readiness = await client.fetchCentralPublishReadiness();
+  const languagePackPolicy = publishPolicy.resource_kinds.find((entry) => entry.kind === "language_pack");
+  const languagePackReadiness = readiness.resource_readiness.find((entry) => entry.kind === "language_pack");
+
+  assert.ok(languagePackPolicy?.required_evidence.includes("unsafe_text_scan"));
+  assert.ok(languagePackReadiness?.publish_evidence.includes("unsafe_text_scan"));
+});

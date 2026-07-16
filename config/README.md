@@ -24,8 +24,8 @@ contributors and automation.
   `profile_shards`. New qualification profiles should prefer shards once the
   main profile file approaches the source-size limit.
 - `operator-qualification-roadmap.json`
-  Planning queue for the first review-level operators that should be hardened
-  toward stronger trust. Each candidate records target level, evidence phase,
+  Planning queue for operators that need stronger retained evidence before or
+  during qualification. Each candidate records target level, evidence phase,
   primary blocker, preferred validation lane, and release-gate impact. It does
   not by itself upgrade any operator.
 - `operator-qualification-evidence-kits.json`

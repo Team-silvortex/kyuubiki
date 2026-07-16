@@ -23,9 +23,17 @@ assets.
 ## Validate
 
 ```sh
-node ./scripts/validate-language-packs.mjs
+make check-language-packs
 ```
 
-The validator checks the catalog, target surfaces, version line, app version,
-pack ids, timestamps, discovered pack files, unique language tags, and the
-minimum 30-pack mainstream target for each UI surface.
+The native validator checks the catalog, target surfaces, version line, app
+version, pack ids, timestamps, discovered pack files, unique language tags, and
+the minimum 30-pack mainstream target for each UI surface.
+
+It also rejects paths that are not repository-relative and text that looks like
+HTML, JavaScript URLs, inline event handlers, browser-storage access, or script
+evaluation. Workbench and Hub local import paths mirror the same unsafe-text
+rule before a pack or override registry can enter UI copy state.
+
+The retained Node entrypoint `node ./scripts/validate-language-packs.mjs` is
+kept for local compatibility, but the Make target is the release gate.

@@ -78,6 +78,8 @@ if (args.has("--self-test")) {
         '"mode" => "read_only_contract"',
         '"accepting_writes" => false',
         '"writes_enabled" => false',
+        "language_pack",
+        "unsafe_text_scan",
         ...pipelineStages,
         ...pipelineBlockers,
       ].join("\n"),
@@ -88,7 +90,7 @@ if (args.has("--self-test")) {
       "config/architecture/module-topology.json":
         "kyuubiki.module-topology/v1 central-web-service self_host_web orchestra-control-plane",
       "docs/central-server-components.md":
-        "central-web-service not a separate top-level module publish pipeline accepting_writes=false publisher identity installer download",
+        "central-web-service not a separate top-level module publish pipeline accepting_writes=false publisher identity installer download language_pack unsafe_text_scan",
     },
   });
   const issues = validateReport(report);
@@ -198,6 +200,17 @@ function buildReport({ readiness, files }) {
         "central_artifact_signatures",
       ]),
     },
+    language_pack_publish_contract: {
+      required_evidence: ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
+      unsafe_text_scan_present: includesAll(files["apps/web/lib/kyuubiki_web/central_store.ex"], [
+        "language_pack",
+        "unsafe_text_scan",
+      ]),
+      docs_present: includesAll(files["docs/central-server-components.md"], [
+        "language_pack",
+        "unsafe_text_scan",
+      ]),
+    },
     publish_pipeline_contract: pipelineContract(files),
     runbook: {
       local_readiness: "make check-central-database-readiness MODE=local BACKEND=sqlite",
@@ -256,6 +269,12 @@ function validateReport(report) {
   }
   if (!report.storage_contract.table_contract_present) {
     issues.push("central database table contract is incomplete");
+  }
+  if (report.language_pack_publish_contract?.unsafe_text_scan_present !== true) {
+    issues.push("language pack unsafe text evidence missing");
+  }
+  if (report.language_pack_publish_contract?.docs_present !== true) {
+    issues.push("language pack unsafe text docs missing");
   }
   for (const schema of report.schema_surface.schema_files) {
     if (!schema.present) issues.push(`schema file missing: ${schema.path}`);
@@ -352,6 +371,12 @@ function renderMarkdown(report) {
     "",
     `- Contract: \`${report.storage_contract.schema_version}\``,
     `- Table contract present: \`${report.storage_contract.table_contract_present ? "yes" : "no"}\``,
+    "",
+    "## Language Pack Publish Contract",
+    "",
+    `- Evidence: \`${report.language_pack_publish_contract.required_evidence.join(", ")}\``,
+    `- Unsafe text scan: \`${report.language_pack_publish_contract.unsafe_text_scan_present ? "yes" : "no"}\``,
+    `- Docs coverage: \`${report.language_pack_publish_contract.docs_present ? "yes" : "no"}\``,
     "",
     "## Publish Pipeline Contract",
     "",

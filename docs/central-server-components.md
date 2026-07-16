@@ -86,6 +86,11 @@ The preview publish policy is intentionally read-only. It defines required
 resource kinds, manifest schemas, review stages, and evidence requirements, but
 does not accept uploads yet. Write paths should wait until publisher accounts,
 token scopes, signing keys, and provenance checks are in place.
+For `language_pack`, the evidence list includes `unsafe_text_scan` alongside
+the language-pack schema, locale target, and surface validation, matching the
+local Workbench/Hub import guards before any future central upload path exists.
+The publish-policy and publish-readiness schemas also conditionally require
+that evidence whenever a resource row declares `kind=language_pack`.
 
 The publisher policy is the read-only account and token-scope contract for that
 future write side. It keeps account creation and token issuance disabled, but
@@ -106,6 +111,9 @@ immutable artifact metadata, required attestations, detached signature posture,
 yank/security-recall behavior, and installer verification rules. This lets the
 Installer, Workbench store, and headless SDKs agree on supply-chain checks
 without storing signing keys or release credentials in the repository.
+For `language_pack`, the provenance resource gate carries the same
+`unsafe_text_scan` publish evidence so download verification and recall views
+cannot drift away from publish readiness.
 
 The artifact admission policy is the companion preflight contract for future
 write-side publishing. It keeps uploads disabled, but exposes the artifact
@@ -113,6 +121,8 @@ envelope, resource-specific evidence, token scopes, review queue stages,
 signature/SBOM expectations, and blocking reasons that must be cleared before a
 real upload endpoint can exist. This gives SDKs and self-hosted deployments one
 machine-readable target without prematurely accepting packages.
+For `language_pack`, its resource row also requires `unsafe_text_scan`, matching
+the publish policy so upload preflight cannot be weaker than catalog readiness.
 
 The publish pipeline endpoint ties the separate policies into one ordered
 read-only workflow: publisher identity, artifact envelope, detached signature,

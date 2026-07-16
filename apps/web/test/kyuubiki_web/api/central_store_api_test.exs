@@ -103,6 +103,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     assert "dynamic_smoke" in operator["required_evidence"]
     assert language_pack["manifest_schema"] == "schemas/language-pack.schema.json"
+    assert "unsafe_text_scan" in language_pack["required_evidence"]
   end
 
   test "central publisher policy exposes account and token safety without issuance" do
@@ -148,6 +149,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert "artifact_signature_required" in resource_readiness["operator"]["blocking_reasons"]
     assert "sbom" in resource_readiness["operator"]["provenance_attestations"]
     assert "language_pack" in Map.keys(resource_readiness)
+    assert "unsafe_text_scan" in resource_readiness["language_pack"]["publish_evidence"]
   end
 
   test "central database policy exposes server deployment persistence requirements" do
@@ -203,6 +205,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     assert "sbom" in resource_gates["operator"]["provenance_attestations"]
     assert "detached_signature" in resource_gates["workflow_template"]["installer_checks"]
+    assert "unsafe_text_scan" in resource_gates["language_pack"]["publish_evidence"]
 
     assert MapSet.subset?(
              MapSet.new(["manifest_schema", "compatibility_smoke", "security_scan", "signature"]),
@@ -230,6 +233,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert "central:artifact:upload" in payload["publisher_token_policy"]["required_scopes"]
     assert payload["review_queue"]["manual_approval_required"] == true
     assert "sbom" in resource_kinds["operator"]["required_attestations"]
+    assert "unsafe_text_scan" in resource_kinds["language_pack"]["required_evidence"]
     assert resource_kinds["language_pack"]["security_recall_supported"] == true
   end
 

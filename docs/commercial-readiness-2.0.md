@@ -61,6 +61,13 @@ Required:
 - solver limitations are visible in docs and product-facing descriptions
 - result drift is detectable across releases
 
+Current focus:
+
+- deepen retained qualification evidence beyond compact closed-form and patch
+  fixtures
+- keep broad physics coverage at qualification while labeling any new
+  experimental families outside the release gate
+
 Acceptable limitation:
 
 - some advanced solver families can remain experimental if clearly labeled

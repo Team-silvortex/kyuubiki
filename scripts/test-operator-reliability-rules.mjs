@@ -118,6 +118,18 @@ function run() {
     ).some((error) => error.includes("is below roadmap minimum review")),
     "roadmap candidate below minimum must fail"
   );
+  assert(
+    qualificationRoadmapErrors(
+      roadmap,
+      { ...manifest, minimum_coverage_level: "qualification" },
+      operators,
+      new Map([
+        ["solve.ok", "qualification"],
+        ["solve.low", "baseline"],
+      ])
+    ).includes("minimum_candidate_level review is below manifest minimum qualification"),
+    "roadmap minimum below manifest minimum must fail"
+  );
 
   const kits = {
     schema_version: operatorReliabilitySchemaVersions.evidenceKits,

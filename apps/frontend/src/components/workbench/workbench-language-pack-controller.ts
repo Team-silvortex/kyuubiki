@@ -11,6 +11,41 @@ import {
 } from "@/lib/workbench/helpers";
 import { getBuiltinWorkbenchLanguagePack } from "@/components/workbench/workbench-language-pack-catalog";
 
+const UNSAFE_LANGUAGE_PACK_TEXT_PATTERNS = [
+  "<",
+  ">",
+  "javascript:",
+  "data:text/html",
+  "onerror=",
+  "onclick=",
+  "innerhtml",
+  "document.cookie",
+  "localstorage",
+  "eval(",
+] as const;
+
+function hasUnsafeLanguagePackText(value: unknown): boolean {
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    return UNSAFE_LANGUAGE_PACK_TEXT_PATTERNS.some((pattern) => normalized.includes(pattern));
+  }
+  if (Array.isArray(value)) return value.some(hasUnsafeLanguagePackText);
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(hasUnsafeLanguagePackText);
+  }
+  return false;
+}
+
+function setUnsafeLanguagePackMessage(language: WorkbenchLanguage, setMessage: (value: string) => void) {
+  setMessage(
+    language === "zh"
+      ? "语言包包含不安全的 UI 文案，已拒绝导入。"
+      : language === "ja"
+        ? "言語パックに安全でない UI 文言が含まれるため、取り込みを拒否しました。"
+        : "Language pack rejected because it contains unsafe UI text.",
+  );
+}
+
 function triggerWorkbenchJsonDownload(filename: string, payload: Record<string, unknown>) {
   if (typeof window === "undefined") return;
   const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
@@ -120,6 +155,10 @@ export function installWorkbenchLanguagePackPayload(params: {
   }
   if (raw.targetSurface !== undefined && raw.targetSurface !== "workbench") {
     throw new Error("wrong-surface");
+  }
+  if (hasUnsafeLanguagePackText(raw)) {
+    setUnsafeLanguagePackMessage(language, setMessage);
+    return;
   }
 
   const nextPack: WorkbenchLanguagePack = {

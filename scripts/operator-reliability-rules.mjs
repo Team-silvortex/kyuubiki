@@ -49,6 +49,16 @@ export function qualificationRoadmapErrors(roadmap, manifest, seenOperators, ope
   if (!allowedLevels.has(roadmap.minimum_candidate_level)) {
     errors.push(`unknown minimum_candidate_level ${roadmap.minimum_candidate_level}`);
   }
+  if (
+    allowedLevels.has(roadmap.minimum_candidate_level) &&
+    allowedLevels.has(manifest.minimum_coverage_level) &&
+    isBelowMinimumCoverageLevel(roadmap.minimum_candidate_level, manifest.minimum_coverage_level)
+  ) {
+    errors.push(
+      `minimum_candidate_level ${roadmap.minimum_candidate_level} is below manifest minimum ` +
+        `${manifest.minimum_coverage_level}`
+    );
+  }
   if (!Array.isArray(roadmap.candidates) || roadmap.candidates.length === 0) {
     errors.push("candidates must be non-empty");
     return errors;

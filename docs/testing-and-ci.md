@@ -66,7 +66,7 @@ The repository now keeps validation split by responsibility.
   solve operator has a machine-readable manifest shard entry with benchmark
   coverage, headless workflow support, evidence files, trust level, and visible
   limits. It also runs a checker self-test and enforces the manifest's
-  `minimum_coverage_level`, currently `review` for the `moxi 2.0.x`
+  `minimum_coverage_level`, currently `qualification` for the `moxi 2.0.x`
   physics-coverage gate.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency

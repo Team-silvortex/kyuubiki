@@ -45,8 +45,12 @@ download sources are wired.
 Validate the shipped pack set with:
 
 ```sh
-node ./scripts/validate-language-packs.mjs
+make check-language-packs
 ```
+
+The retained Node entrypoint `node ./scripts/validate-language-packs.mjs` is
+kept for local compatibility, but the Make target is the release gate and uses
+the native script runner.
 
 ## Hub alignment
 
@@ -105,9 +109,9 @@ to replace the keys it cares about.
   "language": "fr",
   "targetSurface": "workbench",
   "name": "French custom pack",
-  "version": "1.6.0",
+  "version": "2.0.0",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "1.15.0",
+  "targetAppVersion": "2.0.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
   "description": "Overrides a few high-traffic labels first.",
@@ -134,13 +138,18 @@ to replace the keys it cares about.
 - installed packs can be exported again from the same UI surface
 - packs may declare a product-line target and a shipped app-version target so
   operators can see whether a pack was prepared for the current Workbench line
+- shipped packs, catalog entries, Workbench local imports, and Hub override
+  imports reject text that looks like HTML, JavaScript URLs, inline event
+  handlers, browser-storage access, or script evaluation before it can enter UI
+  copy state
 
 ## What it does not do yet
 
 - no remote catalog download flow yet
 - no signature or provenance chain yet
-- no schema validator dependency in the browser yet; the importer currently
-  does lightweight structural checks and then relies on the override merge path
+- no full schema validator dependency in the browser yet; the importer currently
+  does lightweight structural and unsafe-text checks, then relies on the
+  override merge path
 
 That last point is deliberate for now. The schema exists so the format can
 stabilize early, even before the remote delivery and validation stack is wired
@@ -151,6 +160,6 @@ in.
 - keep `versionLine` aligned with the active line such as `moxi 2.x`
 - set `targetSurface` to `workbench` or `hub` for every newly generated pack
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
-  build such as `1.15.0`
+  build such as `2.0.0`
 - treat packs without either field as generic overrides, not as audited release
   assets

@@ -48,7 +48,10 @@ README.
   commands into one screening-level review bundle. Its summary mirrors the
   material-card references, embedded next-round decision, next iteration,
   runnable step count, and chain stop reason so agents can read the top-level
-  state without losing artifact consistency.
+  state without losing artifact consistency. Its `research_evidence` block is a
+  compact cross-check index for ranked candidates, optimization metrics,
+  violated quality gates, focus candidates, plan step count, chain trace count,
+  and final chain winner.
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest

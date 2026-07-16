@@ -17,6 +17,7 @@ const POSTURE: &str = "screening_research_bundle";
 const EXPLORATION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-run/v1";
 const EXECUTION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-next-round-execution/v1";
 const CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
+const RESEARCH_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-research-evidence/v1";
 
 pub(crate) fn run_check_material_research_bundle_contract(
     root: &Path,
@@ -102,6 +103,14 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
+    if !required_fields(schema)
+        .iter()
+        .any(|required| *required == "research_evidence")
+    {
+        issues.push(format!(
+            "{SCHEMA_PATH}: missing required field research_evidence"
+        ));
+    }
     let summary_required = schema
         .pointer("/$defs/summary/required")
         .and_then(Value::as_array)
@@ -114,6 +123,30 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
     }
     if schema.pointer("/$defs/materialCardRef").is_none() {
         issues.push(format!("{SCHEMA_PATH}: missing materialCardRef definition"));
+    }
+    let evidence_required = schema
+        .pointer("/$defs/researchEvidence/required")
+        .and_then(Value::as_array)
+        .map(|fields| fields.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    for field in [
+        "candidate_count",
+        "ranked_candidate_ids",
+        "winner_candidate_id",
+        "primary_metric_ids",
+        "metric_objective_count",
+        "focus_candidate_ids",
+        "quality_gate_decision",
+        "plan_decision",
+        "chain_round_count",
+        "chain_trace_round_count",
+        "final_winner_candidate_id",
+    ] {
+        if !evidence_required.iter().any(|required| *required == field) {
+            issues.push(format!(
+                "{SCHEMA_PATH}: researchEvidence missing required {field}"
+            ));
+        }
     }
     let checksum_required = schema
         .pointer("/$defs/artifactChecksums/required")
@@ -181,6 +214,7 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         EXAMPLE_PATH,
         issues,
     );
+    validate_research_evidence(example, issues);
     assert_equals(
         example.pointer("/next_round_execution_plan/decision"),
         example.pointer("/summary/next_round_decision"),
@@ -255,6 +289,86 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     Ok(())
+}
+
+fn validate_research_evidence(example: &Value, issues: &mut Vec<String>) {
+    assert_schema_version(
+        example.pointer("/research_evidence/schema_version"),
+        RESEARCH_EVIDENCE_SCHEMA_VERSION,
+        "research_evidence",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/research_evidence/winner_candidate_id"),
+        example.pointer("/summary/winner_candidate_id"),
+        "research_evidence.winner_candidate_id",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/research_evidence/quality_gate_decision"),
+        example.pointer("/summary/reliability_decision"),
+        "research_evidence.quality_gate_decision",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/research_evidence/plan_decision"),
+        example.pointer("/summary/next_round_decision"),
+        "research_evidence.plan_decision",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/research_evidence/plan_step_count"),
+        example.pointer("/summary/runnable_next_step_count"),
+        "research_evidence.plan_step_count",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/research_evidence/chain_round_count"),
+        example.pointer("/summary/chain_round_count"),
+        "research_evidence.chain_round_count",
+        issues,
+    );
+    let ranked = string_array(example.pointer("/research_evidence/ranked_candidate_ids"));
+    let focus = string_array(example.pointer("/research_evidence/focus_candidate_ids"));
+    if ranked.is_empty() {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence.ranked_candidate_ids must be non-empty"
+        ));
+    }
+    if example
+        .pointer("/research_evidence/candidate_count")
+        .and_then(Value::as_u64)
+        != Some(ranked.len() as u64)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence.candidate_count must match ranked candidates"
+        ));
+    }
+    if !ranked.contains(&field_at(example, "/summary/winner_candidate_id")) {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence winner must be ranked"
+        ));
+    }
+    if focus.is_empty() || focus.iter().any(|candidate| !ranked.contains(candidate)) {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence.focus_candidate_ids must be ranked candidates"
+        ));
+    }
+    if string_array(example.pointer("/research_evidence/primary_metric_ids")).is_empty() {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence.primary_metric_ids must be non-empty"
+        ));
+    }
+    if example
+        .pointer("/research_evidence/metric_objective_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        == 0
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: research_evidence.metric_objective_count must be positive"
+        ));
+    }
 }
 
 fn validate_material_card_refs(example: &Value, issues: &mut Vec<String>) {
@@ -413,6 +527,20 @@ fn require_array(value: Option<&Value>, field: &str, context: &str, issues: &mut
     {
         issues.push(format!("{context}: {field} must be a non-empty array"));
     }
+}
+
+fn string_array(value: Option<&Value>) -> Vec<&str> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| items.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default()
+}
+
+fn field_at<'a>(value: &'a Value, pointer: &str) -> &'a str {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
 }
 
 fn read_json(root: &Path, relative_path: &str) -> RunnerResult<Value> {

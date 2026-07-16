@@ -15,6 +15,7 @@
     "config_surface",
     "service_surface",
     "storage_contract",
+    "language_pack_publish_contract",
     "publish_pipeline_contract",
     "runbook"
   ],
@@ -84,6 +85,20 @@
       "properties": {
         "schema_version": { "const": "kyuubiki.central-database-contract/v1" },
         "table_contract_present": { "type": "boolean" }
+      }
+    },
+    "language_pack_publish_contract": {
+      "type": "object",
+      "required": ["required_evidence", "unsafe_text_scan_present", "docs_present"],
+      "additionalProperties": false,
+      "properties": {
+        "required_evidence": {
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "unsafe_text_scan" }
+        },
+        "unsafe_text_scan_present": { "type": "boolean" },
+        "docs_present": { "type": "boolean" }
       }
     },
     "publish_pipeline_contract": {

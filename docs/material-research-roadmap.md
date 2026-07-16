@@ -40,7 +40,10 @@ The first retained bundle contract is now
 `kyuubiki.material-research-bundle/v1`, built by
 `make verify-material-research-bundle`. It keeps initial exploration,
 next-round planning, rerun output, chained iterations, checksums, and
-reproduction commands in one screening-level artifact.
+reproduction commands in one screening-level artifact. Its `research_evidence`
+block now lifts ranked candidates, metric objectives, violated gates, focus
+candidates, plan counts, chain trace counts, and final winner into a compact
+machine-checkable review index.
 
 ## Phase 1. Screening Studies Become Honest
 

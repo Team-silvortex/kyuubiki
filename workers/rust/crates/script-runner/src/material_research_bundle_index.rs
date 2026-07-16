@@ -108,6 +108,21 @@ fn run_self_test() -> RunnerResult<String> {
                 "chain_convergence_state": "blocked_by_quality_gates",
                 "chain_round_count": 2,
             },
+            "research_evidence": {
+                "candidate_count": 2,
+                "ranked_candidate_ids": ["candidate-a", "candidate-b"],
+                "winner_candidate_id": "candidate-a",
+                "primary_metric_ids": ["peak_temperature_c"],
+                "metric_objective_count": 1,
+                "violated_quality_gate_ids": ["gate.temperature"],
+                "focus_candidate_ids": ["candidate-a"],
+                "quality_gate_decision": "blocked_by_quality_gates",
+                "plan_decision": "mitigate_design_risk",
+                "plan_step_count": 3,
+                "chain_round_count": 2,
+                "chain_trace_round_count": 2,
+                "final_winner_candidate_id": "candidate-b",
+            },
         }),
     }]);
     if index.get("bundle_count").and_then(Value::as_u64) != Some(1)
@@ -120,6 +135,12 @@ fn run_self_test() -> RunnerResult<String> {
         || index.pointer("/bundles/0/next_iteration") != Some(&Value::from(2))
     {
         return Err("self-test did not retain next-round execution summary".to_string());
+    }
+    if index.pointer("/bundles/0/final_winner_candidate_id") != Some(&Value::from("candidate-b"))
+        || index.pointer("/bundles/0/winner_changed_in_chain") != Some(&Value::from(true))
+        || index.pointer("/winner_changed_in_chain_count") != Some(&Value::from(1))
+    {
+        return Err("self-test did not retain compact research evidence".to_string());
     }
     Ok("material research bundle index self-test passed".to_string())
 }
@@ -175,6 +196,7 @@ fn build_index(entries: Vec<IndexEntry>) -> Value {
         "generated_at_utc": utc_iso_timestamp(),
         "bundle_count": bundles.len(),
         "studies": bundles.iter().filter_map(|bundle| bundle.get("study").cloned()).collect::<Vec<_>>(),
+        "winner_changed_in_chain_count": bundles.iter().filter(|bundle| bundle.get("winner_changed_in_chain").and_then(Value::as_bool) == Some(true)).count(),
         "reliability_decision_counts": counts_by(&bundles, "reliability_decision"),
         "next_round_decision_counts": counts_by(&bundles, "next_round_decision"),
         "bundles": bundles,
@@ -182,12 +204,19 @@ fn build_index(entries: Vec<IndexEntry>) -> Value {
 }
 
 fn bundle_index_entry(profile: &BundleProfile, path: &str, bundle: &Value) -> Value {
+    let initial_winner = pointer_or_null(bundle, "/summary/winner_candidate_id");
+    let final_winner = pointer_or_null(bundle, "/research_evidence/final_winner_candidate_id");
+    let winner_changed = initial_winner != Value::Null
+        && final_winner != Value::Null
+        && initial_winner != final_winner;
     json!({
         "study": bundle.get("study").cloned().unwrap_or(Value::Null),
         "bundle_id": bundle.get("bundle_id").cloned().unwrap_or(Value::Null),
         "path": path,
         "posture": bundle.get("posture").cloned().unwrap_or(Value::Null),
-        "winner_candidate_id": pointer_or_null(bundle, "/summary/winner_candidate_id"),
+        "winner_candidate_id": initial_winner,
+        "final_winner_candidate_id": final_winner,
+        "winner_changed_in_chain": winner_changed,
         "reliability_decision": pointer_or_null(bundle, "/summary/reliability_decision"),
         "next_round_decision": pointer_or_null(bundle, "/summary/next_round_decision"),
         "runnable_next_step_count": pointer_or_null(bundle, "/summary/runnable_next_step_count"),
@@ -195,6 +224,12 @@ fn bundle_index_entry(profile: &BundleProfile, path: &str, bundle: &Value) -> Va
         "chain_stop_reason": pointer_or_null(bundle, "/summary/chain_stop_reason"),
         "chain_convergence_state": pointer_or_null(bundle, "/summary/chain_convergence_state"),
         "chain_round_count": pointer_or_null(bundle, "/summary/chain_round_count"),
+        "chain_trace_round_count": pointer_or_null(bundle, "/research_evidence/chain_trace_round_count"),
+        "research_candidate_count": pointer_or_null(bundle, "/research_evidence/candidate_count"),
+        "primary_metric_ids": pointer_or_null(bundle, "/research_evidence/primary_metric_ids"),
+        "metric_objective_count": pointer_or_null(bundle, "/research_evidence/metric_objective_count"),
+        "violated_quality_gate_ids": pointer_or_null(bundle, "/research_evidence/violated_quality_gate_ids"),
+        "focus_candidate_ids": pointer_or_null(bundle, "/research_evidence/focus_candidate_ids"),
         "profile_study": profile.study,
     })
 }
@@ -228,8 +263,8 @@ fn write_readme(index: &Value, output: &Path) -> RunnerResult<()> {
             index.get("bundle_count").unwrap_or(&Value::Null)
         ),
         String::new(),
-        "| Study | Winner | Reliability | Next round | Runnable | Chain |".to_string(),
-        "| --- | --- | --- | --- | --- | --- |".to_string(),
+        "| Study | Winner | Final winner | Metrics | Gates | Next round | Chain |".to_string(),
+        "| --- | --- | --- | --- | --- | --- | --- |".to_string(),
     ];
     for bundle in index
         .get("bundles")
@@ -238,10 +273,12 @@ fn write_readme(index: &Value, output: &Path) -> RunnerResult<()> {
         .flatten()
     {
         lines.push(format!(
-            "| `{}` | `{}` | `{}` | `{}@{}` | `{}` | `{}/{}` |",
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}@{}` steps=`{}` | `{}/{}` rounds=`{}` trace=`{}` |",
             field(bundle, "study"),
             field(bundle, "winner_candidate_id"),
-            field(bundle, "reliability_decision"),
+            field(bundle, "final_winner_candidate_id"),
+            array_len(bundle, "primary_metric_ids"),
+            array_len(bundle, "violated_quality_gate_ids"),
             field(bundle, "next_round_decision"),
             bundle.get("next_iteration").unwrap_or(&Value::Null),
             bundle
@@ -249,6 +286,8 @@ fn write_readme(index: &Value, output: &Path) -> RunnerResult<()> {
                 .unwrap_or(&Value::Null),
             field(bundle, "chain_stop_reason"),
             field(bundle, "chain_convergence_state"),
+            bundle.get("chain_round_count").unwrap_or(&Value::Null),
+            bundle.get("chain_trace_round_count").unwrap_or(&Value::Null),
         ));
     }
     lines.push(String::new());
@@ -292,6 +331,14 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
 }
 
+fn array_len(value: &Value, key: &str) -> usize {
+    value
+        .get(key)
+        .and_then(Value::as_array)
+        .map(Vec::len)
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{BundleProfile, IndexEntry, build_index};
@@ -319,6 +366,21 @@ mod tests {
                     "chain_convergence_state": "blocked_by_quality_gates",
                     "chain_round_count": 2,
                 },
+                "research_evidence": {
+                    "candidate_count": 2,
+                    "ranked_candidate_ids": ["candidate-a", "candidate-b"],
+                    "winner_candidate_id": "candidate-a",
+                    "primary_metric_ids": ["peak_temperature_c"],
+                    "metric_objective_count": 1,
+                    "violated_quality_gate_ids": ["gate.temperature"],
+                    "focus_candidate_ids": ["candidate-a"],
+                    "quality_gate_decision": "blocked_by_quality_gates",
+                    "plan_decision": "mitigate_design_risk",
+                    "plan_step_count": 3,
+                    "chain_round_count": 2,
+                    "chain_trace_round_count": 2,
+                    "final_winner_candidate_id": "candidate-b",
+                },
             }),
         }]);
         assert_eq!(
@@ -326,5 +388,13 @@ mod tests {
             Some(&json!(1))
         );
         assert_eq!(index.pointer("/bundles/0/next_iteration"), Some(&json!(2)));
+        assert_eq!(
+            index.pointer("/bundles/0/final_winner_candidate_id"),
+            Some(&json!("candidate-b"))
+        );
+        assert_eq!(
+            index.pointer("/winner_changed_in_chain_count"),
+            Some(&json!(1))
+        );
     }
 }

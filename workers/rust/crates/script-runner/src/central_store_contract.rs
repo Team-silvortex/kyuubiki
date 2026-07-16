@@ -554,8 +554,12 @@ impl Options {
 
 #[cfg(test)]
 mod tests {
-    use super::{append_fixture, looks_like_windows_absolute, report_duplicates};
+    use super::{
+        CONFIG_SCHEMA, CONFIG_SCHEMA_VERSION, DEFAULT_CONFIG, REPO_PATH_PATTERN, append_fixture,
+        looks_like_windows_absolute, report_duplicates, validate,
+    };
     use std::collections::HashMap;
+    use std::path::Path;
 
     #[test]
     fn windows_absolute_path_is_detected() {
@@ -575,5 +579,44 @@ mod tests {
         let mut files = HashMap::from([("x.json".to_string(), "{}".to_string())]);
         append_fixture(&mut files, "x.json", "needle");
         assert!(files["x.json"].contains("needle"));
+    }
+
+    #[test]
+    fn central_store_contract_fuzz_smoke_rejects_hostile_ingress() {
+        let cases = [
+            b"not-json".as_slice(),
+            br#"null"#.as_slice(),
+            br#""DATABASE_URL=postgres://user:pass@example/db""#.as_slice(),
+            br#"{"schema_version":"kyuubiki.central-store-contract-check/v1","contracts":[]}"#
+                .as_slice(),
+            br#"{"schema_version":"kyuubiki.central-store-contract-check/v1","contracts":[{"id":"x","schema_version":"kyuubiki.x/v1","schema_path":"/tmp/schema.json","backend_path":"apps/web/lib/x.ex","frontend_types_path":"apps/frontend/x.ts"}],"required_files":["docs/ok.md"],"text_checks":[]}"#
+                .as_slice(),
+            br#"{"schema_version":"kyuubiki.central-store-contract-check/v1","contracts":[{"id":"x","schema_version":"kyuubiki.x/v1","schema_path":"schemas/x.json","backend_path":"../secret.ex","frontend_types_path":"apps/frontend/x.ts"}],"required_files":["docs/ok.md"],"text_checks":[]}"#
+                .as_slice(),
+            br#"{"schema_version":"kyuubiki.central-store-contract-check/v1","contracts":[{"id":"x","schema_version":"kyuubiki.x/v1","schema_path":"schemas/x.json","backend_path":"apps/web/lib/x.ex","frontend_types_path":"apps/frontend/x.ts"}],"required_files":["docs/ok.md"],"text_checks":[{"file":"docs/ok.md","text":"ssh_password","label":"unsafe"}]}"#
+                .as_slice(),
+        ];
+        let root = Path::new("/tmp/kyuubiki-central-store-fuzz");
+        for (index, bytes) in cases.iter().enumerate() {
+            let config = serde_json::from_slice(bytes).unwrap_or_else(|_| {
+                serde_json::Value::String(String::from_utf8_lossy(bytes).into())
+            });
+            let report = validate(root, DEFAULT_CONFIG, &config, fuzz_files());
+            assert!(
+                !report.errors.is_empty(),
+                "central store fuzz case {index} must fail closed"
+            );
+        }
+    }
+
+    fn fuzz_files() -> HashMap<String, String> {
+        HashMap::from([(
+            CONFIG_SCHEMA.to_string(),
+            serde_json::json!({
+                "properties": { "schema_version": { "const": CONFIG_SCHEMA_VERSION } },
+                "$defs": { "repoPath": { "pattern": REPO_PATH_PATTERN } }
+            })
+            .to_string(),
+        )])
     }
 }

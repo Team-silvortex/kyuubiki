@@ -67,6 +67,19 @@
   "$defs": {
     "resourceAdmission": {
       "type": "object",
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "language_pack" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "required_evidence": { "contains": { "const": "unsafe_text_scan" } }
+            }
+          }
+        }
+      ],
       "required": [
         "kind",
         "status",

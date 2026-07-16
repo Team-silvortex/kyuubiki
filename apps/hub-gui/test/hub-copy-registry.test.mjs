@@ -104,6 +104,63 @@ test("hub language-pack import rejects packs targeted at another surface", () =>
   );
 });
 
+test("hub language-pack import rejects unsafe UI text before storage write", () => {
+  for (const payload of [
+    { overrides: { nav: { projects: "<script>alert(1)</script>" } } },
+    { overrides: { nav: { projects: "javascript:alert(1)" } } },
+    { overrides: { nav: { projects: "onclick=steal()" } } },
+    { overrides: { nav: { projects: "localStorage.token" } } },
+  ]) {
+    const storage = new MemoryStorage();
+    assert.throws(
+      () =>
+        importHubCopyPayload(
+          {
+            schema_version: "kyuubiki.language-pack/v1",
+            id: "unsafe-hub-pack",
+            language: "en",
+            targetSurface: "hub",
+            name: "Unsafe hub pack",
+            version: "2.0.0",
+            source: "imported",
+            updatedAt: "2026-06-24T00:00:00.000Z",
+            ...payload,
+          },
+          storage,
+        ),
+      /unsafe-hub-copy-text/,
+    );
+    assert.equal(storage.getItem(HUB_COPY_OVERRIDE_STORAGE_KEY), null);
+  }
+});
+
+test("hub registry import rejects unsafe UI text before storage write", () => {
+  const storage = new MemoryStorage();
+
+  assert.throws(
+    () =>
+      importHubCopyPayload(
+        {
+          defaults: {
+            guides: {
+              localizationTitle: "data:text/html,<script>alert(1)</script>",
+            },
+          },
+          languages: {
+            en: {
+              nav: {
+                projects: "Projects",
+              },
+            },
+          },
+        },
+        storage,
+      ),
+    /unsafe-hub-copy-text/,
+  );
+  assert.equal(storage.getItem(HUB_COPY_OVERRIDE_STORAGE_KEY), null);
+});
+
 test("hub pack-only languages use fallback structure with requested language overrides", () => {
   const storage = new MemoryStorage();
   importHubCopyPayload(

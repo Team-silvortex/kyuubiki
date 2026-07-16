@@ -151,6 +151,7 @@ fn build_bundle(root: &Path, options: &Options) -> RunnerResult<Value> {
             "run_next_duration_ms": next.duration_ms,
             "chain_next_duration_ms": chain.duration_ms,
         },
+        "research_evidence": research_evidence(&initial.payload, &plan.payload, &chain.payload),
         "summary": bundle_summary(&initial.payload, &plan.payload, &next.payload, &chain.payload),
         "initial_exploration": initial.payload,
         "next_round_execution_plan": plan.payload,
@@ -229,6 +230,62 @@ fn bundle_summary(initial: &Value, plan: &Value, next: &Value, chain: &Value) ->
         "chain_convergence_state": chain.pointer("/convergence_assessment/state").cloned().unwrap_or(Value::Null),
         "chain_round_count": chain.get("round_count").cloned().unwrap_or(Value::Null),
     })
+}
+
+fn research_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
+    let report = initial.get("report").unwrap_or(&Value::Null);
+    let objectives = plan.get("optimization_objectives").unwrap_or(&Value::Null);
+    let ranked_candidate_ids = array_strings(report.pointer("/candidates"), "candidate_id");
+    let primary_metric_ids = array_values(objectives.get("primary_metric_ids"));
+    let metric_objective_count = objectives
+        .get("metric_objectives")
+        .and_then(Value::as_array)
+        .map(Vec::len)
+        .unwrap_or(0);
+    let violated_quality_gate_ids = array_values(objectives.get("violated_quality_gate_ids"));
+    let focus_candidate_ids = array_values(objectives.get("focus_candidate_ids"));
+    let trace_round_count = chain
+        .get("optimization_trace")
+        .and_then(Value::as_array)
+        .map(Vec::len)
+        .unwrap_or(0);
+    json!({
+        "schema_version": "kyuubiki.material-research-evidence/v1",
+        "candidate_count": ranked_candidate_ids.len(),
+        "ranked_candidate_ids": ranked_candidate_ids,
+        "winner_candidate_id": report.get("winner_candidate_id").cloned().unwrap_or(Value::Null),
+        "optimization_profile_id": report.pointer("/optimization/id").cloned().unwrap_or(Value::Null),
+        "primary_metric_ids": primary_metric_ids,
+        "metric_objective_count": metric_objective_count,
+        "violated_quality_gate_ids": violated_quality_gate_ids,
+        "focus_candidate_ids": focus_candidate_ids,
+        "quality_gate_decision": report.pointer("/reliability/summary/decision").cloned().unwrap_or(Value::Null),
+        "plan_decision": plan.get("decision").cloned().unwrap_or(Value::Null),
+        "plan_step_count": plan.get("runnable_step_count").cloned().unwrap_or(Value::Null),
+        "chain_round_count": chain.get("round_count").cloned().unwrap_or(Value::Null),
+        "chain_trace_round_count": trace_round_count,
+        "final_winner_candidate_id": chain.get("final_winner_candidate_id").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn array_values(value: Option<&Value>) -> Vec<Value> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| items.to_vec())
+        .unwrap_or_default()
+}
+
+fn array_strings(value: Option<&Value>, key: &str) -> Vec<Value> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.get(key).and_then(Value::as_str))
+                .map(|item| Value::from(item.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn repo_local_path(root: &Path, path: &str, label: &str) -> RunnerResult<(PathBuf, String)> {

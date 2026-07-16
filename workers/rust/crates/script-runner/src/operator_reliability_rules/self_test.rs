@@ -116,6 +116,23 @@ pub(super) fn run_self_test() -> Vec<String> {
         "roadmap candidate below minimum must fail",
         &mut failures,
     );
+    let qualification_manifest = serde_json::json!({
+        "version_line": "tamamono self-test",
+        "minimum_coverage_level": "qualification"
+    });
+    let qualified_levels =
+        HashMap::from([("solve.ok", "qualification"), ("solve.low", "baseline")]);
+    assert_contains(
+        &qualification_roadmap_errors(
+            &roadmap,
+            &qualification_manifest,
+            &operators,
+            &qualified_levels,
+        ),
+        "minimum_candidate_level review is below manifest minimum qualification",
+        "roadmap minimum below manifest minimum must fail",
+        &mut failures,
+    );
 
     let kits = kits_fixture();
     assert_rule(

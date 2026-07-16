@@ -67,6 +67,7 @@ impl<'a> Validator<'a> {
             self.fail("language-packs/catalog.json: catalog must be a JSON object");
             return;
         }
+        self.validate_safe_text(&catalog, "language-packs/catalog.json");
         self.validate_catalog_header(&catalog);
         for (index, entry) in catalog
             .get("packs")
@@ -150,6 +151,10 @@ impl<'a> Validator<'a> {
             self.fail("config/localization/mainstream-language-pack-locales.json: target must be a JSON object");
             return BTreeMap::new();
         }
+        self.validate_safe_text(
+            &target,
+            "config/localization/mainstream-language-pack-locales.json",
+        );
         if string_field(&target, "schema_version") != LOCALE_TARGET_SCHEMA {
             self.fail(format!(
                 "config/localization/mainstream-language-pack-locales.json: schema_version must be {LOCALE_TARGET_SCHEMA}"
@@ -208,6 +213,7 @@ impl<'a> Validator<'a> {
             self.fail(format!("{full_path}: pack must be a JSON object"));
             return None;
         }
+        self.validate_safe_text(&pack, &full_path);
         for field in [
             "schema_version",
             "id",
@@ -358,6 +364,12 @@ impl<'a> Validator<'a> {
     }
 
     fn read_json(&mut self, relative_path: &str) -> Option<Value> {
+        if !is_safe_repo_relative_path(relative_path) {
+            self.fail(format!(
+                "{relative_path}: path must be repository-relative and stay inside language pack validation roots"
+            ));
+            return None;
+        }
         let path = self.root.join(relative_path);
         match fs::read_to_string(&path).and_then(|text| {
             serde_json::from_str(&text)
@@ -396,6 +408,12 @@ impl<'a> Validator<'a> {
     fn fail(&mut self, message: impl Into<String>) {
         self.errors.push(message.into());
     }
+
+    fn validate_safe_text(&mut self, value: &Value, relative_path: &str) {
+        for issue in unsafe_language_pack_text_issues(value, relative_path) {
+            self.fail(issue);
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -415,13 +433,120 @@ fn looks_like_iso_datetime(value: &str) -> bool {
     value.len() >= 20 && value.contains('T') && value.ends_with('Z')
 }
 
+fn is_safe_repo_relative_path(value: &str) -> bool {
+    !value.trim().is_empty()
+        && !value.starts_with('/')
+        && !looks_like_windows_absolute(value)
+        && !value.split(['/', '\\']).any(|part| part == "..")
+}
+
+fn looks_like_windows_absolute(value: &str) -> bool {
+    value.len() > 2
+        && value.as_bytes()[1] == b':'
+        && matches!(value.as_bytes()[2], b'/' | b'\\')
+        && value.as_bytes()[0].is_ascii_alphabetic()
+}
+
+fn unsafe_language_pack_text_issues(value: &Value, label: &str) -> Vec<String> {
+    let mut issues = Vec::new();
+    collect_unsafe_language_pack_text(value, label, &mut issues);
+    issues
+}
+
+fn collect_unsafe_language_pack_text(value: &Value, label: &str, issues: &mut Vec<String>) {
+    match value {
+        Value::String(text) => {
+            let lower = text.to_ascii_lowercase();
+            for (needle, reason) in [
+                ("<", "html angle bracket"),
+                (">", "html angle bracket"),
+                ("javascript:", "javascript url"),
+                ("data:text/html", "html data url"),
+                ("onerror=", "inline event handler"),
+                ("onclick=", "inline event handler"),
+                ("innerhtml", "html injection sink"),
+                ("document.cookie", "browser secret access"),
+                ("localstorage", "browser storage access"),
+                ("eval(", "script evaluation"),
+            ] {
+                if lower.contains(needle) {
+                    issues.push(format!("{label}: unsafe language-pack text: {reason}"));
+                    break;
+                }
+            }
+        }
+        Value::Array(items) => {
+            for (index, item) in items.iter().enumerate() {
+                collect_unsafe_language_pack_text(item, &format!("{label}[{index}]"), issues);
+            }
+        }
+        Value::Object(object) => {
+            for (key, item) in object {
+                collect_unsafe_language_pack_text(item, &format!("{label}.{key}"), issues);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::looks_like_iso_datetime;
+    use super::{
+        Validator, is_safe_repo_relative_path, looks_like_iso_datetime,
+        unsafe_language_pack_text_issues,
+    };
+    use serde_json::json;
 
     #[test]
     fn accepts_release_timestamp_shape() {
         assert!(looks_like_iso_datetime("2026-07-13T00:00:00.000Z"));
         assert!(!looks_like_iso_datetime("2026-07-13"));
+    }
+
+    #[test]
+    fn language_pack_fuzz_smoke_rejects_hostile_paths() {
+        for path in [
+            "",
+            "/tmp/pack.json",
+            "../pack.json",
+            "workbench/../../secret.json",
+            "C:\\Users\\secrets\\pack.json",
+            "C:/Users/secrets/pack.json",
+        ] {
+            assert!(
+                !is_safe_repo_relative_path(path),
+                "hostile language pack path must fail: {path}"
+            );
+        }
+        assert!(is_safe_repo_relative_path(
+            "language-packs/workbench/en.json"
+        ));
+
+        let root = std::path::Path::new("/tmp/kyuubiki-language-pack-fuzz");
+        let mut validator = Validator::new(root);
+        validator.target_app_version = "2.0.0".to_string();
+        assert!(
+            validator
+                .validate_pack("../secret.json", "workbench")
+                .is_none()
+        );
+        assert!(
+            validator
+                .errors
+                .iter()
+                .any(|error| error.contains("path must be repository-relative"))
+        );
+
+        for payload in [
+            json!({"overrides": {"title": "<script>alert(1)</script>"}}),
+            json!({"overrides": {"title": "javascript:alert(1)"}}),
+            json!({"overrides": {"title": "onclick=steal()"}}),
+            json!({"overrides": {"title": "localStorage.token"}}),
+        ] {
+            assert!(
+                !unsafe_language_pack_text_issues(&payload, "language-packs/fuzz.json").is_empty(),
+                "hostile language pack text must fail: {payload}"
+            );
+        }
     }
 }

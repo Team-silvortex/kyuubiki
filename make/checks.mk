@@ -413,6 +413,9 @@ fuzz-smoke:
 	@cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture
 	@cd workers/rust && cargo test -p kyuubiki-installer remote_ssh_fixture_fuzz_smoke -- --nocapture
 	@cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner central_store_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner central_readiness_report_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner language_pack_fuzz_smoke -- --nocapture
 
 architecture-check:
 	@$(MAKE) audit-project-organization

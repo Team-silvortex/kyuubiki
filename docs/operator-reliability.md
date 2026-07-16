@@ -87,10 +87,11 @@ The first validation profiles cover:
   checks
 
 For `moxi 2.0.x`, the manifest also declares
-`minimum_coverage_level: review`. `make check-operator-reliability` treats this
-as a release gate, so future edits cannot silently downgrade a covered operator
-back to `baseline` or `smoke`. The Make target runs the checker self-test first
-to keep the trust-level ordering and release-gate behavior from regressing.
+`minimum_coverage_level: qualification`. `make check-operator-reliability`
+treats this as a release gate, so future edits cannot silently downgrade a
+covered operator back to `review`, `baseline`, or `smoke`. The Make target runs
+the checker self-test first to keep the trust-level ordering and release-gate
+behavior from regressing.
 
 The shard layout keeps each domain contract below the project source-size limit
 while preserving one release-level verification command.
@@ -117,14 +118,16 @@ without hiding the failure from SDK or GUI callers.
 
 The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
-roadmap candidates reference existing manifest operators and already satisfy
-the roadmap's minimum candidate level.
+roadmap candidates reference existing manifest operators, already satisfy the
+roadmap's minimum candidate level, and never set that candidate minimum below
+the manifest's release-gated `minimum_coverage_level`.
 Each roadmap candidate also carries a machine-readable qualification posture:
 
 - `target_level`
-  the trust level the candidate is trying to reach, usually `qualification`
-  but intentionally `review` for screening-only families that should not be
-  over-promoted
+  the trust level the candidate is trying to reach. Release-gated roadmap
+  candidates for `moxi 2.0.x` target `qualification`; screening-only or
+  exploratory families should stay outside this release candidate queue until
+  they have a qualification path.
 - `evidence_phase`
   whether evidence is still `planned`, actively `collecting`,
   `ready_for_review`, or `blocked`
@@ -325,15 +328,15 @@ current modal evidence lives at
 ## Current State
 
 The current `moxi 2.0.x` manifest covers all 38 solve operators in the
-`physics-coverage` benchmark matrix, with a release gate requiring at least
-`review` evidence for every covered operator.
+`physics-coverage` benchmark matrix, with a release gate requiring
+`qualification` evidence for every covered operator.
 
 Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 5 operators
-- `qualification`: 33 operators
+- `review`: 0 operators
+- `qualification`: 38 operators
 
 This remains intentionally conservative. The platform has broad executable
 coverage, and selected line-field, structural, thermal, electromagnetic,
@@ -567,12 +570,13 @@ implied by the current screening and baseline stack.
 
 The most useful next upgrades are:
 
-- harden selected review operators toward `qualification` with external,
-  convergence, or literature-backed evidence
-- use the approved `line-field-closed-form` packet as the template for the
-  next small, analytic qualification candidates
-- add mesh, boundary, and material-assumption evidence where review coverage is
-  still based on compact screening fixtures
+- deepen qualification evidence with larger mesh, boundary, material,
+  convergence, or literature-backed references where current scope is still a
+  compact retained fixture
+- use the approved release packets as templates for new physics families before
+  they enter the release-gated `physics-coverage` manifest
+- keep new experimental operators outside the release gate until they have a
+  qualification path, rather than weakening the moxi coverage contract
 - keep Stokes-flow qualification scoped to the retained screening-boundary
   convergence fixture until a stronger CFD benchmark or reference-tool
   comparison exists

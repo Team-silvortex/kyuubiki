@@ -135,8 +135,9 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner validate-language-packs`
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current release index version, including exact parity with
-  `config/localization/mainstream-language-pack-locales.json`. Make now uses
-  the native runner; the retained `.mjs` script is only a parity reference.
+  `config/localization/mainstream-language-pack-locales.json`, repo-relative
+  path safety, and unsafe-text rejection for UI copy. Make now uses the native
+  runner; the retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-ui-automation-contract`
   Verify the product-owned Workbench UI automation selector contract across the
   JSON contract, HTML documentation, TypeScript helper, and implementation
@@ -169,14 +170,15 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner build-central-readiness-report`
   Write a retained machine-readable central readiness report under `tmp/`.
   The report combines central DB readiness, API endpoint coverage, schema file
-  presence, storage table-contract presence, and safe runbook commands without
-  storing credentials. It also writes a compact Markdown summary for human
-  review. Make now uses the native runner; the retained `.mjs` script is only a
-  parity reference.
+  presence, storage table-contract presence, language-pack publish safety
+  evidence, and safe runbook commands without storing credentials. It also
+  writes a compact Markdown summary for human review. Make now uses the native
+  runner; the retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-central-readiness-report`
   Validate a retained central readiness report, including required endpoints,
-  schema coverage, storage table-contract coverage, and absence of obvious
-  inline credential material. Make now uses the native runner.
+  schema coverage, storage table-contract coverage, language-pack unsafe-text
+  evidence, and absence of obvious inline credential material. Make now uses
+  the native runner.
 - `kyuubiki-script-runner check-verification-evidence-surface`
   Verify the verification-evidence runtime surface, including stable evidence
   commands, generated artifacts under `tmp/`, and the central readiness report
@@ -232,12 +234,15 @@ This directory contains host-native operational entry points.
   chained rounds, artifact checksums, and repo-relative reproduction commands
   under `kyuubiki.material-research-bundle/v1`. The checker verifies that the
   top-level summary matches the embedded next-round decision, next iteration,
-  runnable step count, and chain stop reason. Override `STUDY=` through Make to
-  build the heat-spreader or composite thermo-electric panel retained profile.
+  runnable step count, and chain stop reason. It also verifies the retained
+  `research_evidence` index: ranked candidates, optimization metrics, violated
+  quality gates, focus candidates, plan step count, chain trace count, and final
+  chain winner. Override `STUDY=` through Make to build the heat-spreader or
+  composite thermo-electric panel retained profile.
   The bundle index builder writes a compact multi-study overview under
   `tmp/material-research-bundles/` for CI, agents, and release notes, including
-  next iteration and runnable next-step count for scheduling. The lightweight
-  contract check keeps
+  next iteration, runnable next-step count, compact research evidence, and
+  initial-vs-final winner drift for scheduling. The lightweight contract check keeps
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, and documentation links in
   sync without running the solver. Make now uses the native runner for runtime
@@ -434,7 +439,8 @@ Useful checks:
   Build the retained heat-spreader and composite thermo-electric panel bundles,
   validate them, and write `tmp/material-research-bundles/index.json` plus a
   human-readable `README.md` summary with next iteration and runnable next-step
-  counts.
+  counts, metric/gate evidence, chain trace counts, and initial-vs-final winner
+  drift.
 - `make build-operator-qualification-readiness`
   Write and validate a readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay

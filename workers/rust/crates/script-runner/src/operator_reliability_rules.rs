@@ -78,6 +78,15 @@ pub(crate) fn qualification_roadmap_errors<'a>(
     if !ORDERED_LEVELS.contains(&minimum) {
         errors.push(format!("unknown minimum_candidate_level {minimum}"));
     }
+    let manifest_minimum = field(manifest, "minimum_coverage_level");
+    if ORDERED_LEVELS.contains(&minimum)
+        && ORDERED_LEVELS.contains(&manifest_minimum)
+        && is_below_minimum_coverage_level(minimum, manifest_minimum)
+    {
+        errors.push(format!(
+            "minimum_candidate_level {minimum} is below manifest minimum {manifest_minimum}"
+        ));
+    }
     let Some(candidates) = roadmap.get("candidates").and_then(Value::as_array) else {
         errors.push("candidates must be non-empty".to_string());
         return errors;

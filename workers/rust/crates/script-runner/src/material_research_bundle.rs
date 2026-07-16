@@ -10,6 +10,7 @@ const POSTURE: &str = "screening_research_bundle";
 const EXPLORATION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-run/v1";
 const EXECUTION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-next-round-execution/v1";
 const CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
+const RESEARCH_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-research-evidence/v1";
 const SUPPORTED_STUDIES: &[&str] = &["heat-spreader", "composite-thermo-electric-panel"];
 
 type RunnerResult<T> = Result<T, String>;
@@ -201,11 +202,20 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         "/summary/reliability_decision",
         "/summary/next_round_decision",
         "/summary/chain_stop_reason",
+        "/research_evidence/winner_candidate_id",
+        "/research_evidence/quality_gate_decision",
+        "/research_evidence/plan_decision",
+        "/research_evidence/final_winner_candidate_id",
     ] {
         if pointer_str(bundle, pointer).is_empty() {
             return Err(format!("{}: expected non-empty string", &pointer[1..]));
         }
     }
+    assert_eq_str(
+        pointer_str(bundle, "/research_evidence/schema_version"),
+        RESEARCH_EVIDENCE_SCHEMA_VERSION,
+        "research_evidence.schema_version",
+    )?;
     assert_eq_value(
         bundle.pointer("/next_round_execution_plan/decision"),
         bundle.pointer("/summary/next_round_decision"),
@@ -231,6 +241,7 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         bundle.pointer("/summary/chain_stop_reason"),
         "chain.stop_reason",
     )?;
+    validate_research_evidence(bundle)?;
     if !bundle
         .pointer("/reproducibility/initial_command")
         .and_then(Value::as_array)
@@ -239,6 +250,104 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         return Err("reproducibility.initial_command must be an argv array".to_string());
     }
     Ok(())
+}
+
+fn validate_research_evidence(bundle: &Value) -> RunnerResult<()> {
+    let evidence = bundle
+        .get("research_evidence")
+        .ok_or_else(|| "research_evidence: missing retained research evidence".to_string())?;
+    assert_eq_value(
+        evidence.get("winner_candidate_id"),
+        bundle.pointer("/summary/winner_candidate_id"),
+        "research_evidence.winner_candidate_id",
+    )?;
+    assert_eq_value(
+        evidence.get("quality_gate_decision"),
+        bundle.pointer("/summary/reliability_decision"),
+        "research_evidence.quality_gate_decision",
+    )?;
+    assert_eq_value(
+        evidence.get("plan_decision"),
+        bundle.pointer("/summary/next_round_decision"),
+        "research_evidence.plan_decision",
+    )?;
+    assert_eq_value(
+        evidence.get("plan_step_count"),
+        bundle.pointer("/summary/runnable_next_step_count"),
+        "research_evidence.plan_step_count",
+    )?;
+    assert_eq_value(
+        evidence.get("chain_round_count"),
+        bundle.pointer("/summary/chain_round_count"),
+        "research_evidence.chain_round_count",
+    )?;
+    if let Some(final_winner) = bundle.pointer("/chain/final_winner_candidate_id") {
+        assert_eq_value(
+            evidence.get("final_winner_candidate_id"),
+            Some(final_winner),
+            "research_evidence.final_winner_candidate_id",
+        )?;
+    }
+    let ranked_candidate_ids = non_empty_string_array(evidence, "ranked_candidate_ids")?;
+    let candidate_count = evidence
+        .get("candidate_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "research_evidence.candidate_count must be an integer".to_string())?;
+    if candidate_count != ranked_candidate_ids.len() as u64 {
+        return Err(
+            "research_evidence.candidate_count must match ranked_candidate_ids".to_string(),
+        );
+    }
+    if !ranked_candidate_ids.contains(&pointer_str(bundle, "/summary/winner_candidate_id")) {
+        return Err("research_evidence winner must be present in ranked candidates".to_string());
+    }
+    for focus_id in non_empty_string_array(evidence, "focus_candidate_ids")? {
+        if !ranked_candidate_ids.contains(&focus_id) {
+            return Err(format!(
+                "research_evidence.focus_candidate_ids contains unknown candidate {focus_id:?}"
+            ));
+        }
+    }
+    non_empty_string_array(evidence, "primary_metric_ids")?;
+    if evidence
+        .get("metric_objective_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        == 0
+    {
+        return Err("research_evidence.metric_objective_count must be positive".to_string());
+    }
+    if let Some(trace) = bundle
+        .pointer("/chain/optimization_trace")
+        .and_then(Value::as_array)
+    {
+        let trace_count = evidence
+            .get("chain_trace_round_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        if trace_count != trace.len() as u64 {
+            return Err(
+                "research_evidence.chain_trace_round_count must match chain.optimization_trace"
+                    .to_string(),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn non_empty_string_array<'a>(value: &'a Value, key: &str) -> RunnerResult<Vec<&'a str>> {
+    let items = value
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or_else(|| format!("research_evidence.{key} must be an array"))?;
+    let strings = items.iter().filter_map(Value::as_str).collect::<Vec<_>>();
+    if strings.is_empty() || strings.len() != items.len() {
+        Err(format!(
+            "research_evidence.{key} must be a non-empty string array"
+        ))
+    } else {
+        Ok(strings)
+    }
 }
 
 fn assert_checksum(

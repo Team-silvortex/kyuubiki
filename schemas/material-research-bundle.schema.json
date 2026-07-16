@@ -13,6 +13,7 @@
     "artifact_checksums",
     "reproducibility",
     "execution_trace",
+    "research_evidence",
     "summary",
     "initial_exploration",
     "next_round_execution_plan",
@@ -49,6 +50,9 @@
     },
     "execution_trace": {
       "$ref": "#/$defs/executionTrace"
+    },
+    "research_evidence": {
+      "$ref": "#/$defs/researchEvidence"
     },
     "summary": {
       "$ref": "#/$defs/summary"
@@ -243,6 +247,102 @@
           "minimum": 1
         },
         "chain_stop_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "researchEvidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "candidate_count",
+        "ranked_candidate_ids",
+        "winner_candidate_id",
+        "primary_metric_ids",
+        "metric_objective_count",
+        "violated_quality_gate_ids",
+        "focus_candidate_ids",
+        "quality_gate_decision",
+        "plan_decision",
+        "plan_step_count",
+        "chain_round_count",
+        "chain_trace_round_count",
+        "final_winner_candidate_id"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-research-evidence/v1"
+        },
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ranked_candidate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optimization_profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primary_metric_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "metric_objective_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "violated_quality_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "focus_candidate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "quality_gate_decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_step_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chain_round_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chain_trace_round_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "final_winner_candidate_id": {
           "type": "string",
           "minLength": 1
         }

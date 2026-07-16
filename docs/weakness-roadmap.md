@@ -39,28 +39,36 @@ bookkeeping.
 
 Current weak point:
 
-- many operators are runnable and composable, but not yet qualification-grade
-- smoke tests are broader than benchmark-backed accuracy evidence
-- some limitations are implicit instead of product-visible
+- all release-gated solve operators are now `qualification` level, but several
+  qualifications are still scoped around compact retained fixtures
+- benchmark-backed accuracy exists across the covered matrix, but the next
+  trust jump depends on deeper convergence, perturbation, and reference-tool
+  evidence
+- some limitations are documented in evidence packets, but they still need to
+  become more product-visible in workflow previews and reports
 
 Current moxi hardening focus:
 
-- keep every broad physics family at least smoke-covered
-- identify the first qualification candidates across mechanical, thermal,
-  electromagnetic, CFD/transport, and coupled workflows
-- add explicit failure and limitation notes to weak solver families
+- keep every release-gated physics family at `qualification` without lowering
+  the manifest minimum
+- turn compact qualification fixtures into richer evidence ladders across
+  mechanical, thermal, electromagnetic, CFD/transport, and coupled workflows
+- surface explicit failure, assumption, and limitation notes in user-facing
+  workflow and export paths
 
 Qualification focus:
 
-- add convergence checks for selected families
-- add cross-checks against analytic, literature, or independent reference
-  cases where practical
-- retain evidence bundles for candidate operators
+- add convergence checks beyond the retained closed-form or patch fixtures
+- add cross-checks against analytic, literature, manufactured-solution, or
+  independent reference cases where practical
+- keep retained evidence bundles release-addressable for every promoted
+  operator family
 
 Moxi readiness standard:
 
-- Kyuubiki can clearly separate verified, review-level, partial, and
-  experimental solver claims.
+- Kyuubiki can clearly separate release-qualified, scoped qualification,
+  experimental, and deferred solver claims without weakening the mainline
+  coverage contract.
 
 Primary docs:
 
@@ -269,13 +277,13 @@ Primary docs:
 
 The recommended order is:
 
-1. numerical trust
-2. executable TaskIR stability
+1. deepen numerical trust beyond compact qualification fixtures
+2. executable TaskIR stability and replay compatibility
 3. operator SDK end-to-end package example
 4. agent/orchestra/mesh recovery
 5. automated material research flagship
 6. security fuzz expansion
-7. Workbench main-loop polish
+7. Workbench main-loop polish and product-visible limitations
 
 Workbench polish matters, but it should not outrun the runtime and numerical
 trust foundations.

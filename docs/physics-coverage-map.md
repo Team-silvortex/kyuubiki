@@ -30,9 +30,10 @@ work. The reliability evidence index for that matrix starts at
 `config/operator-reliability/`, and is guarded by
 `make check-operator-reliability`.
 
-For `moxi 2.x`, every covered solve operator now carries at least `review`
-evidence. The manifest's `minimum_coverage_level` is `review`, so the guard
-fails if a covered solver is accidentally downgraded to `baseline` or `smoke`.
+For `moxi 2.x`, every covered solve operator now carries `qualification`
+evidence. The manifest's `minimum_coverage_level` is `qualification`, so the
+guard fails if a covered solver is accidentally downgraded to `review`,
+`baseline`, or `smoke`.
 
 It covers:
 
@@ -233,11 +234,11 @@ Use these labels consistently:
   the family has external validation, convergence posture, and documented
   limits suitable for serious engineering claims
 
-The current reliability pass requires all covered solve operators to reach at
-least `review`. New experimental families may still start as `smoke` or
-`baseline` outside this release gate, but they should not be added to the
-release-gated `physics-coverage` manifest until their evidence satisfies the
-declared minimum.
+The current reliability pass requires all covered solve operators to reach
+`qualification`. New experimental families may still start as `smoke`,
+`baseline`, or `review` outside this release gate, but they should not be added
+to the release-gated `physics-coverage` manifest until their evidence satisfies
+the declared minimum.
 
 The current machine-readable manifest should be treated as the source of truth
 for per-operator trust level. A solver family can only move from `smoke` to

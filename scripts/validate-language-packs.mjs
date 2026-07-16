@@ -15,6 +15,18 @@ const VERSION_LINE = "moxi 2.x";
 const TARGET_APP_VERSION = readCurrentReleaseVersion();
 const SOURCE_VALUES = new Set(["downloaded", "imported"]);
 const SURFACES = new Set(["workbench", "hub"]);
+const UNSAFE_TEXT_PATTERNS = [
+  "<",
+  ">",
+  "javascript:",
+  "data:text/html",
+  "onerror=",
+  "onclick=",
+  "innerhtml",
+  "document.cookie",
+  "localstorage",
+  "eval(",
+];
 
 const errors = [];
 
@@ -26,7 +38,35 @@ function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function isSafeRepoRelativePath(relativePath) {
+  if (typeof relativePath !== "string" || !relativePath.trim()) return false;
+  const normalized = relativePath.replaceAll("\\", "/");
+  if (path.isAbsolute(relativePath) || /^[A-Za-z]:\//.test(normalized)) return false;
+  return !normalized.split("/").some((part) => part === "..");
+}
+
+function collectUnsafeTextIssues(value, label, issues = []) {
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    const pattern = UNSAFE_TEXT_PATTERNS.find((entry) => normalized.includes(entry));
+    if (pattern) issues.push(`${label}: unsafe language pack text contains ${pattern}`);
+    return issues;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectUnsafeTextIssues(entry, `${label}[${index}]`, issues));
+    return issues;
+  }
+  if (isPlainObject(value)) {
+    Object.entries(value).forEach(([key, entry]) => collectUnsafeTextIssues(entry, `${label}.${key}`, issues));
+  }
+  return issues;
+}
+
 function readJson(relativePath) {
+  if (!isSafeRepoRelativePath(relativePath)) {
+    fail(`${relativePath}: path must be repository-relative and stay inside language pack validation roots`);
+    return null;
+  }
   const absolutePath = path.join(repoRoot, relativePath);
   try {
     return JSON.parse(fs.readFileSync(absolutePath, "utf8"));
@@ -69,6 +109,7 @@ function validateLocaleTarget() {
   if (target.line !== VERSION_LINE) {
     fail(`config/localization/mainstream-language-pack-locales.json: line must be ${VERSION_LINE}`);
   }
+  collectUnsafeTextIssues(target, "config/localization/mainstream-language-pack-locales.json").forEach(fail);
   validateTimestamp(target.updatedAt, "config/localization/mainstream-language-pack-locales.json");
   if (!Array.isArray(target.locales)) {
     fail("config/localization/mainstream-language-pack-locales.json: locales must be an array");
@@ -96,6 +137,10 @@ function validateLocaleTarget() {
 }
 
 function validatePack(relativePath, expectedSurface) {
+  if (!isSafeRepoRelativePath(relativePath)) {
+    fail(`language-packs/${relativePath}: path must stay inside language pack validation roots`);
+    return null;
+  }
   const pack = readJson(`language-packs/${relativePath}`);
   if (!isPlainObject(pack)) {
     fail(`language-packs/${relativePath}: pack must be a JSON object`);
@@ -133,6 +178,7 @@ function validatePack(relativePath, expectedSurface) {
   if (!isPlainObject(pack.overrides)) {
     fail(`language-packs/${relativePath}: overrides must be an object`);
   }
+  collectUnsafeTextIssues(pack, `language-packs/${relativePath}`).forEach(fail);
   validateTimestamp(pack.updatedAt, `language-packs/${relativePath}`);
 
   return pack;
@@ -172,6 +218,7 @@ if (isPlainObject(catalog)) {
   if (!Array.isArray(catalog.packs)) {
     fail("language-packs/catalog.json: packs must be an array");
   } else {
+    collectUnsafeTextIssues(catalog, "language-packs/catalog.json").forEach(fail);
     catalog.packs.forEach((entry, index) => {
       const label = `language-packs/catalog.json:packs[${index}]`;
       if (!isPlainObject(entry)) {
@@ -188,6 +235,10 @@ if (isPlainObject(catalog)) {
         fail(`${label}: duplicate id ${entry.id}`);
       }
       seenIds.add(entry.id);
+      if (!isSafeRepoRelativePath(entry.path)) {
+        fail(`${label}: path must stay inside language pack validation roots`);
+        return;
+      }
       referencedPaths.add(entry.path);
 
       const pack = validatePack(entry.path, entry.surface);

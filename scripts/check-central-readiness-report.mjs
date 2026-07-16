@@ -79,6 +79,11 @@ if (process.argv.includes("--self-test")) {
       schema_version: "kyuubiki.central-database-contract/v1",
       table_contract_present: true,
     },
+    language_pack_publish_contract: {
+      required_evidence: ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
+      unsafe_text_scan_present: true,
+      docs_present: true,
+    },
     publish_pipeline_contract: {
       schema_version: "kyuubiki.central-publish-pipeline/v1",
       status: "blocked_preview",
@@ -148,6 +153,12 @@ function validateReport(report) {
   if (report.storage_contract?.table_contract_present !== true) {
     issues.push("storage table contract missing");
   }
+  if (report.language_pack_publish_contract?.unsafe_text_scan_present !== true) {
+    issues.push("language pack unsafe text evidence missing");
+  }
+  if (report.language_pack_publish_contract?.docs_present !== true) {
+    issues.push("language pack unsafe text docs missing");
+  }
   if (report.service_surface?.id !== "central-web-service") {
     issues.push("central web service surface id missing");
   }
@@ -207,6 +218,7 @@ function validateMarkdown(markdown) {
     "## Config Surface",
     "## Service Surface",
     "## Storage Contract",
+    "## Language Pack Publish Contract",
     "## Publish Pipeline Contract",
     "## Runbook",
     "kyuubiki.central-readiness-report/v1",
@@ -217,6 +229,7 @@ function validateMarkdown(markdown) {
     "self_host_web",
     "publisher_identity",
     "download_verification",
+    "unsafe_text_scan",
     "make check-central-database-readiness MODE=local BACKEND=sqlite",
     "make remote-central-database-smoke REMOTE=kyuubiki-lab",
     "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke",
@@ -252,6 +265,9 @@ function markdownFixture() {
     "",
     "## Storage Contract",
     "- Contract: `kyuubiki.central-database-contract/v1`",
+    "",
+    "## Language Pack Publish Contract",
+    "- Evidence: `language_pack, locale_target, surface_validation, unsafe_text_scan`",
     "",
     "## Publish Pipeline Contract",
     "- Contract: `kyuubiki.central-publish-pipeline/v1`",

@@ -523,7 +523,7 @@ defmodule KyuubikiWeb.CentralStore do
     %{
       "kind" => "language_pack",
       "manifest_schema" => "schemas/language-pack.schema.json",
-      "required_evidence" => ["language_pack", "locale_target", "surface_validation"],
+      "required_evidence" => ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
       "distribution_modes" => ["language_pack_catalog", "local_import"],
       "mutable_after_publish" => false
     }

@@ -122,6 +122,18 @@ boundaries:
 - remote deployment metadata ingress, where mutated deployment plans, journals,
   dry-run reports, and raw byte payloads exercise decode, re-encode, and
   rendering without remote mutation or agent startup
+- central store contract ingress, where malformed config JSON, repo-path
+  traversal, inline database credentials, and SSH password-shaped fields are
+  rejected before central store contracts can claim readiness
+- central readiness report ingress, where hostile reports cannot silently mark
+  central service writes, endpoint coverage, schema coverage, or publish
+  pipeline readiness as safe
+- language pack catalog ingress, where pack paths must remain repo-relative and
+  cannot traverse out of the language-pack validation roots, and pack text must
+  not contain HTML, JavaScript URL, inline event-handler, browser-storage, or
+  script-evaluation shapes before UI text is accepted; the Workbench and Hub
+  local import controllers mirror the same unsafe-text rejection before a pack
+  or override registry can enter client state
 
 These checks verify that protocol boundaries do not panic while accepting or
 rejecting each case.
@@ -143,6 +155,13 @@ Run it when changing:
 - remote SSH fixture plan, command-shape report, or local fixture metadata code
 - remote deployment plan, journal, dry-run report, or execution preflight
   metadata code
+- central store contract, publish policy, publisher policy, artifact admission,
+  publish pipeline, or central database readiness contract code
+- central readiness report generation, publish pipeline report rendering, or
+  self-host central service readiness gates
+- language pack catalog, Workbench or Hub local import handling, imported pack
+  metadata, downloaded pack metadata, override registries, or localization
+  distribution code
 - JSON budget limits, artifact parsing, protocol decode, or graph import/export
   paths
 
@@ -152,7 +171,7 @@ protocol decode, then the workflow security guard, Task IR verifier, RPC
 dispatcher, package manifest validator, or update planner must reject malformed
 or over-budget inputs before execution, native library loading, SSH, secret
 access, known-host mutation, fixture container startup, remote mutation, agent
-startup, download, or apply.
+startup, central-store readiness promotion, download, or apply.
 
 ### Control plane
 

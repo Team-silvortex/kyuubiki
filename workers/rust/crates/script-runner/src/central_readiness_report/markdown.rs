@@ -12,6 +12,7 @@ pub(super) fn validate_markdown(markdown: &str) -> Vec<String> {
         "## Config Surface",
         "## Service Surface",
         "## Storage Contract",
+        "## Language Pack Publish Contract",
         "## Publish Pipeline Contract",
         "## Runbook",
         REPORT_SCHEMA,
@@ -22,6 +23,7 @@ pub(super) fn validate_markdown(markdown: &str) -> Vec<String> {
         "self_host_web",
         "publisher_identity",
         "download_verification",
+        "unsafe_text_scan",
         "make check-central-database-readiness MODE=local BACKEND=sqlite",
         "make remote-central-database-smoke REMOTE=kyuubiki-lab",
         "RUN_DB_SMOKE=1 MODE=cloud BACKEND=postgres make test-central-database-smoke",
@@ -66,6 +68,7 @@ pub(super) fn render_markdown(report: &Value) -> String {
     }
     render_schema_section(report, &mut lines);
     render_config_section(report, &mut lines);
+    render_language_pack_section(report, &mut lines);
     render_pipeline_section(report, &mut lines);
     render_tail(report, &mut lines);
     lines.join("\n")
@@ -108,6 +111,33 @@ fn render_config_section(report: &Value, lines: &mut Vec<String>) {
             yes(config, "schema_version_present")
         ));
     }
+}
+
+fn render_language_pack_section(report: &Value, lines: &mut Vec<String>) {
+    lines.extend([
+        String::new(),
+        "## Language Pack Publish Contract".to_string(),
+        String::new(),
+        format!(
+            "- Evidence: `{}`",
+            array_at(report, "/language_pack_publish_contract/required_evidence")
+                .into_iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        format!(
+            "- Unsafe text scan: `{}`",
+            yes_at(
+                report,
+                "/language_pack_publish_contract/unsafe_text_scan_present"
+            )
+        ),
+        format!(
+            "- Docs coverage: `{}`",
+            yes_at(report, "/language_pack_publish_contract/docs_present")
+        ),
+    ]);
 }
 
 fn render_pipeline_section(report: &Value, lines: &mut Vec<String>) {

@@ -167,6 +167,11 @@ fn build_report(
             "schema_version": STORAGE_SCHEMA,
             "table_contract_present": includes_all(files.get("apps/web/lib/kyuubiki_web/storage/central_database.ex"), &[STORAGE_SCHEMA, "central_store_entries", "central_artifact_signatures"])
         },
+        "language_pack_publish_contract": {
+            "required_evidence": ["language_pack", "locale_target", "surface_validation", "unsafe_text_scan"],
+            "unsafe_text_scan_present": includes_all(files.get("apps/web/lib/kyuubiki_web/central_store.ex"), &["language_pack", "unsafe_text_scan"]),
+            "docs_present": includes_all(files.get("docs/central-server-components.md"), &["language_pack", "unsafe_text_scan"])
+        },
         "publish_pipeline_contract": publish_pipeline::contract(&files),
         "runbook": {
             "local_readiness": "make check-central-database-readiness MODE=local BACKEND=sqlite",
@@ -240,6 +245,20 @@ fn validate_report(report: &Value) -> Vec<String> {
         != Some(true)
     {
         issues.push("storage table contract missing".to_string());
+    }
+    if report
+        .pointer("/language_pack_publish_contract/unsafe_text_scan_present")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        issues.push("language pack unsafe text evidence missing".to_string());
+    }
+    if report
+        .pointer("/language_pack_publish_contract/docs_present")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        issues.push("language pack unsafe text docs missing".to_string());
     }
     publish_pipeline::validate(&mut issues, report.pointer("/publish_pipeline_contract"));
     for (pointer, expected, label) in [
@@ -360,7 +379,10 @@ fn self_test_files() -> HashMap<String, String> {
     );
     files.insert(
         "apps/web/lib/kyuubiki_web/central_store.ex".to_string(),
-        publish_pipeline::fixture_backend(),
+        format!(
+            "{} language_pack unsafe_text_scan",
+            publish_pipeline::fixture_backend()
+        ),
     );
     files.insert(
         "apps/web/lib/kyuubiki_web/storage/central_database.ex".to_string(),
@@ -380,7 +402,10 @@ fn self_test_files() -> HashMap<String, String> {
     );
     files.insert(
         "docs/central-server-components.md".to_string(),
-        publish_pipeline::fixture_docs(),
+        format!(
+            "{} language_pack unsafe_text_scan",
+            publish_pipeline::fixture_docs()
+        ),
     );
     files
 }
@@ -561,6 +586,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{markdown, self_test_checker_report, validate_report};
+    use serde_json::{Value, json};
 
     #[test]
     fn self_test_report_is_valid() {
@@ -574,5 +600,41 @@ mod tests {
                 .iter()
                 .any(|issue| issue.contains("markdown missing"))
         );
+    }
+
+    #[test]
+    fn central_readiness_report_fuzz_smoke_rejects_hostile_reports() {
+        let base = self_test_checker_report();
+        let cases = [
+            Value::String("DATABASE_URL=postgres://user:pass@example/db".to_string()),
+            with_path(&base, "/status", json!("ok-but-not-really")),
+            with_path(&base, "/api_surface/endpoints", json!([])),
+            with_path(&base, "/schema_surface/schema_files", json!([])),
+            with_path(
+                &base,
+                "/publish_pipeline_contract/accepting_writes",
+                json!(true),
+            ),
+            with_path(
+                &base,
+                "/publish_pipeline_contract/status",
+                json!("accepting_uploads"),
+            ),
+            with_path(&base, "/mode", json!("ssh_password=do-not-store-this")),
+        ];
+        for (index, report) in cases.iter().enumerate() {
+            assert!(
+                !validate_report(report).is_empty(),
+                "central readiness fuzz case {index} must fail closed"
+            );
+        }
+    }
+
+    fn with_path(report: &Value, pointer: &str, value: Value) -> Value {
+        let mut mutated = report.clone();
+        *mutated
+            .pointer_mut(pointer)
+            .expect("self-test report pointer should exist") = value;
+        mutated
     }
 }
