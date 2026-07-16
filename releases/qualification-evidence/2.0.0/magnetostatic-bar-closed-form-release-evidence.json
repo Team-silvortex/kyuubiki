@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "promotion_summary": {
+    "candidate_id": "magnetostatic-bar-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/magnetostatic-bar-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.magnetostatic_bar_1d"
+    ]
+  },
+  "profiles": [
+    {
+      "profile_id": "magnetostatic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "magnetostatic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.magnetostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_permeance_closed_form",
+        "material_scaling",
+        "zero_source_limit"
+      ],
+      "formal_invariants": [
+        "grounded_magnetic_potential",
+        "magnetic_potential_matches_permeance_balance",
+        "magnetic_field_is_negative_gradient",
+        "flux_density_scales_with_permeability",
+        "zero_source_has_zero_stored_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/magnetostatic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "magnetostatic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 4205,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "magnetostatic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1882,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "magnetostatic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 183,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

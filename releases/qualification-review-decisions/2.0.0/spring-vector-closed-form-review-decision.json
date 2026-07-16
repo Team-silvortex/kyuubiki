@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "spring-vector-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+  "review_gate": "orthogonal vector stiffness, fixed-support displacement, member force, and strain-energy evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 2D and 3D linear static vector spring scope after orthogonal stiffness, member force, and energy-balance evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "2D orthogonal vector stiffness regression passes",
+    "3D orthogonal vector stiffness regression passes",
+    "spring input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

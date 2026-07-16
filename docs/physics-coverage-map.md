@@ -258,4 +258,4 @@ when:
 - material studies can point to the solver families they depend on
 - TaskIR and executable task design have examples from all major coverage
   classes, not only mechanical fixtures
-- `make check-operator-reliability` reports `38 operators, review=17, qualification=21`
+- `make check-operator-reliability` reports `38 operators, review=13, qualification=25`

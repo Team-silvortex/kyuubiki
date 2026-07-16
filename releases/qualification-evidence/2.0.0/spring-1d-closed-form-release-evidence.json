@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "promotion_summary": {
+    "candidate_id": "spring-1d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/spring-1d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.spring_1d"
+    ]
+  },
+  "profiles": [
+    {
+      "profile_id": "spring-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "spring-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.spring_1d"
+      ],
+      "validation_methods": [
+        "series_equivalent_stiffness",
+        "member_force_continuity",
+        "zero_load_limit"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement",
+        "tip_displacement_matches_series_closed_form",
+        "member_forces_are_equal_in_series",
+        "strain_energy_is_half_force_extension",
+        "zero_load_has_zero_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/spring-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/spring_1d_review.rs",
+        "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "spring-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 3643,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "spring-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_1d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 96,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1137,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

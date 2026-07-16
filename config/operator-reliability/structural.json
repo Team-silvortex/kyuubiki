@@ -127,12 +127,13 @@
       "operator_id": "solve.spring_1d",
       "benchmark_template": "spring-chain",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+          "workers/rust/crates/solver/tests/spring_1d_closed_form.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_spring_1d_chain_fixture",
         "review": {
@@ -155,6 +156,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/spring_1d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/spring-1d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/spring_1d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/spring-1d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_1d_review.rs",
+            "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -167,7 +188,7 @@
       "operator_id": "solve.spring_2d",
       "benchmark_template": "spring-grid",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -195,6 +216,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/spring_2d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/spring-vector-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/spring-vector-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_2d_review.rs",
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -207,7 +248,7 @@
       "operator_id": "solve.spring_3d",
       "benchmark_template": "spring-cage",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -234,6 +275,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/spring_3d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/spring-vector-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/spring-vector-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/spring_3d_review.rs",
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_input_reliability.rs"
           ]
         }
       },

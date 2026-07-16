@@ -198,6 +198,151 @@
       ]
     },
     {
+      "profile_id": "magnetostatic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "magnetostatic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.magnetostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_permeance_closed_form",
+        "material_scaling",
+        "zero_source_limit"
+      ],
+      "formal_invariants": [
+        "grounded_magnetic_potential",
+        "magnetic_potential_matches_permeance_balance",
+        "magnetic_field_is_negative_gradient",
+        "flux_density_scales_with_permeability",
+        "zero_source_has_zero_stored_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/magnetostatic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "magnetostatic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "spring-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "spring-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.spring_1d"
+      ],
+      "validation_methods": [
+        "series_equivalent_stiffness",
+        "member_force_continuity",
+        "zero_load_limit"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement",
+        "tip_displacement_matches_series_closed_form",
+        "member_forces_are_equal_in_series",
+        "strain_energy_is_half_force_extension",
+        "zero_load_has_zero_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/spring-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/spring_1d_review.rs",
+        "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "spring-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_1d_review -- --nocapture"
+        },
+        {
+          "id": "spring-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "spring-vector-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "spring-vector-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.spring_2d",
+        "solve.spring_3d"
+      ],
+      "validation_methods": [
+        "orthogonal_vector_stiffness",
+        "component_displacement_closed_form",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_support_displacements_are_zero",
+        "free_node_displacement_matches_inverse_diagonal_stiffness",
+        "member_forces_match_applied_load_components",
+        "element_extension_sign_matches_member_axis",
+        "strain_energy_is_half_force_dot_displacement"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/spring-vector-closed-form.md",
+        "workers/rust/crates/solver/tests/spring_2d_review.rs",
+        "workers/rust/crates/solver/tests/spring_3d_review.rs",
+        "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+        "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "spring-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_2d_review -- --nocapture"
+        },
+        {
+          "id": "spring-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_3d_review -- --nocapture"
+        },
+        {
+          "id": "spring-vector-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_vector_closed_form -- --nocapture"
+        },
+        {
+          "id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "screening-cfd-boundary",
       "profile_role": "release_candidate",
       "qualification_candidate_id": "screening-cfd-boundary",

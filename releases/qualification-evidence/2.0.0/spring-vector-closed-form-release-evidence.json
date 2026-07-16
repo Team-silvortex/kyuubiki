@@ -1,0 +1,103 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "promotion_summary": {
+    "candidate_id": "spring-vector-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/spring-vector-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.spring_2d",
+      "solve.spring_3d"
+    ]
+  },
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "spring-vector-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "spring-vector-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.spring_2d",
+        "solve.spring_3d"
+      ],
+      "validation_methods": [
+        "orthogonal_vector_stiffness",
+        "component_displacement_closed_form",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_support_displacements_are_zero",
+        "free_node_displacement_matches_inverse_diagonal_stiffness",
+        "member_forces_match_applied_load_components",
+        "element_extension_sign_matches_member_axis",
+        "strain_energy_is_half_force_dot_displacement"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/spring-vector-closed-form.md",
+        "workers/rust/crates/solver/tests/spring_2d_review.rs",
+        "workers/rust/crates/solver/tests/spring_3d_review.rs",
+        "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+        "workers/rust/crates/solver/tests/spring_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "spring-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1121,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "spring-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_3d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1053,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "spring-vector-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_vector_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 109,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 94,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

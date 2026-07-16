@@ -5,9 +5,9 @@
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
-.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence capture-stokes-flow-screening-release-evidence capture-acoustic-bar-qualification-release-evidence capture-advection-diffusion-bar-qualification-release-evidence
+.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence capture-stokes-flow-screening-release-evidence capture-acoustic-bar-qualification-release-evidence capture-advection-diffusion-bar-qualification-release-evidence capture-magnetostatic-bar-qualification-release-evidence capture-spring-1d-qualification-release-evidence capture-spring-vector-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
-.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence check-acoustic-bar-qualification-release-evidence check-advection-diffusion-bar-qualification-release-evidence
+.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence check-acoustic-bar-qualification-release-evidence check-advection-diffusion-bar-qualification-release-evidence check-magnetostatic-bar-qualification-release-evidence check-spring-1d-qualification-release-evidence check-spring-vector-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
@@ -216,6 +216,18 @@ capture-advection-diffusion-bar-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --self-test
 	@$(ENTRYPOINT) check-operator-validation --execute --profile advection-diffusion-bar-closed-form --out $${OUT:-tmp/advection-diffusion-bar-closed-form-release-evidence.json}
 
+capture-magnetostatic-bar-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile magnetostatic-bar-closed-form --out $${OUT:-tmp/magnetostatic-bar-closed-form-release-evidence.json}
+
+capture-spring-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile spring-1d-closed-form --out $${OUT:-tmp/spring-1d-closed-form-release-evidence.json}
+
+capture-spring-vector-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile spring-vector-closed-form --out $${OUT:-tmp/spring-vector-closed-form-release-evidence.json}
+
 check-beam-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-beam-frame-qualification-release-evidence --in $${IN:-tmp/beam-frame-classic-qualification-release-evidence.json}
 
@@ -236,6 +248,15 @@ check-acoustic-bar-qualification-release-evidence:
 
 check-advection-diffusion-bar-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/advection-diffusion-bar-closed-form-release-evidence.json} --profile advection-diffusion-bar-closed-form
+
+check-magnetostatic-bar-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/magnetostatic-bar-closed-form-release-evidence.json} --profile magnetostatic-bar-closed-form
+
+check-spring-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/spring-1d-closed-form-release-evidence.json} --profile spring-1d-closed-form
+
+check-spring-vector-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/spring-vector-closed-form-release-evidence.json} --profile spring-vector-closed-form
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline

@@ -109,6 +109,24 @@ It promotes `solve.advection_diffusion_bar_1d` for the retained 1D steady
 constant-coefficient transport scope after closed-form flux, Peclet, and
 zero-velocity checks pass.
 
+The ninth approved qualification packet is
+[magnetostatic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json).
+It promotes `solve.magnetostatic_bar_1d` for the retained 1D linear
+magnetostatic permeance scope after closed-form potential, field, flux, energy,
+and zero-source checks pass.
+
+The tenth approved qualification packet is
+[spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json).
+It promotes `solve.spring_1d` for the retained 1D linear static series-spring
+scope after equivalent-stiffness, member-force, strain-energy, and zero-load
+checks pass.
+
+The eleventh approved qualification packet is
+[spring-vector-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json).
+It promotes `solve.spring_2d` and `solve.spring_3d` for the retained linear
+static orthogonal vector-spring scope after displacement, member-force,
+extension-sign, fixed-support, and strain-energy checks pass.
+
 ## Why these three first
 
 They are the best first return for `v1.x` accuracy work:

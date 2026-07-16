@@ -204,6 +204,79 @@
       "graduation_gate": "closed-form flux, Peclet scaling, and zero-velocity limit evidence must be retained before qualification",
       "preferred_validation_lane": "make capture-advection-diffusion-bar-qualification-release-evidence",
       "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "magnetostatic-bar-closed-form",
+      "priority": "p2",
+      "domain": "electromagnetic",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.magnetostatic_bar_1d"
+      ],
+      "rationale": "The 1D magnetostatic bar has a scalar permeance closed form and completes the electromagnetic line-field qualification boundary.",
+      "primary_blocker": "no blocker; reviewer approved the retained magnetostatic bar validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current magnetostatic-bar closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "closed-form permeance derivation note",
+        "permeance scaling regression",
+        "zero-source energy regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "scalar permeance, material scaling, and zero-source energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-magnetostatic-bar-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "spring-1d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.spring_1d"
+      ],
+      "rationale": "The 1D linear spring chain has a direct series-equivalent closed form and is the safest next structural review promotion.",
+      "primary_blocker": "no blocker; reviewer approved the retained spring 1D validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current spring-1d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "series equivalent stiffness derivation note",
+        "member force continuity regression",
+        "zero-load energy regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "series stiffness, member force continuity, and zero-load energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-spring-1d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "spring-vector-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.spring_2d",
+        "solve.spring_3d"
+      ],
+      "rationale": "The 2D and 3D linear spring operators share the same vector spring projection contract and have compact orthogonal closed-form fixtures.",
+      "primary_blocker": "no blocker; reviewer approved the retained vector spring validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current spring-vector closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "orthogonal vector stiffness derivation note",
+        "2D and 3D closed-form displacement regression",
+        "strain-energy balance regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "orthogonal vector stiffness, fixed-support displacement, member force, and strain-energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-spring-vector-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
     }
   ]
 }

@@ -91,6 +91,39 @@
       "review_gate": "closed-form flux, Peclet scaling, and zero-velocity limit evidence must be retained before qualification",
       "review_decision_path": "releases/qualification-review-decisions/2.0.0/advection-diffusion-bar-closed-form-review-decision.json",
       "promotion_blocker": "no blocker; reviewer approved promotion for the retained 1D steady constant-coefficient transport scope"
+    },
+    {
+      "candidate_id": "magnetostatic-bar-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json",
+      "capture_command": "make capture-magnetostatic-bar-qualification-release-evidence",
+      "check_command": "make check-magnetostatic-bar-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "scalar permeance, material scaling, and zero-source energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/magnetostatic-bar-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 1D linear magnetostatic bar scope"
+    },
+    {
+      "candidate_id": "spring-1d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
+      "capture_command": "make capture-spring-1d-qualification-release-evidence",
+      "check_command": "make check-spring-1d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "series stiffness, member force continuity, and zero-load energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/spring-1d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 1D linear static spring-chain scope"
+    },
+    {
+      "candidate_id": "spring-vector-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+      "capture_command": "make capture-spring-vector-qualification-release-evidence",
+      "check_command": "make check-spring-vector-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "orthogonal vector stiffness, fixed-support displacement, member force, and strain-energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/spring-vector-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 2D and 3D linear static vector spring scope"
     }
   ]
 }

@@ -411,6 +411,155 @@
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]
+    },
+    {
+      "candidate_id": "magnetostatic-bar-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "scalar_permeance_closed_form",
+      "operator_ids": [
+        "solve.magnetostatic_bar_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the compact magnetostatic permeance and energy formulas",
+          "artifact_path": "evidence/operator-qualification/magnetostatic-bar-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain permeance scaling and zero-source energy checks",
+          "artifact_path": "workers/rust/crates/solver/tests/magnetostatic_bar_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "magnetostatic-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for permeance, field, flux, and energy diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/magnetostatic_bar_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "magnetostatic-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for magnetostatic bar inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/magnetostatic_bar_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-magnetostatic-bar-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json",
+          "artifact_command": "make capture-magnetostatic-bar-qualification-release-evidence",
+          "artifact_check_command": "make check-magnetostatic-bar-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "spring-1d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "series_spring_closed_form",
+      "operator_ids": [
+        "solve.spring_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the series spring equivalent stiffness, member force, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/spring-1d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain series stiffness, force continuity, and zero-load energy checks",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "spring-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for boundary, extension, and member force diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for spring operator inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-spring-1d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-spring-1d-qualification-release-evidence",
+          "artifact_check_command": "make check-spring-1d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "spring-vector-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "vector_spring_closed_form",
+      "operator_ids": [
+        "solve.spring_2d",
+        "solve.spring_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the orthogonal vector stiffness, force projection, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/spring-vector-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain 2D and 3D vector stiffness, force, extension, and energy checks",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "spring-2d-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain 2D spring grid review coverage for projected member diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_2d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "spring-3d-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain 3D spring cage review coverage for spatial member diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_3d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "spring-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for spring operator inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-spring-vector-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
+          "artifact_command": "make capture-spring-vector-qualification-release-evidence",
+          "artifact_check_command": "make check-spring-vector-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
     }
   ]
 }

@@ -326,12 +326,12 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 17 operators
-- `qualification`: 21 operators
+- `review`: 13 operators
+- `qualification`: 25 operators
 
 This remains intentionally conservative. The platform has broad executable
 coverage, and selected line-field, structural, thermal, electromagnetic,
-modal, acoustic, transport, and Stokes-screening subsets have crossed into
+modal, acoustic, transport, spring, and Stokes-screening subsets have crossed into
 scoped qualification evidence.
 
 The CFD-facing Stokes operators remain `screening_only` in scope, but the
@@ -361,6 +361,26 @@ advective flux must vanish. This does not claim transient transport, nonlinear
 reaction, multidimensional flow, turbulent mixing, or arbitrary stabilization
 schemes.
 
+The magnetostatic 1D bar is now qualified for the retained linear single-core
+permeance scope. Its closed-form evidence checks magnetic potential, field
+strength, flux density, and stored energy across length, area, permeability,
+and source scaling, plus the zero-source limit. This does not claim nonlinear
+magnetic materials, hysteresis, saturation, eddy currents, or time-varying
+fields.
+
+The spring 1D chain is now qualified for the retained linear static series
+scope. Its closed-form evidence checks equivalent series stiffness, member
+force continuity, element strain energy, and the zero-load response. This does
+not claim nonlinear springs, transient dynamics, contact, or arbitrary vector
+spring networks.
+
+The spring 2D and 3D operators are now qualified for the retained linear static
+orthogonal vector-spring scope. Their closed-form evidence checks inverse
+diagonal stiffness displacement, fixed-support displacement, member force,
+extension sign, and strain energy for planar and spatial spring projections.
+This does not claim nonlinear springs, contact, transient dynamics, or general
+mesh-convergence behavior for arbitrary spring networks.
+
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
 `evidence/operator-qualification/line-field-closed-form-baseline.json` and is
@@ -389,7 +409,7 @@ also reads approved evidence bundles and requires their `promotion_summary` to
 match the release record, review decision path, release version, and roadmap
 operator IDs before an approved record can remain valid. The readiness report
 summarizes that same gate as `summary.release_promotion_summaries`, currently
-showing eight approved promotions as retained, declared, matched, and not
+showing eleven approved promotions as retained, declared, matched, and not
 missing.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated

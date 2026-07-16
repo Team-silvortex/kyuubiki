@@ -1,0 +1,21 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "magnetostatic-bar-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json",
+  "review_gate": "scalar permeance, material scaling, and zero-source energy evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 1D linear magnetostatic bar scope after closed-form permeance, field, flux, and zero-source energy evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "closed-form permeance scaling regression passes",
+    "zero-source energy regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

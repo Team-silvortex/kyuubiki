@@ -1,0 +1,165 @@
+use kyuubiki_protocol::{
+    SolveSpring2dRequest, SolveSpring3dRequest, Spring2dElementInput, Spring2dNodeInput,
+    Spring3dElementInput, Spring3dNodeInput,
+};
+use kyuubiki_solver::{solve_spring_2d, solve_spring_3d};
+
+const TOL: f64 = 1.0e-10;
+
+#[test]
+fn spring_2d_matches_orthogonal_vector_stiffness_closed_form() {
+    let load_x = 800.0;
+    let load_y = -600.0;
+    let stiffness_x = 40_000.0;
+    let stiffness_y = 30_000.0;
+    let result = solve_spring_2d(&SolveSpring2dRequest {
+        nodes: vec![
+            node_2d("free", 0.0, 0.0, false, false, load_x, load_y),
+            node_2d("fixed-x", 1.0, 0.0, true, true, 0.0, 0.0),
+            node_2d("fixed-y", 0.0, 1.0, true, true, 0.0, 0.0),
+        ],
+        elements: vec![
+            element_2d("kx", 0, 1, stiffness_x),
+            element_2d("ky", 0, 2, stiffness_y),
+        ],
+    })
+    .expect("2D vector spring closed-form fixture should solve");
+
+    let free = &result.nodes[0];
+    let expected_ux = load_x / stiffness_x;
+    let expected_uy = load_y / stiffness_y;
+    assert_close(free.ux, expected_ux);
+    assert_close(free.uy, expected_uy);
+    assert_close(result.nodes[1].ux, 0.0);
+    assert_close(result.nodes[1].uy, 0.0);
+    assert_close(result.nodes[2].ux, 0.0);
+    assert_close(result.nodes[2].uy, 0.0);
+    assert_close(result.elements[0].force, -load_x);
+    assert_close(result.elements[1].force, -load_y);
+    assert_close(result.elements[0].extension, -expected_ux);
+    assert_close(result.elements[1].extension, -expected_uy);
+    assert_close(
+        result.total_strain_energy,
+        0.5 * (load_x * expected_ux + load_y * expected_uy),
+    );
+}
+
+#[test]
+fn spring_3d_matches_orthogonal_vector_stiffness_closed_form() {
+    let load_x = 450.0;
+    let load_y = -300.0;
+    let load_z = 900.0;
+    let stiffness_x = 45_000.0;
+    let stiffness_y = 30_000.0;
+    let stiffness_z = 60_000.0;
+    let result = solve_spring_3d(&SolveSpring3dRequest {
+        nodes: vec![
+            node_3d("free", 0.0, 0.0, 0.0, false, false, false, load_x, load_y, load_z),
+            node_3d("fixed-x", 1.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
+            node_3d("fixed-y", 0.0, 1.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
+            node_3d("fixed-z", 0.0, 0.0, 1.0, true, true, true, 0.0, 0.0, 0.0),
+        ],
+        elements: vec![
+            element_3d("kx", 0, 1, stiffness_x),
+            element_3d("ky", 0, 2, stiffness_y),
+            element_3d("kz", 0, 3, stiffness_z),
+        ],
+    })
+    .expect("3D vector spring closed-form fixture should solve");
+
+    let free = &result.nodes[0];
+    let expected_ux = load_x / stiffness_x;
+    let expected_uy = load_y / stiffness_y;
+    let expected_uz = load_z / stiffness_z;
+    assert_close(free.ux, expected_ux);
+    assert_close(free.uy, expected_uy);
+    assert_close(free.uz, expected_uz);
+    for fixed in &result.nodes[1..] {
+        assert_close(fixed.ux, 0.0);
+        assert_close(fixed.uy, 0.0);
+        assert_close(fixed.uz, 0.0);
+    }
+    assert_close(result.elements[0].force, -load_x);
+    assert_close(result.elements[1].force, -load_y);
+    assert_close(result.elements[2].force, -load_z);
+    assert_close(result.elements[0].extension, -expected_ux);
+    assert_close(result.elements[1].extension, -expected_uy);
+    assert_close(result.elements[2].extension, -expected_uz);
+    assert_close(
+        result.total_strain_energy,
+        0.5 * (load_x * expected_ux + load_y * expected_uy + load_z * expected_uz),
+    );
+}
+
+fn node_2d(
+    id: &str,
+    x: f64,
+    y: f64,
+    fix_x: bool,
+    fix_y: bool,
+    load_x: f64,
+    load_y: f64,
+) -> Spring2dNodeInput {
+    Spring2dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        fix_x,
+        fix_y,
+        load_x,
+        load_y,
+    }
+}
+
+fn element_2d(id: &str, node_i: usize, node_j: usize, stiffness: f64) -> Spring2dElementInput {
+    Spring2dElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        stiffness,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn node_3d(
+    id: &str,
+    x: f64,
+    y: f64,
+    z: f64,
+    fix_x: bool,
+    fix_y: bool,
+    fix_z: bool,
+    load_x: f64,
+    load_y: f64,
+    load_z: f64,
+) -> Spring3dNodeInput {
+    Spring3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x,
+        fix_y,
+        fix_z,
+        load_x,
+        load_y,
+        load_z,
+    }
+}
+
+fn element_3d(id: &str, node_i: usize, node_j: usize, stiffness: f64) -> Spring3dElementInput {
+    Spring3dElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        stiffness,
+    }
+}
+
+fn assert_close(actual: f64, expected: f64) {
+    let scale = expected.abs().max(1.0);
+    assert!(
+        (actual - expected).abs() <= TOL * scale,
+        "expected {actual} to be close to {expected}",
+    );
+}
