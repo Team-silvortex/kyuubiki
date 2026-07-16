@@ -13,6 +13,7 @@ export function bindHubAppEvents({
   formatHubOperatorError,
   hubCopy,
   hubDynamic,
+  ensureHubLanguagePack,
   importHubWorkloadLibrary,
   loadHubRecents,
   localizedWorkflowCatalogLabel,
@@ -353,11 +354,14 @@ export function bindHubAppEvents({
     window.__kyuubikiHubLanguageChangeAt = Date.now();
     setEventMessage?.(`language select changed: ${event.target.value}`, "dom:change");
     state.language = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
+    const packResult = await ensureHubLanguagePack?.(state.language);
     rerenderLocalizedHubShell();
     renderToolsPlatformLabel();
     applyDesktopState(elements.actionState, "ready", { kind: "activity" });
-    setOperationOutput(`Language changed to ${state.language}.`);
-    setEventMessage?.(`language applied: ${state.language}`, "language:complete");
+    setOperationOutput(
+      `Language changed to ${state.language}. ${packResult?.message || "Built-in copy applied."} Restart open desktop shells if they were already running.`,
+    );
+    setEventMessage?.(`language applied: ${state.language} · ${packResult?.status || "builtin"}`, "language:complete");
     window.requestAnimationFrame(() => {
       rerenderLocalizedHubShell();
       renderToolsPlatformLabel();

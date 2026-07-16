@@ -18,7 +18,7 @@ delivery.
 
 The repo now keeps distributable support packs under
 [`language-packs`](../language-packs/). As of `moxi 2.0.x`, the shipped
-catalog covers 30 mainstream starter locales for both Workbench and Hub:
+catalog covers 30 mainstream translated core locales for both Workbench and Hub:
 
 - target contract:
   [`config/localization/mainstream-language-pack-locales.json`](../config/localization/mainstream-language-pack-locales.json)
@@ -33,10 +33,11 @@ These files are release-line assets rather than built-in copy branches. Import
 them from the existing local language-pack panels today; future download-source
 flows can consume the same catalog and pack envelopes.
 
-The non-built-in packs are intentionally marked as starter coverage: the
-envelope, metadata, install path, and high-traffic labels are present now, while
-full product-copy translation can be expanded incrementally without changing the
-pack format.
+The non-built-in packs now ship translated core UI coverage for the current
+language-pack contract: navigation, primary surfaces, shell actions, system
+language-pack controls, and high-traffic workflow labels are translated per
+locale. Deeper product-copy translation can still expand incrementally without
+changing the pack format.
 
 Workbench also mirrors the catalog metadata in its System page so operators can
 install the shipped support packs from the built-in catalog even before remote

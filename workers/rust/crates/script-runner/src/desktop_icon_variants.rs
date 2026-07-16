@@ -12,6 +12,7 @@ struct IconVariant {
     label: &'static str,
     color: &'static str,
     target_app: &'static str,
+    sync_runtime_asset: bool,
 }
 
 const ICON_VARIANTS: &[IconVariant] = &[
@@ -20,18 +21,21 @@ const ICON_VARIANTS: &[IconVariant] = &[
         label: "H",
         color: "#15C4D8",
         target_app: "hub-gui",
+        sync_runtime_asset: true,
     },
     IconVariant {
         app_key: "installer",
         label: "I",
         color: "#F5A623",
         target_app: "installer-gui",
+        sync_runtime_asset: true,
     },
     IconVariant {
         app_key: "workbench",
         label: "W",
         color: "#FF6B57",
         target_app: "workbench-gui",
+        sync_runtime_asset: true,
     },
 ];
 
@@ -56,6 +60,7 @@ pub(crate) fn run_generate_desktop_icon_variants(
     for variant in ICON_VARIANTS {
         generate_variant(root, &asset_dir, &base_png, &swift_script, variant)?;
     }
+    sync_shared_runtime_icons(root, &base_png)?;
 
     println!("generated desktop icon variants:");
     for variant in ICON_VARIANTS {
@@ -103,6 +108,34 @@ fn generate_variant(
         .map_err(|error| format!("failed to copy {}: {error}", icns_path.display()))?;
     std::fs::copy(&ico_path, target_dir.join("kyuubiki-app.ico"))
         .map_err(|error| format!("failed to copy {}: {error}", ico_path.display()))?;
+    if variant.sync_runtime_asset {
+        let runtime_asset_dir = root.join(format!("apps/{}/ui/assets", variant.target_app));
+        std::fs::create_dir_all(&runtime_asset_dir).map_err(|error| {
+            format!("failed to create {}: {error}", runtime_asset_dir.display())
+        })?;
+        std::fs::copy(&png_path, runtime_asset_dir.join("kyuubiki-app.png"))
+            .map_err(|error| format!("failed to copy {}: {error}", png_path.display()))?;
+    }
+    Ok(())
+}
+
+fn sync_shared_runtime_icons(root: &Path, base_png: &Path) -> RunnerResult<()> {
+    for target in [
+        "apps/frontend/public/kyuubiki.png",
+        "apps/frontend/public/icon.png",
+        "apps/frontend/public/apple-icon.png",
+        "apps/installer-gui/ui/assets/kyuubiki-dock.png",
+        "apps/workbench-gui/ui/assets/kyuubiki-dock.png",
+    ] {
+        let target = root.join(target);
+        let parent = target
+            .parent()
+            .ok_or_else(|| format!("target {} has no parent directory", target.display()))?;
+        std::fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+        std::fs::copy(base_png, &target)
+            .map_err(|error| format!("failed to copy {}: {error}", target.display()))?;
+    }
     Ok(())
 }
 
@@ -225,6 +258,7 @@ fn print_help() {
         "generate-desktop-icon-variants\n\n\
 Usage:\n  ./scripts/kyuubiki generate-desktop-icon-variants\n\n\
 Generates Hub, Installer, and Workbench desktop icon variants from \
-assets/icons/app/kyuubiki.png. Requires macOS swift, sips, and iconutil."
+assets/icons/app/kyuubiki.png, then syncs Tauri, runtime UI, dock, and \
+frontend public icon copies. Requires macOS swift, sips, and iconutil."
     );
 }

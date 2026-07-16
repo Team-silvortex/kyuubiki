@@ -78,6 +78,7 @@
 
   .hub-head {
     gap: 0.85rem;
+    min-height: 0;
   }
 
   .hub-overview-strip,

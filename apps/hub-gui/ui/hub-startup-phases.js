@@ -30,9 +30,10 @@ async function settleStartup(label, task) {
     }
 }
 export async function runHubStartupPhases(context) {
-    const { elements, state, loadDesktopLanguagePreference, rerenderLocalizedHubShell, enhanceHubAccessibility, loadHubDensitySettings, loadHubHotLogSettings, loadHubRuntimeLogSettings, renderHotRuntimeLogServiceLabel, syncDesktopStates, renderHubDensityToggles, renderPanelPages, renderHubRecents, applyAssistantSettings, renderAssistantPanel, setEventMessage, setSection, setBusy, } = context;
+    const { elements, state, loadDesktopLanguagePreference, ensureHubLanguagePack, rerenderLocalizedHubShell, enhanceHubAccessibility, loadHubDensitySettings, loadHubHotLogSettings, loadHubRuntimeLogSettings, renderHotRuntimeLogServiceLabel, syncDesktopStates, renderHubDensityToggles, renderPanelPages, renderHubRecents, applyAssistantSettings, renderAssistantPanel, setEventMessage, setSection, setBusy, } = context;
     markHubUiPerf("startup:interactive:start");
     state.language = await loadDesktopLanguagePreference();
+    await ensureHubLanguagePack?.(state.language);
     rerenderLocalizedHubShell();
     enhanceHubAccessibility();
     state.density = loadHubDensitySettings();

@@ -8,6 +8,7 @@ import {
   syncDesktopStates,
   watchDesktopLanguagePreference,
 } from "./shared/tauri-bridge.js";
+import { loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
 import { createHubWorkflowPanel } from "./hub-workflow-panel.js";
 import { createHubAssistantAuditPanel } from "./hub-assistant-audit-panel.js";
 import { createHubActionRunner } from "./hub-action-runner.js";
@@ -86,7 +87,7 @@ import {
 } from "./hub-project-history.js";
 import { createHubProjectHistoryPanel } from "./hub-project-history-panel.js";
 import { createHubWorkloadPanel } from "./hub-workload-panel.js";
-import { resolveHubCopy } from "./hub-copy-registry.js";
+import { importHubCopyPayload, resolveHubCopy } from "./hub-copy-registry.js";
 import { downloadHubBlob, downloadHubJson } from "./hub-downloads.js";
 import { formatHubOperatorError } from "./hub-operator-errors.js";
 import {
@@ -107,6 +108,14 @@ let hubStreamingRuntime;
 
 function hubCopy() {
   return resolveHubCopy(HUB_I18N, state.language);
+}
+
+async function ensureHubLanguagePack(language) {
+  const result = await loadDesktopLanguagePack("hub", normalizeDesktopLanguage(language));
+  if (result.status === "loaded" && result.pack) {
+    importHubCopyPayload(result.pack);
+  }
+  return result;
 }
 
 const elements = collectHubElements(document);
@@ -550,6 +559,7 @@ function buildHubAppEventsContext() {
   return {
     elements, state, applyDesktopState, formatHubOperatorError,
     hubCopy, hubDynamic, localizedWorkflowCatalogLabel, normalizeDesktopLanguage,
+    ensureHubLanguagePack,
     bindHubLibraryControls, bindHubLocalizationPanel, bindHubRecentActionControls,
     loadHubRecents, mergeProjectActionHistory, saveDesktopLanguagePreference, saveHubRecents,
     answerWithLocalGuide, executeHubAssistantPlan, requestHubAssistantPlan,
@@ -571,11 +581,12 @@ function buildHubAppEventsContext() {
 bindHubAppEvents(buildHubAppEventsContext());
 watchDesktopLanguagePreference({
   getCurrentLanguage: () => state.language,
-  onChange: (language) => {
+  onChange: async (language) => {
+    const packResult = await ensureHubLanguagePack(language);
     state.language = language;
     rerenderLocalizedHubShell();
     renderToolsPlatformLabel();
-    setEventMessage(`language synced: ${language}`, "language:sync");
+    setEventMessage(`language synced: ${language} · ${packResult.status}`, "language:sync");
   },
 });
 window.__kyuubikiHubAppReadyAt = Date.now();
@@ -583,7 +594,7 @@ setEventMessage("Hub app module ready.", "app:ready");
 
 void runHubStartupPhases({
   applyAssistantSettings, applyBrand, elements, enhanceHubAccessibility,
-  fetchWorkflowCatalog, loadDesktopLanguagePreference, loadDirectMeshRegressionSnapshot,
+  ensureHubLanguagePack, fetchWorkflowCatalog, loadDesktopLanguagePreference, loadDirectMeshRegressionSnapshot,
   loadEnvironment, loadHubDensitySettings, loadHubHotLogSettings, loadHubRuntimeLogSettings,
   loadRegressionGateReport, refreshDesktopStatusOutput, refreshHotRuntimeStatus,
   refreshRuntimeStatus, renderAssistantPanel, renderHotRuntimeLogServiceLabel,

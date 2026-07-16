@@ -8,6 +8,7 @@ import {
   getBuiltinWorkbenchLanguagePack,
   WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES,
 } from "../../src/components/workbench/workbench-language-pack-catalog.ts";
+import { getWorkbenchLanguagePackSystemCopy } from "../../src/components/workbench/workbench-language-pack-system-copy.ts";
 
 test("workbench language pack catalog mirrors shipped workbench support packs", () => {
   const catalogPath = path.resolve(process.cwd(), "../../language-packs/catalog.json");
@@ -66,4 +67,17 @@ test("workbench built-in support packs expose installable downloaded payloads", 
   assert.equal(traditionalChinese?.targetSurface, "workbench");
   assert.equal(traditionalChinese?.language, "zh-TW");
   assert.equal(getBuiltinWorkbenchLanguagePack("missing"), null);
+});
+
+test("workbench language pack system copy covers mainstream feedback without English fallback", () => {
+  const english = getWorkbenchLanguagePackSystemCopy("en");
+  for (const locale of WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES) {
+    const copy = getWorkbenchLanguagePackSystemCopy(locale.language);
+    assert.ok(copy.targetPrefix.trim(), locale.language);
+    assert.ok(copy.imported.trim(), locale.language);
+    assert.ok(copy.removed.trim(), locale.language);
+    assert.ok(copy.invalidJson.trim(), locale.language);
+    assert.notEqual(copy.imported, english.imported, locale.language);
+    assert.notEqual(copy.removed, english.removed, locale.language);
+  }
 });

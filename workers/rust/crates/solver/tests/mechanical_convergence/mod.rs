@@ -1,9 +1,12 @@
 mod beam_frame;
 mod common;
+mod dynamic;
 mod frame_3d;
 mod line;
 mod modal;
+mod nonlinear;
 mod plane;
 mod solid;
+mod spring;
 mod torsion;
 mod truss;

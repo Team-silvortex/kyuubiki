@@ -9,6 +9,7 @@ import {
   syncDesktopStates,
   watchDesktopLanguagePreference,
 } from "./shared/tauri-bridge.js";
+import { createInstallerLanguagePackSupport } from "./installer-language-packs.js";
 import {
   DEFAULT_PRESET,
   SENSITIVE_ENV_FIELD_IDS,
@@ -188,6 +189,11 @@ const installerShellCopy = {
   },
 };
 
+const { ensureInstallerLanguagePack, lazyShellCopyFor } = createInstallerLanguagePackSupport({
+  installerShellCopy,
+  normalizeDesktopLanguage,
+});
+
 const installerLanguageOptions = [
   { value: "en", label: "English" },
   { value: "zh", label: "中文" },
@@ -228,6 +234,8 @@ const installerLanguageOptions = [
 function installerShellCopyFor(language) {
   const normalized = normalizeDesktopLanguage(language);
   if (installerShellCopy[normalized]) return installerShellCopy[normalized];
+  const lazyCopy = lazyShellCopyFor(normalized);
+  if (lazyCopy) return lazyCopy;
   if (normalized.toLowerCase().startsWith("zh")) return installerShellCopy.zh;
   return installerShellCopy.en;
 }
@@ -525,9 +533,18 @@ function populateInstallerLanguageSelect(select, language) {
 
   ui.languageSelect?.addEventListener("change", async (event) => {
     currentLanguage = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
+    const packResult = await ensureInstallerLanguagePack(currentLanguage);
     renderDesktopLanguagePreference();
+    showCompletion(`${packResult.message} Restart already-open desktop shells if they do not refresh.`);
   });
-  watchDesktopLanguagePreference({ getCurrentLanguage: () => currentLanguage, onChange: (language) => { currentLanguage = language; renderDesktopLanguagePreference(); } });
+  watchDesktopLanguagePreference({
+    getCurrentLanguage: () => currentLanguage,
+    onChange: async (language) => {
+      currentLanguage = language;
+      await ensureInstallerLanguagePack(currentLanguage);
+      renderDesktopLanguagePreference();
+    },
+  });
   bindInstallerSidebarTabs();
   ids("storage-mode").addEventListener("change", (event) => setModeCard(event.target.value));
   ui.releasePlatformSelect?.addEventListener("change", (event) => syncReleaseTarget(event.target.value));
@@ -720,6 +737,7 @@ function populateInstallerLanguageSelect(select, language) {
     invoke,
     runAction,
     loadDesktopLanguagePreference,
+    ensureInstallerLanguagePack,
     loadDesktopBrand,
     renderDesktopLanguagePreference,
     setCurrentLanguage: (language) => { currentLanguage = language || currentLanguage; },

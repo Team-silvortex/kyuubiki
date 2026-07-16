@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use crate::RunnerResult;
 
 const DESKTOP_APPS: [&str; 3] = ["hub-gui", "installer-gui", "workbench-gui"];
-const SHARED_UI_FILES: [&str; 6] = [
+const SHARED_UI_FILES: [&str; 7] = [
     "desktop-shell.css",
     "desktop-shell-runtime-mesh.css",
+    "language-pack-loader.js",
     "platform.js",
     "runtime-status-model.js",
     "runtime-status-summary.js",
@@ -68,6 +69,26 @@ fn sync_shared_assets(root: &Path) -> RunnerResult<()> {
             &root.join("apps").join(app).join("ui/assets/brand.json"),
             "desktop brand asset",
         )?;
+        sync_language_packs(root, app)?;
+    }
+    Ok(())
+}
+
+fn sync_language_packs(root: &Path, app: &str) -> RunnerResult<()> {
+    let source_root = root.join("language-packs");
+    let target_root = root.join("apps").join(app).join("ui/language-packs");
+    remove_dir_if_exists(&target_root)?;
+    copy_file(
+        &source_root.join("catalog.json"),
+        &target_root.join("catalog.json"),
+        "desktop language pack catalog",
+    )?;
+    for surface in ["hub", "workbench"] {
+        copy_dir(
+            &source_root.join(surface),
+            &target_root.join(surface),
+            "desktop language pack surface",
+        )?;
     }
     Ok(())
 }
@@ -103,8 +124,37 @@ fn append_file(target: &Path, contents: &str) -> RunnerResult<()> {
         .map_err(|error| format!("failed to append {}: {error}", target.display()))
 }
 
+fn copy_dir(source: &Path, target: &Path, label: &str) -> RunnerResult<()> {
+    fs::create_dir_all(target)
+        .map_err(|error| format!("failed to create {}: {error}", target.display()))?;
+    for entry in fs::read_dir(source)
+        .map_err(|error| format!("failed to read {label} {}: {error}", source.display()))?
+    {
+        let entry = entry.map_err(|error| format!("failed to read {label} entry: {error}"))?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("failed to inspect {}: {error}", source_path.display()))?;
+        if file_type.is_dir() {
+            copy_dir(&source_path, &target_path, label)?;
+        } else if file_type.is_file() {
+            copy_file(&source_path, &target_path, label)?;
+        }
+    }
+    Ok(())
+}
+
 fn remove_if_exists(target: &Path) -> RunnerResult<()> {
     match fs::remove_file(target) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("failed to remove {}: {error}", target.display())),
+    }
+}
+
+fn remove_dir_if_exists(target: &Path) -> RunnerResult<()> {
+    match fs::remove_dir_all(target) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(format!("failed to remove {}: {error}", target.display())),

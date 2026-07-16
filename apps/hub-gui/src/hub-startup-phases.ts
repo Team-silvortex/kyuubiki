@@ -21,6 +21,7 @@ type HubStartupContext = {
   elements: HubStartupElements;
   state: HubStartupState;
   loadDesktopLanguagePreference: () => Promise<string>;
+  ensureHubLanguagePack?: (language: string) => Promise<unknown>;
   rerenderLocalizedHubShell: () => void;
   enhanceHubAccessibility: () => void;
   loadHubDensitySettings: () => string;
@@ -83,6 +84,7 @@ export async function runHubStartupPhases(context: HubStartupContext): Promise<v
     elements,
     state,
     loadDesktopLanguagePreference,
+    ensureHubLanguagePack,
     rerenderLocalizedHubShell,
     enhanceHubAccessibility,
     loadHubDensitySettings,
@@ -102,6 +104,7 @@ export async function runHubStartupPhases(context: HubStartupContext): Promise<v
 
   markHubUiPerf("startup:interactive:start");
   state.language = await loadDesktopLanguagePreference();
+  await ensureHubLanguagePack?.(state.language);
   rerenderLocalizedHubShell();
   enhanceHubAccessibility();
   state.density = loadHubDensitySettings();

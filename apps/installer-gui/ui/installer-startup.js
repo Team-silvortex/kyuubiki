@@ -31,6 +31,7 @@ export async function runInstallerStartup({
   invoke,
   runAction,
   loadDesktopLanguagePreference,
+  ensureInstallerLanguagePack,
   loadDesktopBrand,
   renderDesktopLanguagePreference,
   setCurrentLanguage,
@@ -85,6 +86,7 @@ export async function runInstallerStartup({
       ]);
 
       setCurrentLanguage(language);
+      await ensureInstallerLanguagePack?.(language);
       renderDesktopLanguagePreference();
       if (brand) {
         applyBrandConfig(brand);

@@ -10,6 +10,7 @@ import {
   getWorkbenchLanguagePackCompatibility,
 } from "@/lib/workbench/helpers";
 import { getBuiltinWorkbenchLanguagePack } from "@/components/workbench/workbench-language-pack-catalog";
+import { getWorkbenchLanguagePackSystemCopy } from "@/components/workbench/workbench-language-pack-system-copy";
 
 const UNSAFE_LANGUAGE_PACK_TEXT_PATTERNS = [
   "<",
@@ -37,13 +38,7 @@ function hasUnsafeLanguagePackText(value: unknown): boolean {
 }
 
 function setUnsafeLanguagePackMessage(language: WorkbenchLanguage, setMessage: (value: string) => void) {
-  setMessage(
-    language === "zh"
-      ? "语言包包含不安全的 UI 文案，已拒绝导入。"
-      : language === "ja"
-        ? "言語パックに安全でない UI 文言が含まれるため、取り込みを拒否しました。"
-        : "Language pack rejected because it contains unsafe UI text.",
-  );
+  setMessage(getWorkbenchLanguagePackSystemCopy(language).unsafeRejected);
 }
 
 function triggerWorkbenchJsonDownload(filename: string, payload: Record<string, unknown>) {
@@ -73,21 +68,10 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     versionLine: WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
     targetAppVersion: WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION,
     source: "imported",
-    description:
-      language === "zh"
-        ? "从这个模板开始覆盖 Workbench 文案，并保留版本线与目标版本元数据。"
-        : language === "ja"
-          ? "このテンプレートから Workbench 文言を上書きし、バージョン系メタデータも保持します。"
-          : "Start from this template to override Workbench copy and keep version metadata aligned.",
+    description: getWorkbenchLanguagePackSystemCopy(language).templateDescription,
     overrides: {},
   });
-  setMessage(
-    language === "zh"
-      ? "语言包模板已下载。"
-      : language === "ja"
-        ? "言語パックのテンプレートを出力しました。"
-        : "Language pack template downloaded.",
-  );
+  setMessage(getWorkbenchLanguagePackSystemCopy(language).templateDownloaded);
 }
 
 export function exportWorkbenchInstalledLanguagePack(params: {
@@ -97,13 +81,7 @@ export function exportWorkbenchInstalledLanguagePack(params: {
 }) {
   const { language, activeLanguagePack, setMessage } = params;
   if (!activeLanguagePack) {
-    setMessage(
-      language === "zh"
-        ? "当前语言还没有安装自定义语言包。"
-        : language === "ja"
-          ? "現在の言語にはまだカスタム言語パックがありません。"
-          : "No custom language pack is installed for the current language yet.",
-    );
+    setMessage(getWorkbenchLanguagePackSystemCopy(language).noCustomPack);
     return;
   }
 
@@ -111,13 +89,7 @@ export function exportWorkbenchInstalledLanguagePack(params: {
     `workbench-language-pack-${activeLanguagePack.language}-${activeLanguagePack.id}.json`,
     activeLanguagePack,
   );
-  setMessage(
-    language === "zh"
-      ? "当前语言包已导出。"
-      : language === "ja"
-        ? "現在の言語パックを出力しました。"
-        : "Exported the current language pack.",
-  );
+  setMessage(getWorkbenchLanguagePackSystemCopy(language).exported);
 }
 
 export async function importWorkbenchLanguagePack(params: {
@@ -133,13 +105,7 @@ export async function importWorkbenchLanguagePack(params: {
     };
     installWorkbenchLanguagePackPayload({ raw, language, setLanguagePacks, setMessage });
   } catch {
-    setMessage(
-      language === "zh"
-        ? "语言包 JSON 无效。"
-        : language === "ja"
-          ? "言語パック JSON が無効です。"
-          : "Invalid language pack JSON.",
-    );
+    setMessage(getWorkbenchLanguagePackSystemCopy(language).invalidJson);
   }
 }
 
@@ -190,19 +156,8 @@ export function installWorkbenchLanguagePackPayload(params: {
     return [nextPack, ...next];
   });
 
-  setMessage(
-    language === "zh"
-      ? compatibility === "mismatch"
-        ? "语言包已导入，但它的目标版本与当前 Workbench 不完全对齐。"
-        : "语言包已导入。"
-      : language === "ja"
-        ? compatibility === "mismatch"
-          ? "言語パックを取り込みましたが、対象バージョンが現在の Workbench と完全には一致していません。"
-          : "言語パックを取り込みました。"
-        : compatibility === "mismatch"
-          ? "Language pack imported, but its target version does not fully match the current Workbench."
-          : "Language pack imported.",
-  );
+  const copy = getWorkbenchLanguagePackSystemCopy(language);
+  setMessage(compatibility === "mismatch" ? copy.importedMismatch : copy.imported);
 }
 
 export function installBuiltinWorkbenchLanguagePack(params: {
@@ -214,13 +169,7 @@ export function installBuiltinWorkbenchLanguagePack(params: {
   const { packId, language, setLanguagePacks, setMessage } = params;
   const pack = getBuiltinWorkbenchLanguagePack(packId);
   if (!pack) {
-    setMessage(
-      language === "zh"
-        ? "没有找到这个语言包。"
-        : language === "ja"
-          ? "この言語パックは見つかりません。"
-          : "Language pack not found.",
-    );
+    setMessage(getWorkbenchLanguagePackSystemCopy(language).notFound);
     return;
   }
 
@@ -235,11 +184,5 @@ export function removeWorkbenchLanguagePack(params: {
 }) {
   const { packId, setLanguagePacks, language, setMessage } = params;
   setLanguagePacks((current) => current.filter((pack) => pack.id !== packId));
-  setMessage(
-    language === "zh"
-      ? "语言包已移除。"
-      : language === "ja"
-        ? "言語パックを削除しました。"
-        : "Language pack removed.",
-  );
+  setMessage(getWorkbenchLanguagePackSystemCopy(language).removed);
 }

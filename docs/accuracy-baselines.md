@@ -45,6 +45,11 @@ It currently covers `axial_bar_1d` with:
 - load perturbation scaling for displacement, stress, and energy
 - area perturbation scaling for displacement, stress, and energy
 
+`spring_1d`, `spring_2d`, and `spring_3d` add foundational discrete stiffness
+checks. They cover series equivalent stiffness and orthogonal vector spring
+closed forms under load and stiffness perturbations, including direction-cosine
+assembly, element force/extension recovery, and strain-energy accumulation.
+
 It also covers `beam_1d` with tip-loaded cantilever refinement invariance
 across 1, 2, 4, 8, and 16 elements against closed-form tip displacement, tip
 rotation, root moment, bending stress, and strain energy.
@@ -63,6 +68,18 @@ strain energy, plus load, inertia, and section-modulus perturbation scaling.
 They keep the retained cantilever modal contract while verifying total mass,
 eigenvalue, natural-frequency, period, and shape contracts under global
 stiffness and density scaling.
+
+`transient_spring_1d` and `harmonic_spring_1d` add the first direct dynamic
+spring checks. The transient path verifies one-step Newmark average
+acceleration updates against a hand-derived single-DOF reference; the harmonic
+path checks single-DOF dynamic-stiffness amplitudes, velocity/acceleration
+amplitudes, element force amplitude, and peak-frequency selection.
+
+`nonlinear_spring_1d` and `contact_gap_1d` add the first nonlinear mechanical
+checks. The hardening spring is compared against the Cardano closed-form root
+under load, linear-stiffness, and cubic-stiffness perturbations; the gap stop
+checks inactive and active penalty-contact force balance under load, gap, and
+contact-stiffness perturbations.
 
 `torsion_1d` adds the rotational shaft path across 1, 2, 4, 8, and 16
 elements. It checks closed-form twist, torque, shear stress, and strain energy,
