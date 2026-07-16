@@ -67,6 +67,11 @@ from .workflow_results import (
     normalize_workflow_runtime,
     validate_workflow_result_against_graph,
 )
+from .operator_tasks import (
+    extract_operator_task_failure_receipts,
+    operator_task_failure_actions,
+    operator_task_recovery_summary,
+)
 
 __all__ = [
     "ControlPlaneClient",
@@ -123,4 +128,7 @@ __all__ = [
     "normalize_workflow_progression",
     "normalize_workflow_runtime",
     "validate_workflow_result_against_graph",
+    "extract_operator_task_failure_receipts",
+    "operator_task_failure_actions",
+    "operator_task_recovery_summary",
 ]

@@ -122,6 +122,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
          "checkpoint_digest" => verification["checkpoint_digest"],
          "target_case_ids" => target_case_ids(batch, checkpoint, next_action),
          "blocked_case_ids" => blocked_case_ids(batch, checkpoint, next_action),
+         "recovery_actions" => recovery_actions(checkpoint, next_action),
          "resume_policy" => policy
        }}
     end
@@ -213,11 +214,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "task_count",
       "verified_count",
       "executed_count",
-      "ok_count",
-      "error_count",
-      "failed_case_ids",
-      "readiness_counts"
-    ])
+         "ok_count",
+         "error_count",
+         "failed_case_ids",
+         "failure_receipts",
+         "readiness_counts"
+       ])
     |> Map.put("blocked_readiness_case_ids", blocked_readiness_case_ids(result))
   end
 
@@ -231,11 +233,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "task_count",
       "verified_count",
       "executed_count",
-      "ok_count",
-      "error_count",
-      "failed_case_ids",
-      "readiness_counts"
-    ])
+         "ok_count",
+         "error_count",
+         "failed_case_ids",
+         "failure_receipts",
+         "readiness_counts"
+       ])
   end
 
   defp blocked_readiness_case_ids(%{"results" => results}) when is_list(results) do
@@ -326,6 +329,25 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   end
 
   defp blocked_case_ids(_batch, _checkpoint, _next_action), do: []
+
+  defp recovery_actions(checkpoint, next_action)
+       when next_action in ["retry_failed_cases", "fix_invalid_cases"] do
+    checkpoint
+    |> checkpoint_failure_receipts()
+    |> Enum.map(&get_in(&1, ["recovery", "required_action"]))
+    |> normalize_string_list()
+  end
+
+  defp recovery_actions(_checkpoint, _next_action), do: []
+
+  defp checkpoint_failure_receipts(checkpoint) do
+    [
+      get_in(checkpoint, ["preparation", "failure_receipts"]),
+      get_in(checkpoint, ["execution", "failure_receipts"])
+    ]
+    |> List.flatten()
+    |> Enum.filter(&is_map/1)
+  end
 
   defp all_case_ids(batch) do
     batch

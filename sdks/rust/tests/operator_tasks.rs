@@ -367,6 +367,76 @@ fn control_plane_plans_operator_task_batch_resume() {
     server.join().expect("server thread");
 }
 
+#[test]
+fn extracts_operator_task_recovery_summary() {
+    let payload = serde_json::json!({
+        "status": "failed",
+        "results": [
+            {
+                "case_id": "case-a",
+                "failure_receipt": {
+                    "schema_version": "kyuubiki.headless-operator-task-failure/v1",
+                    "failure_stage": "summarize_execution_program",
+                    "recovery": {"required_action": "fix_task_ir_contract_mirror_fields"}
+                }
+            },
+            {
+                "case_id": "case-b",
+                "error": {
+                    "details": {
+                        "operator_task_failure_receipt": {
+                            "schema_version": "kyuubiki.agent-operator-task-failure/v1",
+                            "failure_stage": "verify_digest",
+                            "recovery": {
+                                "required_action": "rebuild_task_ir_and_recompute_digest"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "case_id": "case-c",
+                "failure_receipt": {
+                    "schema_version": "kyuubiki.control-plane-operator-task-failure/v1",
+                    "failure_stage": "validate_batch_entry",
+                    "recovery": {"required_action": "fix_quality_execution_batch_entry"}
+                }
+            }
+        ],
+        "resume_plan": {
+            "next_action": "retry_failed_cases",
+            "target_case_ids": ["case-a", "case-c"],
+            "blocked_case_ids": ["case-b"],
+            "recovery_actions": [
+                "fix_quality_execution_batch_entry",
+                "inspect_operator_task_batch_checkpoint"
+            ]
+        }
+    });
+
+    let receipts = kyuubiki_headless_sdk::operator_task_failure_receipts(&payload);
+    assert_eq!(receipts.len(), 3);
+    assert_eq!(
+        kyuubiki_headless_sdk::operator_task_failure_actions(&payload),
+        vec![
+            "fix_task_ir_contract_mirror_fields",
+            "rebuild_task_ir_and_recompute_digest",
+            "fix_quality_execution_batch_entry",
+            "inspect_operator_task_batch_checkpoint"
+        ]
+    );
+
+    let summary = kyuubiki_headless_sdk::operator_task_recovery_summary(&payload);
+    assert_eq!(summary["next_action"].as_str(), Some("retry_failed_cases"));
+    assert_eq!(summary["target_case_ids"][0].as_str(), Some("case-a"));
+    assert_eq!(summary["blocked_case_ids"][0].as_str(), Some("case-b"));
+    assert_eq!(summary["failure_receipt_count"].as_u64(), Some(3));
+    assert_eq!(
+        summary["failure_receipts"].as_array().map(Vec::len),
+        Some(3)
+    );
+}
+
 fn read_http_request(stream: &mut std::net::TcpStream) -> String {
     let mut buf = [0_u8; 4096];
     let mut request = Vec::new();

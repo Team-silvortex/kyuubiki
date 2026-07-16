@@ -5,6 +5,7 @@ import path from "node:path";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const schemaPath = "schemas/operator-task-ir.schema.json";
+const goldenManifestPath = "schemas/operator-task-ir-golden-manifest.json";
 const examplePaths = [
   "schemas/examples.operator-task-ir.json",
   "schemas/examples.operator-task-ir-float.json",
@@ -12,6 +13,7 @@ const examplePaths = [
   "schemas/examples.operator-task-batch.json",
 ];
 const requiredAuthoringModes = ["rust_native", "elixir_control_plane"];
+const goldenManifestSchema = "kyuubiki.operator-task-ir-golden-manifest/v1";
 const requiredDigestFields = [
   "schema_version",
   "task_id",
@@ -170,6 +172,83 @@ function validateTaskDigest(task, context) {
   }
 }
 
+function valueAtPointer(task, pointer) {
+  return pointerGet(task, pointer);
+}
+
+function uniqueValues(tasks, pointer) {
+  return [
+    ...new Set(
+      tasks
+        .map((task) => valueAtPointer(task, pointer))
+        .filter((value) => typeof value === "string" && value.length > 0),
+    ),
+  ].sort();
+}
+
+function assertManifestValues(context, actual, expected, field) {
+  if (!Array.isArray(expected) || expected.length === 0) {
+    fail(`${context}: manifest field ${field} must be a non-empty array`);
+  }
+  const missing = expected.filter((entry) => !actual.includes(entry));
+  if (missing.length > 0) {
+    fail(`${context}: missing manifest ${field}: ${missing.join(", ")}`);
+  }
+}
+
+function validateGoldenManifest(tasksByPath) {
+  const manifest = readJson(goldenManifestPath);
+  if (manifest.schema_version !== goldenManifestSchema) {
+    fail(`${goldenManifestPath}: schema_version must be ${goldenManifestSchema}`);
+  }
+  if (manifest.line !== "moxi 2.x") {
+    fail(`${goldenManifestPath}: line must be moxi 2.x`);
+  }
+  if (!Array.isArray(manifest.examples) || manifest.examples.length === 0) {
+    fail(`${goldenManifestPath}: examples must be a non-empty array`);
+  }
+
+  const manifestPaths = new Set();
+  for (const [index, entry] of manifest.examples.entries()) {
+    const context = `${goldenManifestPath}:examples[${index}]`;
+    const examplePath = entry.path;
+    if (typeof examplePath !== "string" || !examplePath.length) {
+      fail(`${context}: path must be a non-empty string`);
+    }
+    manifestPaths.add(examplePath);
+    const tasks = tasksByPath.get(examplePath) ?? [];
+    if (tasks.length === 0) {
+      fail(`${context}: no collected TaskIR examples for ${examplePath}`);
+    }
+    assertManifestValues(context, uniqueValues(tasks, "/task_id"), entry.task_ids, "task_ids");
+    assertManifestValues(
+      context,
+      uniqueValues(tasks, "/descriptor_authoring/mode"),
+      entry.descriptor_authoring_modes,
+      "descriptor_authoring_modes",
+    );
+    assertManifestValues(context, uniqueValues(tasks, "/operator/kind"), entry.operator_kinds, "operator_kinds");
+    assertManifestValues(
+      context,
+      uniqueValues(tasks, "/execution_program/program_kind"),
+      entry.program_kinds,
+      "program_kinds",
+    );
+    assertManifestValues(
+      context,
+      uniqueValues(tasks, "/runtime_hints/execution_mode"),
+      entry.execution_modes,
+      "execution_modes",
+    );
+  }
+
+  for (const examplePath of examplePaths) {
+    if (!manifestPaths.has(examplePath)) {
+      fail(`${goldenManifestPath}: missing manifest entry for ${examplePath}`);
+    }
+  }
+}
+
 function checkContracts() {
   const schema = readJson(schemaPath);
   const constraints = schema["x-kyuubiki-mirror_constraints"];
@@ -186,6 +265,7 @@ function checkContracts() {
 
   let taskCount = 0;
   const authoringModes = new Set();
+  const tasksByPath = new Map();
   for (const examplePath of examplePaths) {
     const tasks = collectTasks(readJson(examplePath));
     if (tasks.length === 0) {
@@ -202,12 +282,14 @@ function checkContracts() {
       }
       taskCount += 1;
     });
+    tasksByPath.set(examplePath, tasks);
   }
   for (const mode of requiredAuthoringModes) {
     if (!authoringModes.has(mode)) {
       fail(`TaskIR examples must include descriptor_authoring.mode=${mode}`);
     }
   }
+  validateGoldenManifest(tasksByPath);
 
   console.log(`Validated ${taskCount} operator task IR example contracts.`);
 }

@@ -12,6 +12,59 @@ const CATALOG_SCHEMA: &str = "kyuubiki.language-pack-catalog/v1";
 const LOCALE_TARGET_SCHEMA: &str = "kyuubiki.localization-mainstream-locales/v1";
 const VERSION_LINE: &str = "moxi 2.x";
 const SURFACES: &[&str] = &["workbench", "hub"];
+const HUB_REQUIRED_OVERRIDE_PATHS: &[&str] = &[
+    "nav.projects",
+    "nav.runtimes",
+    "nav.deploy",
+    "nav.observe",
+    "nav.tools",
+    "sections.projects.title",
+    "sections.projects.copy",
+    "sections.runtimes.title",
+    "sections.runtimes.copy",
+    "sections.deploy.title",
+    "sections.deploy.copy",
+    "shell.language",
+    "shell.actionStatus",
+    "shell.idle",
+    "shell.openWorkbench",
+    "shell.startLocal",
+    "shell.validateEnv",
+];
+const WORKBENCH_REQUIRED_OVERRIDE_PATHS: &[&str] = &[
+    "title",
+    "subtitle",
+    "rail.study",
+    "rail.model",
+    "rail.workflow",
+    "rail.store",
+    "rail.library",
+    "rail.system",
+    "sections.study",
+    "sections.model",
+    "sections.workflow",
+    "sections.store",
+    "sections.library",
+    "sections.system",
+    "workflowBuilderPage",
+    "workflowRunsPage",
+    "workflowCatalogTitle",
+    "workflowTemplateChainLibraryLabel",
+    "languagePacksTitle",
+    "languagePacksHint",
+    "languagePacksEmptyLabel",
+    "languagePackName",
+    "languagePackVersion",
+    "languagePackSourceImported",
+    "languagePackSourceDownloaded",
+    "languagePackDownloadTemplate",
+    "languagePackExportInstalled",
+    "languagePackImport",
+    "languagePackRemove",
+    "languagePackCatalogTitle",
+    "languagePackCatalogHint",
+    "languagePackCatalogAction",
+];
 
 pub(crate) fn run_validate_language_packs(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     if !args.is_empty() {
@@ -27,8 +80,8 @@ pub(crate) fn run_validate_language_packs(root: &Path, args: Vec<OsString>) -> R
         return Ok(1);
     }
     println!(
-        "Validated {} language packs for {VERSION_LINE} {}.",
-        validator.validated_pack_count, validator.target_app_version
+        "Validated {} language packs for {VERSION_LINE} {}; coverage {}.",
+        validator.validated_pack_count, validator.target_app_version, validator.coverage_summary
     );
     Ok(0)
 }
@@ -38,6 +91,7 @@ struct Validator<'a> {
     errors: Vec<String>,
     target_app_version: String,
     validated_pack_count: usize,
+    coverage_summary: String,
 }
 
 impl<'a> Validator<'a> {
@@ -47,6 +101,7 @@ impl<'a> Validator<'a> {
             errors: Vec::new(),
             target_app_version: String::new(),
             validated_pack_count: 0,
+            coverage_summary: "not evaluated".to_string(),
         }
     }
 
@@ -265,8 +320,12 @@ impl<'a> Validator<'a> {
         referenced_paths: &BTreeSet<String>,
         packs_by_surface: &BTreeMap<String, Vec<Value>>,
     ) {
+        let mut summaries = Vec::new();
         for surface in SURFACES {
             let packs = packs_by_surface.get(*surface).cloned().unwrap_or_default();
+            let required_paths = required_override_paths(surface);
+            let mut covered_total = 0usize;
+            let mut required_total = 0usize;
             let languages = packs
                 .iter()
                 .map(|pack| string_field(pack, "language"))
@@ -303,6 +362,19 @@ impl<'a> Validator<'a> {
                     ));
                 }
             }
+            for pack in &packs {
+                let missing = missing_override_paths(pack, required_paths);
+                covered_total += required_paths.len().saturating_sub(missing.len());
+                required_total += required_paths.len();
+                if !missing.is_empty() {
+                    self.fail(format!(
+                        "language-packs/{surface}/{}: missing override coverage {}",
+                        string_field(pack, "language"),
+                        missing.join(", ")
+                    ));
+                }
+            }
+            summaries.push(format!("{surface} {covered_total}/{required_total}"));
             for discovered in self.discover_pack_files(surface) {
                 if !referenced_paths.contains(&discovered) {
                     self.fail(format!(
@@ -311,6 +383,7 @@ impl<'a> Validator<'a> {
                 }
             }
         }
+        self.coverage_summary = summaries.join(", ");
     }
 
     fn discover_pack_files(&mut self, surface: &str) -> Vec<String> {
@@ -445,6 +518,39 @@ fn looks_like_windows_absolute(value: &str) -> bool {
         && value.as_bytes()[1] == b':'
         && matches!(value.as_bytes()[2], b'/' | b'\\')
         && value.as_bytes()[0].is_ascii_alphabetic()
+}
+
+fn required_override_paths(surface: &str) -> &'static [&'static str] {
+    match surface {
+        "hub" => HUB_REQUIRED_OVERRIDE_PATHS,
+        "workbench" => WORKBENCH_REQUIRED_OVERRIDE_PATHS,
+        _ => &[],
+    }
+}
+
+fn value_at_dotted_path<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
+    let mut current = value;
+    for part in path.split('.') {
+        current = current.get(part)?;
+    }
+    Some(current)
+}
+
+fn missing_override_paths(pack: &Value, required_paths: &[&str]) -> Vec<String> {
+    let Some(overrides) = pack.get("overrides") else {
+        return required_paths.iter().map(|entry| (*entry).to_string()).collect();
+    };
+    required_paths
+        .iter()
+        .filter(|path| {
+            value_at_dotted_path(overrides, path)
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .unwrap_or_default()
+                .is_empty()
+        })
+        .map(|entry| (*entry).to_string())
+        .collect()
 }
 
 fn unsafe_language_pack_text_issues(value: &Value, label: &str) -> Vec<String> {

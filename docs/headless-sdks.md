@@ -83,6 +83,20 @@ Failures expose both a human-readable `error` and a stable `error_code`, such
 as `operator_task_digest_mismatch`, `operator_task_mirror_mismatch`, or
 `operator_task_execution_abi_mismatch`, so automation can branch before
 contacting an orchestra or solver agent.
+The same preview payload now includes a
+`kyuubiki.headless-operator-task-failure/v1` `failure_receipt` with the failed
+stage, task identity when available, and a recovery action. This mirrors the
+agent-side `operator_task_failure_receipt` shape while staying local to SDK
+dry-runs.
+Python and Elixir SDK helpers can recursively extract both receipt shapes from
+control-plane, batch, or agent RPC payloads, so automation can route recovery
+without knowing where the service embedded the failure envelope.
+Control-plane batch preparation/execution failures use
+`kyuubiki.control-plane-operator-task-failure/v1` and are surfaced both on the
+failed case entry and in the batch-level `failure_receipts` list.
+Batch checkpoints retain those receipts in their preparation/execution summary,
+and resume plans expose `recovery_actions` so automation can decide whether to
+retry failed cases or repair invalid TaskIR/batch entries first.
 
 SDK-local smoke coverage:
 

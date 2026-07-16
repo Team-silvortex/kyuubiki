@@ -501,6 +501,16 @@ fn operator_task_runtime_rejects_digest_valid_inconsistent_package_mirrors() {
     .expect_err("runtime should reject package mirror mismatch after digest verification");
 
     assert_eq!(error.code, "operator_task_mirror_mismatch");
+    assert_eq!(
+        error.details["schema_version"],
+        "kyuubiki.agent-operator-task-failure/v1"
+    );
+    assert_eq!(error.details["failure_stage"], "summarize_execution_program");
+    assert_eq!(error.details["operator_id"], "transform.fixture");
+    assert_eq!(
+        error.details["recovery"]["required_action"],
+        "fix_task_ir_contract_mirror_fields"
+    );
     assert!(
         error
             .message
@@ -520,6 +530,11 @@ fn operator_task_runtime_reports_missing_digest() {
 
     assert_eq!(error.code, "operator_task_digest_missing");
     assert_eq!(error.message, "missing operator task digest");
+    assert_eq!(error.details["failure_stage"], "verify_digest");
+    assert_eq!(
+        error.details["recovery"]["required_action"],
+        "rebuild_task_ir_and_recompute_digest"
+    );
 }
 
 #[test]
@@ -559,8 +574,21 @@ fn rejects_operator_task_ir_rpc_requests_with_tampered_digest() {
 
     assert!(progress_frames.is_empty());
     assert!(!final_response.ok);
+    let error = final_response.error.expect("operator task error");
+    assert_eq!(error.code, "operator_task_digest_mismatch");
+    let details = error.details.expect("operator task failure details");
+    assert_eq!(details["method"], "run_operator_task_ir");
+    assert_eq!(details["reason_code"], "operator_task_digest_mismatch");
     assert_eq!(
-        final_response.error.expect("operator task error").code,
-        "operator_task_digest_mismatch"
+        details["operator_task_failure_receipt"]["schema_version"],
+        "kyuubiki.agent-operator-task-failure/v1"
+    );
+    assert_eq!(
+        details["operator_task_failure_receipt"]["failure_stage"],
+        "verify_digest"
+    );
+    assert_eq!(
+        details["operator_task_failure_receipt"]["recovery"]["required_action"],
+        "rebuild_task_ir_and_recompute_digest"
     );
 }

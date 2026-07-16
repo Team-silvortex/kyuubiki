@@ -204,6 +204,7 @@ Highlights:
 - high-level `KyuubikiSession` for submit/wait flows
 - `KyuubikiAgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry policy, failure classification, and chunk iteration helpers
+- operator TaskIR failure receipt extraction for batch and agent recovery flows
 - reusable `KyuubikiAuth` header auth object
 - thin JSON-first payload shape for AI-generated requests
 

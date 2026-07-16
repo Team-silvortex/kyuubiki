@@ -441,13 +441,17 @@ fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
         Ok(result) => result,
         Err(error) => {
             let report = agent_watchdog::fail_execution(guard, error.code, error.message);
+            let mut details =
+                serde_json::to_value(report).expect("failure report should serialize");
+            details["operator_task_failure_receipt"] = error.details;
+            let message = details["message"].as_str().unwrap_or_default().to_string();
             return AgentReply::Stream(
                 Vec::new(),
                 RpcResponse::error_with_details(
                     request_id,
                     error.code,
-                    report.message.clone(),
-                    serde_json::to_value(report).expect("failure report should serialize"),
+                    message,
+                    details,
                 ),
             );
         }

@@ -4,6 +4,7 @@ mod control_plane;
 mod error;
 mod material_research_bundle;
 mod material_workflows;
+mod operator_tasks;
 mod session;
 mod solver_rpc;
 mod workflow_builders;
@@ -27,6 +28,9 @@ pub use material_workflows::{
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
     material_study_envelope_catalog_request, material_study_envelope_input_artifacts,
     material_study_execution_plan_example, material_workflow_catalog,
+};
+pub use operator_tasks::{
+    operator_task_failure_actions, operator_task_failure_receipts, operator_task_recovery_summary,
 };
 pub use session::{JobRequest, JobWaitOutcome, KyuubikiSession};
 pub use solver_rpc::{RpcCallOutcome, SolverRpcClient};

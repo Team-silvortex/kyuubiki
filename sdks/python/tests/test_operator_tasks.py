@@ -5,7 +5,12 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from kyuubiki_sdk import ControlPlaneClient
+from kyuubiki_sdk import (
+    ControlPlaneClient,
+    extract_operator_task_failure_receipts,
+    operator_task_failure_actions,
+    operator_task_recovery_summary,
+)
 
 
 class _OperatorTaskHandler(BaseHTTPRequestHandler):
@@ -245,6 +250,84 @@ class OperatorTaskClientTest(unittest.TestCase):
         self.assertEqual(
             _OperatorTaskHandler.observed_payload,
             {"batch": batch},
+        )
+
+    def test_extract_operator_task_failure_receipts(self) -> None:
+        payload = {
+            "status": "failed",
+            "results": [
+                {
+                    "case_id": "case-a",
+                    "error_code": "operator_task_mirror_mismatch",
+                    "failure_receipt": {
+                        "schema_version": "kyuubiki.headless-operator-task-failure/v1",
+                        "failure_stage": "summarize_execution_program",
+                        "recovery": {"required_action": "fix_task_ir_contract_mirror_fields"},
+                    },
+                },
+                {
+                    "case_id": "case-b",
+                    "error": {
+                        "details": {
+                            "operator_task_failure_receipt": {
+                                "schema_version": "kyuubiki.agent-operator-task-failure/v1",
+                                "failure_stage": "verify_digest",
+                                "recovery": {"required_action": "rebuild_task_ir_and_recompute_digest"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "case_id": "case-c",
+                    "failure_receipt": {
+                        "schema_version": "kyuubiki.control-plane-operator-task-failure/v1",
+                        "failure_stage": "validate_batch_entry",
+                        "recovery": {"required_action": "fix_quality_execution_batch_entry"},
+                    },
+                },
+            ],
+            "resume_plan": {
+                "next_action": "retry_failed_cases",
+                "target_case_ids": ["case-a", "case-c"],
+                "blocked_case_ids": ["case-b"],
+                "recovery_actions": [
+                    "fix_quality_execution_batch_entry",
+                    "inspect_operator_task_batch_checkpoint",
+                ]
+            },
+        }
+
+        receipts = extract_operator_task_failure_receipts(payload)
+
+        self.assertEqual(len(receipts), 3)
+        self.assertEqual(receipts[0]["failure_stage"], "summarize_execution_program")
+        self.assertEqual(receipts[1]["failure_stage"], "verify_digest")
+        self.assertEqual(receipts[2]["failure_stage"], "validate_batch_entry")
+        self.assertEqual(
+            operator_task_failure_actions(payload),
+            [
+                "fix_task_ir_contract_mirror_fields",
+                "rebuild_task_ir_and_recompute_digest",
+                "fix_quality_execution_batch_entry",
+                "inspect_operator_task_batch_checkpoint",
+            ],
+        )
+
+        self.assertEqual(
+            operator_task_recovery_summary(payload),
+            {
+                "next_action": "retry_failed_cases",
+                "target_case_ids": ["case-a", "case-c"],
+                "blocked_case_ids": ["case-b"],
+                "recovery_actions": [
+                    "fix_task_ir_contract_mirror_fields",
+                    "rebuild_task_ir_and_recompute_digest",
+                    "fix_quality_execution_batch_entry",
+                    "inspect_operator_task_batch_checkpoint",
+                ],
+                "failure_receipt_count": 3,
+                "failure_receipts": receipts,
+            },
         )
 
 

@@ -8,6 +8,7 @@
   "checkpoint_digest": "a6c0eca82cf20f2d9a0fa967116ec3dfc1be9cb069ee17caa1597b4928c1deab",
   "target_case_ids": ["quality_case_a"],
   "blocked_case_ids": [],
+  "recovery_actions": [],
   "resume_policy": {
     "status": "prepared",
     "next_action": "execute"

@@ -1,0 +1,45 @@
+{
+  "schema_version": "kyuubiki.operator-task-ir-golden-manifest/v1",
+  "line": "moxi 2.x",
+  "purpose": "Release-gated manifest for language-neutral executable TaskIR examples.",
+  "examples": [
+    {
+      "path": "schemas/examples.operator-task-ir.json",
+      "task_ids": ["fixture-task"],
+      "descriptor_authoring_modes": ["rust_native"],
+      "operator_kinds": ["transform"],
+      "program_kinds": ["transform"],
+      "execution_modes": ["orchestra_fetch"]
+    },
+    {
+      "path": "schemas/examples.operator-task-ir-float.json",
+      "task_ids": ["fractional-fixture-task"],
+      "descriptor_authoring_modes": ["rust_native"],
+      "operator_kinds": ["transform"],
+      "program_kinds": ["transform"],
+      "execution_modes": ["orchestra_fetch"]
+    },
+    {
+      "path": "schemas/examples.operator-task-ir-elixir.json",
+      "task_ids": ["elixir-control-plane-quality-gate-task"],
+      "descriptor_authoring_modes": ["elixir_control_plane"],
+      "operator_kinds": ["transform"],
+      "program_kinds": ["transform"],
+      "execution_modes": ["orchestra_fetch"]
+    },
+    {
+      "path": "schemas/examples.operator-task-batch.json",
+      "task_ids": ["fixture-task"],
+      "descriptor_authoring_modes": ["rust_native"],
+      "operator_kinds": ["transform"],
+      "program_kinds": ["transform"],
+      "execution_modes": ["orchestra_fetch"]
+    }
+  ],
+  "required_global_coverage": {
+    "descriptor_authoring_modes": ["rust_native", "elixir_control_plane"],
+    "operator_kinds": ["transform"],
+    "program_kinds": ["transform"],
+    "execution_modes": ["orchestra_fetch"]
+  }
+}

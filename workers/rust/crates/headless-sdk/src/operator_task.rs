@@ -14,6 +14,8 @@ use crate::operator_task_security::operator_task_security_profile;
 
 pub const OPERATOR_TASK_PREPARE_ACTION: &str = "operator_task_prepare";
 pub const OPERATOR_TASK_EXECUTE_ACTION: &str = "operator_task_execute";
+const HEADLESS_OPERATOR_TASK_FAILURE_SCHEMA_VERSION: &str =
+    "kyuubiki.headless-operator-task-failure/v1";
 
 pub fn is_operator_task_prepare_action(action: &str) -> bool {
     action == OPERATOR_TASK_PREPARE_ACTION
@@ -37,11 +39,11 @@ fn prepare_operator_task_payload_checked(
         )
     })?;
 
-    verify_operator_task_digest(task).map_err(classify_digest_error)?;
+    verify_operator_task_digest(task).map_err(|error| classify_digest_error(error, task))?;
     let summary =
-        summarize_operator_task_execution_checked(task).map_err(classify_summary_error)?;
+        summarize_operator_task_execution_checked(task).map_err(|error| classify_summary_error(error, task))?;
     let execution_preview =
-        preview_operator_task_execution(task).map_err(classify_summary_error)?;
+        preview_operator_task_execution(task).map_err(|error| classify_summary_error(error, task))?;
 
     Ok(Value::Object(Map::from_iter([
         ("status".to_string(), Value::from("verified")),
@@ -198,11 +200,13 @@ pub fn preview_operator_task_execute_payload(payload: &Value) -> Result<Value, S
 
 pub fn operator_task_error_preview(message: impl AsRef<str>) -> Value {
     let message = message.as_ref();
+    let code = operator_task_error_code(message);
     Value::Object(Map::from_iter([
         ("error".to_string(), Value::from(message.to_string())),
+        ("error_code".to_string(), Value::from(code)),
         (
-            "error_code".to_string(),
-            Value::from(operator_task_error_code(message)),
+            "failure_receipt".to_string(),
+            operator_task_failure_receipt(code, message, "preview_request", None),
         ),
     ]))
 }
@@ -240,35 +244,53 @@ fn operator_task_error_code(message: &str) -> &'static str {
 struct OperatorTaskPreviewError {
     code: &'static str,
     message: String,
+    details: Value,
 }
 
 impl OperatorTaskPreviewError {
     fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self::with_task(code, message, "preview_request", None)
+    }
+
+    fn with_task(
+        code: &'static str,
+        message: impl Into<String>,
+        stage: &'static str,
+        task: Option<&Value>,
+    ) -> Self {
+        let message = message.into();
         Self {
             code,
-            message: message.into(),
+            details: operator_task_failure_receipt(code, &message, stage, task),
+            message,
         }
     }
 }
 
-fn classify_digest_error(error: OperatorTaskDigestError) -> OperatorTaskPreviewError {
+fn classify_digest_error(error: OperatorTaskDigestError, task: &Value) -> OperatorTaskPreviewError {
     match error {
-        OperatorTaskDigestError::Missing => OperatorTaskPreviewError::new(
+        OperatorTaskDigestError::Missing => OperatorTaskPreviewError::with_task(
             "operator_task_digest_missing",
             "operator task digest is missing",
+            "verify_digest",
+            Some(task),
         ),
-        OperatorTaskDigestError::InvalidTask(message) => OperatorTaskPreviewError::new(
+        OperatorTaskDigestError::InvalidTask(message) => OperatorTaskPreviewError::with_task(
             "operator_task_digest_invalid",
             format!("operator task is invalid: {message}"),
+            "verify_digest",
+            Some(task),
         ),
-        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskPreviewError::new(
+        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskPreviewError::with_task(
             "operator_task_digest_mismatch",
             format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+            "verify_digest",
+            Some(task),
         ),
     }
 }
 
-fn classify_summary_error(error: OperatorTaskSummaryError) -> OperatorTaskPreviewError {
+fn classify_summary_error(error: OperatorTaskSummaryError, task: &Value) -> OperatorTaskPreviewError {
     let code = match error.code {
         OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
         OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
@@ -280,14 +302,74 @@ fn classify_summary_error(error: OperatorTaskSummaryError) -> OperatorTaskPrevie
             "operator_task_invalid"
         }
     };
-    OperatorTaskPreviewError::new(code, error.message)
+    OperatorTaskPreviewError::with_task(code, error.message, "summarize_execution_program", Some(task))
 }
 
 fn operator_task_error_preview_checked(error: OperatorTaskPreviewError) -> Value {
     Value::Object(Map::from_iter([
         ("error".to_string(), Value::from(error.message)),
         ("error_code".to_string(), Value::from(error.code)),
+        ("failure_receipt".to_string(), error.details),
     ]))
+}
+
+fn operator_task_failure_receipt(
+    code: &str,
+    message: &str,
+    stage: &str,
+    task: Option<&Value>,
+) -> Value {
+    Value::Object(Map::from_iter([
+        (
+            "schema_version".to_string(),
+            Value::from(HEADLESS_OPERATOR_TASK_FAILURE_SCHEMA_VERSION),
+        ),
+        ("failure_owner".to_string(), Value::from("headless_sdk")),
+        ("failure_stage".to_string(), Value::from(stage.to_string())),
+        ("reason_code".to_string(), Value::from(code.to_string())),
+        ("message".to_string(), Value::from(message.to_string())),
+        (
+            "task_id".to_string(),
+            task.and_then(|entry| entry.get("task_id")).cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "operator_id".to_string(),
+            task.and_then(|entry| entry.pointer("/operator/id"))
+                .cloned()
+                .unwrap_or(Value::Null),
+        ),
+        (
+            "task_digest".to_string(),
+            task.and_then(|entry| entry.pointer("/integrity/task_digest"))
+                .cloned()
+                .unwrap_or(Value::Null),
+        ),
+        (
+            "recovery".to_string(),
+            Value::Object(Map::from_iter([
+                ("retryable".to_string(), Value::from(false)),
+                (
+                    "required_action".to_string(),
+                    Value::from(required_failure_action(code)),
+                ),
+                ("safe_to_continue_other_tasks".to_string(), Value::from(true)),
+            ])),
+        ),
+    ]))
+}
+
+fn required_failure_action(code: &str) -> &'static str {
+    match code {
+        "operator_task_digest_missing"
+        | "operator_task_digest_mismatch"
+        | "operator_task_digest_invalid" => "rebuild_task_ir_and_recompute_digest",
+        "operator_task_mirror_mismatch"
+        | "operator_task_execution_abi_mismatch"
+        | "operator_task_program_mismatch"
+        | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
+        "operator_task_invalid_params" => "fix_headless_step_payload",
+        _ => "inspect_task_ir",
+    }
 }
 
 pub(crate) fn prepare_operator_task_error_preview(payload: &Value) -> Option<Value> {

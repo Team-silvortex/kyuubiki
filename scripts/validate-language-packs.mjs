@@ -15,6 +15,61 @@ const VERSION_LINE = "moxi 2.x";
 const TARGET_APP_VERSION = readCurrentReleaseVersion();
 const SOURCE_VALUES = new Set(["downloaded", "imported"]);
 const SURFACES = new Set(["workbench", "hub"]);
+const REQUIRED_OVERRIDE_PATHS = {
+  hub: [
+    "nav.projects",
+    "nav.runtimes",
+    "nav.deploy",
+    "nav.observe",
+    "nav.tools",
+    "sections.projects.title",
+    "sections.projects.copy",
+    "sections.runtimes.title",
+    "sections.runtimes.copy",
+    "sections.deploy.title",
+    "sections.deploy.copy",
+    "shell.language",
+    "shell.actionStatus",
+    "shell.idle",
+    "shell.openWorkbench",
+    "shell.startLocal",
+    "shell.validateEnv",
+  ],
+  workbench: [
+    "title",
+    "subtitle",
+    "rail.study",
+    "rail.model",
+    "rail.workflow",
+    "rail.store",
+    "rail.library",
+    "rail.system",
+    "sections.study",
+    "sections.model",
+    "sections.workflow",
+    "sections.store",
+    "sections.library",
+    "sections.system",
+    "workflowBuilderPage",
+    "workflowRunsPage",
+    "workflowCatalogTitle",
+    "workflowTemplateChainLibraryLabel",
+    "languagePacksTitle",
+    "languagePacksHint",
+    "languagePacksEmptyLabel",
+    "languagePackName",
+    "languagePackVersion",
+    "languagePackSourceImported",
+    "languagePackSourceDownloaded",
+    "languagePackDownloadTemplate",
+    "languagePackExportInstalled",
+    "languagePackImport",
+    "languagePackRemove",
+    "languagePackCatalogTitle",
+    "languagePackCatalogHint",
+    "languagePackCatalogAction",
+  ],
+};
 const UNSAFE_TEXT_PATTERNS = [
   "<",
   ">",
@@ -95,6 +150,26 @@ function validateTimestamp(value, relativePath) {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
     fail(`${relativePath}: updatedAt must be an ISO date-time string`);
   }
+}
+
+function valueAtPath(value, dottedPath) {
+  return dottedPath.split(".").reduce((current, part) => {
+    if (!isPlainObject(current)) return undefined;
+    return current[part];
+  }, value);
+}
+
+function coverageForPack(pack) {
+  const requiredPaths = REQUIRED_OVERRIDE_PATHS[pack.targetSurface] ?? [];
+  const missing = requiredPaths.filter((entry) => {
+    const value = valueAtPath(pack.overrides, entry);
+    return typeof value !== "string" || !value.trim();
+  });
+  return {
+    required: requiredPaths.length,
+    covered: requiredPaths.length - missing.length,
+    missing,
+  };
 }
 
 function validateLocaleTarget() {
@@ -203,6 +278,7 @@ const referencedPaths = new Set();
 const seenIds = new Set();
 const packsBySurface = new Map([...SURFACES].map((surface) => [surface, []]));
 const validatedPacks = [];
+const coverageTotals = new Map([...SURFACES].map((surface) => [surface, { covered: 0, required: 0 }]));
 
 if (isPlainObject(catalog)) {
   if (catalog.schema_version !== CATALOG_SCHEMA_VERSION) {
@@ -243,6 +319,15 @@ if (isPlainObject(catalog)) {
 
       const pack = validatePack(entry.path, entry.surface);
       if (!pack) return;
+      const coverage = coverageForPack(pack);
+      const coverageTotal = coverageTotals.get(entry.surface);
+      if (coverageTotal) {
+        coverageTotal.covered += coverage.covered;
+        coverageTotal.required += coverage.required;
+      }
+      if (coverage.missing.length > 0) {
+        fail(`${label}: ${entry.path} missing override coverage ${coverage.missing.join(", ")}`);
+      }
       validatedPacks.push(pack);
       packsBySurface.get(entry.surface)?.push(pack);
       if (pack.id !== entry.id) {
@@ -316,4 +401,10 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Validated ${validatedPacks.length} language packs for ${VERSION_LINE} ${TARGET_APP_VERSION}.`);
+const coverageSummary = [...coverageTotals.entries()]
+  .map(([surface, total]) => `${surface} ${total.covered}/${total.required}`)
+  .join(", ");
+
+console.log(
+  `Validated ${validatedPacks.length} language packs for ${VERSION_LINE} ${TARGET_APP_VERSION}; coverage ${coverageSummary}.`,
+);

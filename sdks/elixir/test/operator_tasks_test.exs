@@ -96,6 +96,80 @@ defmodule KyuubikiSdk.OperatorTasksTest do
     assert Jason.decode!(body) == %{"batch" => batch}
   end
 
+  test "extracts nested operator task failure receipts" do
+    payload = %{
+      "status" => "failed",
+      "results" => [
+        %{
+          "case_id" => "case-a",
+          "failure_receipt" => %{
+            "schema_version" => "kyuubiki.headless-operator-task-failure/v1",
+            "failure_stage" => "summarize_execution_program",
+            "recovery" => %{"required_action" => "fix_task_ir_contract_mirror_fields"}
+          }
+        },
+        %{
+          "case_id" => "case-b",
+          "error" => %{
+            "details" => %{
+              "operator_task_failure_receipt" => %{
+                "schema_version" => "kyuubiki.agent-operator-task-failure/v1",
+                "failure_stage" => "verify_digest",
+                "recovery" => %{"required_action" => "rebuild_task_ir_and_recompute_digest"}
+              }
+            }
+          }
+        },
+        %{
+          "case_id" => "case-c",
+          "failure_receipt" => %{
+            "schema_version" => "kyuubiki.control-plane-operator-task-failure/v1",
+            "failure_stage" => "validate_batch_entry",
+            "recovery" => %{"required_action" => "fix_quality_execution_batch_entry"}
+          }
+        }
+      ],
+      "resume_plan" => %{
+        "next_action" => "retry_failed_cases",
+        "target_case_ids" => ["case-a", "case-c"],
+        "blocked_case_ids" => ["case-b"],
+        "recovery_actions" => [
+          "fix_quality_execution_batch_entry",
+          "inspect_operator_task_batch_checkpoint"
+        ]
+      }
+    }
+
+    receipts = KyuubikiSdk.operator_task_failure_receipts(payload)
+
+    assert Enum.map(receipts, & &1["failure_stage"]) == [
+             "summarize_execution_program",
+             "verify_digest",
+             "validate_batch_entry"
+           ]
+
+    assert KyuubikiSdk.operator_task_failure_actions(payload) == [
+             "fix_task_ir_contract_mirror_fields",
+             "rebuild_task_ir_and_recompute_digest",
+             "fix_quality_execution_batch_entry",
+             "inspect_operator_task_batch_checkpoint"
+           ]
+
+    assert KyuubikiSdk.operator_task_recovery_summary(payload) == %{
+             "next_action" => "retry_failed_cases",
+             "target_case_ids" => ["case-a", "case-c"],
+             "blocked_case_ids" => ["case-b"],
+             "recovery_actions" => [
+               "fix_task_ir_contract_mirror_fields",
+               "rebuild_task_ir_and_recompute_digest",
+               "fix_quality_execution_batch_entry",
+               "inspect_operator_task_batch_checkpoint"
+             ],
+             "failure_receipt_count" => 3,
+             "failure_receipts" => receipts
+           }
+  end
+
   test "control plane client checkpoints operator task batch", %{base_url: base_url} do
     client = ControlPlaneClient.new(base_url)
 

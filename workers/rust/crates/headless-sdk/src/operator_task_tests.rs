@@ -135,6 +135,22 @@ fn operator_task_prepare_dry_run_reports_structured_mirror_error() {
         report.steps[0].result_preview["error_code"],
         "operator_task_mirror_mismatch"
     );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["schema_version"],
+        "kyuubiki.headless-operator-task-failure/v1"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["failure_stage"],
+        "summarize_execution_program"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["operator_id"],
+        "transform.fixture"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["recovery"]["required_action"],
+        "fix_task_ir_contract_mirror_fields"
+    );
 }
 
 #[test]
@@ -148,6 +164,14 @@ fn operator_task_prepare_dry_run_reports_missing_digest() {
     assert_eq!(
         report.steps[0].result_preview["error_code"],
         "operator_task_digest_missing"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["failure_stage"],
+        "verify_digest"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["recovery"]["required_action"],
+        "rebuild_task_ir_and_recompute_digest"
     );
 }
 
@@ -165,6 +189,26 @@ fn operator_task_prepare_dry_run_reports_execution_abi_mismatch() {
         report.steps[0].result_preview["error_code"],
         "operator_task_execution_abi_mismatch"
     );
+}
+
+#[test]
+fn operator_task_prepare_dry_run_reports_missing_task_failure_receipt() {
+    let report = run_batch_dry(&operator_task_batch_without_task(), false, false);
+
+    assert_eq!(report.status, "failed");
+    assert_eq!(
+        report.steps[0].result_preview["error_code"],
+        "operator_task_invalid_params"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["failure_stage"],
+        "preview_request"
+    );
+    assert_eq!(
+        report.steps[0].result_preview["failure_receipt"]["recovery"]["required_action"],
+        "fix_headless_step_payload"
+    );
+    assert!(report.steps[0].result_preview["failure_receipt"]["task_id"].is_null());
 }
 
 #[test]
@@ -250,6 +294,22 @@ fn operator_task_batch(task: Value) -> HeadlessExecutionBatch {
             action: "operator_task_prepare".to_string(),
             risk: crate::HeadlessRisk::Normal,
             payload: json!({ "task": task }),
+        }],
+        warnings: vec![],
+    }
+}
+
+fn operator_task_batch_without_task() -> HeadlessExecutionBatch {
+    HeadlessExecutionBatch {
+        schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+        exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+        language: "en".to_string(),
+        workflow_id: "operator-task-fixture".to_string(),
+        steps: vec![HeadlessExecutionBatchStep {
+            index: 1,
+            action: "operator_task_prepare".to_string(),
+            risk: crate::HeadlessRisk::Normal,
+            payload: json!({}),
         }],
         warnings: vec![],
     }

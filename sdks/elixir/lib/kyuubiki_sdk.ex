@@ -8,6 +8,7 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.MaterialReports
   alias KyuubikiSdk.MaterialResearchBundle
   alias KyuubikiSdk.MaterialWorkflows
+  alias KyuubikiSdk.OperatorTasks
   alias KyuubikiSdk.AdvancedSolverWorkflows
 
   def new_session(opts \\ []), do: Session.new(opts)
@@ -74,6 +75,10 @@ defmodule KyuubikiSdk do
 
   def validate_workflow_result_against_graph(graph, payload),
     do: WorkflowResults.validate_result_against_graph(graph, payload)
+
+  def operator_task_failure_receipts(payload), do: OperatorTasks.failure_receipts(payload)
+  def operator_task_failure_actions(payload), do: OperatorTasks.failure_actions(payload)
+  def operator_task_recovery_summary(payload), do: OperatorTasks.recovery_summary(payload)
 
   defdelegate workflow_schema_ref(schema, version), to: WorkflowBuilders, as: :schema_ref
   defdelegate workflow_axis(axis_id, attrs \\ %{}), to: WorkflowBuilders, as: :axis

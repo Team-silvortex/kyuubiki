@@ -118,6 +118,7 @@ Highlights:
 - `KyuubikiSdk.Session` for submit/batch/wait flows
 - `KyuubikiSdk.AgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry, failure classification, and chunk streaming helpers
+- operator TaskIR failure receipt extraction for batch and agent recovery flows
 - `KyuubikiSdk.Auth` and structured `KyuubikiSdk.Error`
 - workflow contract validation and builder helpers
 - advanced solver workflow templates for modal frame, nonlinear spring, and

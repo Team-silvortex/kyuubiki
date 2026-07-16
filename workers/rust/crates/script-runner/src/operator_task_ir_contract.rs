@@ -7,6 +7,8 @@ use std::path::Path;
 type RunnerResult<T> = Result<T, String>;
 
 const SCHEMA_PATH: &str = "schemas/operator-task-ir.schema.json";
+const GOLDEN_MANIFEST_PATH: &str = "schemas/operator-task-ir-golden-manifest.json";
+const GOLDEN_MANIFEST_SCHEMA: &str = "kyuubiki.operator-task-ir-golden-manifest/v1";
 const EXAMPLE_PATHS: &[&str] = &[
     "schemas/examples.operator-task-ir.json",
     "schemas/examples.operator-task-ir-float.json",
@@ -65,6 +67,7 @@ fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
     };
     let mut task_count = 0usize;
     let mut authoring_modes = Vec::new();
+    let mut tasks_by_path = Map::new();
     for example_path in EXAMPLE_PATHS {
         let example = read_json(root, example_path)?;
         let mut tasks = Vec::new();
@@ -96,6 +99,10 @@ fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
             }
             task_count += 1;
         }
+        tasks_by_path.insert(
+            (*example_path).to_string(),
+            Value::Array(tasks.into_iter().cloned().collect()),
+        );
     }
     for mode in REQUIRED_AUTHORING_MODES {
         if !authoring_modes.iter().any(|found| found == mode) {
@@ -103,6 +110,9 @@ fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
                 "TaskIR examples must include descriptor_authoring.mode={mode}"
             )));
         }
+    }
+    if let Err(issue) = validate_golden_manifest(root, &tasks_by_path) {
+        return Ok(CheckOutcome::Issue(issue));
     }
     Ok(CheckOutcome::Ok(task_count))
 }
@@ -298,6 +308,103 @@ fn validate_task_digest(
     if expected != actual {
         return Err(format!(
             "{context}: integrity.task_digest mismatch; expected {expected}, computed {actual}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_golden_manifest(root: &Path, tasks_by_path: &Map<String, Value>) -> Result<(), String> {
+    let manifest = read_json(root, GOLDEN_MANIFEST_PATH)?;
+    if manifest
+        .get("schema_version")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        != GOLDEN_MANIFEST_SCHEMA
+    {
+        return Err(format!(
+            "{GOLDEN_MANIFEST_PATH}: schema_version must be {GOLDEN_MANIFEST_SCHEMA}"
+        ));
+    }
+    if manifest.get("line").and_then(Value::as_str).unwrap_or_default() != "moxi 2.x" {
+        return Err(format!("{GOLDEN_MANIFEST_PATH}: line must be moxi 2.x"));
+    }
+    let Some(examples) = manifest.get("examples").and_then(Value::as_array) else {
+        return Err(format!("{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"));
+    };
+    if examples.is_empty() {
+        return Err(format!("{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"));
+    }
+    let mut manifest_paths = Vec::new();
+    for (index, entry) in examples.iter().enumerate() {
+        let context = format!("{GOLDEN_MANIFEST_PATH}:examples[{index}]");
+        let example_path = entry.get("path").and_then(Value::as_str).unwrap_or_default();
+        if example_path.is_empty() {
+            return Err(format!("{context}: path must be a non-empty string"));
+        }
+        manifest_paths.push(example_path.to_string());
+        let Some(tasks) = tasks_by_path.get(example_path).and_then(Value::as_array) else {
+            return Err(format!("{context}: no collected TaskIR examples for {example_path}"));
+        };
+        validate_manifest_values(&context, tasks, "/task_id", entry, "task_ids")?;
+        validate_manifest_values(
+            &context,
+            tasks,
+            "/descriptor_authoring/mode",
+            entry,
+            "descriptor_authoring_modes",
+        )?;
+        validate_manifest_values(&context, tasks, "/operator/kind", entry, "operator_kinds")?;
+        validate_manifest_values(
+            &context,
+            tasks,
+            "/execution_program/program_kind",
+            entry,
+            "program_kinds",
+        )?;
+        validate_manifest_values(
+            &context,
+            tasks,
+            "/runtime_hints/execution_mode",
+            entry,
+            "execution_modes",
+        )?;
+    }
+    for example_path in EXAMPLE_PATHS {
+        if !manifest_paths.iter().any(|path| path == example_path) {
+            return Err(format!(
+                "{GOLDEN_MANIFEST_PATH}: missing manifest entry for {example_path}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_manifest_values(
+    context: &str,
+    tasks: &[Value],
+    pointer: &str,
+    entry: &Value,
+    field: &str,
+) -> Result<(), String> {
+    let Some(expected) = entry.get(field).and_then(Value::as_array) else {
+        return Err(format!("{context}: manifest field {field} must be a non-empty array"));
+    };
+    if expected.is_empty() {
+        return Err(format!("{context}: manifest field {field} must be a non-empty array"));
+    }
+    let actual = tasks
+        .iter()
+        .filter_map(|task| pointer_get(task, pointer).and_then(Value::as_str))
+        .collect::<Vec<_>>();
+    let missing = expected
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|expected_value| !actual.iter().any(|actual_value| actual_value == expected_value))
+        .collect::<Vec<_>>();
+    if !missing.is_empty() {
+        return Err(format!(
+            "{context}: missing manifest {field}: {}",
+            missing.join(", ")
         ));
     }
     Ok(())

@@ -7,6 +7,7 @@ use kyuubiki_protocol::{OperatorTaskExecutionPreview, OperatorTaskExecutionSumma
 
 const OPERATOR_TASK_VALIDATION_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task-validation/v1";
 const OPERATOR_TASK_PROVENANCE_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task-provenance/v1";
+const OPERATOR_TASK_FAILURE_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task-failure/v1";
 
 pub(crate) fn operator_task_validation_receipt(
     summary: &OperatorTaskExecutionSummary,
@@ -63,4 +64,42 @@ pub(crate) fn operator_task_provenance_receipt(
             "preview_digest": preview.task_digest
         }
     })
+}
+
+pub(crate) fn operator_task_failure_receipt(
+    code: &str,
+    message: &str,
+    stage: &str,
+    task_ir: Option<&Value>,
+) -> Value {
+    serde_json::json!({
+        "schema_version": OPERATOR_TASK_FAILURE_RECEIPT_SCHEMA,
+        "failure_owner": "agent_runtime",
+        "failure_stage": stage,
+        "reason_code": code,
+        "message": message,
+        "task_id": task_ir.and_then(|task| task.get("task_id")).cloned().unwrap_or(Value::Null),
+        "operator_id": task_ir.and_then(|task| task.pointer("/operator/id")).cloned().unwrap_or(Value::Null),
+        "task_digest": task_ir.and_then(|task| task.pointer("/integrity/task_digest")).cloned().unwrap_or(Value::Null),
+        "recovery": {
+            "retryable": false,
+            "required_action": required_failure_action(code),
+            "safe_to_continue_other_tasks": true
+        }
+    })
+}
+
+fn required_failure_action(code: &str) -> &'static str {
+    match code {
+        "operator_task_digest_missing" | "operator_task_digest_mismatch" | "operator_task_digest_invalid" => {
+            "rebuild_task_ir_and_recompute_digest"
+        }
+        "operator_task_mirror_mismatch"
+        | "operator_task_execution_abi_mismatch"
+        | "operator_task_program_mismatch"
+        | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
+        "invalid_params" => "fix_rpc_request_params",
+        "operator_task_execution_failed" => "inspect_operator_runtime_result",
+        _ => "inspect_task_ir",
+    }
 }

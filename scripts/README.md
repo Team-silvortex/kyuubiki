@@ -136,8 +136,13 @@ This directory contains host-native operational entry points.
   Validate the shipped Workbench/Hub language support pack catalog and JSON
   envelopes for the current release index version, including exact parity with
   `config/localization/mainstream-language-pack-locales.json`, repo-relative
-  path safety, and unsafe-text rejection for UI copy. Make now uses the native
-  runner; the retained `.mjs` script is only a parity reference.
+  path safety, required override-key coverage, and unsafe-text rejection for UI
+  copy. Make now uses the native runner; the retained `.mjs` script is only a
+  parity reference.
+- `report-language-pack-coverage.mjs`
+  Emit a JSON coverage report for shipped language packs. It summarizes
+  language-count coverage and required override-key coverage by UI surface, then
+  lists per-language missing paths for follow-up triage.
 - `kyuubiki-script-runner check-ui-automation-contract`
   Verify the product-owned Workbench UI automation selector contract across the
   JSON contract, HTML documentation, TypeScript helper, and implementation
@@ -205,8 +210,9 @@ This directory contains host-native operational entry points.
   and package version stay consistent across descriptor, execution program, and
   runtime hints, and recomputes canonical `descriptor_digest` and `task_digest`
   values, including a fractional-number fixture, before agent or SDK tests need
-  to run. Make now uses the native runner; the retained `.mjs` script is only a
-  parity reference.
+  to run. It also checks `schemas/operator-task-ir-golden-manifest.json` so the
+  release-line example coverage surface cannot drift silently. Make now uses
+  the native runner; the retained `.mjs` script is only a parity reference.
 - `kyuubiki-script-runner check-workflow-dataset-contract`
   Verify the ONNX-like workflow dataset schema, standalone example, workflow
   graph embedded dataset contract, graph port/edge dataset references, and the

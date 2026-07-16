@@ -401,6 +401,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["next_action"] == example["resume_policy"]["next_action"]
     assert is_list(example["target_case_ids"])
     assert is_list(example["blocked_case_ids"])
+    assert is_list(example["recovery_actions"])
   end
 
   test "operator task batch blocked resume plan example targets blocked cases" do
@@ -414,6 +415,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["next_action"] == "resolve_blocked_cases"
     assert example["target_case_ids"] == ["quality_case_a"]
     assert example["blocked_case_ids"] == ["quality_case_a"]
+    assert example["recovery_actions"] == []
   end
 
   test "material envelope catalog request example matches the shared request contract" do

@@ -112,6 +112,15 @@ Pre-execution failures are classified before package fetch or solver dispatch:
 `operator_task_entrypoint_mismatch`. These are task/contract failures, not
 solver-kernel failures.
 
+Operator TaskIR RPC failures also include a structured
+`operator_task_failure_receipt` in the RPC error details alongside the watchdog
+failure report. The receipt uses
+`kyuubiki.agent-operator-task-failure/v1`, records the failed stage, task id,
+operator id, task digest when available, and a recovery action such as
+`rebuild_task_ir_and_recompute_digest` or `fix_task_ir_contract_mirror_fields`.
+This keeps failed tasks auditable and lets batch schedulers continue unrelated
+cases without scraping human-readable messages.
+
 Task description is dual-mode:
 
 - Elixir control-plane authoring is the default and remains the fastest path for

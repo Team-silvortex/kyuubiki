@@ -13,6 +13,7 @@
     "checkpoint_digest",
     "target_case_ids",
     "blocked_case_ids",
+    "recovery_actions",
     "resume_policy"
   ],
   "properties": {
@@ -51,6 +52,10 @@
       "items": { "type": "string", "minLength": 1 }
     },
     "blocked_case_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "recovery_actions": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },

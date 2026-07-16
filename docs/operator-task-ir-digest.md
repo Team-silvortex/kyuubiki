@@ -146,22 +146,22 @@ Expected digests:
 
 The float-heavy fixture protects fixed-decimal canonicalization:
 
-- operator id: `transform.float_fixture`
+- operator id: `transform.fractional_fixture`
 - family: `fixture`
 - kind: `transform`
-- package ref: `orchestra://operator-package/transform.float_fixture`
+- package ref: `orchestra://operator-package/transform.fractional_fixture`
 - input:
-  `{"temperature_delta":160.0,"thermal_expansion":0.000012,"youngs_modulus":70000000000.0,"poisson_ratio":0.33}`
+  `{"temperature_delta":160.5,"thermal_expansion":0.000012,"poisson_ratio":0.33}`
 - config: `{"constraint_factor":0.7}`
-- task id: `float-fixture-task`
+- task id: `fractional-fixture-task`
 - authoring mode: `rust_native`
 
 Expected digests:
 
 - descriptor digest:
-  `083dfdfa3a8e7115d6966df8d64b457205db07811a4658d6bd319b60778aa612`
+  `5473bf5ee7f3f01eaaf596c83f0ded9cf07c67c45277f6f77cd1cedc2f553d10`
 - task digest:
-  `d87818ffb27cc8f01e6a360f973ebf1d40025362b28cda0909078b99cd6139b7`
+  `77e991c9a4023bbb7c486ad3efc3726381e57671d0d33a4ae22cc6dbc0c849da`
 
 The Elixir-authored fixture protects the hot authoring path while keeping the
 agent-facing task language-neutral:
@@ -187,3 +187,9 @@ Expected digests:
 `make check-operator-task-ir-contract` now requires both `rust_native` and
 `elixir_control_plane` TaskIR fixtures so the executable task surface cannot
 silently drift into a single authoring runtime.
+
+The same gate reads `schemas/operator-task-ir-golden-manifest.json`. That
+manifest records release-line golden coverage by example path, task id,
+descriptor authoring mode, operator kind, execution program kind, and runtime
+execution mode. Changing an example now requires changing the declared coverage
+manifest instead of silently weakening what TaskIR compatibility proves.

@@ -14,6 +14,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   @schema_version "kyuubiki.operator-task-ir/v1"
   @batch_contract "kyuubiki.quality_execution_batch/v1"
   @batch_execution_contract "kyuubiki.operator_task_batch_execution/v1"
+  @failure_receipt_contract "kyuubiki.control-plane-operator-task-failure/v1"
   @agent_rpc_method "run_operator_task_ir"
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
@@ -83,6 +84,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         "error_count" => length(summaries) - verified_count,
         "error_codes" => Map.keys(error_code_counts),
         "error_code_counts" => error_code_counts,
+        "failure_receipts" => failure_receipts(summaries),
         "summaries" => summaries
       }
 
@@ -158,6 +160,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     do: failed_batch_entry(%{}, %{"task_id" => "batch-entry-#{index}"}, :invalid_task_entry)
 
   defp failed_batch_entry(entry, task_ir, reason) do
+    code = error_code(reason)
+
     %{
       "case_id" => Map.get(entry, "case_id"),
       "task_id" => Map.get(task_ir, "task_id"),
@@ -165,10 +169,78 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "operator_id" => get_in(task_ir, ["operator", "id"]),
       "status" => "error",
       "error" => inspect(reason),
-      "error_code" => error_code(reason),
+      "error_code" => code,
+      "failure_receipt" => failure_receipt(entry, task_ir, reason, code),
       "execution_readiness" => OperatorTaskReadiness.local_failed(reason)
     }
   end
+
+  defp failure_receipt(entry, task_ir, reason, code) do
+    %{
+      "schema_version" => @failure_receipt_contract,
+      "failure_owner" => "control_plane",
+      "failure_stage" => failure_stage(reason),
+      "case_id" => Map.get(entry, "case_id"),
+      "task_id" => Map.get(task_ir, "task_id"),
+      "operator_id" => get_in(task_ir, ["operator", "id"]),
+      "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
+      "reason_code" => code,
+      "message" => inspect(reason),
+      "recovery" => %{
+        "retryable" => false,
+        "required_action" => required_failure_action(code),
+        "safe_to_continue_other_tasks" => true
+      }
+    }
+  end
+
+  defp failure_stage({:operator_task_batch_entry_mismatch, _field, _actual, _expected}),
+    do: "validate_batch_entry"
+
+  defp failure_stage(:operator_task_batch_entry_rpc_mirror_mismatch), do: "validate_batch_entry"
+  defp failure_stage(:operator_task_batch_entry_rpc_missing_task_ir), do: "validate_batch_entry"
+  defp failure_stage({:operator_task_batch_entry_rpc_method_mismatch, _method}), do: "validate_batch_entry"
+  defp failure_stage(:missing_task_ir), do: "validate_batch_entry"
+  defp failure_stage(:invalid_task_entry), do: "validate_batch_entry"
+  defp failure_stage({:operator_task_digest_mismatch, _mismatch}), do: "verify_digest"
+  defp failure_stage(:missing_operator_task_digest), do: "verify_digest"
+
+  defp failure_stage(:operator_task_execution_abi_mismatch),
+    do: "summarize_execution_program"
+
+  defp failure_stage(:operator_task_program_mismatch), do: "summarize_execution_program"
+  defp failure_stage(:operator_task_entrypoint_mismatch), do: "summarize_execution_program"
+  defp failure_stage({:operator_task_mirror_mismatch, _mismatch}), do: "summarize_execution_program"
+  defp failure_stage(_reason), do: "local_execute"
+
+  defp required_failure_action(code)
+       when code in [
+              "operator_task_digest_mismatch",
+              "operator_task_digest_missing"
+            ],
+       do: "rebuild_task_ir_and_recompute_digest"
+
+  defp required_failure_action(code)
+       when code in [
+              "operator_task_mirror_mismatch",
+              "operator_task_execution_abi_mismatch",
+              "operator_task_program_mismatch",
+              "operator_task_entrypoint_mismatch"
+            ],
+       do: "fix_task_ir_contract_mirror_fields"
+
+  defp required_failure_action(code)
+       when code in [
+              "operator_task_batch_entry_mismatch",
+              "operator_task_batch_entry_rpc_mirror_mismatch",
+              "operator_task_batch_entry_rpc_missing_task_ir",
+              "operator_task_batch_entry_rpc_method_mismatch",
+              "operator_task_batch_entry_missing_task_ir",
+              "operator_task_batch_entry_invalid"
+            ],
+       do: "fix_quality_execution_batch_entry"
+
+  defp required_failure_action(_code), do: "inspect_operator_task_batch_entry"
 
   defp error_code({:operator_task_digest_mismatch, _mismatch}),
     do: "operator_task_digest_mismatch"
@@ -213,6 +285,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "error_count" => length(results) - ok_count,
       "error_codes" => Map.keys(error_code_counts),
       "error_code_counts" => error_code_counts,
+      "failure_receipts" => failure_receipts(results),
       "readiness_counts" => readiness_counts(results),
       "failed_case_ids" => failed_case_ids(results),
       "results" => results
@@ -226,6 +299,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     |> Enum.filter(&(&1["status"] == "error"))
     |> Enum.map(&Map.get(&1, "case_id"))
     |> Enum.filter(&(is_binary(&1) and &1 != ""))
+  end
+
+  defp failure_receipts(entries) do
+    entries
+    |> Enum.map(&Map.get(&1, "failure_receipt"))
+    |> Enum.filter(&is_map/1)
   end
 
   defp error_code_counts(entries) do

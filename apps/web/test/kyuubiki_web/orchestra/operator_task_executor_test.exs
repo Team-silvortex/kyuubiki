@@ -170,13 +170,36 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
     assert complete["resume_policy"] == %{"status" => "complete", "next_action" => "archive"}
 
-    partial_execution = %{execution | "error_count" => 1, "ok_count" => 0}
+    partial_execution =
+      execution
+      |> Map.merge(%{
+        "error_count" => 1,
+        "ok_count" => 0,
+        "failed_case_ids" => ["case-a"],
+        "failure_receipts" => [
+          %{
+            "schema_version" => "kyuubiki.control-plane-operator-task-failure/v1",
+            "case_id" => "case-a",
+            "reason_code" => "operator_task_digest_mismatch",
+            "recovery" => %{
+              "required_action" => "rebuild_task_ir_and_recompute_digest"
+            }
+          }
+        ]
+      })
+
     partial = OperatorTaskBatchRun.checkpoint(batch, execution: partial_execution)
 
     assert partial["resume_policy"] == %{
              "status" => "partial",
              "next_action" => "retry_failed_cases"
            }
+
+    assert hd(partial["execution"]["failure_receipts"])["case_id"] == "case-a"
+
+    assert {:ok, partial_plan} = OperatorTaskBatchRun.resume_plan(batch, partial)
+    assert partial_plan["target_case_ids"] == ["case-a"]
+    assert partial_plan["recovery_actions"] == ["rebuild_task_ir_and_recompute_digest"]
   end
 
   test "checkpoint resume policy targets readiness-blocked cases separately from errors" do
@@ -311,6 +334,19 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert List.last(result["results"])["status"] == "error"
     assert List.last(result["results"])["error"] =~ "operator_task_digest_mismatch"
     assert List.last(result["results"])["error_code"] == "operator_task_digest_mismatch"
+    assert List.last(result["results"])["failure_receipt"]["schema_version"] ==
+             "kyuubiki.control-plane-operator-task-failure/v1"
+
+    assert List.last(result["results"])["failure_receipt"]["failure_stage"] == "verify_digest"
+
+    assert get_in(List.last(result["results"]), [
+             "failure_receipt",
+             "recovery",
+             "required_action"
+           ]) == "rebuild_task_ir_and_recompute_digest"
+
+    assert hd(result["failure_receipts"])["case_id"] == "case-b"
+    assert hd(result["failure_receipts"])["reason_code"] == "operator_task_digest_mismatch"
     assert List.last(result["results"])["execution_readiness"]["status"] == "blocked"
 
     assert List.last(result["results"])["execution_readiness"]["blocking_stage"] ==
@@ -369,6 +405,14 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert hd(result["results"])["error"] =~ "operator_task_batch_entry_rpc_mirror_mismatch"
 
     assert hd(result["results"])["error_code"] ==
+             "operator_task_batch_entry_rpc_mirror_mismatch"
+
+    assert hd(result["results"])["failure_receipt"]["failure_stage"] == "validate_batch_entry"
+
+    assert get_in(hd(result["results"]), ["failure_receipt", "recovery", "required_action"]) ==
+             "fix_quality_execution_batch_entry"
+
+    assert hd(result["failure_receipts"])["reason_code"] ==
              "operator_task_batch_entry_rpc_mirror_mismatch"
   end
 
