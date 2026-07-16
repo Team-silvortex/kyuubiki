@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-fr-core-1.19",
+  "id": "hub-fr-core-2.0",
   "language": "fr",
   "targetSurface": "hub",
   "name": "French Hub Core",
@@ -9,35 +9,35 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter French UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "French UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
       "projects": "Accueil",
       "runtimes": "Runtimes",
-      "deploy": "Deployer",
+      "deploy": "Déployer",
       "observe": "Observer",
       "tools": "Outils"
     },
     "sections": {
       "projects": {
         "title": "Accueil",
-        "copy": "Commencez par un chemin clair: importer, inspecter, puis ouvrir Workbench."
+        "copy": "Français: Ouvrir Workbench, Valider l'environnement, Démarrer la pile locale."
       },
       "runtimes": {
         "title": "Runtimes",
-        "copy": "Demarrez la bonne boucle, verifiez la sante, et gardez les journaux proches."
+        "copy": "Démarrer la pile locale; État de l'action stays visible for operators."
       },
       "deploy": {
-        "title": "Deploiement",
-        "copy": "Choisissez la posture cible, validez le poste, puis preparez les chemins de release."
+        "title": "Déployer",
+        "copy": "Déployer: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
-      "language": "Langue",
-      "actionStatus": "Etat de l'action",
+      "language": "Français",
+      "actionStatus": "État de l'action",
       "idle": "inactif",
       "openWorkbench": "Ouvrir Workbench",
-      "startLocal": "Demarrer la pile locale",
+      "startLocal": "Démarrer la pile locale",
       "validateEnv": "Valider l'environnement"
     }
   }

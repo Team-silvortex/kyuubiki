@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-pl-core-1.19",
+  "id": "hub-pl-core-2.0",
   "language": "pl",
   "targetSurface": "hub",
   "name": "Polish Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Polish UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Polish UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Start",
+      "runtimes": "Środowiska",
+      "deploy": "Wdrożenie",
+      "observe": "Obserwuj",
+      "tools": "Narzędzia"
     },
     "sections": {
       "projects": {
-        "title": "Polski home",
-        "copy": "Polish starter copy for importing, inspecting, and opening Workbench."
+        "title": "Start",
+        "copy": "Polski: Otwórz Workbench, Zweryfikuj środowisko, Uruchom lokalny stack."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Polish operators."
+        "title": "Środowiska",
+        "copy": "Uruchom lokalny stack; Status akcji stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Polish support pack enabled."
+        "title": "Wdrożenie",
+        "copy": "Wdrożenie: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Polski",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Status akcji",
+      "idle": "bezczynny",
+      "openWorkbench": "Otwórz Workbench",
+      "startLocal": "Uruchom lokalny stack",
+      "validateEnv": "Zweryfikuj środowisko"
     }
   }
 }

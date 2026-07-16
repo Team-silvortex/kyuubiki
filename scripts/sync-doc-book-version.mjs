@@ -51,13 +51,14 @@ const args = parseArgs(process.argv.slice(2));
 const shippingVersion = args.version ?? readJson(updateChannelsPath).shipping_version;
 const versionLine = args.line ?? `moxi ${shippingVersion}`;
 const minorLine = shippingVersion.split(".").slice(0, 2).join(".");
+const codenamePattern = "[a-z][a-z0-9-]*";
 
 const replacements = [
   {
     file: "docs/book.html",
     rules: [
-      [/One book for tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `One book for ${versionLine}`],
-      [/Version line: tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `Version line: ${versionLine}`],
+      [new RegExp(`One book for ${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+`, "g"), `One book for ${versionLine}`],
+      [new RegExp(`Version line: ${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+`, "g"), `Version line: ${versionLine}`],
       [/Shipping version: [0-9]+\.[0-9]+\.[0-9]+/g, `Shipping version: ${shippingVersion}`],
       [/Current prep: [0-9]+\.[0-9]+\.x/g, `Current prep: ${minorLine}.x`],
     ],
@@ -65,20 +66,20 @@ const replacements = [
   {
     file: "docs/book-manifest.json",
     rules: [
-      [/"version_line": "tamamono [0-9]+\.[0-9]+\.[0-9]+"/g, `"version_line": "${versionLine}"`],
+      [new RegExp(`"version_line": "${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+"`, "g"), `"version_line": "${versionLine}"`],
       [/"shipping_version": "[0-9]+\.[0-9]+\.[0-9]+"/g, `"shipping_version": "${shippingVersion}"`],
     ],
   },
   {
     file: "apps/hub-gui/ui/docs/index.html",
     rules: [
-      [/Desktop reading entry for tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `Desktop reading entry for ${versionLine}`],
-      [/Current line: tamamono [0-9]+\.[0-9]+\.[0-9]+/g, `Current line: ${versionLine}`],
+      [new RegExp(`Desktop reading entry for ${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+`, "g"), `Desktop reading entry for ${versionLine}`],
+      [new RegExp(`Current line: ${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+`, "g"), `Current line: ${versionLine}`],
     ],
   },
   {
     file: "apps/hub-gui/ui/docs/current-line.html",
-    rules: [[/>tamamono [0-9]+\.[0-9]+\.[0-9]+</g, `>${versionLine}<`]],
+    rules: [[new RegExp(`>${codenamePattern} [0-9]+\\.[0-9]+\\.[0-9]+<`, "g"), `>${versionLine}<`]],
   },
 ];
 

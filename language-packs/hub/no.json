@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-no-core-1.19",
+  "id": "hub-no-core-2.0",
   "language": "no",
   "targetSurface": "hub",
   "name": "Norwegian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Norwegian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Norwegian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Hjem",
+      "runtimes": "Kjøretider",
+      "deploy": "Distribuer",
+      "observe": "Overvåk",
+      "tools": "Verktøy"
     },
     "sections": {
       "projects": {
-        "title": "Norsk home",
-        "copy": "Norwegian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Hjem",
+        "copy": "Norsk: Åpne Workbench, Valider miljø, Start lokal stack."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Norwegian operators."
+        "title": "Kjøretider",
+        "copy": "Start lokal stack; Handlingsstatus stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Norwegian support pack enabled."
+        "title": "Distribuer",
+        "copy": "Distribuer: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Norsk",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Handlingsstatus",
+      "idle": "inaktiv",
+      "openWorkbench": "Åpne Workbench",
+      "startLocal": "Start lokal stack",
+      "validateEnv": "Valider miljø"
     }
   }
 }

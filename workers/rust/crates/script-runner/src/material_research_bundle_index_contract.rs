@@ -43,10 +43,39 @@ pub(crate) fn run_check_material_research_bundle_index_contract(
 fn run_self_test(root: &Path) -> RunnerResult<()> {
     let mut bad = read_json(root, EXAMPLE_PATH)?;
     bad["winner_changed_in_chain_count"] = Value::from(0);
+    expect_check_example_failure(&bad, "winner drift count mismatch")?;
+
+    let mut bad_readiness = read_json(root, EXAMPLE_PATH)?;
+    if let Some(bundle) = bad_readiness.pointer_mut("/bundles/0") {
+        bundle["validation_blocking_reasons"] =
+            Value::Array(vec![Value::from("external_validation_required")]);
+    }
+    expect_check_example_failure(&bad_readiness, "validation readiness reason mismatch")?;
+
+    let mut bad_priority = read_json(root, EXAMPLE_PATH)?;
+    if let Some(bundle) = bad_priority.pointer_mut("/bundles/0") {
+        bundle["validation_priority_rank"] = Value::from(0);
+    }
+    expect_check_example_failure(&bad_priority, "validation priority mismatch")?;
+
+    let mut bad_priority_reason = read_json(root, EXAMPLE_PATH)?;
+    if let Some(bundle) = bad_priority_reason.pointer_mut("/bundles/0") {
+        bundle["validation_priority_reasons"] =
+            Value::Array(vec![Value::from("screening_followup")]);
+    }
+    expect_check_example_failure(&bad_priority_reason, "validation priority reason mismatch")?;
+
+    let mut bad_priority_count = read_json(root, EXAMPLE_PATH)?;
+    bad_priority_count["validation_priority_counts"]["p0_validation_repair"] = Value::from(0);
+    expect_check_example_failure(&bad_priority_count, "validation priority count mismatch")?;
+    Ok(())
+}
+
+fn expect_check_example_failure(example: &Value, label: &str) -> RunnerResult<()> {
     let mut issues = Vec::new();
-    check_example(&bad, &mut issues);
+    check_example(example, &mut issues);
     if issues.is_empty() {
-        return Err("self-test did not reject winner drift count mismatch".to_string());
+        return Err(format!("self-test did not reject {label}"));
     }
     Ok(())
 }
@@ -67,6 +96,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "winner_changed_in_chain_count",
         "reliability_decision_counts",
         "next_round_decision_counts",
+        "validation_priority_counts",
         "bundles",
     ] {
         if !required_fields(schema)
@@ -98,6 +128,9 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "validation_readiness_score",
         "validation_blocking_reasons",
         "next_validation_action_count",
+        "validation_priority",
+        "validation_priority_rank",
+        "validation_priority_reasons",
     ] {
         if !entry_required.iter().any(|required| *required == field) {
             issues.push(format!(

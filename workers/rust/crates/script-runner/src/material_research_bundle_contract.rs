@@ -6,6 +6,9 @@ use std::path::Path;
 
 type RunnerResult<T> = Result<T, String>;
 
+#[path = "material_research_bundle_contract_self_test.rs"]
+mod material_research_bundle_contract_self_test;
+
 const SCHEMA_PATH: &str = "schemas/material-research-bundle.schema.json";
 const EXAMPLE_PATH: &str = "schemas/examples.material-research-bundle.json";
 const SCHEMAS_README_PATH: &str = "schemas/README.md";
@@ -25,7 +28,7 @@ pub(crate) fn run_check_material_research_bundle_contract(
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
     if args.iter().any(|arg| arg == "--self-test") {
-        run_self_test(root)?;
+        material_research_bundle_contract_self_test::run_self_test(root)?;
         println!("material research bundle contract check self-test passed");
         return Ok(0);
     }
@@ -47,36 +50,6 @@ fn check_contracts(root: &Path) -> RunnerResult<Vec<String>> {
     check_example(&read_json(root, EXAMPLE_PATH)?, &mut issues)?;
     check_documentation(root, &mut issues)?;
     Ok(issues)
-}
-
-fn run_self_test(root: &Path) -> RunnerResult<()> {
-    let mut checksum_mismatch = read_json(root, EXAMPLE_PATH)?;
-    if let Some(checksums) = checksum_mismatch
-        .get_mut("artifact_checksums")
-        .and_then(Value::as_object_mut)
-    {
-        checksums.insert("chain_sha256".to_string(), Value::from("0".repeat(64)));
-    }
-    expect_check_example_failure(&checksum_mismatch, "bad retained artifact checksum")?;
-
-    let mut decision_mismatch = read_json(root, EXAMPLE_PATH)?;
-    if let Some(plan) = decision_mismatch
-        .get_mut("next_round_execution_plan")
-        .and_then(Value::as_object_mut)
-    {
-        plan.insert("decision".to_string(), Value::from("repair_validation"));
-    }
-    expect_check_example_failure(&decision_mismatch, "summary/plan decision mismatch")?;
-    Ok(())
-}
-
-fn expect_check_example_failure(example: &Value, label: &str) -> RunnerResult<()> {
-    let mut issues = Vec::new();
-    check_example(example, &mut issues)?;
-    if issues.is_empty() {
-        return Err(format!("self-test did not reject {label}"));
-    }
-    Ok(())
 }
 
 fn check_schema(schema: &Value, issues: &mut Vec<String>) {
@@ -430,6 +403,31 @@ fn validate_validation_readiness(example: &Value, issues: &mut Vec<String>) {
     {
         issues.push(format!(
             "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include external_validation_required"
+        ));
+    }
+    if example
+        .pointer("/validation_evidence/violated_quality_gate_ids")
+        .and_then(Value::as_array)
+        .is_some_and(|gates| !gates.is_empty())
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "violated_quality_gates")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include violated_quality_gates"
+        ));
+    }
+    if example
+        .pointer("/validation_evidence/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "low_confidence_material_cards")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include low_confidence_material_cards"
         ));
     }
     if string_array(

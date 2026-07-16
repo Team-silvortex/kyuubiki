@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-th-core-1.19",
+  "id": "hub-th-core-2.0",
   "language": "th",
   "targetSurface": "hub",
   "name": "Thai Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Thai UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Thai UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "หน้าแรก",
+      "runtimes": "รันไทม์",
+      "deploy": "ดีพลอย",
+      "observe": "ติดตาม",
+      "tools": "เครื่องมือ"
     },
     "sections": {
       "projects": {
-        "title": "ไทย home",
-        "copy": "Thai starter copy for importing, inspecting, and opening Workbench."
+        "title": "หน้าแรก",
+        "copy": "ไทย: เปิด Workbench, ตรวจสอบสภาพแวดล้อม, เริ่มสแตกในเครื่อง."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Thai operators."
+        "title": "รันไทม์",
+        "copy": "เริ่มสแตกในเครื่อง; สถานะการกระทำ stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Thai support pack enabled."
+        "title": "ดีพลอย",
+        "copy": "ดีพลอย: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "ไทย",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "สถานะการกระทำ",
+      "idle": "ว่าง",
+      "openWorkbench": "เปิด Workbench",
+      "startLocal": "เริ่มสแตกในเครื่อง",
+      "validateEnv": "ตรวจสอบสภาพแวดล้อม"
     }
   }
 }

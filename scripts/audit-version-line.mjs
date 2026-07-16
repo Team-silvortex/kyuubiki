@@ -499,15 +499,15 @@ function printHumanReport(report) {
 }
 
 function runSelfTest() {
-  const checks = markdownFactChecks("1.20.0", "tamamono", (file) => {
+  const checks = markdownFactChecks("2.0.0", "moxi", (file) => {
     if (file === "docs/version-line.md") {
-      return "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line";
+      return "current development point: `moxi 1.15.0`\ncurrent documentation target: `moxi 1.15.x` pre-`2.x` line";
     }
     if (file === "docs/current-line.md") {
-      return "The current development point in this line is `tamamono 1.15.0`.";
+      return "The current development point in this line is `moxi 1.15.0`.";
     }
     if (file === "docs/installer-remote-control.md") {
-      return "remote runtime control surface in the `tamamono 1.15.x` preparation line.";
+      return "remote runtime control surface in the `moxi 1.15.x` preparation line.";
     }
     if (file === "docs/desktop-release-checklist.md") {
       return "Examples for the current `1.15.0` workspace-prep line:";

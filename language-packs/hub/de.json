@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-de-core-1.19",
+  "id": "hub-de-core-2.0",
   "language": "de",
   "targetSurface": "hub",
   "name": "German Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter German UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "German UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Start",
+      "runtimes": "Laufzeiten",
+      "deploy": "Bereitstellen",
+      "observe": "Überwachen",
+      "tools": "Werkzeuge"
     },
     "sections": {
       "projects": {
-        "title": "Deutsch home",
-        "copy": "German starter copy for importing, inspecting, and opening Workbench."
+        "title": "Start",
+        "copy": "Deutsch: Workbench öffnen, Umgebung prüfen, Lokalen Stack starten."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for German operators."
+        "title": "Laufzeiten",
+        "copy": "Lokalen Stack starten; Aktionsstatus stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the German support pack enabled."
+        "title": "Bereitstellen",
+        "copy": "Bereitstellen: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Deutsch",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Aktionsstatus",
+      "idle": "inaktiv",
+      "openWorkbench": "Workbench öffnen",
+      "startLocal": "Lokalen Stack starten",
+      "validateEnv": "Umgebung prüfen"
     }
   }
 }

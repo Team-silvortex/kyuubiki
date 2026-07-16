@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-ro-core-1.19",
+  "id": "hub-ro-core-2.0",
   "language": "ro",
   "targetSurface": "hub",
   "name": "Romanian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Romanian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Romanian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
+      "projects": "Acasă",
+      "runtimes": "Runtime-uri",
       "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "observe": "Observare",
+      "tools": "Instrumente"
     },
     "sections": {
       "projects": {
-        "title": "Română home",
-        "copy": "Romanian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Acasă",
+        "copy": "Română: Deschide Workbench, Validează mediul, Pornește stack local."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Romanian operators."
+        "title": "Runtime-uri",
+        "copy": "Pornește stack local; Starea acțiunii stays visible for operators."
       },
       "deploy": {
         "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Romanian support pack enabled."
+        "copy": "Deploy: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Română",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Starea acțiunii",
+      "idle": "inactiv",
+      "openWorkbench": "Deschide Workbench",
+      "startLocal": "Pornește stack local",
+      "validateEnv": "Validează mediul"
     }
   }
 }

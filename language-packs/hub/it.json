@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-it-core-1.19",
+  "id": "hub-it-core-2.0",
   "language": "it",
   "targetSurface": "hub",
   "name": "Italian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Italian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Italian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
       "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "runtimes": "Runtime",
+      "deploy": "Distribuisci",
+      "observe": "Osserva",
+      "tools": "Strumenti"
     },
     "sections": {
       "projects": {
-        "title": "Italiano home",
-        "copy": "Italian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Home",
+        "copy": "Italiano: Apri Workbench, Valida ambiente, Avvia stack locale."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Italian operators."
+        "title": "Runtime",
+        "copy": "Avvia stack locale; Stato azione stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Italian support pack enabled."
+        "title": "Distribuisci",
+        "copy": "Distribuisci: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Italiano",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Stato azione",
+      "idle": "inattivo",
+      "openWorkbench": "Apri Workbench",
+      "startLocal": "Avvia stack locale",
+      "validateEnv": "Valida ambiente"
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "workbench-fr-core-1.19",
+  "id": "workbench-fr-core-2.0",
   "language": "fr",
   "targetSurface": "workbench",
   "name": "French Workbench Core",
@@ -9,43 +9,43 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter French UI overrides for Workbench navigation, workflow, store, and system surfaces.",
+  "description": "French UI overrides for Workbench navigation, workflow, store, and system surfaces.",
   "overrides": {
-    "title": "Workbench Kyuubiki",
-    "subtitle": "Espace de travail pour la simulation, les workflows et les agents.",
+    "title": "Français Workbench",
+    "subtitle": "Français: simulation, workflow, and agent workspace.",
     "rail": {
-      "study": "Etude",
+      "study": "Étude",
       "model": "Espace",
       "workflow": "Workflow",
       "store": "Store",
       "library": "Historique",
-      "system": "Systeme"
+      "system": "Système"
     },
     "sections": {
-      "study": "Configuration d'etude",
-      "model": "Espace de travail",
+      "study": "Configuration d'étude",
+      "model": "Espace modèle",
       "workflow": "Studio de workflow",
       "store": "Store du projet",
-      "library": "Historique des taches",
-      "system": "Systeme"
+      "library": "Historique des tâches",
+      "system": "Système"
     },
     "workflowBuilderPage": "Constructeur",
-    "workflowRunsPage": "Executions",
+    "workflowRunsPage": "Exécutions",
     "workflowCatalogTitle": "Catalogue de workflows",
-    "workflowTemplateChainLibraryLabel": "Bibliotheque de chaines",
-    "languagePacksTitle": "Packs de langue installes",
-    "languagePacksHint": "Importez des packs JSON locaux maintenant, avec la meme surface prete pour une distribution distante.",
-    "languagePacksEmptyLabel": "Aucun pack de langue personnalise n'est encore installe.",
+    "workflowTemplateChainLibraryLabel": "Bibliothèque de chaînes",
+    "languagePacksTitle": "Packs de langue installés",
+    "languagePacksHint": "Importez des packs JSON locaux maintenant, avec la même enveloppe prête pour une distribution distante.",
+    "languagePacksEmptyLabel": "Aucun pack de langue personnalisé n'est encore installé.",
     "languagePackName": "Nom",
     "languagePackVersion": "Version",
-    "languagePackSourceImported": "Importe",
-    "languagePackSourceDownloaded": "Telecharge",
-    "languagePackDownloadTemplate": "Telecharger le modele",
-    "languagePackExportInstalled": "Exporter le pack installe",
+    "languagePackSourceImported": "Importé",
+    "languagePackSourceDownloaded": "Téléchargé",
+    "languagePackDownloadTemplate": "Télécharger le modèle",
+    "languagePackExportInstalled": "Exporter le pack installé",
     "languagePackImport": "Importer un pack",
     "languagePackRemove": "Retirer",
     "languagePackCatalogTitle": "Catalogue futur",
-    "languagePackCatalogHint": "Ces emplacements restent visibles pour brancher plus tard le telechargement de packs distants.",
-    "languagePackCatalogAction": "Bientot"
+    "languagePackCatalogHint": "Importez des packs JSON locaux maintenant, avec la même enveloppe prête pour une distribution distante.",
+    "languagePackCatalogAction": "Bientôt"
   }
 }

@@ -22,7 +22,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     assert Enum.any?(entries, &(&1["id"] == "solve.frame_3d"))
     assert Enum.any?(entries, &(&1["id"] == "frontend.dsl.layout_report"))
-    assert Enum.any?(entries, &(&1["id"] == "workbench-fr-core-1.19"))
+    assert Enum.any?(entries, &(&1["id"] == "workbench-fr-core-2.0"))
     assert Enum.any?(payload["sources"], &(&1["id"] == "builtin.language-packs"))
     assert payload["capabilities"]["login_system"]["status"] == "preview_contract"
     assert payload["capabilities"]["publisher_accounts"]["status"] == "preview_contract"
@@ -43,7 +43,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     fetch_conn =
       :get
-      |> conn("/api/v1/central/catalog/language_pack/workbench-zh-tw-core-1.19")
+      |> conn("/api/v1/central/catalog/language_pack/workbench-zh-tw-core-2.0")
       |> Router.call(@opts)
 
     assert fetch_conn.status == 200

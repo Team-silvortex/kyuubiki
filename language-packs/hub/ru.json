@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-ru-core-1.19",
+  "id": "hub-ru-core-2.0",
   "language": "ru",
   "targetSurface": "hub",
   "name": "Russian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Russian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Russian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Главная",
+      "runtimes": "Среды выполнения",
+      "deploy": "Развертывание",
+      "observe": "Наблюдение",
+      "tools": "Инструменты"
     },
     "sections": {
       "projects": {
-        "title": "Русский home",
-        "copy": "Russian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Главная",
+        "copy": "Русский: Открыть Workbench, Проверить окружение, Запустить локальный стек."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Russian operators."
+        "title": "Среды выполнения",
+        "copy": "Запустить локальный стек; Статус действия stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Russian support pack enabled."
+        "title": "Развертывание",
+        "copy": "Развертывание: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Русский",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Статус действия",
+      "idle": "ожидание",
+      "openWorkbench": "Открыть Workbench",
+      "startLocal": "Запустить локальный стек",
+      "validateEnv": "Проверить окружение"
     }
   }
 }

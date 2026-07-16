@@ -461,7 +461,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     ];
     let mut sample = json!({
         "schema_version": SCHEMA_VERSION,
-        "version_line": "tamamono test",
+        "version_line": "moxi test",
         "benchmark_lanes": { "ui_startup": "test lane" },
         "security_lanes": { "ui_boundary": "test lane" },
         "lane_test_plan": {

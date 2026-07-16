@@ -325,7 +325,7 @@ function runSelfTest() {
   assertSetEquals(requireSchemaCommandKinds(REPORT_SCHEMA), ALLOWED_KINDS, "report schema command kinds");
   const sample = {
     schema_version: SCHEMA_VERSION,
-    version_line: "tamamono test",
+    version_line: "moxi test",
     profiles: [
       {
         profile_id: "sample",

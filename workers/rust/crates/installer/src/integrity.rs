@@ -364,7 +364,7 @@ fn collect_dist_layout_drift(
 fn fallback_contract(platform: Platform, current_version: &str) -> IntegrityContract {
     IntegrityContract {
         schema_version: "kyuubiki.installation-contract/v1".to_string(),
-        product_line: "tamamono 1.x".to_string(),
+        product_line: "moxi 2.x".to_string(),
         shipping_version: current_version.to_string(),
         required_layout: vec![
             fallback_layout_rule("workspace root", ".", true),

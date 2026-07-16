@@ -59,7 +59,7 @@ a new `1.21.x` planning lane.
   Chapter pages for the centralized book, so the book can grow by section
   without turning the main entrypoint back into one oversized page.
 - `book-ch01-what-is-kyuubiki.html`
-- `book-ch02-tamamono-line.html`
+- `book-ch02-moxi-line.html`
 - `book-ch03-architecture-boundaries.html`
 - `book-ch04-runtime-modes.html`
 - `book-ch05-workflow-and-operators.html`
@@ -83,7 +83,7 @@ a new `1.21.x` planning lane.
 
 Then branch by intent:
 
-- `tamamono-minor-lines.md`
+- `moxi-minor-lines.md`
   Long-range `moxi 2.x` roadmap.
 - `commercial-readiness-2.0.md`
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
@@ -289,7 +289,7 @@ Then branch by intent:
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.
 - `tamamono-minor-lines.md`
-  Suggested long-range grouping for the `moxi 2.x` minor releases.
+  Historical `tamamono 1.x` minor-release grouping retained for handoff context.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
 - `toolchain-contract.md`

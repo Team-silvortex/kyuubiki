@@ -91,6 +91,43 @@ const shellCopy = {
   },
 };
 
+const workbenchShellLanguageOptions = [
+  ["en", "English"],
+  ["zh", "中文（简体）"],
+  ["ja", "日本語"],
+  ["es", "Español"],
+  ["ar", "العربية · Arabic"],
+  ["bn", "বাংলা · Bengali"],
+  ["cs", "Čeština · Czech"],
+  ["da", "Dansk · Danish"],
+  ["de", "Deutsch · German"],
+  ["el", "Ελληνικά · Greek"],
+  ["fa", "فارسی · Persian"],
+  ["fi", "Suomi · Finnish"],
+  ["fr", "Français · French"],
+  ["he", "עברית · Hebrew"],
+  ["hi", "हिन्दी · Hindi"],
+  ["id", "Bahasa Indonesia"],
+  ["it", "Italiano · Italian"],
+  ["ko", "한국어 · Korean"],
+  ["ms", "Bahasa Melayu"],
+  ["nl", "Nederlands · Dutch"],
+  ["no", "Norsk · Norwegian"],
+  ["pl", "Polski · Polish"],
+  ["pt-BR", "Português (Brasil)"],
+  ["ro", "Română · Romanian"],
+  ["ru", "Русский · Russian"],
+  ["sv", "Svenska · Swedish"],
+  ["sw", "Kiswahili · Swahili"],
+  ["ta", "தமிழ் · Tamil"],
+  ["th", "ไทย · Thai"],
+  ["tr", "Türkçe · Turkish"],
+  ["uk", "Українська · Ukrainian"],
+  ["ur", "اردو · Urdu"],
+  ["vi", "Tiếng Việt"],
+  ["zh-TW", "繁體中文 · Traditional Chinese"],
+];
+
 const state = {
   workbenchUrl: "http://127.0.0.1:3000",
   orchestratorUrl: "http://127.0.0.1:4000",
@@ -121,14 +158,42 @@ const elements = {
 };
 
 function shellText() {
-  return shellCopy[state.language] || shellCopy.en;
+  const normalized = normalizeDesktopLanguage(state.language);
+  if (shellCopy[normalized]) return shellCopy[normalized];
+  if (normalized.toLowerCase().startsWith("zh")) return shellCopy.zh;
+  if (normalized.toLowerCase().startsWith("es")) return shellCopy.es;
+  return shellCopy.en;
+}
+
+function populateWorkbenchShellLanguageSelect(select, language) {
+  const normalized = normalizeDesktopLanguage(language);
+  const seen = new Set();
+  const options = workbenchShellLanguageOptions.filter(([value]) => {
+    if (seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+
+  if (!seen.has(normalized)) {
+    options.push([normalized, normalized]);
+  }
+
+  select.replaceChildren(
+    ...options.map(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }),
+  );
+  select.value = normalized;
 }
 
 function renderLanguage() {
   const t = shellText();
   document.documentElement.lang = state.language;
   if (elements.languageLabel) elements.languageLabel.textContent = t.language;
-  if (elements.languageSelect) elements.languageSelect.value = state.language;
+  if (elements.languageSelect) populateWorkbenchShellLanguageSelect(elements.languageSelect, state.language);
 
   const shellPageLabels = {
     control: t.shellPages.control,

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-el-core-1.19",
+  "id": "hub-el-core-2.0",
   "language": "el",
   "targetSurface": "hub",
   "name": "Greek Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Greek UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Greek UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
+      "projects": "Αρχική",
       "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "deploy": "Ανάπτυξη",
+      "observe": "Παρακολούθηση",
+      "tools": "Εργαλεία"
     },
     "sections": {
       "projects": {
-        "title": "Ελληνικά home",
-        "copy": "Greek starter copy for importing, inspecting, and opening Workbench."
+        "title": "Αρχική",
+        "copy": "Ελληνικά: Άνοιγμα Workbench, Έλεγχος περιβάλλοντος, Εκκίνηση τοπικού stack."
       },
       "runtimes": {
         "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Greek operators."
+        "copy": "Εκκίνηση τοπικού stack; Κατάσταση ενέργειας stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Greek support pack enabled."
+        "title": "Ανάπτυξη",
+        "copy": "Ανάπτυξη: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Ελληνικά",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Κατάσταση ενέργειας",
+      "idle": "αδρανές",
+      "openWorkbench": "Άνοιγμα Workbench",
+      "startLocal": "Εκκίνηση τοπικού stack",
+      "validateEnv": "Έλεγχος περιβάλλοντος"
     }
   }
 }

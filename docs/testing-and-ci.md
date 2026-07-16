@@ -57,6 +57,11 @@ The repository now keeps validation split by responsibility.
   fixture, decision counts, winner-drift evidence, metric/gate summaries, and
   documentation links before generated index files are treated as lightweight
   CI, release, or agent planning artifacts.
+  Keep retained material research negative fixtures in the sibling
+  `*_self_test.rs` files under
+  `workers/rust/crates/script-runner/src/`; the main checker modules should stay
+  focused on runtime and contract logic so the 800-line source ceiling remains
+  comfortable.
 - `make check-ui-automation-contract`
   Product-owned Workbench UI selector contract guard. It compares
   `docs/ui-automation-contract.json`, frontend TS selector constants, and the

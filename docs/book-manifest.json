@@ -20,14 +20,14 @@
       ]
     },
     {
-      "id": "tamamono-line",
+      "id": "moxi-line",
       "title": "What moxi 2.x is optimizing for",
-      "chapter_page": "docs/book-ch02-tamamono-line.html",
-      "summary": "Current-line posture and the trust-first philosophy for 1.x.",
+      "chapter_page": "docs/book-ch02-moxi-line.html",
+      "summary": "Current-line posture and the trust-first philosophy for moxi 2.x.",
       "sources": [
         "docs/current-line.md",
         "docs/version-line.md",
-        "docs/tamamono-minor-lines.md",
+        "docs/moxi-minor-lines.md",
         "docs/moxi-handoff.md"
       ]
     },

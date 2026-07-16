@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-nl-core-1.19",
+  "id": "hub-nl-core-2.0",
   "language": "nl",
   "targetSurface": "hub",
   "name": "Dutch Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Dutch UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Dutch UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
+      "projects": "Start",
       "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
+      "deploy": "Uitrollen",
+      "observe": "Observeren",
       "tools": "Tools"
     },
     "sections": {
       "projects": {
-        "title": "Nederlands home",
-        "copy": "Dutch starter copy for importing, inspecting, and opening Workbench."
+        "title": "Start",
+        "copy": "Nederlands: Workbench openen, Omgeving valideren, Lokale stack starten."
       },
       "runtimes": {
         "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Dutch operators."
+        "copy": "Lokale stack starten; Actiestatus stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Dutch support pack enabled."
+        "title": "Uitrollen",
+        "copy": "Uitrollen: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Nederlands",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Actiestatus",
+      "idle": "inactief",
+      "openWorkbench": "Workbench openen",
+      "startLocal": "Lokale stack starten",
+      "validateEnv": "Omgeving valideren"
     }
   }
 }

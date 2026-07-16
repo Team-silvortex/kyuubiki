@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-ko-core-1.19",
+  "id": "hub-ko-core-2.0",
   "language": "ko",
   "targetSurface": "hub",
   "name": "Korean Hub Core",
@@ -9,7 +9,7 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Korean UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Korean UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
       "projects": "홈",
@@ -21,19 +21,19 @@
     "sections": {
       "projects": {
         "title": "홈",
-        "copy": "가져오기, 검사, Workbench 열기까지 명확한 경로로 시작합니다."
+        "copy": "한국어: Workbench 열기, 환경 검증, 로컬 스택 시작."
       },
       "runtimes": {
         "title": "런타임",
-        "copy": "올바른 로컬 루프를 시작하고 상태와 로그를 가까이에 둡니다."
+        "copy": "로컬 스택 시작; 작업 상태 stays visible for operators."
       },
       "deploy": {
         "title": "배포",
-        "copy": "대상 자세를 고르고 워크스테이션을 검증한 뒤 릴리스 경로를 준비합니다."
+        "copy": "배포: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
-      "language": "언어",
+      "language": "한국어",
       "actionStatus": "작업 상태",
       "idle": "대기",
       "openWorkbench": "Workbench 열기",

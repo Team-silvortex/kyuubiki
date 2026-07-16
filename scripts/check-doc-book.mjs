@@ -11,7 +11,7 @@ const manifest = readJson(manifestPath);
 const htmlFiles = [
   "docs/book.html",
   "docs/book-ch01-what-is-kyuubiki.html",
-  "docs/book-ch02-tamamono-line.html",
+  "docs/book-ch02-moxi-line.html",
   "docs/book-ch03-architecture-boundaries.html",
   "docs/book-ch04-runtime-modes.html",
   "docs/book-ch05-workflow-and-operators.html",

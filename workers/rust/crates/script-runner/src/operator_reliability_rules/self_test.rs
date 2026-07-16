@@ -72,7 +72,7 @@ pub(super) fn run_self_test() -> Vec<String> {
         &mut failures,
     );
 
-    let manifest = serde_json::json!({ "version_line": "tamamono self-test" });
+    let manifest = serde_json::json!({ "version_line": "moxi self-test" });
     let operators = ["solve.ok", "solve.low"]
         .into_iter()
         .collect::<HashSet<_>>();
@@ -85,7 +85,7 @@ pub(super) fn run_self_test() -> Vec<String> {
     );
     assert_contains(
         &qualification_roadmap_errors(
-            &with_field(&roadmap, "version_line", Value::from("tamamono wrong")),
+            &with_field(&roadmap, "version_line", Value::from("moxi wrong")),
             &manifest,
             &operators,
             &levels,
@@ -117,7 +117,7 @@ pub(super) fn run_self_test() -> Vec<String> {
         &mut failures,
     );
     let qualification_manifest = serde_json::json!({
-        "version_line": "tamamono self-test",
+        "version_line": "moxi self-test",
         "minimum_coverage_level": "qualification"
     });
     let qualified_levels =
@@ -218,7 +218,7 @@ pub(super) fn run_self_test() -> Vec<String> {
 fn roadmap_fixture() -> Value {
     serde_json::json!({
         "schema_version": ROADMAP_SCHEMA_VERSION,
-        "version_line": "tamamono self-test",
+        "version_line": "moxi self-test",
         "minimum_candidate_level": "review",
         "candidates": [{
             "candidate_id": "self-test",
@@ -236,7 +236,7 @@ fn roadmap_fixture() -> Value {
 fn kits_fixture() -> Value {
     serde_json::json!({
         "schema_version": EVIDENCE_KITS_SCHEMA_VERSION,
-        "version_line": "tamamono self-test",
+        "version_line": "moxi self-test",
         "kits": [{
             "candidate_id": "self-test",
             "status": "planned",

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-ar-core-1.19",
+  "id": "hub-ar-core-2.0",
   "language": "ar",
   "targetSurface": "hub",
   "name": "Arabic Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Arabic UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Arabic UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "الرئيسية",
+      "runtimes": "أوقات التشغيل",
+      "deploy": "النشر",
+      "observe": "المراقبة",
+      "tools": "الأدوات"
     },
     "sections": {
       "projects": {
-        "title": "العربية home",
-        "copy": "Arabic starter copy for importing, inspecting, and opening Workbench."
+        "title": "الرئيسية",
+        "copy": "العربية: فتح Workbench, التحقق من البيئة, بدء الحزمة المحلية."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Arabic operators."
+        "title": "أوقات التشغيل",
+        "copy": "بدء الحزمة المحلية; حالة الإجراء stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Arabic support pack enabled."
+        "title": "النشر",
+        "copy": "النشر: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "العربية",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "حالة الإجراء",
+      "idle": "خامل",
+      "openWorkbench": "فتح Workbench",
+      "startLocal": "بدء الحزمة المحلية",
+      "validateEnv": "التحقق من البيئة"
     }
   }
 }

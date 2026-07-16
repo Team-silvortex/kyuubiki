@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-sw-core-1.19",
+  "id": "hub-sw-core-2.0",
   "language": "sw",
   "targetSurface": "hub",
   "name": "Swahili Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Swahili UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Swahili UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Nyumbani",
+      "runtimes": "Runtime",
+      "deploy": "Sambaza",
+      "observe": "Angalia",
+      "tools": "Zana"
     },
     "sections": {
       "projects": {
-        "title": "Kiswahili home",
-        "copy": "Swahili starter copy for importing, inspecting, and opening Workbench."
+        "title": "Nyumbani",
+        "copy": "Kiswahili: Fungua Workbench, Thibitisha mazingira, Anzisha stack ya ndani."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Swahili operators."
+        "title": "Runtime",
+        "copy": "Anzisha stack ya ndani; Hali ya kitendo stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Swahili support pack enabled."
+        "title": "Sambaza",
+        "copy": "Sambaza: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Kiswahili",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Hali ya kitendo",
+      "idle": "imetulia",
+      "openWorkbench": "Fungua Workbench",
+      "startLocal": "Anzisha stack ya ndani",
+      "validateEnv": "Thibitisha mazingira"
     }
   }
 }

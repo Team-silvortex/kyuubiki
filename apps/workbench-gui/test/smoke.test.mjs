@@ -55,6 +55,9 @@ test("desktop shell registers local runtime actions and shortcuts", () => {
     /watchDesktopLanguagePreference/,
     /setShellPage/,
     /renderShellPages/,
+    /workbenchShellLanguageOptions/,
+    /"pt-BR", "Português \(Brasil\)"/,
+    /"zh-TW", "繁體中文 · Traditional Chinese"/,
     /normalizeDesktopPlatform/,
     /keydown/,
   ]);

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-zh-tw-core-1.19",
+  "id": "hub-zh-tw-core-2.0",
   "language": "zh-TW",
   "targetSurface": "hub",
   "name": "Traditional Chinese Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Traditional Chinese UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Traditional Chinese UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "首頁",
+      "runtimes": "執行環境",
+      "deploy": "部署",
+      "observe": "觀察",
+      "tools": "工具"
     },
     "sections": {
       "projects": {
-        "title": "繁體中文 home",
-        "copy": "Traditional Chinese starter copy for importing, inspecting, and opening Workbench."
+        "title": "首頁",
+        "copy": "繁體中文: 開啟 Workbench, 驗證環境, 啟動本機堆疊."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Traditional Chinese operators."
+        "title": "執行環境",
+        "copy": "啟動本機堆疊; 動作狀態 stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Traditional Chinese support pack enabled."
+        "title": "部署",
+        "copy": "部署: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "繁體中文",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "動作狀態",
+      "idle": "閒置",
+      "openWorkbench": "開啟 Workbench",
+      "startLocal": "啟動本機堆疊",
+      "validateEnv": "驗證環境"
     }
   }
 }

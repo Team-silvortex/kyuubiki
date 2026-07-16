@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-pt-br-core-1.19",
+  "id": "hub-pt-br-core-2.0",
   "language": "pt-BR",
   "targetSurface": "hub",
   "name": "Portuguese (Brazil) Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Portuguese (Brazil) UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Portuguese (Brazil) UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
+      "projects": "Início",
       "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "deploy": "Implantar",
+      "observe": "Observar",
+      "tools": "Ferramentas"
     },
     "sections": {
       "projects": {
-        "title": "Português (Brasil) home",
-        "copy": "Portuguese (Brazil) starter copy for importing, inspecting, and opening Workbench."
+        "title": "Início",
+        "copy": "Português (Brasil): Abrir Workbench, Validar ambiente, Iniciar stack local."
       },
       "runtimes": {
         "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Portuguese (Brazil) operators."
+        "copy": "Iniciar stack local; Status da ação stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Portuguese (Brazil) support pack enabled."
+        "title": "Implantar",
+        "copy": "Implantar: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Português (Brasil)",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Status da ação",
+      "idle": "ocioso",
+      "openWorkbench": "Abrir Workbench",
+      "startLocal": "Iniciar stack local",
+      "validateEnv": "Validar ambiente"
     }
   }
 }

@@ -68,10 +68,15 @@ test("workbench language options include pack-only languages", () => {
     ],
   });
 
-  assert.deepEqual(
-    options.map((option) => option.value),
-    ["en", "zh", "ja", "es", "fr", "de", "ko"],
-  );
-  assert.equal(options.find((option) => option.value === "fr")?.label, "French custom pack (FR)");
-  assert.equal(options.find((option) => option.value === "ko")?.label, "KO");
+  const values = options.map((option) => option.value);
+  assert.ok(values.includes("en"));
+  assert.ok(values.includes("pt-BR"));
+  assert.ok(values.includes("zh-TW"));
+  assert.ok(values.includes("fr"));
+  assert.ok(values.includes("de"));
+  assert.ok(values.includes("ko"));
+  assert.equal(options.find((option) => option.value === "pt-BR")?.label, "Português (Brasil)");
+  assert.equal(options.find((option) => option.value === "zh-TW")?.label, "繁體中文 · Traditional Chinese");
+  assert.equal(options.find((option) => option.value === "fr")?.label, "Français · French");
+  assert.equal(options.find((option) => option.value === "ko")?.label, "한국어 · Korean");
 });

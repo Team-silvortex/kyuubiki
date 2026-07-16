@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-bn-core-1.19",
+  "id": "hub-bn-core-2.0",
   "language": "bn",
   "targetSurface": "hub",
   "name": "Bengali Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Bengali UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Bengali UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "হোম",
+      "runtimes": "রানটাইম",
+      "deploy": "ডিপ্লয়",
+      "observe": "পর্যবেক্ষণ",
+      "tools": "টুলস"
     },
     "sections": {
       "projects": {
-        "title": "বাংলা home",
-        "copy": "Bengali starter copy for importing, inspecting, and opening Workbench."
+        "title": "হোম",
+        "copy": "বাংলা: Workbench খুলুন, এনভায়রনমেন্ট যাচাই, লোকাল স্ট্যাক চালু করুন."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Bengali operators."
+        "title": "রানটাইম",
+        "copy": "লোকাল স্ট্যাক চালু করুন; অ্যাকশনের অবস্থা stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Bengali support pack enabled."
+        "title": "ডিপ্লয়",
+        "copy": "ডিপ্লয়: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "বাংলা",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "অ্যাকশনের অবস্থা",
+      "idle": "নিষ্ক্রিয়",
+      "openWorkbench": "Workbench খুলুন",
+      "startLocal": "লোকাল স্ট্যাক চালু করুন",
+      "validateEnv": "এনভায়রনমেন্ট যাচাই"
     }
   }
 }

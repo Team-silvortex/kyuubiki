@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-uk-core-1.19",
+  "id": "hub-uk-core-2.0",
   "language": "uk",
   "targetSurface": "hub",
   "name": "Ukrainian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Ukrainian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Ukrainian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Головна",
+      "runtimes": "Середовища",
+      "deploy": "Розгортання",
+      "observe": "Спостереження",
+      "tools": "Інструменти"
     },
     "sections": {
       "projects": {
-        "title": "Українська home",
-        "copy": "Ukrainian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Головна",
+        "copy": "Українська: Відкрити Workbench, Перевірити середовище, Запустити локальний стек."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Ukrainian operators."
+        "title": "Середовища",
+        "copy": "Запустити локальний стек; Стан дії stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Ukrainian support pack enabled."
+        "title": "Розгортання",
+        "copy": "Розгортання: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Українська",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Стан дії",
+      "idle": "очікування",
+      "openWorkbench": "Відкрити Workbench",
+      "startLocal": "Запустити локальний стек",
+      "validateEnv": "Перевірити середовище"
     }
   }
 }

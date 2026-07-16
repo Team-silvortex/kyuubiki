@@ -9,6 +9,9 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[path = "material_research_bundle_index_self_test.rs"]
+mod material_research_bundle_index_self_test;
+
 const DEFAULT_OUT_DIR: &str = "tmp/material-research-bundles";
 const DEFAULT_INDEX_INPUT: &str = "tmp/material-research-bundles/index.json";
 const INDEX_SCHEMA_VERSION: &str = "kyuubiki.material-research-bundle-index/v1";
@@ -31,7 +34,7 @@ pub(crate) fn run_build_material_research_bundle_index(
 ) -> RunnerResult<u8> {
     let options = parse_args(args)?;
     let result = if options.self_test {
-        run_self_test()
+        material_research_bundle_index_self_test::run_self_test()
     } else {
         build_index_files(root, &options)
     };
@@ -53,7 +56,7 @@ pub(crate) fn run_check_material_research_bundle_index(
 ) -> RunnerResult<u8> {
     let options = parse_check_args(args)?;
     let result = if options.self_test {
-        run_check_self_test()
+        material_research_bundle_index_self_test::run_check_self_test()
     } else {
         check_index_file(root, &options.input)
     };
@@ -81,9 +84,9 @@ struct CheckOptions {
 }
 
 #[derive(Clone, Copy)]
-struct BundleProfile {
-    study: &'static str,
-    file: &'static str,
+pub(super) struct BundleProfile {
+    pub(super) study: &'static str,
+    pub(super) file: &'static str,
 }
 
 fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
@@ -144,140 +147,6 @@ fn parse_check_args(args: Vec<OsString>) -> RunnerResult<CheckOptions> {
     Ok(options)
 }
 
-fn run_self_test() -> RunnerResult<String> {
-    let index = build_index(vec![IndexEntry {
-        profile: BundleProfile {
-            study: "heat-spreader",
-            file: "a.json",
-        },
-        path: "tmp/a.json".to_string(),
-        bundle: json!({
-            "study": "heat-spreader",
-            "bundle_id": "bundle.a",
-            "posture": "screening_research_bundle",
-            "summary": {
-                "winner_candidate_id": "candidate-a",
-                "reliability_decision": "blocked_by_quality_gates",
-                "next_round_decision": "mitigate_design_risk",
-                "runnable_next_step_count": 3,
-                "next_iteration": 2,
-                "chain_stop_reason": "risk_mitigation_required",
-                "chain_convergence_state": "blocked_by_quality_gates",
-                "chain_round_count": 2,
-            },
-            "research_evidence": {
-                "candidate_count": 2,
-                "ranked_candidate_ids": ["candidate-a", "candidate-b"],
-                "winner_candidate_id": "candidate-a",
-                "primary_metric_ids": ["peak_temperature_c"],
-                "metric_objective_count": 1,
-                "violated_quality_gate_ids": ["gate.temperature"],
-                "focus_candidate_ids": ["candidate-a"],
-                "quality_gate_decision": "blocked_by_quality_gates",
-                "plan_decision": "mitigate_design_risk",
-                "plan_step_count": 3,
-                "chain_round_count": 2,
-                "chain_trace_round_count": 2,
-                "final_winner_candidate_id": "candidate-b",
-            },
-            "validation_evidence": {
-                "validation_posture": "screening_validation",
-                "baseline_refs": [{ "baseline_id": "baseline-a" }],
-                "candidate_confidence_counts": { "low": 1, "medium": 1, "high": 0, "unknown": 0 },
-                "acceptance_criteria": [{ "criterion_id": "gate.temperature" }],
-                "uncertainty_summary": { "external_validation_required": true },
-                "validation_readiness": {
-                    "decision": "screening_only",
-                    "score": 0.4,
-                    "blocking_reasons": ["external_validation_required"],
-                    "next_validation_actions": ["run_external_solver_or_analytic_baseline"],
-                },
-            },
-        }),
-    }]);
-    if index.get("bundle_count").and_then(Value::as_u64) != Some(1)
-        || index.pointer("/reliability_decision_counts/blocked_by_quality_gates")
-            != Some(&Value::from(1))
-    {
-        return Err("self-test did not build expected index counts".to_string());
-    }
-    if index.pointer("/bundles/0/runnable_next_step_count") != Some(&Value::from(3))
-        || index.pointer("/bundles/0/next_iteration") != Some(&Value::from(2))
-    {
-        return Err("self-test did not retain next-round execution summary".to_string());
-    }
-    if index.pointer("/bundles/0/final_winner_candidate_id") != Some(&Value::from("candidate-b"))
-        || index.pointer("/bundles/0/winner_changed_in_chain") != Some(&Value::from(true))
-        || index.pointer("/winner_changed_in_chain_count") != Some(&Value::from(1))
-    {
-        return Err("self-test did not retain compact research evidence".to_string());
-    }
-    Ok("material research bundle index self-test passed".to_string())
-}
-
-fn run_check_self_test() -> RunnerResult<String> {
-    let mut index = build_index(vec![IndexEntry {
-        profile: BundleProfile {
-            study: "heat-spreader",
-            file: "a.json",
-        },
-        path: "tmp/a.json".to_string(),
-        bundle: self_test_bundle(),
-    }]);
-    validate_index(&index)?;
-    index["winner_changed_in_chain_count"] = Value::from(0);
-    if validate_index(&index).is_ok() {
-        return Err("self-test did not reject winner drift count mismatch".to_string());
-    }
-    Ok("material research bundle index check self-test passed".to_string())
-}
-
-fn self_test_bundle() -> Value {
-    json!({
-        "study": "heat-spreader",
-        "bundle_id": "bundle.a",
-        "posture": "screening_research_bundle",
-        "summary": {
-            "winner_candidate_id": "candidate-a",
-            "reliability_decision": "blocked_by_quality_gates",
-            "next_round_decision": "mitigate_design_risk",
-            "runnable_next_step_count": 3,
-            "next_iteration": 2,
-            "chain_stop_reason": "risk_mitigation_required",
-            "chain_convergence_state": "blocked_by_quality_gates",
-            "chain_round_count": 2,
-        },
-        "research_evidence": {
-            "candidate_count": 2,
-            "ranked_candidate_ids": ["candidate-a", "candidate-b"],
-            "winner_candidate_id": "candidate-a",
-            "primary_metric_ids": ["peak_temperature_c"],
-            "metric_objective_count": 1,
-            "violated_quality_gate_ids": ["gate.temperature"],
-            "focus_candidate_ids": ["candidate-a"],
-            "quality_gate_decision": "blocked_by_quality_gates",
-            "plan_decision": "mitigate_design_risk",
-            "plan_step_count": 3,
-            "chain_round_count": 2,
-            "chain_trace_round_count": 2,
-            "final_winner_candidate_id": "candidate-b",
-        },
-        "validation_evidence": {
-            "validation_posture": "screening_validation",
-            "baseline_refs": [{ "baseline_id": "baseline-a" }],
-            "candidate_confidence_counts": { "low": 1, "medium": 1, "high": 0, "unknown": 0 },
-            "acceptance_criteria": [{ "criterion_id": "gate.temperature" }],
-            "uncertainty_summary": { "external_validation_required": true },
-            "validation_readiness": {
-                "decision": "screening_only",
-                "score": 0.4,
-                "blocking_reasons": ["external_validation_required"],
-                "next_validation_actions": ["run_external_solver_or_analytic_baseline"],
-            },
-        },
-    })
-}
-
 fn check_index_file(root: &Path, input: &str) -> RunnerResult<String> {
     let (path, relative) = repo_local_path(root, input, "--in")?;
     let text =
@@ -323,13 +192,13 @@ fn build_index_files(root: &Path, options: &Options) -> RunnerResult<String> {
     ))
 }
 
-struct IndexEntry {
-    profile: BundleProfile,
-    path: String,
-    bundle: Value,
+pub(super) struct IndexEntry {
+    pub(super) profile: BundleProfile,
+    pub(super) path: String,
+    pub(super) bundle: Value,
 }
 
-fn build_index(entries: Vec<IndexEntry>) -> Value {
+pub(super) fn build_index(entries: Vec<IndexEntry>) -> Value {
     let bundles: Vec<Value> = entries
         .into_iter()
         .map(|entry| bundle_index_entry(&entry.profile, &entry.path, &entry.bundle))
@@ -342,11 +211,12 @@ fn build_index(entries: Vec<IndexEntry>) -> Value {
         "winner_changed_in_chain_count": bundles.iter().filter(|bundle| bundle.get("winner_changed_in_chain").and_then(Value::as_bool) == Some(true)).count(),
         "reliability_decision_counts": counts_by(&bundles, "reliability_decision"),
         "next_round_decision_counts": counts_by(&bundles, "next_round_decision"),
+        "validation_priority_counts": counts_by(&bundles, "validation_priority"),
         "bundles": bundles,
     })
 }
 
-fn validate_index(index: &Value) -> RunnerResult<()> {
+pub(super) fn validate_index(index: &Value) -> RunnerResult<()> {
     if field(index, "schema_version") != INDEX_SCHEMA_VERSION {
         return Err(format!("schema_version must be {INDEX_SCHEMA_VERSION}"));
     }
@@ -382,6 +252,12 @@ fn validate_index(index: &Value) -> RunnerResult<()> {
         bundles,
         "next_round_decision_counts",
         "next_round_decision",
+    )?;
+    assert_count_map(
+        index,
+        bundles,
+        "validation_priority_counts",
+        "validation_priority",
     )?;
     let changed = bundles
         .iter()
@@ -420,6 +296,7 @@ fn validate_index_bundle(bundle: &Value, index: usize) -> RunnerResult<()> {
         "chain_stop_reason",
         "chain_convergence_state",
         "validation_readiness_decision",
+        "validation_priority",
         "profile_study",
     ] {
         if field(bundle, key).is_empty() {
@@ -436,6 +313,7 @@ fn validate_index_bundle(bundle: &Value, index: usize) -> RunnerResult<()> {
         "baseline_ref_count",
         "acceptance_criteria_count",
         "next_validation_action_count",
+        "validation_priority_rank",
     ] {
         if bundle.get(key).and_then(Value::as_u64).is_none() {
             return Err(format!("{context}.{key} must be an integer"));
@@ -515,6 +393,60 @@ fn validate_index_bundle(bundle: &Value, index: usize) -> RunnerResult<()> {
             "{context}.validation_blocking_reasons must be non-empty"
         ));
     }
+    let reasons = string_array(bundle.get("validation_blocking_reasons"));
+    if !reasons
+        .iter()
+        .any(|reason| *reason == "external_validation_required")
+    {
+        return Err(format!(
+            "{context}.validation_blocking_reasons must include external_validation_required"
+        ));
+    }
+    if array_len(bundle, "violated_quality_gate_ids") > 0
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "violated_quality_gates")
+    {
+        return Err(format!(
+            "{context}.validation_blocking_reasons must include violated_quality_gates"
+        ));
+    }
+    if bundle
+        .pointer("/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "low_confidence_material_cards")
+    {
+        return Err(format!(
+            "{context}.validation_blocking_reasons must include low_confidence_material_cards"
+        ));
+    }
+    let (expected_priority, expected_rank) = validation_priority_for_index_bundle(bundle);
+    if field(bundle, "validation_priority") != expected_priority
+        || bundle
+            .get("validation_priority_rank")
+            .and_then(Value::as_u64)
+            != Some(expected_rank)
+    {
+        return Err(format!(
+            "{context}.validation_priority must match index evidence"
+        ));
+    }
+    if array_len(bundle, "validation_priority_reasons") == 0 {
+        return Err(format!(
+            "{context}.validation_priority_reasons must be non-empty"
+        ));
+    }
+    if string_array(bundle.get("validation_priority_reasons"))
+        != validation_priority_reasons_for_index_bundle(bundle)
+    {
+        return Err(format!(
+            "{context}.validation_priority_reasons must match index evidence"
+        ));
+    }
     Ok(())
 }
 
@@ -536,6 +468,8 @@ fn bundle_index_entry(profile: &BundleProfile, path: &str, bundle: &Value) -> Va
     let winner_changed = initial_winner != Value::Null
         && final_winner != Value::Null
         && initial_winner != final_winner;
+    let (validation_priority, validation_priority_rank, validation_priority_reasons) =
+        validation_priority_for_bundle(bundle, winner_changed);
     json!({
         "study": bundle.get("study").cloned().unwrap_or(Value::Null),
         "bundle_id": bundle.get("bundle_id").cloned().unwrap_or(Value::Null),
@@ -566,8 +500,93 @@ fn bundle_index_entry(profile: &BundleProfile, path: &str, bundle: &Value) -> Va
         "validation_readiness_score": pointer_or_null(bundle, "/validation_evidence/validation_readiness/score"),
         "validation_blocking_reasons": pointer_or_null(bundle, "/validation_evidence/validation_readiness/blocking_reasons"),
         "next_validation_action_count": array_count(bundle.pointer("/validation_evidence/validation_readiness/next_validation_actions")),
+        "validation_priority": validation_priority,
+        "validation_priority_rank": validation_priority_rank,
+        "validation_priority_reasons": validation_priority_reasons,
         "profile_study": profile.study,
     })
+}
+
+fn validation_priority_for_bundle(
+    bundle: &Value,
+    winner_changed: bool,
+) -> (&'static str, u64, Vec<Value>) {
+    let mut reasons = Vec::new();
+    if winner_changed {
+        reasons.push(Value::from("winner_changed_in_chain"));
+        return ("p0_validation_repair", 0, reasons);
+    }
+    let has_gate = bundle
+        .pointer("/research_evidence/violated_quality_gate_ids")
+        .and_then(Value::as_array)
+        .is_some_and(|items| !items.is_empty());
+    let has_low_confidence = bundle
+        .pointer("/validation_evidence/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0;
+    if has_gate {
+        reasons.push(Value::from("violated_quality_gates"));
+    }
+    if has_low_confidence {
+        reasons.push(Value::from("low_confidence_material_cards"));
+    }
+    if has_gate || has_low_confidence {
+        ("p1_validation_repair", 1, reasons)
+    } else {
+        (
+            "p2_validation_followup",
+            2,
+            vec![Value::from("screening_followup")],
+        )
+    }
+}
+
+fn validation_priority_for_index_bundle(bundle: &Value) -> (&'static str, u64) {
+    if bundle
+        .get("winner_changed_in_chain")
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
+        return ("p0_validation_repair", 0);
+    }
+    let has_gate = array_len(bundle, "violated_quality_gate_ids") > 0;
+    let has_low_confidence = bundle
+        .pointer("/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0;
+    if has_gate || has_low_confidence {
+        ("p1_validation_repair", 1)
+    } else {
+        ("p2_validation_followup", 2)
+    }
+}
+
+fn validation_priority_reasons_for_index_bundle(bundle: &Value) -> Vec<&'static str> {
+    if bundle
+        .get("winner_changed_in_chain")
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
+        return vec!["winner_changed_in_chain"];
+    }
+    let mut reasons = Vec::new();
+    if array_len(bundle, "violated_quality_gate_ids") > 0 {
+        reasons.push("violated_quality_gates");
+    }
+    if bundle
+        .pointer("/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0
+    {
+        reasons.push("low_confidence_material_cards");
+    }
+    if reasons.is_empty() {
+        reasons.push("screening_followup");
+    }
+    reasons
 }
 
 fn counts_by(items: &[Value], key: &str) -> Value {
@@ -598,10 +617,16 @@ fn write_readme(index: &Value, output: &Path) -> RunnerResult<()> {
             "Bundles: {}",
             index.get("bundle_count").unwrap_or(&Value::Null)
         ),
+        format!(
+            "Validation priority counts: {}",
+            index
+                .get("validation_priority_counts")
+                .unwrap_or(&Value::Null)
+        ),
         String::new(),
-        "| Study | Winner | Final winner | Metrics | Gates | Validation | Next round | Chain |"
+        "| Study | Winner | Final winner | Metrics | Gates | Priority | Validation | Next round | Chain |"
             .to_string(),
-        "| --- | --- | --- | --- | --- | --- | --- | --- |".to_string(),
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |".to_string(),
     ];
     for bundle in index
         .get("bundles")
@@ -610,12 +635,17 @@ fn write_readme(index: &Value, output: &Path) -> RunnerResult<()> {
         .flatten()
     {
         lines.push(format!(
-            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` score=`{}` reasons=`{}` actions=`{}` | `{}@{}` steps=`{}` | `{}/{}` rounds=`{}` trace=`{}` |",
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` rank=`{}` reasons=`{}` | `{}` score=`{}` reasons=`{}` actions=`{}` | `{}@{}` steps=`{}` | `{}/{}` rounds=`{}` trace=`{}` |",
             field(bundle, "study"),
             field(bundle, "winner_candidate_id"),
             field(bundle, "final_winner_candidate_id"),
             array_len(bundle, "primary_metric_ids"),
             array_len(bundle, "violated_quality_gate_ids"),
+            field(bundle, "validation_priority"),
+            bundle
+                .get("validation_priority_rank")
+                .unwrap_or(&Value::Null),
+            array_len(bundle, "validation_priority_reasons"),
             field(bundle, "validation_readiness_decision"),
             bundle
                 .get("validation_readiness_score")
@@ -688,75 +718,15 @@ fn array_count(value: Option<&Value>) -> usize {
     value.and_then(Value::as_array).map(Vec::len).unwrap_or(0)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{BundleProfile, IndexEntry, build_index};
-    use serde_json::json;
-
-    #[test]
-    fn self_test_fixture_builds_counts() {
-        let index = build_index(vec![IndexEntry {
-            profile: BundleProfile {
-                study: "heat-spreader",
-                file: "heat-spreader.json",
-            },
-            path: "tmp/a.json".to_string(),
-            bundle: json!({
-                "study": "heat-spreader",
-                "bundle_id": "bundle.a",
-                "posture": "screening_research_bundle",
-                "summary": {
-                    "winner_candidate_id": "candidate-a",
-                    "reliability_decision": "blocked_by_quality_gates",
-                    "next_round_decision": "mitigate_design_risk",
-                    "runnable_next_step_count": 3,
-                    "next_iteration": 2,
-                    "chain_stop_reason": "risk_mitigation_required",
-                    "chain_convergence_state": "blocked_by_quality_gates",
-                    "chain_round_count": 2,
-                },
-                "research_evidence": {
-                    "candidate_count": 2,
-                    "ranked_candidate_ids": ["candidate-a", "candidate-b"],
-                    "winner_candidate_id": "candidate-a",
-                    "primary_metric_ids": ["peak_temperature_c"],
-                    "metric_objective_count": 1,
-                    "violated_quality_gate_ids": ["gate.temperature"],
-                    "focus_candidate_ids": ["candidate-a"],
-                    "quality_gate_decision": "blocked_by_quality_gates",
-                    "plan_decision": "mitigate_design_risk",
-                    "plan_step_count": 3,
-                    "chain_round_count": 2,
-                    "chain_trace_round_count": 2,
-                    "final_winner_candidate_id": "candidate-b",
-                },
-                "validation_evidence": {
-                    "validation_posture": "screening_validation",
-                    "baseline_refs": [{ "baseline_id": "baseline-a" }],
-                    "candidate_confidence_counts": { "low": 1, "medium": 1, "high": 0, "unknown": 0 },
-                    "acceptance_criteria": [{ "criterion_id": "gate.temperature" }],
-                    "uncertainty_summary": { "external_validation_required": true },
-                    "validation_readiness": {
-                        "decision": "screening_only",
-                        "score": 0.4,
-                        "blocking_reasons": ["external_validation_required"],
-                        "next_validation_actions": ["run_external_solver_or_analytic_baseline"],
-                    },
-                },
-            }),
-        }]);
-        assert_eq!(
-            index.pointer("/reliability_decision_counts/blocked_by_quality_gates"),
-            Some(&json!(1))
-        );
-        assert_eq!(index.pointer("/bundles/0/next_iteration"), Some(&json!(2)));
-        assert_eq!(
-            index.pointer("/bundles/0/final_winner_candidate_id"),
-            Some(&json!("candidate-b"))
-        );
-        assert_eq!(
-            index.pointer("/winner_changed_in_chain_count"),
-            Some(&json!(1))
-        );
-    }
+fn string_array(value: Option<&Value>) -> Vec<&str> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect()
 }
+
+#[cfg(test)]
+#[path = "material_research_bundle_index_tests.rs"]
+mod material_research_bundle_index_tests;

@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::ffi::OsString;
 use std::fs;
@@ -16,13 +16,16 @@ const SUPPORTED_STUDIES: &[&str] = &["heat-spreader", "composite-thermo-electric
 
 type RunnerResult<T> = Result<T, String>;
 
+#[path = "material_research_bundle_self_test.rs"]
+mod material_research_bundle_self_test;
+
 pub(crate) fn run_check_material_research_bundle(
     root: &Path,
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
     let options = parse_args(args)?;
     if options.self_test {
-        return run_self_test();
+        return material_research_bundle_self_test::run_self_test();
     }
     let (absolute, relative) = repo_local_path(root, &options.input, "--in")?;
     if !absolute.exists() {
@@ -76,65 +79,6 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
         }
     }
     Ok(options)
-}
-
-fn run_self_test() -> RunnerResult<u8> {
-    let bad_bundle = json!({
-        "schema_version": BUNDLE_SCHEMA_VERSION,
-        "posture": POSTURE,
-        "study": "unsupported-study",
-        "artifact_checksums": { "initial_exploration_sha256": "bad" },
-        "initial_exploration": {},
-        "next_round_execution_plan": {},
-        "next_exploration": {},
-        "chain": {},
-        "summary": {},
-        "reproducibility": { "initial_command": [] },
-    });
-    expect_failure(Path::new("."), &bad_bundle, "bad checksum")?;
-    let artifact = json!({ "schema_version": EXPLORATION_SCHEMA_VERSION, "iteration": 2 });
-    let plan = json!({
-        "schema_version": EXECUTION_SCHEMA_VERSION,
-        "decision": "repair_validation",
-        "iteration": 2,
-        "runnable_step_count": 1,
-    });
-    let chain = json!({ "schema_version": CHAIN_SCHEMA_VERSION, "stop_reason": "validation_repair_required" });
-    let mismatch = json!({
-        "schema_version": BUNDLE_SCHEMA_VERSION,
-        "posture": POSTURE,
-        "study": "heat-spreader",
-        "artifact_checksums": {
-            "initial_exploration_sha256": sha256_json(&artifact)?,
-            "next_round_execution_plan_sha256": sha256_json(&plan)?,
-            "next_exploration_sha256": sha256_json(&artifact)?,
-            "chain_sha256": sha256_json(&chain)?,
-        },
-        "initial_exploration": artifact,
-        "next_round_execution_plan": plan,
-        "next_exploration": artifact,
-        "chain": chain,
-        "summary": {
-            "winner_candidate_id": "candidate-a",
-            "reliability_decision": "blocked_by_quality_gates",
-            "next_round_decision": "mitigate_design_risk",
-            "runnable_next_step_count": 1,
-            "next_iteration": 2,
-            "chain_stop_reason": "validation_repair_required",
-        },
-        "reproducibility": { "initial_command": ["kyuubiki-material-explore"] },
-    });
-    expect_failure(Path::new("."), &mismatch, "summary/plan decision mismatch")?;
-    println!("material research bundle check self-test passed");
-    Ok(0)
-}
-
-fn expect_failure(root: &Path, bundle: &Value, label: &str) -> RunnerResult<()> {
-    if validate_material_research_bundle_value(root, bundle, None).is_ok() {
-        Err(format!("self-test did not reject {label}"))
-    } else {
-        Ok(())
-    }
 }
 
 pub(crate) fn validate_material_research_bundle_value(
@@ -367,6 +311,33 @@ fn validate_validation_readiness(validation: &Value) -> RunnerResult<()> {
     {
         return Err(
             "validation_evidence.validation_readiness.blocking_reasons must include external_validation_required"
+                .into(),
+        );
+    }
+    if validation
+        .get("violated_quality_gate_ids")
+        .and_then(Value::as_array)
+        .is_some_and(|gates| !gates.is_empty())
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "violated_quality_gates")
+    {
+        return Err(
+            "validation_evidence.validation_readiness.blocking_reasons must include violated_quality_gates when gates are violated"
+                .into(),
+        );
+    }
+    if validation
+        .pointer("/candidate_confidence_counts/low")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0
+        && !reasons
+            .iter()
+            .any(|reason| *reason == "low_confidence_material_cards")
+    {
+        return Err(
+            "validation_evidence.validation_readiness.blocking_reasons must include low_confidence_material_cards when low-confidence cards exist"
                 .into(),
         );
     }

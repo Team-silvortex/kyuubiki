@@ -238,7 +238,9 @@ This directory contains host-native operational entry points.
   `research_evidence` index: ranked candidates, optimization metrics, violated
   quality gates, focus candidates, plan step count, chain trace count, and final
   chain winner. Override `STUDY=` through Make to build the heat-spreader or
-  composite thermo-electric panel retained profile.
+  composite thermo-electric panel retained profile. Runtime checker negative
+  fixtures live in
+  `workers/rust/crates/script-runner/src/material_research_bundle_self_test.rs`.
   The bundle index builder writes a compact multi-study overview under
   `tmp/material-research-bundles/` for CI, agents, and release notes, including
   next iteration, runnable next-step count, compact research evidence, compact
@@ -441,19 +443,29 @@ Useful checks:
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, retained summary fields,
   next-round execution-plan fields, or bundle documentation. Make now uses the
-  native runner; the retained `.mjs` script is only a parity reference.
+  native runner; the retained `.mjs` script is only a parity reference. Add
+  contract negative fixtures to
+  `workers/rust/crates/script-runner/src/material_research_bundle_contract_self_test.rs`
+  instead of growing the main checker module.
 - `make material-research-bundle-index`
   Build the retained heat-spreader and composite thermo-electric panel bundles,
   validate them, and write `tmp/material-research-bundles/index.json` plus a
   human-readable `README.md` summary with next iteration and runnable next-step
   counts, metric/gate evidence, validation readiness, chain trace counts, and
-  initial-vs-final winner drift.
+  initial-vs-final winner drift. It also emits deterministic validation
+  priority and priority-reason fields so agents can sort and explain repair
+  work without re-deriving evidence, plus `validation_priority_counts` for
+  dashboard-level p0/p1/p2 pressure summaries.
+  Runtime build/check self-test fixtures live in
+  `workers/rust/crates/script-runner/src/material_research_bundle_index_self_test.rs`;
+  Rust unit fixtures live in
+  `workers/rust/crates/script-runner/src/material_research_bundle_index_tests.rs`.
 - `make check-material-research-bundle-index`
   Validate an existing retained bundle index. Override
   `IN=tmp/material-research-bundles/index.json`; the check verifies bundle
   count, study rows, decision-count maps, research evidence summaries,
-  validation maturity and readiness summaries, chain trace counts, focus
-  candidates, and winner drift.
+  validation maturity and readiness summaries, validation priority, chain trace
+  counts, focus candidates, and winner drift.
 - `make check-material-research-bundle-index-contract`
   Verify the retained bundle index schema, compact example, and documentation
   links:

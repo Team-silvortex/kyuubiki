@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-id-core-1.19",
+  "id": "hub-id-core-2.0",
   "language": "id",
   "targetSurface": "hub",
   "name": "Indonesian Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Indonesian UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Indonesian UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
+      "projects": "Beranda",
+      "runtimes": "Runtime",
       "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "observe": "Pantau",
+      "tools": "Alat"
     },
     "sections": {
       "projects": {
-        "title": "Bahasa Indonesia home",
-        "copy": "Indonesian starter copy for importing, inspecting, and opening Workbench."
+        "title": "Beranda",
+        "copy": "Bahasa Indonesia: Buka Workbench, Validasi lingkungan, Mulai stack lokal."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Indonesian operators."
+        "title": "Runtime",
+        "copy": "Mulai stack lokal; Status aksi stays visible for operators."
       },
       "deploy": {
         "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Indonesian support pack enabled."
+        "copy": "Deploy: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Bahasa Indonesia",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Status aksi",
+      "idle": "diam",
+      "openWorkbench": "Buka Workbench",
+      "startLocal": "Mulai stack lokal",
+      "validateEnv": "Validasi lingkungan"
     }
   }
 }

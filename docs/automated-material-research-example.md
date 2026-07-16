@@ -155,9 +155,12 @@ initial winner, final chain winner, metric count, violated-gate count, focus
 candidates, chain round count, and chain trace count. It also lifts compact
 validation evidence: screening posture, external-validation requirement,
 baseline count, acceptance-criteria count, candidate confidence counts,
-readiness decision, readiness score, blocking reasons, and next validation
-action count. Agents can triage drift, blocked quality gates, and validation
-maturity from the index before opening the full retained bundle.
+readiness decision, readiness score, blocking reasons, next validation action
+count, deterministic validation priority, and priority reasons. Agents can
+triage drift, blocked quality gates, and validation maturity from the index
+before opening the full retained bundle. The index also carries
+`validation_priority_counts` so dashboards can show p0/p1/p2 repair pressure
+without scanning every row.
 The index checker verifies those counts and evidence summaries before the file
 is used as a lightweight planning artifact.
 The index shape is pinned by

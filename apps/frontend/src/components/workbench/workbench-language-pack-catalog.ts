@@ -64,7 +64,7 @@ function languageSlug(language: string) {
 }
 
 function workbenchPackId(language: string) {
-  return `workbench-${languageSlug(language)}-core-1.19`;
+  return `workbench-${languageSlug(language)}-core-2.0`;
 }
 
 function localizeStatus(language: string) {

@@ -52,9 +52,9 @@ test("workbench language pack catalog localizes readiness labels", () => {
 });
 
 test("workbench built-in support packs expose installable downloaded payloads", () => {
-  const french = getBuiltinWorkbenchLanguagePack("workbench-fr-core-1.19");
-  const korean = getBuiltinWorkbenchLanguagePack("workbench-ko-core-1.19");
-  const traditionalChinese = getBuiltinWorkbenchLanguagePack("workbench-zh-tw-core-1.19");
+  const french = getBuiltinWorkbenchLanguagePack("workbench-fr-core-2.0");
+  const korean = getBuiltinWorkbenchLanguagePack("workbench-ko-core-2.0");
+  const traditionalChinese = getBuiltinWorkbenchLanguagePack("workbench-zh-tw-core-2.0");
 
   assert.equal(french?.source, "downloaded");
   assert.equal(french?.targetSurface, "workbench");

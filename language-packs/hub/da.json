@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-da-core-1.19",
+  "id": "hub-da-core-2.0",
   "language": "da",
   "targetSurface": "hub",
   "name": "Danish Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Danish UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Danish UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
+      "projects": "Hjem",
       "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "deploy": "Udrul",
+      "observe": "Overvåg",
+      "tools": "Værktøjer"
     },
     "sections": {
       "projects": {
-        "title": "Dansk home",
-        "copy": "Danish starter copy for importing, inspecting, and opening Workbench."
+        "title": "Hjem",
+        "copy": "Dansk: Åbn Workbench, Valider miljø, Start lokal stack."
       },
       "runtimes": {
         "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Danish operators."
+        "copy": "Start lokal stack; Handlingsstatus stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Danish support pack enabled."
+        "title": "Udrul",
+        "copy": "Udrul: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Dansk",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Handlingsstatus",
+      "idle": "inaktiv",
+      "openWorkbench": "Åbn Workbench",
+      "startLocal": "Start lokal stack",
+      "validateEnv": "Valider miljø"
     }
   }
 }

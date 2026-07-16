@@ -99,6 +99,11 @@ test("installer shell wires core install and runtime actions", () => {
   assertMatches(js, [
     /doctor_report/,
     /guarded_mutation_action/,
+    /installerLanguageOptions/,
+    /value: "pt-BR"/,
+    /value: "zh-TW"/,
+    /populateInstallerLanguageSelect/,
+    /installerShellCopyFor/,
     /invokeGuardedMutation/,
     /watchDesktopLanguagePreference/,
     /populateDesktopPlatformSelect/,

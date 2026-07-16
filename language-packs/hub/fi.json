@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.language-pack/v1",
-  "id": "hub-fi-core-1.19",
+  "id": "hub-fi-core-2.0",
   "language": "fi",
   "targetSurface": "hub",
   "name": "Finnish Hub Core",
@@ -9,36 +9,36 @@
   "targetAppVersion": "2.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-13T00:00:00.000Z",
-  "description": "Starter Finnish UI overrides for Hub navigation, shell, and primary route labels.",
+  "description": "Finnish UI overrides for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
-      "projects": "Home",
-      "runtimes": "Runtimes",
-      "deploy": "Deploy",
-      "observe": "Observe",
-      "tools": "Tools"
+      "projects": "Koti",
+      "runtimes": "Ajonaikaiset",
+      "deploy": "Julkaisu",
+      "observe": "Seuranta",
+      "tools": "Työkalut"
     },
     "sections": {
       "projects": {
-        "title": "Suomi home",
-        "copy": "Finnish starter copy for importing, inspecting, and opening Workbench."
+        "title": "Koti",
+        "copy": "Suomi: Avaa Workbench, Tarkista ympäristö, Käynnistä paikallinen pino."
       },
       "runtimes": {
-        "title": "Runtimes",
-        "copy": "Start the right local loop and keep health checks visible for Finnish operators."
+        "title": "Ajonaikaiset",
+        "copy": "Käynnistä paikallinen pino; Toiminnon tila stays visible for operators."
       },
       "deploy": {
-        "title": "Deploy",
-        "copy": "Prepare release paths and station checks with the Finnish support pack enabled."
+        "title": "Julkaisu",
+        "copy": "Julkaisu: validate station paths, release roots, and runtime readiness."
       }
     },
     "shell": {
       "language": "Suomi",
-      "actionStatus": "Action status",
-      "idle": "idle",
-      "openWorkbench": "Open Workbench",
-      "startLocal": "Start local stack",
-      "validateEnv": "Validate environment"
+      "actionStatus": "Toiminnon tila",
+      "idle": "jouten",
+      "openWorkbench": "Avaa Workbench",
+      "startLocal": "Käynnistä paikallinen pino",
+      "validateEnv": "Tarkista ympäristö"
     }
   }
 }

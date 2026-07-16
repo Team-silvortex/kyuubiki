@@ -12,6 +12,7 @@
     "winner_changed_in_chain_count",
     "reliability_decision_counts",
     "next_round_decision_counts",
+    "validation_priority_counts",
     "bundles"
   ],
   "properties": {
@@ -44,6 +45,9 @@
       "$ref": "#/$defs/countMap"
     },
     "next_round_decision_counts": {
+      "$ref": "#/$defs/countMap"
+    },
+    "validation_priority_counts": {
       "$ref": "#/$defs/countMap"
     },
     "bundles": {
@@ -102,6 +106,9 @@
         "validation_readiness_score",
         "validation_blocking_reasons",
         "next_validation_action_count",
+        "validation_priority",
+        "validation_priority_rank",
+        "validation_priority_reasons",
         "profile_study"
       ],
       "properties": {
@@ -215,6 +222,21 @@
         "next_validation_action_count": {
           "type": "integer",
           "minimum": 1
+        },
+        "validation_priority": {
+          "enum": [
+            "p0_validation_repair",
+            "p1_validation_repair",
+            "p2_validation_followup"
+          ]
+        },
+        "validation_priority_rank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "validation_priority_reasons": {
+          "$ref": "#/$defs/stringArray"
         },
         "profile_study": {
           "type": "string",

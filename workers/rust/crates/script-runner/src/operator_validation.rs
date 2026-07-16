@@ -463,7 +463,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     assert_schema_command_kinds(root, REPORT_SCHEMA)?;
     let mut sample = serde_json::json!({
         "schema_version": SCHEMA_VERSION,
-        "version_line": "tamamono test",
+        "version_line": "moxi test",
         "profiles": [{
             "profile_id": "sample",
             "profile_role": "release_candidate",

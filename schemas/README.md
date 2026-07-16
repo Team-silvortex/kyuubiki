@@ -60,7 +60,9 @@ README.
   studies, decision counts, winner drift, compact metric/gate evidence, focus
   candidates, chain trace counts, screening validation posture, baseline counts,
   acceptance-criteria counts, candidate confidence counts, and validation
-  readiness summaries without embedding full solver payloads.
+  readiness summaries plus deterministic validation priority and priority
+  reasons, including top-level validation priority counts, without embedding
+  full solver payloads.
 - `examples.material-research-bundle-index.json` is the compact fixture used by
   `make check-material-research-bundle-index-contract`.
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions

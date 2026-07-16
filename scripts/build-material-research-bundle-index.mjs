@@ -73,10 +73,39 @@ function readBundle(relativePath) {
   return JSON.parse(fs.readFileSync(target.absolute, "utf8"));
 }
 
+function validationPriority(bundle, winnerChanged) {
+  if (winnerChanged) {
+    return {
+      validation_priority: "p0_validation_repair",
+      validation_priority_rank: 0,
+      validation_priority_reasons: ["winner_changed_in_chain"],
+    };
+  }
+  const hasGate = (bundle.research_evidence?.violated_quality_gate_ids ?? []).length > 0;
+  const hasLowConfidence = (bundle.validation_evidence?.candidate_confidence_counts?.low ?? 0) > 0;
+  const reasons = [
+    ...(hasGate ? ["violated_quality_gates"] : []),
+    ...(hasLowConfidence ? ["low_confidence_material_cards"] : []),
+  ];
+  if (hasGate || hasLowConfidence) {
+    return {
+      validation_priority: "p1_validation_repair",
+      validation_priority_rank: 1,
+      validation_priority_reasons: reasons,
+    };
+  }
+  return {
+    validation_priority: "p2_validation_followup",
+    validation_priority_rank: 2,
+    validation_priority_reasons: ["screening_followup"],
+  };
+}
+
 export function buildIndex(entries) {
   const bundles = entries.map(({ profile, path: relativePath, bundle }) => {
     const initialWinner = bundle.summary?.winner_candidate_id ?? null;
     const finalWinner = bundle.research_evidence?.final_winner_candidate_id ?? null;
+    const winnerChanged = Boolean(initialWinner && finalWinner && initialWinner !== finalWinner);
     return {
       study: bundle.study,
       bundle_id: bundle.bundle_id,
@@ -84,7 +113,7 @@ export function buildIndex(entries) {
       posture: bundle.posture,
       winner_candidate_id: initialWinner,
       final_winner_candidate_id: finalWinner,
-      winner_changed_in_chain: Boolean(initialWinner && finalWinner && initialWinner !== finalWinner),
+      winner_changed_in_chain: winnerChanged,
       reliability_decision: bundle.summary?.reliability_decision ?? null,
       next_round_decision: bundle.summary?.next_round_decision ?? null,
       runnable_next_step_count: bundle.summary?.runnable_next_step_count ?? null,
@@ -111,6 +140,7 @@ export function buildIndex(entries) {
         bundle.validation_evidence?.validation_readiness?.blocking_reasons ?? null,
       next_validation_action_count:
         bundle.validation_evidence?.validation_readiness?.next_validation_actions?.length ?? 0,
+      ...validationPriority(bundle, winnerChanged),
       profile_study: profile.study,
     };
   });
@@ -122,6 +152,7 @@ export function buildIndex(entries) {
     winner_changed_in_chain_count: bundles.filter((bundle) => bundle.winner_changed_in_chain).length,
     reliability_decision_counts: countsBy(bundles, "reliability_decision"),
     next_round_decision_counts: countsBy(bundles, "next_round_decision"),
+    validation_priority_counts: countsBy(bundles, "validation_priority"),
     bundles,
   };
 }
@@ -143,12 +174,13 @@ function writeReadme(index, outputPath) {
     `Generated: ${index.generated_at_utc}`,
     "",
     `Bundles: ${index.bundle_count}`,
+    `Validation priority counts: ${JSON.stringify(index.validation_priority_counts)}`,
     "",
-    "| Study | Winner | Final winner | Metrics | Gates | Validation | Next round | Chain |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Study | Winner | Final winner | Metrics | Gates | Priority | Validation | Next round | Chain |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...index.bundles.map(
       (bundle) =>
-        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.final_winner_candidate_id}\` | \`${bundle.primary_metric_ids?.length ?? 0}\` | \`${bundle.violated_quality_gate_ids?.length ?? 0}\` | \`${bundle.validation_readiness_decision}\` score=\`${bundle.validation_readiness_score}\` reasons=\`${bundle.validation_blocking_reasons?.length ?? 0}\` actions=\`${bundle.next_validation_action_count}\` | \`${bundle.next_round_decision}@${bundle.next_iteration}\` steps=\`${bundle.runnable_next_step_count}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` rounds=\`${bundle.chain_round_count}\` trace=\`${bundle.chain_trace_round_count}\` |`,
+        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.final_winner_candidate_id}\` | \`${bundle.primary_metric_ids?.length ?? 0}\` | \`${bundle.violated_quality_gate_ids?.length ?? 0}\` | \`${bundle.validation_priority}\` rank=\`${bundle.validation_priority_rank}\` reasons=\`${bundle.validation_priority_reasons?.length ?? 0}\` | \`${bundle.validation_readiness_decision}\` score=\`${bundle.validation_readiness_score}\` reasons=\`${bundle.validation_blocking_reasons?.length ?? 0}\` actions=\`${bundle.next_validation_action_count}\` | \`${bundle.next_round_decision}@${bundle.next_iteration}\` steps=\`${bundle.runnable_next_step_count}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` rounds=\`${bundle.chain_round_count}\` trace=\`${bundle.chain_trace_round_count}\` |`,
     ),
     "",
   ];
@@ -198,7 +230,11 @@ function runSelfTest() {
           validation_readiness: {
             decision: "screening_only",
             score: 0.4,
-            blocking_reasons: ["external_validation_required"],
+            blocking_reasons: [
+              "external_validation_required",
+              "violated_quality_gates",
+              "low_confidence_material_cards",
+            ],
             next_validation_actions: ["run_external_solver_or_analytic_baseline"],
           },
         },
@@ -227,6 +263,14 @@ function runSelfTest() {
     index.bundles[0].next_validation_action_count !== 1
   ) {
     fail("self-test did not retain compact validation evidence");
+  }
+  if (
+    index.bundles[0].validation_priority !== "p0_validation_repair" ||
+    index.bundles[0].validation_priority_rank !== 0 ||
+    index.bundles[0].validation_priority_reasons?.[0] !== "winner_changed_in_chain" ||
+    index.validation_priority_counts.p0_validation_repair !== 1
+  ) {
+    fail("self-test did not retain validation priority");
   }
   console.log("material research bundle index self-test passed");
 }

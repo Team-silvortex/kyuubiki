@@ -35,7 +35,7 @@ const BROWSER_ACTION_CONTRACTS = [
     summary: "Fill text into an input-like field.",
     requiredPayloadKeys: ["selector", "value"],
     optionalPayloadKeys: ["target", "text", "input", "timeout", "timeoutMs", "timeout_ms"],
-    examples: [{ selector: "#name", value: "tamamono" }],
+    examples: [{ selector: "#name", value: "moxi" }],
   },
   {
     id: "press",
@@ -83,7 +83,7 @@ const BROWSER_ACTION_CONTRACTS = [
     summary: "Assert that a selector contains the expected text.",
     requiredPayloadKeys: ["selector", "text"],
     optionalPayloadKeys: ["target", "timeout", "timeoutMs", "timeout_ms"],
-    examples: [{ selector: "#result", text: "tamamono" }],
+    examples: [{ selector: "#result", text: "moxi" }],
   },
   {
     id: "snapshot",

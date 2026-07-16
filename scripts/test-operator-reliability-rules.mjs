@@ -59,7 +59,7 @@ function run() {
     "complete qualification evidence must validate"
   );
 
-  const manifest = { version_line: "tamamono self-test" };
+  const manifest = { version_line: "moxi self-test" };
   const operators = new Set(["solve.ok", "solve.low"]);
   const levels = new Map([
     ["solve.ok", "review"],
@@ -67,7 +67,7 @@ function run() {
   ]);
   const roadmap = {
     schema_version: operatorReliabilitySchemaVersions.roadmap,
-    version_line: "tamamono self-test",
+    version_line: "moxi self-test",
     minimum_candidate_level: "review",
     candidates: [
       {
@@ -93,7 +93,7 @@ function run() {
   );
   assert(
     qualificationRoadmapErrors(
-      { ...roadmap, version_line: "tamamono wrong" },
+      { ...roadmap, version_line: "moxi wrong" },
       manifest,
       operators,
       levels
@@ -133,7 +133,7 @@ function run() {
 
   const kits = {
     schema_version: operatorReliabilitySchemaVersions.evidenceKits,
-    version_line: "tamamono self-test",
+    version_line: "moxi self-test",
     kits: [
       {
         candidate_id: "self-test",

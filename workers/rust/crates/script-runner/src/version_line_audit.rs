@@ -350,10 +350,10 @@ fn self_test_markdown_checks(expected: &str, codename: &str) -> Vec<Value> {
     let display = version_display(codename, expected);
     let display_minor = version_display(codename, &minor);
     [
-        ("docs/version-line.md", "current development point", format!("current development point: `{display}`"), "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line"),
-        ("docs/version-line.md", "current documentation target", format!("current documentation target: `{display_minor}` line"), "current development point: `tamamono 1.15.0`\ncurrent documentation target: `tamamono 1.15.x` pre-`moxi` line"),
-        ("docs/current-line.md", "current development point", format!("current development point in this line is `{display}`"), "The current development point in this line is `tamamono 1.15.0`."),
-        ("docs/installer-remote-control.md", "runtime control line", format!("`{display_minor}` line"), "remote runtime control surface in the `tamamono 1.15.x` preparation line."),
+        ("docs/version-line.md", "current development point", format!("current development point: `{display}`"), "current development point: `moxi 1.15.0`\ncurrent documentation target: `moxi 1.15.x` pre-`2.x` line"),
+        ("docs/version-line.md", "current documentation target", format!("current documentation target: `{display_minor}` line"), "current development point: `moxi 1.15.0`\ncurrent documentation target: `moxi 1.15.x` pre-`2.x` line"),
+        ("docs/current-line.md", "current development point", format!("current development point in this line is `{display}`"), "The current development point in this line is `moxi 1.15.0`."),
+        ("docs/installer-remote-control.md", "runtime control line", format!("`{display_minor}` line"), "remote runtime control surface in the `moxi 1.15.x` preparation line."),
         ("docs/desktop-release-checklist.md", "workspace-prep line", format!("current `{expected}` workspace-prep line"), "Examples for the current `1.15.0` workspace-prep line:"),
     ]
     .into_iter()
