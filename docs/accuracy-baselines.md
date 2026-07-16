@@ -34,11 +34,74 @@ mechanics.
 | `thermal_truss_3d` | restrained uniform temperature rise in a 3D truss member | max displacement `0`, max stress magnitude `100800000`, max axial force magnitude `1008000`, max temperature delta `40` | relative tolerance `1e-9` on force/stress magnitudes | automated |
 | `thermal_frame_3d` | restrained thermal space frame with dual gradients | max displacement `0`, max axial force `1.764e6`, max moment `2688`, max stress `1.239e8`, max temperature delta `35`, max temperature gradient `30` | relative tolerance `1e-9` on force/moment/stress magnitudes | automated |
 
+## Mechanical convergence and perturbation checks
+
+The first post-baseline mechanical trust ladder is automated in
+[mechanical_convergence.rs](../workers/rust/crates/solver/tests/mechanical_convergence.rs).
+It currently covers `axial_bar_1d` with:
+
+- mesh refinement invariance across 1, 2, 4, 8, 16, and 32 elements against
+  the closed-form tip displacement, stress, reaction, and strain energy
+- load perturbation scaling for displacement, stress, and energy
+- area perturbation scaling for displacement, stress, and energy
+
+It also covers `beam_1d` with tip-loaded cantilever refinement invariance
+across 1, 2, 4, 8, and 16 elements against closed-form tip displacement, tip
+rotation, root moment, bending stress, and strain energy.
+
+`frame_2d` mirrors the same tip-loaded cantilever closed-form ladder across 1,
+2, 4, 8, and 16 elements, but through the 2D frame node DOFs and local/global
+frame stiffness path. It checks axial drift stays zero while transverse
+displacement, rotation, moment, stress, and strain energy stay closed-form.
+
+`frame_3d` adds the matching space-frame cantilever ladder across 1, 2, 4, 8,
+and 16 elements. It checks the six-DOF node path, local/global 3D frame
+transform, transverse displacement, rotation, root moment, bending stress, and
+strain energy, plus load, inertia, and section-modulus perturbation scaling.
+
+`modal_frame_2d` and `modal_frame_3d` add the first dynamic reliability checks.
+They keep the retained cantilever modal contract while verifying total mass,
+eigenvalue, natural-frequency, period, and shape contracts under global
+stiffness and density scaling.
+
+`torsion_1d` adds the rotational shaft path across 1, 2, 4, 8, and 16
+elements. It checks closed-form twist, torque, shear stress, and strain energy,
+plus torque and polar/section modulus perturbation scaling.
+
+`truss_2d` now has symmetric two-member geometry and load perturbation checks
+against closed-form apex displacement, member force, stress, strain, and strain
+energy. This specifically exercises coordinate transformation and global
+stiffness assembly, not only single-member closed-form behavior.
+
+`truss_3d` extends that check to a symmetric tripod under vertical load. It
+checks 3D coordinate transformation, apex displacement, member force, stress,
+strain, and strain energy across geometry and load perturbations.
+
+`plane_triangle_2d` and `plane_quad_2d` add retained patch scaling checks for
+load, Young's modulus, and thickness perturbations. They verify displacement,
+strain, stress, von Mises stress, strain-energy density, and total energy
+scale according to the assembled linear-elastic plane-stress model.
+
+`solid_tetra_3d` now adds the constant-strain 3D solid path with a single
+free-node tetrahedron. It checks the closed-form displacement, volume,
+strain/stress tensor components, von Mises stress, strain-energy density, and
+total energy across load, material, Poisson-ratio, and height perturbations.
+
+This is deliberately stricter than a sample regression: the uniform axial bar
+and the classic Euler-Bernoulli tip-loaded cantilever should remain closed-form
+exact under refinement, and the symmetric truss plus single-tetra solid should
+remain closed-form under geometry, material, and load perturbation. Any drift
+points to bookkeeping, element-length, coordinate-transform, constitutive,
+thickness/material scaling, load mapping, force/moment, stress recovery, or
+energy accumulation regressions across translational and rotational mechanical
+DOFs.
+
 ## Source of truth
 
 These baselines are enforced in:
 
 - [accuracy_baselines.rs](../workers/rust/crates/solver/tests/accuracy_baselines.rs)
+- [mechanical_convergence.rs](../workers/rust/crates/solver/tests/mechanical_convergence.rs)
 
 The first qualification-oriented evidence packet for the 1D closed-form subset
 is tracked in:
@@ -52,6 +115,7 @@ Run them with:
 ```bash
 cd workers/rust
 cargo test -p kyuubiki-solver --test accuracy_baselines
+cargo test -p kyuubiki-solver --test mechanical_convergence
 ```
 
 For the qualification-oriented subset, retain a release evidence bundle with:
