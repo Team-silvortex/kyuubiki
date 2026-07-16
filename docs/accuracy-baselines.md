@@ -127,6 +127,53 @@ It promotes `solve.spring_2d` and `solve.spring_3d` for the retained linear
 static orthogonal vector-spring scope after displacement, member-force,
 extension-sign, fixed-support, and strain-energy checks pass.
 
+The twelfth approved qualification packet is
+[thermal-beam-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json).
+It promotes `solve.thermal_beam_1d` for the retained linear thermal
+free-curvature scope after tip displacement, tip rotation, zero-gradient, and
+near-zero internal-force checks pass.
+
+The thirteenth approved qualification packet is
+[contact-gap-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json).
+It promotes `solve.contact_gap_1d` for the retained 1D penalty stop scope after
+inactive-gap, active-contact, penetration, and force-split checks pass.
+
+The fourteenth approved qualification packet is
+[truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json).
+It promotes `solve.truss_2d` for the retained symmetric two-bar truss scope
+after axial force, apex displacement, stress, strain, and strain-energy checks
+pass.
+
+The fifteenth approved qualification packet is
+[truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json).
+It promotes `solve.truss_3d` for the retained symmetric tripod truss scope
+after axial force, apex displacement, stress, strain, and strain-energy checks
+pass.
+
+The sixteenth approved qualification packet is
+[thermal-truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json).
+It promotes `solve.thermal_truss_3d` for the retained fully restrained
+uniform-temperature scope after strain split, stress, axial force, and
+strain-energy checks pass.
+
+The seventeenth approved qualification packet is
+[thermal-truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json).
+It promotes `solve.thermal_truss_2d` for the retained fully restrained
+uniform-temperature scope after strain split, stress, axial force, and
+strain-energy checks pass.
+
+The eighteenth approved qualification packet is
+[thermal-frame-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json).
+It promotes `solve.thermal_frame_2d` for the retained fully restrained
+uniform-temperature single-member scope after strain split, axial force,
+stress, zero-gradient, and strain-energy checks pass.
+
+The nineteenth approved qualification packet is
+[thermal-frame-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json).
+It promotes `solve.thermal_frame_3d` for the retained fully restrained
+single-member thermal-gradient scope after strain split, curvature, moment,
+combined-stress, and strain-energy checks pass.
+
 ## Why these three first
 
 They are the best first return for `v1.x` accuracy work:

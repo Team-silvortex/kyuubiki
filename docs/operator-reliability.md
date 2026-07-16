@@ -36,6 +36,12 @@ Harness contract. It groups operators into validation profiles and records:
 - evidence paths that must remain repo-relative
 - commands that can execute the validation profile
 
+The profile contract supports optional repo-relative `profile_shards`. The
+native validation runner and qualification-readiness builder merge those shard
+profiles with the main file before checking duplicate profile ids, evidence
+paths, and command allowlists. New qualification profiles should prefer shards
+when the main file is close to the source-size ceiling.
+
 Each validation profile also declares its qualification mapping:
 
 - `profile_role=release_candidate` means the profile is itself the candidate
@@ -326,8 +332,8 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 13 operators
-- `qualification`: 25 operators
+- `review`: 5 operators
+- `qualification`: 33 operators
 
 This remains intentionally conservative. The platform has broad executable
 coverage, and selected line-field, structural, thermal, electromagnetic,
@@ -381,6 +387,61 @@ extension sign, and strain energy for planar and spatial spring projections.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
+The thermal beam 1D operator is now qualified for the retained linear
+free-curvature scope. Its closed-form evidence checks thermal curvature, tip
+rotation, tip displacement, zero-gradient response, and near-zero internal
+force for a single fixed-free member. This does not claim thermal frame
+assemblies, nonlinear material behavior, transient heat transfer, buckling, or
+plasticity.
+
+The thermal truss 3D operator is now qualified for the retained fully
+restrained uniform-temperature scope. Its closed-form evidence checks zero
+node displacement, thermal/mechanical strain split, compressive stress, axial
+force, and member energy summation. This does not claim partial restraint,
+temperature gradients, buckling, plasticity, contact, or dynamic response.
+
+The thermal truss 2D operator is now qualified for the retained fully
+restrained uniform-temperature scope. Its closed-form evidence mirrors the 3D
+thermal truss lane by checking fixed node displacement, thermal/mechanical
+strain split, compressive stress, axial force, and member energy summation.
+This does not claim partial restraint, mixed thermal loading, temperature
+gradients, buckling, plasticity, contact, or dynamic response.
+
+The thermal frame 2D operator is now qualified for the retained fully
+restrained uniform-temperature single-member scope. Its closed-form evidence
+checks fixed end displacement and rotation, thermal/mechanical strain split,
+axial force, axial stress, zero-gradient moment and shear response, and strain
+energy. This does not claim partial restraint, temperature gradients, frame
+assemblies, geometric nonlinearity, buckling, plasticity, contact, or dynamic
+response.
+
+The thermal frame 3D operator is now qualified for the retained fully
+restrained single-member scope with uniform temperature and linear gradients.
+Its closed-form evidence checks fixed end translations and rotations,
+thermal/mechanical strain split, thermal curvatures, axial force, bending
+moments, combined stress, and strain energy. This does not claim partial
+restraint, arbitrary 3D frame assemblies, torsion-dominant response, geometric
+nonlinearity, buckling, plasticity, contact, or dynamic response.
+
+The contact gap 1D operator is now qualified for the retained penalty stop
+scope. Its closed-form evidence checks inactive gap response, active penalty
+penetration, contact activation count, spring force, contact force, and
+force-split equilibrium. This does not claim multidimensional contact,
+friction, impact, large deformation, or industrial contact search.
+
+The truss 2D operator is now qualified for the retained symmetric two-bar
+scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
+displacement, equal axial member force, stress, strain, and strain energy.
+This does not claim arbitrary truss topology, geometric nonlinearity, buckling,
+dynamic response, damaged members, or 3D space truss behavior.
+
+The truss 3D operator is now qualified for the retained symmetric tripod scope.
+Its closed-form evidence checks fixed base supports, zero lateral apex motion,
+vertical displacement, equal axial leg force, stress, strain, and strain
+energy. This does not claim arbitrary space-frame topology, geometric
+nonlinearity, buckling, damaged members, joint eccentricity, or dynamic
+response.
+
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
 `evidence/operator-qualification/line-field-closed-form-baseline.json` and is
@@ -409,7 +470,7 @@ also reads approved evidence bundles and requires their `promotion_summary` to
 match the release record, review decision path, release version, and roadmap
 operator IDs before an approved record can remain valid. The readiness report
 summarizes that same gate as `summary.release_promotion_summaries`, currently
-showing eleven approved promotions as retained, declared, matched, and not
+showing nineteen approved promotions as retained, declared, matched, and not
 missing.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated

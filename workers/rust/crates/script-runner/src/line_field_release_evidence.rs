@@ -251,10 +251,14 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
         "line-field-closed-form",
         "candidate_id must be line-field-closed-form",
     )?;
-    if evidence.pointer("/promotion_summary/candidate_id").and_then(Value::as_str)
+    if evidence
+        .pointer("/promotion_summary/candidate_id")
+        .and_then(Value::as_str)
         != evidence.get("candidate_id").and_then(Value::as_str)
     {
-        return Err("promotion_summary: candidate_id must match top-level candidate_id".to_string());
+        return Err(
+            "promotion_summary: candidate_id must match top-level candidate_id".to_string(),
+        );
     }
     require_true(
         evidence.pointer("/release_retention/intended_release_artifact"),
@@ -290,7 +294,10 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
             return Err(format!("missing command {expected}"));
         }
     }
-    validate_promotion_summary(root, evidence.get("promotion_summary").unwrap_or(&Value::Null))?;
+    validate_promotion_summary(
+        root,
+        evidence.get("promotion_summary").unwrap_or(&Value::Null),
+    )?;
     validate_provenance(evidence.get("provenance").unwrap_or(&Value::Null))?;
     assert_no_absolute_repo_path(root, evidence, "evidence")
 }

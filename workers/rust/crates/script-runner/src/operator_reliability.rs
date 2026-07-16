@@ -1,3 +1,4 @@
+use crate::operator_qualification_evidence_kits::load_qualification_evidence_kits;
 use crate::operator_reliability_rules::{
     is_below_minimum_coverage_level, qualification_evidence_errors,
     qualification_evidence_kit_errors, qualification_roadmap_errors,
@@ -16,7 +17,6 @@ use release_records::validate_qualification_release_records;
 
 const MANIFEST_PATH: &str = "config/operator-reliability-manifest.json";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
-const EVIDENCE_KITS_PATH: &str = "config/operator-qualification-evidence-kits.json";
 const SHARD_SCHEMA_VERSION: &str = "kyuubiki.operator-reliability-shard/v1";
 const MANIFEST_SCHEMA_VERSION: &str = "kyuubiki.operator-reliability-manifest/v1";
 
@@ -429,7 +429,7 @@ fn validate_roadmap(
         qualification_roadmap_errors(&roadmap, manifest, &borrowed_seen, &borrowed_levels),
         "qualification roadmap",
     )?;
-    let kits = read_json(root, EVIDENCE_KITS_PATH)?;
+    let kits = load_qualification_evidence_kits(root)?;
     first_error(
         qualification_evidence_kit_errors(&kits, &roadmap, manifest),
         "qualification evidence kits",

@@ -52,7 +52,7 @@ function releaseRecordsByCandidate() {
 }
 
 function validationProfilesByCandidate() {
-  const source = readJson(validationProfilesPath);
+  const source = loadValidationProfiles();
   const grouped = new Map();
   for (const profile of source.profiles ?? []) {
     const candidateId = profile.qualification_candidate_id ?? profile.profile_id;
@@ -72,6 +72,41 @@ function validationProfilesByCandidate() {
     );
   }
   return grouped;
+}
+
+function loadValidationProfiles() {
+  const source = readJson(validationProfilesPath);
+  const profiles = [...(source.profiles ?? [])];
+  for (const shardPath of source.profile_shards ?? []) {
+    const shard = readJson(shardPath);
+    if (shard.schema_version !== source.schema_version) {
+      fail(`${shardPath}: schema_version must match ${validationProfilesPath}`);
+    }
+    if (shard.version_line !== source.version_line) {
+      fail(`${shardPath}: version_line must match ${validationProfilesPath}`);
+    }
+    profiles.push(...(shard.profiles ?? []));
+  }
+  return { ...source, profiles };
+}
+
+function loadQualificationEvidenceKits() {
+  const source = readJson(operatorReliabilityPaths.evidenceKits);
+  const kits = [...(source.kits ?? [])];
+  for (const shardPath of source.kit_shards ?? []) {
+    const shard = readJson(shardPath);
+    if (shard.schema_version !== source.schema_version) {
+      fail(`${shardPath}: schema_version must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if (shard.version_line !== source.version_line) {
+      fail(`${shardPath}: version_line must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if ((shard.kit_shards ?? []).length > 0) {
+      fail(`${shardPath}: nested kit_shards are not supported`);
+    }
+    kits.push(...(shard.kits ?? []));
+  }
+  return { ...source, kits };
 }
 
 function operatorTrustLevelCounts() {
@@ -320,7 +355,7 @@ function countReleasePromotionSummaries(candidates) {
 
 function buildReport() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
-  const kits = readJson(operatorReliabilityPaths.evidenceKits);
+  const kits = loadQualificationEvidenceKits();
   if (roadmap.version_line !== kits.version_line) {
     fail("roadmap and evidence kits version_line must match");
   }

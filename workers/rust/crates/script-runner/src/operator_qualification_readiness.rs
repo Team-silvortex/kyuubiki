@@ -1,4 +1,7 @@
-use crate::{RunnerResult, native_time::utc_iso_timestamp};
+use crate::{
+    RunnerResult, native_time::utc_iso_timestamp,
+    operator_qualification_evidence_kits::load_qualification_evidence_kits,
+};
 use serde_json::{Value, json};
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -13,6 +16,7 @@ mod review_summary;
 mod self_test;
 #[cfg(test)]
 mod unit_tests;
+mod validation_profiles;
 
 use args::{parse_check_args, parse_out};
 use operator_trust_summary::operator_trust_level_counts;
@@ -21,12 +25,11 @@ use review_summary::{
     count_release_promotion_summaries, count_release_review_decisions,
     count_release_review_statuses,
 };
+use validation_profiles::validation_profiles_by_candidate;
 
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
-const EVIDENCE_KITS_PATH: &str = "config/operator-qualification-evidence-kits.json";
-const VALIDATION_PROFILES_PATH: &str = "config/operator-validation-profiles.json";
 const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-readiness/v1";
 #[rustfmt::skip]
 const ALLOWED_ACTION_KINDS: &[&str] = &["collect_artifact", "restore_or_generate_artifact", "run_command", "review"];
@@ -70,7 +73,7 @@ pub(crate) fn run_check_operator_qualification_readiness(
 
 fn build_report(root: &Path) -> RunnerResult<Value> {
     let roadmap = read_json(root, ROADMAP_PATH)?;
-    let kits = read_json(root, EVIDENCE_KITS_PATH)?;
+    let kits = load_qualification_evidence_kits(root)?;
     if field(&roadmap, "version_line") != field(&kits, "version_line") {
         return Err("roadmap and evidence kits version_line must match".to_string());
     }
@@ -195,32 +198,6 @@ fn readiness_for(
         "preferred_validation_lane": field(candidate, "preferred_validation_lane"),
         "release_gate_impact": field(candidate, "release_gate_impact"),
     }))
-}
-
-fn validation_profiles_by_candidate(root: &Path) -> RunnerResult<HashMap<String, Vec<Value>>> {
-    let source = read_json(root, VALIDATION_PROFILES_PATH)?;
-    let mut grouped: HashMap<String, Vec<Value>> = HashMap::new();
-    for profile in array(&source, "profiles") {
-        let candidate_id = field(profile, "qualification_candidate_id");
-        grouped
-            .entry(candidate_id.to_string())
-            .or_default()
-            .push(json!({
-                "profile_id": field(profile, "profile_id"),
-                "profile_role": field(profile, "profile_role"),
-                "trust_goal": field(profile, "trust_goal"),
-                "operator_count": array(profile, "operators").len(),
-                "command_count": array(profile, "commands").len(),
-            }));
-    }
-    for profiles in grouped.values_mut() {
-        profiles.sort_by(|left, right| {
-            field(left, "profile_role")
-                .cmp(field(right, "profile_role"))
-                .then(field(left, "profile_id").cmp(field(right, "profile_id")))
-        });
-    }
-    Ok(grouped)
 }
 
 fn artifact_state(

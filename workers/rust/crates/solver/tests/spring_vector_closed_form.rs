@@ -54,7 +54,9 @@ fn spring_3d_matches_orthogonal_vector_stiffness_closed_form() {
     let stiffness_z = 60_000.0;
     let result = solve_spring_3d(&SolveSpring3dRequest {
         nodes: vec![
-            node_3d("free", 0.0, 0.0, 0.0, false, false, false, load_x, load_y, load_z),
+            node_3d(
+                "free", 0.0, 0.0, 0.0, false, false, false, load_x, load_y, load_z,
+            ),
             node_3d("fixed-x", 1.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
             node_3d("fixed-y", 0.0, 1.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
             node_3d("fixed-z", 0.0, 0.0, 1.0, true, true, true, 0.0, 0.0, 0.0),

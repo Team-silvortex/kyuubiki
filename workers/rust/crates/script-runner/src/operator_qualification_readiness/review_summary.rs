@@ -88,7 +88,12 @@ where
                 .filter(|artifact| {
                     field(artifact, "kind") == "release_retained_regression_output"
                         && field(artifact, "release_review_status") == "approved"
-                        && promotion_summary_matches(root, candidate.borrow(), artifact, &release_version)
+                        && promotion_summary_matches(
+                            root,
+                            candidate.borrow(),
+                            artifact,
+                            &release_version,
+                        )
                 })
                 .collect::<Vec<_>>()
         })
@@ -118,7 +123,8 @@ fn promotion_summary_matches(
         && field(&summary, "approved_coverage_level") == "qualification"
         && field(&summary, "retained_evidence_path") == field(artifact, "release_record_path")
         && field(&summary, "release_record_path") == RELEASE_RECORDS_PATH
-        && field(&summary, "review_decision_path") == field(artifact, "release_review_decision_path")
+        && field(&summary, "review_decision_path")
+            == field(artifact, "release_review_decision_path")
         && sorted_strings(array_strings(&summary, "promoted_operator_ids"))
             == sorted_strings(array_strings(candidate, "operator_ids"))
 }

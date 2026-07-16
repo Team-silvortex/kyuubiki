@@ -277,6 +277,190 @@
       "graduation_gate": "orthogonal vector stiffness, fixed-support displacement, member force, and strain-energy evidence must be retained before qualification",
       "preferred_validation_lane": "make capture-spring-vector-qualification-release-evidence",
       "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "thermal-beam-1d-closed-form",
+      "priority": "p2",
+      "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.thermal_beam_1d"
+      ],
+      "rationale": "The 1D thermal beam has a compact free-curvature closed form and is the safest thermal-structural review promotion after line and spring operators.",
+      "primary_blocker": "no blocker; reviewer approved the retained thermal beam validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current thermal-beam-1d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "free curvature derivation note",
+        "tip displacement and rotation regression",
+        "zero-gradient response regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "free thermal curvature, fixed-root response, zero-gradient limit, and near-zero internal-force evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-thermal-beam-1d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "contact-gap-1d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.contact_gap_1d"
+      ],
+      "rationale": "The 1D penalty stop contact operator has compact inactive and active branch closed forms for the retained single-contact fixture.",
+      "primary_blocker": "no blocker; reviewer approved the retained contact-gap validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current contact-gap-1d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "inactive and active branch derivation note",
+        "penalty contact closed-form regression",
+        "contact input reliability regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "inactive gap, active penalty stop, penetration, and force-split equilibrium evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-contact-gap-1d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "truss-2d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.truss_2d"
+      ],
+      "rationale": "The 2D truss operator has a compact symmetric two-bar closed form for axial force, apex displacement, and strain energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained 2D truss validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current truss-2d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "symmetric two-bar derivation note",
+        "member force and displacement regression",
+        "truss input reliability regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "symmetric two-bar force balance, displacement, stress, strain, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-truss-2d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "truss-3d-closed-form",
+      "priority": "p2",
+      "domain": "structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.truss_3d"
+      ],
+      "rationale": "The 3D truss operator has a compact symmetric tripod closed form for axial force, apex displacement, and strain energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained 3D truss validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current truss-3d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "symmetric tripod derivation note",
+        "member force and displacement regression",
+        "truss input reliability regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "symmetric tripod force balance, displacement, stress, strain, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-truss-3d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "thermal-truss-3d-closed-form",
+      "priority": "p2",
+      "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.thermal_truss_3d"
+      ],
+      "rationale": "The 3D thermal truss operator has a compact fully restrained uniform-temperature closed form for strain split, stress, axial force, and energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained 3D thermal truss validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current thermal-truss-3d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "restrained uniform-temperature derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "restrained uniform-temperature strain split, stress, axial force, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-thermal-truss-3d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "thermal-truss-2d-closed-form",
+      "priority": "p2",
+      "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.thermal_truss_2d"
+      ],
+      "rationale": "The 2D thermal truss operator has the same fully restrained uniform-temperature closed form as the 3D thermal truss lane.",
+      "primary_blocker": "no blocker; reviewer approved the retained 2D thermal truss validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current thermal-truss-2d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "restrained uniform-temperature derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "restrained uniform-temperature 2D strain split, stress, axial force, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-thermal-truss-2d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "thermal-frame-2d-closed-form",
+      "priority": "p2",
+      "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.thermal_frame_2d"
+      ],
+      "rationale": "The 2D thermal frame operator has a compact fully restrained uniform-temperature single-member closed form for axial force, stress, and energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained 2D thermal frame validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current thermal-frame-2d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "restrained uniform-temperature frame derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "restrained uniform-temperature 2D frame strain split, axial force, stress, zero-gradient, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-thermal-frame-2d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "thermal-frame-3d-closed-form",
+      "priority": "p2",
+      "domain": "thermal_structural",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.thermal_frame_3d"
+      ],
+      "rationale": "The 3D thermal frame operator has a compact fully restrained single-member closed form for uniform temperature, thermal curvature, bending moment, combined stress, and energy.",
+      "primary_blocker": "no blocker; reviewer approved the retained 3D thermal frame validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current thermal-frame-3d closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "restrained thermal-gradient frame derivation note",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-thermal-frame-3d-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
     }
   ]
 }

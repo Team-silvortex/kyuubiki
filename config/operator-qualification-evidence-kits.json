@@ -561,5 +561,8 @@
         }
       ]
     }
+  ],
+  "kit_shards": [
+    "config/operator-qualification-evidence-kits/closed-form-promotions.json"
   ]
 }

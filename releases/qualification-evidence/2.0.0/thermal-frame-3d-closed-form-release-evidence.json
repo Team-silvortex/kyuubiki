@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "promotion_summary": {
+    "candidate_id": "thermal-frame-3d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-frame-3d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.thermal_frame_3d"
+    ]
+  },
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "thermal-frame-3d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-frame-3d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_frame_3d"
+      ],
+      "validation_methods": [
+        "restrained_temperature_gradient_closed_form",
+        "thermal_curvature_balance",
+        "combined_stress_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_end_displacements_and_rotations_are_zero",
+        "total_axial_strain_is_zero_under_full_restraint",
+        "thermal_curvatures_match_gradient_depth_contract",
+        "axial_force_and_bending_moments_match_closed_form",
+        "combined_stress_and_energy_match_closed_form"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-frame-3d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-frame-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_3d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 2659,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-frame-3d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_3d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 117,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 110,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

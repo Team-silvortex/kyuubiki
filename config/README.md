@@ -19,6 +19,10 @@ contributors and automation.
   executable validation profiles with analytic checks, local formal
   invariants, cross-check commands, evidence paths, and the
   `schemas/operator-validation-profiles.schema.json` input shape.
+- `operator-validation-profiles/*.json`
+  Optional profile shards loaded through `operator-validation-profiles.json`
+  `profile_shards`. New qualification profiles should prefer shards once the
+  main profile file approaches the source-size limit.
 - `operator-qualification-roadmap.json`
   Planning queue for the first review-level operators that should be hardened
   toward stronger trust. Each candidate records target level, evidence phase,
@@ -29,6 +33,10 @@ contributors and automation.
   A kit describes what must be collected before real `evidence.qualification`
   can be added to the reliability shards. Command-backed artifacts can pair a
   capture command with a separate check command for generated release bundles.
+- `operator-qualification-evidence-kits/*.json`
+  Optional kit shards loaded through `operator-qualification-evidence-kits.json`
+  `kit_shards`. New closed-form promotion kits should prefer shards once the
+  main kit file approaches the source-size limit.
 - `releases/qualification-records/<version>.json`
   Release-bound staging records for qualification evidence bundles. These
   records bind a release snapshot, candidate IDs, capture commands, check

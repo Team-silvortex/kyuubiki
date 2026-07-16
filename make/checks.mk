@@ -5,9 +5,9 @@
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
-.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence capture-stokes-flow-screening-release-evidence capture-acoustic-bar-qualification-release-evidence capture-advection-diffusion-bar-qualification-release-evidence capture-magnetostatic-bar-qualification-release-evidence capture-spring-1d-qualification-release-evidence capture-spring-vector-qualification-release-evidence
+.PHONY: capture-thermal-plane-qualification-release-evidence capture-electromagnetic-plane-qualification-release-evidence capture-modal-frame-qualification-release-evidence capture-stokes-flow-screening-release-evidence capture-acoustic-bar-qualification-release-evidence capture-advection-diffusion-bar-qualification-release-evidence capture-magnetostatic-bar-qualification-release-evidence capture-spring-1d-qualification-release-evidence capture-spring-vector-qualification-release-evidence capture-thermal-beam-1d-qualification-release-evidence capture-thermal-frame-2d-qualification-release-evidence capture-thermal-frame-3d-qualification-release-evidence capture-contact-gap-1d-qualification-release-evidence capture-truss-2d-qualification-release-evidence capture-truss-3d-qualification-release-evidence capture-thermal-truss-3d-qualification-release-evidence capture-thermal-truss-2d-qualification-release-evidence
 .PHONY: check-line-field-closed-form-baseline check-line-field-qualification-release-evidence check-beam-frame-qualification-release-evidence
-.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence check-acoustic-bar-qualification-release-evidence check-advection-diffusion-bar-qualification-release-evidence check-magnetostatic-bar-qualification-release-evidence check-spring-1d-qualification-release-evidence check-spring-vector-qualification-release-evidence
+.PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence check-acoustic-bar-qualification-release-evidence check-advection-diffusion-bar-qualification-release-evidence check-magnetostatic-bar-qualification-release-evidence check-spring-1d-qualification-release-evidence check-spring-vector-qualification-release-evidence check-thermal-beam-1d-qualification-release-evidence check-thermal-frame-2d-qualification-release-evidence check-thermal-frame-3d-qualification-release-evidence check-contact-gap-1d-qualification-release-evidence check-truss-2d-qualification-release-evidence check-truss-3d-qualification-release-evidence check-thermal-truss-3d-qualification-release-evidence check-thermal-truss-2d-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
@@ -228,6 +228,38 @@ capture-spring-vector-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --self-test
 	@$(ENTRYPOINT) check-operator-validation --execute --profile spring-vector-closed-form --out $${OUT:-tmp/spring-vector-closed-form-release-evidence.json}
 
+capture-thermal-beam-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-beam-1d-closed-form --out $${OUT:-tmp/thermal-beam-1d-closed-form-release-evidence.json}
+
+capture-thermal-frame-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-frame-2d-closed-form --out $${OUT:-tmp/thermal-frame-2d-closed-form-release-evidence.json}
+
+capture-thermal-frame-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-frame-3d-closed-form --out $${OUT:-tmp/thermal-frame-3d-closed-form-release-evidence.json}
+
+capture-contact-gap-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile contact-gap-1d-closed-form --out $${OUT:-tmp/contact-gap-1d-closed-form-release-evidence.json}
+
+capture-truss-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile truss-2d-closed-form --out $${OUT:-tmp/truss-2d-closed-form-release-evidence.json}
+
+capture-truss-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile truss-3d-closed-form --out $${OUT:-tmp/truss-3d-closed-form-release-evidence.json}
+
+capture-thermal-truss-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-truss-3d-closed-form --out $${OUT:-tmp/thermal-truss-3d-closed-form-release-evidence.json}
+
+capture-thermal-truss-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --self-test
+	@$(ENTRYPOINT) check-operator-validation --execute --profile thermal-truss-2d-closed-form --out $${OUT:-tmp/thermal-truss-2d-closed-form-release-evidence.json}
+
 check-beam-frame-qualification-release-evidence:
 	@$(ENTRYPOINT) check-beam-frame-qualification-release-evidence --in $${IN:-tmp/beam-frame-classic-qualification-release-evidence.json}
 
@@ -257,6 +289,30 @@ check-spring-1d-qualification-release-evidence:
 
 check-spring-vector-qualification-release-evidence:
 	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/spring-vector-closed-form-release-evidence.json} --profile spring-vector-closed-form
+
+check-thermal-beam-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-beam-1d-closed-form-release-evidence.json} --profile thermal-beam-1d-closed-form
+
+check-thermal-frame-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-frame-2d-closed-form-release-evidence.json} --profile thermal-frame-2d-closed-form
+
+check-thermal-frame-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-frame-3d-closed-form-release-evidence.json} --profile thermal-frame-3d-closed-form
+
+check-contact-gap-1d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/contact-gap-1d-closed-form-release-evidence.json} --profile contact-gap-1d-closed-form
+
+check-truss-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/truss-2d-closed-form-release-evidence.json} --profile truss-2d-closed-form
+
+check-truss-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/truss-3d-closed-form-release-evidence.json} --profile truss-3d-closed-form
+
+check-thermal-truss-3d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-truss-3d-closed-form-release-evidence.json} --profile thermal-truss-3d-closed-form
+
+check-thermal-truss-2d-qualification-release-evidence:
+	@$(ENTRYPOINT) check-operator-validation --in $${IN:-tmp/thermal-truss-2d-closed-form-release-evidence.json} --profile thermal-truss-2d-closed-form
 
 check-line-field-closed-form-baseline:
 	@$(ENTRYPOINT) check-line-field-closed-form-baseline

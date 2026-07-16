@@ -349,7 +349,7 @@
       "operator_id": "solve.contact_gap_1d",
       "benchmark_template": "contact-gap-chain",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -377,6 +377,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/contact_gap_1d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/contact-gap-1d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/contact-gap-1d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/contact_gap_1d_review.rs",
+            "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/contact_gap_reliability.rs"
           ]
         }
       },
@@ -552,7 +572,7 @@
       "operator_id": "solve.truss_2d",
       "benchmark_template": "truss-roof",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -580,6 +600,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/truss_2d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/truss-2d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/truss_2d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/truss-2d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/truss_2d_review.rs",
+            "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/truss_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -592,7 +632,7 @@
       "operator_id": "solve.truss_3d",
       "benchmark_template": "space-frame",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -619,6 +659,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/truss_3d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/truss-3d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/truss_3d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/truss-3d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/truss_3d_review.rs",
+            "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/truss_input_reliability.rs"
           ]
         }
       },

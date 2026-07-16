@@ -144,6 +144,23 @@ function validateConfig(config) {
   });
 }
 
+function loadConfig(relativePath) {
+  const config = readJson(relativePath);
+  const profiles = [...(config.profiles ?? [])];
+  for (const shardPath of config.profile_shards ?? []) {
+    requireString(shardPath, "profile_shards[]", "config");
+    const shard = readJson(shardPath);
+    if (shard.schema_version !== config.schema_version) {
+      throw new Error(`${shardPath}: schema_version must match ${relativePath}`);
+    }
+    if (shard.version_line !== config.version_line) {
+      throw new Error(`${shardPath}: version_line must match ${relativePath}`);
+    }
+    profiles.push(...(shard.profiles ?? []));
+  }
+  return { ...config, profiles };
+}
+
 function requireSchemaCommandKinds(relativePath) {
   const schema = readJson(relativePath);
   const enumValues = schema?.$defs?.commandKind?.enum;
@@ -369,7 +386,7 @@ try {
     console.log(`operator validation report ok: ${options.inputReport} (${report.profile_count} profile(s))`);
     process.exit(0);
   }
-  const config = readJson(options.config);
+  const config = loadConfig(options.config);
   validateConfig(config);
   const report = buildReport(config, options);
   validateReport(report, options);

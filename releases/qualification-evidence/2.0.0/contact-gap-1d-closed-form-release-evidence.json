@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "promotion_summary": {
+    "candidate_id": "contact-gap-1d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/contact-gap-1d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.contact_gap_1d"
+    ]
+  },
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "contact-gap-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "contact-gap-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.contact_gap_1d"
+      ],
+      "validation_methods": [
+        "inactive_gap_closed_form",
+        "active_penalty_stop_closed_form",
+        "force_split_equilibrium"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement",
+        "inactive_gap_has_zero_contact_force",
+        "active_gap_penetration_matches_tip_displacement_minus_gap",
+        "spring_force_plus_contact_force_matches_load",
+        "contact_activation_count_matches_branch"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/contact-gap-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/contact_gap_1d_review.rs",
+        "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/contact_gap_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "contact-gap-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 4023,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "contact-gap-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 189,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "contact-gap-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1858,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

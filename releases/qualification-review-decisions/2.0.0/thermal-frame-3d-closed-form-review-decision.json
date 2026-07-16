@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "thermal-frame-3d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
+  "review_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 3D fully restrained thermal-gradient frame scope after strain split, curvature, moment, combined stress, and energy evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "restrained 3D thermal-gradient frame closed-form regression passes",
+    "thermal frame 3D review regression passes",
+    "frame input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

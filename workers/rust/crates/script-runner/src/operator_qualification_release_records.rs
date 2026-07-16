@@ -1,4 +1,7 @@
-use crate::{RunnerResult, run_command};
+use crate::{
+    RunnerResult, operator_qualification_evidence_kits::load_qualification_evidence_kits,
+    run_command,
+};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -12,7 +15,6 @@ use review_decision::{validate_review_decision_path, validate_review_status_tran
 const DEFAULT_INPUT: &str = "releases/qualification-records/1.20.0.json";
 const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-release-records/v1";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
-const KITS_PATH: &str = "config/operator-qualification-evidence-kits.json";
 
 pub(crate) fn run_check_operator_qualification_release_records(
     root: &Path,
@@ -70,7 +72,7 @@ fn validate_records(root: &Path, records: &Value, records_path: &str) -> RunnerR
         "snapshot version",
     )?;
     let roadmap = read_json(root, ROADMAP_PATH)?;
-    let kits = read_json(root, KITS_PATH)?;
+    let kits = load_qualification_evidence_kits(root)?;
     assert_eq(
         field(&roadmap, "version_line"),
         field(records, "version_line"),

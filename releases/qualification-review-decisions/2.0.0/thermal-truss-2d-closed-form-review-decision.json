@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "thermal-truss-2d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
+  "review_gate": "restrained uniform-temperature 2D strain split, stress, axial force, and energy evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 2D fully restrained uniform-temperature thermal truss scope after strain split, stress, axial force, and energy evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "restrained uniform-temperature 2D closed-form regression passes",
+    "mixed thermal truss review regression passes",
+    "thermal truss input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

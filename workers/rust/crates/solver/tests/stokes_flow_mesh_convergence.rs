@@ -13,8 +13,14 @@ fn stokes_flow_quad_2d_preserves_linear_screening_field_under_refinement() {
     let refined = solve_stokes_flow_plane_quad_2d(&quad_mesh(2))
         .expect("refined quad Stokes refinement fixture should solve");
 
-    assert_close(coarse.elements.iter().map(|element| element.area).sum(), 1.0);
-    assert_close(refined.elements.iter().map(|element| element.area).sum(), 1.0);
+    assert_close(
+        coarse.elements.iter().map(|element| element.area).sum(),
+        1.0,
+    );
+    assert_close(
+        refined.elements.iter().map(|element| element.area).sum(),
+        1.0,
+    );
     assert_close(coarse.max_velocity, refined.max_velocity);
     assert_close(coarse.pressure_drop, refined.pressure_drop);
     assert_close(coarse.max_divergence_error, refined.max_divergence_error);
@@ -34,8 +40,14 @@ fn stokes_flow_triangle_2d_preserves_linear_screening_field_under_refinement() {
     let refined = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(2))
         .expect("refined triangle Stokes refinement fixture should solve");
 
-    assert_close(coarse.elements.iter().map(|element| element.area).sum(), 1.0);
-    assert_close(refined.elements.iter().map(|element| element.area).sum(), 1.0);
+    assert_close(
+        coarse.elements.iter().map(|element| element.area).sum(),
+        1.0,
+    );
+    assert_close(
+        refined.elements.iter().map(|element| element.area).sum(),
+        1.0,
+    );
     assert_close(coarse.max_velocity, refined.max_velocity);
     assert_close(coarse.pressure_drop, refined.pressure_drop);
     assert_close(coarse.max_divergence_error, refined.max_divergence_error);

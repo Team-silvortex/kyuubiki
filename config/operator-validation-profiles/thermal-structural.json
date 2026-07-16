@@ -1,0 +1,236 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "thermal-beam-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-beam-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_beam_1d"
+      ],
+      "validation_methods": [
+        "free_curvature_closed_form",
+        "zero_gradient_limit",
+        "near_zero_internal_force"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement_rotation",
+        "tip_rotation_matches_curvature_times_length",
+        "tip_displacement_matches_half_curvature_length_squared",
+        "zero_gradient_has_zero_response",
+        "free_curvature_has_near_zero_internal_force"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-beam-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-beam-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-beam-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "beam-torsion-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_torsion_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-frame-2d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-frame-2d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_frame_2d"
+      ],
+      "validation_methods": [
+        "restrained_uniform_temperature_closed_form",
+        "zero_gradient_limit",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_end_displacements_and_rotations_are_zero",
+        "total_axial_strain_is_zero_under_full_restraint",
+        "mechanical_strain_is_negative_thermal_strain",
+        "axial_force_and_stress_match_uniform_temperature_closed_form",
+        "zero_gradient_has_zero_moment_shear_and_bending_stress"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-frame-2d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_frame_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-frame-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-frame-2d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-frame-3d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-frame-3d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_frame_3d"
+      ],
+      "validation_methods": [
+        "restrained_temperature_gradient_closed_form",
+        "thermal_curvature_balance",
+        "combined_stress_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_end_displacements_and_rotations_are_zero",
+        "total_axial_strain_is_zero_under_full_restraint",
+        "thermal_curvatures_match_gradient_depth_contract",
+        "axial_force_and_bending_moments_match_closed_form",
+        "combined_stress_and_energy_match_closed_form"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-frame-3d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-frame-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_3d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-frame-3d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-truss-3d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-truss-3d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_truss_3d"
+      ],
+      "validation_methods": [
+        "restrained_uniform_temperature_closed_form",
+        "thermal_mechanical_strain_split",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_node_displacements_are_zero",
+        "total_strain_is_zero_under_full_restraint",
+        "mechanical_strain_is_negative_thermal_strain",
+        "compressive_stress_matches_youngs_modulus_times_mechanical_strain",
+        "total_strain_energy_matches_member_energy_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-truss-3d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_truss_3d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-truss-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_3d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-truss-3d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "thermal-truss-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-truss-2d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-truss-2d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_truss_2d"
+      ],
+      "validation_methods": [
+        "restrained_uniform_temperature_closed_form",
+        "thermal_mechanical_strain_split",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_node_displacements_are_zero",
+        "total_strain_is_zero_under_full_restraint",
+        "mechanical_strain_is_negative_thermal_strain",
+        "compressive_stress_matches_youngs_modulus_times_mechanical_strain",
+        "total_strain_energy_matches_member_energy_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-truss-2d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-truss-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-truss-2d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "thermal-truss-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_input_reliability -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,10 @@
 {
   "schema_version": "kyuubiki.operator-validation-profiles/v1",
   "version_line": "moxi 2.0.x",
+  "profile_shards": [
+    "config/operator-validation-profiles/structural.json",
+    "config/operator-validation-profiles/thermal-structural.json"
+  ],
   "profiles": [
     {
       "profile_id": "line-field-closed-form",

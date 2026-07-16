@@ -159,7 +159,7 @@ function makeTarget(command) {
 
 function checkQualificationRoadmapClosure() {
   const roadmap = readJson(operatorReliabilityPaths.roadmap);
-  const evidenceKits = readJson(operatorReliabilityPaths.evidenceKits);
+  const evidenceKits = loadQualificationEvidenceKits();
   if (roadmap.version_line !== evidenceKits.version_line) {
     fail(`${operatorReliabilityPaths.roadmap}: version_line must match evidence kits`);
   }
@@ -226,6 +226,25 @@ function checkQualificationRoadmapClosure() {
       }
     }
   }
+}
+
+function loadQualificationEvidenceKits() {
+  const source = readJson(operatorReliabilityPaths.evidenceKits);
+  const kits = [...(source.kits ?? [])];
+  for (const shardPath of source.kit_shards ?? []) {
+    const shard = readJson(shardPath);
+    if (shard.schema_version !== source.schema_version) {
+      fail(`${shardPath}: schema_version must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if (shard.version_line !== source.version_line) {
+      fail(`${shardPath}: version_line must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if ((shard.kit_shards ?? []).length > 0) {
+      fail(`${shardPath}: nested kit_shards are not supported`);
+    }
+    kits.push(...(shard.kits ?? []));
+  }
+  return { ...source, kits };
 }
 
 function runSelfTest() {

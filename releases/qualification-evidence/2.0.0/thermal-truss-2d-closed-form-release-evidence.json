@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "promotion_summary": {
+    "candidate_id": "thermal-truss-2d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-truss-2d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.thermal_truss_2d"
+    ]
+  },
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "thermal-truss-2d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-truss-2d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_truss_2d"
+      ],
+      "validation_methods": [
+        "restrained_uniform_temperature_closed_form",
+        "thermal_mechanical_strain_split",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_node_displacements_are_zero",
+        "total_strain_is_zero_under_full_restraint",
+        "mechanical_strain_is_negative_thermal_strain",
+        "compressive_stress_matches_youngs_modulus_times_mechanical_strain",
+        "total_strain_energy_matches_member_energy_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-truss-2d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-truss-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_2d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 2475,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-truss-2d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_2d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 292,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-truss-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_truss_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 269,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

@@ -124,6 +124,94 @@
       "review_gate": "orthogonal vector stiffness, fixed-support displacement, member force, and strain-energy evidence must be retained before qualification",
       "review_decision_path": "releases/qualification-review-decisions/2.0.0/spring-vector-closed-form-review-decision.json",
       "promotion_blocker": "no blocker; reviewer approved promotion for the retained 2D and 3D linear static vector spring scope"
+    },
+    {
+      "candidate_id": "thermal-beam-1d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
+      "capture_command": "make capture-thermal-beam-1d-qualification-release-evidence",
+      "check_command": "make check-thermal-beam-1d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "free thermal curvature, fixed-root response, zero-gradient limit, and near-zero internal-force evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-beam-1d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 1D linear thermal beam free-curvature scope"
+    },
+    {
+      "candidate_id": "contact-gap-1d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
+      "capture_command": "make capture-contact-gap-1d-qualification-release-evidence",
+      "check_command": "make check-contact-gap-1d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "inactive gap, active penalty stop, penetration, and force-split equilibrium evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/contact-gap-1d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 1D penalty stop contact scope"
+    },
+    {
+      "candidate_id": "truss-2d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json",
+      "capture_command": "make capture-truss-2d-qualification-release-evidence",
+      "check_command": "make check-truss-2d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "symmetric two-bar force balance, displacement, stress, strain, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/truss-2d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 2D symmetric two-bar truss scope"
+    },
+    {
+      "candidate_id": "truss-3d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json",
+      "capture_command": "make capture-truss-3d-qualification-release-evidence",
+      "check_command": "make check-truss-3d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "symmetric tripod force balance, displacement, stress, strain, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/truss-3d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 3D symmetric tripod truss scope"
+    },
+    {
+      "candidate_id": "thermal-truss-3d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json",
+      "capture_command": "make capture-thermal-truss-3d-qualification-release-evidence",
+      "check_command": "make check-thermal-truss-3d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "restrained uniform-temperature strain split, stress, axial force, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-truss-3d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 3D fully restrained uniform-temperature thermal truss scope"
+    },
+    {
+      "candidate_id": "thermal-truss-2d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
+      "capture_command": "make capture-thermal-truss-2d-qualification-release-evidence",
+      "check_command": "make check-thermal-truss-2d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "restrained uniform-temperature 2D strain split, stress, axial force, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-truss-2d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 2D fully restrained uniform-temperature thermal truss scope"
+    },
+    {
+      "candidate_id": "thermal-frame-2d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json",
+      "capture_command": "make capture-thermal-frame-2d-qualification-release-evidence",
+      "check_command": "make check-thermal-frame-2d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "restrained uniform-temperature 2D frame strain split, axial force, stress, zero-gradient, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-frame-2d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 2D fully restrained uniform-temperature thermal frame scope"
+    },
+    {
+      "candidate_id": "thermal-frame-3d-closed-form",
+      "status": "attached_to_release",
+      "evidence_path": "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
+      "capture_command": "make capture-thermal-frame-3d-qualification-release-evidence",
+      "check_command": "make check-thermal-frame-3d-qualification-release-evidence",
+      "review_status": "approved",
+      "review_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
+      "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-frame-3d-closed-form-review-decision.json",
+      "promotion_blocker": "no blocker; reviewer approved promotion for the retained 3D fully restrained thermal-gradient frame scope"
     }
   ]
 }

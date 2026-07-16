@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "thermal-beam-1d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
+  "review_gate": "free thermal curvature, fixed-root response, zero-gradient limit, and near-zero internal-force evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 1D linear thermal beam free-curvature scope after closed-form tip response, zero-gradient, and near-zero internal-force evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "free-curvature closed-form regression passes",
+    "zero-gradient response regression passes",
+    "beam and thermal beam input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

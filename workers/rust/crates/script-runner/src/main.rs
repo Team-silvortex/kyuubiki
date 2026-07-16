@@ -63,6 +63,7 @@ mod native_time;
 mod nightly_artifact_overview;
 mod node_tests;
 mod operator_package_dynamic_smoke;
+mod operator_qualification_evidence_kits;
 mod operator_qualification_readiness;
 mod operator_qualification_release_records;
 mod operator_reliability;

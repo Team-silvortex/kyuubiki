@@ -10,7 +10,11 @@ fn spring_1d_matches_series_equivalent_stiffness_closed_form() {
     let result = solve_spring_1d(&series_request(load, &stiffnesses))
         .expect("series spring closed-form fixture should solve");
 
-    let expected_tip = load * stiffnesses.iter().map(|stiffness| 1.0 / stiffness).sum::<f64>();
+    let expected_tip = load
+        * stiffnesses
+            .iter()
+            .map(|stiffness| 1.0 / stiffness)
+            .sum::<f64>();
     let mut expected_displacement = 0.0;
     assert_close(result.nodes[0].ux, 0.0);
     for (index, stiffness) in stiffnesses.iter().enumerate() {
@@ -53,7 +57,11 @@ fn series_request(load: f64, stiffnesses: &[f64]) -> SolveSpring1dRequest {
             id: format!("n{index}"),
             x: index as f64,
             fix_x: index == 0,
-            load_x: if index == stiffnesses.len() { load } else { 0.0 },
+            load_x: if index == stiffnesses.len() {
+                load
+            } else {
+                0.0
+            },
         });
     }
     let elements = stiffnesses

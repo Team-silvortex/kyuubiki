@@ -27,9 +27,18 @@ fn magnetostatic_bar_1d_matches_closed_form_permeance_scaling() {
         let element = &result.elements[0];
 
         assert_close(result.nodes[0].magnetic_potential, 0.0);
-        assert_close(result.nodes[1].magnetic_potential, expected.magnetic_potential);
-        assert_close(result.max_magnetic_potential, expected.magnetic_potential.abs());
-        assert_close(result.max_magnetic_field_strength, expected.field_strength.abs());
+        assert_close(
+            result.nodes[1].magnetic_potential,
+            expected.magnetic_potential,
+        );
+        assert_close(
+            result.max_magnetic_potential,
+            expected.magnetic_potential.abs(),
+        );
+        assert_close(
+            result.max_magnetic_field_strength,
+            expected.field_strength.abs(),
+        );
         assert_close(result.max_flux_density, expected.flux_density.abs());
         assert_close(result.total_stored_energy, expected.stored_energy);
         assert_close(
@@ -90,12 +99,8 @@ impl MagneticCase {
         let gradient = magnetic_potential / self.length;
         let field_strength = -gradient;
         let flux_density = self.permeability * field_strength;
-        let stored_energy = 0.5
-            * self.permeability
-            * field_strength
-            * field_strength
-            * self.area
-            * self.length;
+        let stored_energy =
+            0.5 * self.permeability * field_strength * field_strength * self.area * self.length;
         ExpectedMagneticResponse {
             magnetic_potential,
             gradient,

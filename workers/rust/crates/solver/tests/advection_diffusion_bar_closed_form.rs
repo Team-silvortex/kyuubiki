@@ -34,8 +34,14 @@ fn advection_diffusion_bar_1d_matches_closed_form_flux_across_peclet_regimes() {
         assert_close(result.max_concentration, expected.max_concentration);
         assert_close(result.max_total_flux, expected.total_flux.abs());
         assert_close(result.max_peclet_number, expected.peclet_number);
-        assert_close(element.average_concentration, expected.average_concentration);
-        assert_close(element.concentration_gradient, expected.concentration_gradient);
+        assert_close(
+            element.average_concentration,
+            expected.average_concentration,
+        );
+        assert_close(
+            element.concentration_gradient,
+            expected.concentration_gradient,
+        );
         assert_close(element.diffusive_flux, expected.diffusive_flux);
         assert_close(element.advective_flux, expected.advective_flux);
         assert_close(element.total_flux, expected.total_flux);

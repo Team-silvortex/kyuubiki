@@ -276,8 +276,7 @@ function loadManifest() {
 }
 
 function validateQualificationEvidenceKits(manifest, roadmap) {
-  const kitsPath = operatorReliabilityPaths.evidenceKits;
-  const kits = readJson(kitsPath);
+  const kits = loadQualificationEvidenceKits();
   const errors = qualificationEvidenceKitErrors(kits, roadmap, manifest);
   if (errors.length > 0) {
     fail(`qualification evidence kits: ${errors[0]}`);
@@ -308,6 +307,25 @@ function validateQualificationEvidenceKits(manifest, roadmap) {
   }
   validateQualificationReleaseRecords(kits, roadmap);
   return kits;
+}
+
+function loadQualificationEvidenceKits() {
+  const source = readJson(operatorReliabilityPaths.evidenceKits);
+  const kits = [...(source.kits ?? [])];
+  for (const shardPath of source.kit_shards ?? []) {
+    const shard = readJson(shardPath);
+    if (shard.schema_version !== source.schema_version) {
+      fail(`${shardPath}: schema_version must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if (shard.version_line !== source.version_line) {
+      fail(`${shardPath}: version_line must match ${operatorReliabilityPaths.evidenceKits}`);
+    }
+    if ((shard.kit_shards ?? []).length > 0) {
+      fail(`${shardPath}: nested kit_shards are not supported`);
+    }
+    kits.push(...(shard.kits ?? []));
+  }
+  return { ...source, kits };
 }
 
 function validateQualificationReleaseRecords(kits, roadmap) {

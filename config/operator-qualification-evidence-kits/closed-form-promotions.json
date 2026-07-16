@@ -1,0 +1,298 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-evidence-kits/v1",
+  "version_line": "moxi 2.0.x",
+  "kits": [
+    {
+      "candidate_id": "thermal-beam-1d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "thermal_beam_free_curvature_closed_form",
+      "operator_ids": [
+        "solve.thermal_beam_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive free thermal curvature, tip rotation, tip displacement, and zero-gradient formulas",
+          "artifact_path": "evidence/operator-qualification/thermal-beam-1d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain free-curvature and zero-gradient checks",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "thermal-beam-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for root constraints, tip response, and moment diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "beam-torsion-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for beam, torsion, and thermal beam inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-beam-1d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-thermal-beam-1d-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-beam-1d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "contact-gap-1d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "penalty_contact_closed_form",
+      "operator_ids": [
+        "solve.contact_gap_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive inactive-gap and active-penalty-stop equilibrium formulas",
+          "artifact_path": "evidence/operator-qualification/contact-gap-1d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain inactive branch, active branch, penetration, and force-split checks",
+          "artifact_path": "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "contact-gap-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for active stop and residual diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/contact_gap_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "contact-gap-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for contact gap inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/contact_gap_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-contact-gap-1d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-contact-gap-1d-qualification-release-evidence",
+          "artifact_check_command": "make check-contact-gap-1d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "truss-2d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "symmetric_two_bar_truss_closed_form",
+      "operator_ids": [
+        "solve.truss_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive symmetric two-bar axial force, displacement, stress, strain, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/truss-2d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain member force, apex displacement, support, and energy checks",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "truss-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for loaded node equilibrium and member diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_2d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "truss-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for 2D and 3D truss inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-truss-2d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-truss-2d-qualification-release-evidence",
+          "artifact_check_command": "make check-truss-2d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "truss-3d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "symmetric_tripod_truss_closed_form",
+      "operator_ids": [
+        "solve.truss_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive symmetric tripod axial force, displacement, stress, strain, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/truss-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain member force, apex displacement, support, and energy checks",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "truss-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for loaded node equilibrium and member diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_3d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "truss-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for 2D and 3D truss inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-truss-3d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-truss-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-truss-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "thermal-truss-3d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "restrained_uniform_temperature_truss_3d",
+      "operator_ids": [
+        "solve.thermal_truss_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive fully restrained uniform-temperature strain split, stress, axial force, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/thermal-truss-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-truss-3d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-thermal-truss-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-truss-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "thermal-truss-2d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "restrained_uniform_temperature_truss_2d",
+      "operator_ids": [
+        "solve.thermal_truss_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive fully restrained uniform-temperature 2D strain split, stress, axial force, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/thermal-truss-2d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-truss-2d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-thermal-truss-2d-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-truss-2d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "thermal-frame-2d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "restrained_uniform_temperature_frame_2d",
+      "operator_ids": [
+        "solve.thermal_frame_2d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive fully restrained uniform-temperature 2D frame strain split, axial force, stress, zero-gradient, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/thermal-frame-2d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-frame-2d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-thermal-frame-2d-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-frame-2d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "thermal-frame-3d-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "restrained_temperature_gradient_frame_3d",
+      "operator_ids": [
+        "solve.thermal_frame_3d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive fully restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy formulas",
+          "artifact_path": "evidence/operator-qualification/thermal-frame-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-thermal-frame-3d-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
+          "artifact_command": "make capture-thermal-frame-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-frame-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    }
+  ]
+}

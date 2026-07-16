@@ -50,7 +50,7 @@ fn run(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
         println!("operator validation report ok: {input_report} ({profile_count} profile(s))");
         return Ok(0);
     }
-    let config = read_json(root, &options.config)?;
+    let config = load_config(root, &options.config)?;
     validate_config(root, &config)?;
     let report = build_report(root, &config, &options)?;
     validate_report(&report, &options)?;
@@ -127,6 +127,9 @@ fn validate_config(root: &Path, config: &Value) -> RunnerResult<()> {
         return Err(format!("schema_version must be {SCHEMA_VERSION}"));
     }
     require_string(config.get("version_line"), "version_line", "config")?;
+    if config.get("profile_shards").is_some() {
+        require_string_list(config.get("profile_shards"), "profile_shards", "config")?;
+    }
     let profiles = config
         .get("profiles")
         .and_then(Value::as_array)
@@ -143,6 +146,36 @@ fn validate_config(root: &Path, config: &Value) -> RunnerResult<()> {
         }
     }
     Ok(())
+}
+
+fn load_config(root: &Path, relative_path: &str) -> RunnerResult<Value> {
+    let mut config = read_json(root, relative_path)?;
+    let version_line = field(&config, "version_line").to_string();
+    let mut profiles = config
+        .get("profiles")
+        .and_then(Value::as_array)
+        .cloned()
+        .ok_or_else(|| "profiles must be an array".to_string())?;
+    for shard_path in string_array(config.get("profile_shards")) {
+        let shard = read_json(root, shard_path)?;
+        if field(&shard, "schema_version") != SCHEMA_VERSION {
+            return Err(format!(
+                "{shard_path}: schema_version must be {SCHEMA_VERSION}"
+            ));
+        }
+        if field(&shard, "version_line") != version_line {
+            return Err(format!(
+                "{shard_path}: version_line must match {relative_path}"
+            ));
+        }
+        let shard_profiles = shard
+            .get("profiles")
+            .and_then(Value::as_array)
+            .ok_or_else(|| format!("{shard_path}: profiles must be an array"))?;
+        profiles.extend(shard_profiles.iter().cloned());
+    }
+    config["profiles"] = Value::Array(profiles);
+    Ok(config)
 }
 
 fn validate_profile(root: &Path, profile: &Value, context: &str) -> RunnerResult<()> {

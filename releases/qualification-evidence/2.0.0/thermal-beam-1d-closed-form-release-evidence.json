@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "promotion_summary": {
+    "candidate_id": "thermal-beam-1d-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/thermal-beam-1d-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.thermal_beam_1d"
+    ]
+  },
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "profiles": [
+    {
+      "profile_id": "thermal-beam-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "thermal-beam-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.thermal_beam_1d"
+      ],
+      "validation_methods": [
+        "free_curvature_closed_form",
+        "zero_gradient_limit",
+        "near_zero_internal_force"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement_rotation",
+        "tip_rotation_matches_curvature_times_length",
+        "tip_displacement_matches_half_curvature_length_squared",
+        "zero_gradient_has_zero_response",
+        "free_curvature_has_near_zero_internal_force"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/thermal-structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/thermal-beam-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "thermal-beam-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 2529,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "thermal-beam-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 111,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "beam-torsion-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_torsion_input_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 243,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

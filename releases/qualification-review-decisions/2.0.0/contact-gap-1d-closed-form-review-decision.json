@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "contact-gap-1d-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
+  "review_gate": "inactive gap, active penalty stop, penetration, and force-split equilibrium evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 1D penalty stop contact scope after inactive-gap, active-contact, penetration, and force-split evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "inactive branch closed-form regression passes",
+    "active penalty branch closed-form regression passes",
+    "contact input reliability regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

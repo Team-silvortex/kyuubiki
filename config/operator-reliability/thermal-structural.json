@@ -68,7 +68,7 @@
       "operator_id": "solve.thermal_beam_1d",
       "benchmark_template": "thermal-beam-line",
       "domain": "thermal_structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -97,6 +97,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-beam-1d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-beam-1d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -109,7 +129,7 @@
       "operator_id": "solve.thermal_frame_2d",
       "benchmark_template": "thermal-frame-2d",
       "domain": "thermal_structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -137,6 +157,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_frame_2d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-frame-2d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-frame-2d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_frame_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -149,7 +189,7 @@
       "operator_id": "solve.thermal_frame_3d",
       "benchmark_template": "thermal-frame-3d",
       "domain": "thermal_structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -179,6 +219,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-frame-3d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-frame-3d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -191,7 +251,7 @@
       "operator_id": "solve.thermal_truss_2d",
       "benchmark_template": "thermal-truss-2d",
       "domain": "thermal_structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -220,6 +280,26 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-truss-2d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-truss-2d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -232,7 +312,7 @@
       "operator_id": "solve.thermal_truss_3d",
       "benchmark_template": "thermal-truss-3d",
       "domain": "thermal_structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -259,6 +339,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/thermal_truss_3d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-truss-3d-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-truss-3d-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_truss_3d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
           ]
         }
       },

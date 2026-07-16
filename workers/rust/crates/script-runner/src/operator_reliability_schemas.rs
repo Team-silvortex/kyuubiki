@@ -1,3 +1,4 @@
+use crate::operator_qualification_evidence_kits::load_qualification_evidence_kits;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
@@ -145,7 +146,7 @@ fn check_reliability_shards(root: &Path) -> RunnerResult<Option<String>> {
 
 fn check_qualification_roadmap_closure(root: &Path) -> RunnerResult<Option<String>> {
     let roadmap = read_json(root, ROADMAP_PATH)?;
-    let evidence_kits = read_json(root, EVIDENCE_KITS_PATH)?;
+    let evidence_kits = load_qualification_evidence_kits(root)?;
     if field(&roadmap, "version_line") != field(&evidence_kits, "version_line") {
         return Ok(Some(format!(
             "{ROADMAP_PATH}: version_line must match evidence kits"

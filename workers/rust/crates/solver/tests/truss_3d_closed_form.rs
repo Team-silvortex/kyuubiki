@@ -1,0 +1,126 @@
+use kyuubiki_protocol::{SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput};
+use kyuubiki_solver::solve_truss_3d;
+
+const TOL: f64 = 1.0e-8;
+
+#[test]
+fn truss_3d_matches_symmetric_tripod_closed_form() {
+    let radius = 0.6;
+    let height = 0.9;
+    let load = -1500.0;
+    let area = 0.012;
+    let youngs_modulus = 70.0e9;
+    let result = solve_truss_3d(&tripod_request(radius, height, load, area, youngs_modulus))
+        .expect("symmetric tripod truss should solve");
+
+    let length = (radius * radius + height * height).sqrt();
+    let vertical_direction = height / length;
+    let axial_force = load / (3.0 * vertical_direction);
+    let expected_uz =
+        load * length / (3.0 * youngs_modulus * area * vertical_direction * vertical_direction);
+    let expected_stress = axial_force / area;
+    let expected_strain = expected_stress / youngs_modulus;
+    let expected_energy = 3.0 * 0.5 * expected_stress * expected_strain * area * length;
+
+    for support in &result.nodes[0..3] {
+        assert_close(support.ux, 0.0, 1.0e-12);
+        assert_close(support.uy, 0.0, 1.0e-12);
+        assert_close(support.uz, 0.0, 1.0e-12);
+    }
+
+    let apex = &result.nodes[3];
+    assert_close(apex.ux, 0.0, TOL);
+    assert_close(apex.uy, 0.0, TOL);
+    assert_close(apex.uz, expected_uz, TOL);
+    assert_close(result.max_displacement, expected_uz.abs(), TOL);
+    assert_close(result.max_stress, expected_stress.abs(), TOL);
+    assert_close(result.total_strain_energy, expected_energy, TOL);
+
+    for element in &result.elements {
+        assert_close(element.length, length, TOL);
+        assert_close(element.axial_force, axial_force, TOL);
+        assert_close(element.stress, expected_stress, TOL);
+        assert_close(element.strain, expected_strain, TOL);
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.strain,
+            TOL,
+        );
+    }
+}
+
+fn tripod_request(
+    radius: f64,
+    height: f64,
+    load_z: f64,
+    area: f64,
+    youngs_modulus: f64,
+) -> SolveTruss3dRequest {
+    let root_three_over_two = 3.0_f64.sqrt() * 0.5;
+    SolveTruss3dRequest {
+        nodes: vec![
+            node("base-a", radius, 0.0, 0.0, true, 0.0),
+            node(
+                "base-b",
+                -0.5 * radius,
+                root_three_over_two * radius,
+                0.0,
+                true,
+                0.0,
+            ),
+            node(
+                "base-c",
+                -0.5 * radius,
+                -root_three_over_two * radius,
+                0.0,
+                true,
+                0.0,
+            ),
+            node("apex", 0.0, 0.0, height, false, load_z),
+        ],
+        elements: vec![
+            element("leg-a", 0, 3, area, youngs_modulus),
+            element("leg-b", 1, 3, area, youngs_modulus),
+            element("leg-c", 2, 3, area, youngs_modulus),
+        ],
+    }
+}
+
+fn node(id: &str, x: f64, y: f64, z: f64, fixed: bool, load_z: f64) -> Truss3dNodeInput {
+    Truss3dNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        z,
+        fix_x: fixed,
+        fix_y: fixed,
+        fix_z: fixed,
+        load_x: 0.0,
+        load_y: 0.0,
+        load_z,
+    }
+}
+
+fn element(
+    id: &str,
+    node_i: usize,
+    node_j: usize,
+    area: f64,
+    youngs_modulus: f64,
+) -> Truss3dElementInput {
+    Truss3dElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        area,
+        youngs_modulus,
+    }
+}
+
+fn assert_close(actual: f64, expected: f64, tolerance: f64) {
+    let scale = expected.abs().max(1.0);
+    assert!(
+        (actual - expected).abs() <= tolerance * scale,
+        "expected {actual} to be close to {expected}",
+    );
+}

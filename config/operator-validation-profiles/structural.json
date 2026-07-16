@@ -1,0 +1,144 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "contact-gap-1d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "contact-gap-1d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.contact_gap_1d"
+      ],
+      "validation_methods": [
+        "inactive_gap_closed_form",
+        "active_penalty_stop_closed_form",
+        "force_split_equilibrium"
+      ],
+      "formal_invariants": [
+        "fixed_root_displacement",
+        "inactive_gap_has_zero_contact_force",
+        "active_gap_penetration_matches_tip_displacement_minus_gap",
+        "spring_force_plus_contact_force_matches_load",
+        "contact_activation_count_matches_branch"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/contact-gap-1d-closed-form.md",
+        "workers/rust/crates/solver/tests/contact_gap_1d_review.rs",
+        "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/contact_gap_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "contact-gap-1d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_review -- --nocapture"
+        },
+        {
+          "id": "contact-gap-1d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "contact-gap-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "truss-2d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "truss-2d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.truss_2d"
+      ],
+      "validation_methods": [
+        "symmetric_two_bar_closed_form",
+        "member_force_balance",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_support_displacements_are_zero",
+        "apex_horizontal_displacement_is_zero_by_symmetry",
+        "member_axial_forces_match_vertical_equilibrium",
+        "stress_and_strain_match_axial_force",
+        "total_strain_energy_matches_member_energy_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/truss-2d-closed-form.md",
+        "workers/rust/crates/solver/tests/truss_2d_review.rs",
+        "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/truss_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "truss-2d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_2d_review -- --nocapture"
+        },
+        {
+          "id": "truss-2d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "truss-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "truss-3d-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "truss-3d-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.truss_3d"
+      ],
+      "validation_methods": [
+        "symmetric_tripod_closed_form",
+        "member_force_balance_3d",
+        "strain_energy_balance"
+      ],
+      "formal_invariants": [
+        "fixed_base_displacements_are_zero",
+        "apex_lateral_displacements_are_zero_by_symmetry",
+        "member_axial_forces_match_vertical_equilibrium",
+        "stress_and_strain_match_axial_force",
+        "total_strain_energy_matches_three_member_energy_sum"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/truss-3d-closed-form.md",
+        "workers/rust/crates/solver/tests/truss_3d_review.rs",
+        "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/truss_input_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "truss-3d-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_3d_review -- --nocapture"
+        },
+        {
+          "id": "truss-3d-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "truss-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_input_reliability -- --nocapture"
+        }
+      ]
+    }
+  ]
+}
