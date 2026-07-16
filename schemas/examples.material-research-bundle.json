@@ -108,6 +108,94 @@
     "chain_trace_round_count": 1,
     "final_winner_candidate_id": "pyrolytic_graphite_in_plane"
   },
+  "validation_evidence": {
+    "schema_version": "kyuubiki.material-validation-evidence/v1",
+    "validation_posture": "screening_validation",
+    "baseline_refs": [
+      {
+        "baseline_id": "material.heat_spreader_screening.optimization.v1",
+        "kind": "built_in_screening_fixture",
+        "status": "retained",
+        "scope": "internal deterministic solver fixture; external calibration still required"
+      }
+    ],
+    "candidate_confidence_counts": {
+      "low": 1,
+      "medium": 2,
+      "high": 0,
+      "unknown": 0
+    },
+    "sensitivity_summary": {
+      "schema_version": "kyuubiki.material-sensitivity-summary/v1",
+      "method": "metric_weight_and_gate_proxy",
+      "primary_metric_ids": [
+        "peak_temperature_c",
+        "areal_mass_kg_m2",
+        "conductivity_density_ratio"
+      ],
+      "focus_candidate_ids": [
+        "pyrolytic_graphite_in_plane",
+        "aluminum_6061"
+      ],
+      "winner_stability_state": "blocked_by_quality_gates",
+      "winner_score_delta": 0,
+      "chain_trace_round_count": 1
+    },
+    "acceptance_criteria": [
+      {
+        "criterion_id": "gate.peak_temperature.warning",
+        "metric_id": "peak_temperature_c",
+        "operator": "<=",
+        "limit": 70,
+        "status": "violate"
+      },
+      {
+        "criterion_id": "gate.areal_mass.warning",
+        "metric_id": "areal_mass_kg_m2",
+        "operator": "<=",
+        "limit": 8,
+        "status": "violate"
+      }
+    ],
+    "uncertainty_summary": {
+      "schema_version": "kyuubiki.material-uncertainty-summary/v1",
+      "material_parameter_scope": "kyuubiki.material-cards.heat-spreader.v1",
+      "candidate_confidence_counts": {
+        "low": 1,
+        "medium": 2,
+        "high": 0,
+        "unknown": 0
+      },
+      "known_limitations": [
+        "scalar room-temperature screening values",
+        "external calibration still required"
+      ],
+      "external_validation_required": true
+    },
+    "validation_readiness": {
+      "schema_version": "kyuubiki.material-validation-readiness/v1",
+      "decision": "screening_only",
+      "score": 0.4,
+      "blocking_reasons": [
+        "external_validation_required",
+        "violated_quality_gates",
+        "low_confidence_material_cards"
+      ],
+      "next_validation_actions": [
+        "run_external_solver_or_analytic_baseline",
+        "close_or_explain_violated_quality_gates",
+        "replace_low_confidence_material_cards"
+      ]
+    },
+    "external_validation_plan": [
+      "compare winning candidate ranking against an external solver or analytic benchmark",
+      "replace scalar material cards with temperature-dependent or anisotropic curves where applicable"
+    ],
+    "violated_quality_gate_ids": [
+      "gate.peak_temperature.warning",
+      "gate.areal_mass.warning"
+    ]
+  },
   "summary": {
     "winner_candidate_id": "pyrolytic_graphite_in_plane",
     "reliability_decision": "blocked_by_quality_gates",

@@ -152,6 +152,7 @@ fn build_bundle(root: &Path, options: &Options) -> RunnerResult<Value> {
             "chain_next_duration_ms": chain.duration_ms,
         },
         "research_evidence": research_evidence(&initial.payload, &plan.payload, &chain.payload),
+        "validation_evidence": validation_evidence(&initial.payload, &plan.payload, &chain.payload),
         "summary": bundle_summary(&initial.payload, &plan.payload, &next.payload, &chain.payload),
         "initial_exploration": initial.payload,
         "next_round_execution_plan": plan.payload,
@@ -232,6 +233,110 @@ fn bundle_summary(initial: &Value, plan: &Value, next: &Value, chain: &Value) ->
     })
 }
 
+fn validation_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
+    let report = initial.get("report").unwrap_or(&Value::Null);
+    let reliability = report.get("reliability").unwrap_or(&Value::Null);
+    let quality_gates = reliability
+        .get("quality_gates")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let violated_gate_ids = quality_gates
+        .iter()
+        .filter(|gate| gate.get("status").and_then(Value::as_str) == Some("violate"))
+        .filter_map(|gate| gate.get("id").and_then(Value::as_str))
+        .map(Value::from)
+        .collect::<Vec<_>>();
+    let candidate_confidence = confidence_counts(report.pointer("/material_card_refs"));
+    let primary_metric_ids = plan
+        .pointer("/optimization_objectives/primary_metric_ids")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let acceptance_criteria = quality_gates
+        .iter()
+        .map(|gate| {
+            json!({
+                "criterion_id": gate.get("id").cloned().unwrap_or(Value::Null),
+                "metric_id": gate.get("metric_id").cloned().unwrap_or(Value::Null),
+                "operator": gate.get("operator").cloned().unwrap_or(Value::Null),
+                "limit": gate.get("limit").cloned().unwrap_or(Value::Null),
+                "status": gate.get("status").cloned().unwrap_or(Value::Null),
+            })
+        })
+        .collect::<Vec<_>>();
+    let validation_readiness = validation_readiness(&candidate_confidence, &violated_gate_ids);
+    json!({
+        "schema_version": "kyuubiki.material-validation-evidence/v1",
+        "validation_posture": "screening_validation",
+        "baseline_refs": [{
+            "baseline_id": report.pointer("/optimization/id").cloned().unwrap_or(Value::Null),
+            "kind": "built_in_screening_fixture",
+            "status": "retained",
+            "scope": "internal deterministic solver fixture; external calibration still required",
+        }],
+        "candidate_confidence_counts": candidate_confidence,
+        "sensitivity_summary": {
+            "schema_version": "kyuubiki.material-sensitivity-summary/v1",
+            "method": "metric_weight_and_gate_proxy",
+            "primary_metric_ids": primary_metric_ids,
+            "focus_candidate_ids": plan.pointer("/optimization_objectives/focus_candidate_ids").cloned().unwrap_or_else(|| json!([])),
+            "winner_stability_state": chain.pointer("/convergence_assessment/state").cloned().unwrap_or(Value::Null),
+            "winner_score_delta": chain.pointer("/convergence_assessment/winner_score_delta").cloned().unwrap_or(Value::Null),
+            "chain_trace_round_count": chain.get("optimization_trace").and_then(Value::as_array).map(Vec::len).unwrap_or(0),
+        },
+        "acceptance_criteria": acceptance_criteria,
+        "uncertainty_summary": {
+            "schema_version": "kyuubiki.material-uncertainty-summary/v1",
+            "material_parameter_scope": reliability.get("material_card_version").cloned().unwrap_or(Value::Null),
+            "candidate_confidence_counts": candidate_confidence,
+            "known_limitations": reliability.get("limitations").cloned().unwrap_or_else(|| json!([])),
+            "external_validation_required": true,
+        },
+        "validation_readiness": validation_readiness,
+        "external_validation_plan": [
+            "compare winning candidate ranking against an external solver or analytic benchmark",
+            "replace scalar material cards with temperature-dependent or anisotropic curves where applicable",
+            "run mesh and boundary-condition perturbation before qualification claims"
+        ],
+        "violated_quality_gate_ids": violated_gate_ids,
+    })
+}
+
+fn validation_readiness(candidate_confidence: &Value, violated_gate_ids: &[Value]) -> Value {
+    let low = confidence_count(candidate_confidence, "low");
+    let unknown = confidence_count(candidate_confidence, "unknown");
+    let mut score = 0.70_f64;
+    let mut reasons = vec![Value::from("external_validation_required")];
+    let mut actions = vec![Value::from("run_external_solver_or_analytic_baseline")];
+    if !violated_gate_ids.is_empty() {
+        score -= 0.20;
+        reasons.push(Value::from("violated_quality_gates"));
+        actions.push(Value::from("close_or_explain_violated_quality_gates"));
+    }
+    if low > 0 {
+        score -= 0.10;
+        reasons.push(Value::from("low_confidence_material_cards"));
+        actions.push(Value::from("replace_low_confidence_material_cards"));
+    }
+    if unknown > 0 {
+        score -= 0.10;
+        reasons.push(Value::from("unknown_confidence_material_cards"));
+        actions.push(Value::from("classify_unknown_material_card_confidence"));
+    }
+    json!({
+        "schema_version": "kyuubiki.material-validation-readiness/v1",
+        "decision": "screening_only",
+        "score": ((score.max(0.0) * 100.0).round() / 100.0),
+        "blocking_reasons": reasons,
+        "next_validation_actions": actions,
+    })
+}
+
+fn confidence_count(counts: &Value, key: &str) -> u64 {
+    counts.get(key).and_then(Value::as_u64).unwrap_or(0)
+}
+
 fn research_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
     let report = initial.get("report").unwrap_or(&Value::Null);
     let objectives = plan.get("optimization_objectives").unwrap_or(&Value::Null);
@@ -266,6 +371,26 @@ fn research_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
         "chain_trace_round_count": trace_round_count,
         "final_winner_candidate_id": chain.get("final_winner_candidate_id").cloned().unwrap_or(Value::Null),
     })
+}
+
+fn confidence_counts(value: Option<&Value>) -> Value {
+    let mut low = 0u64;
+    let mut medium = 0u64;
+    let mut high = 0u64;
+    let mut unknown = 0u64;
+    for item in value.and_then(Value::as_array).into_iter().flatten() {
+        match item
+            .get("confidence")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown")
+        {
+            "low" => low += 1,
+            "medium" => medium += 1,
+            "high" => high += 1,
+            _ => unknown += 1,
+        }
+    }
+    json!({ "low": low, "medium": medium, "high": high, "unknown": unknown })
 }
 
 fn array_values(value: Option<&Value>) -> Vec<Value> {

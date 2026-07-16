@@ -1,6 +1,7 @@
 use crate::{
     material_card_contract, material_research_bundle, material_research_bundle_build,
-    material_research_bundle_contract, material_research_bundle_index, material_research_example,
+    material_research_bundle_contract, material_research_bundle_index,
+    material_research_bundle_index_contract, material_research_example,
     material_study_sdk_examples, remote_material_health, remote_material_research_example,
     remote_material_stage_health, remote_material_summary,
 };
@@ -31,6 +32,14 @@ pub(crate) fn run_material_research_command(
         }
         "build-material-research-bundle-index" => {
             material_research_bundle_index::run_build_material_research_bundle_index(root, args)
+        }
+        "check-material-research-bundle-index" => {
+            material_research_bundle_index::run_check_material_research_bundle_index(root, args)
+        }
+        "check-material-research-bundle-index-contract" => {
+            material_research_bundle_index_contract::run_check_material_research_bundle_index_contract(
+                root, args,
+            )
         }
         "capture-material-research-example" => {
             material_research_example::run_capture_material_research_example(root, args)

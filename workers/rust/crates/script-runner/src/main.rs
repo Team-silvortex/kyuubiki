@@ -47,6 +47,7 @@ mod material_research_bundle;
 mod material_research_bundle_build;
 mod material_research_bundle_contract;
 mod material_research_bundle_index;
+mod material_research_bundle_index_contract;
 mod material_research_example;
 mod material_score_contract;
 mod material_study_execution_plan_contract;

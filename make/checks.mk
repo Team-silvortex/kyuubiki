@@ -10,7 +10,7 @@
 .PHONY: check-thermal-plane-qualification-release-evidence check-electromagnetic-plane-qualification-release-evidence check-modal-frame-qualification-release-evidence check-stokes-flow-screening-release-evidence check-acoustic-bar-qualification-release-evidence check-advection-diffusion-bar-qualification-release-evidence check-magnetostatic-bar-qualification-release-evidence check-spring-1d-qualification-release-evidence check-spring-vector-qualification-release-evidence check-nonlinear-spring-1d-qualification-release-evidence check-frame-3d-qualification-release-evidence check-plane-2d-qualification-release-evidence check-thermal-beam-1d-qualification-release-evidence check-thermal-frame-2d-qualification-release-evidence check-thermal-frame-3d-qualification-release-evidence check-solid-tetra-3d-qualification-release-evidence check-contact-gap-1d-qualification-release-evidence check-truss-2d-qualification-release-evidence check-truss-3d-qualification-release-evidence check-thermal-truss-3d-qualification-release-evidence check-thermal-truss-2d-qualification-release-evidence
 .PHONY: check-operator-reliability-rules check-operator-reliability-schemas check-operator-validation verify-operator-validation
 .PHONY: capture-material-research-example check-material-research-example verify-material-research-example
-.PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index
+.PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
 .PHONY: audit-dependencies fuzz-smoke check-minimal-industrial-closure architecture-check verify
@@ -371,8 +371,20 @@ verify-material-research-bundle:
 	@$(MAKE) check-material-research-bundle IN=$${OUT:-tmp/material-research-bundle.json}
 
 material-research-bundle-index:
+	@$(ENTRYPOINT) check-material-research-bundle-index-contract --self-test
+	@$(ENTRYPOINT) check-material-research-bundle-index-contract
 	@$(ENTRYPOINT) build-material-research-bundle-index --self-test
 	@$(ENTRYPOINT) build-material-research-bundle-index --ensure-bundles --out-dir $${OUT_DIR:-tmp/material-research-bundles}
+	@$(ENTRYPOINT) check-material-research-bundle-index --self-test
+	@$(ENTRYPOINT) check-material-research-bundle-index --in $${OUT_DIR:-tmp/material-research-bundles}/index.json
+
+check-material-research-bundle-index:
+	@$(ENTRYPOINT) check-material-research-bundle-index --self-test
+	@$(ENTRYPOINT) check-material-research-bundle-index --in $${IN:-tmp/material-research-bundles/index.json}
+
+check-material-research-bundle-index-contract:
+	@$(ENTRYPOINT) check-material-research-bundle-index-contract --self-test
+	@$(ENTRYPOINT) check-material-research-bundle-index-contract
 
 remote-material-research-example:
 	@$(ENTRYPOINT) remote-material-research-example --profile $${PROFILE:-100k} --matrix $${MATRIX:-compound-core} --repeat $${REPEAT:-1}
@@ -438,6 +450,7 @@ architecture-check:
 	@$(MAKE) check-material-study-execution-plan-contract
 	@$(MAKE) check-material-exploration-chain-contract
 	@$(MAKE) check-material-research-bundle-contract
+	@$(MAKE) check-material-research-bundle-index-contract
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-package-dynamic-smoke-contract

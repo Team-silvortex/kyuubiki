@@ -38,10 +38,11 @@ The repository now keeps validation split by responsibility.
   Lightweight new-architecture guard for the `2.0.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
-  chain contract checks, TaskIR mirror and digest contract checks, dependency
-  audits, external operator package preflight, external operator dynamic host
-  smoke, docs book manifest validation, focused Operator TaskIR control-plane
-  tests, and the Rust live operator task path.
+  chain contract checks, retained material research bundle and bundle-index
+  contract checks, TaskIR mirror and digest contract checks, dependency audits,
+  external operator package preflight, external operator dynamic host smoke,
+  docs book manifest validation, focused Operator TaskIR control-plane tests,
+  and the Rust live operator task path.
 - `make check-materialization-plan-contract`
   Shared materialized-candidate contract guard. It checks the materialization
   plan schema, fixture, and SDK documentation links before agent/lab output is
@@ -51,6 +52,11 @@ The repository now keeps validation split by responsibility.
   fixture, convergence assessment, optimization trace, summary/run alignment,
   and documentation links before `--chain-next` output is treated as a stable
   SDK or agent-facing contract.
+- `make check-material-research-bundle-index-contract`
+  Shared retained-index guard. It checks the bundle-index schema, compact
+  fixture, decision counts, winner-drift evidence, metric/gate summaries, and
+  documentation links before generated index files are treated as lightweight
+  CI, release, or agent planning artifacts.
 - `make check-ui-automation-contract`
   Product-owned Workbench UI selector contract guard. It compares
   `docs/ui-automation-contract.json`, frontend TS selector constants, and the

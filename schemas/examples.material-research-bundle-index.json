@@ -1,0 +1,123 @@
+{
+  "$schema": "material-research-bundle-index.schema.json",
+  "schema_version": "kyuubiki.material-research-bundle-index/v1",
+  "generated_at_utc": "2026-07-16T00:00:00Z",
+  "bundle_count": 2,
+  "studies": [
+    "heat-spreader",
+    "composite-thermo-electric-panel"
+  ],
+  "winner_changed_in_chain_count": 1,
+  "reliability_decision_counts": {
+    "blocked_by_quality_gates": 2
+  },
+  "next_round_decision_counts": {
+    "mitigate_design_risk": 2
+  },
+  "bundles": [
+    {
+      "study": "heat-spreader",
+      "bundle_id": "material.heat_spreader_screening.reproducible_bundle.v1",
+      "path": "tmp/material-research-bundles/heat-spreader.json",
+      "posture": "screening_research_bundle",
+      "winner_candidate_id": "pyrolytic_graphite_in_plane",
+      "final_winner_candidate_id": "pyrolytic_graphite_in_plane",
+      "winner_changed_in_chain": false,
+      "reliability_decision": "blocked_by_quality_gates",
+      "next_round_decision": "mitigate_design_risk",
+      "runnable_next_step_count": 2,
+      "next_iteration": 2,
+      "chain_stop_reason": "risk_mitigation_required",
+      "chain_convergence_state": "blocked_by_quality_gates",
+      "chain_round_count": 2,
+      "chain_trace_round_count": 2,
+      "research_candidate_count": 3,
+      "primary_metric_ids": [
+        "peak_temperature_c",
+        "areal_mass_kg_m2",
+        "conductivity_density_ratio"
+      ],
+      "metric_objective_count": 3,
+      "violated_quality_gate_ids": [
+        "gate.peak_temperature.warning",
+        "gate.areal_mass.warning"
+      ],
+      "focus_candidate_ids": [
+        "pyrolytic_graphite_in_plane",
+        "aluminum_6061"
+      ],
+      "validation_posture": "screening_validation",
+      "external_validation_required": true,
+      "baseline_ref_count": 1,
+      "acceptance_criteria_count": 3,
+      "candidate_confidence_counts": {
+        "low": 1,
+        "medium": 2,
+        "high": 0,
+        "unknown": 0
+      },
+      "validation_readiness_decision": "screening_only",
+      "validation_readiness_score": 0.4,
+      "validation_blocking_reasons": [
+        "external_validation_required",
+        "violated_quality_gates",
+        "low_confidence_material_cards"
+      ],
+      "next_validation_action_count": 3,
+      "profile_study": "heat-spreader"
+    },
+    {
+      "study": "composite-thermo-electric-panel",
+      "bundle_id": "material.composite_thermo_electric_panel.reproducible_bundle.v1",
+      "path": "tmp/material-research-bundles/composite-thermo-electric-panel.json",
+      "posture": "screening_research_bundle",
+      "winner_candidate_id": "copper_ptfe_glass_epoxy",
+      "final_winner_candidate_id": "aluminum_alumina_aluminum",
+      "winner_changed_in_chain": true,
+      "reliability_decision": "blocked_by_quality_gates",
+      "next_round_decision": "mitigate_design_risk",
+      "runnable_next_step_count": 2,
+      "next_iteration": 2,
+      "chain_stop_reason": "risk_mitigation_required",
+      "chain_convergence_state": "blocked_by_quality_gates",
+      "chain_round_count": 2,
+      "chain_trace_round_count": 2,
+      "research_candidate_count": 3,
+      "primary_metric_ids": [
+        "max_electric_field_v_m",
+        "max_temperature_c",
+        "max_thermal_stress_pa",
+        "breakdown_safety_factor",
+        "areal_mass_kg_m2",
+        "interface_risk_score"
+      ],
+      "metric_objective_count": 6,
+      "violated_quality_gate_ids": [
+        "gate.interface_risk.prototype"
+      ],
+      "focus_candidate_ids": [
+        "copper_ptfe_glass_epoxy",
+        "copper_polyimide_aluminum"
+      ],
+      "validation_posture": "screening_validation",
+      "external_validation_required": true,
+      "baseline_ref_count": 1,
+      "acceptance_criteria_count": 5,
+      "candidate_confidence_counts": {
+        "low": 1,
+        "medium": 2,
+        "high": 0,
+        "unknown": 0
+      },
+      "validation_readiness_decision": "screening_only",
+      "validation_readiness_score": 0.4,
+      "validation_blocking_reasons": [
+        "external_validation_required",
+        "violated_quality_gates",
+        "low_confidence_material_cards"
+      ],
+      "next_validation_action_count": 3,
+      "profile_study": "composite-thermo-electric-panel"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ const EXPLORATION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-run/v1";
 const EXECUTION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-next-round-execution/v1";
 const CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
 const RESEARCH_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-research-evidence/v1";
+const VALIDATION_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-validation-evidence/v1";
 
 pub(crate) fn run_check_material_research_bundle_contract(
     root: &Path,
@@ -111,6 +112,14 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             "{SCHEMA_PATH}: missing required field research_evidence"
         ));
     }
+    if !required_fields(schema)
+        .iter()
+        .any(|required| *required == "validation_evidence")
+    {
+        issues.push(format!(
+            "{SCHEMA_PATH}: missing required field validation_evidence"
+        ));
+    }
     let summary_required = schema
         .pointer("/$defs/summary/required")
         .and_then(Value::as_array)
@@ -145,6 +154,30 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         if !evidence_required.iter().any(|required| *required == field) {
             issues.push(format!(
                 "{SCHEMA_PATH}: researchEvidence missing required {field}"
+            ));
+        }
+    }
+    let validation_required = schema
+        .pointer("/$defs/validationEvidence/required")
+        .and_then(Value::as_array)
+        .map(|fields| fields.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    for field in [
+        "baseline_refs",
+        "candidate_confidence_counts",
+        "sensitivity_summary",
+        "acceptance_criteria",
+        "uncertainty_summary",
+        "validation_readiness",
+        "external_validation_plan",
+        "violated_quality_gate_ids",
+    ] {
+        if !validation_required
+            .iter()
+            .any(|required| *required == field)
+        {
+            issues.push(format!(
+                "{SCHEMA_PATH}: validationEvidence missing required {field}"
             ));
         }
     }
@@ -215,6 +248,7 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     validate_research_evidence(example, issues);
+    validate_validation_evidence(example, issues);
     assert_equals(
         example.pointer("/next_round_execution_plan/decision"),
         example.pointer("/summary/next_round_decision"),
@@ -289,6 +323,124 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     Ok(())
+}
+
+fn validate_validation_evidence(example: &Value, issues: &mut Vec<String>) {
+    assert_schema_version(
+        example.pointer("/validation_evidence/schema_version"),
+        VALIDATION_EVIDENCE_SCHEMA_VERSION,
+        "validation_evidence",
+        issues,
+    );
+    if example
+        .pointer("/validation_evidence/validation_posture")
+        .and_then(Value::as_str)
+        != Some("screening_validation")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_posture must be screening_validation"
+        ));
+    }
+    if example
+        .pointer("/validation_evidence/baseline_refs")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.baseline_refs must be non-empty"
+        ));
+    }
+    if string_array(example.pointer("/validation_evidence/external_validation_plan")).is_empty() {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.external_validation_plan must be non-empty"
+        ));
+    }
+    if string_array(example.pointer("/validation_evidence/sensitivity_summary/primary_metric_ids"))
+        .is_empty()
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.sensitivity_summary.primary_metric_ids must be non-empty"
+        ));
+    }
+    assert_equals(
+        example.pointer("/validation_evidence/sensitivity_summary/focus_candidate_ids"),
+        example.pointer("/research_evidence/focus_candidate_ids"),
+        "validation_evidence.sensitivity_summary.focus_candidate_ids",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/validation_evidence/sensitivity_summary/chain_trace_round_count"),
+        example.pointer("/research_evidence/chain_trace_round_count"),
+        "validation_evidence.sensitivity_summary.chain_trace_round_count",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/validation_evidence/violated_quality_gate_ids"),
+        example.pointer("/research_evidence/violated_quality_gate_ids"),
+        "validation_evidence.violated_quality_gate_ids",
+        issues,
+    );
+    assert_equals(
+        example.pointer("/validation_evidence/candidate_confidence_counts"),
+        example.pointer("/validation_evidence/uncertainty_summary/candidate_confidence_counts"),
+        "validation_evidence.candidate_confidence_counts",
+        issues,
+    );
+    if example
+        .pointer("/validation_evidence/uncertainty_summary/external_validation_required")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence external_validation_required must be true"
+        ));
+    }
+    validate_validation_readiness(example, issues);
+}
+
+fn validate_validation_readiness(example: &Value, issues: &mut Vec<String>) {
+    assert_schema_version(
+        example.pointer("/validation_evidence/validation_readiness/schema_version"),
+        "kyuubiki.material-validation-readiness/v1",
+        "validation_evidence.validation_readiness",
+        issues,
+    );
+    if example
+        .pointer("/validation_evidence/validation_readiness/decision")
+        .and_then(Value::as_str)
+        != Some("screening_only")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.decision must be screening_only"
+        ));
+    }
+    let score = example
+        .pointer("/validation_evidence/validation_readiness/score")
+        .and_then(Value::as_f64);
+    if !score.is_some_and(|score| (0.0..=1.0).contains(&score)) {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.score must be between 0 and 1"
+        ));
+    }
+    let reasons =
+        string_array(example.pointer("/validation_evidence/validation_readiness/blocking_reasons"));
+    if !reasons
+        .iter()
+        .any(|reason| *reason == "external_validation_required")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include external_validation_required"
+        ));
+    }
+    if string_array(
+        example.pointer("/validation_evidence/validation_readiness/next_validation_actions"),
+    )
+    .is_empty()
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: validation_evidence.validation_readiness.next_validation_actions must be non-empty"
+        ));
+    }
 }
 
 fn validate_research_evidence(example: &Value, issues: &mut Vec<String>) {

@@ -69,6 +69,8 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   build-material-research-bundle\n  \
   build-material-research-bundle-index\n  \
   check-material-research-bundle\n  \
+  check-material-research-bundle-index\n  \
+  check-material-research-bundle-index-contract\n  \
   check-material-study-sdk-examples\n  \
   check-remote-material-preconditioner-health\n  \
   check-remote-material-stage-health\n  \

@@ -79,6 +79,8 @@ help:
 	@echo "  make check-material-study-sdk-examples Run Rust/Python/Elixir material study plan SDK examples"
 	@echo "  make verify-material-research-bundle Build and check the retained material research bundle (STUDY=heat-spreader|composite-thermo-electric-panel)"
 	@echo "  make material-research-bundle-index Build retained material research bundles and write tmp/material-research-bundles/index.json"
+	@echo "  make check-material-research-bundle-index Verify retained bundle index counts and evidence summaries"
+	@echo "  make check-material-research-bundle-index-contract Verify retained bundle index schema/example/docs contract"
 	@echo "  make check-operator-task-ir-contract Verify TaskIR mirrors, digests, and examples"
 	@echo "  make check-operator-package-dynamic-smoke-contract Verify external operator dynamic-smoke schema and fixture"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"

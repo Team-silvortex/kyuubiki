@@ -11,6 +11,7 @@ const EXPLORATION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-run/v1";
 const EXECUTION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-next-round-execution/v1";
 const CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
 const RESEARCH_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-research-evidence/v1";
+const VALIDATION_EVIDENCE_SCHEMA_VERSION: &str = "kyuubiki.material-validation-evidence/v1";
 const SUPPORTED_STUDIES: &[&str] = &["heat-spreader", "composite-thermo-electric-panel"];
 
 type RunnerResult<T> = Result<T, String>;
@@ -206,6 +207,7 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         "/research_evidence/quality_gate_decision",
         "/research_evidence/plan_decision",
         "/research_evidence/final_winner_candidate_id",
+        "/validation_evidence/validation_posture",
     ] {
         if pointer_str(bundle, pointer).is_empty() {
             return Err(format!("{}: expected non-empty string", &pointer[1..]));
@@ -215,6 +217,11 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         pointer_str(bundle, "/research_evidence/schema_version"),
         RESEARCH_EVIDENCE_SCHEMA_VERSION,
         "research_evidence.schema_version",
+    )?;
+    assert_eq_str(
+        pointer_str(bundle, "/validation_evidence/schema_version"),
+        VALIDATION_EVIDENCE_SCHEMA_VERSION,
+        "validation_evidence.schema_version",
     )?;
     assert_eq_value(
         bundle.pointer("/next_round_execution_plan/decision"),
@@ -242,6 +249,7 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         "chain.stop_reason",
     )?;
     validate_research_evidence(bundle)?;
+    validate_validation_evidence(bundle)?;
     if !bundle
         .pointer("/reproducibility/initial_command")
         .and_then(Value::as_array)
@@ -249,6 +257,120 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
     {
         return Err("reproducibility.initial_command must be an argv array".to_string());
     }
+    Ok(())
+}
+
+fn validate_validation_evidence(bundle: &Value) -> RunnerResult<()> {
+    let validation = bundle
+        .get("validation_evidence")
+        .ok_or_else(|| "validation_evidence: missing retained validation evidence".to_string())?;
+    assert_eq_str(
+        pointer_str(validation, "/sensitivity_summary/schema_version"),
+        "kyuubiki.material-sensitivity-summary/v1",
+        "validation_evidence.sensitivity_summary.schema_version",
+    )?;
+    assert_eq_str(
+        pointer_str(validation, "/uncertainty_summary/schema_version"),
+        "kyuubiki.material-uncertainty-summary/v1",
+        "validation_evidence.uncertainty_summary.schema_version",
+    )?;
+    non_empty_string_array(validation, "external_validation_plan")?;
+    non_empty_string_array(
+        validation.get("sensitivity_summary").ok_or_else(|| {
+            "validation_evidence.sensitivity_summary must be an object".to_string()
+        })?,
+        "primary_metric_ids",
+    )?;
+    non_empty_string_array(
+        validation.get("sensitivity_summary").ok_or_else(|| {
+            "validation_evidence.sensitivity_summary must be an object".to_string()
+        })?,
+        "focus_candidate_ids",
+    )?;
+    if validation
+        .get("baseline_refs")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        return Err("validation_evidence.baseline_refs must be non-empty".to_string());
+    }
+    if validation
+        .get("acceptance_criteria")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        return Err("validation_evidence.acceptance_criteria must be non-empty".to_string());
+    }
+    assert_eq_value(
+        validation.pointer("/sensitivity_summary/chain_trace_round_count"),
+        bundle.pointer("/research_evidence/chain_trace_round_count"),
+        "validation_evidence.sensitivity_summary.chain_trace_round_count",
+    )?;
+    assert_eq_value(
+        validation.pointer("/sensitivity_summary/focus_candidate_ids"),
+        bundle.pointer("/research_evidence/focus_candidate_ids"),
+        "validation_evidence.sensitivity_summary.focus_candidate_ids",
+    )?;
+    assert_eq_value(
+        validation.get("violated_quality_gate_ids"),
+        bundle.pointer("/research_evidence/violated_quality_gate_ids"),
+        "validation_evidence.violated_quality_gate_ids",
+    )?;
+    assert_eq_value(
+        validation.get("candidate_confidence_counts"),
+        validation.pointer("/uncertainty_summary/candidate_confidence_counts"),
+        "validation_evidence.candidate_confidence_counts",
+    )?;
+    if validation
+        .pointer("/uncertainty_summary/external_validation_required")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        return Err(
+            "validation_evidence.uncertainty_summary.external_validation_required must be true"
+                .to_string(),
+        );
+    }
+    validate_validation_readiness(validation)?;
+    Ok(())
+}
+
+fn validate_validation_readiness(validation: &Value) -> RunnerResult<()> {
+    let readiness = validation
+        .get("validation_readiness")
+        .ok_or_else(|| "validation_evidence.validation_readiness must be present".to_string())?;
+    assert_eq_str(
+        pointer_str(readiness, "/schema_version"),
+        "kyuubiki.material-validation-readiness/v1",
+        "validation_evidence.validation_readiness.schema_version",
+    )?;
+    if pointer_str(readiness, "/decision") != "screening_only" {
+        return Err(
+            "validation_evidence.validation_readiness.decision must be screening_only".into(),
+        );
+    }
+    let score = readiness
+        .get("score")
+        .and_then(Value::as_f64)
+        .ok_or_else(|| {
+            "validation_evidence.validation_readiness.score must be a number".to_string()
+        })?;
+    if !(0.0..=1.0).contains(&score) {
+        return Err(
+            "validation_evidence.validation_readiness.score must be between 0 and 1".into(),
+        );
+    }
+    let reasons = string_array(readiness.get("blocking_reasons"));
+    if !reasons
+        .iter()
+        .any(|reason| *reason == "external_validation_required")
+    {
+        return Err(
+            "validation_evidence.validation_readiness.blocking_reasons must include external_validation_required"
+                .into(),
+        );
+    }
+    non_empty_string_array(readiness, "next_validation_actions")?;
     Ok(())
 }
 
@@ -348,6 +470,15 @@ fn non_empty_string_array<'a>(value: &'a Value, key: &str) -> RunnerResult<Vec<&
     } else {
         Ok(strings)
     }
+}
+
+fn string_array(value: Option<&Value>) -> Vec<&str> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect()
 }
 
 fn assert_checksum(

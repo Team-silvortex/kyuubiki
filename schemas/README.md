@@ -51,7 +51,18 @@ README.
   state without losing artifact consistency. Its `research_evidence` block is a
   compact cross-check index for ranked candidates, optimization metrics,
   violated quality gates, focus candidates, plan step count, chain trace count,
-  and final chain winner.
+  and final chain winner. Its `validation_evidence` block records screening
+  baseline refs, confidence counts, sensitivity proxy metrics, acceptance
+  criteria, uncertainty limits, validation-readiness decision, blocking reasons,
+  and external validation requirements.
+- `material-research-bundle-index.schema.json` is for the lightweight retained
+  bundle index used by CI, release notes, and agents. It lists retained material
+  studies, decision counts, winner drift, compact metric/gate evidence, focus
+  candidates, chain trace counts, screening validation posture, baseline counts,
+  acceptance-criteria counts, candidate confidence counts, and validation
+  readiness summaries without embedding full solver payloads.
+- `examples.material-research-bundle-index.json` is the compact fixture used by
+  `make check-material-research-bundle-index-contract`.
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
   hints, package-fetch semantics, and SHA-256 integrity field shape. Digest

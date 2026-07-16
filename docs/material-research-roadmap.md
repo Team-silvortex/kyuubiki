@@ -43,7 +43,11 @@ next-round planning, rerun output, chained iterations, checksums, and
 reproduction commands in one screening-level artifact. Its `research_evidence`
 block now lifts ranked candidates, metric objectives, violated gates, focus
 candidates, plan counts, chain trace counts, and final winner into a compact
-machine-checkable review index.
+machine-checkable review index. Its `validation_evidence` block records the
+screening baseline, acceptance criteria, confidence distribution, sensitivity
+proxy, uncertainty limits, validation-readiness decision, blocking reasons, and
+external validation plan so the retained bundle does not overstate
+qualification readiness.
 
 ## Phase 1. Screening Studies Become Honest
 

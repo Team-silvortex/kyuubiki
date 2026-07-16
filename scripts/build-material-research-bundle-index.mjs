@@ -98,6 +98,19 @@ export function buildIndex(entries) {
       metric_objective_count: bundle.research_evidence?.metric_objective_count ?? null,
       violated_quality_gate_ids: bundle.research_evidence?.violated_quality_gate_ids ?? null,
       focus_candidate_ids: bundle.research_evidence?.focus_candidate_ids ?? null,
+      validation_posture: bundle.validation_evidence?.validation_posture ?? null,
+      external_validation_required:
+        bundle.validation_evidence?.uncertainty_summary?.external_validation_required ?? null,
+      baseline_ref_count: bundle.validation_evidence?.baseline_refs?.length ?? 0,
+      acceptance_criteria_count: bundle.validation_evidence?.acceptance_criteria?.length ?? 0,
+      candidate_confidence_counts: bundle.validation_evidence?.candidate_confidence_counts ?? null,
+      validation_readiness_decision:
+        bundle.validation_evidence?.validation_readiness?.decision ?? null,
+      validation_readiness_score: bundle.validation_evidence?.validation_readiness?.score ?? null,
+      validation_blocking_reasons:
+        bundle.validation_evidence?.validation_readiness?.blocking_reasons ?? null,
+      next_validation_action_count:
+        bundle.validation_evidence?.validation_readiness?.next_validation_actions?.length ?? 0,
       profile_study: profile.study,
     };
   });
@@ -131,11 +144,11 @@ function writeReadme(index, outputPath) {
     "",
     `Bundles: ${index.bundle_count}`,
     "",
-    "| Study | Winner | Final winner | Metrics | Gates | Next round | Chain |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Study | Winner | Final winner | Metrics | Gates | Validation | Next round | Chain |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ...index.bundles.map(
       (bundle) =>
-        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.final_winner_candidate_id}\` | \`${bundle.primary_metric_ids?.length ?? 0}\` | \`${bundle.violated_quality_gate_ids?.length ?? 0}\` | \`${bundle.next_round_decision}@${bundle.next_iteration}\` steps=\`${bundle.runnable_next_step_count}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` rounds=\`${bundle.chain_round_count}\` trace=\`${bundle.chain_trace_round_count}\` |`,
+        `| \`${bundle.study}\` | \`${bundle.winner_candidate_id}\` | \`${bundle.final_winner_candidate_id}\` | \`${bundle.primary_metric_ids?.length ?? 0}\` | \`${bundle.violated_quality_gate_ids?.length ?? 0}\` | \`${bundle.validation_readiness_decision}\` score=\`${bundle.validation_readiness_score}\` reasons=\`${bundle.validation_blocking_reasons?.length ?? 0}\` actions=\`${bundle.next_validation_action_count}\` | \`${bundle.next_round_decision}@${bundle.next_iteration}\` steps=\`${bundle.runnable_next_step_count}\` | \`${bundle.chain_stop_reason}/${bundle.chain_convergence_state}\` rounds=\`${bundle.chain_round_count}\` trace=\`${bundle.chain_trace_round_count}\` |`,
     ),
     "",
   ];
@@ -176,6 +189,19 @@ function runSelfTest() {
           chain_trace_round_count: 2,
           final_winner_candidate_id: "candidate-b",
         },
+        validation_evidence: {
+          validation_posture: "screening_validation",
+          baseline_refs: [{ baseline_id: "baseline-a" }],
+          candidate_confidence_counts: { low: 1, medium: 1, high: 0, unknown: 0 },
+          acceptance_criteria: [{ criterion_id: "gate.temperature" }],
+          uncertainty_summary: { external_validation_required: true },
+          validation_readiness: {
+            decision: "screening_only",
+            score: 0.4,
+            blocking_reasons: ["external_validation_required"],
+            next_validation_actions: ["run_external_solver_or_analytic_baseline"],
+          },
+        },
       },
     },
   ]);
@@ -191,6 +217,16 @@ function runSelfTest() {
     index.winner_changed_in_chain_count !== 1
   ) {
     fail("self-test did not retain compact research evidence");
+  }
+  if (
+    index.bundles[0].validation_posture !== "screening_validation" ||
+    index.bundles[0].external_validation_required !== true ||
+    index.bundles[0].baseline_ref_count !== 1 ||
+    index.bundles[0].acceptance_criteria_count !== 1 ||
+    index.bundles[0].validation_readiness_decision !== "screening_only" ||
+    index.bundles[0].next_validation_action_count !== 1
+  ) {
+    fail("self-test did not retain compact validation evidence");
   }
   console.log("material research bundle index self-test passed");
 }

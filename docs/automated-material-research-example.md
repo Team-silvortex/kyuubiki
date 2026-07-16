@@ -93,6 +93,10 @@ agent, CI lane, or human reviewer. It contains:
 - `research_evidence`, a compact machine-checkable index of ranked candidates,
   optimization metrics, violated quality gates, focus candidates, plan step
   count, chain round count, and final chain winner
+- `validation_evidence`, a screening-level validation envelope that records
+  retained baseline references, material-card confidence counts, sensitivity
+  proxy metrics, acceptance criteria, uncertainty limits, validation-readiness
+  decision, and the required external validation plan
 
 The retained bundle checker cross-validates that `summary.next_round_decision`,
 `summary.next_iteration`, `summary.runnable_next_step_count`, and
@@ -102,6 +106,18 @@ ranked candidate set, focus candidates, quality-gate decision, plan decision,
 step count, and chain trace count aligned with the retained artifacts. This
 keeps the single-file story honest when an agent or reviewer reads only the
 top-level summary first.
+
+The `validation_evidence` block is deliberately conservative. It does not claim
+experimental qualification. It records that the current retained loop is a
+screening validation artifact, points to the built-in deterministic baseline,
+mirrors the violated quality gates as acceptance criteria, and keeps the
+external validation plan visible next to the results. That gives agents a
+machine-readable reason to continue with sensitivity and calibration work before
+any qualification claim.
+Its `validation_readiness` sub-block is intentionally a scheduling signal, not a
+material score: it records `screening_only`, a bounded readiness score, blocking
+reasons such as external-validation and low-confidence material cards, and the
+next validation actions required before stronger claims.
 
 The initial winner and final chain winner are intentionally separate fields.
 For simple heat-spreader screening they may match; for broader coupled-material
@@ -125,13 +141,29 @@ To build both retained bundle profiles and a compact index for agents or CI:
 make material-research-bundle-index
 ```
 
+To validate an existing retained bundle index without rebuilding the bundles:
+
+```sh
+make check-material-research-bundle-index
+```
+
 The index is written under `tmp/material-research-bundles/index.json` with a
 matching `README.md` summary. Each index row also carries the next iteration and
 runnable next-step count so CI lanes or agents can choose cheap repair runs
 before expensive exploration. It now also lifts the compact research evidence:
 initial winner, final chain winner, metric count, violated-gate count, focus
-candidates, chain round count, and chain trace count. Agents can triage drift or
-blocked quality gates from the index before opening the full retained bundle.
+candidates, chain round count, and chain trace count. It also lifts compact
+validation evidence: screening posture, external-validation requirement,
+baseline count, acceptance-criteria count, candidate confidence counts,
+readiness decision, readiness score, blocking reasons, and next validation
+action count. Agents can triage drift, blocked quality gates, and validation
+maturity from the index before opening the full retained bundle.
+The index checker verifies those counts and evidence summaries before the file
+is used as a lightweight planning artifact.
+The index shape is pinned by
+[schemas/material-research-bundle-index.schema.json](../schemas/material-research-bundle-index.schema.json)
+and
+[schemas/examples.material-research-bundle-index.json](../schemas/examples.material-research-bundle-index.json).
 It is a local generated artifact and should stay out of Git unless a release
 explicitly promotes it.
 

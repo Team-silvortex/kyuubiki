@@ -241,10 +241,17 @@ This directory contains host-native operational entry points.
   composite thermo-electric panel retained profile.
   The bundle index builder writes a compact multi-study overview under
   `tmp/material-research-bundles/` for CI, agents, and release notes, including
-  next iteration, runnable next-step count, compact research evidence, and
-  initial-vs-final winner drift for scheduling. The lightweight contract check keeps
+  next iteration, runnable next-step count, compact research evidence, compact
+  validation evidence, validation readiness, and initial-vs-final winner drift
+  for scheduling. The native `check-material-research-bundle-index` gate
+  validates index counts, decision maps, research and validation evidence
+  summaries, readiness summaries, chain trace counts, and winner drift before an
+  agent treats the index as a lightweight planning
+  artifact. The lightweight contract check keeps
   `schemas/material-research-bundle.schema.json`,
-  `schemas/examples.material-research-bundle.json`, and documentation links in
+  `schemas/material-research-bundle-index.schema.json`,
+  `schemas/examples.material-research-bundle.json`,
+  `schemas/examples.material-research-bundle-index.json`, and documentation links in
   sync without running the solver. Make now uses the native runner for runtime
   and contract checks; retained `.mjs` checkers are only parity references.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
@@ -439,8 +446,20 @@ Useful checks:
   Build the retained heat-spreader and composite thermo-electric panel bundles,
   validate them, and write `tmp/material-research-bundles/index.json` plus a
   human-readable `README.md` summary with next iteration and runnable next-step
-  counts, metric/gate evidence, chain trace counts, and initial-vs-final winner
-  drift.
+  counts, metric/gate evidence, validation readiness, chain trace counts, and
+  initial-vs-final winner drift.
+- `make check-material-research-bundle-index`
+  Validate an existing retained bundle index. Override
+  `IN=tmp/material-research-bundles/index.json`; the check verifies bundle
+  count, study rows, decision-count maps, research evidence summaries,
+  validation maturity and readiness summaries, chain trace counts, focus
+  candidates, and winner drift.
+- `make check-material-research-bundle-index-contract`
+  Verify the retained bundle index schema, compact example, and documentation
+  links:
+  `schemas/material-research-bundle-index.schema.json`,
+  `schemas/examples.material-research-bundle-index.json`, and the material
+  research documentation.
 - `make build-operator-qualification-readiness`
   Write and validate a readiness report for the qualification roadmap. Override
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay
