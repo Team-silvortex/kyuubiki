@@ -4,6 +4,18 @@
   "executed": true,
   "profile_count": 1,
   "ok": true,
+  "promotion_summary": {
+    "candidate_id": "modal-frame-sanity",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/modal-frame-sanity-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.modal_frame_2d",
+      "solve.modal_frame_3d"
+    ]
+  },
   "profiles": [
     {
       "profile_id": "modal-frame-sanity",

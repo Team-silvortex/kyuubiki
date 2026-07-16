@@ -205,11 +205,15 @@ fn validate_approved_promotion_summary(
     if field(record, "review_status") != "approved" {
         return Ok(());
     }
-    assert_eq(
+    if !matches!(
         field(evidence, "schema_version"),
-        "kyuubiki.operator-qualification-release-evidence/v1",
-        "approved evidence schema_version",
-    )?;
+        "kyuubiki.operator-qualification-release-evidence/v1"
+            | "kyuubiki.operator-validation-report/v1"
+    ) {
+        return Err(format!(
+            "{candidate_id}: approved evidence schema_version must be a qualification release evidence or operator validation report"
+        ));
+    }
     let summary = evidence.get("promotion_summary").unwrap_or(&Value::Null);
     if !summary.is_object() {
         return Err(format!(

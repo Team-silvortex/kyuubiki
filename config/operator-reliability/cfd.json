@@ -6,12 +6,13 @@
       "operator_id": "solve.stokes_flow_quad_2d",
       "benchmark_template": "stokes-plane-quad",
       "domain": "cfd",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/stokes_flow_reliability.rs"
+          "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
         ],
         "reliability_suite": "stokes_flow_reliability",
         "review": {
@@ -49,6 +50,27 @@
             "docs/operator-reliability.md#cfd-stokes-divergence-tolerance",
             "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/screening-cfd-boundary-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+          ]
         }
       },
       "limits": [
@@ -64,12 +86,13 @@
       "operator_id": "solve.stokes_flow_triangle_2d",
       "benchmark_template": "stokes-plane-triangle",
       "domain": "cfd",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+          "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
+          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
         ],
         "reliability_suite": "stokes_flow_triangle_reliability",
         "review": {
@@ -105,6 +128,27 @@
           "tolerance_notes": [
             "docs/operator-reliability.md#cfd-stokes-divergence-tolerance",
             "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/screening-cfd-boundary-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
           ]
         }
       },

@@ -66,7 +66,7 @@
       "operator_id": "solve.heat_plane_triangle_2d",
       "benchmark_template": "heat-plane-triangle",
       "domain": "thermal",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -100,6 +100,27 @@
           "material_notes": [
             "docs/operator-reliability.md#thermal-plane-material-and-boundary-notes"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+            "evidence/operator-qualification/thermal-plane-material-provenance.json"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+            "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -112,7 +133,7 @@
       "operator_id": "solve.heat_plane_quad_2d",
       "benchmark_template": "heat-plane-quad",
       "domain": "thermal",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -145,6 +166,27 @@
           ],
           "material_notes": [
             "docs/operator-reliability.md#thermal-plane-material-and-boundary-notes"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+            "evidence/operator-qualification/thermal-plane-material-provenance.json"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/thermal-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+            "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs"
           ]
         }
       },

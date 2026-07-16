@@ -65,7 +65,7 @@
       "operator_id": "solve.torsion_1d",
       "benchmark_template": "torsion-shaft",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -92,6 +92,28 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/torsion_1d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/beam-frame-classic-reference-note.md",
+            "evidence/operator-qualification/beam-frame-force-sign-convention.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/beam-frame-classic-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "workers/rust/crates/solver/tests/torsion_1d_review.rs",
+            "workers/rust/crates/solver/tests/torsion_input_reliability.rs",
+            "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
           ]
         }
       },
@@ -307,7 +329,7 @@
       "operator_id": "solve.beam_1d",
       "benchmark_template": "beam-line",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -335,6 +357,27 @@
           "tests": [
             "workers/rust/crates/solver/tests/beam_1d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/beam-frame-classic-reference-note.md",
+            "evidence/operator-qualification/beam-frame-force-sign-convention.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/beam-frame-classic-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "workers/rust/crates/solver/tests/beam_1d_review.rs",
+            "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -347,7 +390,7 @@
       "operator_id": "solve.frame_2d",
       "benchmark_template": "frame-2d",
       "domain": "structural",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -374,6 +417,27 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/frame_2d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/beam-frame-classic-reference-note.md",
+            "evidence/operator-qualification/beam-frame-force-sign-convention.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/beam-frame-classic-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "workers/rust/crates/solver/tests/frame_2d_review.rs",
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
           ]
         }
       },

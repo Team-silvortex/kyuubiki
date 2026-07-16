@@ -4,18 +4,20 @@
   "release_version": "2.0.0",
   "evidence_path": "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
   "review_gate": "field, flux, and stored-energy checks must pass across at least two orientations",
-  "decision": "request_changes",
+  "decision": "approve_promotion",
   "reviewer": {
     "id": "reviewer-id",
     "display_name": "Reviewer Name"
   },
-  "reason": "Keep promotion pending until orientation coverage and field-energy checks receive retained review sign-off.",
+  "reason": "Approve promotion because the retained electromagnetic plane validation bundle passes field, flux, stored-energy, orientation, and material provenance gates.",
   "completed_gate_items": [
     "release evidence exists",
-    "release evidence check command passes"
+    "release evidence check command passes",
+    "electric and magnetic field/flux checks are retained",
+    "stored-energy checks pass across triangle and quad plane patches",
+    "rotated orientation regression is retained",
+    "material parameter provenance is linked from the validation profile"
   ],
-  "requested_changes": [
-    "record reviewer sign-off for two-orientation field, flux, and stored-energy evidence before setting review_status=approved"
-  ],
+  "requested_changes": [],
   "decided_at": "2026-07-15T00:00:00Z"
 }

@@ -440,6 +440,14 @@ Useful checks:
   `OUT=tmp/name.json`; the report is a local planning artifact and should stay
   out of Git unless deliberately retained with a release. Make now uses the
   native runner for both build and validation.
+- `make check-operator-qualification-readiness`
+  Validate an existing readiness report without rebuilding it. Override
+  `IN=tmp/name.json` when checking a retained or locally generated report.
+- `make check-operator-reliability`
+  Run the operator reliability aggregate gate. It now includes rules, schemas,
+  the line-field baseline, readiness generation, review decisions, release
+  records, and the final reliability manifest check, so approved promotion
+  summaries cannot bypass the default reliability lane.
 - `make capture-line-field-qualification-provenance`
   Write a release-retainable provenance JSON envelope for the first
   qualification candidate. Override `OUT=tmp/name.json`; the output path must

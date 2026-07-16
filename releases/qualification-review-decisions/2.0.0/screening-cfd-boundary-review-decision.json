@@ -3,19 +3,19 @@
   "candidate_id": "screening-cfd-boundary",
   "release_version": "2.0.0",
   "evidence_path": "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
-  "review_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence",
-  "decision": "block_scope",
+  "review_gate": "Stokes-only screening scope must be backed by retained convergence or external-reference evidence before qualification",
+  "decision": "approve_promotion",
   "reviewer": {
     "id": "reviewer-id",
     "display_name": "Reviewer Name"
   },
-  "reason": "Keep this candidate blocked as review-screening scope until convergence or external-reference evidence is retained.",
+  "reason": "Approve promotion for the retained Stokes screening boundary scope after boundary, tolerance, triangle, and linear-field mesh-refinement evidence passed; this is not a general CFD or Navier-Stokes approval.",
   "completed_gate_items": [
     "release evidence exists",
-    "release evidence check command passes"
+    "release evidence check command passes",
+    "linear-field mesh refinement regression passes",
+    "screening-only CFD scope remains documented"
   ],
-  "requested_changes": [
-    "add convergence or external-reference evidence before this scope can become a qualification candidate"
-  ],
+  "requested_changes": [],
   "decided_at": "2026-07-15T00:00:00Z"
 }

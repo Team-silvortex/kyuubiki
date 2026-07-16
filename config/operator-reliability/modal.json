@@ -6,7 +6,7 @@
       "operator_id": "solve.modal_frame_2d",
       "benchmark_template": "modal-frame-2d",
       "domain": "modal",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -34,6 +34,27 @@
           "tests": [
             "workers/rust/crates/solver/tests/modal_frame_2d_review.rs"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/modal-frame-frequency-convergence.md",
+            "evidence/operator-qualification/modal-frame-normalization-policy.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/modal-frame-sanity-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
+            "workers/rust/crates/solver/tests/modal_frame_2d_review.rs",
+            "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -46,7 +67,7 @@
       "operator_id": "solve.modal_frame_3d",
       "benchmark_template": "modal-frame-3d",
       "domain": "modal",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -74,6 +95,27 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/modal_frame_3d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/modal-frame-frequency-convergence.md",
+            "evidence/operator-qualification/modal-frame-normalization-policy.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/modal-frame-sanity-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
+            "workers/rust/crates/solver/tests/modal_frame_3d_review.rs",
+            "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs"
           ]
         }
       },

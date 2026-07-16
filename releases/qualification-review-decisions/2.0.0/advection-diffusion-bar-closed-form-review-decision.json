@@ -1,0 +1,21 @@
+{
+  "schema_version": "kyuubiki.operator-qualification-review-decision/v1",
+  "candidate_id": "advection-diffusion-bar-closed-form",
+  "release_version": "2.0.0",
+  "evidence_path": "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",
+  "review_gate": "closed-form flux, Peclet scaling, and zero-velocity limit evidence must be retained before qualification",
+  "decision": "approve_promotion",
+  "reviewer": {
+    "id": "reviewer-id",
+    "display_name": "Reviewer Name"
+  },
+  "reason": "Approve promotion for the retained 1D steady constant-coefficient transport scope after closed-form flux, Peclet, and zero-velocity evidence passed.",
+  "completed_gate_items": [
+    "release evidence exists",
+    "release evidence check command passes",
+    "closed-form flux regression passes",
+    "zero-velocity limit regression passes"
+  ],
+  "requested_changes": [],
+  "decided_at": "2026-07-15T00:00:00Z"
+}

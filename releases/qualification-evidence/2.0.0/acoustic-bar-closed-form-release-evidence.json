@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "promotion_summary": {
+    "candidate_id": "acoustic-bar-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/acoustic-bar-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.acoustic_bar_1d"
+    ]
+  },
+  "profiles": [
+    {
+      "profile_id": "acoustic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "acoustic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.acoustic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "frequency_scaling",
+        "damping_loss_invariant"
+      ],
+      "formal_invariants": [
+        "positive_angular_frequency",
+        "positive_speed_of_sound",
+        "wave_number_scales_with_frequency",
+        "particle_velocity_matches_pressure_gradient",
+        "undamped_case_has_zero_loss"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/acoustic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/acoustic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "acoustic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 2689,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "acoustic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1068,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "acoustic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 79,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

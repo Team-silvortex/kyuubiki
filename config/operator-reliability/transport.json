@@ -6,12 +6,13 @@
       "operator_id": "solve.advection_diffusion_bar_1d",
       "benchmark_template": "advection-diffusion-bar",
       "domain": "transport",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs"
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
         ],
         "reliability_suite": "advection_diffusion_bar_reliability",
         "review": {
@@ -33,6 +34,26 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "evidence/operator-qualification/advection-diffusion-bar-closed-form.md"
+          ],
+          "convergence_checks": [
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/advection-diffusion-bar-closed-form-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
           ]
         }
       },

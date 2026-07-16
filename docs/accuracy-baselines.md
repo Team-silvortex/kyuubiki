@@ -67,6 +67,48 @@ cross-checks the retained review decision, release record, and four promoted
 operator ids, so the four 1D closed-form line-field operators now carry
 `qualification` evidence only after the retained packet approves them.
 
+The second approved qualification packet is
+[beam-frame-classic-release-evidence.json](../releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json).
+It promotes `solve.beam_1d`, `solve.torsion_1d`, and `solve.frame_2d` after
+the retained validation report passes canonical beam, frame, torsion,
+sign-convention, and boundary-regression checks.
+
+The third approved qualification packet is
+[electromagnetic-plane-patch-release-evidence.json](../releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json).
+It promotes the electrostatic and magnetostatic triangle/quad plane operators
+after retained field, flux, stored-energy, orientation, and material-provenance
+checks pass.
+
+The fourth approved qualification packet is
+[thermal-plane-patch-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json).
+It promotes the heat and thermoelastic triangle/quad plane operators after
+retained mesh/refinement, boundary, thermoelastic stress, heat-flux, and
+material-provenance checks pass.
+
+The fifth approved qualification packet is
+[modal-frame-sanity-release-evidence.json](../releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json).
+It promotes `solve.modal_frame_2d` and `solve.modal_frame_3d` after retained
+frequency scaling, mode ordering, restrained DOF, and mode-shape normalization
+checks pass.
+
+The sixth approved qualification packet is
+[stokes-flow-screening-release-evidence.json](../releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json).
+It promotes the Stokes quad and triangle screening operators only for the
+retained screening-boundary scope, after boundary, divergence, heterogeneous
+material, and linear-field mesh-refinement checks pass.
+
+The seventh approved qualification packet is
+[acoustic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json).
+It promotes `solve.acoustic_bar_1d` for the retained 1D linear
+frequency-domain duct scope after closed-form pressure, wave-number,
+particle-velocity, and damping-loss checks pass.
+
+The eighth approved qualification packet is
+[advection-diffusion-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json).
+It promotes `solve.advection_diffusion_bar_1d` for the retained 1D steady
+constant-coefficient transport scope after closed-form flux, Peclet, and
+zero-velocity checks pass.
+
 ## Why these three first
 
 They are the best first return for `v1.x` accuracy work:

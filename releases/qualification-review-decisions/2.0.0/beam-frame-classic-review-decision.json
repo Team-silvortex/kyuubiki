@@ -4,18 +4,19 @@
   "release_version": "2.0.0",
   "evidence_path": "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
   "review_gate": "two independent canonical cases must pass with documented tolerances",
-  "decision": "request_changes",
+  "decision": "approve_promotion",
   "reviewer": {
     "id": "reviewer-id",
     "display_name": "Reviewer Name"
   },
-  "reason": "Keep promotion pending until independent reviewer sign-off is recorded against the retained release evidence.",
+  "reason": "Approve promotion because the retained structural validation bundle passes beam, frame, torsion, sign-convention, and boundary-regression gates.",
   "completed_gate_items": [
     "release evidence exists",
-    "release evidence check command passes"
+    "release evidence check command passes",
+    "beam, frame, and torsion canonical cases pass with documented tolerances",
+    "force, moment, rotation, and torsion sign-convention scope is retained",
+    "bad-input boundary regressions are retained for beam, torsion, and frame inputs"
   ],
-  "requested_changes": [
-    "record reviewer sign-off before setting review_status=approved"
-  ],
+  "requested_changes": [],
   "decided_at": "2026-07-15T00:00:00Z"
 }

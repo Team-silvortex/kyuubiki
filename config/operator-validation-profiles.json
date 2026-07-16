@@ -47,64 +47,7 @@
       "profile_id": "stokes-flow-screening",
       "profile_role": "component_profile",
       "qualification_candidate_id": "screening-cfd-boundary",
-      "trust_goal": "review_screening",
-      "operators": [
-        "solve.stokes_flow_quad_2d",
-        "solve.stokes_flow_triangle_2d"
-      ],
-      "validation_methods": [
-        "boundary_response_cross_check",
-        "local_diagnostic_invariant",
-        "screening_tolerance_policy_check"
-      ],
-      "formal_invariants": [
-        "finite_velocity_pressure_fields",
-        "non_negative_divergence_error",
-        "non_negative_reynolds_number",
-        "non_negative_viscous_dissipation",
-        "explicit_non_navier_stokes_scope"
-      ],
-      "evidence_paths": [
-        "config/operator-reliability/cfd.json",
-        "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
-        "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
-        "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
-        "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
-        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
-      ],
-      "commands": [
-        {
-          "id": "stokes-review-fixture",
-          "kind": "cross_check",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture"
-        },
-        {
-          "id": "stokes-quad-reliability-fixture",
-          "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_reliability -- --nocapture"
-        },
-        {
-          "id": "stokes-triangle-review-fixture",
-          "kind": "cross_check",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_2d_review -- --nocapture"
-        },
-        {
-          "id": "stokes-triangle-reliability-fixture",
-          "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture"
-        },
-        {
-          "id": "reliability-contract",
-          "kind": "contract",
-          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json"
-        }
-      ]
-    },
-    {
-      "profile_id": "screening-cfd-boundary",
-      "profile_role": "release_candidate",
-      "qualification_candidate_id": "screening-cfd-boundary",
-      "trust_goal": "review_screening_release_candidate",
+      "trust_goal": "qualification_screening_boundary",
       "operators": [
         "solve.stokes_flow_quad_2d",
         "solve.stokes_flow_triangle_2d"
@@ -113,20 +56,23 @@
         "boundary_response_cross_check",
         "local_diagnostic_invariant",
         "screening_tolerance_policy_check",
-        "release_candidate_scope_guard"
+        "mesh_refinement_invariance"
       ],
       "formal_invariants": [
         "finite_velocity_pressure_fields",
         "non_negative_divergence_error",
         "non_negative_reynolds_number",
         "non_negative_viscous_dissipation",
-        "explicit_non_navier_stokes_scope"
+        "explicit_non_navier_stokes_scope",
+        "linear_field_refinement_preserves_divergence",
+        "linear_field_refinement_preserves_shear"
       ],
       "evidence_paths": [
         "config/operator-reliability/cfd.json",
-        "docs/operator-reliability.md",
+        "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
         "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
         "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
         "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
@@ -153,9 +99,165 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture"
         },
         {
-          "id": "reliability-contract",
-          "kind": "contract",
-          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json"
+          "id": "stokes-mesh-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_mesh_convergence -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "acoustic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "acoustic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.acoustic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "frequency_scaling",
+        "damping_loss_invariant"
+      ],
+      "formal_invariants": [
+        "positive_angular_frequency",
+        "positive_speed_of_sound",
+        "wave_number_scales_with_frequency",
+        "particle_velocity_matches_pressure_gradient",
+        "undamped_case_has_zero_loss"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/acoustic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/acoustic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "acoustic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "acoustic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "acoustic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "advection-diffusion-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "advection-diffusion-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "peclet_regime_cross_check",
+        "zero_velocity_limit"
+      ],
+      "formal_invariants": [
+        "fixed_boundary_concentrations",
+        "diffusive_flux_matches_gradient",
+        "advective_flux_matches_average_concentration",
+        "total_flux_is_flux_sum",
+        "zero_velocity_has_zero_advective_flux"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/transport.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/advection-diffusion-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "advection-diffusion-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "screening-cfd-boundary",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "screening-cfd-boundary",
+      "trust_goal": "qualification_screening_boundary_release_candidate",
+      "operators": [
+        "solve.stokes_flow_quad_2d",
+        "solve.stokes_flow_triangle_2d"
+      ],
+      "validation_methods": [
+        "boundary_response_cross_check",
+        "local_diagnostic_invariant",
+        "screening_tolerance_policy_check",
+        "release_candidate_scope_guard",
+        "mesh_refinement_invariance"
+      ],
+      "formal_invariants": [
+        "finite_velocity_pressure_fields",
+        "non_negative_divergence_error",
+        "non_negative_reynolds_number",
+        "non_negative_viscous_dissipation",
+        "explicit_non_navier_stokes_scope",
+        "linear_field_refinement_preserves_divergence",
+        "linear_field_refinement_preserves_shear"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/cfd.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
+        "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+      ],
+      "commands": [
+        {
+          "id": "stokes-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "stokes-quad-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_reliability -- --nocapture"
+        },
+        {
+          "id": "stokes-triangle-review-fixture",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "stokes-triangle-reliability-fixture",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_triangle_reliability -- --nocapture"
+        },
+        {
+          "id": "stokes-mesh-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_mesh_convergence -- --nocapture"
         }
       ]
     },

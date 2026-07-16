@@ -44,7 +44,7 @@ It covers:
 - magnetostatics: 1D bar plus 2D triangle and quad plane fields
 - transport: 1D advection-diffusion scalar concentration flow
 - acoustics: 1D acoustic bar
-- simplified CFD: Stokes flow plane quad
+- simplified CFD: Stokes flow plane quad and triangle
 - modal dynamics: modal frame 2D and 3D
 - coupled thermo-structural fixtures: thermal truss, thermal plane, thermal
   beam, and thermal frame families
@@ -258,4 +258,4 @@ when:
 - material studies can point to the solver families they depend on
 - TaskIR and executable task design have examples from all major coverage
   classes, not only mechanical fixtures
-- `make check-operator-reliability` reports `38 operators, review=34, qualification=4`
+- `make check-operator-reliability` reports `38 operators, review=17, qualification=21`

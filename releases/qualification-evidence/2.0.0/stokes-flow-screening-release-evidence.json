@@ -4,12 +4,24 @@
   "executed": true,
   "profile_count": 1,
   "ok": true,
+  "promotion_summary": {
+    "candidate_id": "screening-cfd-boundary",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/screening-cfd-boundary-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.stokes_flow_quad_2d",
+      "solve.stokes_flow_triangle_2d"
+    ]
+  },
   "profiles": [
     {
       "profile_id": "screening-cfd-boundary",
       "profile_role": "release_candidate",
       "qualification_candidate_id": "screening-cfd-boundary",
-      "trust_goal": "review_screening_release_candidate",
+      "trust_goal": "qualification_screening_boundary_release_candidate",
       "operators": [
         "solve.stokes_flow_quad_2d",
         "solve.stokes_flow_triangle_2d"
@@ -18,20 +30,25 @@
         "boundary_response_cross_check",
         "local_diagnostic_invariant",
         "screening_tolerance_policy_check",
-        "release_candidate_scope_guard"
+        "release_candidate_scope_guard",
+        "mesh_refinement_invariance"
       ],
       "formal_invariants": [
         "finite_velocity_pressure_fields",
         "non_negative_divergence_error",
         "non_negative_reynolds_number",
         "non_negative_viscous_dissipation",
-        "explicit_non_navier_stokes_scope"
+        "explicit_non_navier_stokes_scope",
+        "linear_field_refinement_preserves_divergence",
+        "linear_field_refinement_preserves_shear"
       ],
       "evidence_paths": [
         "config/operator-reliability/cfd.json",
         "docs/operator-reliability.md",
+        "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
         "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
         "workers/rust/crates/solver/tests/stokes_flow_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
         "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
@@ -44,7 +61,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 184,
+            "duration_ms": 398,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -56,7 +73,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 55,
+            "duration_ms": 141,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -68,7 +85,7 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 89,
+            "duration_ms": 168,
             "stdout_tail": [],
             "stderr_tail": []
           }
@@ -80,19 +97,19 @@
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 58,
+            "duration_ms": 180,
             "stdout_tail": [],
             "stderr_tail": []
           }
         },
         {
-          "id": "reliability-contract",
-          "kind": "contract",
-          "command": "make check-operator-reliability OUT=tmp/operator-qualification-readiness.json",
+          "id": "stokes-mesh-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_mesh_convergence -- --nocapture",
           "result": {
             "ok": true,
             "status": 0,
-            "duration_ms": 214,
+            "duration_ms": 235,
             "stdout_tail": [],
             "stderr_tail": []
           }

@@ -4,6 +4,20 @@
   "executed": true,
   "profile_count": 1,
   "ok": true,
+  "promotion_summary": {
+    "candidate_id": "electromagnetic-plane-patch",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/electromagnetic-plane-patch-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.electrostatic_plane_triangle_2d",
+      "solve.electrostatic_plane_quad_2d",
+      "solve.magnetostatic_plane_triangle_2d",
+      "solve.magnetostatic_plane_quad_2d"
+    ]
+  },
   "profiles": [
     {
       "profile_id": "electromagnetic-plane-patch",

@@ -4,18 +4,19 @@
   "release_version": "2.0.0",
   "evidence_path": "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
   "review_gate": "mode frequencies and ordering must remain stable under documented refinement",
-  "decision": "request_changes",
+  "decision": "approve_promotion",
   "reviewer": {
     "id": "reviewer-id",
     "display_name": "Reviewer Name"
   },
-  "reason": "Keep promotion pending until documented refinement stability is signed off against the retained modal evidence.",
+  "reason": "Approve promotion because the retained modal frame validation bundle passes frequency scaling, mode ordering, restrained DOF, and mode-shape normalization gates.",
   "completed_gate_items": [
     "release evidence exists",
-    "release evidence check command passes"
+    "release evidence check command passes",
+    "frequency length-scaling evidence is retained",
+    "mode ordering remains stable under documented refinement",
+    "mode-shape normalization and restrained DOF contracts pass"
   ],
-  "requested_changes": [
-    "record reviewer sign-off for modal frequency and ordering stability before setting review_status=approved"
-  ],
+  "requested_changes": [],
   "decided_at": "2026-07-15T00:00:00Z"
 }

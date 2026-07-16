@@ -107,7 +107,7 @@
       "operator_id": "solve.electrostatic_plane_triangle_2d",
       "benchmark_template": "electrostatic-plane-triangle",
       "domain": "electromagnetic",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -141,6 +141,26 @@
           "material_notes": [
             "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope",
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+          ],
+          "convergence_checks": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/electromagnetic-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+          ]
         }
       },
       "limits": [
@@ -153,7 +173,7 @@
       "operator_id": "solve.electrostatic_plane_quad_2d",
       "benchmark_template": "electrostatic-plane-quad",
       "domain": "electromagnetic",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -187,6 +207,26 @@
           "material_notes": [
             "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope",
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+          ],
+          "convergence_checks": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/electromagnetic-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs"
+          ]
         }
       },
       "limits": [
@@ -199,7 +239,7 @@
       "operator_id": "solve.magnetostatic_plane_triangle_2d",
       "benchmark_template": "magnetostatic-plane-triangle",
       "domain": "electromagnetic",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -233,6 +273,26 @@
           "material_notes": [
             "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
           ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope",
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+          ],
+          "convergence_checks": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/electromagnetic-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
+            "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs"
+          ]
         }
       },
       "limits": [
@@ -246,7 +306,7 @@
       "operator_id": "solve.magnetostatic_plane_quad_2d",
       "benchmark_template": "magnetostatic-plane-quad",
       "domain": "electromagnetic",
-      "coverage_level": "review",
+      "coverage_level": "qualification",
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
@@ -279,6 +339,26 @@
           ],
           "material_notes": [
             "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+          ]
+        },
+        "qualification": {
+          "validation_sources": [
+            "docs/operator-reliability.md#electromagnetic-plane-review-scope",
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+          ],
+          "convergence_checks": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+          ],
+          "provenance": [
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "releases/qualification-review-decisions/2.0.0/electromagnetic-plane-patch-review-decision.json"
+          ],
+          "release_gates": [
+            "releases/qualification-records/1.20.0.json"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs"
           ]
         }
       },

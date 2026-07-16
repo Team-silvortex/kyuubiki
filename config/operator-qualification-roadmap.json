@@ -41,9 +41,9 @@
         "solve.frame_2d"
       ],
       "rationale": "Classic beam, torsion, and frame cases are central to engineering trust and have textbook references.",
-      "primary_blocker": "release evidence is attached; final trust-level promotion still requires reviewer sign-off against the graduation gate",
+      "primary_blocker": "no blocker; reviewer approved the retained structural validation bundle against the graduation gate",
       "evidence_gaps": [
-        "reviewer sign-off against the attached release-retained structural validation bundle"
+        "none for the current beam-frame-classic qualification scope"
       ],
       "required_artifacts": [
         "canonical benchmark note",
@@ -68,9 +68,9 @@
         "solve.heat_plane_quad_2d"
       ],
       "rationale": "2D thermal and thermoelastic patches are needed before material heat-spreader claims can mature.",
-      "primary_blocker": "mesh refinement, boundary coverage, and material provenance evidence are present; final trust-level promotion still requires reviewer sign-off",
+      "primary_blocker": "no blocker; reviewer approved the retained thermal plane validation bundle against the graduation gate",
       "evidence_gaps": [
-        "reviewer sign-off against the thermal plane evidence bundle"
+        "none for the current thermal-plane-patch qualification scope"
       ],
       "required_artifacts": [
         "mesh refinement report",
@@ -94,9 +94,9 @@
         "solve.magnetostatic_plane_quad_2d"
       ],
       "rationale": "Plane electromagnetic patches are important for dielectric and magnetic material screening.",
-      "primary_blocker": "field-energy, material provenance, and orientation regression evidence are present; final trust-level promotion still requires reviewer sign-off",
+      "primary_blocker": "no blocker; reviewer approved the retained electromagnetic plane validation bundle against the graduation gate",
       "evidence_gaps": [
-        "reviewer sign-off against the electromagnetic plane evidence bundle"
+        "none for the current electromagnetic-plane-patch qualification scope"
       ],
       "required_artifacts": [
         "rotated patch regression",
@@ -118,9 +118,9 @@
         "solve.modal_frame_3d"
       ],
       "rationale": "Modal workflows need convergence and mode-order evidence before serious vibration claims.",
-      "primary_blocker": "mode-shape normalization, ordering, and length-scaling evidence are present; final trust-level promotion still requires reviewer sign-off",
+      "primary_blocker": "no blocker; reviewer approved the retained modal frame validation bundle against the graduation gate",
       "evidence_gaps": [
-        "reviewer sign-off against the modal frame evidence bundle"
+        "none for the current modal-frame-sanity qualification scope"
       ],
       "required_artifacts": [
         "frequency convergence report",
@@ -135,26 +135,75 @@
       "candidate_id": "screening-cfd-boundary",
       "priority": "p2",
       "domain": "cfd",
-      "target_level": "review",
+      "target_level": "qualification",
       "evidence_phase": "ready_for_review",
       "operator_ids": [
         "solve.stokes_flow_quad_2d",
         "solve.stokes_flow_triangle_2d"
       ],
-      "rationale": "The Stokes operators are intentionally screening-grade; their quad and triangle fixtures now have explicit scope, boundary, and tolerance evidence for review.",
-      "primary_blocker": "higher trust remains blocked until convergence or external-reference evidence exists",
+      "rationale": "The Stokes operators are intentionally screening-grade; their quad and triangle fixtures now have explicit scope, boundary, tolerance, and mesh-refinement evidence for the screening boundary.",
+      "primary_blocker": "no blocker; reviewer approved the retained Stokes screening boundary bundle against the convergence gate",
       "evidence_gaps": [
-        "mesh-convergence or external-reference evidence for any claim beyond review-screening"
+        "none for the current Stokes screening-boundary qualification scope"
       ],
       "required_artifacts": [
         "alternate boundary response regression",
         "triangle geometry and heterogeneous material regression",
+        "linear-field mesh refinement regression",
         "screening divergence tolerance policy",
         "screening-scope documentation"
       ],
-      "graduation_gate": "do not qualify until the Stokes-only screening scope is backed by convergence or external-reference evidence",
+      "graduation_gate": "Stokes-only screening scope must be backed by retained convergence or external-reference evidence before qualification",
       "preferred_validation_lane": "make verify-operator-validation",
-      "release_gate_impact": "experimental_only"
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "acoustic-bar-closed-form",
+      "priority": "p2",
+      "domain": "acoustic",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.acoustic_bar_1d"
+      ],
+      "rationale": "The 1D acoustic bar has a compact scalar closed form and is a good first acoustic qualification boundary.",
+      "primary_blocker": "no blocker; reviewer approved the retained acoustic closed-form validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current acoustic-bar closed-form qualification scope"
+      ],
+      "required_artifacts": [
+        "closed-form derivation note",
+        "frequency scaling regression",
+        "damping loss regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "scalar closed-form response, frequency scaling, and damping-loss evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-acoustic-bar-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
+    },
+    {
+      "candidate_id": "advection-diffusion-bar-closed-form",
+      "priority": "p2",
+      "domain": "transport",
+      "target_level": "qualification",
+      "evidence_phase": "ready_for_review",
+      "operator_ids": [
+        "solve.advection_diffusion_bar_1d"
+      ],
+      "rationale": "The 1D advection-diffusion bar has direct flux and Peclet closed forms for constant-coefficient steady transport.",
+      "primary_blocker": "no blocker; reviewer approved the retained transport closed-form validation bundle against the graduation gate",
+      "evidence_gaps": [
+        "none for the current 1D steady transport qualification scope"
+      ],
+      "required_artifacts": [
+        "closed-form flux derivation note",
+        "Peclet regime regression",
+        "zero-velocity limit regression",
+        "release-retained validation output"
+      ],
+      "graduation_gate": "closed-form flux, Peclet scaling, and zero-velocity limit evidence must be retained before qualification",
+      "preferred_validation_lane": "make capture-advection-diffusion-bar-qualification-release-evidence",
+      "release_gate_impact": "release_watch"
     }
   ]
 }

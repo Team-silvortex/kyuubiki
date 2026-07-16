@@ -289,17 +289,125 @@
         {
           "artifact_id": "stokes-divergence-tolerance-policy",
           "kind": "tolerance_policy",
-          "gate": "pin the screening divergence tolerance scope and explicitly block Navier-Stokes or mesh-convergence claims",
+          "gate": "pin the screening divergence tolerance scope and explicitly block Navier-Stokes claims",
           "artifact_path": "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "stokes-mesh-convergence",
+          "kind": "convergence_regression",
+          "gate": "retain a linear-field mesh refinement regression before qualifying the Stokes screening boundary",
+          "artifact_path": "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "stokes-mesh-convergence-note",
+          "kind": "convergence_note",
+          "gate": "document the refinement-invariance scope and non-Navier-Stokes boundary",
+          "artifact_path": "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
           "artifact_id": "stokes-screening-release-evidence",
           "kind": "release_retained_regression_output",
-          "gate": "review the retained output from make capture-stokes-flow-screening-release-evidence before widening CFD screening claims",
+          "gate": "review the retained output from make capture-stokes-flow-screening-release-evidence before qualifying the Stokes screening boundary",
           "artifact_path": "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
           "artifact_command": "make capture-stokes-flow-screening-release-evidence",
           "artifact_check_command": "make check-stokes-flow-screening-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "acoustic-bar-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "scalar_closed_form",
+      "operator_ids": [
+        "solve.acoustic_bar_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the reduced scalar acoustic pressure response and diagnostic formulas",
+          "artifact_path": "evidence/operator-qualification/acoustic-bar-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain frequency scaling, particle velocity, wave number, and damping-loss checks",
+          "artifact_path": "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "acoustic-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for frequency response diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "acoustic-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for acoustic bar inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-acoustic-bar-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json",
+          "artifact_command": "make capture-acoustic-bar-qualification-release-evidence",
+          "artifact_check_command": "make check-acoustic-bar-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        }
+      ]
+    },
+    {
+      "candidate_id": "advection-diffusion-bar-closed-form",
+      "status": "ready_for_review",
+      "artifact_profile": "scalar_flux_closed_form",
+      "operator_ids": [
+        "solve.advection_diffusion_bar_1d"
+      ],
+      "artifact_requirements": [
+        {
+          "artifact_id": "closed-form-note",
+          "kind": "derivation_note",
+          "gate": "derive the compact transport flux and Peclet diagnostic formulas",
+          "artifact_path": "evidence/operator-qualification/advection-diffusion-bar-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "closed-form-regression",
+          "kind": "regression_test",
+          "gate": "retain diffusion-dominant, advection-dominant, and zero-velocity checks",
+          "artifact_path": "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "transport-review-fixture",
+          "kind": "boundary_regression",
+          "gate": "retain review fixture coverage for concentration and flux diagnostics",
+          "artifact_path": "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "transport-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for transport bar inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "release-validation-output",
+          "kind": "release_retained_regression_output",
+          "gate": "review the retained output from make capture-advection-diffusion-bar-qualification-release-evidence before promotion",
+          "artifact_path": "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",
+          "artifact_command": "make capture-advection-diffusion-bar-qualification-release-evidence",
+          "artifact_check_command": "make check-advection-diffusion-bar-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         }
       ]

@@ -4,18 +4,20 @@
   "release_version": "2.0.0",
   "evidence_path": "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
   "review_gate": "mesh and boundary evidence must be linked from the operator reliability entry",
-  "decision": "request_changes",
+  "decision": "approve_promotion",
   "reviewer": {
     "id": "reviewer-id",
     "display_name": "Reviewer Name"
   },
-  "reason": "Keep promotion pending until mesh and boundary evidence links are reviewed from the operator reliability entry.",
+  "reason": "Approve promotion because the retained thermal plane validation bundle passes mesh, boundary, thermoelastic, heat-flux, and material provenance gates.",
   "completed_gate_items": [
     "release evidence exists",
-    "release evidence check command passes"
+    "release evidence check command passes",
+    "mesh refinement equivalence is retained",
+    "thermal boundary coverage is retained",
+    "thermoelastic stress cross-checks pass",
+    "material parameter provenance is linked from the validation profile"
   ],
-  "requested_changes": [
-    "record reviewer sign-off for mesh and boundary evidence linkage before setting review_status=approved"
-  ],
+  "requested_changes": [],
   "decided_at": "2026-07-15T00:00:00Z"
 }

@@ -4,6 +4,19 @@
   "executed": true,
   "profile_count": 1,
   "ok": true,
+  "promotion_summary": {
+    "candidate_id": "beam-frame-classic",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/beam-frame-classic-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.beam_1d",
+      "solve.torsion_1d",
+      "solve.frame_2d"
+    ]
+  },
   "profiles": [
     {
       "profile_id": "beam-frame-classic",

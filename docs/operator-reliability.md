@@ -181,26 +181,30 @@ dissipation plumbing through the same headless workflow path as the other
 physics operators. It is not a general Navier-Stokes solver, turbulence model,
 compressible-flow solver, or industrial CFD validation claim.
 
-The current review evidence covers compact quad and triangle fixtures: the
-quad lane checks body-force and lid-driven shear responses, while the triangle
-lane checks geometry rejection and heterogeneous viscosity response. That is
-enough to catch shape, boundary, diagnostic, and non-finite input regressions
-for review-screening, but not enough to claim mesh-converged CFD accuracy.
+The current qualification evidence covers compact quad and triangle fixtures:
+the quad lane checks body-force and lid-driven shear responses, while the
+triangle lane checks geometry rejection and heterogeneous viscosity response.
+The retained mesh-refinement regression uses a linear Stokes field on coarse
+and refined quad/triangle meshes to verify stable area, divergence, shear,
+velocity, pressure-drop, and viscous-stress diagnostics. That is enough to
+qualify the Stokes screening boundary, but not enough to claim general CFD,
+Navier-Stokes, turbulence, compressible-flow, or industrial design accuracy.
 
 ## CFD Stokes Divergence Tolerance
 
 The screening divergence gate is `1e-10` for the current compact Stokes
 fixtures. This tolerance is a regression guard for the single-quad arithmetic
 path and boundary assembly, not a reusable engineering qualification tolerance.
-If the operator graduates beyond screening, the tolerance must be replaced or
-backed by retained convergence evidence, solver-version provenance, and a
-documented scope of validity.
+The current screening-boundary qualification is backed by retained convergence
+evidence, solver-version provenance, and a documented scope of validity. Any
+future claim beyond that Stokes-only screening boundary must replace or extend
+this tolerance policy.
 
 The machine-readable screening policy lives at
 `evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json`.
 That artifact pins the current regression scope and explicitly blocks using
 the same tolerance for Navier-Stokes, turbulence, compressible-flow, or
-mesh-convergence claims.
+mesh-convergence claims outside the retained linear-field fixture.
 
 The CFD quality transform also exposes review-facing explanation fields:
 `cfd_quality_dominant_term`, `cfd_quality_watch_count`, and
@@ -218,22 +222,23 @@ post-processing names such as `vx`/`vy`, `p`, `div_u`, `reynolds`, and
 
 ## Electromagnetic Plane Review Scope
 
-The 2D electrostatic and magnetostatic plane operators are review-grade
-single-patch field checks. They verify that triangle and quad elements can
-report gradients, field strength, flux density, and stored energy through the
-same headless workflow contract. They do not yet claim mesh convergence,
-rotated-patch orientation invariance, coupled high-frequency electromagnetics,
-or production qualification.
+The 2D electrostatic and magnetostatic plane operators are now qualification
+grade for the retained single-patch field-energy scope. They verify that
+triangle and quad elements can report gradients, field strength, flux density,
+stored energy, material-parameter scaling, and rotated orientation behavior
+through the same headless workflow contract. They still do not claim broad
+mesh convergence, coupled high-frequency electromagnetics, or production multiphysics
+qualification.
 
-The near-term qualification gate is review sign-off over the field-energy,
-material-provenance, and orientation evidence. The same field, flux, and
-stored-energy checks now run across two patch orientations. The
-`electromagnetic-plane-patch` evidence kit is now `ready_for_review`: it has a
-field-energy derivation note, a material-parameter provenance record, an
-orientation regression, and a validation profile that executes the
-electrostatic and magnetostatic triangle and quad review fixtures together.
-For the moxi 2.0.0 line, the retained validation report is attached at
+The `electromagnetic-plane-patch` qualification packet has reviewer sign-off
+over field-energy, material-provenance, and orientation evidence. Its retained
+validation report executes the electrostatic and magnetostatic triangle and
+quad review fixtures together and is attached at
 `releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json`.
+The matching review decision promotes `solve.electrostatic_plane_triangle_2d`,
+`solve.electrostatic_plane_quad_2d`,
+`solve.magnetostatic_plane_triangle_2d`, and
+`solve.magnetostatic_plane_quad_2d`.
 
 ## Electromagnetic Plane Material And Energy Notes
 
@@ -256,18 +261,20 @@ signed off.
 
 ## Thermal Plane Review Scope
 
-The 2D heat-plane and thermoelastic-plane operators are review-grade compact
-patch checks. Heat-plane fixtures exercise steady temperature gradients and
-heat-flux diagnostics. Thermoelastic-plane fixtures exercise restrained
-thermal strain, mechanical strain, stress, and von Mises diagnostics. They are
-not yet mesh convergence, mixed-boundary coverage, or qualification evidence.
+The 2D heat-plane and thermoelastic-plane operators are now qualification grade
+for the retained compact patch scope. Heat-plane fixtures exercise steady
+temperature gradients, heat-flux diagnostics, boundary coverage, and triangle
+versus quad patch equivalence. Thermoelastic-plane fixtures exercise restrained
+thermal strain, mechanical strain, stress, von Mises diagnostics, material
+parameter provenance, and the same mesh/refinement equivalence. They still do
+not claim arbitrary mixed-boundary heat-transfer coverage or production
+thermo-mechanical qualification outside the retained patch envelope.
 
-The `thermal-plane-patch` roadmap candidate is now `ready_for_review`:
-boundary coverage, material-parameter provenance, and a mesh/refinement
-equivalence regression are linked. Its validation profile executes the heat
-and thermoelastic triangle/quad review fixtures together, then checks that a
-two-triangle split matches the quad patch response for heat flow and restrained
-thermal stress.
+The `thermal-plane-patch` qualification packet has reviewer sign-off over
+boundary coverage, material-parameter provenance, and mesh/refinement
+equivalence. Its validation profile executes the heat and thermoelastic
+triangle/quad review fixtures together, then checks that a two-triangle split
+matches the quad patch response for heat flow and restrained thermal stress.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
 
@@ -279,9 +286,8 @@ linear plane stress plus positive elastic constants and thermal expansion
 coefficients. These material values are fixture parameters, not material-card
 provenance.
 
-Before qualification, the thermal plane group still needs reviewer sign-off
-against the current evidence bundle. The current boundary and material
-evidence lives at
+The thermal plane qualification scope is backed by retained boundary and
+material evidence at
 `evidence/operator-qualification/thermal-plane-boundary-coverage.md` and
 `evidence/operator-qualification/thermal-plane-material-provenance.json`; the
 mesh/refinement regression lives at
@@ -295,7 +301,7 @@ conversion, restrained DOF zeroing, and expanded mode-shape normalization. The
 current shape normalization contract uses a unit Euclidean participation norm
 on the expanded shape vector.
 
-The `modal-frame-sanity` roadmap candidate is now `ready_for_review`: it has a
+The `modal-frame-sanity` qualification packet is now approved: it has a
 normalization policy, a frequency-convergence note, and a regression that
 checks 2D and 3D cantilever mode ordering plus the expected frequency increase
 for shorter beams. Symmetric 3D bending modes may be near-degenerate, so the
@@ -303,8 +309,9 @@ for shorter beams. Symmetric 3D bending modes may be near-degenerate, so the
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json`.
 
-Before qualification, the modal frame group still needs reviewer sign-off
-against the current evidence bundle. The current modal evidence lives at
+The retained review decision promotes `solve.modal_frame_2d` and
+`solve.modal_frame_3d` for the current linear modal cantilever scope. The
+current modal evidence lives at
 `evidence/operator-qualification/modal-frame-normalization-policy.md`,
 `evidence/operator-qualification/modal-frame-frequency-convergence.md`, and
 `workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs`.
@@ -319,23 +326,40 @@ Current level distribution:
 
 - `baseline`: 0 operators
 - `smoke`: 0 operators
-- `review`: 34 operators
-- `qualification`: 4 operators
+- `review`: 17 operators
+- `qualification`: 21 operators
 
 This remains intentionally conservative. The platform has broad executable
-coverage, and only the 1D closed-form line-field subset has crossed into
-engineering-qualification evidence.
+coverage, and selected line-field, structural, thermal, electromagnetic,
+modal, acoustic, transport, and Stokes-screening subsets have crossed into
+scoped qualification evidence.
 
-The CFD-facing Stokes operators are still `screening_only`, but the
-`screening-cfd-boundary` evidence kit is now `ready_for_review`: the quad lane
-has body-force and lid-driven shear boundary fixtures, and the triangle lane
-adds geometry rejection plus heterogeneous viscosity response. The test suite
-encodes a screening divergence tolerance and the retained screening policy
-documents its current scope. The `screening-cfd-boundary` validation profile
-now acts as the release-candidate aggregation lane, while
-`stokes-flow-screening` remains the narrower component profile. The operators
-still need mesh-convergence or external-reference evidence before any stronger
-claim.
+The CFD-facing Stokes operators remain `screening_only` in scope, but the
+`screening-cfd-boundary` evidence kit is now qualified for that boundary: the
+quad lane has body-force and lid-driven shear boundary fixtures, the triangle
+lane adds geometry rejection plus heterogeneous viscosity response, and the
+mesh-refinement fixture verifies a linear Stokes field on coarse and refined
+quad/triangle meshes. The test suite encodes a screening divergence tolerance
+and the retained screening policy documents its current limits. The
+`screening-cfd-boundary` validation profile now acts as the release-candidate
+aggregation lane, while `stokes-flow-screening` remains the narrower component
+profile. Future Navier-Stokes or industrial CFD claims still need separate
+external-reference or benchmark evidence.
+
+The acoustic 1D bar is now qualified for the retained linear frequency-domain
+duct scope. Its closed-form evidence solves the reduced scalar pressure
+response at two frequencies, checks wave number and particle velocity against
+the analytic formulas, and verifies that an undamped fixture reports zero
+damping loss. This does not claim branched duct networks, nonlinear acoustics,
+transient propagation, or 3D acoustic cavities.
+
+The advection-diffusion 1D bar is now qualified for the retained steady
+constant-coefficient transport scope. Its closed-form evidence checks
+diffusive, advective, and total flux across diffusion-dominant and
+advection-dominant Peclet regimes, plus the zero-velocity limit where
+advective flux must vanish. This does not claim transient transport, nonlinear
+reaction, multidimensional flow, turbulent mixing, or arbitrary stabilization
+schemes.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
@@ -365,7 +389,7 @@ also reads approved evidence bundles and requires their `promotion_summary` to
 match the release record, review decision path, release version, and roadmap
 operator IDs before an approved record can remain valid. The readiness report
 summarizes that same gate as `summary.release_promotion_summaries`, currently
-showing the one approved promotion as retained, declared, matched, and not
+showing eight approved promotions as retained, declared, matched, and not
 missing.
 
 `solve.solid_tetra_3d` is now part of `physics-coverage` through a dedicated
@@ -373,8 +397,8 @@ solid-tetra benchmark template and a solver-level review fixture for a
 restrained single-tetra load path. It is still a screening fixture, not a
 mesh-convergence or qualification claim.
 
-The `beam-frame-classic` qualification candidate has also reached
-`ready_for_review`. Its reference note is
+The `beam-frame-classic` qualification candidate is now approved for
+qualification. Its reference note is
 `evidence/operator-qualification/beam-frame-classic-reference-note.md`, and its
 first multi-case regression is
 `workers/rust/crates/solver/tests/beam_frame_classic_regression.rs`. That test
@@ -389,9 +413,10 @@ retained output is attached at
 and referenced by `releases/qualification-records/1.20.0.json`. Use
 `make check-beam-frame-qualification-release-evidence` before relying on the
 file; it rejects non-executed reports, mixed-profile reports, missing evidence
-paths, and failed beam/frame/torsion commands. The remaining blocker is
-reviewer sign-off against the graduation gate before any manifest entry is
-promoted.
+paths, and failed beam/frame/torsion commands. Its retained review decision
+approves promotion against the graduation gate, so `solve.beam_1d`,
+`solve.torsion_1d`, and `solve.frame_2d` now carry `evidence.qualification`
+entries in the structural reliability shard.
 
 ## Smoke-Level Gaps
 
@@ -440,8 +465,8 @@ The most useful next upgrades are:
   next small, analytic qualification candidates
 - add mesh, boundary, and material-assumption evidence where review coverage is
   still based on compact screening fixtures
-- expand Stokes-flow screening evidence beyond the second boundary-response
-  fixture and screening tolerance policy into convergence or reference-tool
-  evidence
+- keep Stokes-flow qualification scoped to the retained screening-boundary
+  convergence fixture until a stronger CFD benchmark or reference-tool
+  comparison exists
 - keep future qualification promotions blocked until external, convergence,
   literature, or analytic evidence exists

@@ -1,0 +1,88 @@
+{
+  "schema_version": "kyuubiki.operator-validation-report/v1",
+  "source": "config/operator-validation-profiles.json",
+  "executed": true,
+  "profile_count": 1,
+  "ok": true,
+  "promotion_summary": {
+    "candidate_id": "advection-diffusion-bar-closed-form",
+    "release_version": "2.0.0",
+    "approved_coverage_level": "qualification",
+    "retained_evidence_path": "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",
+    "release_record_path": "releases/qualification-records/1.20.0.json",
+    "review_decision_path": "releases/qualification-review-decisions/2.0.0/advection-diffusion-bar-closed-form-review-decision.json",
+    "promoted_operator_ids": [
+      "solve.advection_diffusion_bar_1d"
+    ]
+  },
+  "profiles": [
+    {
+      "profile_id": "advection-diffusion-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "advection-diffusion-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "peclet_regime_cross_check",
+        "zero_velocity_limit"
+      ],
+      "formal_invariants": [
+        "fixed_boundary_concentrations",
+        "diffusive_flux_matches_gradient",
+        "advective_flux_matches_average_concentration",
+        "total_flux_is_flux_sum",
+        "zero_velocity_has_zero_advective_flux"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/transport.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/advection-diffusion-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+      ],
+      "commands": [
+        {
+          "id": "advection-diffusion-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_1d_review -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 7070,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "advection-diffusion-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_reliability -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 1569,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        },
+        {
+          "id": "advection-diffusion-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_closed_form -- --nocapture",
+          "result": {
+            "ok": true,
+            "status": 0,
+            "duration_ms": 195,
+            "stdout_tail": [],
+            "stderr_tail": []
+          }
+        }
+      ],
+      "ok": true
+    }
+  ]
+}

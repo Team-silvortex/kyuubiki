@@ -143,7 +143,10 @@ covered.
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
 their Node/Rust checkers are part of the validation tensor so a candidate
-cannot appear mature only because release evidence exists.
+cannot appear mature only because release evidence exists. The default
+`make check-operator-reliability` lane also depends on release-record checks,
+so approved promotion summaries are verified by the aggregate operator
+reliability gate instead of living only behind a specialist command.
 
 The generated tensor report also assigns a maturity label to every required
 covered coordinate:
