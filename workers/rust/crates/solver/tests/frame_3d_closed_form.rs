@@ -18,6 +18,8 @@ fn frame_3d_closed_form_matches_tip_loaded_cantilever() {
         section_modulus_z,
     ))
     .expect("3D frame closed-form cantilever should solve");
+    assert_frame_summary(&result);
+    assert_tip_work_energy(&result);
 
     let expected_uy = load_y * length.powi(3) / (3.0 * youngs_modulus * iz);
     let expected_rz = load_y * length.powi(2) / (2.0 * youngs_modulus * iz);
@@ -78,6 +80,8 @@ fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
         section_modulus_z,
     ))
     .expect("baseline 3D frame cantilever should solve");
+    assert_frame_summary(&baseline);
+    assert_tip_work_energy(&baseline);
 
     let load_scale = 1.45;
     let load_scaled = solve_frame_3d(&cantilever(
@@ -88,6 +92,8 @@ fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
         section_modulus_z,
     ))
     .expect("load-scaled 3D frame cantilever should solve");
+    assert_frame_summary(&load_scaled);
+    assert_tip_work_energy(&load_scaled);
     assert_close(load_scaled.nodes[1].uy / baseline.nodes[1].uy, load_scale);
     assert_close(load_scaled.nodes[1].rz / baseline.nodes[1].rz, load_scale);
     assert_close(
@@ -109,6 +115,8 @@ fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
         section_modulus_z,
     ))
     .expect("inertia-scaled 3D frame cantilever should solve");
+    assert_frame_summary(&inertia_scaled);
+    assert_tip_work_energy(&inertia_scaled);
     assert_close(
         inertia_scaled.nodes[1].uy / baseline.nodes[1].uy,
         1.0 / inertia_scale,
@@ -136,6 +144,8 @@ fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
         section_modulus_z,
     ))
     .expect("length-scaled 3D frame cantilever should solve");
+    assert_frame_summary(&longer);
+    assert_tip_work_energy(&longer);
     assert_close(
         longer.elements[0].length / baseline.elements[0].length,
         length_scale,
@@ -227,6 +237,91 @@ fn node(
         moment_y,
         moment_z,
     }
+}
+
+fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| {
+                assert_close(
+                    node.displacement_magnitude,
+                    (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
+                );
+                node.displacement_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_rotation,
+        result
+            .nodes
+            .iter()
+            .map(|node| {
+                assert_close(
+                    node.rotation_magnitude,
+                    (node.rx * node.rx + node.ry * node.ry + node.rz * node.rz).sqrt(),
+                );
+                node.rotation_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_moment,
+        result
+            .elements
+            .iter()
+            .flat_map(|element| {
+                [
+                    element.moment_y_i.abs(),
+                    element.moment_z_i.abs(),
+                    element.moment_y_j.abs(),
+                    element.moment_z_j.abs(),
+                ]
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_stress,
+        result
+            .elements
+            .iter()
+            .map(|element| element.max_combined_stress)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| {
+                assert_close(
+                    element.max_combined_stress,
+                    element.axial_stress + element.max_bending_stress,
+                );
+                element.strain_energy
+            })
+            .sum::<f64>(),
+    );
+}
+
+fn assert_tip_work_energy(result: &kyuubiki_protocol::SolveFrame3dResult) {
+    let external_work = result
+        .nodes
+        .iter()
+        .zip(result.input.nodes.iter())
+        .map(|(node, input)| {
+            input.load_x * node.ux
+                + input.load_y * node.uy
+                + input.load_z * node.uz
+                + input.moment_x * node.rx
+                + input.moment_y * node.ry
+                + input.moment_z * node.rz
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
 fn assert_close(actual: f64, expected: f64) {

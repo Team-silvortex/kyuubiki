@@ -207,6 +207,7 @@ fn assert_transient_response(
         final_step.strain_energy,
         0.5 * case.stiffness * expected.displacement.powi(2),
     );
+    assert_transient_summary(result);
 }
 
 fn assert_harmonic_response(
@@ -245,6 +246,202 @@ fn assert_harmonic_response(
         assert_close(element.extension_amplitude, expected.displacement_amplitude);
         assert_close(element.force_amplitude, expected.force_amplitude);
     }
+    assert_harmonic_summary(result);
+}
+
+fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientSpring1dResult) {
+    let final_step = result.history.last().expect("history includes final step");
+    assert_close(
+        result.final_time,
+        result.input.steps as f64 * result.input.time_step,
+    );
+    assert_close(
+        result.max_displacement,
+        result
+            .history
+            .iter()
+            .map(|step| step.max_displacement)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_velocity,
+        result
+            .history
+            .iter()
+            .map(|step| step.max_velocity)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_force,
+        result
+            .elements
+            .iter()
+            .map(|element| (element.spring_force + element.damping_force).abs())
+            .fold(0.0_f64, f64::max),
+    );
+
+    for (node, (&displacement, &velocity)) in result.nodes.iter().zip(
+        final_step
+            .displacements
+            .iter()
+            .zip(final_step.velocities.iter()),
+    ) {
+        assert_close(node.ux, displacement);
+        assert_close(node.vx, velocity);
+    }
+
+    for step in &result.history {
+        assert_eq!(step.displacements.len(), result.input.nodes.len());
+        assert_eq!(step.velocities.len(), result.input.nodes.len());
+        assert_close(step.time, step.step as f64 * result.input.time_step);
+        assert_close(
+            step.max_displacement,
+            step.displacements
+                .iter()
+                .map(|value| value.abs())
+                .fold(0.0_f64, f64::max),
+        );
+        assert_close(
+            step.max_velocity,
+            step.velocities
+                .iter()
+                .map(|value| value.abs())
+                .fold(0.0_f64, f64::max),
+        );
+        assert_close(
+            step.kinetic_energy,
+            kinetic_energy(&result.input, &step.velocities),
+        );
+        assert_close(
+            step.strain_energy,
+            strain_energy(&result.input, &step.displacements),
+        );
+    }
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let left = &result.nodes[element.node_i];
+        let right = &result.nodes[element.node_j];
+        assert_close(element.extension, right.ux - left.ux);
+        assert_close(element.relative_velocity, right.vx - left.vx);
+        assert_close(element.spring_force, input.stiffness * element.extension);
+        assert_close(
+            element.damping_force,
+            input.damping * element.relative_velocity,
+        );
+    }
+}
+
+fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResult) {
+    assert_close(
+        result.max_displacement,
+        result
+            .frequencies
+            .iter()
+            .map(|frequency| frequency.max_displacement)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_velocity,
+        result
+            .frequencies
+            .iter()
+            .map(|frequency| frequency.max_velocity)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_acceleration,
+        result
+            .frequencies
+            .iter()
+            .map(|frequency| frequency.max_acceleration)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_force,
+        result
+            .frequencies
+            .iter()
+            .map(|frequency| frequency.max_force)
+            .fold(0.0_f64, f64::max),
+    );
+
+    let peak = result
+        .frequencies
+        .iter()
+        .max_by(|left, right| left.max_displacement.total_cmp(&right.max_displacement))
+        .expect("frequency list should not be empty");
+    assert_close(result.peak_frequency_hz, peak.frequency_hz);
+
+    for frequency in &result.frequencies {
+        assert_close(
+            frequency.angular_frequency,
+            std::f64::consts::TAU * frequency.frequency_hz,
+        );
+        assert_close(
+            frequency.max_displacement,
+            frequency
+                .nodes
+                .iter()
+                .map(|node| node.displacement_amplitude)
+                .fold(0.0_f64, f64::max),
+        );
+        assert_close(
+            frequency.max_velocity,
+            frequency
+                .nodes
+                .iter()
+                .map(|node| node.velocity_amplitude)
+                .fold(0.0_f64, f64::max),
+        );
+        assert_close(
+            frequency.max_acceleration,
+            frequency
+                .nodes
+                .iter()
+                .map(|node| node.acceleration_amplitude)
+                .fold(0.0_f64, f64::max),
+        );
+        assert_close(
+            frequency.max_force,
+            frequency
+                .elements
+                .iter()
+                .map(|element| element.force_amplitude)
+                .fold(0.0_f64, f64::max),
+        );
+
+        for node in &frequency.nodes {
+            assert_close(
+                node.velocity_amplitude,
+                frequency.angular_frequency * node.displacement_amplitude,
+            );
+            assert_close(
+                node.acceleration_amplitude,
+                frequency.angular_frequency.powi(2) * node.displacement_amplitude,
+            );
+        }
+    }
+}
+
+fn kinetic_energy(request: &SolveTransientSpring1dRequest, velocities: &[f64]) -> f64 {
+    0.5 * request
+        .nodes
+        .iter()
+        .zip(velocities.iter())
+        .map(|(node, velocity)| node.mass * velocity * velocity)
+        .sum::<f64>()
+}
+
+fn strain_energy(request: &SolveTransientSpring1dRequest, displacements: &[f64]) -> f64 {
+    request
+        .elements
+        .iter()
+        .map(|element| {
+            let extension = displacements[element.node_j] - displacements[element.node_i];
+            0.5 * element.stiffness * extension * extension
+        })
+        .sum::<f64>()
 }
 
 fn newmark_single_step(case: TransientCase) -> NewmarkExpected {

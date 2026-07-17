@@ -1,8 +1,9 @@
 use kyuubiki_protocol::{
     HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
-    ThermalPlaneTriangleElementInput,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
+    SolveHeatPlaneTriangle2dResult, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalPlaneTriangle2dResult, ThermalPlaneNodeInput,
+    ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
 };
 use kyuubiki_solver::{
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_thermal_plane_quad_2d,
@@ -34,6 +35,8 @@ fn heat_plane_triangle_refinement_matches_quad_patch_temperatures_and_heat_flow(
         triangle.total_abs_heat_flow_rate,
         quad.total_abs_heat_flow_rate,
     );
+    assert_heat_triangle_summary(&triangle);
+    assert_heat_quad_summary(&quad);
 }
 
 #[test]
@@ -90,6 +93,10 @@ fn heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scale
         thick.total_abs_heat_flow_rate / diagonal_b.total_abs_heat_flow_rate,
         1.8,
     );
+    assert_heat_triangle_summary(&diagonal_a);
+    assert_heat_triangle_summary(&diagonal_b);
+    assert_heat_triangle_summary(&perturbed);
+    assert_heat_triangle_summary(&thick);
 }
 
 #[test]
@@ -112,6 +119,7 @@ fn heat_plane_quad_manufactured_linear_field_is_refinement_invariant() {
             assert_close(element.heat_flux_x, 0.0);
             assert_close(element.heat_flux_y, 3600.0);
         }
+        assert_heat_quad_summary(&result);
     }
 }
 
@@ -135,6 +143,7 @@ fn heat_plane_triangle_manufactured_linear_field_is_refinement_invariant() {
             assert_close(element.heat_flux_x, 0.0);
             assert_close(element.heat_flux_y, 3600.0);
         }
+        assert_heat_triangle_summary(&result);
     }
 }
 
@@ -189,6 +198,162 @@ fn thermal_plane_triangle_refinement_matches_quad_patch_stress_and_energy() {
         thick.total_strain_energy / triangle.total_strain_energy,
         1.6,
     );
+    assert_thermal_triangle_summary(&triangle);
+    assert_thermal_quad_summary(&quad);
+    assert_thermal_triangle_summary(&hotter);
+    assert_thermal_triangle_summary(&thick);
+}
+
+fn assert_heat_triangle_summary(result: &SolveHeatPlaneTriangle2dResult) {
+    let mut max_heat_flux = 0.0_f64;
+    let mut total_abs_heat_flow_rate = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature = (result.nodes[element.node_i].temperature
+            + result.nodes[element.node_j].temperature
+            + result.nodes[element.node_k].temperature)
+            / 3.0;
+        assert_close(element.average_temperature, average_temperature);
+        assert_close(
+            element.heat_flux_x,
+            -input.conductivity * element.temperature_gradient_x,
+        );
+        assert_close(
+            element.heat_flux_y,
+            -input.conductivity * element.temperature_gradient_y,
+        );
+        assert_close(
+            element.heat_flux_magnitude,
+            magnitude(element.heat_flux_x, element.heat_flux_y),
+        );
+        assert_close(
+            element.heat_flow_rate,
+            element.heat_flux_magnitude * element.area * input.thickness,
+        );
+        max_heat_flux = max_heat_flux.max(element.heat_flux_magnitude);
+        total_abs_heat_flow_rate += element.heat_flow_rate.abs();
+    }
+
+    assert_close(result.max_temperature, max_heat_temperature(result));
+    assert_close(result.max_heat_flux, max_heat_flux);
+    assert_close(result.total_abs_heat_flow_rate, total_abs_heat_flow_rate);
+}
+
+fn assert_heat_quad_summary(result: &SolveHeatPlaneQuad2dResult) {
+    let mut max_heat_flux = 0.0_f64;
+    let mut total_abs_heat_flow_rate = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature = (result.nodes[element.node_i].temperature
+            + result.nodes[element.node_j].temperature
+            + result.nodes[element.node_k].temperature
+            + result.nodes[element.node_l].temperature)
+            / 4.0;
+        assert_close(element.average_temperature, average_temperature);
+        assert_close(
+            element.heat_flux_x,
+            -input.conductivity * element.temperature_gradient_x,
+        );
+        assert_close(
+            element.heat_flux_y,
+            -input.conductivity * element.temperature_gradient_y,
+        );
+        assert_close(
+            element.heat_flux_magnitude,
+            magnitude(element.heat_flux_x, element.heat_flux_y),
+        );
+        assert_close(
+            element.heat_flow_rate,
+            element.heat_flux_magnitude * element.area * input.thickness,
+        );
+        max_heat_flux = max_heat_flux.max(element.heat_flux_magnitude);
+        total_abs_heat_flow_rate += element.heat_flow_rate.abs();
+    }
+
+    assert_close(result.max_temperature, max_heat_temperature(result));
+    assert_close(result.max_heat_flux, max_heat_flux);
+    assert_close(result.total_abs_heat_flow_rate, total_abs_heat_flow_rate);
+}
+
+fn assert_thermal_triangle_summary(result: &SolveThermalPlaneTriangle2dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
+            + result.nodes[element.node_j].temperature_delta
+            + result.nodes[element.node_k].temperature_delta)
+            / 3.0;
+        assert_close(element.average_temperature_delta, average_temperature_delta);
+        assert_close(
+            element.thermal_strain,
+            input.thermal_expansion * average_temperature_delta,
+        );
+        assert_close(
+            element.von_mises,
+            von_mises(element.stress_x, element.stress_y, element.tau_xy),
+        );
+        assert_close(
+            element.max_in_plane_shear,
+            in_plane_shear(element.stress_x, element.stress_y, element.tau_xy),
+        );
+        max_stress = max_stress.max(element.von_mises);
+        max_energy_density = max_energy_density.max(element.strain_energy_density);
+        total_strain_energy += element.strain_energy_density * element.area * input.thickness;
+    }
+
+    assert_close(result.max_displacement, max_thermal_displacement(result));
+    assert_close(
+        result.max_temperature_delta,
+        max_thermal_temperature(result),
+    );
+    assert_close(result.max_stress, max_stress);
+    assert_close(result.max_strain_energy_density, max_energy_density);
+    assert_close(result.total_strain_energy, total_strain_energy);
+}
+
+fn assert_thermal_quad_summary(result: &SolveThermalPlaneQuad2dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
+            + result.nodes[element.node_j].temperature_delta
+            + result.nodes[element.node_k].temperature_delta
+            + result.nodes[element.node_l].temperature_delta)
+            / 4.0;
+        assert_close(element.average_temperature_delta, average_temperature_delta);
+        assert_close(
+            element.thermal_strain,
+            input.thermal_expansion * average_temperature_delta,
+        );
+        assert_close(
+            element.von_mises,
+            von_mises(element.stress_x, element.stress_y, element.tau_xy),
+        );
+        assert_close(
+            element.max_in_plane_shear,
+            in_plane_shear(element.stress_x, element.stress_y, element.tau_xy),
+        );
+        max_stress = max_stress.max(element.von_mises);
+        max_energy_density = max_energy_density.max(element.strain_energy_density);
+        total_strain_energy += element.strain_energy_density * element.area * input.thickness;
+    }
+
+    assert_close(result.max_displacement, max_thermal_displacement(result));
+    assert_close(
+        result.max_temperature_delta,
+        max_thermal_temperature(result),
+    );
+    assert_close(result.max_stress, max_stress);
+    assert_close(result.max_strain_energy_density, max_energy_density);
+    assert_close(result.total_strain_energy, total_strain_energy);
 }
 
 fn heat_triangle_patch() -> SolveHeatPlaneTriangle2dRequest {
@@ -450,4 +615,90 @@ fn assert_close(actual: f64, expected: f64) {
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
     );
+}
+
+fn max_heat_temperature(result: &impl HeatPlaneSummary) -> f64 {
+    result
+        .node_temperatures()
+        .into_iter()
+        .map(f64::abs)
+        .fold(0.0_f64, f64::max)
+}
+
+fn max_thermal_displacement(result: &impl ThermalPlaneSummary) -> f64 {
+    result
+        .node_displacements()
+        .into_iter()
+        .map(|(ux, uy)| magnitude(ux, uy))
+        .fold(0.0_f64, f64::max)
+}
+
+fn max_thermal_temperature(result: &impl ThermalPlaneSummary) -> f64 {
+    result
+        .node_temperature_deltas()
+        .into_iter()
+        .map(f64::abs)
+        .fold(0.0_f64, f64::max)
+}
+
+trait HeatPlaneSummary {
+    fn node_temperatures(&self) -> Vec<f64>;
+}
+
+impl HeatPlaneSummary for SolveHeatPlaneTriangle2dResult {
+    fn node_temperatures(&self) -> Vec<f64> {
+        self.nodes.iter().map(|node| node.temperature).collect()
+    }
+}
+
+impl HeatPlaneSummary for SolveHeatPlaneQuad2dResult {
+    fn node_temperatures(&self) -> Vec<f64> {
+        self.nodes.iter().map(|node| node.temperature).collect()
+    }
+}
+
+trait ThermalPlaneSummary {
+    fn node_displacements(&self) -> Vec<(f64, f64)>;
+    fn node_temperature_deltas(&self) -> Vec<f64>;
+}
+
+impl ThermalPlaneSummary for SolveThermalPlaneTriangle2dResult {
+    fn node_displacements(&self) -> Vec<(f64, f64)> {
+        self.nodes.iter().map(|node| (node.ux, node.uy)).collect()
+    }
+
+    fn node_temperature_deltas(&self) -> Vec<f64> {
+        self.nodes
+            .iter()
+            .map(|node| node.temperature_delta)
+            .collect()
+    }
+}
+
+impl ThermalPlaneSummary for SolveThermalPlaneQuad2dResult {
+    fn node_displacements(&self) -> Vec<(f64, f64)> {
+        self.nodes.iter().map(|node| (node.ux, node.uy)).collect()
+    }
+
+    fn node_temperature_deltas(&self) -> Vec<f64> {
+        self.nodes
+            .iter()
+            .map(|node| node.temperature_delta)
+            .collect()
+    }
+}
+
+fn von_mises(stress_x: f64, stress_y: f64, tau_xy: f64) -> f64 {
+    (stress_x * stress_x - stress_x * stress_y + stress_y * stress_y + 3.0 * tau_xy * tau_xy)
+        .max(0.0)
+        .sqrt()
+}
+
+fn in_plane_shear(stress_x: f64, stress_y: f64, tau_xy: f64) -> f64 {
+    let half_delta = 0.5 * (stress_x - stress_y);
+    (half_delta * half_delta + tau_xy * tau_xy).sqrt()
+}
+
+fn magnitude(x: f64, y: f64) -> f64 {
+    (x * x + y * y).sqrt()
 }

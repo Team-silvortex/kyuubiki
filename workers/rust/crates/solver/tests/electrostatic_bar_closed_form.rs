@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
     ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticBar1dResult,
 };
 use kyuubiki_solver::solve_electrostatic_bar_1d;
 
@@ -186,7 +187,7 @@ fn node(
 }
 
 fn assert_response(
-    result: &kyuubiki_protocol::SolveElectrostaticBar1dResult,
+    result: &SolveElectrostaticBar1dResult,
     expected: ExpectedElectrostaticResponse,
 ) {
     assert_eq!(result.nodes.len(), 2);
@@ -200,6 +201,7 @@ fn assert_response(
         expected.electric_flux_density.abs(),
     );
     assert_close(result.total_stored_energy, expected.stored_energy);
+    assert_field_balance(result);
     assert_close(
         result.total_stored_energy,
         0.5 * result.nodes[1].potential * result.input.nodes[1].charge_density,
@@ -218,6 +220,62 @@ fn assert_response(
         expected.electric_flux_density,
     );
     assert_close(result.elements[0].stored_energy, expected.stored_energy);
+}
+
+fn assert_field_balance(result: &SolveElectrostaticBar1dResult) {
+    let max_potential = result
+        .nodes
+        .iter()
+        .map(|node| node.potential.abs())
+        .fold(0.0_f64, f64::max);
+    let max_electric_field = result
+        .elements
+        .iter()
+        .map(|element| element.electric_field.abs())
+        .fold(0.0_f64, f64::max);
+    let max_flux_density = result
+        .elements
+        .iter()
+        .map(|element| element.electric_flux_density.abs())
+        .fold(0.0_f64, f64::max);
+    let total_stored_energy = result
+        .elements
+        .iter()
+        .map(|element| element.stored_energy)
+        .sum::<f64>();
+    assert_close(result.max_potential, max_potential);
+    assert_close(result.max_electric_field, max_electric_field);
+    assert_close(result.max_flux_density, max_flux_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let expected_length = (node_j.x - node_i.x).abs();
+        let expected_average_potential = 0.5 * (node_i.potential + node_j.potential);
+        let expected_gradient = (node_j.potential - node_i.potential) / expected_length;
+        let expected_stored_energy = 0.5
+            * input.permittivity
+            * element.electric_field
+            * element.electric_field
+            * input.area
+            * element.length;
+        assert_close(element.length, expected_length);
+        assert_close(element.average_potential, expected_average_potential);
+        assert_close(element.potential_gradient, expected_gradient);
+        assert_close(element.electric_field, -element.potential_gradient);
+        assert_close(
+            element.electric_flux_density,
+            input.permittivity * element.electric_field,
+        );
+        assert_close(element.stored_energy, expected_stored_energy);
+        let nodal_charge = node_i.charge_density + node_j.charge_density;
+        assert_close(
+            element.electric_flux_density * input.area + nodal_charge,
+            0.0,
+        );
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

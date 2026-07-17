@@ -163,6 +163,7 @@ fn assert_response(
     assert_close(result.max_temperature, case.final_temperature().abs());
     assert_close(result.total_thermal_energy, case.final_energy());
     assert_close(result.max_heat_flux, case.final_heat_flux().abs());
+    assert_transient_summary(result);
     assert_close(
         result.elements[0].temperature_gradient,
         case.final_gradient(),
@@ -179,6 +180,104 @@ fn assert_response(
         assert_close(step.max_temperature, expected_temperature.abs());
         assert_close(step.total_thermal_energy, expected_energy);
     }
+}
+
+fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dResult) {
+    let capacities = lumped_capacities(&result.input);
+    let final_temperatures = result
+        .nodes
+        .iter()
+        .map(|node| node.temperature)
+        .collect::<Vec<_>>();
+    assert_close(
+        result.final_time,
+        result.input.steps as f64 * result.input.time_step,
+    );
+    assert_close(
+        result.max_temperature,
+        final_temperatures
+            .iter()
+            .map(|value| value.abs())
+            .fold(0.0, f64::max),
+    );
+    assert_close(
+        result.total_thermal_energy,
+        thermal_energy(&final_temperatures, &capacities),
+    );
+    assert_close(
+        result.max_heat_flux,
+        result
+            .elements
+            .iter()
+            .map(|element| element.heat_flux.abs())
+            .fold(0.0, f64::max),
+    );
+
+    let final_step = result.history.last().expect("history includes final step");
+    assert_eq!(final_step.step, result.input.steps);
+    assert_close(final_step.time, result.final_time);
+    for (node, temperature) in result
+        .nodes
+        .iter()
+        .zip(final_step.nodal_temperatures.iter())
+    {
+        assert_close(node.temperature, *temperature);
+    }
+    assert_close(final_step.max_temperature, result.max_temperature);
+    assert_close(final_step.total_thermal_energy, result.total_thermal_energy);
+
+    for step in &result.history {
+        assert_eq!(step.nodal_temperatures.len(), result.nodes.len());
+        assert_close(step.time, step.step as f64 * result.input.time_step);
+        assert_close(
+            step.max_temperature,
+            step.nodal_temperatures
+                .iter()
+                .map(|value| value.abs())
+                .fold(0.0, f64::max),
+        );
+        assert_close(
+            step.total_thermal_energy,
+            thermal_energy(&step.nodal_temperatures, &capacities),
+        );
+    }
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let left = &result.nodes[element.node_i];
+        let right = &result.nodes[element.node_j];
+        assert_close(
+            element.average_temperature,
+            0.5 * (left.temperature + right.temperature),
+        );
+        assert_close(
+            element.temperature_gradient,
+            (right.temperature - left.temperature) / element.length,
+        );
+        assert_close(
+            element.heat_flux,
+            -input.conductivity * element.temperature_gradient,
+        );
+    }
+}
+
+fn lumped_capacities(request: &SolveTransientHeatBar1dRequest) -> Vec<f64> {
+    let mut capacities = vec![0.0; request.nodes.len()];
+    for element in &request.elements {
+        let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+        let heat_capacity = element.density * element.specific_heat * element.area * length;
+        capacities[element.node_i] += 0.5 * heat_capacity;
+        capacities[element.node_j] += 0.5 * heat_capacity;
+    }
+    capacities
+}
+
+fn thermal_energy(temperatures: &[f64], capacities: &[f64]) -> f64 {
+    temperatures
+        .iter()
+        .zip(capacities.iter())
+        .map(|(temperature, capacity)| temperature * capacity)
+        .sum()
 }
 
 fn node(

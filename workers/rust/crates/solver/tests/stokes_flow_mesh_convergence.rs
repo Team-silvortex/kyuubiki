@@ -16,6 +16,7 @@ fn stokes_flow_quad_2d_preserves_linear_screening_field_under_refinement() {
         let result = solve_stokes_flow_plane_quad_2d(&quad_mesh(subdivisions))
             .expect("refined quad Stokes refinement fixture should solve");
 
+        assert_quad_summary(&result);
         assert_eq!(result.elements.len(), subdivisions * subdivisions);
         assert_close(
             result.elements.iter().map(|element| element.area).sum(),
@@ -45,6 +46,7 @@ fn stokes_flow_triangle_2d_preserves_linear_screening_field_under_refinement() {
         let result = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(subdivisions))
             .expect("refined triangle Stokes refinement fixture should solve");
 
+        assert_triangle_summary(&result);
         assert_eq!(result.elements.len(), subdivisions * subdivisions * 2);
         assert_close(
             result.elements.iter().map(|element| element.area).sum(),
@@ -72,6 +74,9 @@ fn stokes_flow_linear_field_scales_viscosity_and_density_diagnostics() {
         .expect("viscosity-perturbed Stokes fixture should solve");
     let dense = solve_stokes_flow_plane_quad_2d(&quad_mesh_with_material(1, 2.0, 1.25, 1.0))
         .expect("density-perturbed Stokes fixture should solve");
+    assert_quad_summary(&baseline);
+    assert_quad_summary(&viscous);
+    assert_quad_summary(&dense);
 
     assert_close(viscous.max_velocity, baseline.max_velocity);
     assert_close(viscous.max_shear_rate, baseline.max_shear_rate);
@@ -103,6 +108,7 @@ fn stokes_flow_linear_field_scales_viscosity_and_density_diagnostics() {
     let larger =
         solve_stokes_flow_plane_quad_2d(&quad_mesh_scaled(1, 2.0, 1.0, 1.0, geometry_scale))
             .expect("geometry-scaled Stokes quad fixture should solve");
+    assert_quad_summary(&larger);
     assert_close(larger.max_velocity, baseline.max_velocity);
     assert_close(
         larger.max_shear_rate / baseline.max_shear_rate,
@@ -135,6 +141,10 @@ fn stokes_flow_triangle_linear_field_scales_material_diagnostics() {
             .expect("density-perturbed triangle Stokes fixture should solve");
     let thick = solve_stokes_flow_plane_triangle_2d(&triangle_mesh_with_material(1, 2.0, 1.0, 1.5))
         .expect("thickness-perturbed triangle Stokes fixture should solve");
+    assert_triangle_summary(&baseline);
+    assert_triangle_summary(&viscous);
+    assert_triangle_summary(&dense);
+    assert_triangle_summary(&thick);
 
     assert_close(viscous.max_velocity, baseline.max_velocity);
     assert_close(viscous.max_shear_rate, baseline.max_shear_rate);
@@ -182,6 +192,7 @@ fn stokes_flow_triangle_linear_field_scales_material_diagnostics() {
         geometry_scale,
     ))
     .expect("geometry-scaled triangle Stokes fixture should solve");
+    assert_triangle_summary(&larger);
     assert_close(larger.max_velocity, baseline.max_velocity);
     assert_close(
         larger.max_shear_rate / baseline.max_shear_rate,
@@ -382,6 +393,198 @@ fn total_triangle_dissipation(
         .iter()
         .map(|element| element.viscous_dissipation)
         .sum()
+}
+
+fn assert_quad_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dResult) {
+    assert_flow_summary(
+        &result.nodes,
+        result.max_velocity,
+        result.max_pressure,
+        result.pressure_drop,
+        result.max_divergence_error,
+        result.max_reynolds_number,
+        result.max_shear_rate,
+        result.max_viscous_shear_stress,
+        result.elements.iter().map(|element| FlowElementFields {
+            area: element.area,
+            average_velocity_x: element.average_velocity_x,
+            average_velocity_y: element.average_velocity_y,
+            average_velocity_magnitude: element.average_velocity_magnitude,
+            average_pressure: element.average_pressure,
+            shear_rate: element.shear_rate,
+            max_viscous_shear_stress: element.max_viscous_shear_stress,
+            divergence_error: element.divergence_error,
+            reynolds_number: element.reynolds_number,
+            viscous_dissipation: element.viscous_dissipation,
+            viscosity: result.input.elements[element.index].viscosity,
+            density: result.input.elements[element.index].density,
+            node_indices: vec![
+                element.node_i,
+                element.node_j,
+                element.node_k,
+                element.node_l,
+            ],
+        }),
+    );
+}
+
+fn assert_triangle_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneTriangle2dResult) {
+    assert_flow_summary(
+        &result.nodes,
+        result.max_velocity,
+        result.max_pressure,
+        result.pressure_drop,
+        result.max_divergence_error,
+        result.max_reynolds_number,
+        result.max_shear_rate,
+        result.max_viscous_shear_stress,
+        result.elements.iter().map(|element| FlowElementFields {
+            area: element.area,
+            average_velocity_x: element.average_velocity_x,
+            average_velocity_y: element.average_velocity_y,
+            average_velocity_magnitude: element.average_velocity_magnitude,
+            average_pressure: element.average_pressure,
+            shear_rate: element.shear_rate,
+            max_viscous_shear_stress: element.max_viscous_shear_stress,
+            divergence_error: element.divergence_error,
+            reynolds_number: element.reynolds_number,
+            viscous_dissipation: element.viscous_dissipation,
+            viscosity: result.input.elements[element.index].viscosity,
+            density: result.input.elements[element.index].density,
+            node_indices: vec![element.node_i, element.node_j, element.node_k],
+        }),
+    );
+}
+
+struct FlowElementFields {
+    area: f64,
+    average_velocity_x: f64,
+    average_velocity_y: f64,
+    average_velocity_magnitude: f64,
+    average_pressure: f64,
+    shear_rate: f64,
+    max_viscous_shear_stress: f64,
+    divergence_error: f64,
+    reynolds_number: f64,
+    viscous_dissipation: f64,
+    viscosity: f64,
+    density: f64,
+    node_indices: Vec<usize>,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn assert_flow_summary(
+    nodes: &[kyuubiki_protocol::StokesFlowPlaneNodeResult],
+    max_velocity: f64,
+    max_pressure: f64,
+    pressure_drop: f64,
+    max_divergence_error: f64,
+    max_reynolds_number: f64,
+    max_shear_rate: f64,
+    max_viscous_shear_stress: f64,
+    elements: impl Iterator<Item = FlowElementFields>,
+) {
+    assert_close(
+        max_velocity,
+        nodes
+            .iter()
+            .map(|node| {
+                assert_close(
+                    node.velocity_magnitude,
+                    (node.velocity_x * node.velocity_x + node.velocity_y * node.velocity_y).sqrt(),
+                );
+                node.velocity_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        max_pressure,
+        nodes
+            .iter()
+            .map(|node| node.pressure.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    let min_pressure = nodes
+        .iter()
+        .map(|node| node.pressure)
+        .fold(f64::INFINITY, f64::min);
+    let max_signed_pressure = nodes
+        .iter()
+        .map(|node| node.pressure)
+        .fold(f64::NEG_INFINITY, f64::max);
+    assert_close(pressure_drop, max_signed_pressure - min_pressure);
+
+    let elements = elements.collect::<Vec<_>>();
+    assert_close(
+        max_divergence_error,
+        elements
+            .iter()
+            .map(|element| element.divergence_error.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        max_reynolds_number,
+        elements
+            .iter()
+            .map(|element| element.reynolds_number)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        max_shear_rate,
+        elements
+            .iter()
+            .map(|element| element.shear_rate)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        max_viscous_shear_stress,
+        elements
+            .iter()
+            .map(|element| element.max_viscous_shear_stress)
+            .fold(0.0_f64, f64::max),
+    );
+
+    for element in elements {
+        let node_count = element.node_indices.len() as f64;
+        let average_velocity_x = element
+            .node_indices
+            .iter()
+            .map(|&index| nodes[index].velocity_x)
+            .sum::<f64>()
+            / node_count;
+        let average_velocity_y = element
+            .node_indices
+            .iter()
+            .map(|&index| nodes[index].velocity_y)
+            .sum::<f64>()
+            / node_count;
+        let average_pressure = element
+            .node_indices
+            .iter()
+            .map(|&index| nodes[index].pressure)
+            .sum::<f64>()
+            / node_count;
+
+        assert_close(element.average_velocity_x, average_velocity_x);
+        assert_close(element.average_velocity_y, average_velocity_y);
+        assert_close(
+            element.average_velocity_magnitude,
+            (average_velocity_x * average_velocity_x + average_velocity_y * average_velocity_y)
+                .sqrt(),
+        );
+        assert_close(element.average_pressure, average_pressure);
+        assert_close(
+            element.reynolds_number,
+            element.density * element.average_velocity_magnitude * element.area.sqrt()
+                / element.viscosity,
+        );
+        assert!(element.area > 0.0);
+        assert!(element.shear_rate >= 0.0);
+        assert!(element.max_viscous_shear_stress >= 0.0);
+        assert!(element.divergence_error >= 0.0);
+        assert!(element.reynolds_number >= 0.0);
+        assert!(element.viscous_dissipation >= 0.0);
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

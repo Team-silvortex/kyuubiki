@@ -1,4 +1,4 @@
-use kyuubiki_protocol::SolveBarRequest;
+use kyuubiki_protocol::{ElementResult, SolveBarRequest, SolveBarResult};
 use kyuubiki_solver::solve_bar_1d;
 
 const TOL: f64 = 1.0e-10;
@@ -148,7 +148,7 @@ struct ExpectedBarResponse {
     total_strain_energy: f64,
 }
 
-fn assert_response(result: &kyuubiki_protocol::SolveBarResult, expected: ExpectedBarResponse) {
+fn assert_response(result: &SolveBarResult, expected: ExpectedBarResponse) {
     assert_close(result.tip_displacement, expected.tip_displacement);
     assert_close(result.max_displacement, expected.tip_displacement.abs());
     assert_close(result.max_stress, expected.stress.abs());
@@ -171,7 +171,8 @@ fn assert_response(result: &kyuubiki_protocol::SolveBarResult, expected: Expecte
     }
 }
 
-fn assert_energy_balance(result: &kyuubiki_protocol::SolveBarResult) {
+fn assert_energy_balance(result: &SolveBarResult) {
+    assert_bar_summary(result);
     let total_from_elements = result
         .elements
         .iter()
@@ -192,6 +193,55 @@ fn assert_energy_balance(result: &kyuubiki_protocol::SolveBarResult) {
         result.total_strain_energy,
         0.5 * result.input.tip_force * result.tip_displacement,
     );
+}
+
+fn assert_bar_summary(result: &SolveBarResult) {
+    let max_displacement = result
+        .nodes
+        .iter()
+        .map(|node| node.displacement.abs())
+        .fold(0.0_f64, f64::max);
+    let tip_displacement = result
+        .nodes
+        .iter()
+        .max_by(|left, right| left.x.total_cmp(&right.x))
+        .expect("bar result should contain at least one node")
+        .displacement;
+    assert_close(result.max_displacement, max_displacement);
+    assert_close(result.tip_displacement, tip_displacement);
+    assert_close(result.reaction_force, -result.input.tip_force);
+
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    for element in &result.elements {
+        assert_element_law(result, element);
+        max_stress = max_stress.max(element.stress.abs());
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+    }
+    assert_close(result.max_stress, max_stress);
+    assert_close(result.max_strain_energy_density, max_energy_density);
+}
+
+fn assert_element_law(result: &SolveBarResult, element: &ElementResult) {
+    let length = element.x2 - element.x1;
+    let node_i = result
+        .nodes
+        .iter()
+        .find(|node| (node.x - element.x1).abs() <= TOL)
+        .expect("element x1 should match a result node");
+    let node_j = result
+        .nodes
+        .iter()
+        .find(|node| (node.x - element.x2).abs() <= TOL)
+        .expect("element x2 should match a result node");
+    let expected_strain = (node_j.displacement - node_i.displacement) / length;
+    let expected_stress = result.input.youngs_modulus * expected_strain;
+    let expected_force = expected_stress * result.input.area;
+    let expected_energy_density = 0.5 * expected_stress * expected_strain;
+    assert_close(element.strain, expected_strain);
+    assert_close(element.stress, expected_stress);
+    assert_close(element.axial_force, expected_force);
+    assert_close(element.strain_energy_density, expected_energy_density);
 }
 
 fn assert_close(actual: f64, expected: f64) {

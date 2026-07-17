@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
     MagnetostaticBar1dElementInput, MagnetostaticBar1dNodeInput, SolveMagnetostaticBar1dRequest,
+    SolveMagnetostaticBar1dResult,
 };
 use kyuubiki_solver::solve_magnetostatic_bar_1d;
 
@@ -23,32 +24,7 @@ fn magnetostatic_bar_1d_matches_closed_form_permeance_scaling() {
     ] {
         let result =
             solve_magnetostatic_bar_1d(&case.request()).expect("closed-form magnetic case");
-        let expected = case.expected();
-        let element = &result.elements[0];
-
-        assert_close(result.nodes[0].magnetic_potential, 0.0);
-        assert_close(
-            result.nodes[1].magnetic_potential,
-            expected.magnetic_potential,
-        );
-        assert_close(
-            result.max_magnetic_potential,
-            expected.magnetic_potential.abs(),
-        );
-        assert_close(
-            result.max_magnetic_field_strength,
-            expected.field_strength.abs(),
-        );
-        assert_close(result.max_flux_density, expected.flux_density.abs());
-        assert_close(result.total_stored_energy, expected.stored_energy);
-        assert_close(
-            element.average_magnetic_potential,
-            expected.magnetic_potential / 2.0,
-        );
-        assert_close(element.magnetic_potential_gradient, expected.gradient);
-        assert_close(element.magnetic_field_strength, expected.field_strength);
-        assert_close(element.magnetic_flux_density, expected.flux_density);
-        assert_close(element.stored_energy, expected.stored_energy);
+        assert_case(&result, case.expected());
     }
 }
 
@@ -66,6 +42,7 @@ fn magnetostatic_bar_1d_reports_zero_energy_for_zero_source() {
     assert_close(result.max_magnetic_field_strength, 0.0);
     assert_close(result.max_flux_density, 0.0);
     assert_close(result.total_stored_energy, 0.0);
+    assert_case(&result, case.expected());
 }
 
 #[test]
@@ -231,10 +208,7 @@ struct ExpectedMagneticResponse {
     stored_energy: f64,
 }
 
-fn assert_case(
-    result: &kyuubiki_protocol::SolveMagnetostaticBar1dResult,
-    expected: ExpectedMagneticResponse,
-) {
+fn assert_case(result: &SolveMagnetostaticBar1dResult, expected: ExpectedMagneticResponse) {
     let element = &result.elements[0];
     assert_close(result.nodes[0].magnetic_potential, 0.0);
     assert_close(
@@ -251,6 +225,7 @@ fn assert_case(
     );
     assert_close(result.max_flux_density, expected.flux_density.abs());
     assert_close(result.total_stored_energy, expected.stored_energy);
+    assert_field_balance(result);
     assert_close(
         result.total_stored_energy,
         0.5 * result.nodes[1].magnetic_potential * result.input.nodes[1].magnetomotive_source,
@@ -263,6 +238,70 @@ fn assert_case(
     assert_close(element.magnetic_field_strength, expected.field_strength);
     assert_close(element.magnetic_flux_density, expected.flux_density);
     assert_close(element.stored_energy, expected.stored_energy);
+}
+
+fn assert_field_balance(result: &SolveMagnetostaticBar1dResult) {
+    let max_magnetic_potential = result
+        .nodes
+        .iter()
+        .map(|node| node.magnetic_potential.abs())
+        .fold(0.0_f64, f64::max);
+    let max_field_strength = result
+        .elements
+        .iter()
+        .map(|element| element.magnetic_field_strength.abs())
+        .fold(0.0_f64, f64::max);
+    let max_flux_density = result
+        .elements
+        .iter()
+        .map(|element| element.magnetic_flux_density.abs())
+        .fold(0.0_f64, f64::max);
+    let total_stored_energy = result
+        .elements
+        .iter()
+        .map(|element| element.stored_energy)
+        .sum::<f64>();
+    assert_close(result.max_magnetic_potential, max_magnetic_potential);
+    assert_close(result.max_magnetic_field_strength, max_field_strength);
+    assert_close(result.max_flux_density, max_flux_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let expected_length = (node_j.x - node_i.x).abs();
+        let expected_average_potential =
+            0.5 * (node_i.magnetic_potential + node_j.magnetic_potential);
+        let expected_gradient =
+            (node_j.magnetic_potential - node_i.magnetic_potential) / expected_length;
+        let expected_stored_energy = 0.5
+            * input.permeability
+            * element.magnetic_field_strength
+            * element.magnetic_field_strength
+            * input.area
+            * element.length;
+        assert_close(element.length, expected_length);
+        assert_close(
+            element.average_magnetic_potential,
+            expected_average_potential,
+        );
+        assert_close(element.magnetic_potential_gradient, expected_gradient);
+        assert_close(
+            element.magnetic_field_strength,
+            -element.magnetic_potential_gradient,
+        );
+        assert_close(
+            element.magnetic_flux_density,
+            input.permeability * element.magnetic_field_strength,
+        );
+        assert_close(element.stored_energy, expected_stored_energy);
+        let nodal_source = node_i.magnetomotive_source + node_j.magnetomotive_source;
+        assert_close(
+            element.magnetic_flux_density * input.area + nodal_source,
+            0.0,
+        );
+    }
 }
 
 fn node(

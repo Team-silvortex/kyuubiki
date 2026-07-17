@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
-    SolidTetra3dElementInput, SolidTetra3dNodeInput, SolveSolidTetra3dRequest,
+    SolidTetra3dElementInput, SolidTetra3dElementResult, SolidTetra3dNodeInput,
+    SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
 };
 use kyuubiki_solver::solve_solid_tetra_3d;
 
@@ -68,6 +69,7 @@ fn solid_tetra_3d_closed_form_matches_single_free_node_solution() {
     assert_close(result.max_strain_energy_density, expected_energy_density);
     assert_close(result.total_strain_energy, expected_total_energy);
     assert_tip_force_energy(result.total_strain_energy, load_z, tip.uz);
+    assert_solid_summary(&result);
 }
 
 #[test]
@@ -82,6 +84,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
     ))
     .expect("baseline solid tetra fixture should solve");
     assert_tip_force_energy(baseline.total_strain_energy, load_z, baseline.nodes[3].uz);
+    assert_solid_summary(&baseline);
 
     let load_scale = 1.5;
     let load_scaled = solve_solid_tetra_3d(&restrained_tip_load_request(
@@ -108,6 +111,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         load_z * load_scale,
         load_scaled.nodes[3].uz,
     );
+    assert_solid_summary(&load_scaled);
 
     let modulus_scale = 1.7;
     let stiffer = solve_solid_tetra_3d(&restrained_tip_load_request(
@@ -127,6 +131,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         1.0 / modulus_scale,
     );
     assert_tip_force_energy(stiffer.total_strain_energy, load_z, stiffer.nodes[3].uz);
+    assert_solid_summary(&stiffer);
 
     let height_scale = 1.4;
     let taller = solve_solid_tetra_3d(&restrained_tip_load_request_with_height(
@@ -150,6 +155,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         height_scale,
     );
     assert_tip_force_energy(taller.total_strain_energy, load_z, taller.nodes[3].uz);
+    assert_solid_summary(&taller);
 
     let base_scale = 1.6;
     let wider_base = solve_solid_tetra_3d(&restrained_tip_load_request_with_geometry(
@@ -190,6 +196,75 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         load_z,
         wider_base.nodes[3].uz,
     );
+    assert_solid_summary(&wider_base);
+}
+
+fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
+    let mut total_volume = 0.0_f64;
+    let mut max_von_mises = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for node in &result.nodes {
+        assert_close(
+            node.displacement_magnitude,
+            magnitude3(node.ux, node.uy, node.uz),
+        );
+    }
+
+    for element in &result.elements {
+        assert_solid_element_contract(element);
+        total_volume += element.volume;
+        max_von_mises = max_von_mises.max(element.von_mises_stress);
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+        total_strain_energy += element.strain_energy_density * element.volume;
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.displacement_magnitude)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.total_volume, total_volume);
+    assert_close(result.max_von_mises_stress, max_von_mises);
+    assert_close(result.max_strain_energy_density, max_energy_density);
+    assert_close(result.total_strain_energy, total_strain_energy);
+
+    let external_work = result
+        .input
+        .nodes
+        .iter()
+        .zip(result.nodes.iter())
+        .map(|(input, node)| {
+            input.load_x * node.ux + input.load_y * node.uy + input.load_z * node.uz
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_solid_element_contract(element: &SolidTetra3dElementResult) {
+    let expected_von_mises = (0.5
+        * ((element.stress_x - element.stress_y).powi(2)
+            + (element.stress_y - element.stress_z).powi(2)
+            + (element.stress_z - element.stress_x).powi(2))
+        + 3.0
+            * (element.shear_xy * element.shear_xy
+                + element.shear_yz * element.shear_yz
+                + element.shear_zx * element.shear_zx))
+        .sqrt();
+    let expected_energy_density = 0.5
+        * (element.stress_x * element.strain_x
+            + element.stress_y * element.strain_y
+            + element.stress_z * element.strain_z
+            + element.shear_xy * element.gamma_xy
+            + element.shear_yz * element.gamma_yz
+            + element.shear_zx * element.gamma_zx);
+
+    assert_close(element.von_mises_stress, expected_von_mises);
+    assert_close(element.strain_energy_density, expected_energy_density);
 }
 
 fn restrained_tip_load_request(
@@ -252,6 +327,10 @@ fn node(id: &str, x: f64, y: f64, z: f64, fixed: bool, load_z: f64) -> SolidTetr
 
 fn assert_tip_force_energy(total_strain_energy: f64, tip_load: f64, tip_displacement: f64) {
     assert_close(total_strain_energy, 0.5 * tip_load * tip_displacement);
+}
+
+fn magnitude3(x: f64, y: f64, z: f64) -> f64 {
+    (x * x + y * y + z * z).sqrt()
 }
 
 fn assert_close(actual: f64, expected: f64) {

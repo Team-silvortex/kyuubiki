@@ -21,6 +21,8 @@ fn modal_frame_2d_sanity_retains_ordering_normalization_and_length_scaling() {
 
     assert_eq!(short.modes.len(), 3);
     assert_eq!(long.modes.len(), 3);
+    assert_modal_2d_summary(&short, 6);
+    assert_modal_2d_summary(&long, 6);
     assert_strictly_increasing(short.modes.iter().map(|mode| mode.natural_frequency_hz));
     assert_strictly_increasing(long.modes.iter().map(|mode| mode.natural_frequency_hz));
     assert_close(short.total_mass, DENSITY * AREA);
@@ -45,6 +47,8 @@ fn modal_frame_3d_sanity_retains_ordering_normalization_and_length_scaling() {
 
     assert_eq!(short.modes.len(), 3);
     assert_eq!(long.modes.len(), 3);
+    assert_modal_3d_summary(&short, 12);
+    assert_modal_3d_summary(&long, 12);
     assert_non_decreasing(short.modes.iter().map(|mode| mode.natural_frequency_hz));
     assert_non_decreasing(long.modes.iter().map(|mode| mode.natural_frequency_hz));
     assert_close(short.total_mass, DENSITY * AREA);
@@ -91,6 +95,7 @@ fn modal_frame_2d_tracks_stiffness_and_density_frequency_scaling() {
 
         assert_eq!(result.free_dofs, baseline.free_dofs);
         assert_close(result.total_mass, baseline.total_mass * case.density_factor);
+        assert_modal_2d_summary(&result, 6);
         assert_close(
             result.min_frequency_hz,
             baseline.min_frequency_hz * frequency_scale,
@@ -133,6 +138,7 @@ fn modal_frame_3d_tracks_stiffness_and_density_frequency_scaling() {
 
         assert_eq!(result.free_dofs, baseline.free_dofs);
         assert_close(result.total_mass, baseline.total_mass * case.density_factor);
+        assert_modal_3d_summary(&result, 12);
         assert_close(
             result.min_frequency_hz,
             baseline.min_frequency_hz * frequency_scale,
@@ -248,6 +254,104 @@ fn assert_modal_shape(shape: &[f64], free_dofs: &[usize], expected_len: usize) {
         }
     }
     assert!(shape.iter().any(|value| value.abs() > 1.0e-6));
+}
+
+fn assert_modal_2d_summary(result: &kyuubiki_protocol::SolveModalFrame2dResult, dof_count: usize) {
+    assert_eq!(result.free_dofs.len(), dof_count / 2);
+    assert_modal_summary(
+        result.min_frequency_hz,
+        result.max_frequency_hz,
+        &result.free_dofs,
+        dof_count,
+        result.modes.iter().map(|mode| ModalFields {
+            index: mode.index,
+            eigenvalue_rad_s_squared: mode.eigenvalue_rad_s_squared,
+            natural_frequency_rad_s: mode.natural_frequency_rad_s,
+            natural_frequency_hz: mode.natural_frequency_hz,
+            period_s: mode.period_s,
+            participation_norm: mode.participation_norm,
+            shape: &mode.shape,
+        }),
+    );
+}
+
+fn assert_modal_3d_summary(result: &kyuubiki_protocol::SolveModalFrame3dResult, dof_count: usize) {
+    assert_eq!(result.free_dofs.len(), dof_count / 2);
+    assert_modal_summary(
+        result.min_frequency_hz,
+        result.max_frequency_hz,
+        &result.free_dofs,
+        dof_count,
+        result.modes.iter().map(|mode| ModalFields {
+            index: mode.index,
+            eigenvalue_rad_s_squared: mode.eigenvalue_rad_s_squared,
+            natural_frequency_rad_s: mode.natural_frequency_rad_s,
+            natural_frequency_hz: mode.natural_frequency_hz,
+            period_s: mode.period_s,
+            participation_norm: mode.participation_norm,
+            shape: &mode.shape,
+        }),
+    );
+}
+
+struct ModalFields<'a> {
+    index: usize,
+    eigenvalue_rad_s_squared: f64,
+    natural_frequency_rad_s: f64,
+    natural_frequency_hz: f64,
+    period_s: f64,
+    participation_norm: f64,
+    shape: &'a [f64],
+}
+
+fn assert_modal_summary<'a>(
+    min_frequency_hz: f64,
+    max_frequency_hz: f64,
+    free_dofs: &[usize],
+    dof_count: usize,
+    modes: impl Iterator<Item = ModalFields<'a>>,
+) {
+    let modes = modes.collect::<Vec<_>>();
+    assert!(
+        !modes.is_empty(),
+        "modal result should retain at least one mode"
+    );
+    assert_close(
+        min_frequency_hz,
+        modes
+            .iter()
+            .map(|mode| mode.natural_frequency_hz)
+            .fold(f64::INFINITY, f64::min),
+    );
+    assert_close(
+        max_frequency_hz,
+        modes
+            .iter()
+            .map(|mode| mode.natural_frequency_hz)
+            .fold(0.0_f64, f64::max),
+    );
+
+    for (expected_index, mode) in modes.iter().enumerate() {
+        assert_eq!(mode.index, expected_index);
+        assert_close(
+            mode.natural_frequency_rad_s,
+            mode.eigenvalue_rad_s_squared.sqrt(),
+        );
+        assert_close(
+            mode.natural_frequency_hz,
+            mode.natural_frequency_rad_s / std::f64::consts::TAU,
+        );
+        assert_close(mode.period_s, 1.0 / mode.natural_frequency_hz);
+        assert_modal_shape(mode.shape, free_dofs, dof_count);
+        assert_close(
+            mode.participation_norm,
+            mode.shape
+                .iter()
+                .map(|value| value * value)
+                .sum::<f64>()
+                .sqrt(),
+        );
+    }
 }
 
 fn assert_2d_modes_scale(

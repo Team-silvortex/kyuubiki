@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{SolveSpring1dRequest, Spring1dElementInput, Spring1dNodeInput};
+use kyuubiki_protocol::{
+    SolveSpring1dRequest, SolveSpring1dResult, Spring1dElementInput, Spring1dNodeInput,
+};
 use kyuubiki_solver::solve_spring_1d;
 
 const TOL: f64 = 1.0e-10;
@@ -162,7 +164,8 @@ fn series_request_with_spacing(
     SolveSpring1dRequest { nodes, elements }
 }
 
-fn assert_energy_balance(result: &kyuubiki_protocol::SolveSpring1dResult) {
+fn assert_energy_balance(result: &SolveSpring1dResult) {
+    assert_spring_summary(result);
     assert_close(
         result.total_strain_energy,
         result
@@ -179,6 +182,32 @@ fn assert_energy_balance(result: &kyuubiki_protocol::SolveSpring1dResult) {
         .map(|(input, result)| input.load_x * result.ux)
         .sum::<f64>();
     assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_spring_summary(result: &SolveSpring1dResult) {
+    let mut max_displacement: f64 = 0.0;
+    for node in &result.nodes {
+        max_displacement = max_displacement.max(node.ux.abs());
+    }
+    assert_close(result.max_displacement, max_displacement);
+
+    let mut max_force: f64 = 0.0;
+    let mut total_energy = 0.0;
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let expected_extension = node_j.ux - node_i.ux;
+        let expected_force = input.stiffness * expected_extension;
+        let expected_energy = 0.5 * expected_force * expected_extension;
+        assert_close(element.extension, expected_extension);
+        assert_close(element.force, expected_force);
+        assert_close(element.strain_energy, expected_energy);
+        max_force = max_force.max(element.force.abs());
+        total_energy += element.strain_energy;
+    }
+    assert_close(result.max_force, max_force);
+    assert_close(result.total_strain_energy, total_energy);
 }
 
 fn assert_close(actual: f64, expected: f64) {

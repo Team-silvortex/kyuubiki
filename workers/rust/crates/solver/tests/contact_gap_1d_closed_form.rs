@@ -24,6 +24,7 @@ fn contact_gap_1d_matches_inactive_gap_closed_form() {
     assert!(!result.contacts[0].active);
     assert!(expected_tip < gap);
     assert_penalty_contact_law(&result);
+    assert_contact_summary(&result);
 }
 
 #[test]
@@ -48,6 +49,7 @@ fn contact_gap_1d_matches_active_penalty_stop_closed_form() {
     assert_close(expected_spring_force + expected_contact_force, load);
     assert!(result.contacts[0].active);
     assert_penalty_contact_law(&result);
+    assert_contact_summary(&result);
 }
 
 #[test]
@@ -87,6 +89,8 @@ fn contact_gap_1d_preserves_active_force_split_under_load_gap_scaling() {
     );
     assert_penalty_contact_law(&baseline);
     assert_penalty_contact_law(&scaled);
+    assert_contact_summary(&baseline);
+    assert_contact_summary(&scaled);
 }
 
 #[test]
@@ -148,6 +152,9 @@ fn contact_gap_1d_tracks_contact_stiffness_force_split() {
     assert_close(longer.elements[0].force, baseline.elements[0].force);
     assert_close(longer.contacts[0].force, baseline.contacts[0].force);
     assert_penalty_contact_law(&longer);
+    assert_contact_summary(&baseline);
+    assert_contact_summary(&stiffer);
+    assert_contact_summary(&longer);
 }
 
 fn request(
@@ -244,6 +251,46 @@ fn assert_penalty_contact_law(result: &kyuubiki_protocol::SolveContactGap1dResul
         .map(|contact| contact.force)
         .sum::<f64>();
     assert_close(spring_force + contact_force, external_load);
+}
+
+fn assert_contact_summary(result: &kyuubiki_protocol::SolveContactGap1dResult) {
+    let mut max_force = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let extension = result.nodes[element.node_j].ux - result.nodes[element.node_i].ux;
+        assert_close(element.extension, extension);
+        assert_close(
+            element.force,
+            input.stiffness * extension + input.cubic_stiffness * extension.powi(3),
+        );
+        assert_close(
+            element.tangent_stiffness,
+            input.stiffness + 3.0 * input.cubic_stiffness * extension.powi(2),
+        );
+        max_force = max_force.max(element.force.abs());
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.ux.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_force, max_force);
+    assert!(result.converged);
+    assert!(result.residual_norm <= result.input.tolerance.unwrap_or(1.0e-9));
+
+    for (index, step) in result.steps.iter().enumerate() {
+        assert_eq!(step.step, index + 1);
+        assert!(step.load_factor > 0.0);
+        assert!(step.load_factor <= 1.0);
+        assert!(step.converged);
+        assert!(step.iterations <= result.input.max_iterations.unwrap_or(32));
+        assert!(step.residual_norm <= result.input.tolerance.unwrap_or(1.0e-9));
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

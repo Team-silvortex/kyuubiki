@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
-    PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest,
+    PlaneNodeInput, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
+    PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
+    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
 };
 use kyuubiki_solver::{solve_plane_quad_2d, solve_plane_triangle_2d};
 
@@ -52,6 +53,7 @@ fn plane_triangle_2d_matches_retained_patch_stiffness_reference() {
             .fold(0.0_f64, f64::max),
         1.0e-12,
     );
+    assert_triangle_summary(&result);
 }
 
 #[test]
@@ -90,6 +92,7 @@ fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
         element.strain_energy_density.abs(),
         1.0e-12,
     );
+    assert_quad_summary(&result);
 }
 
 #[test]
@@ -100,6 +103,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         &baseline.nodes,
         baseline.total_strain_energy,
     );
+    assert_triangle_summary(&baseline);
 
     let load_scale = 1.5;
     let mut load_request = triangle_patch();
@@ -128,6 +132,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         &load_scaled.nodes,
         load_scaled.total_strain_energy,
     );
+    assert_triangle_summary(&load_scaled);
 
     let thickness_scale = 1.6;
     let mut thick_request = triangle_patch();
@@ -156,6 +161,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         &thickened.nodes,
         thickened.total_strain_energy,
     );
+    assert_triangle_summary(&thickened);
 
     let modulus_scale = 1.4;
     let mut stiff_request = triangle_patch();
@@ -179,6 +185,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         &stiffened.nodes,
         stiffened.total_strain_energy,
     );
+    assert_triangle_summary(&stiffened);
 
     let geometry_scale = 1.5;
     let scaled_geometry = solve_plane_triangle_2d(&triangle_patch_scaled(geometry_scale))
@@ -204,6 +211,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         &scaled_geometry.nodes,
         scaled_geometry.total_strain_energy,
     );
+    assert_triangle_summary(&scaled_geometry);
 }
 
 #[test]
@@ -214,6 +222,7 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         &baseline.nodes,
         baseline.total_strain_energy,
     );
+    assert_quad_summary(&baseline);
 
     let load_scale = 1.35;
     let mut load_request = quad_patch();
@@ -242,6 +251,7 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         &load_scaled.nodes,
         load_scaled.total_strain_energy,
     );
+    assert_quad_summary(&load_scaled);
 
     let modulus_scale = 1.7;
     let mut stiff_request = quad_patch();
@@ -263,6 +273,7 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         &stiffened.nodes,
         stiffened.total_strain_energy,
     );
+    assert_quad_summary(&stiffened);
 
     let thickness_scale = 1.8;
     let mut thick_request = quad_patch();
@@ -288,6 +299,7 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         &thickened.nodes,
         thickened.total_strain_energy,
     );
+    assert_quad_summary(&thickened);
 
     let geometry_scale = 1.4;
     let scaled_geometry =
@@ -312,6 +324,63 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         &scaled_geometry.input.nodes,
         &scaled_geometry.nodes,
         scaled_geometry.total_strain_energy,
+    );
+    assert_quad_summary(&scaled_geometry);
+}
+
+fn assert_triangle_summary(result: &SolvePlaneTriangle2dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        assert_plane_element_metrics(element, true, true);
+        max_stress = max_stress.max(element.von_mises);
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+        total_strain_energy += element.strain_energy_density * element.area * input.thickness;
+    }
+
+    assert_node_displacement_summary(result.max_displacement, &result.nodes);
+    assert_close(result.max_stress, max_stress, 1.0e-10);
+    assert_close(
+        result.max_strain_energy_density,
+        max_energy_density,
+        1.0e-12,
+    );
+    assert_close(result.total_strain_energy, total_strain_energy, 1.0e-12);
+    assert_external_work_energy(
+        &result.input.nodes,
+        &result.nodes,
+        result.total_strain_energy,
+    );
+}
+
+fn assert_quad_summary(result: &SolvePlaneQuad2dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        assert_plane_element_metrics(element, false, false);
+        max_stress = max_stress.max(element.von_mises);
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+        total_strain_energy += element.strain_energy_density * element.area * input.thickness;
+    }
+
+    assert_node_displacement_summary(result.max_displacement, &result.nodes);
+    assert_close(result.max_stress, max_stress, 1.0e-10);
+    assert_close(
+        result.max_strain_energy_density,
+        max_energy_density,
+        1.0e-12,
+    );
+    assert_close(result.total_strain_energy, total_strain_energy, 1.0e-12);
+    assert_external_work_energy(
+        &result.input.nodes,
+        &result.nodes,
+        result.total_strain_energy,
     );
 }
 
@@ -435,6 +504,143 @@ fn assert_planar_metrics(
             .sqrt(),
         1.0e-12,
     );
+}
+
+fn assert_plane_element_metrics(
+    element: &impl PlaneElementMetrics,
+    check_stress_formula: bool,
+    check_energy_formula: bool,
+) {
+    if check_stress_formula {
+        assert_planar_metrics(
+            element.stress_x(),
+            element.stress_y(),
+            element.tau_xy(),
+            element.principal_stress_1(),
+            element.principal_stress_2(),
+            element.max_in_plane_shear(),
+            element.von_mises(),
+        );
+    } else {
+        assert!(element.principal_stress_1() >= element.principal_stress_2());
+        assert!(element.max_in_plane_shear() >= 0.0);
+        assert!(element.von_mises() >= 0.0);
+    }
+    if check_energy_formula {
+        assert_close(
+            element.strain_energy_density(),
+            0.5 * element.stress_strain_work_density(),
+            1.0e-12,
+        );
+    }
+}
+
+trait PlaneElementMetrics {
+    fn strain_x(&self) -> f64;
+    fn strain_y(&self) -> f64;
+    fn gamma_xy(&self) -> f64;
+    fn stress_x(&self) -> f64;
+    fn stress_y(&self) -> f64;
+    fn tau_xy(&self) -> f64;
+    fn principal_stress_1(&self) -> f64;
+    fn principal_stress_2(&self) -> f64;
+    fn max_in_plane_shear(&self) -> f64;
+    fn von_mises(&self) -> f64;
+    fn strain_energy_density(&self) -> f64;
+
+    fn stress_strain_work_density(&self) -> f64 {
+        self.stress_x() * self.strain_x()
+            + self.stress_y() * self.strain_y()
+            + self.tau_xy() * self.gamma_xy()
+    }
+}
+
+impl PlaneElementMetrics for PlaneTriangleElementResult {
+    fn strain_x(&self) -> f64 {
+        self.strain_x
+    }
+    fn strain_y(&self) -> f64 {
+        self.strain_y
+    }
+    fn gamma_xy(&self) -> f64 {
+        self.gamma_xy
+    }
+    fn stress_x(&self) -> f64 {
+        self.stress_x
+    }
+    fn stress_y(&self) -> f64 {
+        self.stress_y
+    }
+    fn tau_xy(&self) -> f64 {
+        self.tau_xy
+    }
+    fn principal_stress_1(&self) -> f64 {
+        self.principal_stress_1
+    }
+    fn principal_stress_2(&self) -> f64 {
+        self.principal_stress_2
+    }
+    fn max_in_plane_shear(&self) -> f64 {
+        self.max_in_plane_shear
+    }
+    fn von_mises(&self) -> f64 {
+        self.von_mises
+    }
+    fn strain_energy_density(&self) -> f64 {
+        self.strain_energy_density
+    }
+}
+
+impl PlaneElementMetrics for PlaneQuadElementResult {
+    fn strain_x(&self) -> f64 {
+        self.strain_x
+    }
+    fn strain_y(&self) -> f64 {
+        self.strain_y
+    }
+    fn gamma_xy(&self) -> f64 {
+        self.gamma_xy
+    }
+    fn stress_x(&self) -> f64 {
+        self.stress_x
+    }
+    fn stress_y(&self) -> f64 {
+        self.stress_y
+    }
+    fn tau_xy(&self) -> f64 {
+        self.tau_xy
+    }
+    fn principal_stress_1(&self) -> f64 {
+        self.principal_stress_1
+    }
+    fn principal_stress_2(&self) -> f64 {
+        self.principal_stress_2
+    }
+    fn max_in_plane_shear(&self) -> f64 {
+        self.max_in_plane_shear
+    }
+    fn von_mises(&self) -> f64 {
+        self.von_mises
+    }
+    fn strain_energy_density(&self) -> f64 {
+        self.strain_energy_density
+    }
+}
+
+fn assert_node_displacement_summary(
+    max_displacement: f64,
+    nodes: &[kyuubiki_protocol::PlaneNodeResult],
+) {
+    let mut derived_max = 0.0_f64;
+    for node in nodes {
+        assert_close(
+            node.displacement_magnitude,
+            (node.ux * node.ux + node.uy * node.uy).sqrt(),
+            1.0e-12,
+        );
+        derived_max = derived_max.max(node.displacement_magnitude);
+    }
+    assert_close(max_displacement, derived_max, 1.0e-12);
 }
 
 fn assert_external_work_energy(

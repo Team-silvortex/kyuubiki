@@ -1,6 +1,6 @@
 use kyuubiki_protocol::{
-    SolveThermalTruss3dRequest, ThermalTruss3dElementInput, ThermalTruss3dElementResult,
-    ThermalTruss3dNodeInput,
+    SolveThermalTruss3dRequest, SolveThermalTruss3dResult, ThermalTruss3dElementInput,
+    ThermalTruss3dElementResult, ThermalTruss3dNodeInput,
 };
 use kyuubiki_solver::solve_thermal_truss_3d;
 
@@ -54,6 +54,7 @@ fn thermal_truss_3d_matches_restrained_uniform_temperature_closed_form() {
         result.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&result);
 }
 
 #[test]
@@ -75,6 +76,7 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         baseline.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&baseline);
 
     let temperature_scale = 1.4;
     let hotter = solve_thermal_truss_3d(&restrained_triangle(
@@ -106,6 +108,7 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         hotter.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&hotter);
 
     let expansion_scale = 1.25;
     let expanded = solve_thermal_truss_3d(&restrained_triangle(
@@ -137,6 +140,7 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         expanded.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&expanded);
 
     let modulus_scale = 1.3;
     let stiffer = solve_thermal_truss_3d(&restrained_triangle(
@@ -168,6 +172,7 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         stiffer.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&stiffer);
 
     let area_scale = 1.7;
     let larger = solve_thermal_truss_3d(&restrained_triangle(
@@ -196,6 +201,7 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         larger.max_strain_energy_density,
         area * area_scale,
     );
+    assert_thermal_truss_summary(&larger);
 
     let geometry_scale = 1.5;
     let longer = solve_thermal_truss_3d(&restrained_triangle_scaled(
@@ -233,6 +239,64 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         longer.max_strain_energy_density,
         area,
     );
+    assert_thermal_truss_summary(&longer);
+}
+
+fn assert_thermal_truss_summary(result: &SolveThermalTruss3dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_axial_force = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
+            + result.nodes[element.node_j].temperature_delta)
+            / 2.0;
+        assert_close(element.average_temperature_delta, average_temperature_delta);
+        assert_close(
+            element.thermal_strain,
+            input.thermal_expansion * average_temperature_delta,
+        );
+        assert_close(
+            element.mechanical_strain,
+            element.total_strain - element.thermal_strain,
+        );
+        assert_close(
+            element.stress,
+            input.youngs_modulus * element.mechanical_strain,
+        );
+        assert_close(element.axial_force, element.stress * input.area);
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.mechanical_strain,
+        );
+        max_stress = max_stress.max(element.stress.abs());
+        max_axial_force = max_axial_force.max(element.axial_force.abs());
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+        total_strain_energy += element.strain_energy_density * input.area * element.length;
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_temperature_delta,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.temperature_delta.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_stress, max_stress);
+    assert_close(result.max_axial_force, max_axial_force);
+    assert_close(result.max_strain_energy_density, max_energy_density);
+    assert_close(result.total_strain_energy, total_strain_energy);
 }
 
 fn restrained_triangle(

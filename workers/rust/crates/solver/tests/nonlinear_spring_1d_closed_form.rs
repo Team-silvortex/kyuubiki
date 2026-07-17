@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
     NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolveNonlinearSpring1dRequest,
+    SolveNonlinearSpring1dResult,
 };
 use kyuubiki_solver::solve_nonlinear_spring_1d;
 
@@ -42,6 +43,7 @@ fn nonlinear_spring_1d_closed_form_matches_cardano_root() {
     assert_close(element.tangent_stiffness, expected_tangent);
     assert!(element.tangent_stiffness > stiffness);
     assert_hardening_energy_law(element, stiffness, cubic_stiffness);
+    assert_nonlinear_spring_summary(&result);
 }
 
 #[test]
@@ -53,6 +55,7 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
         solve_nonlinear_spring_1d(&single_hardening_spring(stiffness, cubic_stiffness, load))
             .expect("baseline hardening spring should solve");
     assert_hardening_energy_law(&baseline.elements[0], stiffness, cubic_stiffness);
+    assert_nonlinear_spring_summary(&baseline);
 
     let scale = 1.7;
     let scaled = solve_nonlinear_spring_1d(&single_hardening_spring(
@@ -91,6 +94,7 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
         stiffness * scale,
         cubic_stiffness * scale,
     );
+    assert_nonlinear_spring_summary(&scaled);
     for (scaled_step, baseline_step) in scaled.steps.iter().zip(&baseline.steps) {
         assert_eq!(scaled_step.step, baseline_step.step);
         assert_close(scaled_step.load_factor, baseline_step.load_factor);
@@ -120,6 +124,46 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
     );
     assert_hardening_energy_law(&longer.elements[0], stiffness, cubic_stiffness);
     assert_eq!(longer.steps.len(), baseline.steps.len());
+    assert_nonlinear_spring_summary(&longer);
+}
+
+fn assert_nonlinear_spring_summary(result: &SolveNonlinearSpring1dResult) {
+    let mut max_force = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let extension = result.nodes[element.node_j].ux - result.nodes[element.node_i].ux;
+        assert_close(element.extension, extension);
+        assert_close(
+            element.force,
+            input.stiffness * extension + input.cubic_stiffness * extension.powi(3),
+        );
+        assert_close(
+            element.tangent_stiffness,
+            input.stiffness + 3.0 * input.cubic_stiffness * extension.powi(2),
+        );
+        max_force = max_force.max(element.force.abs());
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.ux.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_force, max_force);
+    assert!(result.residual_norm <= result.input.tolerance.unwrap_or(1.0e-9));
+
+    for (index, step) in result.steps.iter().enumerate() {
+        assert_eq!(step.step, index + 1);
+        assert!(step.load_factor > 0.0);
+        assert!(step.load_factor <= 1.0);
+        assert!(step.converged);
+        assert!(step.iterations <= result.input.max_iterations.unwrap_or(32));
+        assert!(step.residual_norm <= result.input.tolerance.unwrap_or(1.0e-9));
+    }
 }
 
 fn single_hardening_spring(

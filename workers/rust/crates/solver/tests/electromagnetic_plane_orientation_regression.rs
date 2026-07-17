@@ -1,9 +1,13 @@
 use kyuubiki_protocol::{
     ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
-    ElectrostaticPlaneTriangleElementInput, MagnetostaticPlaneNodeInput,
-    MagnetostaticPlaneQuadElementInput, MagnetostaticPlaneTriangleElementInput,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
+    ElectrostaticPlaneQuadElementResult, ElectrostaticPlaneTriangleElementInput,
+    ElectrostaticPlaneTriangleElementResult, MagnetostaticPlaneNodeInput,
+    MagnetostaticPlaneQuadElementInput, MagnetostaticPlaneQuadElementResult,
+    MagnetostaticPlaneTriangleElementInput, MagnetostaticPlaneTriangleElementResult,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneQuad2dResult,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveElectrostaticPlaneTriangle2dResult,
+    SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneQuad2dResult,
+    SolveMagnetostaticPlaneTriangle2dRequest, SolveMagnetostaticPlaneTriangle2dResult,
 };
 use kyuubiki_solver::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
@@ -37,6 +41,7 @@ fn electrostatic_plane_orientation_regression_preserves_energy_and_rotates_field
         EXPECTED_ELECTRIC_ENERGY_DENSITY,
     );
     assert_close(triangle_element.stored_energy, 4.8);
+    assert_electrostatic_triangle_contract(&triangle);
 
     let quad_element = &quad.elements[0];
     assert_close(quad_element.potential_gradient_x, 0.0);
@@ -50,6 +55,7 @@ fn electrostatic_plane_orientation_regression_preserves_energy_and_rotates_field
         EXPECTED_ELECTRIC_ENERGY_DENSITY,
     );
     assert_close(quad_element.stored_energy, 9.6);
+    assert_electrostatic_quad_contract(&quad);
 }
 
 #[test]
@@ -83,6 +89,8 @@ fn electrostatic_plane_thickness_scales_energy_without_changing_field() {
         thick_element.stored_energy / baseline_element.stored_energy,
         2.5,
     );
+    assert_electrostatic_quad_contract(&baseline);
+    assert_electrostatic_quad_contract(&thick);
 }
 
 #[test]
@@ -114,6 +122,7 @@ fn magnetostatic_plane_orientation_regression_preserves_energy_and_rotates_flux(
         EXPECTED_MAGNETIC_ENERGY_DENSITY,
     );
     assert_close(triangle_element.stored_energy, 0.000_314_159_265_358_979_25);
+    assert_magnetostatic_triangle_contract(&triangle);
 
     let quad_element = &quad.elements[0];
     assert_close(
@@ -137,6 +146,7 @@ fn magnetostatic_plane_orientation_regression_preserves_energy_and_rotates_flux(
         EXPECTED_MAGNETIC_ENERGY_DENSITY,
     );
     assert_close(quad_element.stored_energy, 0.000_628_318_530_717_958_5);
+    assert_magnetostatic_quad_contract(&quad);
 }
 
 #[test]
@@ -170,6 +180,482 @@ fn magnetostatic_plane_current_source_scales_with_inverse_thickness() {
     assert_close(
         thick_element.stored_energy / baseline_element.stored_energy,
         inverse_thickness_scale,
+    );
+    assert_magnetostatic_quad_contract(&baseline);
+    assert_magnetostatic_quad_contract(&thick);
+}
+
+fn assert_electrostatic_triangle_contract(result: &SolveElectrostaticPlaneTriangle2dResult) {
+    let mut max_field = 0.0_f64;
+    let mut max_flux = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_stored_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let potentials = [
+            result.nodes[element.node_i].potential,
+            result.nodes[element.node_j].potential,
+            result.nodes[element.node_k].potential,
+        ];
+        assert_electrostatic_element_contract(
+            element,
+            input.permittivity,
+            input.thickness,
+            potentials.iter().sum::<f64>() / 3.0,
+        );
+        max_field = max_field.max(element.electric_field_magnitude);
+        max_flux = max_flux.max(element.electric_flux_density_magnitude);
+        max_energy_density = max_energy_density.max(element.electric_energy_density);
+        total_stored_energy += element.stored_energy;
+    }
+
+    assert_close(
+        result.max_potential,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.potential.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_electric_field, max_field);
+    assert_close(result.max_flux_density, max_flux);
+    assert_close(result.max_electric_energy_density, max_energy_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+}
+
+fn assert_electrostatic_quad_contract(result: &SolveElectrostaticPlaneQuad2dResult) {
+    let mut max_field = 0.0_f64;
+    let mut max_flux = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_stored_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let potentials = [
+            result.nodes[element.node_i].potential,
+            result.nodes[element.node_j].potential,
+            result.nodes[element.node_k].potential,
+            result.nodes[element.node_l].potential,
+        ];
+        assert_electrostatic_element_contract(
+            element,
+            input.permittivity,
+            input.thickness,
+            potentials.iter().sum::<f64>() / 4.0,
+        );
+        max_field = max_field.max(element.electric_field_magnitude);
+        max_flux = max_flux.max(element.electric_flux_density_magnitude);
+        max_energy_density = max_energy_density.max(element.electric_energy_density);
+        total_stored_energy += element.stored_energy;
+    }
+
+    assert_close(
+        result.max_potential,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.potential.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_electric_field, max_field);
+    assert_close(result.max_flux_density, max_flux);
+    assert_close(result.max_electric_energy_density, max_energy_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+}
+
+trait ElectrostaticPlaneElement {
+    fn area(&self) -> f64;
+    fn average_potential(&self) -> f64;
+    fn potential_gradient_x(&self) -> f64;
+    fn potential_gradient_y(&self) -> f64;
+    fn electric_field_x(&self) -> f64;
+    fn electric_field_y(&self) -> f64;
+    fn electric_field_magnitude(&self) -> f64;
+    fn electric_flux_density_x(&self) -> f64;
+    fn electric_flux_density_y(&self) -> f64;
+    fn electric_flux_density_magnitude(&self) -> f64;
+    fn electric_energy_density(&self) -> f64;
+    fn stored_energy(&self) -> f64;
+}
+
+impl ElectrostaticPlaneElement for ElectrostaticPlaneTriangleElementResult {
+    fn area(&self) -> f64 {
+        self.area
+    }
+
+    fn average_potential(&self) -> f64 {
+        self.average_potential
+    }
+
+    fn potential_gradient_x(&self) -> f64 {
+        self.potential_gradient_x
+    }
+
+    fn potential_gradient_y(&self) -> f64 {
+        self.potential_gradient_y
+    }
+
+    fn electric_field_x(&self) -> f64 {
+        self.electric_field_x
+    }
+
+    fn electric_field_y(&self) -> f64 {
+        self.electric_field_y
+    }
+
+    fn electric_field_magnitude(&self) -> f64 {
+        self.electric_field_magnitude
+    }
+
+    fn electric_flux_density_x(&self) -> f64 {
+        self.electric_flux_density_x
+    }
+
+    fn electric_flux_density_y(&self) -> f64 {
+        self.electric_flux_density_y
+    }
+
+    fn electric_flux_density_magnitude(&self) -> f64 {
+        self.electric_flux_density_magnitude
+    }
+
+    fn electric_energy_density(&self) -> f64 {
+        self.electric_energy_density
+    }
+
+    fn stored_energy(&self) -> f64 {
+        self.stored_energy
+    }
+}
+
+impl ElectrostaticPlaneElement for ElectrostaticPlaneQuadElementResult {
+    fn area(&self) -> f64 {
+        self.area
+    }
+
+    fn average_potential(&self) -> f64 {
+        self.average_potential
+    }
+
+    fn potential_gradient_x(&self) -> f64 {
+        self.potential_gradient_x
+    }
+
+    fn potential_gradient_y(&self) -> f64 {
+        self.potential_gradient_y
+    }
+
+    fn electric_field_x(&self) -> f64 {
+        self.electric_field_x
+    }
+
+    fn electric_field_y(&self) -> f64 {
+        self.electric_field_y
+    }
+
+    fn electric_field_magnitude(&self) -> f64 {
+        self.electric_field_magnitude
+    }
+
+    fn electric_flux_density_x(&self) -> f64 {
+        self.electric_flux_density_x
+    }
+
+    fn electric_flux_density_y(&self) -> f64 {
+        self.electric_flux_density_y
+    }
+
+    fn electric_flux_density_magnitude(&self) -> f64 {
+        self.electric_flux_density_magnitude
+    }
+
+    fn electric_energy_density(&self) -> f64 {
+        self.electric_energy_density
+    }
+
+    fn stored_energy(&self) -> f64 {
+        self.stored_energy
+    }
+}
+
+fn assert_electrostatic_element_contract(
+    element: &impl ElectrostaticPlaneElement,
+    permittivity: f64,
+    thickness: f64,
+    average_potential: f64,
+) {
+    assert_close(element.average_potential(), average_potential);
+    assert_close(element.electric_field_x(), -element.potential_gradient_x());
+    assert_close(element.electric_field_y(), -element.potential_gradient_y());
+    assert_close(
+        element.electric_field_magnitude(),
+        magnitude(element.electric_field_x(), element.electric_field_y()),
+    );
+    assert_close(
+        element.electric_flux_density_x(),
+        permittivity * element.electric_field_x(),
+    );
+    assert_close(
+        element.electric_flux_density_y(),
+        permittivity * element.electric_field_y(),
+    );
+    assert_close(
+        element.electric_flux_density_magnitude(),
+        magnitude(
+            element.electric_flux_density_x(),
+            element.electric_flux_density_y(),
+        ),
+    );
+    assert_close(
+        element.electric_energy_density(),
+        0.5 * permittivity * element.electric_field_magnitude().powi(2),
+    );
+    assert_close(
+        element.stored_energy(),
+        element.electric_energy_density() * element.area() * thickness,
+    );
+}
+
+fn assert_magnetostatic_triangle_contract(result: &SolveMagnetostaticPlaneTriangle2dResult) {
+    let mut max_field = 0.0_f64;
+    let mut max_flux = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_stored_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let vector_potentials = [
+            result.nodes[element.node_i].vector_potential,
+            result.nodes[element.node_j].vector_potential,
+            result.nodes[element.node_k].vector_potential,
+        ];
+        assert_magnetostatic_element_contract(
+            element,
+            input.permeability,
+            input.thickness,
+            vector_potentials.iter().sum::<f64>() / 3.0,
+        );
+        max_field = max_field.max(element.magnetic_field_strength_magnitude);
+        max_flux = max_flux.max(element.magnetic_flux_density_magnitude);
+        max_energy_density = max_energy_density.max(element.magnetic_energy_density);
+        total_stored_energy += element.stored_energy;
+    }
+
+    assert_close(
+        result.max_vector_potential,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.vector_potential.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_magnetic_field_strength, max_field);
+    assert_close(result.max_flux_density, max_flux);
+    assert_close(result.max_magnetic_energy_density, max_energy_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+}
+
+fn assert_magnetostatic_quad_contract(result: &SolveMagnetostaticPlaneQuad2dResult) {
+    let mut max_field = 0.0_f64;
+    let mut max_flux = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_stored_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let vector_potentials = [
+            result.nodes[element.node_i].vector_potential,
+            result.nodes[element.node_j].vector_potential,
+            result.nodes[element.node_k].vector_potential,
+            result.nodes[element.node_l].vector_potential,
+        ];
+        assert_magnetostatic_element_contract(
+            element,
+            input.permeability,
+            input.thickness,
+            vector_potentials.iter().sum::<f64>() / 4.0,
+        );
+        max_field = max_field.max(element.magnetic_field_strength_magnitude);
+        max_flux = max_flux.max(element.magnetic_flux_density_magnitude);
+        max_energy_density = max_energy_density.max(element.magnetic_energy_density);
+        total_stored_energy += element.stored_energy;
+    }
+
+    assert_close(
+        result.max_vector_potential,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.vector_potential.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_magnetic_field_strength, max_field);
+    assert_close(result.max_flux_density, max_flux);
+    assert_close(result.max_magnetic_energy_density, max_energy_density);
+    assert_close(result.total_stored_energy, total_stored_energy);
+}
+
+trait MagnetostaticPlaneElement {
+    fn area(&self) -> f64;
+    fn average_vector_potential(&self) -> f64;
+    fn vector_potential_gradient_x(&self) -> f64;
+    fn vector_potential_gradient_y(&self) -> f64;
+    fn magnetic_field_strength_x(&self) -> f64;
+    fn magnetic_field_strength_y(&self) -> f64;
+    fn magnetic_field_strength_magnitude(&self) -> f64;
+    fn magnetic_flux_density_x(&self) -> f64;
+    fn magnetic_flux_density_y(&self) -> f64;
+    fn magnetic_flux_density_magnitude(&self) -> f64;
+    fn magnetic_energy_density(&self) -> f64;
+    fn stored_energy(&self) -> f64;
+}
+
+impl MagnetostaticPlaneElement for MagnetostaticPlaneTriangleElementResult {
+    fn area(&self) -> f64 {
+        self.area
+    }
+
+    fn average_vector_potential(&self) -> f64 {
+        self.average_vector_potential
+    }
+
+    fn vector_potential_gradient_x(&self) -> f64 {
+        self.vector_potential_gradient_x
+    }
+
+    fn vector_potential_gradient_y(&self) -> f64 {
+        self.vector_potential_gradient_y
+    }
+
+    fn magnetic_field_strength_x(&self) -> f64 {
+        self.magnetic_field_strength_x
+    }
+
+    fn magnetic_field_strength_y(&self) -> f64 {
+        self.magnetic_field_strength_y
+    }
+
+    fn magnetic_field_strength_magnitude(&self) -> f64 {
+        self.magnetic_field_strength_magnitude
+    }
+
+    fn magnetic_flux_density_x(&self) -> f64 {
+        self.magnetic_flux_density_x
+    }
+
+    fn magnetic_flux_density_y(&self) -> f64 {
+        self.magnetic_flux_density_y
+    }
+
+    fn magnetic_flux_density_magnitude(&self) -> f64 {
+        self.magnetic_flux_density_magnitude
+    }
+
+    fn magnetic_energy_density(&self) -> f64 {
+        self.magnetic_energy_density
+    }
+
+    fn stored_energy(&self) -> f64 {
+        self.stored_energy
+    }
+}
+
+impl MagnetostaticPlaneElement for MagnetostaticPlaneQuadElementResult {
+    fn area(&self) -> f64 {
+        self.area
+    }
+
+    fn average_vector_potential(&self) -> f64 {
+        self.average_vector_potential
+    }
+
+    fn vector_potential_gradient_x(&self) -> f64 {
+        self.vector_potential_gradient_x
+    }
+
+    fn vector_potential_gradient_y(&self) -> f64 {
+        self.vector_potential_gradient_y
+    }
+
+    fn magnetic_field_strength_x(&self) -> f64 {
+        self.magnetic_field_strength_x
+    }
+
+    fn magnetic_field_strength_y(&self) -> f64 {
+        self.magnetic_field_strength_y
+    }
+
+    fn magnetic_field_strength_magnitude(&self) -> f64 {
+        self.magnetic_field_strength_magnitude
+    }
+
+    fn magnetic_flux_density_x(&self) -> f64 {
+        self.magnetic_flux_density_x
+    }
+
+    fn magnetic_flux_density_y(&self) -> f64 {
+        self.magnetic_flux_density_y
+    }
+
+    fn magnetic_flux_density_magnitude(&self) -> f64 {
+        self.magnetic_flux_density_magnitude
+    }
+
+    fn magnetic_energy_density(&self) -> f64 {
+        self.magnetic_energy_density
+    }
+
+    fn stored_energy(&self) -> f64 {
+        self.stored_energy
+    }
+}
+
+fn assert_magnetostatic_element_contract(
+    element: &impl MagnetostaticPlaneElement,
+    permeability: f64,
+    thickness: f64,
+    average_vector_potential: f64,
+) {
+    assert_close(element.average_vector_potential(), average_vector_potential);
+    assert_close(
+        element.magnetic_flux_density_x(),
+        element.vector_potential_gradient_y(),
+    );
+    assert_close(
+        element.magnetic_flux_density_y(),
+        -element.vector_potential_gradient_x(),
+    );
+    assert_close(
+        element.magnetic_flux_density_magnitude(),
+        magnitude(
+            element.magnetic_flux_density_x(),
+            element.magnetic_flux_density_y(),
+        ),
+    );
+    assert_close(
+        element.magnetic_field_strength_x(),
+        element.magnetic_flux_density_x() / permeability,
+    );
+    assert_close(
+        element.magnetic_field_strength_y(),
+        element.magnetic_flux_density_y() / permeability,
+    );
+    assert_close(
+        element.magnetic_field_strength_magnitude(),
+        magnitude(
+            element.magnetic_field_strength_x(),
+            element.magnetic_field_strength_y(),
+        ),
+    );
+    assert_close(
+        element.magnetic_energy_density(),
+        0.5 * element.magnetic_flux_density_magnitude()
+            * element.magnetic_field_strength_magnitude(),
+    );
+    assert_close(
+        element.stored_energy(),
+        element.magnetic_energy_density() * element.area() * thickness,
     );
 }
 
@@ -296,4 +782,8 @@ fn assert_close(actual: f64, expected: f64) {
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
     );
+}
+
+fn magnitude(x: f64, y: f64) -> f64 {
+    (x * x + y * y).sqrt()
 }

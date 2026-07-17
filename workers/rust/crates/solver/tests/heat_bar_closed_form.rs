@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{HeatBar1dElementInput, HeatBar1dNodeInput, SolveHeatBar1dRequest};
+use kyuubiki_protocol::{
+    HeatBar1dElementInput, HeatBar1dNodeInput, SolveHeatBar1dRequest, SolveHeatBar1dResult,
+};
 use kyuubiki_solver::solve_heat_bar_1d;
 
 const TOL: f64 = 1.0e-10;
@@ -156,17 +158,14 @@ fn node(
     }
 }
 
-fn assert_response(
-    result: &kyuubiki_protocol::SolveHeatBar1dResult,
-    expected: ExpectedHeatResponse,
-) {
+fn assert_response(result: &SolveHeatBar1dResult, expected: ExpectedHeatResponse) {
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
     assert_close(result.nodes[0].temperature, 0.0);
     assert_close(result.nodes[1].temperature, expected.tip_temperature);
     assert_close(result.max_temperature, expected.tip_temperature.abs());
     assert_close(result.max_heat_flux, expected.heat_flux.abs());
-    assert_heat_balance(result);
+    assert_heat_bar_summary(result);
     assert_close(
         result.elements[0].average_temperature,
         expected.tip_temperature / 2.0,
@@ -175,7 +174,14 @@ fn assert_response(
     assert_close(result.elements[0].heat_flux, expected.heat_flux);
 }
 
-fn assert_heat_balance(result: &kyuubiki_protocol::SolveHeatBar1dResult) {
+fn assert_heat_bar_summary(result: &SolveHeatBar1dResult) {
+    let max_temperature = result
+        .nodes
+        .iter()
+        .map(|node| node.temperature.abs())
+        .fold(0.0_f64, f64::max);
+    assert_close(result.max_temperature, max_temperature);
+
     let max_heat_flux = result
         .elements
         .iter()
@@ -185,12 +191,18 @@ fn assert_heat_balance(result: &kyuubiki_protocol::SolveHeatBar1dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let expected_length = (node_j.x - node_i.x).abs();
+        let expected_average_temperature = 0.5 * (node_i.temperature + node_j.temperature);
+        let expected_gradient = (node_j.temperature - node_i.temperature) / expected_length;
+        assert_close(element.length, expected_length);
+        assert_close(element.average_temperature, expected_average_temperature);
+        assert_close(element.temperature_gradient, expected_gradient);
         assert_close(
             element.heat_flux,
             -input.conductivity * element.temperature_gradient,
         );
-        let node_i = &result.nodes[element.node_i];
-        let node_j = &result.nodes[element.node_j];
         let nodal_load = node_i.heat_load + node_j.heat_load;
         assert_close(element.heat_flux * input.area + nodal_load, 0.0);
     }

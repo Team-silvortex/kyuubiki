@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
-    SolveThermalFrame2dRequest, ThermalFrame2dElementInput, ThermalFrame2dNodeInput,
+    SolveThermalFrame2dRequest, SolveThermalFrame2dResult, ThermalFrame2dElementInput,
+    ThermalFrame2dNodeInput,
 };
 use kyuubiki_solver::solve_thermal_frame_2d;
 
@@ -62,6 +63,7 @@ fn thermal_frame_2d_matches_restrained_uniform_temperature_closed_form() {
     assert_close(result.max_temperature_gradient, 0.0);
     assert_close(result.total_strain_energy, expected_energy);
     assert_member_energy_balance(&result.elements, result.total_strain_energy);
+    assert_thermal_frame_summary(&result);
 }
 
 #[test]
@@ -80,6 +82,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
     ))
     .expect("baseline restrained thermal frame 2d should solve");
     assert_member_energy_balance(&baseline.elements, baseline.total_strain_energy);
+    assert_thermal_frame_summary(&baseline);
 
     let temperature_scale = 1.5;
     let hotter = solve_thermal_frame_2d(&restrained_member(
@@ -107,6 +110,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         temperature_scale * temperature_scale,
     );
     assert_member_energy_balance(&hotter.elements, hotter.total_strain_energy);
+    assert_thermal_frame_summary(&hotter);
 
     let expansion_scale = 1.3;
     let expanded = solve_thermal_frame_2d(&restrained_member(
@@ -134,6 +138,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         expansion_scale * expansion_scale,
     );
     assert_member_energy_balance(&expanded.elements, expanded.total_strain_energy);
+    assert_thermal_frame_summary(&expanded);
 
     let area_scale = 1.7;
     let wider = solve_thermal_frame_2d(&restrained_member(
@@ -157,6 +162,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         area_scale,
     );
     assert_member_energy_balance(&wider.elements, wider.total_strain_energy);
+    assert_thermal_frame_summary(&wider);
 
     let modulus_scale = 1.25;
     let stiffer = solve_thermal_frame_2d(&restrained_member(
@@ -184,6 +190,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         modulus_scale,
     );
     assert_member_energy_balance(&stiffer.elements, stiffer.total_strain_energy);
+    assert_thermal_frame_summary(&stiffer);
 
     let length_scale = 1.45;
     let longer = solve_thermal_frame_2d(&restrained_member(
@@ -211,6 +218,89 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         length_scale,
     );
     assert_member_energy_balance(&longer.elements, longer.total_strain_energy);
+    assert_thermal_frame_summary(&longer);
+}
+
+fn assert_thermal_frame_summary(result: &SolveThermalFrame2dResult) {
+    let mut max_moment = 0.0_f64;
+    let mut max_stress = 0.0_f64;
+    let mut max_axial_force = 0.0_f64;
+    let mut max_temperature_gradient = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
+            + result.nodes[element.node_j].temperature_delta)
+            / 2.0;
+        assert_close(element.average_temperature_delta, average_temperature_delta);
+        assert_close(
+            element.thermal_strain,
+            input.thermal_expansion * average_temperature_delta,
+        );
+        assert_close(
+            element.mechanical_strain,
+            element.total_strain - element.thermal_strain,
+        );
+        assert_close(
+            element.thermal_curvature,
+            input.thermal_expansion * element.temperature_gradient_y / input.section_depth,
+        );
+        assert_close(
+            element.axial_stress,
+            -input.youngs_modulus * element.mechanical_strain,
+        );
+        assert_close(element.axial_force_i, element.axial_stress * input.area);
+        assert_close(element.axial_force_j, -element.axial_force_i);
+        assert_close(
+            element.max_combined_stress,
+            element.axial_stress.abs() + element.max_bending_stress.abs(),
+        );
+        max_moment = max_moment.max(element.moment_i.abs());
+        max_moment = max_moment.max(element.moment_j.abs());
+        max_stress = max_stress.max(element.max_combined_stress.abs());
+        max_axial_force = max_axial_force.max(element.axial_force_i.abs());
+        max_axial_force = max_axial_force.max(element.axial_force_j.abs());
+        max_temperature_gradient =
+            max_temperature_gradient.max(element.temperature_gradient_y.abs());
+        total_strain_energy += element.strain_energy;
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| {
+                assert_close(
+                    node.displacement_magnitude,
+                    (node.ux * node.ux + node.uy * node.uy).sqrt(),
+                );
+                node.displacement_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_rotation,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.rz.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_temperature_delta,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.temperature_delta.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(result.max_moment, max_moment);
+    assert_close(result.max_stress, max_stress);
+    assert_close(result.max_axial_force, max_axial_force);
+    assert_close(result.max_temperature_gradient, max_temperature_gradient);
+    assert_close(result.total_strain_energy, total_strain_energy);
 }
 
 fn restrained_member(

@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput};
+use kyuubiki_protocol::{
+    SolveTruss3dRequest, SolveTruss3dResult, Truss3dElementInput, Truss3dNodeInput,
+};
 use kyuubiki_solver::solve_truss_3d;
 
 const TOL: f64 = 1.0e-8;
@@ -48,6 +50,7 @@ fn truss_3d_matches_symmetric_tripod_closed_form() {
             TOL,
         );
     }
+    assert_truss_summary(&result);
 }
 
 #[test]
@@ -60,6 +63,7 @@ fn truss_3d_tracks_load_and_area_scaling() {
     let baseline = solve_truss_3d(&tripod_request(radius, height, load, area, youngs_modulus))
         .expect("baseline tripod truss should solve");
     assert_apex_force_energy(baseline.total_strain_energy, load, baseline.nodes[3].uz);
+    assert_truss_summary(&baseline);
 
     let load_scale = 1.35;
     let load_scaled = solve_truss_3d(&tripod_request(
@@ -95,6 +99,7 @@ fn truss_3d_tracks_load_and_area_scaling() {
         load * load_scale,
         load_scaled.nodes[3].uz,
     );
+    assert_truss_summary(&load_scaled);
 
     let area_scale = 1.5;
     let area_scaled = solve_truss_3d(&tripod_request(
@@ -130,6 +135,7 @@ fn truss_3d_tracks_load_and_area_scaling() {
         load,
         area_scaled.nodes[3].uz,
     );
+    assert_truss_summary(&area_scaled);
 
     let modulus_scale = 1.2;
     let stiffened = solve_truss_3d(&tripod_request(
@@ -157,6 +163,7 @@ fn truss_3d_tracks_load_and_area_scaling() {
         TOL,
     );
     assert_apex_force_energy(stiffened.total_strain_energy, load, stiffened.nodes[3].uz);
+    assert_truss_summary(&stiffened);
 
     let geometry_scale = 1.4;
     let longer = solve_truss_3d(&tripod_request(
@@ -189,6 +196,51 @@ fn truss_3d_tracks_load_and_area_scaling() {
         TOL,
     );
     assert_apex_force_energy(longer.total_strain_energy, load, longer.nodes[3].uz);
+    assert_truss_summary(&longer);
+}
+
+fn assert_truss_summary(result: &SolveTruss3dResult) {
+    let mut max_stress = 0.0_f64;
+    let mut max_energy_density = 0.0_f64;
+    let mut total_strain_energy = 0.0_f64;
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        assert_close(element.stress, input.youngs_modulus * element.strain, TOL);
+        assert_close(element.axial_force, element.stress * input.area, TOL);
+        assert_close(
+            element.strain_energy_density,
+            0.5 * element.stress * element.strain,
+            TOL,
+        );
+        max_stress = max_stress.max(element.stress.abs());
+        max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
+        total_strain_energy += element.strain_energy_density * input.area * element.length;
+    }
+
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
+            .fold(0.0_f64, f64::max),
+        TOL,
+    );
+    assert_close(result.max_stress, max_stress, TOL);
+    assert_close(result.max_strain_energy_density, max_energy_density, TOL);
+    assert_close(result.total_strain_energy, total_strain_energy, TOL);
+
+    let external_work = result
+        .input
+        .nodes
+        .iter()
+        .zip(result.nodes.iter())
+        .map(|(input, node)| {
+            input.load_x * node.ux + input.load_y * node.uy + input.load_z * node.uz
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work, TOL);
 }
 
 fn tripod_request(

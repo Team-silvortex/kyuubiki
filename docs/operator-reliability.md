@@ -207,7 +207,10 @@ changes scale Reynolds diagnostics without changing viscous stress.
 The quad and triangle paths also check geometry scaling with the prescribed
 velocity boundary held fixed, so element area scales with domain area, shear
 rate and viscous stress scale inversely with length, and viscous dissipation
-remains fixed under the same thickness.
+remains fixed under the same thickness. Every retained branch also re-derives
+summary maxima, pressure drop, element average velocity/pressure, Reynolds
+number, and nonnegative divergence, shear, stress, and dissipation diagnostics
+from node and element fields.
 
 ## CFD Stokes Divergence Tolerance
 
@@ -265,6 +268,11 @@ total stored energy scales linearly with thickness. For the current-driven
 magnetostatic patch, vector-potential gradient, flux density, and field
 strength scale inversely with thickness; energy density scales with the inverse
 square and total stored energy scales inversely.
+The retained executable check now also re-derives the result summaries from
+nodes and elements: maximum potential/vector potential, maximum field strength,
+maximum flux density, maximum energy density, element average potentials, field
+or flux orientation laws, material constitutive laws, and stored-energy totals
+must all agree with the reported diagnostics.
 The matching review decision promotes `solve.electrostatic_plane_triangle_2d`,
 `solve.electrostatic_plane_quad_2d`,
 `solve.magnetostatic_plane_triangle_2d`, and
@@ -315,12 +323,18 @@ linearly with thickness.
 Quad and triangle heat-plane meshes also run the same manufactured linear
 temperature field over 1x1, 2x2, and 4x4 refinements, preserving nodal
 temperatures, gradients, heat-flux density, and total heat-flow rate across
-the refinement ladder.
+the refinement ladder. The retained executable check also re-derives maximum
+temperature, maximum heat flux, average element temperature, Fourier heat-flux
+components, element heat-flow rate, and total absolute heat-flow rate from the
+reported node and element fields.
 The retained thermoelastic patch also checks temperature-delta and thickness
 scaling: restrained thermal stress scales linearly with temperature delta,
 strain-energy density and total energy scale quadratically with temperature
 delta, and thickness leaves stress plus energy density fixed while scaling
-total energy linearly.
+total energy linearly. Its retained regression also re-derives displacement,
+temperature-delta, von Mises stress, in-plane shear, thermal strain,
+strain-energy density, and total strain-energy summaries from public result
+fields.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
 
@@ -354,7 +368,10 @@ for shorter beams across eigenvalue, rad/s, Hz, and period. The retained
 regression also verifies that uniform stiffness and density scaling drive modal
 frequency by `sqrt(stiffness / density)`, eigenvalue by `stiffness / density`,
 and period by the inverse frequency factor while preserving free DOFs and
-normalized participation. Symmetric 3D bending
+normalized participation. Every retained branch also re-derives min/max
+frequency, eigenvalue/rad/s/Hz/period consistency, mode index order, expanded
+shape constraints, and participation norm from the retained mode fields.
+Symmetric 3D bending
 modes may be near-degenerate, so the 3D ordering contract is non-decreasing
 rather than strictly increasing.
 For the moxi 2.0.0 line, the retained validation report is attached at
@@ -385,18 +402,37 @@ coverage, and selected line-field, structural, thermal, electromagnetic,
 modal, acoustic, transport, spring, and Stokes-screening subsets have crossed into
 scoped qualification evidence.
 
+The dynamic spring 1D operators are retained for the single-DOF transient and
+harmonic response scope. The transient branch checks Newmark single-step
+response, load scaling, and undamped time-step refinement; every retained
+branch also re-derives history maxima, kinetic energy, strain energy, final
+node state, and final spring/damping force diagnostics. The harmonic branch
+checks dynamic-stiffness amplitudes, damping response, global maxima, peak
+frequency, per-frequency maxima, and velocity/acceleration amplitudes from the
+frequency result fields.
+
 The CFD-facing Stokes operators remain `screening_only` in scope, but the
 `screening-cfd-boundary` evidence kit is now qualified for that boundary: the
 quad lane has body-force and lid-driven shear boundary fixtures, the triangle
 lane adds geometry rejection plus heterogeneous viscosity response, and the
 mesh-refinement fixture verifies a linear Stokes field on 1x1, 2x2, and 4x4
 quad/triangle meshes with material-diagnostic scaling on both element shapes.
+The retained screening tests also re-derive Stokes summary and element
+diagnostics from public node/element fields, including velocity magnitude,
+pressure drop, Reynolds number, and nonnegative dissipation.
 The test suite encodes a screening divergence tolerance and the retained
 screening policy documents its current limits. The
 `screening-cfd-boundary` validation profile now acts as the release-candidate
 aggregation lane, while `stokes-flow-screening` remains the narrower component
 profile. Future Navier-Stokes or industrial CFD claims still need separate
 external-reference or benchmark evidence.
+
+The transient heat 1D bar is now retained for the single-free-node implicit
+Euler lumped-capacity scope. Its closed-form regression checks each history
+step, final time, final node temperatures, final heat flux, and thermal energy.
+Every retained branch also re-derives history maxima and energies from lumped
+capacity, checks that the last history frame matches final summary fields, and
+recomputes final element average temperature, gradient, and Fourier heat flux.
 
 The acoustic 1D bar is now qualified for the retained linear frequency-domain
 duct scope. Its closed-form evidence solves the reduced scalar pressure
@@ -411,7 +447,10 @@ requires the dynamic pressure, pressure gradient, particle velocity, and
 damping loss to keep matching the same closed-form dynamic-stiffness reference.
 The source-amplitude regression uses a pure-source fixture to verify linear
 pressure/particle-velocity scaling and quadratic acoustic-intensity/damping-loss
-scaling. This does not claim branched duct networks, nonlinear acoustics,
+scaling. Every retained branch also re-derives summary maxima, sound-pressure
+level, speed of sound, wave number, particle velocity, acoustic intensity, and
+damping loss, element length, and material echo fields from node, element, and
+material fields. This does not claim branched duct networks, nonlinear acoustics,
 transient propagation, or 3D acoustic cavities.
 
 The advection-diffusion 1D bar is now qualified for the retained steady
@@ -429,8 +468,12 @@ three-node free concentration DOF and verifies that internal
 source strength scales the middle concentration linearly while cross-sectional
 area inversely scales the source-driven concentration increment. It also checks
 the source-balance jump between left and right total flux against source per
-area, so internal source terms cannot silently lose conservation. This does not
-claim transient transport, nonlinear reaction, multidimensional flow,
+area, so internal source terms cannot silently lose conservation. Every retained
+branch now also re-derives summary maxima from node/element results and checks
+element length, average concentration, concentration gradient,
+`diffusive_flux = -D * grad(c)`, `advective_flux = velocity * c_avg`,
+`total_flux = diffusive_flux + advective_flux`, and the Peclet formula. This
+does not claim transient transport, nonlinear reaction, multidimensional flow,
 turbulent mixing, or arbitrary stabilization schemes.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
@@ -438,9 +481,13 @@ permeance scope. Its closed-form evidence checks magnetic potential, field
 strength, flux density, and stored energy across length, area, permeability,
 and source scaling, plus the zero-source limit. The retained regression also
 checks the magnetic energy conjugacy
-`stored_energy = 0.5 * magnetomotive_source * magnetic_potential`. This does not claim nonlinear
-magnetic materials, hysteresis, saturation, eddy currents, or time-varying
-fields.
+`stored_energy = 0.5 * magnetomotive_source * magnetic_potential`, summary
+stored-energy summation, magnetic field/flux recovery, max magnetic potential,
+element length, average magnetic potential, magnetic-potential-gradient
+recovery, and the source balance
+`magnetic_flux_density * area + magnetomotive_source = 0`. This does not claim
+nonlinear magnetic materials, hysteresis, saturation, eddy currents, or
+time-varying fields.
 
 The spring 1D chain is now qualified for the retained linear static series
 scope. Its closed-form evidence checks equivalent series stiffness, member
@@ -451,7 +498,10 @@ that uniform stiffness scaling inversely scales displacement and strain energy
 while preserving series force continuity. It also perturbs node spacing to
 verify that reported element length changes do not alter displacement, member
 force, or energy for fixed discrete spring stiffness. Every retained branch
-also checks `total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)`.
+also re-derives element extension, member force, element strain energy,
+`max_displacement`, `max_force`, and
+`total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)` from public
+input, node, and element fields.
 This does not claim nonlinear
 springs, transient dynamics, contact, or arbitrary vector spring networks.
 
@@ -466,7 +516,10 @@ free-node displacement and strain energy while preserving reaction/member force.
 They also perturb orthogonal anchor distances to verify that reported element
 length changes do not alter displacement, member force, or energy for a fixed
 discrete spring stiffness. Every retained branch also checks
-`total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)`.
+direction-cosine displacement projection, `force = stiffness * extension`,
+element strain energy, `max_displacement`, `max_force`, and
+`total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)` from public
+input, node, and element fields.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
@@ -482,7 +535,10 @@ scales linearly, and tip displacement scales quadratically, without
 introducing internal moment or strain energy. Every retained branch also checks
 that total strain energy equals the sum of member `strain_energy` diagnostics,
 so free-curvature zero-energy behavior is enforced at both summary and element
-levels.
+levels. Every retained branch also re-derives node displacement magnitude,
+max displacement, max rotation, max moment, max stress, max temperature
+gradient, thermal curvature, and total strain energy from public node and
+element fields.
 This does not claim thermal frame assemblies, nonlinear material behavior,
 transient heat transfer, buckling, or plasticity.
 
@@ -499,7 +555,10 @@ where member lengths and total energy scale linearly while thermal strain,
 stress, axial force, and energy density remain fixed. Every retained scaling
 branch also re-sums member energy from
 `strain_energy_density * area * length` and checks max energy density against
-the element set. This does not claim
+the element set. Every retained branch also re-derives average element
+temperature delta, thermal strain, mechanical strain, Hooke-law stress, axial
+force, max displacement, max temperature delta, max stress, max axial force,
+and total strain energy from public node and element fields. This does not claim
 partial restraint,
 temperature gradients, buckling, plasticity, contact, or dynamic response.
 
@@ -510,7 +569,11 @@ strain split, compressive stress, axial force, and member energy summation.
 The retained 2D scaling regression applies the same temperature,
 thermal-expansion, Young's-modulus, area, and uniform geometry checks to the
 planar restrained triangle, including total member-energy re-summation and max
-energy-density checks across every retained scaling branch. This does not claim partial restraint, mixed thermal loading,
+energy-density checks across every retained scaling branch. Every retained
+branch also re-derives average element temperature delta, thermal strain,
+mechanical strain, Hooke-law stress, axial force, max displacement, max
+temperature delta, max stress, max axial force, and total strain energy from
+public node and element fields. This does not claim partial restraint, mixed thermal loading,
 temperature gradients, buckling, plasticity, contact, or dynamic response.
 
 The thermal frame 2D operator is now qualified for the retained fully
@@ -525,7 +588,11 @@ force, stress, and energy without changing thermal strain. It also verifies
 length scaling where thermal strain, stress, and axial force remain fixed while
 strain energy scales linearly with member length. Every retained branch also
 checks that total strain energy equals the sum of member `strain_energy`
-diagnostics. This does not claim
+diagnostics. Every retained branch also re-derives node displacement magnitude,
+max displacement, max rotation, average temperature delta, thermal strain,
+mechanical strain, thermal curvature, axial stress, axial force, combined
+stress, max temperature delta, max temperature gradient, max moment, max stress,
+and total strain energy from public node and element fields. This does not claim
 partial restraint, temperature gradients, frame assemblies, geometric
 nonlinearity, buckling, plasticity, contact, or dynamic response.
 
@@ -543,7 +610,13 @@ and inertia scaling changes bending moments without changing thermal curvature
 or axial force. It also verifies length scaling where thermal strain,
 curvatures, axial force, and bending moments remain fixed while strain energy
 scales linearly with member length. Every retained branch also checks that
-total strain energy equals the sum of member `strain_energy` diagnostics. This does not claim partial restraint,
+total strain energy equals the sum of member `strain_energy` diagnostics. Every
+retained branch also re-derives node displacement and rotation magnitudes, max
+displacement, max rotation, average temperature delta, thermal strain,
+mechanical strain, both thermal curvatures, axial stress, axial force, bending
+moments, bending stress, combined stress, temperature summaries, moment
+summary, stress summary, and total strain energy from public node and element
+fields. This does not claim partial restraint,
 arbitrary 3D frame
 assemblies, torsion-dominant response, geometric nonlinearity, buckling,
 plasticity, contact, or dynamic response.
@@ -562,7 +635,10 @@ independent of reported geometry length for fixed discrete spring and contact
 stiffness. Every retained branch also checks the penalty contact law directly:
 penetration is `max(ux - gap, 0)`, contact force is normal stiffness times
 penetration, active counts match active flags, `max_contact_force` is the contact
-force maximum, and spring plus contact force balances the external load. This does not claim
+force maximum, and spring plus contact force balances the external load. Every
+retained branch also re-derives spring extension, spring force, tangent
+stiffness, max displacement, max spring force, nonlinear solve residual bounds,
+and monotone converged load-step metadata from public result fields. This does not claim
 multidimensional contact, friction, impact, large deformation, or industrial
 contact search.
 
@@ -578,7 +654,10 @@ load-controlled axial force and stress, and that similar-geometry scaling
 linearly scales member length, apex displacement, and strain energy while
 preserving axial force and stress. It also asserts
 `total_strain_energy = 0.5 * apex_load * apex_displacement` across the retained
-closed-form and scaling cases. This does not claim arbitrary truss topology,
+closed-form and scaling cases. Every retained branch also re-derives maximum
+nodal displacement, max stress, max strain-energy density, total strain
+energy, Hooke-law stress, axial force, element energy density, and global
+external work from public node and element fields. This does not claim arbitrary truss topology,
 geometric nonlinearity, buckling, dynamic response, damaged members, or 3D
 space truss behavior.
 
@@ -592,7 +671,10 @@ load-controlled leg force and stress. It also checks similar-geometry scaling
 across leg length, apex displacement, and strain energy while preserving leg
 force and stress, plus
 `total_strain_energy = 0.5 * apex_load * apex_displacement` for the retained
-vertical load/displacement pair. This does not claim arbitrary space-frame topology, geometric
+vertical load/displacement pair. Every retained branch also re-derives maximum
+3D nodal displacement, max stress, max strain-energy density, total strain
+energy, Hooke-law stress, axial force, element energy density, and global
+external work from public node and element fields. This does not claim arbitrary space-frame topology, geometric
 nonlinearity, buckling, damaged members, joint eccentricity, or dynamic
 response.
 
@@ -614,7 +696,15 @@ stress and axial force; it also verifies length-linear displacement and energy
 response while preserving stress, strain-energy density, and axial force. Its
 closed-form regression now also checks that summary strain energy equals the
 element energy-density integral and the work-conjugate value
-`0.5 * tip_force * tip_displacement`. The
+`0.5 * tip_force * tip_displacement`, while re-deriving tip displacement,
+reaction force, element strain, stress, axial force, strain-energy density, and
+summary maxima from public node and element fields. The thermal bar now has
+`thermal_bar_1d_tracks_restrained_uniform_rise_scaling`, which verifies
+temperature, thermal-expansion, modulus, area, and length scaling for the
+fully restrained uniform-rise scope. Its retained regression re-derives element
+length, average temperature delta, thermal strain, mechanical strain, total
+strain, stress, axial force, energy density, total strain energy, and summary
+maxima from public node, element, and input fields. The
 heat and electrostatic line fields also have source/material scaling
 regressions:
 `heat_bar_1d_tracks_heat_load_and_conductivity_scaling` verifies heat-load
@@ -623,14 +713,19 @@ source-controlled flux, and also checks area-inverse temperature, gradient,
 and heat-flux response plus length-linear temperature response while preserving
 gradient and heat flux for the same heat load. Its retained regression also
 checks Fourier flux recovery and the end-load conservation balance
-`heat_flux * area + heat_load = 0`; and
+`heat_flux * area + heat_load = 0`, plus max temperature, max heat flux,
+element length, average temperature, and temperature-gradient recovery from
+public result fields; and
 `electrostatic_bar_1d_tracks_charge_and_permittivity_scaling` verifies charge
 linearity, quadratic stored-energy scaling, and permittivity-inverse potential
 response while preserving source-controlled electric flux density; it also
 checks area-inverse potential, field, flux-density, and stored-energy response
 plus length-linear potential and stored-energy response while preserving field
-and flux density for the same charge source, and verifies the electrostatic
-energy conjugacy `stored_energy = 0.5 * charge * potential`.
+and flux density for the same charge source. It also verifies summary
+stored-energy summation, electric-field/flux recovery, max potential, element
+length, average-potential and potential-gradient recovery, the source balance
+`electric_flux_density * area + charge = 0`, and the electrostatic energy
+conjugacy `stored_energy = 0.5 * charge * potential`.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
@@ -665,7 +760,10 @@ base-area scaling where a wider restrained base increases volume while
 reducing displacement, stress, von Mises stress, and total energy by the
 inverse area factor. The retained checks also assert
 `total_strain_energy = 0.5 * tip_load * tip_displacement` for the single free
-tip DOF. This remains a single-element linear-elastic
+tip DOF. Every retained branch also re-derives node displacement magnitude,
+total volume, von Mises stress, `0.5 * stress dot strain` energy density,
+maximum summary fields, total strain energy, and external work-energy from the
+public node and element fields. This remains a single-element linear-elastic
 qualification, not a mesh-convergence,
 plasticity, contact, or large-deformation claim.
 
@@ -681,7 +779,10 @@ hardening potential `U = 0.5 * k * u^2 + 0.25 * c * u^4`, with force and
 tangent stiffness matching the first and second displacement derivatives of
 that potential. It also perturbs element length to
 verify that the discrete hardening law keeps the Cardano root, force, and
-tangent stiffness independent of reported geometry length. This is a monotone
+tangent stiffness independent of reported geometry length. Every retained
+branch also re-derives spring extension from node displacement, force,
+tangent stiffness, max displacement, max force, residual bounds, and monotone
+converged load-step metadata from public result fields. This is a monotone
 one-dimensional hardening qualification, not a hysteresis, softening,
 snap-through, or dynamics claim.
 
@@ -696,6 +797,9 @@ quadratically, and that bending-inertia changes inversely scale displacement,
 rotation, and energy without changing load-controlled moment or stress. It
 also verifies length scaling across element length, displacement, rotation,
 root moment, bending stress, and strain energy for the same tip-load case.
+Every retained branch also re-derives displacement, rotation, moment, stress,
+and energy summary fields from nodes/elements and checks
+`total_strain_energy = 0.5 * sum(load_or_moment * displacement_or_rotation)`.
 This remains a single-member linear static qualification, not a multi-member
 stability, geometric nonlinearity, warping, plastic-hinge, or dynamics claim.
 
@@ -713,7 +817,14 @@ paths also check similar-geometry scaling where area scales quadratically,
 stress scales inversely with length, and displacement/energy stay fixed under
 the same nodal loads. They also assert the global work-energy conjugacy
 `total_strain_energy = 0.5 * sum(load_x * ux + load_y * uy)` for both retained
-triangle and quad patch paths. This remains a small-patch
+triangle and quad patch paths. Every retained branch also re-derives node
+displacement magnitude, max displacement, max stress, max strain-energy
+density, total strain energy, and work-energy consistency from public result
+fields. Triangle elements additionally recheck the direct principal-stress,
+von Mises, in-plane shear, and `0.5 * stress dot strain` energy-density
+formulas; quad elements keep those nonlinear diagnostics as split-triangle
+weighted result fields rather than incorrectly reapplying the formula to
+weighted stress/strain components. This remains a small-patch
 qualification, not a mesh-convergence, high-order quadrature, distorted-element,
 plasticity, buckling, or large-deformation claim.
 
@@ -730,7 +841,9 @@ so load-controlled moments, torques, stresses, and strain energies stay
 separated from stiffness- or geometry-controlled displacement, rotation, or
 twist response. It also checks the signed work-energy conjugacy
 `total_strain_energy = 0.5 * tip_load * tip_displacement` for beam and frame
-cases, and `total_strain_energy = 0.5 * torque * twist` for torsion. Its sign
+cases, and `total_strain_energy = 0.5 * torque * twist` for torsion. Every
+retained branch also re-derives displacement, rotation, moment, torque, stress,
+and total strain-energy summaries from node and element fields. Its sign
 convention note is
 `evidence/operator-qualification/beam-frame-force-sign-convention.md`. The
 `beam-frame-classic` profile is also part of `make verify-operator-validation`,

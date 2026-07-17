@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
     AcousticBar1dElementInput, AcousticBar1dNodeInput, SolveAcousticBar1dRequest,
+    SolveAcousticBar1dResult,
 };
 use kyuubiki_solver::solve_acoustic_bar_1d;
 
@@ -27,6 +28,7 @@ fn acoustic_bar_1d_matches_closed_form_response_across_frequencies() {
         assert_close(result.max_particle_velocity, expected.particle_velocity);
         assert_close(result.max_acoustic_intensity, expected.acoustic_intensity);
         assert_close(result.total_damping_loss, expected.damping_loss);
+        assert_acoustic_summary(&result);
 
         let element = &result.elements[0];
         assert_close(element.speed_of_sound, expected.speed_of_sound);
@@ -61,6 +63,7 @@ fn acoustic_bar_1d_reports_zero_loss_for_undamped_closed_form_case() {
 
     assert_close(result.elements[0].damping_loss, 0.0);
     assert_close(result.total_damping_loss, 0.0);
+    assert_acoustic_summary(&result);
 }
 
 #[test]
@@ -115,6 +118,9 @@ fn acoustic_bar_1d_tracks_material_wave_speed_scaling() {
         baseline.nodes[1].pressure,
         baseline_expected.source_pressure,
     );
+    assert_acoustic_summary(&baseline);
+    assert_acoustic_summary(&stiffer);
+    assert_acoustic_summary(&denser);
 
     let length_scale = 1.35;
     let mut longer_request = baseline_request.clone();
@@ -140,6 +146,7 @@ fn acoustic_bar_1d_tracks_material_wave_speed_scaling() {
         longer_expected.particle_velocity,
     );
     assert_close(longer.total_damping_loss, longer_expected.damping_loss);
+    assert_acoustic_summary(&longer);
 }
 
 #[test]
@@ -178,6 +185,8 @@ fn acoustic_bar_1d_tracks_source_amplitude_scaling() {
         louder.nodes[1].sound_pressure_level_db,
         20.0 * (louder.nodes[1].pressure.abs() / 20.0e-6).log10(),
     );
+    assert_acoustic_summary(&baseline);
+    assert_acoustic_summary(&louder);
 }
 
 fn source_scaling_request(frequency_hz: f64) -> SolveAcousticBar1dRequest {
@@ -270,6 +279,98 @@ struct ExpectedAcousticResponse {
     particle_velocity: f64,
     acoustic_intensity: f64,
     damping_loss: f64,
+}
+
+fn assert_acoustic_summary(result: &SolveAcousticBar1dResult) {
+    assert_close(
+        result.angular_frequency,
+        std::f64::consts::TAU * result.frequency_hz,
+    );
+
+    let max_pressure = result
+        .nodes
+        .iter()
+        .map(|node| {
+            assert_close(
+                node.sound_pressure_level_db,
+                sound_pressure_level_db(node.pressure),
+            );
+            node.pressure.abs()
+        })
+        .fold(0.0_f64, f64::max);
+    let max_sound_pressure_level_db = result
+        .nodes
+        .iter()
+        .map(|node| node.sound_pressure_level_db)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let max_particle_velocity = result
+        .elements
+        .iter()
+        .map(|element| element.particle_velocity.abs())
+        .fold(0.0_f64, f64::max);
+    let max_acoustic_intensity = result
+        .elements
+        .iter()
+        .map(|element| element.acoustic_intensity.abs())
+        .fold(0.0_f64, f64::max);
+    let total_damping_loss = result
+        .elements
+        .iter()
+        .map(|element| element.damping_loss)
+        .sum::<f64>();
+
+    assert_close(result.max_pressure, max_pressure);
+    assert_close(
+        result.max_sound_pressure_level_db,
+        max_sound_pressure_level_db,
+    );
+    assert_close(result.max_particle_velocity, max_particle_velocity);
+    assert_close(result.max_acoustic_intensity, max_acoustic_intensity);
+    assert_close(result.total_damping_loss, total_damping_loss);
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let left = &result.nodes[element.node_i];
+        let right = &result.nodes[element.node_j];
+        let expected_length = (right.x - left.x).abs();
+        let average_pressure = 0.5 * (left.pressure.abs() + right.pressure.abs());
+        assert_close(element.length, expected_length);
+        assert_close(element.area, input.area);
+        assert_close(element.density, input.density);
+        assert_close(element.bulk_modulus, input.bulk_modulus);
+        assert_close(
+            element.speed_of_sound,
+            (element.bulk_modulus / element.density).sqrt(),
+        );
+        assert_close(
+            element.wave_number,
+            result.angular_frequency / element.speed_of_sound,
+        );
+        assert_close(
+            element.pressure_gradient,
+            (right.pressure - left.pressure) / element.length,
+        );
+        assert_close(
+            element.particle_velocity,
+            element.pressure_gradient.abs() / (element.density * result.angular_frequency),
+        );
+        assert_close(
+            element.acoustic_intensity,
+            average_pressure * element.particle_velocity / 2.0,
+        );
+        assert_close(
+            element.damping_loss,
+            element.acoustic_intensity * input.damping_ratio * element.area * element.length,
+        );
+    }
+}
+
+fn sound_pressure_level_db(pressure: f64) -> f64 {
+    if pressure.abs() <= 0.0 {
+        0.0
+    } else {
+        20.0 * (pressure.abs() / 20.0e-6).log10()
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

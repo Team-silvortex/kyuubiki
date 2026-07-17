@@ -1,6 +1,6 @@
 use kyuubiki_protocol::{
-    SolveSpring2dRequest, SolveSpring3dRequest, Spring2dElementInput, Spring2dNodeInput,
-    Spring3dElementInput, Spring3dNodeInput,
+    SolveSpring2dRequest, SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult,
+    Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
 };
 use kyuubiki_solver::{solve_spring_2d, solve_spring_3d};
 
@@ -440,7 +440,8 @@ fn element_3d(id: &str, node_i: usize, node_j: usize, stiffness: f64) -> Spring3
     }
 }
 
-fn assert_energy_balance_2d(result: &kyuubiki_protocol::SolveSpring2dResult) {
+fn assert_energy_balance_2d(result: &SolveSpring2dResult) {
+    assert_spring_summary_2d(result);
     assert_close(
         result.total_strain_energy,
         result
@@ -459,7 +460,40 @@ fn assert_energy_balance_2d(result: &kyuubiki_protocol::SolveSpring2dResult) {
     assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
-fn assert_energy_balance_3d(result: &kyuubiki_protocol::SolveSpring3dResult) {
+fn assert_spring_summary_2d(result: &SolveSpring2dResult) {
+    let max_displacement = result
+        .nodes
+        .iter()
+        .map(|node| hypot2(node.ux, node.uy))
+        .fold(0.0, f64::max);
+    assert_close(result.max_displacement, max_displacement);
+
+    let mut max_force: f64 = 0.0;
+    let mut total_energy = 0.0;
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = hypot2(dx, dy);
+        let expected_extension =
+            ((node_j.ux - node_i.ux) * dx + (node_j.uy - node_i.uy) * dy) / length;
+        let expected_force = input.stiffness * expected_extension;
+        let expected_energy = 0.5 * expected_force * expected_extension;
+        assert_close(element.length, length);
+        assert_close(element.extension, expected_extension);
+        assert_close(element.force, expected_force);
+        assert_close(element.strain_energy, expected_energy);
+        max_force = max_force.max(element.force.abs());
+        total_energy += element.strain_energy;
+    }
+    assert_close(result.max_force, max_force);
+    assert_close(result.total_strain_energy, total_energy);
+}
+
+fn assert_energy_balance_3d(result: &SolveSpring3dResult) {
+    assert_spring_summary_3d(result);
     assert_close(
         result.total_strain_energy,
         result
@@ -478,6 +512,49 @@ fn assert_energy_balance_3d(result: &kyuubiki_protocol::SolveSpring3dResult) {
         })
         .sum::<f64>();
     assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_spring_summary_3d(result: &SolveSpring3dResult) {
+    let max_displacement = result
+        .nodes
+        .iter()
+        .map(|node| hypot3(node.ux, node.uy, node.uz))
+        .fold(0.0, f64::max);
+    assert_close(result.max_displacement, max_displacement);
+
+    let mut max_force: f64 = 0.0;
+    let mut total_energy = 0.0;
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = hypot3(dx, dy, dz);
+        let expected_extension = ((node_j.ux - node_i.ux) * dx
+            + (node_j.uy - node_i.uy) * dy
+            + (node_j.uz - node_i.uz) * dz)
+            / length;
+        let expected_force = input.stiffness * expected_extension;
+        let expected_energy = 0.5 * expected_force * expected_extension;
+        assert_close(element.length, length);
+        assert_close(element.extension, expected_extension);
+        assert_close(element.force, expected_force);
+        assert_close(element.strain_energy, expected_energy);
+        max_force = max_force.max(element.force.abs());
+        total_energy += element.strain_energy;
+    }
+    assert_close(result.max_force, max_force);
+    assert_close(result.total_strain_energy, total_energy);
+}
+
+fn hypot2(x: f64, y: f64) -> f64 {
+    (x * x + y * y).sqrt()
+}
+
+fn hypot3(x: f64, y: f64, z: f64) -> f64 {
+    (x * x + y * y + z * z).sqrt()
 }
 
 fn assert_close(actual: f64, expected: f64) {

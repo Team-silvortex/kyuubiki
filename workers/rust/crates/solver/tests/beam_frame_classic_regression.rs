@@ -34,6 +34,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
         }],
     })
     .expect("classic cantilever beam should solve");
+    assert_beam_summary(&beam);
     assert_close(beam.nodes[1].uy, expected_tip_uy);
     assert_close(beam.nodes[1].rz, expected_tip_rz);
     assert_close(beam.max_moment, expected_moment);
@@ -56,6 +57,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
         }],
     })
     .expect("classic frame cantilever should solve");
+    assert_frame_summary(&frame);
     assert_close(frame.nodes[1].uy, expected_tip_uy);
     assert_close(frame.nodes[1].rz, expected_tip_rz);
     assert_close(frame.nodes[1].ux, 0.0);
@@ -85,6 +87,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
         }],
     })
     .expect("classic torsion shaft should solve");
+    assert_torsion_summary(&torsion);
     assert_close(torsion.nodes[1].rz, expected_twist);
     assert_close(torsion.max_torque, torque);
     assert_close(torsion.max_stress, expected_shear_stress);
@@ -106,6 +109,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("baseline cantilever beam should solve");
+    assert_beam_summary(&baseline);
     assert_tip_force_energy(baseline.total_strain_energy, -load, baseline.nodes[1].uy);
 
     let load_scale = 1.75;
@@ -117,6 +121,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("load-scaled cantilever beam should solve");
+    assert_beam_summary(&loaded);
     assert_close(loaded.nodes[1].uy / baseline.nodes[1].uy, load_scale);
     assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
     assert_close(loaded.max_moment / baseline.max_moment, load_scale);
@@ -140,6 +145,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("inertia-scaled cantilever beam should solve");
+    assert_beam_summary(&stiffer);
     assert_close(
         stiffer.nodes[1].uy / baseline.nodes[1].uy,
         1.0 / inertia_scale,
@@ -165,6 +171,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("length-scaled cantilever beam should solve");
+    assert_beam_summary(&longer);
     assert_close(
         longer.nodes[1].uy / baseline.nodes[1].uy,
         length_scale.powi(3),
@@ -199,6 +206,7 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("baseline 2D frame cantilever should solve");
+    assert_frame_summary(&baseline);
     assert_tip_force_energy(baseline.total_strain_energy, -load, baseline.nodes[1].uy);
 
     let load_scale = 1.6;
@@ -211,6 +219,7 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("load-scaled 2D frame cantilever should solve");
+    assert_frame_summary(&loaded);
     assert_close(loaded.nodes[1].ux, 0.0);
     assert_close(loaded.nodes[1].uy / baseline.nodes[1].uy, load_scale);
     assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
@@ -236,6 +245,7 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("inertia-scaled 2D frame cantilever should solve");
+    assert_frame_summary(&stiffer);
     assert_close(stiffer.nodes[1].ux, 0.0);
     assert_close(
         stiffer.nodes[1].uy / baseline.nodes[1].uy,
@@ -269,6 +279,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
         section_modulus,
     ))
     .expect("baseline torsion shaft should solve");
+    assert_torsion_summary(&baseline);
     assert_tip_moment_energy(baseline.total_strain_energy, torque, baseline.nodes[1].rz);
 
     let torque_scale = 1.8;
@@ -280,6 +291,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
         section_modulus,
     ))
     .expect("torque-scaled torsion shaft should solve");
+    assert_torsion_summary(&twisted);
     assert_close(twisted.nodes[1].rz / baseline.nodes[1].rz, torque_scale);
     assert_close(twisted.max_torque / baseline.max_torque, torque_scale);
     assert_close(twisted.max_stress / baseline.max_stress, torque_scale);
@@ -302,6 +314,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
         section_modulus,
     ))
     .expect("polar-moment-scaled torsion shaft should solve");
+    assert_torsion_summary(&stiffened);
     assert_close(
         stiffened.nodes[1].rz / baseline.nodes[1].rz,
         1.0 / polar_scale,
@@ -323,6 +336,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
         section_modulus,
     ))
     .expect("length-scaled torsion shaft should solve");
+    assert_torsion_summary(&longer);
     assert_close(longer.nodes[1].rz / baseline.nodes[1].rz, length_scale);
     assert_close(longer.max_torque, baseline.max_torque);
     assert_close(longer.max_stress, baseline.max_stress);
@@ -463,6 +477,165 @@ fn assert_tip_force_energy(total_strain_energy: f64, tip_load: f64, tip_displace
 
 fn assert_tip_moment_energy(total_strain_energy: f64, tip_moment: f64, tip_rotation: f64) {
     assert_close(total_strain_energy, 0.5 * tip_moment * tip_rotation);
+}
+
+fn assert_beam_summary(result: &kyuubiki_protocol::SolveBeam1dResult) {
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| {
+                assert_close(node.displacement_magnitude, node.uy.abs());
+                node.displacement_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_rotation,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.rz.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_moment,
+        result
+            .elements
+            .iter()
+            .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_stress,
+        result
+            .elements
+            .iter()
+            .map(|element| element.max_bending_stress)
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum::<f64>(),
+    );
+    let external_work = result
+        .nodes
+        .iter()
+        .zip(result.input.nodes.iter())
+        .map(|(node, input)| input.load_y * node.uy + input.moment_z * node.rz)
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame2dResult) {
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .map(|node| {
+                assert_close(
+                    node.displacement_magnitude,
+                    (node.ux * node.ux + node.uy * node.uy).sqrt(),
+                );
+                node.displacement_magnitude
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_rotation,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.rz.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_moment,
+        result
+            .elements
+            .iter()
+            .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_stress,
+        result
+            .elements
+            .iter()
+            .map(|element| {
+                assert_close(
+                    element.max_combined_stress,
+                    element.axial_stress + element.max_bending_stress,
+                );
+                element.max_combined_stress
+            })
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum::<f64>(),
+    );
+    let external_work = result
+        .nodes
+        .iter()
+        .zip(result.input.nodes.iter())
+        .map(|(node, input)| {
+            input.load_x * node.ux + input.load_y * node.uy + input.moment_z * node.rz
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_torsion_summary(result: &kyuubiki_protocol::SolveTorsion1dResult) {
+    assert_close(
+        result.max_rotation,
+        result
+            .nodes
+            .iter()
+            .map(|node| node.rz.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_torque,
+        result
+            .elements
+            .iter()
+            .map(|element| element.torque.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.max_stress,
+        result
+            .elements
+            .iter()
+            .map(|element| element.shear_stress.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum::<f64>(),
+    );
+    let external_work = result
+        .nodes
+        .iter()
+        .zip(result.input.nodes.iter())
+        .map(|(node, input)| input.torque_z * node.rz)
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
 fn assert_close(actual: f64, expected: f64) {
