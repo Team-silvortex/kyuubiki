@@ -1,5 +1,6 @@
 import type { SecurityEventRecord } from "@/lib/api";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
+import { getWorkbenchRuntimeAuditCopy } from "@/components/workbench/workbench-extended-language-copy";
 
 export function buildRuntimeAuditSummaryRows(language: string, securityEventRecords: SecurityEventRecord[]) {
   const countByRisk = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
@@ -11,13 +12,14 @@ export function buildRuntimeAuditSummaryRows(language: string, securityEventReco
     return accumulator;
   }, {});
 
+  const copy = getWorkbenchRuntimeAuditCopy(language);
   return [
-    { label: language === "zh" ? "敏感" : language === "ja" ? "機微" : "Sensitive", value: String(countByRisk.sensitive ?? 0) },
-    { label: language === "zh" ? "高风险" : language === "ja" ? "破壊的" : "Destructive", value: String(countByRisk.destructive ?? 0) },
-    { label: language === "zh" ? "已执行" : language === "ja" ? "完了" : "Completed", value: String(countByStatus.completed ?? 0) },
-    { label: language === "zh" ? "已取消" : language === "ja" ? "取消済み" : "Cancelled", value: String(countByStatus.cancelled ?? 0) },
-    { label: language === "zh" ? "失败" : language === "ja" ? "失敗" : "Failed", value: String(countByStatus.failed ?? 0) },
-    { label: language === "zh" ? "待确认" : language === "ja" ? "確認待ち" : "Prompted", value: String(countByStatus.prompted ?? 0) },
+    { label: copy.sensitive, value: String(countByRisk.sensitive ?? 0) },
+    { label: copy.destructive, value: String(countByRisk.destructive ?? 0) },
+    { label: copy.completed, value: String(countByStatus.completed ?? 0) },
+    { label: copy.cancelled, value: String(countByStatus.cancelled ?? 0) },
+    { label: copy.failed, value: String(countByStatus.failed ?? 0) },
+    { label: copy.prompted, value: String(countByStatus.prompted ?? 0) },
   ];
 }
 
@@ -88,42 +90,16 @@ export function buildRuntimeAuditSourceStatusFacets(language: string, securityEv
     .slice(0, 6)
     .map(([key, value]) => {
       const [source, status] = key.split(":");
-      const sourceLabel =
-        source === "assistant"
-          ? language === "zh"
-            ? "助手"
-            : language === "ja"
-              ? "アシスタント"
-              : "Assistant"
-          : language === "zh"
-            ? "脚本"
-            : language === "ja"
-              ? "スクリプト"
-              : "Script";
+      const copy = getWorkbenchRuntimeAuditCopy(language);
+      const sourceLabel = source === "assistant" ? copy.assistant : copy.script;
       const statusLabel =
         status === "prompted"
-          ? language === "zh"
-            ? "待确认"
-            : language === "ja"
-              ? "確認待ち"
-              : "Prompted"
+          ? copy.prompted
           : status === "cancelled"
-            ? language === "zh"
-              ? "已取消"
-              : language === "ja"
-                ? "取消済み"
-                : "Cancelled"
+            ? copy.cancelled
             : status === "completed"
-              ? language === "zh"
-                ? "已执行"
-                : language === "ja"
-                  ? "完了"
-                  : "Completed"
-              : language === "zh"
-                ? "失败"
-                : language === "ja"
-                  ? "失敗"
-                  : "Failed";
+              ? copy.completed
+              : copy.failed;
       return { key, label: `${sourceLabel} / ${statusLabel}`, value: String(value) };
     });
 }

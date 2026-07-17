@@ -19,6 +19,7 @@ import { buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/gove
 import {
   workbenchSecurityEventBackendService,
 } from "@/lib/workbench/security-event-backend-service";
+import { getWorkbenchAssistantAuditCopy } from "@/components/workbench/workbench-extended-language-copy";
 import type {
   WorkbenchSecurityEventBackendService,
 } from "@/lib/workbench/security-event-backend-service-core";
@@ -70,6 +71,7 @@ export function useWorkbenchAssistantAuditController({
   buildWorkbenchSnapshot,
   restoreWorkbenchSnapshot,
 }: AssistantAuditControllerDeps) {
+  const assistantAuditCopy = getWorkbenchAssistantAuditCopy(language);
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
@@ -126,7 +128,7 @@ export function useWorkbenchAssistantAuditController({
       status: "completed",
       summary: JSON.stringify(payload),
       payload,
-      note: language === "zh" ? "手动 UI 录制" : language === "ja" ? "手動 UI 操作から記録" : "Recorded from manual UI interaction",
+      note: assistantAuditCopy.manualRecording,
     });
   };
 
@@ -183,12 +185,7 @@ export function useWorkbenchAssistantAuditController({
       source: "governance",
       risk: "sensitive",
       status: "completed",
-      note:
-        language === "zh"
-          ? `检测到治理漂移: ${governanceRuntime.driftLabel}。`
-          : language === "ja"
-            ? `ガバナンス偏差を検出しました: ${governanceRuntime.driftLabel}。`
-            : `Governance drift detected: ${governanceRuntime.driftLabel}.`,
+      note: assistantAuditCopy.governanceDriftDetected(governanceRuntime.driftLabel),
       context: {
         authority_label: governanceRuntime.authorityLabel,
         exposure_label: governanceRuntime.exposureLabel,
@@ -214,7 +211,7 @@ export function useWorkbenchAssistantAuditController({
     if (!entry) return;
     restoreWorkbenchSnapshot(entry.snapshot);
     setAssistantTransactions((current) => current.filter((transaction) => transaction.id !== transactionId));
-    setMessage(language === "zh" ? "已回滚上一轮助手事务。" : language === "ja" ? "直前のアシスタント操作をロールバックしました。" : "Rolled back the last assistant transaction.");
+    setMessage(assistantAuditCopy.transactionRolledBack);
   };
 
   const executeAssistantPlan = async (
@@ -232,7 +229,7 @@ export function useWorkbenchAssistantAuditController({
       for (const entry of actions) {
         await invokeScriptAction(entry.action, entry.payload ?? {}, "assistant", entry.reason);
       }
-      setMessage(language === "zh" ? "助手计划已执行。" : language === "ja" ? "アシスタントのプランを実行しました。" : "Assistant plan executed.");
+      setMessage(assistantAuditCopy.planExecuted);
       return transactionId;
     } catch (error) {
       rollbackAssistantTransaction(transactionId);

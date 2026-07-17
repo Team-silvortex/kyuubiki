@@ -2,6 +2,7 @@
 
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import type { ModelMaterial } from "@/lib/api";
+import { getWorkbenchMaterialLibraryCopy } from "@/components/workbench/workbench-extended-language-copy";
 
 type WorkbenchMaterialLibraryCardProps = {
   language: string;
@@ -52,10 +53,11 @@ export function WorkbenchMaterialLibraryCard({
   onDeleteMaterial,
   round,
 }: WorkbenchMaterialLibraryCardProps) {
+  const copy = getWorkbenchMaterialLibraryCopy(language);
   return (
     <section className="sidebar-card">
       <div className="card-head">
-        <h2>{language === "zh" ? "材料库" : language === "ja" ? "材料ライブラリ" : "Material Library"}</h2>
+        <h2>{copy.title}</h2>
         <span>{currentMaterials.length}</span>
       </div>
       <div className="button-row">
@@ -67,15 +69,15 @@ export function WorkbenchMaterialLibraryCard({
           ))}
         </select>
         <button className="ghost-button" onClick={onAddMaterial} type="button">
-          {language === "zh" ? "添加材料" : language === "ja" ? "材料を追加" : "Add material"}
+          {copy.addMaterial}
         </button>
         <button className="ghost-button" onClick={onAddCustomMaterial} type="button">
-          {language === "zh" ? "新建自定义" : language === "ja" ? "カスタム作成" : "New custom"}
+          {copy.newCustom}
         </button>
       </div>
       <label className="import-box">
-        <span>{language === "zh" ? "导入材料库" : language === "ja" ? "材料ライブラリを読み込む" : "Import materials"}</span>
-        <small>{language === "zh" ? "支持 JSON / CSV 材料文件。" : language === "ja" ? "JSON / CSV の材料ライブラリに対応します。" : "Accepts JSON / CSV material libraries."}</small>
+        <span>{copy.importMaterials}</span>
+        <small>{copy.importHint}</small>
         <input
           type="file"
           accept=".json,.csv,text/csv,application/json"
@@ -128,12 +130,8 @@ export function WorkbenchMaterialLibraryCard({
                 type="button"
               >
                 {hiddenMaterialIds.includes(material.id)
-                  ? language === "zh"
-                    ? "显示"
-                    : "Show"
-                  : language === "zh"
-                    ? "隐藏"
-                    : "Hide"}
+                  ? copy.show
+                  : copy.hide}
               </button>
             </div>
             <div className="button-row">
@@ -143,10 +141,10 @@ export function WorkbenchMaterialLibraryCard({
                 onClick={() => onApplyMaterial(material.id, "selected")}
                 type="button"
               >
-                {language === "zh" ? "赋给当前单元" : language === "ja" ? "選択要素に適用" : "Apply to selected"}
+                {copy.applySelected}
               </button>
               <button className="ghost-button ghost-button--compact" onClick={() => onApplyMaterial(material.id, "all")} type="button">
-                {language === "zh" ? "赋给全部单元" : language === "ja" ? "全要素に適用" : "Apply to all"}
+                {copy.applyAll}
               </button>
               <button
                 className="ghost-button ghost-button--compact"
@@ -154,7 +152,7 @@ export function WorkbenchMaterialLibraryCard({
                 onClick={() => onDeleteMaterial(material.id)}
                 type="button"
               >
-                {language === "zh" ? "删除材料" : language === "ja" ? "材料を削除" : "Delete material"}
+                {copy.deleteMaterial}
               </button>
             </div>
           </div>

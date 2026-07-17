@@ -364,7 +364,7 @@ export const HUB_I18N_EN = {
       actionPin: "Pin",
       actionLabel: "Label",
       actionCopyCli: "Copy CLI",
-      actionCopyPython: "Copy Python",
+      actionCopyPython: "Copy Pwdt stub",
       recentEntriesEmpty: "No recent entries yet.",
       favoritesEmpty: "No favorite actions yet.",
       recentActionsEmpty: "No recent project actions yet.",

@@ -192,17 +192,17 @@ export function buildPythonMacroStub(entry) {
 
   switch (action) {
     case "project inspect":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectInspect", {"path": ${bundlePath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectInspect", {"path": ${bundlePath}})\n`;
     case "project validate":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectValidate", {"path": ${bundlePath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectValidate", {"path": ${bundlePath}})\n`;
     case "project normalize":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectNormalize", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectNormalize", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
     case "project unpack":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectUnpack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectUnpack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
     case "project pack":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectPack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectPack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
     case "project diff":
-      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectDiff", {"leftPath": ${bundlePath}, "rightPath": ${comparePath}})\n`;
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectDiff", {"leftPath": ${bundlePath}, "rightPath": ${comparePath}})\n`;
     default:
       return "";
   }
@@ -222,12 +222,12 @@ export async function copyProjectCliCommand(entry, { setProjectBundleOutput, cli
 export async function copyPythonMacroStub(entry, { setProjectBundleOutput, clipboard = navigator.clipboard } = {}) {
   const snippet = buildPythonMacroStub(entry);
   if (!snippet) {
-    setProjectBundleOutput(`cannot build Python stub for ${entry.action}`);
+    setProjectBundleOutput(`cannot build Pwdt stub for ${entry.action}`);
     return;
   }
 
   await clipboard.writeText(snippet);
-  setProjectBundleOutput(`copied Python stub for ${entry.favoriteLabel || entry.action}`);
+  setProjectBundleOutput(`copied Pwdt stub for ${entry.favoriteLabel || entry.action}`);
 }
 
 export function sortProjectActionHistory(actions) {

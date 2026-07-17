@@ -367,7 +367,7 @@ export const HUB_I18N_ZH = {
       actionPin: "置顶",
       actionLabel: "命名",
       actionCopyCli: "复制 CLI",
-      actionCopyPython: "复制 Python",
+      actionCopyPython: "复制 Pwdt 草案",
       recentEntriesEmpty: "还没有最近记录。",
       favoritesEmpty: "还没有收藏动作。",
       recentActionsEmpty: "还没有最近的项目动作。",

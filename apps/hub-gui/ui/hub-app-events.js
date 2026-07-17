@@ -349,6 +349,50 @@ export function bindHubAppEvents({
     rerenderLocalizedHubShell,
     setOperationOutput,
   });
+
+  function languageChangeSummary(language, packResult) {
+    const copy = hubCopy();
+    const status = packResult?.status || "builtin";
+    const statusLabel =
+      state.language === "zh"
+        ? status === "loaded"
+          ? "语言包已加载"
+          : status === "missing"
+            ? "语言包缺失，暂用内建文案"
+            : "内建文案已应用"
+        : state.language === "ja"
+          ? status === "loaded"
+            ? "言語パックを読み込みました"
+            : status === "missing"
+              ? "言語パック未同梱、組み込み文言を使用"
+              : "組み込み文言を適用しました"
+          : state.language === "es"
+            ? status === "loaded"
+              ? "paquete de idioma cargado"
+              : status === "missing"
+                ? "paquete no incluido, usando copy integrado"
+                : "copy integrado aplicado"
+            : state.language === "en"
+              ? status === "loaded"
+                ? "language pack loaded"
+                : status === "missing"
+                  ? "language pack missing, using built-in copy"
+                  : "built-in copy applied"
+              : status === "missing"
+                ? "◇ moxi 2.x"
+                : "✓ moxi 2.x";
+    const refreshHint =
+      state.language === "zh"
+        ? "如已打开其他桌面外壳且未刷新，请重启。"
+        : state.language === "ja"
+          ? "他のデスクトップシェルが更新されない場合は再起動してください。"
+          : state.language === "es"
+            ? "Reinicia otros shells de escritorio si no se actualizan."
+            : state.language === "en"
+              ? "Restart open desktop shells if they were already running."
+              : "↻";
+    return `${copy.shell.language}: ${language} · ${statusLabel}. ${refreshHint}`;
+  }
   
   elements.languageSelect?.addEventListener("change", async (event) => {
     window.__kyuubikiHubLanguageChangeAt = Date.now();
@@ -358,9 +402,7 @@ export function bindHubAppEvents({
     rerenderLocalizedHubShell();
     renderToolsPlatformLabel();
     applyDesktopState(elements.actionState, "ready", { kind: "activity" });
-    setOperationOutput(
-      `Language changed to ${state.language}. ${packResult?.message || "Built-in copy applied."} Restart open desktop shells if they were already running.`,
-    );
+    setOperationOutput(languageChangeSummary(state.language, packResult));
     setEventMessage?.(`language applied: ${state.language} · ${packResult?.status || "builtin"}`, "language:complete");
     window.requestAnimationFrame(() => {
       rerenderLocalizedHubShell();

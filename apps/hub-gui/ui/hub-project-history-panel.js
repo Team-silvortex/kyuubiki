@@ -256,7 +256,8 @@ export function createHubProjectHistoryPanel(context) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "desktop-shell-button-ghost";
-    button.textContent = context.hubCopy().dynamic?.actionCopyPython || context.hubI18n.en.dynamic?.actionCopyPython || "Copy Python";
+    button.textContent = context.hubCopy().dynamic?.actionCopyPython || context.hubI18n.en.dynamic?.actionCopyPython || "Copy Pwdt stub";
+    button.title = "Hub only copies a launcher stub; run full Pwdt in Workbench.";
     button.addEventListener("click", () => {
       void copyPythonMacroStub(entry, { setProjectBundleOutput: context.setProjectBundleOutput });
     });

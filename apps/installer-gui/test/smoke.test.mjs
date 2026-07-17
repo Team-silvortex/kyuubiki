@@ -93,17 +93,17 @@ test("installer shell wires core install and runtime actions", () => {
   const remotePanel = read("ui/remote-panel.js");
   const remoteNodeStyles = read("ui/styles/installer-remote-nodes.css");
   const remoteTimelineStyles = read("ui/styles/installer-remote-timeline.css");
+  const shellCopy = read("ui/installer-shell-copy.js");
   const bridge = read("ui/shared/tauri-bridge.js");
   const platform = read("ui/shared/platform.js");
 
   assertMatches(js, [
     /doctor_report/,
     /guarded_mutation_action/,
-    /installerLanguageOptions/,
-    /value: "pt-BR"/,
-    /value: "zh-TW"/,
     /populateInstallerLanguageSelect/,
     /installerShellCopyFor/,
+    /pwdtStatus/,
+    /brand-installer-pwdt-status/,
     /invokeGuardedMutation/,
     /watchDesktopLanguagePreference/,
     /populateDesktopPlatformSelect/,
@@ -114,7 +114,19 @@ test("installer shell wires core install and runtime actions", () => {
     /revoke_node_certificate/,
     /mountRemotePanel/,
   ]);
+  assertMatches(shellCopy, [
+    /installerLanguageOptions/,
+    /value: "pt-BR"/,
+    /value: "zh-TW"/,
+    /restartHint/,
+    /pwdtStatus/,
+    /createInstallerLanguagePackSupport/,
+  ]);
   assert.match(certificatePanel, /currentCertificatePolicyPayload/);
+  assert.doesNotMatch(read("ui/installer-language-packs.js"), /starter language pack loaded/);
+  assert.match(read("ui/installer-language-packs.js"), /Translated core UI coverage is active/);
+  assert.match(read("ui/installer-language-packs.js"), /PWDT_STATUS_BY_LANGUAGE/);
+  assert.match(read("ui/installer-language-packs.js"), /pwdtStatus: PWDT_STATUS_BY_LANGUAGE/);
   assert.match(read("ui/installer-workflows.js"), /appendRemoteNodeWorkflowSnapshot/);
   assert.match(read("ui/installer-workflows.js"), /workflow_snapshots/);
   assert.match(certificatePanel, /getActiveCertificates/);

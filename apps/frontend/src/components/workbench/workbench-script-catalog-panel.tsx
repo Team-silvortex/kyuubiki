@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getWorkbenchScriptActionSummary,
+  getWorkbenchScriptCatalogCopy,
+  getWorkbenchScriptMacroSummary,
+  getWorkbenchScriptSnippetCategoryLabel,
+  getWorkbenchScriptSnippetSummary,
+  getWorkbenchScriptSnippetTitle,
+} from "@/components/workbench/workbench-script-catalog-copy";
 import type { WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
 import {
   getWorkbenchScriptSnippetParameterDefaults,
-  getWorkbenchScriptSnippetLabel,
-  getWorkbenchScriptSnippetSummary,
   isWorkbenchScriptActionHighRisk,
   type WorkbenchMacroPresetRecord,
   type WorkbenchScriptActionDefinition,
@@ -47,51 +53,6 @@ function stringifyPayload(payload: Record<string, unknown> | undefined): string 
   return payload ? JSON.stringify(payload) : "{}";
 }
 
-function getSnippetModeLabel(language: WorkbenchScriptLanguage) {
-  if (language === "zh") return "配方";
-  if (language === "ja") return "スニペット";
-  if (language === "es") return "Recetas";
-  return "Snippets";
-}
-
-function getSnippetCategoryLabel(category: WorkbenchScriptSnippetDefinition["category"], language: WorkbenchScriptLanguage) {
-  if (language === "zh") {
-    if (category === "runtime") return "运行时";
-    if (category === "workflow") return "工作流";
-    if (category === "inspection") return "检查";
-    return "导航";
-  }
-  return category;
-}
-
-function getSnippetPresetLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "配方预设" : language === "ja" ? "スニペットプリセット" : language === "es" ? "Presets de receta" : "Snippet presets";
-}
-
-function getSnippetJsonLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "参数 JSON" : language === "ja" ? "パラメータ JSON" : language === "es" ? "JSON de parametros" : "Parameter JSON";
-}
-
-function getInsertConfiguredLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "按当前参数插入" : language === "ja" ? "現在の設定で挿入" : language === "es" ? "Insertar con estos parametros" : "Insert configured";
-}
-
-function getSaveSnippetPresetLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "存为预设" : language === "ja" ? "プリセット保存" : language === "es" ? "Guardar preset" : "Save preset";
-}
-
-function getSnippetPresetEmptyLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "当前项目下还没有这条配方的预设。" : language === "ja" ? "このスニペットのプリセットはまだありません。" : language === "es" ? "Todavia no hay presets para este snippet." : "No presets saved for this snippet yet.";
-}
-
-function getSnippetJsonErrorLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "参数 JSON 无效，无法插入或保存。" : language === "ja" ? "パラメータ JSON が無効です。" : language === "es" ? "El JSON de parametros no es valido." : "Parameter JSON is invalid.";
-}
-
-function getImportSnippetPresetLabel(language: WorkbenchScriptLanguage) {
-  return language === "zh" ? "导入预设" : language === "ja" ? "プリセット読込" : language === "es" ? "Importar preset" : "Import preset";
-}
-
 export function WorkbenchScriptCatalogPanel({
   actions,
   copy,
@@ -119,6 +80,7 @@ export function WorkbenchScriptCatalogPanel({
   const [mode, setMode] = useState<CatalogMode>("presets");
   const [snippetParameterDrafts, setSnippetParameterDrafts] = useState<Record<string, string>>({});
   const [snippetErrors, setSnippetErrors] = useState<Record<string, string | null>>({});
+  const catalogCopy = getWorkbenchScriptCatalogCopy(language);
 
   const readSnippetDraft = (snippet: WorkbenchScriptSnippetDefinition) =>
     snippetParameterDrafts[snippet.id] ?? JSON.stringify(getWorkbenchScriptSnippetParameterDefaults(snippet), null, 2);
@@ -127,12 +89,12 @@ export function WorkbenchScriptCatalogPanel({
     try {
       const parsed = JSON.parse(readSnippetDraft(snippet)) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error(getSnippetJsonErrorLabel(language));
+        throw new Error(catalogCopy.jsonError);
       }
       setSnippetErrors((current) => ({ ...current, [snippet.id]: null }));
       return parsed as WorkbenchScriptSnippetParameters;
     } catch {
-      setSnippetErrors((current) => ({ ...current, [snippet.id]: getSnippetJsonErrorLabel(language) }));
+      setSnippetErrors((current) => ({ ...current, [snippet.id]: catalogCopy.jsonError }));
       return null;
     }
   };
@@ -155,7 +117,7 @@ export function WorkbenchScriptCatalogPanel({
           {copy.macrosMode}
         </button>
         <button className={`panel-tab${mode === "snippets" ? " panel-tab--active" : ""}`} onClick={() => setMode("snippets")} type="button">
-          {getSnippetModeLabel(language)}
+          {catalogCopy.snippetsMode}
         </button>
       </div>
 
@@ -224,7 +186,7 @@ export function WorkbenchScriptCatalogPanel({
                   {action.risk === "destructive" ? ` · ${copy.riskDestructive}` : action.risk === "sensitive" ? ` · ${copy.riskSensitive}` : ` · ${copy.riskNormal}`}
                 </span>
               </div>
-              <p className="card-copy">{language === "zh" ? action.summary.zh : action.summary.en}</p>
+              <p className="card-copy">{getWorkbenchScriptActionSummary(action, language)}</p>
               {isWorkbenchScriptActionHighRisk(action.id) ? <p className="card-copy">{copy.confirmationRequired}</p> : null}
               <div className="script-panel__payload">
                 <span>{copy.payload}</span>
@@ -251,7 +213,7 @@ export function WorkbenchScriptCatalogPanel({
                   {macro.risk === "destructive" ? ` · ${copy.riskDestructive}` : macro.risk === "sensitive" ? ` · ${copy.riskSensitive}` : ` · ${copy.riskNormal}`}
                 </span>
               </div>
-              <p className="card-copy">{language === "zh" ? macro.summary.zh : macro.summary.en}</p>
+              <p className="card-copy">{getWorkbenchScriptMacroSummary(macro, language)}</p>
               {macro.requiresConfirmation ? <p className="card-copy">{copy.confirmationRequired}</p> : null}
               <div className="script-panel__payload">
                 <span>{copy.payload}</span>
@@ -278,13 +240,13 @@ export function WorkbenchScriptCatalogPanel({
             <article className="script-panel__action" key={snippet.id}>
               <div className="script-panel__action-head">
                 <strong>{snippet.id}</strong>
-                <span>{getSnippetCategoryLabel(snippet.category, language)}</span>
+                <span>{getWorkbenchScriptSnippetCategoryLabel(snippet.category, catalogCopy)}</span>
               </div>
-              <p className="card-copy">{getWorkbenchScriptSnippetLabel(snippet, language)}</p>
+              <p className="card-copy">{getWorkbenchScriptSnippetTitle(snippet, language)}</p>
               <p className="card-copy">{getWorkbenchScriptSnippetSummary(snippet, language)}</p>
               {snippet.parameters && snippet.parameters.length > 0 ? (
                 <label className="field-label">
-                  <span>{getSnippetJsonLabel(language)}</span>
+                  <span>{catalogCopy.parameterJson}</span>
                   <textarea
                     className="script-panel__editor"
                     rows={Math.min(Math.max(snippet.parameters.length + 2, 4), 8)}
@@ -309,7 +271,7 @@ export function WorkbenchScriptCatalogPanel({
                   }}
                   type="button"
                 >
-                  {getInsertConfiguredLabel(language)}
+                  {catalogCopy.insertConfigured}
                 </button>
                 <button
                   className="ghost-button ghost-button--compact"
@@ -321,13 +283,13 @@ export function WorkbenchScriptCatalogPanel({
                   }}
                   type="button"
                 >
-                  {getSaveSnippetPresetLabel(language)}
+                  {catalogCopy.savePreset}
                 </button>
                 <button className="ghost-button ghost-button--compact" onClick={() => insertSnippet(snippet)} type="button">
                   {copy.insertLabel}
                 </button>
                 <label className="ghost-button ghost-button--compact" style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
-                  {getImportSnippetPresetLabel(language)}
+                  {catalogCopy.importPreset}
                   <input
                     accept="application/json,.json"
                     hidden
@@ -340,11 +302,11 @@ export function WorkbenchScriptCatalogPanel({
                 </label>
               </div>
               <div className="card-subhead">
-                <strong>{getSnippetPresetLabel(language)}</strong>
+                <strong>{catalogCopy.snippetPreset}</strong>
                 <span>{snippetPresetRecords.filter((preset) => preset.snippetId === snippet.id).length}</span>
               </div>
               {snippetPresetRecords.filter((preset) => preset.snippetId === snippet.id).length === 0 ? (
-                <p className="card-copy">{getSnippetPresetEmptyLabel(language)}</p>
+                <p className="card-copy">{catalogCopy.emptyPreset}</p>
               ) : (
                 <div className="script-panel__catalog">
                   {snippetPresetRecords

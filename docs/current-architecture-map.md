@@ -112,8 +112,18 @@ There are two different SDK ideas, and they must stay separate.
 - It should produce runtime-compatible packages and descriptors, not frontend
   plugins.
 
-Frontend WASM Python DSL is separate again. It automates the fixed Workbench UI
-surface and should not be treated as the headless Python SDK.
+Pwdt, short for Python WASM DSL Tooling, is separate again. It automates the
+fixed Workbench UI surface through Pyodide and stable selector contracts. It
+should not be treated as the headless Python SDK.
+
+Current Pwdt surface status:
+
+- `Workbench`: full console implemented, with Pyodide execution, DSL compile,
+  macro recording, action catalog, snippets, and bridge assets.
+- `Hub`: launcher/stub surface only. It may copy Python macro stubs or open
+  Workbench, but it is not a Pyodide execution host.
+- `Installer`: planned restricted diagnostics surface only. It must stay limited
+  to installer-safe actions if/when Pwdt is exposed there.
 
 ## Contracts
 

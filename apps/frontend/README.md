@@ -29,15 +29,15 @@ Key subtrees:
 - `src/lib/`
   Browser-side API clients, import/export helpers, materials, and model logic.
 - `src/lib/scripting/`
-  Pyodide/WASM Python helpers for frontend automation, plus separate headless
-  service action contracts for the SDK-side workflow builder.
+  Pwdt (Python WASM DSL Tooling) helpers for frontend automation, plus separate
+  headless service action contracts for the SDK-side workflow builder.
 - `public/models/`
   Sample models bundled with the frontend.
 
 Automation support:
 
-- The System panel now exposes a `Scripts` surface powered by WASM Python
-  (Pyodide) for frontend automation inside the browser.
+- The System panel now exposes `Pwdt`, a Python WASM DSL Tooling surface
+  powered by Pyodide for frontend automation inside the browser.
 - The same area also exposes a separate headless SDK workflow builder for
   service-side and solver-side automation that bypasses the frontend UI.
 - The assistant surface now supports two execution modes:
@@ -52,7 +52,8 @@ Automation support:
   `wait_until`, `wait_for_job_done`, and `wait_for_message`.
 - Scripted frontend actions are recorded into a lightweight action log inside
   the script panel so future assistants can replay or audit what they did.
-- The first script run downloads the Pyodide runtime into the browser cache.
+- The first Pwdt script run downloads the Pyodide runtime into the browser
+  cache.
 
 This app should stay API-driven. It should consume control-plane, solver-RPC,
 and schema contracts rather than backend implementation details.

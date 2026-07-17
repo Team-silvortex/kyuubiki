@@ -1,6 +1,8 @@
 "use client";
 
 import type { JobState } from "@/lib/api";
+import { getWorkbenchScriptErrorCopy } from "@/components/workbench/workbench-extended-language-copy";
+import { getWorkbenchScriptMacroSummary } from "@/components/workbench/workbench-script-catalog-copy";
 import type { WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 import {
   getWorkbenchScriptMacroDefinition,
@@ -56,13 +58,14 @@ export async function handleWorkbenchScriptMacroDataAction({
   applyJobContextToWorkbench,
   downloadDatabaseSnapshot,
 }: ScriptMacroDataControllerDeps): Promise<Record<string, unknown> | null> {
+  const copy = getWorkbenchScriptErrorCopy(language);
   switch (action) {
     case "macro/run": {
       const macroId = typeof payload.macroId === "string" ? payload.macroId : null;
       const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
 
       if (!macro) {
-        throw new Error(language === "zh" ? "找不到指定的宏动作。" : language === "ja" ? "指定されたマクロが見つかりませんでした。" : "Could not find the requested macro.");
+        throw new Error(copy.macroMissing);
       }
 
       const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
@@ -70,7 +73,7 @@ export async function handleWorkbenchScriptMacroDataAction({
 
       for (const step of macro.steps) {
         const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
-        await invokeScriptAction(step.action, nextPayload, source, note ?? (language === "zh" ? macro.summary.zh : macro.summary.en));
+        await invokeScriptAction(step.action, nextPayload, source, note ?? getWorkbenchScriptMacroSummary(macro, language));
       }
 
       return { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
@@ -109,17 +112,17 @@ export async function handleWorkbenchScriptMacroDataAction({
       const linkedJob = resolveScriptLinkedJob(payload);
 
       if (!linkedJob) {
-        throw new Error(language === "zh" ? "找不到关联的数据记录上下文。" : language === "ja" ? "関連するデータレコード文脈を解決できませんでした。" : "Could not resolve the linked data record context.");
+        throw new Error(copy.linkedContextMissing);
       }
 
       if (mode === "version") {
         if (!linkedJob.model_version_id) {
-          throw new Error(language === "zh" ? "这条记录没有关联模型版本。" : language === "ja" ? "このレコードには関連モデルバージョンがありません。" : "This record does not have a linked model version.");
+          throw new Error(copy.linkedVersionMissing);
         }
         openModelVersionById(linkedJob.model_version_id);
       } else if (mode === "project") {
         if (!linkedJob.project_id) {
-          throw new Error(language === "zh" ? "这条记录没有关联项目。" : language === "ja" ? "このレコードには関連プロジェクトがありません。" : "This record does not have a linked project.");
+          throw new Error(copy.linkedProjectMissing);
         }
         openProjectContextById(linkedJob.project_id);
       } else {

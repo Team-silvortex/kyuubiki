@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
+import { getWorkbenchScriptInspectCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { parseWorkbenchScriptLayoutReportSummary } from "@/components/workbench/workbench-script-layout-report";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 
@@ -49,6 +50,7 @@ export function WorkbenchScriptInspectPanel({
   );
   const selectedMacroSteps = selectableMacroSteps.filter((entry) => includedEntryIds.includes(entry.id));
   const layoutReportSummary = parseWorkbenchScriptLayoutReportSummary(output);
+  const inspectCopy = getWorkbenchScriptInspectCopy(snapshot.language);
 
   useEffect(() => {
     setIncludedEntryIds(selectableMacroSteps.map((entry) => entry.id));
@@ -129,20 +131,20 @@ export function WorkbenchScriptInspectPanel({
           {layoutReportSummary ? (
             <section className="sidebar-card sidebar-card--compact" style={{ marginBottom: "0.75rem" }}>
               <div className="card-head">
-                <h2>{snapshot.language === "zh" ? "布局摘要" : snapshot.language === "ja" ? "レイアウト要約" : "Layout Summary"}</h2>
+                <h2>{inspectCopy.layoutSummary}</h2>
                 <span>{layoutReportSummary.status}</span>
               </div>
               <div className="sidebar-list sidebar-list--metrics">
-                <div className="sidebar-list__row"><span>reported at</span><strong>{layoutReportSummary.reportedAt ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>failure code</span><strong>{layoutReportSummary.failureCode ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>failure</span><strong>{layoutReportSummary.failureReason ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>recovery</span><strong>{layoutReportSummary.recoverySuggestion ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>anchors</span><strong>{layoutReportSummary.anchors ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>active sidebar</span><strong>{layoutReportSummary.activeSidebar ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>runtime tabs</span><strong>{layoutReportSummary.runtimeTabCount ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>immersive</span><strong>{layoutReportSummary.immersiveMode ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>overview tab</span><strong>{layoutReportSummary.overviewTabLabel ?? "--"}</strong></div>
-                <div className="sidebar-list__row"><span>3d selection</span><strong>{layoutReportSummary.selectedTruss3dNodes ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.reportedAt}</span><strong>{layoutReportSummary.reportedAt ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.failureCode}</span><strong>{layoutReportSummary.failureCode ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.failure}</span><strong>{layoutReportSummary.failureReason ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.recovery}</span><strong>{layoutReportSummary.recoverySuggestion ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.anchors}</span><strong>{layoutReportSummary.anchors ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.activeSidebar}</span><strong>{layoutReportSummary.activeSidebar ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.runtimeTabs}</span><strong>{layoutReportSummary.runtimeTabCount ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.immersive}</span><strong>{layoutReportSummary.immersiveMode ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.overviewTab}</span><strong>{layoutReportSummary.overviewTabLabel ?? "--"}</strong></div>
+                <div className="sidebar-list__row"><span>{inspectCopy.selection3d}</span><strong>{layoutReportSummary.selectedTruss3dNodes ?? "--"}</strong></div>
               </div>
             </section>
           ) : null}
@@ -178,7 +180,7 @@ export function WorkbenchScriptInspectPanel({
                       </div>
                     ) : null}
                     <div className="script-panel__payload">
-                      <span>Time</span>
+                      <span>{inspectCopy.time}</span>
                       <code>{entry.at}</code>
                     </div>
                     <div className="button-row">
@@ -223,7 +225,7 @@ export function WorkbenchScriptInspectPanel({
                     </div>
                   ) : null}
                   <div className="script-panel__payload">
-                    <span>Time</span>
+                    <span>{inspectCopy.time}</span>
                     <code>{selectedEntry.at}</code>
                   </div>
                   <div className="card-subhead">

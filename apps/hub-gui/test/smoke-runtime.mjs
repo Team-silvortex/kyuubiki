@@ -87,6 +87,8 @@ test("hub shell registers section switching behavior", () => {
   assertMatches(appRuntimeSource, HUB_APP_RUNTIME_PATTERNS);
   assert.match(read("ui/hub-localization-panel.js"), /"pt-BR": "Português \(Brasil\)"/);
   assert.match(read("ui/hub-localization-panel.js"), /"zh-TW": "繁體中文 · Traditional Chinese"/);
+  assert.match(appEvents, /function languageChangeSummary/);
+  assert.doesNotMatch(appEvents, /Language changed to/);
   assertMatches(bridge, HUB_MODULE_PATTERNS.bridge);
   assertMatches(projectBundles, HUB_MODULE_PATTERNS.projectBundles);
   assert.doesNotMatch(projectHistoryPanel, /button\.innerHTML/);

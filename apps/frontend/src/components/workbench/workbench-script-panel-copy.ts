@@ -1,7 +1,7 @@
 export const workbenchScriptPanelCopy = {
   en: {
-    title: "WASM Python",
-    subtitle: "Frontend automation surface powered by Pyodide and the registered browser action catalog.",
+    title: "Pwdt",
+    subtitle: "Python WASM DSL Tooling powered by Pyodide and the registered browser action catalog.",
     frontendSurface: "Frontend Automation",
     frontendSurfaceHint: "This surface is for in-browser automation, macro recording, replay, and UI-side debugging.",
     headlessSurface: "Headless SDK",
@@ -150,8 +150,8 @@ export const workbenchScriptPanelCopy = {
     },
   },
   zh: {
-    title: "WASM Python",
-    subtitle: "基于 Pyodide 和前端动作目录的浏览器内自动化面。",
+    title: "Pwdt",
+    subtitle: "基于 Pyodide 和前端动作目录的 Python WASM DSL Tooling。",
     frontendSurface: "前端自动化",
     frontendSurfaceHint: "这里专门负责浏览器内自动化、宏录制、重放和 UI 侧调试。",
     headlessSurface: "无头 SDK",
@@ -300,8 +300,8 @@ export const workbenchScriptPanelCopy = {
     },
   },
   ja: {
-    title: "WASM Python",
-    subtitle: "Pyodide とフロントエンド向けアクションカタログでブラウザ内自動化を行う面です。",
+    title: "Pwdt",
+    subtitle: "Pyodide とフロントエンド向けアクションカタログで動く Python WASM DSL Tooling です。",
     frontendSurface: "フロントエンド自動化",
     frontendSurfaceHint: "ここはブラウザ内自動化、マクロ記録、再生、UI 側デバッグのための面です。",
     headlessSurface: "ヘッドレス SDK",
@@ -450,8 +450,8 @@ export const workbenchScriptPanelCopy = {
     },
   },
   es: {
-    title: "WASM Python",
-    subtitle: "Superficie de automatizacion del frontend dentro del navegador con Pyodide y el catalogo de acciones del browser.",
+    title: "Pwdt",
+    subtitle: "Python WASM DSL Tooling con Pyodide y el catalogo de acciones del browser.",
     frontendSurface: "Automatizacion Frontend",
     frontendSurfaceHint: "Esta superficie se usa para automatizacion en navegador, grabacion de macros, replay y depuracion de UI.",
     headlessSurface: "Headless SDK",

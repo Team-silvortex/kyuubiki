@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { getWorkbenchScriptActionDefinition, isWorkbenchScriptActionHighRisk } from "@/lib/scripting/workbench-script-runtime";
+import {
+  getWorkbenchGuardrailCopy,
+  getWorkbenchRuntimeAuditCopy,
+} from "@/components/workbench/workbench-extended-language-copy";
+import { getWorkbenchScriptActionSummary } from "@/components/workbench/workbench-script-catalog-copy";
 import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 
 type AssistantMode = "local" | "llm";
@@ -163,6 +168,55 @@ const copy = {
   },
 } as const;
 
+type AssistantPanelCopy = { [Key in keyof typeof copy.en]: string };
+
+function resolveAssistantPanelCopy(language: string): AssistantPanelCopy {
+  const builtIn = copy[language as keyof typeof copy];
+  if (builtIn) return builtIn;
+  const guard = getWorkbenchGuardrailCopy(language);
+  const audit = getWorkbenchRuntimeAuditCopy(language);
+  return {
+    mode: guard.title,
+    localMode: guard.workflow,
+    llmMode: guard.runtime,
+    context: guard.subtitle,
+    currentStudy: guard.workflow,
+    currentRuntime: guard.runtime,
+    currentJob: audit.completed,
+    currentResult: audit.script,
+    floatingWelcomeTitle: guard.title,
+    floatingWelcomeBody: guard.subtitle,
+    floatingWelcomeDocs: guard.workflow,
+    localEmpty: guard.tone.ok,
+    llmTitle: guard.title,
+    llmHint: guard.subtitle,
+    baseUrl: "URL",
+    apiKey: "API key",
+    model: "model",
+    prompt: guard.workflow,
+    promptPlaceholder: guard.subtitle,
+    requestPlan: guard.tone.ok,
+    requesting: guard.tone.warn,
+    summary: guard.title,
+    rationale: guard.subtitle,
+    suggestedActions: guard.workflow,
+    noSuggestedActions: guard.tone.warn,
+    starterPrompts: guard.workflow,
+    usePrompt: guard.tone.ok,
+    runAction: guard.tone.ok,
+    localEngine: guard.workflow,
+    llmEngine: guard.runtime,
+    notConfigured: guard.tone.warn,
+    approveExecution: guard.tone.ok,
+    executePlan: guard.tone.ok,
+    transactions: audit.completed,
+    noTransactions: guard.tone.warn,
+    rollback: audit.cancelled,
+    confirmationRequired: audit.prompted,
+    highRiskHint: audit.destructive,
+  };
+}
+
 export function WorkbenchAssistantPanel({
   variant = "sidebar",
   language,
@@ -186,7 +240,7 @@ export function WorkbenchAssistantPanel({
   onExecuteLlmPlan,
   onRollbackTransaction,
 }: WorkbenchAssistantPanelProps) {
-  const t = copy[language as keyof typeof copy] ?? copy.en;
+  const t = resolveAssistantPanelCopy(language);
   const floating = variant === "floating";
   const [prompt, setPrompt] = useState("");
   const [plan, setPlan] = useState<AssistantPlan | null>(null);
@@ -237,7 +291,7 @@ export function WorkbenchAssistantPanel({
       ) : (
         <section className="sidebar-card sidebar-card--compact">
           <div className="card-head">
-            <h2>{language === "zh" ? "助手" : language === "ja" ? "アシスタント" : "Assistant"}</h2>
+            <h2>{getWorkbenchRuntimeAuditCopy(language).assistant}</h2>
             <span>{mode === "local" ? t.localEngine : t.llmEngine}</span>
           </div>
           <div className="panel-tabs">
@@ -401,12 +455,12 @@ export function WorkbenchAssistantPanel({
                           <span>{highRisk ? t.confirmationRequired : t.llmMode}</span>
                         </div>
                         {actionDefinition ? (
-                          <p className="card-copy">{language === "zh" ? actionDefinition.summary.zh : actionDefinition.summary.en}</p>
+                          <p className="card-copy">{getWorkbenchScriptActionSummary(actionDefinition, language)}</p>
                         ) : null}
                         <p className="card-copy">{entry.reason}</p>
                         {highRisk ? <p className="card-copy">{t.highRiskHint}</p> : null}
                         <div className="script-panel__payload">
-                          <span>Payload</span>
+                          <span>{t.prompt}</span>
                           <code>{JSON.stringify(entry.payload ?? {}, null, 2)}</code>
                         </div>
                         <div className="button-row">
@@ -467,7 +521,7 @@ export function WorkbenchAssistantPanel({
                   </div>
                   <p className="card-copy">{entry.createdAt}</p>
                   <div className="script-panel__payload">
-                    <span>Actions</span>
+                    <span>{t.suggestedActions}</span>
                     <code>{entry.executedActions.join(", ")}</code>
                   </div>
                   <div className="button-row">

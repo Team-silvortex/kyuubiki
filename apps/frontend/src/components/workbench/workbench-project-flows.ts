@@ -1,11 +1,13 @@
 "use client";
 
 import { buildWorkbenchAdminDataEffects } from "@/components/workbench/workbench-admin-context";
+import { getWorkbenchProjectFlowCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { createWorkbenchProjectStorageController } from "@/components/workbench/workbench-project-storage-controller";
 import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 
 export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   let projectStorageControllerRef: { openModelVersionById?: (versionId: string) => void } | null = null;
+  const projectFlowCopy = getWorkbenchProjectFlowCopy(props.language);
 
   const adminDataEffects = buildWorkbenchAdminDataEffects({
     selectedAdminJob: props.selectedAdminJob,
@@ -26,55 +28,15 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     setSidebarSection: props.setSidebarSection,
     setMessage: props.setMessage,
     labels: {
-      noJobVersion:
-        props.language === "zh"
-          ? "这个任务还没有关联模型版本。"
-          : props.language === "ja"
-            ? "このジョブには関連するモデルバージョンがまだありません。"
-            : "This job does not have a linked model version.",
-      noResultVersion:
-        props.language === "zh"
-          ? "这个结果还没有关联模型版本。"
-          : props.language === "ja"
-            ? "この結果には関連するモデルバージョンがまだありません。"
-            : "This result does not have a linked model version.",
-      noRecordContext:
-        props.language === "zh"
-          ? "这条记录还没有可应用的项目或版本上下文。"
-          : props.language === "ja"
-            ? "このレコードには適用できる project / version の文脈がまだありません。"
-            : "This record does not have a linked project or version context yet.",
-      linkedProjectMissing:
-        props.language === "zh"
-          ? "找不到关联项目。"
-          : props.language === "ja"
-            ? "関連プロジェクトが見つかりませんでした。"
-            : "Could not find the linked project.",
+      noJobVersion: projectFlowCopy.noJobVersion,
+      noResultVersion: projectFlowCopy.noResultVersion,
+      noRecordContext: projectFlowCopy.noRecordContext,
+      linkedProjectMissing: projectFlowCopy.linkedProjectMissing,
       linkedProjectOpened: props.t.linkedProjectOpened,
-      noJobProject:
-        props.language === "zh"
-          ? "这个任务还没有关联项目。"
-          : props.language === "ja"
-            ? "このジョブには関連プロジェクトがまだありません。"
-            : "This job does not have a linked project.",
-      noResultProject:
-        props.language === "zh"
-          ? "这个结果还没有关联项目。"
-          : props.language === "ja"
-            ? "この結果には関連プロジェクトがまだありません。"
-            : "This result does not have a linked project.",
-      selectJobFirst:
-        props.language === "zh"
-          ? "请先选择一条任务记录。"
-          : props.language === "ja"
-            ? "先にジョブレコードを選択してください。"
-            : "Select a job record first.",
-      missingResultJob:
-        props.language === "zh"
-          ? "找不到这条结果对应的任务记录。"
-          : props.language === "ja"
-            ? "この結果に対応するジョブレコードが見つかりませんでした。"
-            : "Could not find the job record linked to this result.",
+      noJobProject: projectFlowCopy.noJobProject,
+      noResultProject: projectFlowCopy.noResultProject,
+      selectJobFirst: projectFlowCopy.selectJobFirst,
+      missingResultJob: projectFlowCopy.missingResultJob,
       recordContextApplied: props.t.recordContextApplied,
     },
   });
@@ -101,12 +63,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     formatImportNotice: (skippedSensitivePresetCount: number): WorkbenchNoticeItem => ({
       id: "project-import-notice",
       tone: "warning",
-      message:
-        props.language === "zh"
-          ? `项目导入时跳过了 ${skippedSensitivePresetCount} 个敏感自动化预设。`
-          : props.language === "ja"
-            ? `プロジェクトの取り込み時に機微な automation preset を ${skippedSensitivePresetCount} 件スキップしました。`
-            : `Skipped ${skippedSensitivePresetCount} sensitive automation preset(s) during project import.`,
+      message: projectFlowCopy.skippedSensitivePresets(skippedSensitivePresetCount),
     }),
     setMessage: props.setMessage,
     setSystemAlerts: props.setSystemAlerts,

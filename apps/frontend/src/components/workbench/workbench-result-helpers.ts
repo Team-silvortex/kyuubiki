@@ -30,6 +30,7 @@ import {
   type WorkbenchCopy,
   type WorkbenchLanguage,
 } from "@/components/workbench/workbench-copy";
+import { getWorkbenchMaterialCopy } from "@/components/workbench/workbench-extended-language-copy";
 
 type PlaneResultField =
   | "von_mises"
@@ -91,27 +92,15 @@ export function localMaterialLabel(
   value: string,
   language: WorkbenchLanguage,
 ): string {
-  const labels = {
-    en: {
-      "210": "Steel",
-      "70": "Aluminum",
-      "116": "Titanium",
-      "30": "Concrete",
-      "135": "Carbon fiber",
-      custom: "Custom",
-    },
-    zh: {
-      "210": "钢",
-      "70": "铝",
-      "116": "钛",
-      "30": "混凝土",
-      "135": "碳纤维",
-      custom: "自定义",
-    },
+  const labels = getWorkbenchMaterialCopy(language);
+  const materialByValue = {
+    "210": labels.steel,
+    "70": labels.aluminum,
+    "116": labels.titanium,
+    "30": labels.concrete,
+    "135": labels.carbonFiber,
   } as const;
-
-  const localized = language === "zh" ? labels.zh : labels.en;
-  return localized[value as keyof typeof localized] ?? localized.custom;
+  return materialByValue[value as keyof typeof materialByValue] ?? labels.custom;
 }
 
 export function materialColorByIndex(index: number) {
