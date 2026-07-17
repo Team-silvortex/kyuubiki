@@ -27,7 +27,10 @@ fn modal_frame_2d_sanity_retains_ordering_normalization_and_length_scaling() {
     assert_close(long.total_mass, DENSITY * AREA * 2.0);
 
     for (short_mode, long_mode) in short.modes.iter().zip(long.modes.iter()) {
+        assert!(short_mode.eigenvalue_rad_s_squared > long_mode.eigenvalue_rad_s_squared);
+        assert!(short_mode.natural_frequency_rad_s > long_mode.natural_frequency_rad_s);
         assert!(short_mode.natural_frequency_hz > long_mode.natural_frequency_hz);
+        assert!(short_mode.period_s < long_mode.period_s);
         assert_modal_shape(&short_mode.shape, &short.free_dofs, 6);
         assert_modal_shape(&long_mode.shape, &long.free_dofs, 6);
         assert_close(short_mode.participation_norm, 1.0);
@@ -48,7 +51,10 @@ fn modal_frame_3d_sanity_retains_ordering_normalization_and_length_scaling() {
     assert_close(long.total_mass, DENSITY * AREA * 2.0);
 
     for (short_mode, long_mode) in short.modes.iter().zip(long.modes.iter()) {
+        assert!(short_mode.eigenvalue_rad_s_squared > long_mode.eigenvalue_rad_s_squared);
+        assert!(short_mode.natural_frequency_rad_s > long_mode.natural_frequency_rad_s);
         assert!(short_mode.natural_frequency_hz > long_mode.natural_frequency_hz);
+        assert!(short_mode.period_s < long_mode.period_s);
         assert_modal_shape(&short_mode.shape, &short.free_dofs, 12);
         assert_modal_shape(&long_mode.shape, &long.free_dofs, 12);
         assert_close(short_mode.participation_norm, 1.0);

@@ -38,6 +38,11 @@ fn plane_triangle_2d_matches_retained_patch_stiffness_reference() {
     }
     assert_close(result.elements[0].von_mises, 100_000.0, 1.0e-10);
     assert_close(result.total_strain_energy, expected_total_energy, 1.0e-12);
+    assert_external_work_energy(
+        &result.input.nodes,
+        &result.nodes,
+        result.total_strain_energy,
+    );
     assert_close(
         result.max_strain_energy_density,
         result
@@ -75,6 +80,11 @@ fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
         element.strain_energy_density * element.area * result.input.elements[0].thickness,
         1.0e-12,
     );
+    assert_external_work_energy(
+        &result.input.nodes,
+        &result.nodes,
+        result.total_strain_energy,
+    );
     assert_close(
         result.max_strain_energy_density,
         element.strain_energy_density.abs(),
@@ -85,6 +95,11 @@ fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
 #[test]
 fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
     let baseline = solve_plane_triangle_2d(&triangle_patch()).expect("triangle baseline");
+    assert_external_work_energy(
+        &baseline.input.nodes,
+        &baseline.nodes,
+        baseline.total_strain_energy,
+    );
 
     let load_scale = 1.5;
     let mut load_request = triangle_patch();
@@ -107,6 +122,11 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
         1.0e-10,
+    );
+    assert_external_work_energy(
+        &load_scaled.input.nodes,
+        &load_scaled.nodes,
+        load_scaled.total_strain_energy,
     );
 
     let thickness_scale = 1.6;
@@ -131,6 +151,11 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         1.0 / thickness_scale,
         1.0e-10,
     );
+    assert_external_work_energy(
+        &thickened.input.nodes,
+        &thickened.nodes,
+        thickened.total_strain_energy,
+    );
 
     let modulus_scale = 1.4;
     let mut stiff_request = triangle_patch();
@@ -148,6 +173,11 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         stiffened.total_strain_energy / baseline.total_strain_energy,
         1.0 / modulus_scale,
         1.0e-10,
+    );
+    assert_external_work_energy(
+        &stiffened.input.nodes,
+        &stiffened.nodes,
+        stiffened.total_strain_energy,
     );
 
     let geometry_scale = 1.5;
@@ -169,11 +199,21 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         baseline.total_strain_energy,
         1.0e-10,
     );
+    assert_external_work_energy(
+        &scaled_geometry.input.nodes,
+        &scaled_geometry.nodes,
+        scaled_geometry.total_strain_energy,
+    );
 }
 
 #[test]
 fn plane_quad_2d_tracks_load_and_modulus_scaling() {
     let baseline = solve_plane_quad_2d(&quad_patch()).expect("quad baseline");
+    assert_external_work_energy(
+        &baseline.input.nodes,
+        &baseline.nodes,
+        baseline.total_strain_energy,
+    );
 
     let load_scale = 1.35;
     let mut load_request = quad_patch();
@@ -197,6 +237,11 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         load_scale * load_scale,
         1.0e-10,
     );
+    assert_external_work_energy(
+        &load_scaled.input.nodes,
+        &load_scaled.nodes,
+        load_scaled.total_strain_energy,
+    );
 
     let modulus_scale = 1.7;
     let mut stiff_request = quad_patch();
@@ -212,6 +257,11 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         stiffened.total_strain_energy / baseline.total_strain_energy,
         1.0 / modulus_scale,
         1.0e-10,
+    );
+    assert_external_work_energy(
+        &stiffened.input.nodes,
+        &stiffened.nodes,
+        stiffened.total_strain_energy,
     );
 
     let thickness_scale = 1.8;
@@ -233,6 +283,11 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         1.0 / thickness_scale,
         1.0e-10,
     );
+    assert_external_work_energy(
+        &thickened.input.nodes,
+        &thickened.nodes,
+        thickened.total_strain_energy,
+    );
 
     let geometry_scale = 1.4;
     let scaled_geometry =
@@ -252,6 +307,11 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         scaled_geometry.total_strain_energy,
         baseline.total_strain_energy,
         1.0e-10,
+    );
+    assert_external_work_energy(
+        &scaled_geometry.input.nodes,
+        &scaled_geometry.nodes,
+        scaled_geometry.total_strain_energy,
     );
 }
 
@@ -375,6 +435,19 @@ fn assert_planar_metrics(
             .sqrt(),
         1.0e-12,
     );
+}
+
+fn assert_external_work_energy(
+    input_nodes: &[PlaneNodeInput],
+    result_nodes: &[kyuubiki_protocol::PlaneNodeResult],
+    total_strain_energy: f64,
+) {
+    let external_work = input_nodes
+        .iter()
+        .zip(result_nodes.iter())
+        .map(|(input, result)| input.load_x * result.ux + input.load_y * result.uy)
+        .sum::<f64>();
+    assert_close(total_strain_energy, 0.5 * external_work, 1.0e-10);
 }
 
 fn assert_close(actual: f64, expected: f64, tolerance: f64) {

@@ -30,6 +30,7 @@ fn spring_1d_matches_series_equivalent_stiffness_closed_form() {
     assert_close(result.max_displacement, expected_tip);
     assert_close(result.max_force, load);
     assert_close(result.total_strain_energy, expected_energy);
+    assert_energy_balance(&result);
 }
 
 #[test]
@@ -40,6 +41,7 @@ fn spring_1d_reports_zero_response_for_zero_load() {
     assert_close(result.max_displacement, 0.0);
     assert_close(result.max_force, 0.0);
     assert_close(result.total_strain_energy, 0.0);
+    assert_energy_balance(&result);
     for node in &result.nodes {
         assert_close(node.ux, 0.0);
     }
@@ -56,6 +58,7 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
     let stiffnesses = [18_000.0, 27_000.0, 36_000.0];
     let baseline =
         solve_spring_1d(&series_request(load, &stiffnesses)).expect("baseline spring chain");
+    assert_energy_balance(&baseline);
 
     let load_scale = 1.6;
     let load_scaled = solve_spring_1d(&series_request(load * load_scale, &stiffnesses))
@@ -69,6 +72,7 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
     );
+    assert_energy_balance(&load_scaled);
     for (scaled, base) in load_scaled.elements.iter().zip(&baseline.elements) {
         assert_close(scaled.extension / base.extension, load_scale);
         assert_close(scaled.force / base.force, load_scale);
@@ -94,6 +98,7 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
         stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
         1.0 / stiffness_scale,
     );
+    assert_energy_balance(&stiffness_scaled);
     for (scaled, base) in stiffness_scaled.elements.iter().zip(&baseline.elements) {
         assert_close(scaled.extension / base.extension, 1.0 / stiffness_scale);
         assert_close(scaled.force, base.force);
@@ -113,6 +118,7 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
     assert_close(longer.max_displacement, baseline.max_displacement);
     assert_close(longer.max_force, baseline.max_force);
     assert_close(longer.total_strain_energy, baseline.total_strain_energy);
+    assert_energy_balance(&longer);
     for (scaled, base) in longer.elements.iter().zip(&baseline.elements) {
         assert_close(scaled.length / base.length, spacing_scale);
         assert_close(scaled.extension, base.extension);
@@ -154,6 +160,25 @@ fn series_request_with_spacing(
         })
         .collect();
     SolveSpring1dRequest { nodes, elements }
+}
+
+fn assert_energy_balance(result: &kyuubiki_protocol::SolveSpring1dResult) {
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum(),
+    );
+    let external_work = result
+        .input
+        .nodes
+        .iter()
+        .zip(result.nodes.iter())
+        .map(|(input, result)| input.load_x * result.ux)
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
 fn assert_close(actual: f64, expected: f64) {

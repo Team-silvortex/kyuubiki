@@ -435,6 +435,10 @@ fn assert_source_response(
     );
     assert_close(result.elements[1].total_flux, right_expected.total_flux);
     assert_close(
+        result.elements[1].total_flux - result.elements[0].total_flux,
+        case.source / case.area,
+    );
+    assert_close(
         result.max_total_flux,
         left_expected
             .total_flux

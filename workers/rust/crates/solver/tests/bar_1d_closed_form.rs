@@ -154,6 +154,7 @@ fn assert_response(result: &kyuubiki_protocol::SolveBarResult, expected: Expecte
     assert_close(result.max_stress, expected.stress.abs());
     assert_close(result.reaction_force, expected.reaction_force);
     assert_close(result.total_strain_energy, expected.total_strain_energy);
+    assert_energy_balance(result);
     assert_close(
         result.max_strain_energy_density,
         expected.strain_energy_density.abs(),
@@ -168,6 +169,29 @@ fn assert_response(result: &kyuubiki_protocol::SolveBarResult, expected: Expecte
             expected.strain_energy_density,
         );
     }
+}
+
+fn assert_energy_balance(result: &kyuubiki_protocol::SolveBarResult) {
+    let total_from_elements = result
+        .elements
+        .iter()
+        .map(|element| {
+            element.strain_energy_density * result.input.area * (element.x2 - element.x1).abs()
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, total_from_elements);
+    assert_close(
+        result.max_strain_energy_density,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy_density.abs())
+            .fold(0.0_f64, f64::max),
+    );
+    assert_close(
+        result.total_strain_energy,
+        0.5 * result.input.tip_force * result.tip_displacement,
+    );
 }
 
 fn assert_close(actual: f64, expected: f64) {

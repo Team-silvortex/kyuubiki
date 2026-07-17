@@ -51,6 +51,10 @@ It covers:
 - coupled thermo-structural fixtures: thermal truss, thermal plane, thermal
   beam, and thermal frame families
 
+The Stokes screening line carries a retained linear-field refinement ladder
+over 1x1, 2x2, and 4x4 quad/triangle meshes, including total
+viscous-dissipation invariance under refinement.
+
 Run it locally at fixture scale:
 
 ```bash
@@ -96,10 +100,16 @@ path:
   `concentration_min`/`concentration_max`, and `source_balance` are normalized
   into the same contract
 
+The retained transport closed-form regression now also checks internal-source
+balance by requiring the left/right total-flux jump to match source per area.
+
 The electromagnetic line has the same decision posture for electrostatics and
 magnetostatics: diagnostics can be checked by field/energy threshold guards and
 paired candidates can be compared before a workflow commits to the next solve
-or bridge step. Electrostatic quality can also normalize solver aliases such as
+or bridge step. The retained plane regression now also checks that element
+thickness linearly scales stored energy for the Dirichlet electrostatic patch,
+while the current-driven magnetostatic patch follows the expected
+inverse-thickness field and energy response. Electrostatic quality can also normalize solver aliases such as
 `max_electric_field`, `peak_energy_density`, and `potential_min`/`potential_max`
 into the canonical field, energy-density, and potential-span terms.
 Magnetostatic quality does the same for `max_magnetic_field_strength`,
@@ -127,11 +137,19 @@ stress objectives. Thermal scores now include dominant, watch-count, and
 blocking-term fields for automated recovery and next-step selection. Solver
 aliases such as `temperature_min`/`temperature_max`, `peak_heat_flux`,
 `thermal_stress_peak`, and `thermal_energy_total` are normalized too.
+The retained heat-plane regression also separates heat-flux density from total
+heat-flow rate by checking thickness scaling on the same manufactured linear
+temperature field, and it now keeps quad and triangle heat meshes invariant
+across 1x1, 2x2, and 4x4 refinements for that manufactured field.
+The retained thermoelastic patch now adds the matching temperature-delta and
+thickness scaling split, keeping stress/energy-density diagnostics distinct
+from total energy.
 The solver-side `transient_heat_bar_closed_form.rs` regression now keeps a
 positive-conductance implicit Euler thermal-bar transient reference
 promotion-ready, covering lumped capacity, fixed-temperature reduction,
-heat-load linearity, heat flux, and thermal energy history before transient
-heat is promoted into the release-gated physics matrix.
+heat-load linearity, length-driven capacity/conductance scaling, heat flux, and
+thermal energy history before transient heat is promoted into the release-gated
+physics matrix.
 
 The electrostatic line now mirrors that optimization shape:
 `transform.evaluate_electrostatic_guard`,
@@ -160,6 +178,9 @@ into an optimization-ready acoustic quality score with watch/missing counts,
 dominant-term explanation, and blocking-term summaries. Solver aliases such as
 `peak_spl_db`, `peak_acoustic_intensity`, `pressure_amplitude_peak`, and
 `damping_loss_total` are normalized into that same score contract.
+The retained acoustic solver regression now also spans an octave frequency
+ladder and checks wave-number frequency linearity against the same closed-form
+duct reference.
 
 The modal line is covered by `transform.evaluate_modal_guard`,
 `transform.benchmark_modal_pair`, and `transform.score_modal_quality`, so
@@ -178,8 +199,9 @@ Harmonic response entries can use aliases such as `freq_hz`,
 `displacement_amplitude`, `acceleration_amplitude`, and `force_amplitude`.
 The solver-side `dynamic_spring_closed_form.rs` regression now keeps
 single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
-including load-scaling and near-resonance damping-scaling checks, but those
-dynamic spring operators remain outside the release-gated 38-operator
+including load-scaling, near-resonance damping-scaling, and undamped
+free-vibration time-step refinement checks, but those dynamic spring operators
+remain outside the release-gated 38-operator
 `physics-coverage` qualification manifest until the dynamic line is promoted
 into that matrix.
 

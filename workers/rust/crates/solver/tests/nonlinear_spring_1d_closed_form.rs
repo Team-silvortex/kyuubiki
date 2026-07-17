@@ -41,6 +41,7 @@ fn nonlinear_spring_1d_closed_form_matches_cardano_root() {
     assert_close(element.force, load);
     assert_close(element.tangent_stiffness, expected_tangent);
     assert!(element.tangent_stiffness > stiffness);
+    assert_hardening_energy_law(element, stiffness, cubic_stiffness);
 }
 
 #[test]
@@ -51,6 +52,7 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
     let baseline =
         solve_nonlinear_spring_1d(&single_hardening_spring(stiffness, cubic_stiffness, load))
             .expect("baseline hardening spring should solve");
+    assert_hardening_energy_law(&baseline.elements[0], stiffness, cubic_stiffness);
 
     let scale = 1.7;
     let scaled = solve_nonlinear_spring_1d(&single_hardening_spring(
@@ -68,6 +70,14 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
     assert_close(scaled.elements[0].force / baseline.elements[0].force, scale);
     assert_close(scaled.max_force / baseline.max_force, scale);
     assert_close(
+        hardening_potential(
+            scaled.elements[0].extension,
+            stiffness * scale,
+            cubic_stiffness * scale,
+        ) / hardening_potential(baseline.elements[0].extension, stiffness, cubic_stiffness),
+        scale,
+    );
+    assert_close(
         scaled.elements[0].tangent_stiffness / baseline.elements[0].tangent_stiffness,
         scale,
     );
@@ -75,6 +85,11 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
         scaled.elements[0].force,
         stiffness * scale * scaled.elements[0].extension
             + cubic_stiffness * scale * scaled.elements[0].extension.powi(3),
+    );
+    assert_hardening_energy_law(
+        &scaled.elements[0],
+        stiffness * scale,
+        cubic_stiffness * scale,
     );
     for (scaled_step, baseline_step) in scaled.steps.iter().zip(&baseline.steps) {
         assert_eq!(scaled_step.step, baseline_step.step);
@@ -99,6 +114,11 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
         longer.elements[0].tangent_stiffness,
         baseline.elements[0].tangent_stiffness,
     );
+    assert_close(
+        hardening_potential(longer.elements[0].extension, stiffness, cubic_stiffness),
+        hardening_potential(baseline.elements[0].extension, stiffness, cubic_stiffness),
+    );
+    assert_hardening_energy_law(&longer.elements[0], stiffness, cubic_stiffness);
     assert_eq!(longer.steps.len(), baseline.steps.len());
 }
 
@@ -139,6 +159,28 @@ fn hardening_root(stiffness: f64, cubic_stiffness: f64, load: f64) -> f64 {
     let q = -load / cubic_stiffness;
     let discriminant = (q * 0.5).powi(2) + (p / 3.0).powi(3);
     (-q * 0.5 + discriminant.sqrt()).cbrt() + (-q * 0.5 - discriminant.sqrt()).cbrt()
+}
+
+fn hardening_potential(extension: f64, stiffness: f64, cubic_stiffness: f64) -> f64 {
+    0.5 * stiffness * extension.powi(2) + 0.25 * cubic_stiffness * extension.powi(4)
+}
+
+fn assert_hardening_energy_law(
+    element: &kyuubiki_protocol::NonlinearSpring1dElementResult,
+    stiffness: f64,
+    cubic_stiffness: f64,
+) {
+    let extension = element.extension;
+    let potential = hardening_potential(extension, stiffness, cubic_stiffness);
+    assert!(potential >= 0.0);
+    assert_close(
+        element.force,
+        stiffness * extension + cubic_stiffness * extension.powi(3),
+    );
+    assert_close(
+        element.tangent_stiffness,
+        stiffness + 3.0 * cubic_stiffness * extension.powi(2),
+    );
 }
 
 fn node(id: &str, x: f64, fix_x: bool, load_x: f64) -> NonlinearSpring1dNodeInput {

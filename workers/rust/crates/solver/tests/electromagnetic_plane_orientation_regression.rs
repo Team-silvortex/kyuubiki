@@ -53,6 +53,39 @@ fn electrostatic_plane_orientation_regression_preserves_energy_and_rotates_field
 }
 
 #[test]
+fn electrostatic_plane_thickness_scales_energy_without_changing_field() {
+    let baseline = solve_electrostatic_plane_quad_2d(&electrostatic_quad_y_request())
+        .expect("baseline electrostatic quad should solve");
+    let thick = solve_electrostatic_plane_quad_2d(&electrostatic_quad_y_request_with_thickness(
+        THICKNESS * 2.5,
+    ))
+    .expect("thicker electrostatic quad should solve");
+
+    let baseline_element = &baseline.elements[0];
+    let thick_element = &thick.elements[0];
+    assert_close(
+        thick_element.potential_gradient_y,
+        baseline_element.potential_gradient_y,
+    );
+    assert_close(
+        thick_element.electric_field_y,
+        baseline_element.electric_field_y,
+    );
+    assert_close(
+        thick_element.electric_flux_density_y,
+        baseline_element.electric_flux_density_y,
+    );
+    assert_close(
+        thick_element.electric_energy_density,
+        baseline_element.electric_energy_density,
+    );
+    assert_close(
+        thick_element.stored_energy / baseline_element.stored_energy,
+        2.5,
+    );
+}
+
+#[test]
 fn magnetostatic_plane_orientation_regression_preserves_energy_and_rotates_flux() {
     let triangle = solve_magnetostatic_plane_triangle_2d(&magnetostatic_triangle_x_request())
         .expect("rotated magnetostatic triangle should solve");
@@ -106,6 +139,40 @@ fn magnetostatic_plane_orientation_regression_preserves_energy_and_rotates_flux(
     assert_close(quad_element.stored_energy, 0.000_628_318_530_717_958_5);
 }
 
+#[test]
+fn magnetostatic_plane_current_source_scales_with_inverse_thickness() {
+    let baseline = solve_magnetostatic_plane_quad_2d(&magnetostatic_quad_x_request())
+        .expect("baseline magnetostatic quad should solve");
+    let thick = solve_magnetostatic_plane_quad_2d(&magnetostatic_quad_x_request_with_thickness(
+        THICKNESS * 2.5,
+    ))
+    .expect("thicker magnetostatic quad should solve");
+
+    let baseline_element = &baseline.elements[0];
+    let thick_element = &thick.elements[0];
+    let inverse_thickness_scale = 1.0 / 2.5;
+    assert_close(
+        thick_element.vector_potential_gradient_x / baseline_element.vector_potential_gradient_x,
+        inverse_thickness_scale,
+    );
+    assert_close(
+        thick_element.magnetic_flux_density_y / baseline_element.magnetic_flux_density_y,
+        inverse_thickness_scale,
+    );
+    assert_close(
+        thick_element.magnetic_field_strength_y / baseline_element.magnetic_field_strength_y,
+        inverse_thickness_scale,
+    );
+    assert_close(
+        thick_element.magnetic_energy_density / baseline_element.magnetic_energy_density,
+        inverse_thickness_scale * inverse_thickness_scale,
+    );
+    assert_close(
+        thick_element.stored_energy / baseline_element.stored_energy,
+        inverse_thickness_scale,
+    );
+}
+
 fn electrostatic_triangle_y_request() -> SolveElectrostaticPlaneTriangle2dRequest {
     SolveElectrostaticPlaneTriangle2dRequest {
         nodes: vec![
@@ -125,6 +192,12 @@ fn electrostatic_triangle_y_request() -> SolveElectrostaticPlaneTriangle2dReques
 }
 
 fn electrostatic_quad_y_request() -> SolveElectrostaticPlaneQuad2dRequest {
+    electrostatic_quad_y_request_with_thickness(THICKNESS)
+}
+
+fn electrostatic_quad_y_request_with_thickness(
+    thickness: f64,
+) -> SolveElectrostaticPlaneQuad2dRequest {
     SolveElectrostaticPlaneQuad2dRequest {
         nodes: vec![
             e_node("bottom-left", 0.0, 0.0, 12.0),
@@ -138,7 +211,7 @@ fn electrostatic_quad_y_request() -> SolveElectrostaticPlaneQuad2dRequest {
             node_j: 1,
             node_k: 2,
             node_l: 3,
-            thickness: THICKNESS,
+            thickness,
             permittivity: EPSILON,
         }],
     }
@@ -163,6 +236,12 @@ fn magnetostatic_triangle_x_request() -> SolveMagnetostaticPlaneTriangle2dReques
 }
 
 fn magnetostatic_quad_x_request() -> SolveMagnetostaticPlaneQuad2dRequest {
+    magnetostatic_quad_x_request_with_thickness(THICKNESS)
+}
+
+fn magnetostatic_quad_x_request_with_thickness(
+    thickness: f64,
+) -> SolveMagnetostaticPlaneQuad2dRequest {
     SolveMagnetostaticPlaneQuad2dRequest {
         nodes: vec![
             m_node("ground-bottom", 0.0, 0.0, true, 0.0, 0.0),
@@ -176,7 +255,7 @@ fn magnetostatic_quad_x_request() -> SolveMagnetostaticPlaneQuad2dRequest {
             node_j: 1,
             node_k: 2,
             node_l: 3,
-            thickness: THICKNESS,
+            thickness,
             permeability: MU,
         }],
     }

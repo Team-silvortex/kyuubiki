@@ -38,6 +38,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
     assert_close(beam.nodes[1].rz, expected_tip_rz);
     assert_close(beam.max_moment, expected_moment);
     assert_close(beam.max_stress, expected_bending_stress);
+    assert_tip_force_energy(beam.total_strain_energy, -load, beam.nodes[1].uy);
 
     let frame = solve_frame_2d(&SolveFrame2dRequest {
         nodes: vec![
@@ -60,6 +61,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
     assert_close(frame.nodes[1].ux, 0.0);
     assert_close(frame.max_moment, expected_moment);
     assert_close(frame.max_stress, expected_bending_stress);
+    assert_tip_force_energy(frame.total_strain_energy, -load, frame.nodes[1].uy);
 
     let torsion_length: f64 = 1.5;
     let torque: f64 = 2500.0;
@@ -86,6 +88,7 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
     assert_close(torsion.nodes[1].rz, expected_twist);
     assert_close(torsion.max_torque, torque);
     assert_close(torsion.max_stress, expected_shear_stress);
+    assert_tip_moment_energy(torsion.total_strain_energy, torque, torsion.nodes[1].rz);
 }
 
 #[test]
@@ -103,6 +106,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("baseline cantilever beam should solve");
+    assert_tip_force_energy(baseline.total_strain_energy, -load, baseline.nodes[1].uy);
 
     let load_scale = 1.75;
     let loaded = solve_beam_1d(&beam_request(
@@ -117,6 +121,11 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
     assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
     assert_close(loaded.max_moment / baseline.max_moment, load_scale);
     assert_close(loaded.max_stress / baseline.max_stress, load_scale);
+    assert_tip_force_energy(
+        loaded.total_strain_energy,
+        -load * load_scale,
+        loaded.nodes[1].uy,
+    );
     assert_close(
         loaded.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
@@ -141,6 +150,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
     );
     assert_close(stiffer.max_moment, baseline.max_moment);
     assert_close(stiffer.max_stress, baseline.max_stress);
+    assert_tip_force_energy(stiffer.total_strain_energy, -load, stiffer.nodes[1].uy);
     assert_close(
         stiffer.total_strain_energy / baseline.total_strain_energy,
         1.0 / inertia_scale,
@@ -165,6 +175,7 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
     );
     assert_close(longer.max_moment / baseline.max_moment, length_scale);
     assert_close(longer.max_stress / baseline.max_stress, length_scale);
+    assert_tip_force_energy(longer.total_strain_energy, -load, longer.nodes[1].uy);
     assert_close(
         longer.total_strain_energy / baseline.total_strain_energy,
         length_scale.powi(3),
@@ -188,6 +199,7 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
         section_modulus,
     ))
     .expect("baseline 2D frame cantilever should solve");
+    assert_tip_force_energy(baseline.total_strain_energy, -load, baseline.nodes[1].uy);
 
     let load_scale = 1.6;
     let loaded = solve_frame_2d(&frame_request(
@@ -204,6 +216,11 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
     assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
     assert_close(loaded.max_moment / baseline.max_moment, load_scale);
     assert_close(loaded.max_stress / baseline.max_stress, load_scale);
+    assert_tip_force_energy(
+        loaded.total_strain_energy,
+        -load * load_scale,
+        loaded.nodes[1].uy,
+    );
     assert_close(
         loaded.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
@@ -230,6 +247,7 @@ fn frame_2d_tracks_tip_load_and_inertia_scaling() {
     );
     assert_close(stiffer.max_moment, baseline.max_moment);
     assert_close(stiffer.max_stress, baseline.max_stress);
+    assert_tip_force_energy(stiffer.total_strain_energy, -load, stiffer.nodes[1].uy);
     assert_close(
         stiffer.total_strain_energy / baseline.total_strain_energy,
         1.0 / inertia_scale,
@@ -251,6 +269,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
         section_modulus,
     ))
     .expect("baseline torsion shaft should solve");
+    assert_tip_moment_energy(baseline.total_strain_energy, torque, baseline.nodes[1].rz);
 
     let torque_scale = 1.8;
     let twisted = solve_torsion_1d(&torsion_request(
@@ -264,6 +283,11 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
     assert_close(twisted.nodes[1].rz / baseline.nodes[1].rz, torque_scale);
     assert_close(twisted.max_torque / baseline.max_torque, torque_scale);
     assert_close(twisted.max_stress / baseline.max_stress, torque_scale);
+    assert_tip_moment_energy(
+        twisted.total_strain_energy,
+        torque * torque_scale,
+        twisted.nodes[1].rz,
+    );
     assert_close(
         twisted.total_strain_energy / baseline.total_strain_energy,
         torque_scale * torque_scale,
@@ -284,6 +308,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
     );
     assert_close(stiffened.max_torque, baseline.max_torque);
     assert_close(stiffened.max_stress, baseline.max_stress);
+    assert_tip_moment_energy(stiffened.total_strain_energy, torque, stiffened.nodes[1].rz);
     assert_close(
         stiffened.total_strain_energy / baseline.total_strain_energy,
         1.0 / polar_scale,
@@ -301,6 +326,7 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
     assert_close(longer.nodes[1].rz / baseline.nodes[1].rz, length_scale);
     assert_close(longer.max_torque, baseline.max_torque);
     assert_close(longer.max_stress, baseline.max_stress);
+    assert_tip_moment_energy(longer.total_strain_energy, torque, longer.nodes[1].rz);
     assert_close(
         longer.total_strain_energy / baseline.total_strain_energy,
         length_scale,
@@ -429,6 +455,14 @@ fn torsion_node(id: &str, x: f64, fix_rz: bool, torque_z: f64) -> Torsion1dNodeI
         fix_rz,
         torque_z,
     }
+}
+
+fn assert_tip_force_energy(total_strain_energy: f64, tip_load: f64, tip_displacement: f64) {
+    assert_close(total_strain_energy, 0.5 * tip_load * tip_displacement);
+}
+
+fn assert_tip_moment_energy(total_strain_energy: f64, tip_moment: f64, tip_rotation: f64) {
+    assert_close(total_strain_energy, 0.5 * tip_moment * tip_rotation);
 }
 
 fn assert_close(actual: f64, expected: f64) {

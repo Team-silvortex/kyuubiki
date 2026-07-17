@@ -166,12 +166,34 @@ fn assert_response(
     assert_close(result.nodes[1].temperature, expected.tip_temperature);
     assert_close(result.max_temperature, expected.tip_temperature.abs());
     assert_close(result.max_heat_flux, expected.heat_flux.abs());
+    assert_heat_balance(result);
     assert_close(
         result.elements[0].average_temperature,
         expected.tip_temperature / 2.0,
     );
     assert_close(result.elements[0].temperature_gradient, expected.gradient);
     assert_close(result.elements[0].heat_flux, expected.heat_flux);
+}
+
+fn assert_heat_balance(result: &kyuubiki_protocol::SolveHeatBar1dResult) {
+    let max_heat_flux = result
+        .elements
+        .iter()
+        .map(|element| element.heat_flux.abs())
+        .fold(0.0_f64, f64::max);
+    assert_close(result.max_heat_flux, max_heat_flux);
+
+    for element in &result.elements {
+        let input = &result.input.elements[element.index];
+        assert_close(
+            element.heat_flux,
+            -input.conductivity * element.temperature_gradient,
+        );
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let nodal_load = node_i.heat_load + node_j.heat_load;
+        assert_close(element.heat_flux * input.area + nodal_load, 0.0);
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

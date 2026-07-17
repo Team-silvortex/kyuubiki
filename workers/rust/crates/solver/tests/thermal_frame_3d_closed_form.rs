@@ -91,6 +91,7 @@ fn thermal_frame_3d_matches_restrained_temperature_gradient_closed_form() {
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_temperature_gradient, gradient_y);
     assert_close(result.total_strain_energy, strain_energy);
+    assert_member_energy_balance(&result.elements, result.total_strain_energy);
 }
 
 #[test]
@@ -124,6 +125,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         section_depth_z,
     ))
     .expect("baseline thermal frame 3d should solve");
+    assert_member_energy_balance(&baseline.elements, baseline.total_strain_energy);
 
     let thermal_scale = 1.4;
     let hotter = solve_thermal_frame_3d(&restrained_member(
@@ -170,6 +172,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         hotter.elements[0].strain_energy / baseline.elements[0].strain_energy,
         thermal_scale * thermal_scale,
     );
+    assert_member_energy_balance(&hotter.elements, hotter.total_strain_energy);
 
     let expansion_scale = 1.25;
     let expanded = solve_thermal_frame_3d(&restrained_member(
@@ -216,6 +219,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         expanded.elements[0].strain_energy / baseline.elements[0].strain_energy,
         expansion_scale * expansion_scale,
     );
+    assert_member_energy_balance(&expanded.elements, expanded.total_strain_energy);
 
     let modulus_scale = 1.2;
     let stiffer = solve_thermal_frame_3d(&restrained_member(
@@ -262,6 +266,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         stiffer.elements[0].strain_energy / baseline.elements[0].strain_energy,
         modulus_scale,
     );
+    assert_member_energy_balance(&stiffer.elements, stiffer.total_strain_energy);
 
     let inertia_scale = 1.6;
     let heavier = solve_thermal_frame_3d(&restrained_member(
@@ -301,6 +306,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         baseline.elements[0].axial_force_i,
     );
     assert!(heavier.elements[0].strain_energy > baseline.elements[0].strain_energy);
+    assert_member_energy_balance(&heavier.elements, heavier.total_strain_energy);
 
     let length_scale = 1.4;
     let longer = solve_thermal_frame_3d(&restrained_member(
@@ -347,6 +353,7 @@ fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
         longer.elements[0].strain_energy / baseline.elements[0].strain_energy,
         length_scale,
     );
+    assert_member_energy_balance(&longer.elements, longer.total_strain_energy);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -411,6 +418,16 @@ fn node(id: &str, x: f64, y: f64, z: f64, temperature_delta: f64) -> ThermalFram
         moment_z: 0.0,
         temperature_delta,
     }
+}
+
+fn assert_member_energy_balance(
+    elements: &[kyuubiki_protocol::ThermalFrame3dElementResult],
+    total_strain_energy: f64,
+) {
+    assert_close(
+        total_strain_energy,
+        elements.iter().map(|element| element.strain_energy).sum(),
+    );
 }
 
 fn assert_close(actual: f64, expected: f64) {

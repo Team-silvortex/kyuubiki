@@ -42,6 +42,7 @@ fn spring_2d_matches_orthogonal_vector_stiffness_closed_form() {
         result.total_strain_energy,
         0.5 * (load_x * expected_ux + load_y * expected_uy),
     );
+    assert_energy_balance_2d(&result);
 }
 
 #[test]
@@ -91,12 +92,14 @@ fn spring_3d_matches_orthogonal_vector_stiffness_closed_form() {
         result.total_strain_energy,
         0.5 * (load_x * expected_ux + load_y * expected_uy + load_z * expected_uz),
     );
+    assert_energy_balance_3d(&result);
 }
 
 #[test]
 fn spring_2d_tracks_load_and_stiffness_scaling() {
     let baseline = solve_spring_2d(&spring_2d_request(700.0, -500.0, 35_000.0, 25_000.0))
         .expect("baseline 2D vector spring should solve");
+    assert_energy_balance_2d(&baseline);
 
     let load_scale = 1.4;
     let load_scaled = solve_spring_2d(&spring_2d_request(
@@ -120,6 +123,7 @@ fn spring_2d_tracks_load_and_stiffness_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
     );
+    assert_energy_balance_2d(&load_scaled);
 
     let stiffness_scale = 1.6;
     let stiffness_scaled = solve_spring_2d(&spring_2d_request(
@@ -149,6 +153,7 @@ fn spring_2d_tracks_load_and_stiffness_scaling() {
         stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
         1.0 / stiffness_scale,
     );
+    assert_energy_balance_2d(&stiffness_scaled);
 
     let geometry_scale = 2.0;
     let longer = solve_spring_2d(&spring_2d_request_scaled(
@@ -172,6 +177,7 @@ fn spring_2d_tracks_load_and_stiffness_scaling() {
     assert_close(longer.elements[0].force, baseline.elements[0].force);
     assert_close(longer.elements[1].force, baseline.elements[1].force);
     assert_close(longer.total_strain_energy, baseline.total_strain_energy);
+    assert_energy_balance_2d(&longer);
 }
 
 #[test]
@@ -180,6 +186,7 @@ fn spring_3d_tracks_load_and_stiffness_scaling() {
         420.0, -280.0, 700.0, 42_000.0, 28_000.0, 56_000.0,
     ))
     .expect("baseline 3D vector spring should solve");
+    assert_energy_balance_3d(&baseline);
 
     let load_scale = 1.5;
     let load_scaled = solve_spring_3d(&spring_3d_request(
@@ -199,6 +206,7 @@ fn spring_3d_tracks_load_and_stiffness_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
     );
+    assert_energy_balance_3d(&load_scaled);
 
     let stiffness_scale = 1.75;
     let stiffness_scaled = solve_spring_3d(&spring_3d_request(
@@ -227,6 +235,7 @@ fn spring_3d_tracks_load_and_stiffness_scaling() {
         stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
         1.0 / stiffness_scale,
     );
+    assert_energy_balance_3d(&stiffness_scaled);
 
     let geometry_scale = 1.8;
     let longer = solve_spring_3d(&spring_3d_request_scaled(
@@ -256,6 +265,7 @@ fn spring_3d_tracks_load_and_stiffness_scaling() {
     assert_close(longer.nodes[0].uz, baseline.nodes[0].uz);
     assert_close(longer.max_force, baseline.max_force);
     assert_close(longer.total_strain_energy, baseline.total_strain_energy);
+    assert_energy_balance_3d(&longer);
 }
 
 fn spring_2d_request(
@@ -428,6 +438,46 @@ fn element_3d(id: &str, node_i: usize, node_j: usize, stiffness: f64) -> Spring3
         node_j,
         stiffness,
     }
+}
+
+fn assert_energy_balance_2d(result: &kyuubiki_protocol::SolveSpring2dResult) {
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum(),
+    );
+    let external_work = result
+        .input
+        .nodes
+        .iter()
+        .zip(result.nodes.iter())
+        .map(|(input, result)| input.load_x * result.ux + input.load_y * result.uy)
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_energy_balance_3d(result: &kyuubiki_protocol::SolveSpring3dResult) {
+    assert_close(
+        result.total_strain_energy,
+        result
+            .elements
+            .iter()
+            .map(|element| element.strain_energy)
+            .sum(),
+    );
+    let external_work = result
+        .input
+        .nodes
+        .iter()
+        .zip(result.nodes.iter())
+        .map(|(input, result)| {
+            input.load_x * result.ux + input.load_y * result.uy + input.load_z * result.uz
+        })
+        .sum::<f64>();
+    assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
 fn assert_close(actual: f64, expected: f64) {

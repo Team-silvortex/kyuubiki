@@ -51,6 +51,27 @@ fn transient_heat_bar_1d_tracks_lumped_capacity_and_heat_load_response() {
         massive.nodes[1].temperature < baseline.nodes[1].temperature,
         "larger lumped capacity should slow the same transient heat load"
     );
+
+    let length_scale = 1.5;
+    let longer_case = HeatTransientCase {
+        length: baseline_case.length * length_scale,
+        ..baseline_case
+    };
+    let longer =
+        solve_transient_heat_bar_1d(&longer_case.request()).expect("length-scaled transient heat");
+    assert_response(&longer, longer_case);
+    assert_close(
+        longer_case.node_capacity() / baseline_case.node_capacity(),
+        length_scale,
+    );
+    assert_close(
+        longer_case.conductance() / baseline_case.conductance(),
+        1.0 / length_scale,
+    );
+    assert!(
+        longer.nodes[1].temperature < baseline.nodes[1].temperature,
+        "longer bars should heat more slowly over the same finite time window"
+    );
 }
 
 #[derive(Clone, Copy)]

@@ -67,6 +67,7 @@ fn solid_tetra_3d_closed_form_matches_single_free_node_solution() {
     assert_close(result.max_von_mises_stress, expected_von_mises);
     assert_close(result.max_strain_energy_density, expected_energy_density);
     assert_close(result.total_strain_energy, expected_total_energy);
+    assert_tip_force_energy(result.total_strain_energy, load_z, tip.uz);
 }
 
 #[test]
@@ -80,6 +81,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         load_z,
     ))
     .expect("baseline solid tetra fixture should solve");
+    assert_tip_force_energy(baseline.total_strain_energy, load_z, baseline.nodes[3].uz);
 
     let load_scale = 1.5;
     let load_scaled = solve_solid_tetra_3d(&restrained_tip_load_request(
@@ -101,6 +103,11 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
     );
+    assert_tip_force_energy(
+        load_scaled.total_strain_energy,
+        load_z * load_scale,
+        load_scaled.nodes[3].uz,
+    );
 
     let modulus_scale = 1.7;
     let stiffer = solve_solid_tetra_3d(&restrained_tip_load_request(
@@ -119,6 +126,7 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         stiffer.total_strain_energy / baseline.total_strain_energy,
         1.0 / modulus_scale,
     );
+    assert_tip_force_energy(stiffer.total_strain_energy, load_z, stiffer.nodes[3].uz);
 
     let height_scale = 1.4;
     let taller = solve_solid_tetra_3d(&restrained_tip_load_request_with_height(
@@ -141,6 +149,47 @@ fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
         taller.total_strain_energy / baseline.total_strain_energy,
         height_scale,
     );
+    assert_tip_force_energy(taller.total_strain_energy, load_z, taller.nodes[3].uz);
+
+    let base_scale = 1.6;
+    let wider_base = solve_solid_tetra_3d(&restrained_tip_load_request_with_geometry(
+        youngs_modulus,
+        poisson_ratio,
+        load_z,
+        base_scale,
+        1.0,
+    ))
+    .expect("base-area-scaled solid tetra fixture should solve");
+    let inverse_base_area_scale = 1.0 / base_scale.powi(2);
+    assert_close(
+        wider_base.total_volume / baseline.total_volume,
+        base_scale.powi(2),
+    );
+    assert_close(
+        wider_base.nodes[3].uz / baseline.nodes[3].uz,
+        inverse_base_area_scale,
+    );
+    assert_close(
+        wider_base.elements[0].strain_z / baseline.elements[0].strain_z,
+        inverse_base_area_scale,
+    );
+    assert_close(
+        wider_base.elements[0].stress_z / baseline.elements[0].stress_z,
+        inverse_base_area_scale,
+    );
+    assert_close(
+        wider_base.max_von_mises_stress / baseline.max_von_mises_stress,
+        inverse_base_area_scale,
+    );
+    assert_close(
+        wider_base.total_strain_energy / baseline.total_strain_energy,
+        inverse_base_area_scale,
+    );
+    assert_tip_force_energy(
+        wider_base.total_strain_energy,
+        load_z,
+        wider_base.nodes[3].uz,
+    );
 }
 
 fn restrained_tip_load_request(
@@ -157,11 +206,21 @@ fn restrained_tip_load_request_with_height(
     load_z: f64,
     height: f64,
 ) -> SolveSolidTetra3dRequest {
+    restrained_tip_load_request_with_geometry(youngs_modulus, poisson_ratio, load_z, 1.0, height)
+}
+
+fn restrained_tip_load_request_with_geometry(
+    youngs_modulus: f64,
+    poisson_ratio: f64,
+    load_z: f64,
+    base_scale: f64,
+    height: f64,
+) -> SolveSolidTetra3dRequest {
     SolveSolidTetra3dRequest {
         nodes: vec![
             node("n0", 0.0, 0.0, 0.0, true, 0.0),
-            node("n1", 1.0, 0.0, 0.0, true, 0.0),
-            node("n2", 0.0, 1.0, 0.0, true, 0.0),
+            node("n1", base_scale, 0.0, 0.0, true, 0.0),
+            node("n2", 0.0, base_scale, 0.0, true, 0.0),
             node("n3", 0.0, 0.0, height, false, load_z),
         ],
         elements: vec![SolidTetra3dElementInput {
@@ -189,6 +248,10 @@ fn node(id: &str, x: f64, y: f64, z: f64, fixed: bool, load_z: f64) -> SolidTetr
         load_y: 0.0,
         load_z,
     }
+}
+
+fn assert_tip_force_energy(total_strain_energy: f64, tip_load: f64, tip_displacement: f64) {
+    assert_close(total_strain_energy, 0.5 * tip_load * tip_displacement);
 }
 
 fn assert_close(actual: f64, expected: f64) {

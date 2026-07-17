@@ -201,6 +201,10 @@ fn assert_response(
     );
     assert_close(result.total_stored_energy, expected.stored_energy);
     assert_close(
+        result.total_stored_energy,
+        0.5 * result.nodes[1].potential * result.input.nodes[1].charge_density,
+    );
+    assert_close(
         result.elements[0].average_potential,
         expected.potential / 2.0,
     );

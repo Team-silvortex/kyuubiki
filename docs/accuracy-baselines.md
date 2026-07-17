@@ -50,7 +50,8 @@ It currently covers `axial_bar_1d` with:
 `spring_1d`, `spring_2d`, and `spring_3d` add foundational discrete stiffness
 checks. They cover series equivalent stiffness and orthogonal vector spring
 closed forms under load and stiffness perturbations, including direction-cosine
-assembly, element force/extension recovery, and strain-energy accumulation.
+assembly, element force/extension recovery, strain-energy accumulation, and
+global work-energy balance.
 
 It also covers `beam_1d` with tip-loaded cantilever refinement invariance
 across 1, 2, 4, 8, and 16 elements against closed-form tip displacement, tip
@@ -69,7 +70,8 @@ strain energy, plus load, inertia, and section-modulus perturbation scaling.
 `modal_frame_2d` and `modal_frame_3d` add the first dynamic reliability checks.
 They keep the retained cantilever modal contract while verifying total mass,
 eigenvalue, natural-frequency, period, and shape contracts under global
-stiffness and density scaling.
+stiffness and density scaling, plus short-versus-long cantilever monotonicity
+across eigenvalue, rad/s, Hz, and period.
 
 `transient_spring_1d` and `harmonic_spring_1d` add the first direct dynamic
 spring checks. The transient path verifies one-step Newmark average
@@ -82,14 +84,19 @@ displacement, velocity, acceleration, spring/damping force, kinetic energy, and
 strain energy scale by the expected linear/quadratic factors when load and
 initial state are scaled together, while harmonic amplitudes scale linearly,
 the peak frequency remains unchanged, and increased damping lowers the retained
-near-resonance displacement while keeping force amplitude closed-form.
+near-resonance displacement while keeping force amplitude closed-form. It also
+checks undamped free-vibration time-step refinement against the continuous
+single-DOF oscillator reference, requiring smaller time steps to reduce
+displacement error over the retained short transient window.
 
 `transient_heat_bar_1d` adds a focused heat-transfer transient check. The
 `transient_heat_bar_closed_form.rs` regression verifies the implicit Euler
 single-free-node thermal recurrence for a lumped-capacity bar with positive
 conductance, fixed root temperature, tip heat load, every history step, final
 gradient, final heat flux, and thermal energy. It also checks heat-load
-linearity and confirms larger lumped capacity slows the same transient load.
+linearity, confirms larger lumped capacity slows the same transient load, and
+checks length scaling where lumped capacity rises with length, conductance
+falls inversely, and the same finite time window heats more slowly.
 
 `nonlinear_spring_1d` and `contact_gap_1d` add the first nonlinear mechanical
 checks. The hardening spring is compared against the Cardano closed-form root
@@ -118,7 +125,8 @@ scale according to the assembled linear-elastic plane-stress model.
 `solid_tetra_3d` now adds the constant-strain 3D solid path with a single
 free-node tetrahedron. It checks the closed-form displacement, volume,
 strain/stress tensor components, von Mises stress, strain-energy density, and
-total energy across load, material, Poisson-ratio, and height perturbations.
+total energy across load, material, Poisson-ratio, height, and base-area
+perturbations.
 
 This is deliberately stricter than a sample regression: the uniform axial bar
 and the classic Euler-Bernoulli tip-loaded cantilever should remain closed-form
@@ -127,7 +135,12 @@ remain closed-form under geometry, material, and load perturbation. Any drift
 points to bookkeeping, element-length, coordinate-transform, constitutive,
 thickness/material scaling, load mapping, force/moment, stress recovery, or
 energy accumulation regressions across translational and rotational mechanical
-DOFs.
+DOFs. The retained axial-bar regression additionally requires summary strain
+energy to match both element energy-density integration and
+`0.5 * tip_force * tip_displacement`. The beam/frame/torsion classic regression
+also keeps an explicit work-energy conjugacy check: beam and frame strain
+energy must equal `0.5 * tip_load * tip_displacement`, while torsion strain
+energy must equal `0.5 * torque * twist`.
 
 ## Source of truth
 
@@ -168,7 +181,10 @@ operator ids, so the four 1D closed-form line-field operators now carry
 focused heat and electrostatic bar regressions now also cover length scaling:
 temperature and potential scale with length under fixed sources, while
 gradient, heat flux, electric field, and electric flux density remain pinned
-to the same closed-form values.
+to the same closed-form values. The heat bar regression also checks Fourier
+flux recovery and the end-load conservation balance
+`heat_flux * area + heat_load = 0`. The electrostatic bar regression also
+checks the `0.5 * charge * potential` stored-energy conjugacy.
 
 The second approved qualification packet is
 [beam-frame-classic-release-evidence.json](../releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json).
@@ -179,35 +195,40 @@ sign-convention, and boundary-regression checks.
 The third approved qualification packet is
 [electromagnetic-plane-patch-release-evidence.json](../releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json).
 It promotes the electrostatic and magnetostatic triangle/quad plane operators
-after retained field, flux, stored-energy, orientation, and material-provenance
-checks pass.
+after retained field, flux, stored-energy, orientation, electrostatic thickness
+energy scaling, current-driven magnetostatic inverse-thickness scaling, and
+material-provenance checks pass.
 
 The fourth approved qualification packet is
 [thermal-plane-patch-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json).
 It promotes the heat and thermoelastic triangle/quad plane operators after
-retained mesh/refinement, boundary, thermoelastic stress, heat-flux, and
-material-provenance checks pass.
+retained mesh/refinement, manufactured linear-field refinement, boundary,
+thermoelastic stress, heat-flux, heat-plane thickness scaling, thermoelastic
+temperature/thickness scaling, and material-provenance checks pass.
 
 The fifth approved qualification packet is
 [modal-frame-sanity-release-evidence.json](../releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json).
 It promotes `solve.modal_frame_2d` and `solve.modal_frame_3d` after retained
 frequency scaling, mode ordering, restrained DOF, and mode-shape normalization
-checks pass.
+checks pass, including short-versus-long cantilever period/frequency
+monotonicity.
 
 The sixth approved qualification packet is
 [stokes-flow-screening-release-evidence.json](../releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json).
 It promotes the Stokes quad and triangle screening operators only for the
 retained screening-boundary scope, after boundary, divergence, heterogeneous
-material, and linear-field mesh-refinement checks pass. The retained quad
-and triangle screening regressions also cover geometry-area scaling with fixed
-velocity boundary data.
+material, and 1x1/2x2/4x4 linear-field mesh-refinement checks pass. The retained
+quad and triangle screening regressions also cover total viscous-dissipation
+invariance under refinement and geometry-area scaling with fixed velocity
+boundary data.
 
 The seventh approved qualification packet is
 [acoustic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json).
 It promotes `solve.acoustic_bar_1d` for the retained 1D linear
 frequency-domain duct scope after closed-form pressure, wave-number,
-particle-velocity, and damping-loss checks pass. The focused closed-form
-regression now also checks duct-length perturbation against the same dynamic
+particle-velocity, wave-number frequency-linearity, and damping-loss checks
+pass across an octave frequency ladder. The focused closed-form regression now
+also checks duct-length perturbation against the same dynamic
 closed-form reference, plus pure-source amplitude scaling: pressure and
 particle velocity scale linearly, while acoustic intensity and damping loss
 scale quadratically.
@@ -221,7 +242,8 @@ fixed-boundary length-scaling case where gradient and diffusive flux scale
 inversely with length while Peclet scales linearly, plus a
 three-node internal-source fixture where source strength scales the free middle
 concentration linearly and cross-sectional area inversely scales the
-source-driven concentration increment.
+source-driven concentration increment while the left/right total-flux jump
+matches source per area.
 
 The ninth approved qualification packet is
 [magnetostatic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json).
@@ -232,7 +254,8 @@ checks source-driven linear/quadratic response, permeability-inverse potential
 and energy response while preserving source-controlled flux density, and
 area-inverse potential, field, flux-density, and stored-energy response. It
 also checks length-linear potential and stored-energy response while preserving
-field strength and flux density for the same source.
+field strength and flux density for the same source, plus the
+`0.5 * magnetomotive_source * magnetic_potential` stored-energy conjugacy.
 
 The tenth approved qualification packet is
 [spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json).
@@ -240,7 +263,8 @@ It promotes `solve.spring_1d` for the retained 1D linear static series-spring
 scope after equivalent-stiffness, member-force, strain-energy, and zero-load
 checks pass. The focused closed-form regression also verifies that changing
 node spacing changes reported element length without changing the fixed
-discrete-stiffness response.
+discrete-stiffness response, while every retained branch checks total energy
+against element-energy summation and `0.5 * sum(F*u)`.
 
 The eleventh approved qualification packet is
 [spring-vector-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json).
@@ -249,7 +273,8 @@ static orthogonal vector-spring scope after displacement, member-force,
 extension-sign, fixed-support, and strain-energy checks pass. The focused
 closed-form regression also verifies that changing orthogonal anchor distances
 changes reported element length without changing the fixed discrete-stiffness
-response.
+response, while every retained branch checks total energy against element-energy
+summation and `0.5 * sum(F*u)`.
 
 The twelfth approved qualification packet is
 [thermal-beam-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json).
@@ -260,7 +285,9 @@ checks that temperature-gradient and thermal-expansion changes linearly scale
 curvature, tip rotation, and tip displacement, while section-depth changes
 scale the same free-curvature diagnostics inversely. It also checks length
 scaling where curvature remains fixed, tip rotation scales linearly, and tip
-displacement scales quadratically.
+displacement scales quadratically. Every retained branch also re-sums member
+`strain_energy` into total strain energy to enforce zero-energy free curvature
+at summary and element levels.
 
 The thirteenth approved qualification packet is
 [contact-gap-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json).
@@ -268,7 +295,10 @@ It promotes `solve.contact_gap_1d` for the retained 1D penalty stop scope after
 inactive-gap, active-contact, penetration, and force-split checks pass. The
 focused closed-form regression also checks contact-normal-stiffness scaling,
 reduced penetration, the updated spring/contact force split, and geometry-length
-invariance for the fixed discrete spring/contact law.
+invariance for the fixed discrete spring/contact law. Every retained branch also
+checks the penalty contact law directly: penetration cutoff, contact force,
+active flags/count, `max_contact_force`, and spring/contact/external-load
+balance.
 
 The fourteenth approved qualification packet is
 [truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json).
@@ -277,7 +307,8 @@ after axial force, apex displacement, stress, strain, and strain-energy checks
 pass. The focused closed-form regression also checks that Young's modulus
 inversely scales apex displacement and strain energy while preserving
 load-controlled axial force and stress, plus similar-geometry scaling across
-member length, apex displacement, and strain energy.
+member length, apex displacement, and strain energy. It also checks the
+work-energy conjugacy `total_strain_energy = 0.5 * apex_load * apex_displacement`.
 
 The fifteenth approved qualification packet is
 [truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json).
@@ -286,7 +317,9 @@ after axial force, apex displacement, stress, strain, and strain-energy checks
 pass. The focused closed-form regression also checks that Young's modulus
 inversely scales apex displacement and strain energy while preserving
 load-controlled leg force and stress, plus similar-geometry scaling across leg
-length, apex displacement, and strain energy.
+length, apex displacement, and strain energy. It also checks the vertical
+load/displacement work-energy conjugacy
+`total_strain_energy = 0.5 * apex_load * apex_displacement`.
 
 The sixteenth approved qualification packet is
 [thermal-truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json).
@@ -295,7 +328,8 @@ uniform-temperature scope after strain split, stress, axial force, and
 strain-energy checks pass. The focused closed-form regression also checks
 thermal-expansion and Young's-modulus scaling alongside temperature and area
 scaling, plus uniform geometry scaling where member lengths and total energy
-scale together.
+scale together. Each retained scaling branch also re-sums member energy from
+`strain_energy_density * area * length` and checks max energy density.
 
 The seventeenth approved qualification packet is
 [thermal-truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json).
@@ -303,7 +337,9 @@ It promotes `solve.thermal_truss_2d` for the retained fully restrained
 uniform-temperature scope after strain split, stress, axial force, and
 strain-energy checks pass. The focused closed-form regression mirrors the 3D
 thermal truss lane with temperature, thermal-expansion, Young's-modulus, and
-area scaling, plus uniform geometry scaling.
+area scaling, plus uniform geometry scaling. Each retained scaling branch also
+re-sums member energy from `strain_energy_density * area * length` and checks
+max energy density.
 
 The eighteenth approved qualification packet is
 [thermal-frame-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json).
@@ -311,7 +347,8 @@ It promotes `solve.thermal_frame_2d` for the retained fully restrained
 uniform-temperature single-member scope after strain split, axial force,
 stress, zero-gradient, and strain-energy checks pass. The focused closed-form
 regression also checks temperature, thermal-expansion, area, Young's modulus,
-and length scaling.
+and length scaling, with every retained branch re-summing member `strain_energy`
+into total strain energy.
 
 The nineteenth approved qualification packet is
 [thermal-frame-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json).
@@ -319,7 +356,8 @@ It promotes `solve.thermal_frame_3d` for the retained fully restrained
 single-member thermal-gradient scope after strain split, curvature, moment,
 combined-stress, and strain-energy checks pass. The focused closed-form
 regression also checks thermal-expansion and Young's-modulus scaling alongside
-the retained temperature-gradient, inertia, and length checks.
+the retained temperature-gradient, inertia, and length checks, with every
+retained branch re-summing member `strain_energy` into total strain energy.
 
 The twentieth approved qualification packet is
 [solid-tetra-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json).
@@ -327,15 +365,21 @@ It promotes `solve.solid_tetra_3d` for the retained unit constant-strain
 tetrahedron scope after reduced stiffness, tip displacement, constitutive
 stress, von Mises, and strain-energy checks pass. The focused closed-form
 regression now also checks tip-height scaling across volume, displacement,
-constant strain/stress recovery, and total strain energy.
+constant strain/stress recovery, and total strain energy, plus base-area
+scaling where wider restrained bases dilute displacement, stress, von Mises
+stress, and total energy by the inverse area factor. It also checks the single
+free-tip work-energy conjugacy
+`total_strain_energy = 0.5 * tip_load * tip_displacement`.
 
 The twenty-first approved qualification packet is
 [nonlinear-spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json).
 It promotes `solve.nonlinear_spring_1d` for the retained monotone hardening
 spring scope after Cardano root, Newton convergence, force balance, tangent
 stiffness, and load-step checks pass. The focused closed-form regression also
-checks that changing element length does not alter the fixed discrete
-hardening-law response.
+checks the conservative hardening potential
+`U = 0.5 * k * u^2 + 0.25 * c * u^4`, its force/tangent derivatives, and that
+changing element length does not alter the fixed discrete hardening-law
+response.
 
 The twenty-second approved qualification packet is
 [frame-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json).
@@ -351,7 +395,8 @@ retained small plane-stress patch scope after direct-stiffness displacement,
 stress diagnostic, split-triangle, and strain-energy checks pass. The focused
 closed-form regression now covers load, thickness, and Young's-modulus scaling
 for both triangle and quad retained patch paths, plus similar-geometry scaling
-under fixed nodal loads.
+under fixed nodal loads. It also checks the global work-energy conjugacy
+`total_strain_energy = 0.5 * sum(load_x * ux + load_y * uy)`.
 
 ## Why these three first
 

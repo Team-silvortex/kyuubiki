@@ -7,13 +7,20 @@ const TOL: f64 = 1.0e-9;
 
 #[test]
 fn acoustic_bar_1d_matches_closed_form_response_across_frequencies() {
-    for frequency_hz in [50.0, 200.0] {
+    let mut previous_frequency = None;
+    let mut previous_wave_number = None;
+
+    for frequency_hz in [25.0, 50.0, 100.0, 200.0, 400.0] {
         let expected = expected_closed_form(frequency_hz);
         let result =
             solve_acoustic_bar_1d(&request(frequency_hz)).expect("closed-form acoustic case");
 
         assert_close(result.frequency_hz, frequency_hz);
         assert_close(result.angular_frequency, expected.omega);
+        assert_close(
+            result.angular_frequency / frequency_hz,
+            std::f64::consts::TAU,
+        );
         assert_close(result.nodes[0].pressure, expected.fixed_pressure);
         assert_close(result.nodes[1].pressure, expected.source_pressure);
         assert_close(result.max_pressure, expected.max_pressure);
@@ -24,10 +31,25 @@ fn acoustic_bar_1d_matches_closed_form_response_across_frequencies() {
         let element = &result.elements[0];
         assert_close(element.speed_of_sound, expected.speed_of_sound);
         assert_close(element.wave_number, expected.wave_number);
+        assert_close(
+            element.wave_number / frequency_hz,
+            std::f64::consts::TAU / element.speed_of_sound,
+        );
         assert_close(element.pressure_gradient, expected.pressure_gradient);
         assert_close(element.particle_velocity, expected.particle_velocity);
         assert_close(element.acoustic_intensity, expected.acoustic_intensity);
         assert_close(element.damping_loss, expected.damping_loss);
+
+        if let (Some(last_frequency), Some(last_wave_number)) =
+            (previous_frequency, previous_wave_number)
+        {
+            assert_close(
+                element.wave_number / last_wave_number,
+                frequency_hz / last_frequency,
+            );
+        }
+        previous_frequency = Some(frequency_hz);
+        previous_wave_number = Some(element.wave_number);
     }
 }
 

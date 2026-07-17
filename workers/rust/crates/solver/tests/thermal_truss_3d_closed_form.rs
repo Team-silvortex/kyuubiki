@@ -48,9 +48,11 @@ fn thermal_truss_3d_matches_restrained_uniform_temperature_closed_form() {
     assert_close(result.max_axial_force, expected_axial_force.abs());
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_strain_energy_density, expected_energy_density);
-    assert_close(
+    assert_energy_balance(
+        &result.elements,
         result.total_strain_energy,
-        total_strain_energy(&result.elements, area),
+        result.max_strain_energy_density,
+        area,
     );
 }
 
@@ -67,6 +69,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         temperature_delta,
     ))
     .expect("baseline restrained thermal truss 3d should solve");
+    assert_energy_balance(
+        &baseline.elements,
+        baseline.total_strain_energy,
+        baseline.max_strain_energy_density,
+        area,
+    );
 
     let temperature_scale = 1.4;
     let hotter = solve_thermal_truss_3d(&restrained_triangle(
@@ -91,6 +99,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
     assert_close(
         hotter.total_strain_energy / baseline.total_strain_energy,
         temperature_scale * temperature_scale,
+    );
+    assert_energy_balance(
+        &hotter.elements,
+        hotter.total_strain_energy,
+        hotter.max_strain_energy_density,
+        area,
     );
 
     let expansion_scale = 1.25;
@@ -117,6 +131,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         expanded.total_strain_energy / baseline.total_strain_energy,
         expansion_scale * expansion_scale,
     );
+    assert_energy_balance(
+        &expanded.elements,
+        expanded.total_strain_energy,
+        expanded.max_strain_energy_density,
+        area,
+    );
 
     let modulus_scale = 1.3;
     let stiffer = solve_thermal_truss_3d(&restrained_triangle(
@@ -142,6 +162,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
         stiffer.total_strain_energy / baseline.total_strain_energy,
         modulus_scale,
     );
+    assert_energy_balance(
+        &stiffer.elements,
+        stiffer.total_strain_energy,
+        stiffer.max_strain_energy_density,
+        area,
+    );
 
     let area_scale = 1.7;
     let larger = solve_thermal_truss_3d(&restrained_triangle(
@@ -163,6 +189,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
     assert_close(
         larger.total_strain_energy / baseline.total_strain_energy,
         area_scale,
+    );
+    assert_energy_balance(
+        &larger.elements,
+        larger.total_strain_energy,
+        larger.max_strain_energy_density,
+        area * area_scale,
     );
 
     let geometry_scale = 1.5;
@@ -194,6 +226,12 @@ fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
     assert_close(
         longer.total_strain_energy / baseline.total_strain_energy,
         geometry_scale,
+    );
+    assert_energy_balance(
+        &longer.elements,
+        longer.total_strain_energy,
+        longer.max_strain_energy_density,
+        area,
     );
 }
 
@@ -278,6 +316,22 @@ fn total_strain_energy(elements: &[ThermalTruss3dElementResult], area: f64) -> f
         .iter()
         .map(|element| element.strain_energy_density * area * element.length)
         .sum()
+}
+
+fn assert_energy_balance(
+    elements: &[ThermalTruss3dElementResult],
+    total_energy: f64,
+    max_energy_density: f64,
+    area: f64,
+) {
+    assert_close(total_energy, total_strain_energy(elements, area));
+    assert_close(
+        max_energy_density,
+        elements
+            .iter()
+            .map(|element| element.strain_energy_density.abs())
+            .fold(0.0_f64, f64::max),
+    );
 }
 
 fn assert_close(actual: f64, expected: f64) {

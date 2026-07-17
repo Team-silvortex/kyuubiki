@@ -32,6 +32,7 @@ fn thermal_beam_1d_matches_free_curvature_closed_form() {
     assert!(result.max_moment < 1.0e-8);
     assert!(result.max_stress < 1.0e-5);
     assert!(result.total_strain_energy.abs() < 1.0e-12);
+    assert_member_energy_balance(&result.elements, result.total_strain_energy);
 
     let element = &result.elements[0];
     assert_close(element.length, length);
@@ -54,6 +55,7 @@ fn thermal_beam_1d_reports_zero_response_for_zero_gradient() {
     assert_close(result.max_stress, 0.0);
     assert_close(result.max_temperature_gradient, 0.0);
     assert_close(result.total_strain_energy, 0.0);
+    assert_member_energy_balance(&result.elements, result.total_strain_energy);
     for node in &result.nodes {
         assert_close(node.uy, 0.0);
         assert_close(node.rz, 0.0);
@@ -75,6 +77,7 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     let baseline =
         solve_thermal_beam_1d(&request(length, thermal_expansion, gradient, section_depth))
             .expect("baseline free-curvature thermal beam should solve");
+    assert_member_energy_balance(&baseline.elements, baseline.total_strain_energy);
 
     let gradient_scale = 1.6;
     let hotter = solve_thermal_beam_1d(&request(
@@ -92,6 +95,7 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     assert_close(hotter.nodes[1].uy / baseline.nodes[1].uy, gradient_scale);
     assert!(hotter.max_moment < 1.0e-8);
     assert!(hotter.total_strain_energy.abs() < 1.0e-12);
+    assert_member_energy_balance(&hotter.elements, hotter.total_strain_energy);
 
     let expansion_scale = 1.25;
     let expanded = solve_thermal_beam_1d(&request(
@@ -109,6 +113,7 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     assert_close(expanded.nodes[1].uy / baseline.nodes[1].uy, expansion_scale);
     assert!(expanded.max_moment < 1.0e-8);
     assert!(expanded.total_strain_energy.abs() < 1.0e-12);
+    assert_member_energy_balance(&expanded.elements, expanded.total_strain_energy);
 
     let depth_scale = 1.4;
     let deeper = solve_thermal_beam_1d(&request(
@@ -126,6 +131,7 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     assert_close(deeper.nodes[1].uy / baseline.nodes[1].uy, 1.0 / depth_scale);
     assert!(deeper.max_moment < 1.0e-8);
     assert!(deeper.total_strain_energy.abs() < 1.0e-12);
+    assert_member_energy_balance(&deeper.elements, deeper.total_strain_energy);
 
     let length_scale: f64 = 1.5;
     let longer = solve_thermal_beam_1d(&request(
@@ -146,6 +152,7 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     );
     assert!(longer.max_moment < 1.0e-8);
     assert!(longer.total_strain_energy.abs() < 1.0e-12);
+    assert_member_energy_balance(&longer.elements, longer.total_strain_energy);
 }
 
 fn request(
@@ -183,6 +190,16 @@ fn node(id: &str, x: f64, fix_y: bool, fix_rz: bool) -> ThermalBeam1dNodeInput {
         load_y: 0.0,
         moment_z: 0.0,
     }
+}
+
+fn assert_member_energy_balance(
+    elements: &[kyuubiki_protocol::ThermalBeam1dElementResult],
+    total_strain_energy: f64,
+) {
+    assert_close(
+        total_strain_energy,
+        elements.iter().map(|element| element.strain_energy).sum(),
+    );
 }
 
 fn assert_close(actual: f64, expected: f64) {

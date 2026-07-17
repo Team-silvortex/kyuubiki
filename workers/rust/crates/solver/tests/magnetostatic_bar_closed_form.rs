@@ -252,6 +252,10 @@ fn assert_case(
     assert_close(result.max_flux_density, expected.flux_density.abs());
     assert_close(result.total_stored_energy, expected.stored_energy);
     assert_close(
+        result.total_stored_energy,
+        0.5 * result.nodes[1].magnetic_potential * result.input.nodes[1].magnetomotive_source,
+    );
+    assert_close(
         element.average_magnetic_potential,
         expected.magnetic_potential / 2.0,
     );

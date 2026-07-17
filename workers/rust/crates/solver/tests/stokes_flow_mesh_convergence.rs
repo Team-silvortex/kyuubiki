@@ -8,56 +8,60 @@ const TOL: f64 = 1.0e-10;
 
 #[test]
 fn stokes_flow_quad_2d_preserves_linear_screening_field_under_refinement() {
-    let coarse = solve_stokes_flow_plane_quad_2d(&quad_mesh(1))
-        .expect("coarse quad Stokes refinement fixture should solve");
-    let refined = solve_stokes_flow_plane_quad_2d(&quad_mesh(2))
-        .expect("refined quad Stokes refinement fixture should solve");
+    let baseline = solve_stokes_flow_plane_quad_2d(&quad_mesh(1))
+        .expect("baseline quad Stokes refinement fixture should solve");
+    let baseline_dissipation = total_quad_dissipation(&baseline);
 
-    assert_close(
-        coarse.elements.iter().map(|element| element.area).sum(),
-        1.0,
-    );
-    assert_close(
-        refined.elements.iter().map(|element| element.area).sum(),
-        1.0,
-    );
-    assert_close(coarse.max_velocity, refined.max_velocity);
-    assert_close(coarse.pressure_drop, refined.pressure_drop);
-    assert_close(coarse.max_divergence_error, refined.max_divergence_error);
-    assert_close(coarse.max_shear_rate, refined.max_shear_rate);
-    assert_close(
-        coarse.max_viscous_shear_stress,
-        refined.max_viscous_shear_stress,
-    );
-    assert_close(refined.max_divergence_error, 0.0);
-    assert_close(refined.max_shear_rate, 1.0);
+    for subdivisions in [1_usize, 2, 4] {
+        let result = solve_stokes_flow_plane_quad_2d(&quad_mesh(subdivisions))
+            .expect("refined quad Stokes refinement fixture should solve");
+
+        assert_eq!(result.elements.len(), subdivisions * subdivisions);
+        assert_close(
+            result.elements.iter().map(|element| element.area).sum(),
+            1.0,
+        );
+        assert_close(result.max_velocity, baseline.max_velocity);
+        assert_close(result.pressure_drop, baseline.pressure_drop);
+        assert_close(result.max_divergence_error, baseline.max_divergence_error);
+        assert_close(result.max_shear_rate, baseline.max_shear_rate);
+        assert_close(
+            result.max_viscous_shear_stress,
+            baseline.max_viscous_shear_stress,
+        );
+        assert_close(total_quad_dissipation(&result), baseline_dissipation);
+        assert_close(result.max_divergence_error, 0.0);
+        assert_close(result.max_shear_rate, 1.0);
+    }
 }
 
 #[test]
 fn stokes_flow_triangle_2d_preserves_linear_screening_field_under_refinement() {
-    let coarse = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(1))
-        .expect("coarse triangle Stokes refinement fixture should solve");
-    let refined = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(2))
-        .expect("refined triangle Stokes refinement fixture should solve");
+    let baseline = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(1))
+        .expect("baseline triangle Stokes refinement fixture should solve");
+    let baseline_dissipation = total_triangle_dissipation(&baseline);
 
-    assert_close(
-        coarse.elements.iter().map(|element| element.area).sum(),
-        1.0,
-    );
-    assert_close(
-        refined.elements.iter().map(|element| element.area).sum(),
-        1.0,
-    );
-    assert_close(coarse.max_velocity, refined.max_velocity);
-    assert_close(coarse.pressure_drop, refined.pressure_drop);
-    assert_close(coarse.max_divergence_error, refined.max_divergence_error);
-    assert_close(coarse.max_shear_rate, refined.max_shear_rate);
-    assert_close(
-        coarse.max_viscous_shear_stress,
-        refined.max_viscous_shear_stress,
-    );
-    assert_close(refined.max_divergence_error, 0.0);
-    assert_close(refined.max_shear_rate, 1.0);
+    for subdivisions in [1_usize, 2, 4] {
+        let result = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(subdivisions))
+            .expect("refined triangle Stokes refinement fixture should solve");
+
+        assert_eq!(result.elements.len(), subdivisions * subdivisions * 2);
+        assert_close(
+            result.elements.iter().map(|element| element.area).sum(),
+            1.0,
+        );
+        assert_close(result.max_velocity, baseline.max_velocity);
+        assert_close(result.pressure_drop, baseline.pressure_drop);
+        assert_close(result.max_divergence_error, baseline.max_divergence_error);
+        assert_close(result.max_shear_rate, baseline.max_shear_rate);
+        assert_close(
+            result.max_viscous_shear_stress,
+            baseline.max_viscous_shear_stress,
+        );
+        assert_close(total_triangle_dissipation(&result), baseline_dissipation);
+        assert_close(result.max_divergence_error, 0.0);
+        assert_close(result.max_shear_rate, 1.0);
+    }
 }
 
 #[test]
@@ -360,6 +364,24 @@ fn triangle(
 
 fn grid_index(x_index: usize, y_index: usize, subdivisions: usize) -> usize {
     y_index * (subdivisions + 1) + x_index
+}
+
+fn total_quad_dissipation(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dResult) -> f64 {
+    result
+        .elements
+        .iter()
+        .map(|element| element.viscous_dissipation)
+        .sum()
+}
+
+fn total_triangle_dissipation(
+    result: &kyuubiki_protocol::SolveStokesFlowPlaneTriangle2dResult,
+) -> f64 {
+    result
+        .elements
+        .iter()
+        .map(|element| element.viscous_dissipation)
+        .sum()
 }
 
 fn assert_close(actual: f64, expected: f64) {

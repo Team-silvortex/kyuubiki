@@ -36,6 +36,7 @@ fn truss_2d_matches_symmetric_two_bar_closed_form() {
     assert_close(result.max_displacement, expected_uy.abs(), TOL);
     assert_close(result.max_stress, expected_stress.abs(), TOL);
     assert_close(result.total_strain_energy, expected_energy, TOL);
+    assert_apex_force_energy(result.total_strain_energy, load, result.nodes[2].uy);
 
     for element in &result.elements {
         assert_close(element.length, length, TOL);
@@ -65,6 +66,7 @@ fn truss_2d_tracks_load_and_area_scaling() {
         youngs_modulus,
     ))
     .expect("baseline two-bar truss should solve");
+    assert_apex_force_energy(baseline.total_strain_energy, load, baseline.nodes[2].uy);
 
     let load_scale = 1.4;
     let load_scaled = solve_truss_2d(&symmetric_request(
@@ -94,6 +96,11 @@ fn truss_2d_tracks_load_and_area_scaling() {
         load_scaled.total_strain_energy / baseline.total_strain_energy,
         load_scale * load_scale,
         TOL,
+    );
+    assert_apex_force_energy(
+        load_scaled.total_strain_energy,
+        load * load_scale,
+        load_scaled.nodes[2].uy,
     );
 
     let area_scale = 1.6;
@@ -125,6 +132,11 @@ fn truss_2d_tracks_load_and_area_scaling() {
         1.0 / area_scale,
         TOL,
     );
+    assert_apex_force_energy(
+        area_scaled.total_strain_energy,
+        load,
+        area_scaled.nodes[2].uy,
+    );
 
     let modulus_scale = 1.25;
     let stiffened = solve_truss_2d(&symmetric_request(
@@ -151,6 +163,7 @@ fn truss_2d_tracks_load_and_area_scaling() {
         1.0 / modulus_scale,
         TOL,
     );
+    assert_apex_force_energy(stiffened.total_strain_energy, load, stiffened.nodes[2].uy);
 
     let geometry_scale = 1.45;
     let longer = solve_truss_2d(&symmetric_request(
@@ -182,6 +195,7 @@ fn truss_2d_tracks_load_and_area_scaling() {
         geometry_scale,
         TOL,
     );
+    assert_apex_force_energy(longer.total_strain_energy, load, longer.nodes[2].uy);
 }
 
 fn symmetric_request(
@@ -230,6 +244,14 @@ fn element(
         area,
         youngs_modulus,
     }
+}
+
+fn assert_apex_force_energy(total_strain_energy: f64, apex_load: f64, apex_displacement: f64) {
+    assert_close(
+        total_strain_energy,
+        0.5 * apex_load * apex_displacement,
+        TOL,
+    );
 }
 
 fn assert_close(actual: f64, expected: f64, tolerance: f64) {

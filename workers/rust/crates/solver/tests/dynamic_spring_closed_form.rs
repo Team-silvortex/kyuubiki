@@ -47,6 +47,45 @@ fn transient_spring_1d_matches_newmark_step_and_load_scaling() {
 }
 
 #[test]
+fn transient_spring_1d_refines_toward_undamped_free_vibration_reference() {
+    let base_case = TransientCase {
+        mass: 2.0,
+        stiffness: 128.0,
+        damping: 0.0,
+        load: 0.0,
+        initial_displacement: 0.1,
+        initial_velocity: 0.0,
+        time_step: 0.02,
+    };
+    let final_time = 0.1;
+    let mut previous_error = f64::INFINITY;
+
+    for time_step in [0.02, 0.01, 0.005] {
+        let case = TransientCase {
+            time_step,
+            ..base_case
+        };
+        let steps = (final_time / time_step) as usize;
+        let result = solve_transient_spring_1d(&transient_request_with_steps(case, steps))
+            .expect("refined free-vibration transient should solve");
+        let expected = undamped_free_vibration(case, final_time);
+        let displacement_error = (result.nodes[1].ux - expected.displacement).abs();
+        let velocity_error = (result.nodes[1].vx - expected.velocity).abs();
+
+        assert_close(result.final_time, final_time);
+        assert!(
+            displacement_error < previous_error,
+            "smaller time step should reduce displacement error: {displacement_error} >= {previous_error}"
+        );
+        assert!(
+            velocity_error.is_finite(),
+            "velocity error should remain finite under refinement"
+        );
+        previous_error = displacement_error;
+    }
+}
+
+#[test]
 fn harmonic_spring_1d_matches_frequency_response_and_load_scaling() {
     let baseline_case = HarmonicCase {
         mass: 2.0,
@@ -133,6 +172,11 @@ struct HarmonicExpected {
     velocity_amplitude: f64,
     acceleration_amplitude: f64,
     force_amplitude: f64,
+}
+
+struct ContinuousExpected {
+    displacement: f64,
+    velocity: f64,
 }
 
 fn assert_transient_response(
@@ -258,7 +302,24 @@ fn harmonic_closed_form(case: HarmonicCase, frequency_hz: f64) -> HarmonicExpect
     }
 }
 
+fn undamped_free_vibration(case: TransientCase, time: f64) -> ContinuousExpected {
+    let omega = (case.stiffness / case.mass).sqrt();
+    ContinuousExpected {
+        displacement: case.initial_displacement * (omega * time).cos()
+            + case.initial_velocity / omega * (omega * time).sin(),
+        velocity: -case.initial_displacement * omega * (omega * time).sin()
+            + case.initial_velocity * (omega * time).cos(),
+    }
+}
+
 fn transient_request(case: TransientCase) -> SolveTransientSpring1dRequest {
+    transient_request_with_steps(case, 1)
+}
+
+fn transient_request_with_steps(
+    case: TransientCase,
+    steps: usize,
+) -> SolveTransientSpring1dRequest {
     SolveTransientSpring1dRequest {
         nodes: vec![
             dynamic_node("fixed", 0.0, true, 0.0, 1.0, 0.0, 0.0),
@@ -274,7 +335,7 @@ fn transient_request(case: TransientCase) -> SolveTransientSpring1dRequest {
         ],
         elements: vec![dynamic_element(case.stiffness, case.damping)],
         time_step: case.time_step,
-        steps: 1,
+        steps,
     }
 }
 

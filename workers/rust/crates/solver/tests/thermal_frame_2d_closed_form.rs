@@ -61,6 +61,7 @@ fn thermal_frame_2d_matches_restrained_uniform_temperature_closed_form() {
     assert_close(result.max_temperature_delta, temperature_delta);
     assert_close(result.max_temperature_gradient, 0.0);
     assert_close(result.total_strain_energy, expected_energy);
+    assert_member_energy_balance(&result.elements, result.total_strain_energy);
 }
 
 #[test]
@@ -78,6 +79,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         temperature_delta,
     ))
     .expect("baseline restrained thermal frame 2d should solve");
+    assert_member_energy_balance(&baseline.elements, baseline.total_strain_energy);
 
     let temperature_scale = 1.5;
     let hotter = solve_thermal_frame_2d(&restrained_member(
@@ -104,6 +106,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         hotter.total_strain_energy / baseline.total_strain_energy,
         temperature_scale * temperature_scale,
     );
+    assert_member_energy_balance(&hotter.elements, hotter.total_strain_energy);
 
     let expansion_scale = 1.3;
     let expanded = solve_thermal_frame_2d(&restrained_member(
@@ -130,6 +133,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         expanded.total_strain_energy / baseline.total_strain_energy,
         expansion_scale * expansion_scale,
     );
+    assert_member_energy_balance(&expanded.elements, expanded.total_strain_energy);
 
     let area_scale = 1.7;
     let wider = solve_thermal_frame_2d(&restrained_member(
@@ -152,6 +156,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         wider.total_strain_energy / baseline.total_strain_energy,
         area_scale,
     );
+    assert_member_energy_balance(&wider.elements, wider.total_strain_energy);
 
     let modulus_scale = 1.25;
     let stiffer = solve_thermal_frame_2d(&restrained_member(
@@ -178,6 +183,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         stiffer.total_strain_energy / baseline.total_strain_energy,
         modulus_scale,
     );
+    assert_member_energy_balance(&stiffer.elements, stiffer.total_strain_energy);
 
     let length_scale = 1.45;
     let longer = solve_thermal_frame_2d(&restrained_member(
@@ -204,6 +210,7 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         longer.total_strain_energy / baseline.total_strain_energy,
         length_scale,
     );
+    assert_member_energy_balance(&longer.elements, longer.total_strain_energy);
 }
 
 fn restrained_member(
@@ -246,6 +253,16 @@ fn node(id: &str, x: f64, y: f64, temperature_delta: f64) -> ThermalFrame2dNodeI
         moment_z: 0.0,
         temperature_delta,
     }
+}
+
+fn assert_member_energy_balance(
+    elements: &[kyuubiki_protocol::ThermalFrame2dElementResult],
+    total_strain_energy: f64,
+) {
+    assert_close(
+        total_strain_energy,
+        elements.iter().map(|element| element.strain_energy).sum(),
+    );
 }
 
 fn assert_close(actual: f64, expected: f64) {

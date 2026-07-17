@@ -23,6 +23,7 @@ fn contact_gap_1d_matches_inactive_gap_closed_form() {
     assert_close(result.contacts[0].force, 0.0);
     assert!(!result.contacts[0].active);
     assert!(expected_tip < gap);
+    assert_penalty_contact_law(&result);
 }
 
 #[test]
@@ -46,6 +47,7 @@ fn contact_gap_1d_matches_active_penalty_stop_closed_form() {
     assert_close(result.contacts[0].force, expected_contact_force);
     assert_close(expected_spring_force + expected_contact_force, load);
     assert!(result.contacts[0].active);
+    assert_penalty_contact_law(&result);
 }
 
 #[test]
@@ -83,6 +85,8 @@ fn contact_gap_1d_preserves_active_force_split_under_load_gap_scaling() {
         scaled.elements[0].force + scaled.contacts[0].force,
         load * scale,
     );
+    assert_penalty_contact_law(&baseline);
+    assert_penalty_contact_law(&scaled);
 }
 
 #[test]
@@ -121,6 +125,8 @@ fn contact_gap_1d_tracks_contact_stiffness_force_split() {
     assert_close(stiffer.elements[0].force, expected_spring_force);
     assert_close(stiffer.contacts[0].force, expected_contact_force);
     assert_close(expected_spring_force + expected_contact_force, load);
+    assert_penalty_contact_law(&baseline);
+    assert_penalty_contact_law(&stiffer);
 
     let length_scale = 2.0;
     let longer = solve_contact_gap_1d(&request_with_length(
@@ -141,6 +147,7 @@ fn contact_gap_1d_tracks_contact_stiffness_force_split() {
     );
     assert_close(longer.elements[0].force, baseline.elements[0].force);
     assert_close(longer.contacts[0].force, baseline.contacts[0].force);
+    assert_penalty_contact_law(&longer);
 }
 
 fn request(
@@ -190,6 +197,53 @@ fn node(id: &str, x: f64, fix_x: bool, load_x: f64) -> NonlinearSpring1dNodeInpu
         fix_x,
         load_x,
     }
+}
+
+fn assert_penalty_contact_law(result: &kyuubiki_protocol::SolveContactGap1dResult) {
+    let active_count = result
+        .contacts
+        .iter()
+        .filter(|contact| contact.active)
+        .count();
+    assert_eq!(result.active_contact_count, active_count);
+    assert_close(
+        result.max_contact_force,
+        result
+            .contacts
+            .iter()
+            .map(|contact| contact.force.abs())
+            .fold(0.0_f64, f64::max),
+    );
+
+    for contact in &result.contacts {
+        let input = &result.input.contacts[contact.index];
+        let node = &result.nodes[contact.node];
+        let expected_penetration = (node.ux - input.gap).max(0.0);
+        assert_close(contact.gap, input.gap);
+        assert_close(contact.penetration, expected_penetration);
+        assert_close(contact.force, input.normal_stiffness * expected_penetration);
+        assert_eq!(contact.active, expected_penetration > 0.0);
+        assert!(contact.penetration >= 0.0);
+        assert!(contact.force >= 0.0);
+    }
+
+    let external_load = result
+        .input
+        .nodes
+        .iter()
+        .map(|node| node.load_x)
+        .sum::<f64>();
+    let spring_force = result
+        .elements
+        .iter()
+        .map(|element| element.force)
+        .sum::<f64>();
+    let contact_force = result
+        .contacts
+        .iter()
+        .map(|contact| contact.force)
+        .sum::<f64>();
+    assert_close(spring_force + contact_force, external_load);
 }
 
 fn assert_close(actual: f64, expected: f64) {

@@ -40,11 +40,17 @@ fn heat_plane_triangle_refinement_matches_quad_patch_temperatures_and_heat_flow(
 fn heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scaled() {
     let diagonal_a = solve_heat_plane_triangle_2d(&heat_triangle_patch())
         .expect("first diagonal heat patch should solve");
-    let diagonal_b = solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch(CONDUCTIVITY))
-        .expect("second diagonal heat patch should solve");
+    let diagonal_b =
+        solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch(CONDUCTIVITY))
+            .expect("second diagonal heat patch should solve");
     let perturbed =
         solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch(CONDUCTIVITY * 1.07))
             .expect("conductivity-perturbed heat patch should solve");
+    let thick = solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch_with_material(
+        CONDUCTIVITY,
+        THICKNESS * 1.8,
+    ))
+    .expect("thickness-perturbed heat patch should solve");
 
     assert_eq!(diagonal_a.nodes.len(), diagonal_b.nodes.len());
     for (left, right) in diagonal_a.nodes.iter().zip(diagonal_b.nodes.iter()) {
@@ -72,6 +78,64 @@ fn heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scale
         perturbed.elements[0].temperature_gradient_y,
         diagonal_b.elements[0].temperature_gradient_y,
     );
+    assert_close(
+        thick.elements[0].temperature_gradient_y,
+        diagonal_b.elements[0].temperature_gradient_y,
+    );
+    assert_close(
+        thick.elements[0].heat_flux_y,
+        diagonal_b.elements[0].heat_flux_y,
+    );
+    assert_close(
+        thick.total_abs_heat_flow_rate / diagonal_b.total_abs_heat_flow_rate,
+        1.8,
+    );
+}
+
+#[test]
+fn heat_plane_quad_manufactured_linear_field_is_refinement_invariant() {
+    for subdivisions in [1_usize, 2, 4] {
+        let result = solve_heat_plane_quad_2d(&heat_quad_mesh(subdivisions))
+            .expect("refined quad heat manufactured field should solve");
+
+        assert_close(result.max_temperature, 100.0);
+        assert_close(result.max_heat_flux, 3600.0);
+        assert_close(result.total_abs_heat_flow_rate, 72.0);
+        assert_eq!(result.elements.len(), subdivisions * subdivisions);
+
+        for node in &result.nodes {
+            assert_close(node.temperature, manufactured_temperature(node.y));
+        }
+        for element in &result.elements {
+            assert_close(element.temperature_gradient_x, 0.0);
+            assert_close(element.temperature_gradient_y, -80.0);
+            assert_close(element.heat_flux_x, 0.0);
+            assert_close(element.heat_flux_y, 3600.0);
+        }
+    }
+}
+
+#[test]
+fn heat_plane_triangle_manufactured_linear_field_is_refinement_invariant() {
+    for subdivisions in [1_usize, 2, 4] {
+        let result = solve_heat_plane_triangle_2d(&heat_triangle_mesh(subdivisions))
+            .expect("refined triangle heat manufactured field should solve");
+
+        assert_close(result.max_temperature, 100.0);
+        assert_close(result.max_heat_flux, 3600.0);
+        assert_close(result.total_abs_heat_flow_rate, 72.0);
+        assert_eq!(result.elements.len(), subdivisions * subdivisions * 2);
+
+        for node in &result.nodes {
+            assert_close(node.temperature, manufactured_temperature(node.y));
+        }
+        for element in &result.elements {
+            assert_close(element.temperature_gradient_x, 0.0);
+            assert_close(element.temperature_gradient_y, -80.0);
+            assert_close(element.heat_flux_x, 0.0);
+            assert_close(element.heat_flux_y, 3600.0);
+        }
+    }
 }
 
 #[test]
@@ -80,6 +144,16 @@ fn thermal_plane_triangle_refinement_matches_quad_patch_stress_and_energy() {
         .expect("two-triangle thermal patch should solve");
     let quad = solve_thermal_plane_quad_2d(&thermal_quad_patch())
         .expect("quad thermal patch should solve");
+    let hotter = solve_thermal_plane_triangle_2d(&thermal_triangle_patch_with_material(
+        THICKNESS,
+        TEMPERATURE_DELTA * 1.4,
+    ))
+    .expect("temperature-scaled thermal patch should solve");
+    let thick = solve_thermal_plane_triangle_2d(&thermal_triangle_patch_with_material(
+        THICKNESS * 1.6,
+        TEMPERATURE_DELTA,
+    ))
+    .expect("thickness-scaled thermal patch should solve");
 
     assert_eq!(triangle.nodes.len(), quad.nodes.len());
     for (triangle_node, quad_node) in triangle.nodes.iter().zip(quad.nodes.iter()) {
@@ -95,6 +169,25 @@ fn thermal_plane_triangle_refinement_matches_quad_patch_stress_and_energy() {
     assert_close(
         triangle.max_strain_energy_density,
         quad.max_strain_energy_density,
+    );
+
+    assert_close(hotter.max_stress / triangle.max_stress, 1.4);
+    assert_close(
+        hotter.max_strain_energy_density / triangle.max_strain_energy_density,
+        1.4 * 1.4,
+    );
+    assert_close(
+        hotter.total_strain_energy / triangle.total_strain_energy,
+        1.4 * 1.4,
+    );
+    assert_close(thick.max_stress, triangle.max_stress);
+    assert_close(
+        thick.max_strain_energy_density,
+        triangle.max_strain_energy_density,
+    );
+    assert_close(
+        thick.total_strain_energy / triangle.total_strain_energy,
+        1.6,
     );
 }
 
@@ -120,20 +213,119 @@ fn heat_quad_patch() -> SolveHeatPlaneQuad2dRequest {
     }
 }
 
+fn heat_quad_mesh(subdivisions: usize) -> SolveHeatPlaneQuad2dRequest {
+    let mut elements = Vec::new();
+    for y_index in 0..subdivisions {
+        for x_index in 0..subdivisions {
+            elements.push(HeatPlaneQuadElementInput {
+                id: format!("quad-{x_index}-{y_index}"),
+                node_i: heat_grid_index(x_index, y_index, subdivisions),
+                node_j: heat_grid_index(x_index + 1, y_index, subdivisions),
+                node_k: heat_grid_index(x_index + 1, y_index + 1, subdivisions),
+                node_l: heat_grid_index(x_index, y_index + 1, subdivisions),
+                thickness: THICKNESS,
+                conductivity: CONDUCTIVITY,
+            });
+        }
+    }
+
+    SolveHeatPlaneQuad2dRequest {
+        nodes: heat_grid_nodes(subdivisions),
+        elements,
+    }
+}
+
+fn heat_triangle_mesh(subdivisions: usize) -> SolveHeatPlaneTriangle2dRequest {
+    let mut elements = Vec::new();
+    for y_index in 0..subdivisions {
+        for x_index in 0..subdivisions {
+            let lower_left = heat_grid_index(x_index, y_index, subdivisions);
+            let lower_right = heat_grid_index(x_index + 1, y_index, subdivisions);
+            let upper_right = heat_grid_index(x_index + 1, y_index + 1, subdivisions);
+            let upper_left = heat_grid_index(x_index, y_index + 1, subdivisions);
+            elements.push(heat_tri(
+                &format!("tri-a-{x_index}-{y_index}"),
+                lower_left,
+                lower_right,
+                upper_right,
+            ));
+            elements.push(heat_tri(
+                &format!("tri-b-{x_index}-{y_index}"),
+                lower_left,
+                upper_right,
+                upper_left,
+            ));
+        }
+    }
+
+    SolveHeatPlaneTriangle2dRequest {
+        nodes: heat_grid_nodes(subdivisions),
+        elements,
+    }
+}
+
+fn heat_grid_nodes(subdivisions: usize) -> Vec<HeatPlaneNodeInput> {
+    let mut nodes = Vec::new();
+    for y_index in 0..=subdivisions {
+        for x_index in 0..=subdivisions {
+            let x = x_index as f64 / subdivisions as f64;
+            let y = y_index as f64 / subdivisions as f64;
+            nodes.push(heat_node(
+                &format!("n-{x_index}-{y_index}"),
+                x,
+                y,
+                true,
+                manufactured_temperature(y),
+            ));
+        }
+    }
+    nodes
+}
+
+fn heat_grid_index(x_index: usize, y_index: usize, subdivisions: usize) -> usize {
+    y_index * (subdivisions + 1) + x_index
+}
+
+fn manufactured_temperature(y: f64) -> f64 {
+    100.0 - 80.0 * y
+}
+
 fn heat_triangle_cross_diagonal_patch(conductivity: f64) -> SolveHeatPlaneTriangle2dRequest {
+    heat_triangle_cross_diagonal_patch_with_material(conductivity, THICKNESS)
+}
+
+fn heat_triangle_cross_diagonal_patch_with_material(
+    conductivity: f64,
+    thickness: f64,
+) -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
         nodes: heat_nodes(),
         elements: vec![
-            heat_tri_with_conductivity("left", 0, 1, 3, conductivity),
-            heat_tri_with_conductivity("right", 1, 2, 3, conductivity),
+            heat_tri_with_material("left", 0, 1, 3, conductivity, thickness),
+            heat_tri_with_material("right", 1, 2, 3, conductivity, thickness),
         ],
     }
 }
 
 fn thermal_triangle_patch() -> SolveThermalPlaneTriangle2dRequest {
+    thermal_triangle_patch_with_material(THICKNESS, TEMPERATURE_DELTA)
+}
+
+fn thermal_triangle_patch_with_material(
+    thickness: f64,
+    temperature_delta: f64,
+) -> SolveThermalPlaneTriangle2dRequest {
+    let elements = vec![thermal_tri("lower", 0, 1, 2), thermal_tri("upper", 0, 2, 3)]
+        .into_iter()
+        .map(|mut element| {
+            element.thickness = thickness;
+            element
+        })
+        .collect();
+
     SolveThermalPlaneTriangle2dRequest {
-        nodes: thermal_nodes(),
-        elements: vec![thermal_tri("lower", 0, 1, 2), thermal_tri("upper", 0, 2, 3)],
+        nodes: thermal_nodes_with_delta(temperature_delta),
+        elements,
     }
 }
 
@@ -164,11 +356,15 @@ fn heat_nodes() -> Vec<HeatPlaneNodeInput> {
 }
 
 fn thermal_nodes() -> Vec<ThermalPlaneNodeInput> {
+    thermal_nodes_with_delta(TEMPERATURE_DELTA)
+}
+
+fn thermal_nodes_with_delta(temperature_delta: f64) -> Vec<ThermalPlaneNodeInput> {
     vec![
-        thermal_node("n0", 0.0, 0.0),
-        thermal_node("n1", 1.0, 0.0),
-        thermal_node("n2", 1.0, 1.0),
-        thermal_node("n3", 0.0, 1.0),
+        thermal_node("n0", 0.0, 0.0, temperature_delta),
+        thermal_node("n1", 1.0, 0.0, temperature_delta),
+        thermal_node("n2", 1.0, 1.0, temperature_delta),
+        thermal_node("n3", 0.0, 1.0, temperature_delta),
     ]
 }
 
@@ -183,7 +379,7 @@ fn heat_node(id: &str, x: f64, y: f64, fixed: bool, temperature: f64) -> HeatPla
     }
 }
 
-fn thermal_node(id: &str, x: f64, y: f64) -> ThermalPlaneNodeInput {
+fn thermal_node(id: &str, x: f64, y: f64, temperature_delta: f64) -> ThermalPlaneNodeInput {
     ThermalPlaneNodeInput {
         id: id.to_string(),
         x,
@@ -192,7 +388,7 @@ fn thermal_node(id: &str, x: f64, y: f64) -> ThermalPlaneNodeInput {
         fix_y: true,
         load_x: 0.0,
         load_y: 0.0,
-        temperature_delta: TEMPERATURE_DELTA,
+        temperature_delta,
     }
 }
 
@@ -212,19 +408,20 @@ fn heat_tri(
     }
 }
 
-fn heat_tri_with_conductivity(
+fn heat_tri_with_material(
     id: &str,
     node_i: usize,
     node_j: usize,
     node_k: usize,
     conductivity: f64,
+    thickness: f64,
 ) -> HeatPlaneTriangleElementInput {
     HeatPlaneTriangleElementInput {
         id: id.to_string(),
         node_i,
         node_j,
         node_k,
-        thickness: THICKNESS,
+        thickness,
         conductivity,
     }
 }
