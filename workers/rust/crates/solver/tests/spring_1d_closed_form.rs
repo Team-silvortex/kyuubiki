@@ -72,7 +72,10 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
     for (scaled, base) in load_scaled.elements.iter().zip(&baseline.elements) {
         assert_close(scaled.extension / base.extension, load_scale);
         assert_close(scaled.force / base.force, load_scale);
-        assert_close(scaled.strain_energy / base.strain_energy, load_scale * load_scale);
+        assert_close(
+            scaled.strain_energy / base.strain_energy,
+            load_scale * load_scale,
+        );
     }
 
     let stiffness_scale = 1.8;
@@ -80,8 +83,8 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
         .iter()
         .map(|stiffness| stiffness * stiffness_scale)
         .collect::<Vec<_>>();
-    let stiffness_scaled = solve_spring_1d(&series_request(load, &stiffened))
-        .expect("stiffness-scaled spring chain");
+    let stiffness_scaled =
+        solve_spring_1d(&series_request(load, &stiffened)).expect("stiffness-scaled spring chain");
     assert_close(
         stiffness_scaled.max_displacement / baseline.max_displacement,
         1.0 / stiffness_scale,
@@ -94,16 +97,44 @@ fn spring_1d_tracks_load_and_stiffness_scaling() {
     for (scaled, base) in stiffness_scaled.elements.iter().zip(&baseline.elements) {
         assert_close(scaled.extension / base.extension, 1.0 / stiffness_scale);
         assert_close(scaled.force, base.force);
-        assert_close(scaled.strain_energy / base.strain_energy, 1.0 / stiffness_scale);
+        assert_close(
+            scaled.strain_energy / base.strain_energy,
+            1.0 / stiffness_scale,
+        );
+    }
+
+    let spacing_scale = 2.25;
+    let longer = solve_spring_1d(&series_request_with_spacing(
+        load,
+        &stiffnesses,
+        spacing_scale,
+    ))
+    .expect("geometry-scaled spring chain");
+    assert_close(longer.max_displacement, baseline.max_displacement);
+    assert_close(longer.max_force, baseline.max_force);
+    assert_close(longer.total_strain_energy, baseline.total_strain_energy);
+    for (scaled, base) in longer.elements.iter().zip(&baseline.elements) {
+        assert_close(scaled.length / base.length, spacing_scale);
+        assert_close(scaled.extension, base.extension);
+        assert_close(scaled.force, base.force);
+        assert_close(scaled.strain_energy, base.strain_energy);
     }
 }
 
 fn series_request(load: f64, stiffnesses: &[f64]) -> SolveSpring1dRequest {
+    series_request_with_spacing(load, stiffnesses, 1.0)
+}
+
+fn series_request_with_spacing(
+    load: f64,
+    stiffnesses: &[f64],
+    spacing: f64,
+) -> SolveSpring1dRequest {
     let mut nodes = Vec::with_capacity(stiffnesses.len() + 1);
     for index in 0..=stiffnesses.len() {
         nodes.push(Spring1dNodeInput {
             id: format!("n{index}"),
-            x: index as f64,
+            x: index as f64 * spacing,
             fix_x: index == 0,
             load_x: if index == stiffnesses.len() {
                 load

@@ -153,6 +153,31 @@ fn magnetostatic_bar_1d_tracks_source_permeability_and_area_scaling() {
         wider_result.total_stored_energy,
         baseline_result.total_stored_energy / area_factor,
     );
+
+    let length_factor = 1.6;
+    let longer = MagneticCase {
+        length: baseline.length * length_factor,
+        ..baseline
+    };
+    let longer_result =
+        solve_magnetostatic_bar_1d(&longer.request()).expect("length-scaled magnetic case");
+    assert_case(&longer_result, longer.expected());
+    assert_close(
+        longer_result.nodes[1].magnetic_potential,
+        baseline_result.nodes[1].magnetic_potential * length_factor,
+    );
+    assert_close(
+        longer_result.elements[0].magnetic_field_strength,
+        baseline_result.elements[0].magnetic_field_strength,
+    );
+    assert_close(
+        longer_result.elements[0].magnetic_flux_density,
+        baseline_result.elements[0].magnetic_flux_density,
+    );
+    assert_close(
+        longer_result.total_stored_energy,
+        baseline_result.total_stored_energy * length_factor,
+    );
 }
 
 #[derive(Clone, Copy)]

@@ -126,6 +126,26 @@ fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
     assert_close(deeper.nodes[1].uy / baseline.nodes[1].uy, 1.0 / depth_scale);
     assert!(deeper.max_moment < 1.0e-8);
     assert!(deeper.total_strain_energy.abs() < 1.0e-12);
+
+    let length_scale: f64 = 1.5;
+    let longer = solve_thermal_beam_1d(&request(
+        length * length_scale,
+        thermal_expansion,
+        gradient,
+        section_depth,
+    ))
+    .expect("length-scaled thermal beam should solve");
+    assert_close(
+        longer.elements[0].thermal_curvature,
+        baseline.elements[0].thermal_curvature,
+    );
+    assert_close(longer.nodes[1].rz / baseline.nodes[1].rz, length_scale);
+    assert_close(
+        longer.nodes[1].uy / baseline.nodes[1].uy,
+        length_scale.powi(2),
+    );
+    assert!(longer.max_moment < 1.0e-8);
+    assert!(longer.total_strain_energy.abs() < 1.0e-12);
 }
 
 fn request(

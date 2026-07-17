@@ -94,6 +94,28 @@ fn stokes_flow_linear_field_scales_viscosity_and_density_diagnostics() {
         dense.max_viscous_shear_stress,
         baseline.max_viscous_shear_stress,
     );
+
+    let geometry_scale = 1.5;
+    let larger =
+        solve_stokes_flow_plane_quad_2d(&quad_mesh_scaled(1, 2.0, 1.0, 1.0, geometry_scale))
+            .expect("geometry-scaled Stokes quad fixture should solve");
+    assert_close(larger.max_velocity, baseline.max_velocity);
+    assert_close(
+        larger.max_shear_rate / baseline.max_shear_rate,
+        1.0 / geometry_scale,
+    );
+    assert_close(
+        larger.max_viscous_shear_stress / baseline.max_viscous_shear_stress,
+        1.0 / geometry_scale,
+    );
+    assert_close(
+        larger.elements[0].area / baseline.elements[0].area,
+        geometry_scale * geometry_scale,
+    );
+    assert_close(
+        larger.elements[0].viscous_dissipation,
+        baseline.elements[0].viscous_dissipation,
+    );
 }
 
 #[test]
@@ -146,6 +168,33 @@ fn stokes_flow_triangle_linear_field_scales_material_diagnostics() {
         thick.elements[0].viscous_dissipation / baseline.elements[0].viscous_dissipation,
         1.5,
     );
+
+    let geometry_scale = 1.4;
+    let larger = solve_stokes_flow_plane_triangle_2d(&triangle_mesh_scaled(
+        1,
+        2.0,
+        1.0,
+        1.0,
+        geometry_scale,
+    ))
+    .expect("geometry-scaled triangle Stokes fixture should solve");
+    assert_close(larger.max_velocity, baseline.max_velocity);
+    assert_close(
+        larger.max_shear_rate / baseline.max_shear_rate,
+        1.0 / geometry_scale,
+    );
+    assert_close(
+        larger.max_viscous_shear_stress / baseline.max_viscous_shear_stress,
+        1.0 / geometry_scale,
+    );
+    assert_close(
+        larger.elements[0].area / baseline.elements[0].area,
+        geometry_scale * geometry_scale,
+    );
+    assert_close(
+        larger.elements[0].viscous_dissipation,
+        baseline.elements[0].viscous_dissipation,
+    );
 }
 
 fn quad_mesh(subdivisions: usize) -> SolveStokesFlowPlaneQuad2dRequest {
@@ -158,10 +207,25 @@ fn quad_mesh_with_material(
     density: f64,
     thickness: f64,
 ) -> SolveStokesFlowPlaneQuad2dRequest {
+    quad_mesh_scaled(subdivisions, viscosity, density, thickness, 1.0)
+}
+
+fn quad_mesh_scaled(
+    subdivisions: usize,
+    viscosity: f64,
+    density: f64,
+    thickness: f64,
+    geometry_scale: f64,
+) -> SolveStokesFlowPlaneQuad2dRequest {
     let mut nodes = Vec::new();
     for y_index in 0..=subdivisions {
         for x_index in 0..=subdivisions {
-            nodes.push(linear_stokes_node(x_index, y_index, subdivisions));
+            nodes.push(linear_stokes_node_scaled(
+                x_index,
+                y_index,
+                subdivisions,
+                geometry_scale,
+            ));
         }
     }
 
@@ -198,10 +262,25 @@ fn triangle_mesh_with_material(
     density: f64,
     thickness: f64,
 ) -> SolveStokesFlowPlaneTriangle2dRequest {
+    triangle_mesh_scaled(subdivisions, viscosity, density, thickness, 1.0)
+}
+
+fn triangle_mesh_scaled(
+    subdivisions: usize,
+    viscosity: f64,
+    density: f64,
+    thickness: f64,
+    geometry_scale: f64,
+) -> SolveStokesFlowPlaneTriangle2dRequest {
     let mut nodes = Vec::new();
     for y_index in 0..=subdivisions {
         for x_index in 0..=subdivisions {
-            nodes.push(linear_stokes_node(x_index, y_index, subdivisions));
+            nodes.push(linear_stokes_node_scaled(
+                x_index,
+                y_index,
+                subdivisions,
+                geometry_scale,
+            ));
         }
     }
 
@@ -236,19 +315,20 @@ fn triangle_mesh_with_material(
     SolveStokesFlowPlaneTriangle2dRequest { nodes, elements }
 }
 
-fn linear_stokes_node(
+fn linear_stokes_node_scaled(
     x_index: usize,
     y_index: usize,
     subdivisions: usize,
+    geometry_scale: f64,
 ) -> StokesFlowPlaneNodeInput {
-    let x = x_index as f64 / subdivisions as f64;
-    let y = y_index as f64 / subdivisions as f64;
+    let x = x_index as f64 / subdivisions as f64 * geometry_scale;
+    let y = y_index as f64 / subdivisions as f64 * geometry_scale;
     StokesFlowPlaneNodeInput {
         id: format!("n-{x_index}-{y_index}"),
         x,
         y,
         fix_velocity_x: true,
-        velocity_x: y,
+        velocity_x: y / geometry_scale,
         fix_velocity_y: true,
         velocity_y: 0.0,
         fix_pressure: true,

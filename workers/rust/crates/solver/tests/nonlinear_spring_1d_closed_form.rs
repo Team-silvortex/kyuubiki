@@ -81,6 +81,25 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
         assert_close(scaled_step.load_factor, baseline_step.load_factor);
         assert!(scaled_step.converged);
     }
+
+    let length_scale = 2.4;
+    let longer = solve_nonlinear_spring_1d(&single_hardening_spring_with_length(
+        length_scale,
+        stiffness,
+        cubic_stiffness,
+        load,
+    ))
+    .expect("geometry-scaled hardening spring should solve");
+    assert!(longer.converged);
+    assert_close(longer.elements[0].length, length_scale);
+    assert_close(longer.nodes[1].ux, baseline.nodes[1].ux);
+    assert_close(longer.elements[0].extension, baseline.elements[0].extension);
+    assert_close(longer.elements[0].force, baseline.elements[0].force);
+    assert_close(
+        longer.elements[0].tangent_stiffness,
+        baseline.elements[0].tangent_stiffness,
+    );
+    assert_eq!(longer.steps.len(), baseline.steps.len());
 }
 
 fn single_hardening_spring(
@@ -88,8 +107,20 @@ fn single_hardening_spring(
     cubic_stiffness: f64,
     load: f64,
 ) -> SolveNonlinearSpring1dRequest {
+    single_hardening_spring_with_length(1.0, stiffness, cubic_stiffness, load)
+}
+
+fn single_hardening_spring_with_length(
+    length: f64,
+    stiffness: f64,
+    cubic_stiffness: f64,
+    load: f64,
+) -> SolveNonlinearSpring1dRequest {
     SolveNonlinearSpring1dRequest {
-        nodes: vec![node("fixed", 0.0, true, 0.0), node("tip", 1.0, false, load)],
+        nodes: vec![
+            node("fixed", 0.0, true, 0.0),
+            node("tip", length, false, load),
+        ],
         elements: vec![NonlinearSpring1dElementInput {
             id: "hardening".to_string(),
             node_i: 0,

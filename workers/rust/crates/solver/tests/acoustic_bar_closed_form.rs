@@ -52,8 +52,7 @@ fn acoustic_bar_1d_tracks_material_wave_speed_scaling() {
     let mut stiffer_request = baseline_request.clone();
     stiffer_request.elements[0].bulk_modulus *= bulk_scale;
     let stiffer_expected = expected_from_request(&stiffer_request);
-    let stiffer =
-        solve_acoustic_bar_1d(&stiffer_request).expect("stiffer acoustic material case");
+    let stiffer = solve_acoustic_bar_1d(&stiffer_request).expect("stiffer acoustic material case");
 
     assert_close(
         stiffer.elements[0].speed_of_sound / baseline.elements[0].speed_of_sound,
@@ -90,7 +89,79 @@ fn acoustic_bar_1d_tracks_material_wave_speed_scaling() {
         denser_expected.particle_velocity,
     );
     assert_close(denser.total_damping_loss, denser_expected.damping_loss);
-    assert_close(baseline.nodes[1].pressure, baseline_expected.source_pressure);
+    assert_close(
+        baseline.nodes[1].pressure,
+        baseline_expected.source_pressure,
+    );
+
+    let length_scale = 1.35;
+    let mut longer_request = baseline_request.clone();
+    longer_request.nodes[1].x *= length_scale;
+    let longer_expected = expected_from_request(&longer_request);
+    let longer = solve_acoustic_bar_1d(&longer_request).expect("length-scaled acoustic duct");
+
+    assert_close(
+        longer.elements[0].speed_of_sound,
+        baseline.elements[0].speed_of_sound,
+    );
+    assert_close(
+        longer.elements[0].wave_number,
+        baseline.elements[0].wave_number,
+    );
+    assert_close(longer.nodes[1].pressure, longer_expected.source_pressure);
+    assert_close(
+        longer.elements[0].pressure_gradient,
+        longer_expected.pressure_gradient,
+    );
+    assert_close(
+        longer.elements[0].particle_velocity,
+        longer_expected.particle_velocity,
+    );
+    assert_close(longer.total_damping_loss, longer_expected.damping_loss);
+}
+
+#[test]
+fn acoustic_bar_1d_tracks_source_amplitude_scaling() {
+    let baseline_request = source_scaling_request(160.0);
+    let baseline = solve_acoustic_bar_1d(&baseline_request).expect("baseline acoustic source case");
+
+    let source_scale = 2.5;
+    let mut louder_request = baseline_request.clone();
+    louder_request.nodes[1].volume_velocity_source *= source_scale;
+    let louder_expected = expected_from_request(&louder_request);
+    let louder = solve_acoustic_bar_1d(&louder_request).expect("source-scaled acoustic case");
+
+    assert_close(louder.nodes[1].pressure, louder_expected.source_pressure);
+    assert_close(
+        louder.nodes[1].pressure / baseline.nodes[1].pressure,
+        source_scale,
+    );
+    assert_close(
+        louder.elements[0].pressure_gradient / baseline.elements[0].pressure_gradient,
+        source_scale,
+    );
+    assert_close(
+        louder.max_particle_velocity / baseline.max_particle_velocity,
+        source_scale,
+    );
+    assert_close(
+        louder.max_acoustic_intensity / baseline.max_acoustic_intensity,
+        source_scale * source_scale,
+    );
+    assert_close(
+        louder.total_damping_loss / baseline.total_damping_loss,
+        source_scale * source_scale,
+    );
+    assert_close(
+        louder.nodes[1].sound_pressure_level_db,
+        20.0 * (louder.nodes[1].pressure.abs() / 20.0e-6).log10(),
+    );
+}
+
+fn source_scaling_request(frequency_hz: f64) -> SolveAcousticBar1dRequest {
+    let mut request = request(frequency_hz);
+    request.nodes[0].pressure = 0.0;
+    request
 }
 
 fn request(frequency_hz: f64) -> SolveAcousticBar1dRequest {

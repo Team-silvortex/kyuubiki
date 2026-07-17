@@ -147,6 +147,44 @@ fn advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling() {
         advective_element.peclet_number / baseline_element.peclet_number,
         velocity_scale,
     );
+
+    let length_scale = 1.4;
+    let longer_case = TransportCase {
+        length: baseline_case.length * length_scale,
+        ..baseline_case
+    };
+    let longer = solve_advection_diffusion_bar_1d(&longer_case.request())
+        .expect("length-scaled transport case should solve");
+    let longer_element = &longer.elements[0];
+
+    assert_close(
+        longer.nodes[0].concentration,
+        baseline.nodes[0].concentration,
+    );
+    assert_close(
+        longer.nodes[1].concentration,
+        baseline.nodes[1].concentration,
+    );
+    assert_close(
+        longer_element.average_concentration,
+        baseline_element.average_concentration,
+    );
+    assert_close(
+        longer_element.concentration_gradient / baseline_element.concentration_gradient,
+        1.0 / length_scale,
+    );
+    assert_close(
+        longer_element.diffusive_flux / baseline_element.diffusive_flux,
+        1.0 / length_scale,
+    );
+    assert_close(
+        longer_element.advective_flux,
+        baseline_element.advective_flux,
+    );
+    assert_close(
+        longer_element.peclet_number / baseline_element.peclet_number,
+        length_scale,
+    );
 }
 
 #[test]

@@ -163,6 +163,37 @@ fn thermal_truss_2d_tracks_temperature_and_area_scaling() {
         larger.total_strain_energy / baseline.total_strain_energy,
         area_scale,
     );
+
+    let geometry_scale = 1.6;
+    let longer = solve_thermal_truss_2d(&restrained_triangle_scaled(
+        geometry_scale,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("geometry-scaled thermal truss 2d should solve");
+    assert_close(
+        longer.elements[0].length / baseline.elements[0].length,
+        geometry_scale,
+    );
+    assert_close(
+        longer.elements[0].thermal_strain,
+        baseline.elements[0].thermal_strain,
+    );
+    assert_close(longer.elements[0].stress, baseline.elements[0].stress);
+    assert_close(
+        longer.elements[0].strain_energy_density,
+        baseline.elements[0].strain_energy_density,
+    );
+    assert_close(
+        longer.elements[0].axial_force,
+        baseline.elements[0].axial_force,
+    );
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        geometry_scale,
+    );
 }
 
 fn restrained_triangle(
@@ -171,11 +202,27 @@ fn restrained_triangle(
     thermal_expansion: f64,
     temperature_delta: f64,
 ) -> SolveThermalTruss2dRequest {
+    restrained_triangle_scaled(
+        1.0,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    )
+}
+
+fn restrained_triangle_scaled(
+    geometry_scale: f64,
+    area: f64,
+    youngs_modulus: f64,
+    thermal_expansion: f64,
+    temperature_delta: f64,
+) -> SolveThermalTruss2dRequest {
     SolveThermalTruss2dRequest {
         nodes: vec![
             node("n0", 0.0, 0.0, temperature_delta),
-            node("n1", 1.0, 0.0, temperature_delta),
-            node("n2", 0.0, 0.75, temperature_delta),
+            node("n1", 1.0 * geometry_scale, 0.0, temperature_delta),
+            node("n2", 0.0, 0.75 * geometry_scale, temperature_delta),
         ],
         elements: vec![
             element("edge-01", 0, 1, area, youngs_modulus, thermal_expansion),

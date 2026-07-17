@@ -105,6 +105,32 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         temperature_scale * temperature_scale,
     );
 
+    let expansion_scale = 1.3;
+    let expanded = solve_thermal_frame_2d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion * expansion_scale,
+        temperature_delta,
+    ))
+    .expect("thermal-expansion-scaled thermal frame 2d should solve");
+    assert_close(
+        expanded.elements[0].thermal_strain / baseline.elements[0].thermal_strain,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.elements[0].axial_stress / baseline.elements[0].axial_stress,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.total_strain_energy / baseline.total_strain_energy,
+        expansion_scale * expansion_scale,
+    );
+
     let area_scale = 1.7;
     let wider = solve_thermal_frame_2d(&restrained_member(
         length,
@@ -114,7 +140,10 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
         temperature_delta,
     ))
     .expect("area-scaled thermal frame 2d should solve");
-    assert_close(wider.elements[0].axial_stress, baseline.elements[0].axial_stress);
+    assert_close(
+        wider.elements[0].axial_stress,
+        baseline.elements[0].axial_stress,
+    );
     assert_close(
         wider.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
         area_scale,
@@ -148,6 +177,32 @@ fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
     assert_close(
         stiffer.total_strain_energy / baseline.total_strain_energy,
         modulus_scale,
+    );
+
+    let length_scale = 1.45;
+    let longer = solve_thermal_frame_2d(&restrained_member(
+        length * length_scale,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("length-scaled thermal frame 2d should solve");
+    assert_close(
+        longer.elements[0].thermal_strain,
+        baseline.elements[0].thermal_strain,
+    );
+    assert_close(
+        longer.elements[0].axial_stress,
+        baseline.elements[0].axial_stress,
+    );
+    assert_close(
+        longer.elements[0].axial_force_i,
+        baseline.elements[0].axial_force_i,
+    );
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        length_scale,
     );
 }
 

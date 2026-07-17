@@ -74,6 +74,31 @@ fn bar_1d_tracks_load_area_and_modulus_scaling() {
         stiffer.total_strain_energy / baseline.total_strain_energy,
         1.0 / modulus_scale,
     );
+
+    let length_scale = 1.6;
+    let longer_case = BarCase {
+        length: baseline_case.length * length_scale,
+        ..baseline_case
+    };
+    let longer = solve_bar_1d(&longer_case.request()).expect("length-scaled axial bar");
+    assert_response(&longer, longer_case.expected());
+    assert_close(
+        longer.tip_displacement / baseline.tip_displacement,
+        length_scale,
+    );
+    assert_close(longer.max_stress, baseline.max_stress);
+    assert_close(
+        longer.max_strain_energy_density,
+        baseline.max_strain_energy_density,
+    );
+    assert_close(
+        longer.elements[0].axial_force,
+        baseline.elements[0].axial_force,
+    );
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        length_scale,
+    );
 }
 
 #[derive(Clone, Copy)]

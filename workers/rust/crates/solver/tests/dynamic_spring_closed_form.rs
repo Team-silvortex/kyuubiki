@@ -78,6 +78,28 @@ fn harmonic_spring_1d_matches_frequency_response_and_load_scaling() {
         load_scale,
     );
     assert_close(loaded.max_force / baseline.max_force, load_scale);
+
+    let damping_scale = 3.0;
+    let damped_case = HarmonicCase {
+        damping: baseline_case.damping * damping_scale,
+        ..baseline_case
+    };
+    let damped = solve_harmonic_spring_1d(&harmonic_request(damped_case, &frequencies))
+        .expect("damping-scaled harmonic response");
+    assert_harmonic_response(&damped, damped_case, &frequencies);
+    let near_resonance = frequencies
+        .iter()
+        .position(|frequency_hz| (*frequency_hz - 4.0).abs() <= f64::EPSILON)
+        .expect("near-resonance frequency should be present");
+    assert!(
+        damped.frequencies[near_resonance].max_displacement
+            < baseline.frequencies[near_resonance].max_displacement,
+        "larger damping should reduce the retained near-resonance displacement"
+    );
+    assert_close(
+        damped.frequencies[near_resonance].elements[0].force_amplitude,
+        harmonic_closed_form(damped_case, frequencies[near_resonance]).force_amplitude,
+    );
 }
 
 #[derive(Clone, Copy)]

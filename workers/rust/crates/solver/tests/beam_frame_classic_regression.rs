@@ -145,6 +145,30 @@ fn beam_1d_tracks_tip_load_and_inertia_scaling() {
         stiffer.total_strain_energy / baseline.total_strain_energy,
         1.0 / inertia_scale,
     );
+
+    let length_scale: f64 = 1.3;
+    let longer = solve_beam_1d(&beam_request(
+        length * length_scale,
+        load,
+        youngs_modulus,
+        moment_of_inertia,
+        section_modulus,
+    ))
+    .expect("length-scaled cantilever beam should solve");
+    assert_close(
+        longer.nodes[1].uy / baseline.nodes[1].uy,
+        length_scale.powi(3),
+    );
+    assert_close(
+        longer.nodes[1].rz / baseline.nodes[1].rz,
+        length_scale.powi(2),
+    );
+    assert_close(longer.max_moment / baseline.max_moment, length_scale);
+    assert_close(longer.max_stress / baseline.max_stress, length_scale);
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        length_scale.powi(3),
+    );
 }
 
 #[test]
@@ -263,6 +287,23 @@ fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
     assert_close(
         stiffened.total_strain_energy / baseline.total_strain_energy,
         1.0 / polar_scale,
+    );
+
+    let length_scale: f64 = 1.4;
+    let longer = solve_torsion_1d(&torsion_request(
+        length * length_scale,
+        torque,
+        shear_modulus,
+        polar_moment,
+        section_modulus,
+    ))
+    .expect("length-scaled torsion shaft should solve");
+    assert_close(longer.nodes[1].rz / baseline.nodes[1].rz, length_scale);
+    assert_close(longer.max_torque, baseline.max_torque);
+    assert_close(longer.max_stress, baseline.max_stress);
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        length_scale,
     );
 }
 

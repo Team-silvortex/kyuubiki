@@ -126,6 +126,37 @@ fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
         inertia_scaled.total_strain_energy / baseline.total_strain_energy,
         1.0 / inertia_scale,
     );
+
+    let length_scale: f64 = 1.25;
+    let longer = solve_frame_3d(&cantilever(
+        length * length_scale,
+        load_y,
+        youngs_modulus,
+        iz,
+        section_modulus_z,
+    ))
+    .expect("length-scaled 3D frame cantilever should solve");
+    assert_close(
+        longer.elements[0].length / baseline.elements[0].length,
+        length_scale,
+    );
+    assert_close(
+        longer.nodes[1].uy / baseline.nodes[1].uy,
+        length_scale.powi(3),
+    );
+    assert_close(
+        longer.nodes[1].rz / baseline.nodes[1].rz,
+        length_scale.powi(2),
+    );
+    assert_close(
+        longer.elements[0].moment_z_i / baseline.elements[0].moment_z_i,
+        length_scale,
+    );
+    assert_close(longer.max_stress / baseline.max_stress, length_scale);
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        length_scale.powi(3),
+    );
 }
 
 fn cantilever(

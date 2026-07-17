@@ -91,6 +91,31 @@ fn electrostatic_bar_1d_tracks_charge_and_permittivity_scaling() {
         wider_result.total_stored_energy,
         baseline_result.total_stored_energy / area_factor,
     );
+
+    let length_factor = 1.75;
+    let longer = ElectrostaticCase {
+        length: baseline.length * length_factor,
+        ..baseline
+    };
+    let longer_result =
+        solve_electrostatic_bar_1d(&longer.request()).expect("length-scaled electrostatic bar");
+    assert_response(&longer_result, longer.expected());
+    assert_close(
+        longer_result.nodes[1].potential,
+        baseline_result.nodes[1].potential * length_factor,
+    );
+    assert_close(
+        longer_result.elements[0].electric_field,
+        baseline_result.elements[0].electric_field,
+    );
+    assert_close(
+        longer_result.elements[0].electric_flux_density,
+        baseline_result.elements[0].electric_flux_density,
+    );
+    assert_close(
+        longer_result.total_stored_energy,
+        baseline_result.total_stored_energy * length_factor,
+    );
 }
 
 #[derive(Clone, Copy)]

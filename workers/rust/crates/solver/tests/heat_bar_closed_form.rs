@@ -74,6 +74,26 @@ fn heat_bar_1d_tracks_heat_load_and_conductivity_scaling() {
         wider_result.elements[0].heat_flux,
         baseline_result.elements[0].heat_flux / area_factor,
     );
+
+    let length_factor = 1.8;
+    let longer = HeatCase {
+        length: baseline.length * length_factor,
+        ..baseline
+    };
+    let longer_result = solve_heat_bar_1d(&longer.request()).expect("length-scaled heat bar");
+    assert_response(&longer_result, longer.expected());
+    assert_close(
+        longer_result.nodes[1].temperature,
+        baseline_result.nodes[1].temperature * length_factor,
+    );
+    assert_close(
+        longer_result.elements[0].temperature_gradient,
+        baseline_result.elements[0].temperature_gradient,
+    );
+    assert_close(
+        longer_result.elements[0].heat_flux,
+        baseline_result.elements[0].heat_flux,
+    );
 }
 
 #[derive(Clone, Copy)]

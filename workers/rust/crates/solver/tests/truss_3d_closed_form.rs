@@ -144,6 +144,37 @@ fn truss_3d_tracks_load_and_area_scaling() {
         1.0 / modulus_scale,
         TOL,
     );
+
+    let geometry_scale = 1.4;
+    let longer = solve_truss_3d(&tripod_request(
+        radius * geometry_scale,
+        height * geometry_scale,
+        load,
+        area,
+        youngs_modulus,
+    ))
+    .expect("geometry-scaled tripod truss should solve");
+    assert_close(
+        longer.elements[0].length / baseline.elements[0].length,
+        geometry_scale,
+        TOL,
+    );
+    assert_close(
+        longer.nodes[3].uz / baseline.nodes[3].uz,
+        geometry_scale,
+        TOL,
+    );
+    assert_close(
+        longer.elements[0].axial_force,
+        baseline.elements[0].axial_force,
+        TOL,
+    );
+    assert_close(longer.max_stress, baseline.max_stress, TOL);
+    assert_close(
+        longer.total_strain_energy / baseline.total_strain_energy,
+        geometry_scale,
+        TOL,
+    );
 }
 
 fn tripod_request(

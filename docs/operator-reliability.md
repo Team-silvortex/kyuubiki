@@ -203,6 +203,10 @@ linear screening field: quad and triangle viscosity changes scale viscous
 stress and dissipation while leaving the prescribed velocity and shear rate
 unchanged, triangle thickness changes scale dissipation only, and density
 changes scale Reynolds diagnostics without changing viscous stress.
+The quad and triangle paths also check geometry scaling with the prescribed
+velocity boundary held fixed, so element area scales with domain area, shear
+rate and viscous stress scale inversely with length, and viscous dissipation
+remains fixed under the same thickness.
 
 ## CFD Stokes Divergence Tolerance
 
@@ -381,8 +385,13 @@ the analytic formulas, and verifies that an undamped fixture reports zero
 damping loss. The material perturbation regression also checks that bulk
 modulus and density changes drive speed of sound and wave number by the
 expected square-root scaling while pressure response, particle velocity, and
-damping loss remain closed-form matched. This does not claim branched duct
-networks, nonlinear acoustics, transient propagation, or 3D acoustic cavities.
+damping loss remain closed-form matched. It also perturbs duct length and
+requires the dynamic pressure, pressure gradient, particle velocity, and
+damping loss to keep matching the same closed-form dynamic-stiffness reference.
+The source-amplitude regression uses a pure-source fixture to verify linear
+pressure/particle-velocity scaling and quadratic acoustic-intensity/damping-loss
+scaling. This does not claim branched duct networks, nonlinear acoustics,
+transient propagation, or 3D acoustic cavities.
 
 The advection-diffusion 1D bar is now qualified for the retained steady
 constant-coefficient transport scope. Its closed-form evidence checks
@@ -391,8 +400,11 @@ advection-dominant Peclet regimes, plus the zero-velocity limit where
 advective flux must vanish. The retained material/flow perturbation regression
 also verifies that fixed-boundary concentrations stay unchanged while
 diffusivity scales diffusive flux and inversely scales Peclet number, and
-velocity scales advective flux and Peclet number. The source-response
-regression adds a three-node free concentration DOF and verifies that internal
+velocity scales advective flux and Peclet number. It also checks length scaling:
+the fixed-boundary gradient and diffusive flux scale inversely with length,
+Peclet number scales linearly with length, and the advective flux remains
+fixed by the same average concentration. The source-response regression adds a
+three-node free concentration DOF and verifies that internal
 source strength scales the middle concentration linearly while cross-sectional
 area inversely scales the source-driven concentration increment. This does not
 claim transient transport, nonlinear reaction, multidimensional flow,
@@ -411,7 +423,9 @@ force continuity, element strain energy, and the zero-load response. The
 retained scaling regression also verifies that load scaling linearly scales
 displacement and member force while scaling strain energy quadratically, and
 that uniform stiffness scaling inversely scales displacement and strain energy
-while preserving series force continuity. This does not claim nonlinear
+while preserving series force continuity. It also perturbs node spacing to
+verify that reported element length changes do not alter displacement, member
+force, or energy for fixed discrete spring stiffness. This does not claim nonlinear
 springs, transient dynamics, contact, or arbitrary vector spring networks.
 
 The spring 2D and 3D operators are now qualified for the retained linear static
@@ -422,6 +436,9 @@ The retained vector-spring scaling regressions also verify that load scaling
 linearly scales free-node displacement and member force while scaling strain
 energy quadratically, and that uniform stiffness scaling inversely scales
 free-node displacement and strain energy while preserving reaction/member force.
+They also perturb orthogonal anchor distances to verify that reported element
+length changes do not alter displacement, member force, or energy for a fixed
+discrete spring stiffness.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
@@ -431,8 +448,10 @@ rotation, tip displacement, zero-gradient response, and near-zero internal
 force for a single fixed-free member. The retained scaling regression verifies
 that temperature-gradient and thermal-expansion changes linearly scale
 curvature, tip rotation, and tip displacement, while section-depth changes
-inversely scale those same free-curvature diagnostics without introducing
-internal moment or strain energy.
+inversely scale those same free-curvature diagnostics. It also verifies length
+scaling for the same free-curvature case: curvature stays fixed, tip rotation
+scales linearly, and tip displacement scales quadratically, without
+introducing internal moment or strain energy.
 This does not claim thermal frame assemblies, nonlinear material behavior,
 transient heat transfer, buckling, or plasticity.
 
@@ -444,7 +463,10 @@ that temperature and thermal-expansion changes scale thermal strain, stress,
 and axial force while scaling strain energy quadratically, that Young's
 modulus changes scale stress, axial force, and energy without changing thermal
 strain, and that area changes scale axial force and total energy without
-changing stress or energy density. This does not claim partial restraint,
+changing stress or energy density. It also verifies uniform geometry scaling
+where member lengths and total energy scale linearly while thermal strain,
+stress, axial force, and energy density remain fixed. This does not claim
+partial restraint,
 temperature gradients, buckling, plasticity, contact, or dynamic response.
 
 The thermal truss 2D operator is now qualified for the retained fully
@@ -452,8 +474,8 @@ restrained uniform-temperature scope. Its closed-form evidence mirrors the 3D
 thermal truss lane by checking fixed node displacement, thermal/mechanical
 strain split, compressive stress, axial force, and member energy summation.
 The retained 2D scaling regression applies the same temperature,
-thermal-expansion, Young's-modulus, and area checks to the planar restrained
-triangle. This does not claim partial restraint, mixed thermal loading,
+thermal-expansion, Young's-modulus, area, and uniform geometry checks to the
+planar restrained triangle. This does not claim partial restraint, mixed thermal loading,
 temperature gradients, buckling, plasticity, contact, or dynamic response.
 
 The thermal frame 2D operator is now qualified for the retained fully
@@ -461,12 +483,14 @@ restrained uniform-temperature single-member scope. Its closed-form evidence
 checks fixed end displacement and rotation, thermal/mechanical strain split,
 axial force, axial stress, zero-gradient moment and shear response, and strain
 energy. The retained scaling regression verifies that temperature changes
-scale thermal strain, axial force, and axial stress while scaling strain energy
-quadratically, that area changes scale axial force and energy without changing
-stress, and that modulus changes scale force, stress, and energy without
-changing thermal strain. This does not claim partial restraint, temperature
-gradients, frame assemblies, geometric nonlinearity, buckling, plasticity,
-contact, or dynamic response.
+and thermal-expansion changes scale thermal strain, axial force, and axial
+stress while scaling strain energy quadratically, that area changes scale
+axial force and energy without changing stress, and that modulus changes scale
+force, stress, and energy without changing thermal strain. It also verifies
+length scaling where thermal strain, stress, and axial force remain fixed while
+strain energy scales linearly with member length. This does not claim
+partial restraint, temperature gradients, frame assemblies, geometric
+nonlinearity, buckling, plasticity, contact, or dynamic response.
 
 The thermal frame 3D operator is now qualified for the retained fully
 restrained single-member scope with uniform temperature and linear gradients.
@@ -475,10 +499,16 @@ thermal/mechanical strain split, thermal curvatures, axial force, bending
 moments, combined stress, and strain energy. The retained scaling regression
 verifies that uniform temperature and gradient scaling drives thermal strain,
 thermal curvatures, axial force, bending moments, and energy by the expected
-linear/quadratic factors, while inertia scaling changes bending moments without
-changing thermal curvature or axial force. This does not claim partial
-restraint, arbitrary 3D frame assemblies, torsion-dominant response, geometric
-nonlinearity, buckling, plasticity, contact, or dynamic response.
+linear/quadratic factors, thermal-expansion scaling drives the same retained
+thermal strain, curvature, force, moment, and energy factors, Young's modulus
+scales force, moment, and energy without changing thermal strain or curvature,
+and inertia scaling changes bending moments without changing thermal curvature
+or axial force. It also verifies length scaling where thermal strain,
+curvatures, axial force, and bending moments remain fixed while strain energy
+scales linearly with member length. This does not claim partial restraint,
+arbitrary 3D frame
+assemblies, torsion-dominant response, geometric nonlinearity, buckling,
+plasticity, contact, or dynamic response.
 
 The contact gap 1D operator is now qualified for the retained penalty stop
 scope. Its closed-form evidence checks inactive gap response, active penalty
@@ -486,8 +516,14 @@ penetration, contact activation count, spring force, contact force, and
 force-split equilibrium. The retained scaling regression also verifies that
 active contact remains active when load and gap are scaled together, with tip
 displacement, penetration, spring force, and contact force preserving the same
-scale factor. This does not claim multidimensional contact, friction, impact,
-large deformation, or industrial contact search.
+scale factor. It also verifies contact-normal-stiffness scaling against the
+closed-form penalty force split, including reduced penetration and the updated
+spring/contact force balance for the same load and gap. It also perturbs the
+spring element length to verify that the active penalty force split remains
+independent of reported geometry length for fixed discrete spring and contact
+stiffness. This does not claim
+multidimensional contact, friction, impact, large deformation, or industrial
+contact search.
 
 The truss 2D operator is now qualified for the retained symmetric two-bar
 scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
@@ -497,9 +533,11 @@ apex displacement, axial force, and stress while scaling energy quadratically,
 and that area changes inversely scale displacement, stress, and energy while
 preserving axial force. It also verifies that Young's modulus changes
 inversely scale displacement and strain energy while preserving
-load-controlled axial force and stress. This does not claim arbitrary truss
-topology, geometric nonlinearity, buckling, dynamic response, damaged members,
-or 3D space truss behavior.
+load-controlled axial force and stress, and that similar-geometry scaling
+linearly scales member length, apex displacement, and strain energy while
+preserving axial force and stress. This does not claim arbitrary truss topology,
+geometric nonlinearity, buckling, dynamic response, damaged members, or 3D
+space truss behavior.
 
 The truss 3D operator is now qualified for the retained symmetric tripod scope.
 Its closed-form evidence checks fixed base supports, zero lateral apex motion,
@@ -507,9 +545,11 @@ vertical displacement, equal axial leg force, stress, strain, and strain
 energy. The retained tripod scaling regression applies the same load and area
 checks to the 3D leg-force/stress/energy response, and now also verifies
 Young's-modulus inverse displacement and energy scaling while preserving
-load-controlled leg force and stress. This does not claim arbitrary
-space-frame topology, geometric nonlinearity, buckling, damaged members, joint
-eccentricity, or dynamic response.
+load-controlled leg force and stress. It also checks similar-geometry scaling
+across leg length, apex displacement, and strain energy while preserving leg
+force and stress. This does not claim arbitrary space-frame topology, geometric
+nonlinearity, buckling, damaged members, joint eccentricity, or dynamic
+response.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
@@ -525,17 +565,21 @@ closed-form expected values, tolerances, and tolerance scope for `solve.bar_1d`,
 has `bar_1d_tracks_load_area_and_modulus_scaling`, which verifies load
 linearity, area-inverse displacement/stress/energy response, and
 modulus-inverse displacement/energy response while preserving load-controlled
-stress and axial force. The heat and electrostatic line fields also have
-source/material scaling regressions:
+stress and axial force; it also verifies length-linear displacement and energy
+response while preserving stress, strain-energy density, and axial force. The
+heat and electrostatic line fields also have source/material scaling
+regressions:
 `heat_bar_1d_tracks_heat_load_and_conductivity_scaling` verifies heat-load
 linearity plus conductivity-inverse temperature response while preserving
 source-controlled flux, and also checks area-inverse temperature, gradient,
-and heat-flux response for the same heat load; and
+and heat-flux response plus length-linear temperature response while preserving
+gradient and heat flux for the same heat load; and
 `electrostatic_bar_1d_tracks_charge_and_permittivity_scaling` verifies charge
 linearity, quadratic stored-energy scaling, and permittivity-inverse potential
 response while preserving source-controlled electric flux density; it also
 checks area-inverse potential, field, flux-density, and stored-energy response
-for the same charge source.
+plus length-linear potential and stored-energy response while preserving field
+and flux density for the same charge source.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
@@ -564,9 +608,10 @@ constitutive stress components, von Mises stress, and strain energy against
 scaling regression verifies that load scaling drives displacement, stress, von
 Mises stress, and energy by the expected linear/quadratic factors, while
 elastic-modulus scaling inversely changes displacement and energy without
-changing load-controlled stress. This remains a single-element linear-elastic
-qualification, not a mesh-convergence, plasticity, contact, or
-large-deformation claim.
+changing load-controlled stress. It also verifies tip-height scaling through
+volume, displacement, constant strain/stress recovery, and total energy. This
+remains a single-element linear-elastic qualification, not a mesh-convergence,
+plasticity, contact, or large-deformation claim.
 
 `solve.nonlinear_spring_1d` is now qualified for the current single hardening
 spring scope. The retained evidence derives the Cardano root for
@@ -575,9 +620,11 @@ stiffness, residuals, and monotonic load-step factors against
 `workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs`. The
 retained scaling regression also verifies that scaling the linear stiffness,
 cubic stiffness, and load together preserves displacement while scaling force
-and tangent stiffness by the same factor. This is a monotone one-dimensional
-hardening qualification, not a hysteresis, softening, snap-through, or dynamics
-claim.
+and tangent stiffness by the same factor. It also perturbs element length to
+verify that the discrete hardening law keeps the Cardano root, force, and
+tangent stiffness independent of reported geometry length. This is a monotone
+one-dimensional hardening qualification, not a hysteresis, softening,
+snap-through, or dynamics claim.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
@@ -587,8 +634,10 @@ frame, then checks them against
 scaling regression verifies that tip-load changes linearly scale displacement,
 rotation, root moment, and bending stress while scaling strain energy
 quadratically, and that bending-inertia changes inversely scale displacement,
-rotation, and energy without changing load-controlled moment or stress. This
-remains a single-member linear static qualification, not a multi-member
+rotation, and energy without changing load-controlled moment or stress. It
+also verifies length scaling across element length, displacement, rotation,
+root moment, bending stress, and strain energy for the same tip-load case.
+This remains a single-member linear static qualification, not a multi-member
 stability, geometric nonlinearity, warping, plastic-hinge, or dynamics claim.
 
 `solve.plane_triangle_2d` and `solve.plane_quad_2d` are now qualified for the
@@ -597,10 +646,13 @@ triangle direct-stiffness reference, the quad split-triangle weighted contract,
 stress diagnostics, von Mises handling, and strain-energy totals against
 `workers/rust/crates/solver/tests/plane_2d_closed_form.rs`. The retained
 scaling regressions verify that load changes scale displacement, stress, and
-energy by the expected linear/quadratic factors, that triangle thickness
-changes inversely scale displacement, stress, and energy under fixed nodal
-loads, and that quad modulus changes inversely scale displacement and energy
-without changing load-controlled stress. This remains a small-patch
+energy by the expected linear/quadratic factors, that triangle and quad
+thickness changes inversely scale displacement, stress, and energy under fixed
+nodal loads, and that triangle and quad modulus changes inversely scale
+displacement and energy without changing load-controlled stress. Both retained
+paths also check similar-geometry scaling where area scales quadratically,
+stress scales inversely with length, and displacement/energy stay fixed under
+the same nodal loads. This remains a small-patch
 qualification, not a mesh-convergence, high-order quadrature, distorted-element,
 plasticity, buckling, or large-deformation claim.
 
@@ -611,10 +663,11 @@ first multi-case regression is
 `workers/rust/crates/solver/tests/beam_frame_classic_regression.rs`. That test
 checks a closed-form cantilever beam, equivalent 2D frame cantilever, and
 prismatic torsion shaft. The retained regression now also checks beam tip-load
-and bending-inertia scaling, 2D frame tip-load and bending-inertia scaling, plus
-torsion torque and polar-moment scaling, so load-controlled moments, torques,
-stresses, and strain energies stay separated from stiffness-controlled
-displacement, rotation, or twist response. Its sign convention note is
+and bending-inertia scaling, beam length scaling, 2D frame tip-load and
+bending-inertia scaling, plus torsion torque, polar-moment, and length scaling,
+so load-controlled moments, torques, stresses, and strain energies stay
+separated from stiffness- or geometry-controlled displacement, rotation, or
+twist response. Its sign convention note is
 `evidence/operator-qualification/beam-frame-force-sign-convention.md`. The
 `beam-frame-classic` profile is also part of `make verify-operator-validation`,
 so release validation output now executes the regression, beam review, torsion

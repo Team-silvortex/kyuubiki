@@ -178,9 +178,10 @@ Harmonic response entries can use aliases such as `freq_hz`,
 `displacement_amplitude`, `acceleration_amplitude`, and `force_amplitude`.
 The solver-side `dynamic_spring_closed_form.rs` regression now keeps
 single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
-including load-scaling checks, but those dynamic spring operators remain outside
-the release-gated 38-operator `physics-coverage` qualification manifest until
-the dynamic line is promoted into that matrix.
+including load-scaling and near-resonance damping-scaling checks, but those
+dynamic spring operators remain outside the release-gated 38-operator
+`physics-coverage` qualification manifest until the dynamic line is promoted
+into that matrix.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

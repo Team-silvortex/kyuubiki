@@ -85,14 +85,85 @@ fn contact_gap_1d_preserves_active_force_split_under_load_gap_scaling() {
     );
 }
 
+#[test]
+fn contact_gap_1d_tracks_contact_stiffness_force_split() {
+    let spring_stiffness = 1300.0;
+    let contact_stiffness = 8000.0;
+    let gap = 0.035;
+    let load = 95.0;
+    let baseline = solve_contact_gap_1d(&request(load, spring_stiffness, gap, contact_stiffness))
+        .expect("baseline active contact fixture should solve");
+
+    let stiffness_scale = 2.25;
+    let stiffer = solve_contact_gap_1d(&request(
+        load,
+        spring_stiffness,
+        gap,
+        contact_stiffness * stiffness_scale,
+    ))
+    .expect("contact-stiffness-scaled fixture should solve");
+
+    let expected_tip = (load + contact_stiffness * stiffness_scale * gap)
+        / (spring_stiffness + contact_stiffness * stiffness_scale);
+    let expected_penetration = expected_tip - gap;
+    let expected_spring_force = spring_stiffness * expected_tip;
+    let expected_contact_force = contact_stiffness * stiffness_scale * expected_penetration;
+
+    assert!(baseline.converged);
+    assert!(stiffer.converged);
+    assert_eq!(baseline.active_contact_count, 1);
+    assert_eq!(stiffer.active_contact_count, 1);
+    assert!(stiffer.contacts[0].active);
+    assert!(stiffer.contacts[0].penetration < baseline.contacts[0].penetration);
+    assert!(stiffer.contacts[0].force > baseline.contacts[0].force);
+    assert_close(stiffer.nodes[1].ux, expected_tip);
+    assert_close(stiffer.contacts[0].penetration, expected_penetration);
+    assert_close(stiffer.elements[0].force, expected_spring_force);
+    assert_close(stiffer.contacts[0].force, expected_contact_force);
+    assert_close(expected_spring_force + expected_contact_force, load);
+
+    let length_scale = 2.0;
+    let longer = solve_contact_gap_1d(&request_with_length(
+        length_scale,
+        load,
+        spring_stiffness,
+        gap,
+        contact_stiffness,
+    ))
+    .expect("geometry-scaled contact fixture should solve");
+    assert!(longer.converged);
+    assert_eq!(longer.active_contact_count, 1);
+    assert_close(longer.elements[0].length, length_scale);
+    assert_close(longer.nodes[1].ux, baseline.nodes[1].ux);
+    assert_close(
+        longer.contacts[0].penetration,
+        baseline.contacts[0].penetration,
+    );
+    assert_close(longer.elements[0].force, baseline.elements[0].force);
+    assert_close(longer.contacts[0].force, baseline.contacts[0].force);
+}
+
 fn request(
     load: f64,
     spring_stiffness: f64,
     gap: f64,
     contact_stiffness: f64,
 ) -> SolveContactGap1dRequest {
+    request_with_length(1.0, load, spring_stiffness, gap, contact_stiffness)
+}
+
+fn request_with_length(
+    length: f64,
+    load: f64,
+    spring_stiffness: f64,
+    gap: f64,
+    contact_stiffness: f64,
+) -> SolveContactGap1dRequest {
     SolveContactGap1dRequest {
-        nodes: vec![node("fixed", 0.0, true, 0.0), node("tip", 1.0, false, load)],
+        nodes: vec![
+            node("fixed", 0.0, true, 0.0),
+            node("tip", length, false, load),
+        ],
         elements: vec![NonlinearSpring1dElementInput {
             id: "spring".to_string(),
             node_i: 0,

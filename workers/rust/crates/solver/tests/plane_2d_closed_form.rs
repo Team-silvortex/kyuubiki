@@ -92,8 +92,7 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
         node.load_x *= load_scale;
         node.load_y *= load_scale;
     }
-    let load_scaled =
-        solve_plane_triangle_2d(&load_request).expect("load-scaled triangle patch");
+    let load_scaled = solve_plane_triangle_2d(&load_request).expect("load-scaled triangle patch");
     assert_close(
         load_scaled.nodes[2].uy / baseline.nodes[2].uy,
         load_scale,
@@ -130,6 +129,44 @@ fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
     assert_close(
         thickened.total_strain_energy / baseline.total_strain_energy,
         1.0 / thickness_scale,
+        1.0e-10,
+    );
+
+    let modulus_scale = 1.4;
+    let mut stiff_request = triangle_patch();
+    for element in &mut stiff_request.elements {
+        element.youngs_modulus *= modulus_scale;
+    }
+    let stiffened = solve_plane_triangle_2d(&stiff_request).expect("modulus-scaled triangle patch");
+    assert_close(
+        stiffened.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / modulus_scale,
+        1.0e-10,
+    );
+    assert_close(stiffened.max_stress, baseline.max_stress, 1.0e-10);
+    assert_close(
+        stiffened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / modulus_scale,
+        1.0e-10,
+    );
+
+    let geometry_scale = 1.5;
+    let scaled_geometry = solve_plane_triangle_2d(&triangle_patch_scaled(geometry_scale))
+        .expect("geometry-scaled triangle patch");
+    assert_close(
+        scaled_geometry.elements[0].area / baseline.elements[0].area,
+        geometry_scale * geometry_scale,
+        1.0e-10,
+    );
+    assert_close(scaled_geometry.nodes[2].uy, baseline.nodes[2].uy, 1.0e-10);
+    assert_close(
+        scaled_geometry.max_stress / baseline.max_stress,
+        1.0 / geometry_scale,
+        1.0e-10,
+    );
+    assert_close(
+        scaled_geometry.total_strain_energy,
+        baseline.total_strain_energy,
         1.0e-10,
     );
 }
@@ -176,15 +213,67 @@ fn plane_quad_2d_tracks_load_and_modulus_scaling() {
         1.0 / modulus_scale,
         1.0e-10,
     );
+
+    let thickness_scale = 1.8;
+    let mut thick_request = quad_patch();
+    thick_request.elements[0].thickness *= thickness_scale;
+    let thickened = solve_plane_quad_2d(&thick_request).expect("thickness-scaled quad patch");
+    assert_close(
+        thickened.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+    assert_close(
+        thickened.max_stress / baseline.max_stress,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+    assert_close(
+        thickened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+
+    let geometry_scale = 1.4;
+    let scaled_geometry =
+        solve_plane_quad_2d(&quad_patch_scaled(geometry_scale)).expect("geometry-scaled quad");
+    assert_close(
+        scaled_geometry.elements[0].area / baseline.elements[0].area,
+        geometry_scale * geometry_scale,
+        1.0e-10,
+    );
+    assert_close(scaled_geometry.nodes[2].uy, baseline.nodes[2].uy, 1.0e-10);
+    assert_close(
+        scaled_geometry.max_stress / baseline.max_stress,
+        1.0 / geometry_scale,
+        1.0e-10,
+    );
+    assert_close(
+        scaled_geometry.total_strain_energy,
+        baseline.total_strain_energy,
+        1.0e-10,
+    );
 }
 
 fn triangle_patch() -> SolvePlaneTriangle2dRequest {
+    triangle_patch_scaled(1.0)
+}
+
+fn triangle_patch_scaled(geometry_scale: f64) -> SolvePlaneTriangle2dRequest {
     SolvePlaneTriangle2dRequest {
         nodes: vec![
             node("bottom_left", 0.0, 0.0, true, true, 0.0, 0.0),
-            node("bottom_right", 1.0, 0.0, false, true, 0.0, 0.0),
-            node("top_right", 1.0, 1.0, false, false, 0.0, -1000.0),
-            node("top_left", 0.0, 1.0, true, false, 0.0, -1000.0),
+            node("bottom_right", geometry_scale, 0.0, false, true, 0.0, 0.0),
+            node(
+                "top_right",
+                geometry_scale,
+                geometry_scale,
+                false,
+                false,
+                0.0,
+                -1000.0,
+            ),
+            node("top_left", 0.0, geometry_scale, true, false, 0.0, -1000.0),
         ],
         elements: vec![
             triangle("tri_lower", 0, 1, 2),
@@ -194,12 +283,32 @@ fn triangle_patch() -> SolvePlaneTriangle2dRequest {
 }
 
 fn quad_patch() -> SolvePlaneQuad2dRequest {
+    quad_patch_scaled(1.0)
+}
+
+fn quad_patch_scaled(geometry_scale: f64) -> SolvePlaneQuad2dRequest {
     SolvePlaneQuad2dRequest {
         nodes: vec![
             node("bottom_left", 0.0, 0.0, true, true, 0.0, 0.0),
-            node("bottom_right", 1.0, 0.0, false, true, 0.0, 0.0),
-            node("top_right", 1.0, 0.8, false, false, 200.0, -1200.0),
-            node("top_left", 0.0, 0.8, true, false, 200.0, -1200.0),
+            node("bottom_right", geometry_scale, 0.0, false, true, 0.0, 0.0),
+            node(
+                "top_right",
+                geometry_scale,
+                0.8 * geometry_scale,
+                false,
+                false,
+                200.0,
+                -1200.0,
+            ),
+            node(
+                "top_left",
+                0.0,
+                0.8 * geometry_scale,
+                true,
+                false,
+                200.0,
+                -1200.0,
+            ),
         ],
         elements: vec![PlaneQuadElementInput {
             id: "quad_panel".to_string(),
