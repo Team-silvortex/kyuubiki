@@ -41,7 +41,8 @@
             "evidence/operator-qualification/modal-frame-normalization-policy.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
+            "modal_frame_2d_tracks_stiffness_and_density_frequency_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",
@@ -103,7 +104,8 @@
             "evidence/operator-qualification/modal-frame-normalization-policy.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+            "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
+            "modal_frame_3d_tracks_stiffness_and_density_frequency_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json",

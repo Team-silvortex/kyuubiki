@@ -11,7 +11,8 @@
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+          "workers/rust/crates/solver/tests/heat_bar_closed_form.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_heat_bar_1d_two_element_gradient",
         "review": {
@@ -41,7 +42,9 @@
             "evidence/operator-qualification/line-field-closed-form-baseline.json"
           ],
           "convergence_checks": [
-            "evidence/operator-qualification/line-field-tolerance-policy.json"
+            "evidence/operator-qualification/line-field-tolerance-policy.json",
+            "workers/rust/crates/solver/tests/heat_bar_closed_form.rs",
+            "heat_bar_1d_tracks_heat_load_and_conductivity_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
@@ -52,7 +55,8 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
-            "workers/rust/crates/solver/tests/heat_bar_1d_review.rs"
+            "workers/rust/crates/solver/tests/heat_bar_1d_review.rs",
+            "workers/rust/crates/solver/tests/heat_bar_closed_form.rs"
           ]
         }
       },

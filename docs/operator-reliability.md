@@ -326,8 +326,12 @@ on the expanded shape vector.
 The `modal-frame-sanity` qualification packet is now approved: it has a
 normalization policy, a frequency-convergence note, and a regression that
 checks 2D and 3D cantilever mode ordering plus the expected frequency increase
-for shorter beams. Symmetric 3D bending modes may be near-degenerate, so the
-3D ordering contract is non-decreasing rather than strictly increasing.
+for shorter beams. The retained regression also verifies that uniform stiffness
+and density scaling drive modal frequency by `sqrt(stiffness / density)`,
+eigenvalue by `stiffness / density`, and period by the inverse frequency factor
+while preserving free DOFs and normalized participation. Symmetric 3D bending
+modes may be near-degenerate, so the 3D ordering contract is non-decreasing
+rather than strictly increasing.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json`.
 
@@ -506,7 +510,18 @@ checked by `make check-line-field-closed-form-baseline`. This pins the
 closed-form expected values, tolerances, and tolerance scope for `solve.bar_1d`,
 `solve.thermal_bar_1d`, `solve.heat_bar_1d`, and
 `solve.electrostatic_bar_1d`; those four operators now carry
-`evidence.qualification` entries in the reliability shards.
+`evidence.qualification` entries in the reliability shards. The axial bar now
+has `bar_1d_tracks_load_area_and_modulus_scaling`, which verifies load
+linearity, area-inverse displacement/stress/energy response, and
+modulus-inverse displacement/energy response while preserving load-controlled
+stress and axial force. The heat and electrostatic line fields also have
+source/material scaling regressions:
+`heat_bar_1d_tracks_heat_load_and_conductivity_scaling` verifies heat-load
+linearity plus conductivity-inverse temperature response while preserving
+source-controlled flux, and
+`electrostatic_bar_1d_tracks_charge_and_permittivity_scaling` verifies charge
+linearity, quadratic stored-energy scaling, and permittivity-inverse potential
+response while preserving source-controlled electric flux density.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
@@ -554,17 +569,26 @@ claim.
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
 root moment, bending stress, and strain-energy formulas for an x-aligned 3D
 frame, then checks them against
-`workers/rust/crates/solver/tests/frame_3d_closed_form.rs`. This remains a
-single-member linear static qualification, not a multi-member stability,
-geometric nonlinearity, warping, plastic-hinge, or dynamics claim.
+`workers/rust/crates/solver/tests/frame_3d_closed_form.rs`. The retained
+scaling regression verifies that tip-load changes linearly scale displacement,
+rotation, root moment, and bending stress while scaling strain energy
+quadratically, and that bending-inertia changes inversely scale displacement,
+rotation, and energy without changing load-controlled moment or stress. This
+remains a single-member linear static qualification, not a multi-member
+stability, geometric nonlinearity, warping, plastic-hinge, or dynamics claim.
 
 `solve.plane_triangle_2d` and `solve.plane_quad_2d` are now qualified for the
 current small plane-stress patch scope. The retained evidence checks the
 triangle direct-stiffness reference, the quad split-triangle weighted contract,
 stress diagnostics, von Mises handling, and strain-energy totals against
-`workers/rust/crates/solver/tests/plane_2d_closed_form.rs`. This remains a
-small-patch qualification, not a mesh-convergence, high-order quadrature,
-distorted-element, plasticity, buckling, or large-deformation claim.
+`workers/rust/crates/solver/tests/plane_2d_closed_form.rs`. The retained
+scaling regressions verify that load changes scale displacement, stress, and
+energy by the expected linear/quadratic factors, that triangle thickness
+changes inversely scale displacement, stress, and energy under fixed nodal
+loads, and that quad modulus changes inversely scale displacement and energy
+without changing load-controlled stress. This remains a small-patch
+qualification, not a mesh-convergence, high-order quadrature, distorted-element,
+plasticity, buckling, or large-deformation claim.
 
 The `beam-frame-classic` qualification candidate is now approved for
 qualification. Its reference note is
@@ -572,7 +596,11 @@ qualification. Its reference note is
 first multi-case regression is
 `workers/rust/crates/solver/tests/beam_frame_classic_regression.rs`. That test
 checks a closed-form cantilever beam, equivalent 2D frame cantilever, and
-prismatic torsion shaft. Its sign convention note is
+prismatic torsion shaft. The retained regression now also checks beam tip-load
+and bending-inertia scaling, 2D frame tip-load and bending-inertia scaling, plus
+torsion torque and polar-moment scaling, so load-controlled moments, torques,
+stresses, and strain energies stay separated from stiffness-controlled
+displacement, rotation, or twist response. Its sign convention note is
 `evidence/operator-qualification/beam-frame-force-sign-convention.md`. The
 `beam-frame-classic` profile is also part of `make verify-operator-validation`,
 so release validation output now executes the regression, beam review, torsion

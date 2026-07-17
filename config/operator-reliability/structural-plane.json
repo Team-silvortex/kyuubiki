@@ -42,7 +42,8 @@
             "evidence/operator-qualification/plane-2d-patch-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+            "plane_triangle_2d_tracks_load_and_thickness_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
@@ -105,7 +106,8 @@
             "evidence/operator-qualification/plane-2d-patch-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs"
+            "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+            "plane_quad_2d_tracks_load_and_modulus_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",

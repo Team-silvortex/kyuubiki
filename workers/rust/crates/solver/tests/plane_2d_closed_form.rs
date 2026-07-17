@@ -82,6 +82,102 @@ fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
     );
 }
 
+#[test]
+fn plane_triangle_2d_tracks_load_and_thickness_scaling() {
+    let baseline = solve_plane_triangle_2d(&triangle_patch()).expect("triangle baseline");
+
+    let load_scale = 1.5;
+    let mut load_request = triangle_patch();
+    for node in &mut load_request.nodes {
+        node.load_x *= load_scale;
+        node.load_y *= load_scale;
+    }
+    let load_scaled =
+        solve_plane_triangle_2d(&load_request).expect("load-scaled triangle patch");
+    assert_close(
+        load_scaled.nodes[2].uy / baseline.nodes[2].uy,
+        load_scale,
+        1.0e-10,
+    );
+    assert_close(
+        load_scaled.max_stress / baseline.max_stress,
+        load_scale,
+        1.0e-10,
+    );
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+        1.0e-10,
+    );
+
+    let thickness_scale = 1.6;
+    let mut thick_request = triangle_patch();
+    for element in &mut thick_request.elements {
+        element.thickness *= thickness_scale;
+    }
+    let thickened =
+        solve_plane_triangle_2d(&thick_request).expect("thickness-scaled triangle patch");
+    assert_close(
+        thickened.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+    assert_close(
+        thickened.max_stress / baseline.max_stress,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+    assert_close(
+        thickened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / thickness_scale,
+        1.0e-10,
+    );
+}
+
+#[test]
+fn plane_quad_2d_tracks_load_and_modulus_scaling() {
+    let baseline = solve_plane_quad_2d(&quad_patch()).expect("quad baseline");
+
+    let load_scale = 1.35;
+    let mut load_request = quad_patch();
+    for node in &mut load_request.nodes {
+        node.load_x *= load_scale;
+        node.load_y *= load_scale;
+    }
+    let load_scaled = solve_plane_quad_2d(&load_request).expect("load-scaled quad patch");
+    assert_close(
+        load_scaled.nodes[2].uy / baseline.nodes[2].uy,
+        load_scale,
+        1.0e-10,
+    );
+    assert_close(
+        load_scaled.max_stress / baseline.max_stress,
+        load_scale,
+        1.0e-10,
+    );
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+        1.0e-10,
+    );
+
+    let modulus_scale = 1.7;
+    let mut stiff_request = quad_patch();
+    stiff_request.elements[0].youngs_modulus *= modulus_scale;
+    let stiffened = solve_plane_quad_2d(&stiff_request).expect("modulus-scaled quad patch");
+    assert_close(
+        stiffened.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / modulus_scale,
+        1.0e-10,
+    );
+    assert_close(stiffened.max_stress, baseline.max_stress, 1.0e-10);
+    assert_close(
+        stiffened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / modulus_scale,
+        1.0e-10,
+    );
+}
+
 fn triangle_patch() -> SolvePlaneTriangle2dRequest {
     SolvePlaneTriangle2dRequest {
         nodes: vec![

@@ -11,7 +11,8 @@
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+          "workers/rust/crates/solver/tests/bar_1d_closed_form.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_axial_bar_1d_closed_form",
         "review": {
@@ -40,7 +41,9 @@
             "evidence/operator-qualification/line-field-closed-form-baseline.json"
           ],
           "convergence_checks": [
-            "evidence/operator-qualification/line-field-tolerance-policy.json"
+            "evidence/operator-qualification/line-field-tolerance-policy.json",
+            "workers/rust/crates/solver/tests/bar_1d_closed_form.rs",
+            "bar_1d_tracks_load_area_and_modulus_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
@@ -51,7 +54,8 @@
           ],
           "tests": [
             "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
-            "workers/rust/crates/solver/tests/bar_1d_review.rs"
+            "workers/rust/crates/solver/tests/bar_1d_review.rs",
+            "workers/rust/crates/solver/tests/bar_1d_closed_form.rs"
           ]
         }
       },
@@ -100,7 +104,8 @@
             "evidence/operator-qualification/beam-frame-force-sign-convention.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "torsion_1d_tracks_torque_and_polar_moment_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
@@ -408,7 +413,8 @@
             "evidence/operator-qualification/beam-frame-force-sign-convention.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "beam_1d_tracks_tip_load_and_inertia_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
@@ -469,7 +475,8 @@
             "evidence/operator-qualification/beam-frame-force-sign-convention.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs"
+            "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+            "frame_2d_tracks_tip_load_and_inertia_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/beam-frame-classic-release-evidence.json",
@@ -530,7 +537,8 @@
             "evidence/operator-qualification/frame-3d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/frame_3d_closed_form.rs"
+            "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
+            "frame_3d_tracks_tip_load_and_bending_inertia_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json",

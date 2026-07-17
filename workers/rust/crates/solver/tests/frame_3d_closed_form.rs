@@ -63,6 +63,71 @@ fn frame_3d_closed_form_matches_tip_loaded_cantilever() {
     assert_close(element.strain_energy, expected_energy);
 }
 
+#[test]
+fn frame_3d_tracks_tip_load_and_bending_inertia_scaling() {
+    let length = 1.8;
+    let load_y: f64 = -850.0;
+    let youngs_modulus = 205.0e9;
+    let iz = 7.5e-6;
+    let section_modulus_z = 1.45e-4;
+    let baseline = solve_frame_3d(&cantilever(
+        length,
+        load_y,
+        youngs_modulus,
+        iz,
+        section_modulus_z,
+    ))
+    .expect("baseline 3D frame cantilever should solve");
+
+    let load_scale = 1.45;
+    let load_scaled = solve_frame_3d(&cantilever(
+        length,
+        load_y * load_scale,
+        youngs_modulus,
+        iz,
+        section_modulus_z,
+    ))
+    .expect("load-scaled 3D frame cantilever should solve");
+    assert_close(load_scaled.nodes[1].uy / baseline.nodes[1].uy, load_scale);
+    assert_close(load_scaled.nodes[1].rz / baseline.nodes[1].rz, load_scale);
+    assert_close(
+        load_scaled.elements[0].moment_z_i / baseline.elements[0].moment_z_i,
+        load_scale,
+    );
+    assert_close(load_scaled.max_stress / baseline.max_stress, load_scale);
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let inertia_scale = 1.6;
+    let inertia_scaled = solve_frame_3d(&cantilever(
+        length,
+        load_y,
+        youngs_modulus,
+        iz * inertia_scale,
+        section_modulus_z,
+    ))
+    .expect("inertia-scaled 3D frame cantilever should solve");
+    assert_close(
+        inertia_scaled.nodes[1].uy / baseline.nodes[1].uy,
+        1.0 / inertia_scale,
+    );
+    assert_close(
+        inertia_scaled.nodes[1].rz / baseline.nodes[1].rz,
+        1.0 / inertia_scale,
+    );
+    assert_close(
+        inertia_scaled.elements[0].moment_z_i,
+        baseline.elements[0].moment_z_i,
+    );
+    assert_close(inertia_scaled.max_stress, baseline.max_stress);
+    assert_close(
+        inertia_scaled.total_strain_energy / baseline.total_strain_energy,
+        1.0 / inertia_scale,
+    );
+}
+
 fn cantilever(
     length: f64,
     load_y: f64,

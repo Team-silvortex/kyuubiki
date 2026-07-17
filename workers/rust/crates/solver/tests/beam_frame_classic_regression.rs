@@ -88,6 +88,256 @@ fn beam_frame_classic_regression_matches_closed_form_cantilever_and_torsion_case
     assert_close(torsion.max_stress, expected_shear_stress);
 }
 
+#[test]
+fn beam_1d_tracks_tip_load_and_inertia_scaling() {
+    let length: f64 = 2.25;
+    let load: f64 = 1_400.0;
+    let youngs_modulus: f64 = 205.0e9;
+    let moment_of_inertia: f64 = 9.2e-6;
+    let section_modulus: f64 = 1.8e-4;
+    let baseline = solve_beam_1d(&beam_request(
+        length,
+        load,
+        youngs_modulus,
+        moment_of_inertia,
+        section_modulus,
+    ))
+    .expect("baseline cantilever beam should solve");
+
+    let load_scale = 1.75;
+    let loaded = solve_beam_1d(&beam_request(
+        length,
+        load * load_scale,
+        youngs_modulus,
+        moment_of_inertia,
+        section_modulus,
+    ))
+    .expect("load-scaled cantilever beam should solve");
+    assert_close(loaded.nodes[1].uy / baseline.nodes[1].uy, load_scale);
+    assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
+    assert_close(loaded.max_moment / baseline.max_moment, load_scale);
+    assert_close(loaded.max_stress / baseline.max_stress, load_scale);
+    assert_close(
+        loaded.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let inertia_scale = 2.4;
+    let stiffer = solve_beam_1d(&beam_request(
+        length,
+        load,
+        youngs_modulus,
+        moment_of_inertia * inertia_scale,
+        section_modulus,
+    ))
+    .expect("inertia-scaled cantilever beam should solve");
+    assert_close(
+        stiffer.nodes[1].uy / baseline.nodes[1].uy,
+        1.0 / inertia_scale,
+    );
+    assert_close(
+        stiffer.nodes[1].rz / baseline.nodes[1].rz,
+        1.0 / inertia_scale,
+    );
+    assert_close(stiffer.max_moment, baseline.max_moment);
+    assert_close(stiffer.max_stress, baseline.max_stress);
+    assert_close(
+        stiffer.total_strain_energy / baseline.total_strain_energy,
+        1.0 / inertia_scale,
+    );
+}
+
+#[test]
+fn frame_2d_tracks_tip_load_and_inertia_scaling() {
+    let length: f64 = 2.15;
+    let load: f64 = 1_250.0;
+    let area: f64 = 0.021;
+    let youngs_modulus: f64 = 208.0e9;
+    let moment_of_inertia: f64 = 8.7e-6;
+    let section_modulus: f64 = 1.72e-4;
+    let baseline = solve_frame_2d(&frame_request(
+        length,
+        load,
+        area,
+        youngs_modulus,
+        moment_of_inertia,
+        section_modulus,
+    ))
+    .expect("baseline 2D frame cantilever should solve");
+
+    let load_scale = 1.6;
+    let loaded = solve_frame_2d(&frame_request(
+        length,
+        load * load_scale,
+        area,
+        youngs_modulus,
+        moment_of_inertia,
+        section_modulus,
+    ))
+    .expect("load-scaled 2D frame cantilever should solve");
+    assert_close(loaded.nodes[1].ux, 0.0);
+    assert_close(loaded.nodes[1].uy / baseline.nodes[1].uy, load_scale);
+    assert_close(loaded.nodes[1].rz / baseline.nodes[1].rz, load_scale);
+    assert_close(loaded.max_moment / baseline.max_moment, load_scale);
+    assert_close(loaded.max_stress / baseline.max_stress, load_scale);
+    assert_close(
+        loaded.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let inertia_scale = 2.2;
+    let stiffer = solve_frame_2d(&frame_request(
+        length,
+        load,
+        area,
+        youngs_modulus,
+        moment_of_inertia * inertia_scale,
+        section_modulus,
+    ))
+    .expect("inertia-scaled 2D frame cantilever should solve");
+    assert_close(stiffer.nodes[1].ux, 0.0);
+    assert_close(
+        stiffer.nodes[1].uy / baseline.nodes[1].uy,
+        1.0 / inertia_scale,
+    );
+    assert_close(
+        stiffer.nodes[1].rz / baseline.nodes[1].rz,
+        1.0 / inertia_scale,
+    );
+    assert_close(stiffer.max_moment, baseline.max_moment);
+    assert_close(stiffer.max_stress, baseline.max_stress);
+    assert_close(
+        stiffer.total_strain_energy / baseline.total_strain_energy,
+        1.0 / inertia_scale,
+    );
+}
+
+#[test]
+fn torsion_1d_tracks_torque_and_polar_moment_scaling() {
+    let length: f64 = 1.75;
+    let torque: f64 = 3_100.0;
+    let shear_modulus: f64 = 79.0e9;
+    let polar_moment: f64 = 2.3e-6;
+    let section_modulus: f64 = 1.45e-4;
+    let baseline = solve_torsion_1d(&torsion_request(
+        length,
+        torque,
+        shear_modulus,
+        polar_moment,
+        section_modulus,
+    ))
+    .expect("baseline torsion shaft should solve");
+
+    let torque_scale = 1.8;
+    let twisted = solve_torsion_1d(&torsion_request(
+        length,
+        torque * torque_scale,
+        shear_modulus,
+        polar_moment,
+        section_modulus,
+    ))
+    .expect("torque-scaled torsion shaft should solve");
+    assert_close(twisted.nodes[1].rz / baseline.nodes[1].rz, torque_scale);
+    assert_close(twisted.max_torque / baseline.max_torque, torque_scale);
+    assert_close(twisted.max_stress / baseline.max_stress, torque_scale);
+    assert_close(
+        twisted.total_strain_energy / baseline.total_strain_energy,
+        torque_scale * torque_scale,
+    );
+
+    let polar_scale = 2.5;
+    let stiffened = solve_torsion_1d(&torsion_request(
+        length,
+        torque,
+        shear_modulus,
+        polar_moment * polar_scale,
+        section_modulus,
+    ))
+    .expect("polar-moment-scaled torsion shaft should solve");
+    assert_close(
+        stiffened.nodes[1].rz / baseline.nodes[1].rz,
+        1.0 / polar_scale,
+    );
+    assert_close(stiffened.max_torque, baseline.max_torque);
+    assert_close(stiffened.max_stress, baseline.max_stress);
+    assert_close(
+        stiffened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / polar_scale,
+    );
+}
+
+fn beam_request(
+    length: f64,
+    load: f64,
+    youngs_modulus: f64,
+    moment_of_inertia: f64,
+    section_modulus: f64,
+) -> SolveBeam1dRequest {
+    SolveBeam1dRequest {
+        nodes: vec![
+            beam_node("fixed", 0.0, true, true, 0.0, 0.0),
+            beam_node("tip", length, false, false, -load, 0.0),
+        ],
+        elements: vec![Beam1dElementInput {
+            id: "cantilever".to_string(),
+            node_i: 0,
+            node_j: 1,
+            youngs_modulus,
+            moment_of_inertia,
+            section_modulus,
+            distributed_load_y: 0.0,
+        }],
+    }
+}
+
+fn frame_request(
+    length: f64,
+    load: f64,
+    area: f64,
+    youngs_modulus: f64,
+    moment_of_inertia: f64,
+    section_modulus: f64,
+) -> SolveFrame2dRequest {
+    SolveFrame2dRequest {
+        nodes: vec![
+            frame_node("fixed", 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
+            frame_node("tip", length, 0.0, false, false, false, 0.0, -load, 0.0),
+        ],
+        elements: vec![Frame2dElementInput {
+            id: "cantilever-frame".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area,
+            youngs_modulus,
+            moment_of_inertia,
+            section_modulus,
+        }],
+    }
+}
+
+fn torsion_request(
+    length: f64,
+    torque: f64,
+    shear_modulus: f64,
+    polar_moment: f64,
+    section_modulus: f64,
+) -> SolveTorsion1dRequest {
+    SolveTorsion1dRequest {
+        nodes: vec![
+            torsion_node("fixed", 0.0, true, 0.0),
+            torsion_node("tip", length, false, torque),
+        ],
+        elements: vec![Torsion1dElementInput {
+            id: "shaft".to_string(),
+            node_i: 0,
+            node_j: 1,
+            shear_modulus,
+            polar_moment,
+            section_modulus,
+        }],
+    }
+}
+
 fn beam_node(
     id: &str,
     x: f64,

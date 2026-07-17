@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
-    Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
-    SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame2dModeResult,
+    ModalFrame3dElementInput, ModalFrame3dModeResult, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest,
 };
 use kyuubiki_solver::{solve_modal_frame_2d, solve_modal_frame_3d};
 
@@ -55,7 +56,105 @@ fn modal_frame_3d_sanity_retains_ordering_normalization_and_length_scaling() {
     }
 }
 
+#[test]
+fn modal_frame_2d_tracks_stiffness_and_density_frequency_scaling() {
+    let baseline = solve_modal_frame_2d(&modal_2d_scaled_request(2.0, 1.0, 1.0))
+        .expect("baseline 2d modal frame");
+
+    for case in [
+        ModalScaleCase {
+            stiffness_factor: 4.0,
+            density_factor: 1.0,
+        },
+        ModalScaleCase {
+            stiffness_factor: 1.0,
+            density_factor: 2.25,
+        },
+        ModalScaleCase {
+            stiffness_factor: 3.24,
+            density_factor: 1.44,
+        },
+    ] {
+        let result = solve_modal_frame_2d(&modal_2d_scaled_request(
+            2.0,
+            case.stiffness_factor,
+            case.density_factor,
+        ))
+        .expect("scaled 2d modal frame");
+        let frequency_scale = (case.stiffness_factor / case.density_factor).sqrt();
+
+        assert_eq!(result.free_dofs, baseline.free_dofs);
+        assert_close(result.total_mass, baseline.total_mass * case.density_factor);
+        assert_close(
+            result.min_frequency_hz,
+            baseline.min_frequency_hz * frequency_scale,
+        );
+        assert_close(
+            result.max_frequency_hz,
+            baseline.max_frequency_hz * frequency_scale,
+        );
+        assert_2d_modes_scale(&baseline.modes, &result.modes, frequency_scale);
+        assert_strictly_increasing(result.modes.iter().map(|mode| mode.natural_frequency_hz));
+    }
+}
+
+#[test]
+fn modal_frame_3d_tracks_stiffness_and_density_frequency_scaling() {
+    let baseline = solve_modal_frame_3d(&modal_3d_scaled_request(2.0, 1.0, 1.0))
+        .expect("baseline 3d modal frame");
+
+    for case in [
+        ModalScaleCase {
+            stiffness_factor: 4.0,
+            density_factor: 1.0,
+        },
+        ModalScaleCase {
+            stiffness_factor: 1.0,
+            density_factor: 2.25,
+        },
+        ModalScaleCase {
+            stiffness_factor: 3.24,
+            density_factor: 1.44,
+        },
+    ] {
+        let result = solve_modal_frame_3d(&modal_3d_scaled_request(
+            2.0,
+            case.stiffness_factor,
+            case.density_factor,
+        ))
+        .expect("scaled 3d modal frame");
+        let frequency_scale = (case.stiffness_factor / case.density_factor).sqrt();
+
+        assert_eq!(result.free_dofs, baseline.free_dofs);
+        assert_close(result.total_mass, baseline.total_mass * case.density_factor);
+        assert_close(
+            result.min_frequency_hz,
+            baseline.min_frequency_hz * frequency_scale,
+        );
+        assert_close(
+            result.max_frequency_hz,
+            baseline.max_frequency_hz * frequency_scale,
+        );
+        assert_3d_modes_scale(&baseline.modes, &result.modes, frequency_scale);
+        assert_non_decreasing(result.modes.iter().map(|mode| mode.natural_frequency_hz));
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ModalScaleCase {
+    stiffness_factor: f64,
+    density_factor: f64,
+}
+
 fn modal_2d_request(length: f64) -> SolveModalFrame2dRequest {
+    modal_2d_scaled_request(length, 1.0, 1.0)
+}
+
+fn modal_2d_scaled_request(
+    length: f64,
+    stiffness_factor: f64,
+    density_factor: f64,
+) -> SolveModalFrame2dRequest {
     SolveModalFrame2dRequest {
         nodes: vec![node_2d("fixed", 0.0, true), node_2d("tip", length, false)],
         elements: vec![ModalFrame2dElementInput {
@@ -63,16 +162,24 @@ fn modal_2d_request(length: f64) -> SolveModalFrame2dRequest {
             node_i: 0,
             node_j: 1,
             area: AREA,
-            youngs_modulus: YOUNGS_MODULUS,
+            youngs_modulus: YOUNGS_MODULUS * stiffness_factor,
             moment_of_inertia: MOMENT_OF_INERTIA,
             section_modulus: SECTION_MODULUS,
-            density: DENSITY,
+            density: DENSITY * density_factor,
         }],
         mode_count: Some(3),
     }
 }
 
 fn modal_3d_request(length: f64) -> SolveModalFrame3dRequest {
+    modal_3d_scaled_request(length, 1.0, 1.0)
+}
+
+fn modal_3d_scaled_request(
+    length: f64,
+    stiffness_factor: f64,
+    density_factor: f64,
+) -> SolveModalFrame3dRequest {
     SolveModalFrame3dRequest {
         nodes: vec![node_3d("fixed", 0.0, true), node_3d("tip", length, false)],
         elements: vec![ModalFrame3dElementInput {
@@ -80,12 +187,12 @@ fn modal_3d_request(length: f64) -> SolveModalFrame3dRequest {
             node_i: 0,
             node_j: 1,
             area: AREA,
-            youngs_modulus: YOUNGS_MODULUS,
-            shear_modulus: SHEAR_MODULUS,
+            youngs_modulus: YOUNGS_MODULUS * stiffness_factor,
+            shear_modulus: SHEAR_MODULUS * stiffness_factor,
             torsion_constant: TORSION_CONSTANT,
             moment_of_inertia_y: MOMENT_OF_INERTIA,
             moment_of_inertia_z: MOMENT_OF_INERTIA,
-            density: DENSITY,
+            density: DENSITY * density_factor,
         }],
         mode_count: Some(3),
     }
@@ -135,6 +242,70 @@ fn assert_modal_shape(shape: &[f64], free_dofs: &[usize], expected_len: usize) {
         }
     }
     assert!(shape.iter().any(|value| value.abs() > 1.0e-6));
+}
+
+fn assert_2d_modes_scale(
+    baseline_modes: &[ModalFrame2dModeResult],
+    modes: &[ModalFrame2dModeResult],
+    frequency_scale: f64,
+) {
+    assert_eq!(modes.len(), baseline_modes.len());
+    for (baseline, mode) in baseline_modes.iter().zip(modes.iter()) {
+        assert_modal_frequency_scale(
+            baseline.eigenvalue_rad_s_squared,
+            baseline.natural_frequency_rad_s,
+            baseline.natural_frequency_hz,
+            baseline.period_s,
+            mode.eigenvalue_rad_s_squared,
+            mode.natural_frequency_rad_s,
+            mode.natural_frequency_hz,
+            mode.period_s,
+            frequency_scale,
+        );
+        assert_modal_shape(&mode.shape, &[3, 4, 5], 6);
+        assert_close(mode.participation_norm, 1.0);
+    }
+}
+
+fn assert_3d_modes_scale(
+    baseline_modes: &[ModalFrame3dModeResult],
+    modes: &[ModalFrame3dModeResult],
+    frequency_scale: f64,
+) {
+    assert_eq!(modes.len(), baseline_modes.len());
+    for (baseline, mode) in baseline_modes.iter().zip(modes.iter()) {
+        assert_modal_frequency_scale(
+            baseline.eigenvalue_rad_s_squared,
+            baseline.natural_frequency_rad_s,
+            baseline.natural_frequency_hz,
+            baseline.period_s,
+            mode.eigenvalue_rad_s_squared,
+            mode.natural_frequency_rad_s,
+            mode.natural_frequency_hz,
+            mode.period_s,
+            frequency_scale,
+        );
+        assert_modal_shape(&mode.shape, &[6, 7, 8, 9, 10, 11], 12);
+        assert_close(mode.participation_norm, 1.0);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn assert_modal_frequency_scale(
+    baseline_eigenvalue: f64,
+    baseline_rad_s: f64,
+    baseline_hz: f64,
+    baseline_period_s: f64,
+    eigenvalue: f64,
+    rad_s: f64,
+    hz: f64,
+    period_s: f64,
+    frequency_scale: f64,
+) {
+    assert_close(eigenvalue, baseline_eigenvalue * frequency_scale.powi(2));
+    assert_close(rad_s, baseline_rad_s * frequency_scale);
+    assert_close(hz, baseline_hz * frequency_scale);
+    assert_close(period_s, baseline_period_s / frequency_scale);
 }
 
 fn assert_strictly_increasing(values: impl Iterator<Item = f64>) {
