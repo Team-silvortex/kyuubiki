@@ -1,0 +1,25 @@
+{
+  "schema_version": "kyuubiki.localization-surface-posture/v1",
+  "line": "moxi 2.x",
+  "updatedAt": "2026-07-17T00:00:00.000Z",
+  "surfaces": {
+    "workbench": {
+      "posture": "shipped-pack-surface",
+      "packCatalogSurface": "workbench",
+      "targetLocaleCount": 30,
+      "notes": "Workbench ships first-class support packs for the mainstream locale set."
+    },
+    "hub": {
+      "posture": "shipped-pack-surface",
+      "packCatalogSurface": "hub",
+      "targetLocaleCount": 30,
+      "notes": "Hub ships separate override envelopes for the same mainstream locale set."
+    },
+    "installer": {
+      "posture": "adapter-surface",
+      "packCatalogSurface": "hub",
+      "targetLocaleCount": 30,
+      "notes": "Installer derives shell copy from Hub packs and keeps Installer-owned fields locally until a standalone Installer catalog is needed."
+    }
+  }
+}

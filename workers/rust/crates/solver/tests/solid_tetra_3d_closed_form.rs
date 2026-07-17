@@ -69,6 +69,55 @@ fn solid_tetra_3d_closed_form_matches_single_free_node_solution() {
     assert_close(result.total_strain_energy, expected_total_energy);
 }
 
+#[test]
+fn solid_tetra_3d_tracks_load_and_modulus_scaling() {
+    let youngs_modulus = 68.0e9;
+    let poisson_ratio = 0.31;
+    let load_z = -850.0;
+    let baseline = solve_solid_tetra_3d(&restrained_tip_load_request(
+        youngs_modulus,
+        poisson_ratio,
+        load_z,
+    ))
+    .expect("baseline solid tetra fixture should solve");
+
+    let load_scale = 1.5;
+    let load_scaled = solve_solid_tetra_3d(&restrained_tip_load_request(
+        youngs_modulus,
+        poisson_ratio,
+        load_z * load_scale,
+    ))
+    .expect("load-scaled solid tetra fixture should solve");
+    assert_close(load_scaled.nodes[3].uz / baseline.nodes[3].uz, load_scale);
+    assert_close(
+        load_scaled.elements[0].stress_z / baseline.elements[0].stress_z,
+        load_scale,
+    );
+    assert_close(
+        load_scaled.max_von_mises_stress / baseline.max_von_mises_stress,
+        load_scale,
+    );
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let modulus_scale = 1.7;
+    let stiffer = solve_solid_tetra_3d(&restrained_tip_load_request(
+        youngs_modulus * modulus_scale,
+        poisson_ratio,
+        load_z,
+    ))
+    .expect("modulus-scaled solid tetra fixture should solve");
+    assert_close(stiffer.nodes[3].uz / baseline.nodes[3].uz, 1.0 / modulus_scale);
+    assert_close(stiffer.elements[0].stress_z, baseline.elements[0].stress_z);
+    assert_close(stiffer.max_von_mises_stress, baseline.max_von_mises_stress);
+    assert_close(
+        stiffer.total_strain_energy / baseline.total_strain_energy,
+        1.0 / modulus_scale,
+    );
+}
+
 fn restrained_tip_load_request(
     youngs_modulus: f64,
     poisson_ratio: f64,

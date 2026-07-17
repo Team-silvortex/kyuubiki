@@ -54,10 +54,12 @@
         "qualification": {
           "validation_sources": [
             "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
-            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+            "linear-field-stokes-material-scaling-regression"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+            "stokes_flow_linear_field_scales_viscosity_and_density_diagnostics"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",
@@ -133,10 +135,12 @@
         "qualification": {
           "validation_sources": [
             "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
-            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json"
+            "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
+            "linear-field-stokes-material-scaling-regression"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+            "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+            "stokes_flow_linear_field_scales_viscosity_and_density_diagnostics"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json",

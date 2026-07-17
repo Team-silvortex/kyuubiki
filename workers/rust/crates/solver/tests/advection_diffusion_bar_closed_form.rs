@@ -67,6 +67,76 @@ fn advection_diffusion_bar_1d_reports_zero_advective_flux_for_zero_velocity() {
     assert_close(element.total_flux, element.diffusive_flux);
 }
 
+#[test]
+fn advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling() {
+    let baseline_case = TransportCase {
+        length: 1.8,
+        left_concentration: 0.9,
+        right_concentration: 0.15,
+        diffusivity: 0.06,
+        velocity: 0.08,
+    };
+    let baseline = solve_advection_diffusion_bar_1d(&baseline_case.request())
+        .expect("baseline transport scaling case should solve");
+    let baseline_element = &baseline.elements[0];
+
+    let diffusivity_scale = 1.5;
+    let diffusive_case = TransportCase {
+        diffusivity: baseline_case.diffusivity * diffusivity_scale,
+        ..baseline_case
+    };
+    let diffusive = solve_advection_diffusion_bar_1d(&diffusive_case.request())
+        .expect("diffusivity-scaled transport case should solve");
+    let diffusive_element = &diffusive.elements[0];
+
+    assert_close(diffusive.nodes[0].concentration, baseline.nodes[0].concentration);
+    assert_close(diffusive.nodes[1].concentration, baseline.nodes[1].concentration);
+    assert_close(
+        diffusive_element.concentration_gradient,
+        baseline_element.concentration_gradient,
+    );
+    assert_close(
+        diffusive_element.diffusive_flux / baseline_element.diffusive_flux,
+        diffusivity_scale,
+    );
+    assert_close(
+        diffusive_element.advective_flux,
+        baseline_element.advective_flux,
+    );
+    assert_close(
+        diffusive_element.peclet_number / baseline_element.peclet_number,
+        1.0 / diffusivity_scale,
+    );
+
+    let velocity_scale = 1.75;
+    let advective_case = TransportCase {
+        velocity: baseline_case.velocity * velocity_scale,
+        ..baseline_case
+    };
+    let advective = solve_advection_diffusion_bar_1d(&advective_case.request())
+        .expect("velocity-scaled transport case should solve");
+    let advective_element = &advective.elements[0];
+
+    assert_close(advective.nodes[0].concentration, baseline.nodes[0].concentration);
+    assert_close(advective.nodes[1].concentration, baseline.nodes[1].concentration);
+    assert_close(
+        advective_element.concentration_gradient,
+        baseline_element.concentration_gradient,
+    );
+    assert_close(
+        advective_element.diffusive_flux,
+        baseline_element.diffusive_flux,
+    );
+    assert_close(
+        advective_element.advective_flux / baseline_element.advective_flux,
+        velocity_scale,
+    );
+    assert_close(
+        advective_element.peclet_number / baseline_element.peclet_number,
+        velocity_scale,
+    );
+}
+
 #[derive(Clone, Copy)]
 struct TransportCase {
     length: f64,

@@ -1,8 +1,7 @@
-# Workbench Language Packs
+# Language Packs
 
-Workbench language packs let `moxi 2.x` grow beyond the built-in `en`,
-`zh`, `ja`, and `es` copy sets without hard-wiring every future language into the
-repo first.
+Language packs let `moxi 2.x` grow beyond the built-in `en`, `zh`, `ja`,
+and `es` copy sets without hard-wiring every future language into the repo first.
 
 This is intentionally a local-first workflow today:
 
@@ -18,16 +17,29 @@ delivery.
 
 The repo now keeps distributable support packs under
 [`language-packs`](../language-packs/). As of `moxi 2.0.x`, the shipped
-catalog covers 30 mainstream translated core locales for both Workbench and Hub:
+catalog covers 30 mainstream translated core locales for both Workbench and Hub,
+for 60 shipped pack envelopes total:
 
 - target contract:
   [`config/localization/mainstream-language-pack-locales.json`](../config/localization/mainstream-language-pack-locales.json)
+- surface posture:
+  [`config/localization/surface-posture.json`](../config/localization/surface-posture.json)
 - catalog: [`language-packs/catalog.json`](../language-packs/catalog.json)
 - Workbench packs: `ar`, `bn`, `cs`, `da`, `de`, `el`, `fa`, `fi`, `fr`,
   `he`, `hi`, `id`, `it`, `ko`, `ms`, `nl`, `no`, `pl`, `pt-BR`, `ro`, `ru`,
   `sv`, `sw`, `ta`, `th`, `tr`, `uk`, `ur`, `vi`, `zh-TW`
 - Hub packs: the same 30 locale tags, packaged as separate Hub override
   envelopes
+
+Installer does not yet ship a separate 30-pack Installer catalog. Instead, the
+Installer shell reuses the Hub support packs through its own adapter and keeps
+Installer-only copy, such as the restricted Pwdt diagnostics status, in a local
+30-locale mapping. That makes Installer language switching usable now without
+pretending the Installer has a fully independent localization surface.
+The machine-readable surface posture lives in
+`config/localization/surface-posture.json` so future store, installer, or
+release tooling can tell the difference between a shipped pack surface and an
+adapter surface.
 
 These files are release-line assets rather than built-in copy branches. Import
 them from the existing local language-pack panels today; future download-source
@@ -76,6 +88,23 @@ Hub currently accepts two local JSON entry shapes from that panel:
 Single-pack imports are merged into the current Hub override registry and kept
 visible as pack metadata. Full-registry imports replace the current registry
 snapshot in one go.
+
+## Installer alignment
+
+Installer currently uses a bounded adapter rather than a third standalone pack
+family:
+
+- built-in Installer copy still covers `en`, `zh`, `ja`, and `es`
+- the language selector exposes the same 30 mainstream locale targets used by
+  Workbench and Hub
+- non-built-in Installer shell copy is derived from the matching Hub pack
+- Installer-specific fields stay in the Installer adapter, not in Hub packs
+- Pwdt is documented as Workbench-first, while Installer only exposes restricted
+  diagnostics copy
+
+This keeps the install/update surface localized enough for `moxi 2.0.x` while
+leaving room to add true `targetSurface: "installer"` packs later if Installer
+copy grows beyond shell-level setup and diagnostics.
 
 ## Current contract
 
@@ -134,6 +163,7 @@ to replace the keys it cares about.
 - packs are stored locally in browser storage
 - imported packs can override the active language immediately
 - built-in copy remains the fallback for keys not supplied by the pack
+- shipped catalog coverage is checked as 30 Workbench packs plus 30 Hub packs
 - `targetSurface` prevents Workbench packs and Hub packs from being imported into
   the wrong UI surface once the pack declares a surface
 - installed packs can be exported again from the same UI surface
@@ -148,6 +178,8 @@ to replace the keys it cares about.
 
 - no remote catalog download flow yet
 - no signature or provenance chain yet
+- no standalone Installer language-pack catalog yet; Installer reuses Hub packs
+  through an adapter for now
 - no full schema validator dependency in the browser yet; the importer currently
   does lightweight structural and unsafe-text checks, then relies on the
   override merge path

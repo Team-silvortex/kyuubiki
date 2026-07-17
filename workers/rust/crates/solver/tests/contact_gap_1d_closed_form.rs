@@ -48,6 +48,43 @@ fn contact_gap_1d_matches_active_penalty_stop_closed_form() {
     assert!(result.contacts[0].active);
 }
 
+#[test]
+fn contact_gap_1d_preserves_active_force_split_under_load_gap_scaling() {
+    let spring_stiffness = 1200.0;
+    let contact_stiffness = 9000.0;
+    let gap = 0.04;
+    let load = 88.0;
+    let baseline = solve_contact_gap_1d(&request(load, spring_stiffness, gap, contact_stiffness))
+        .expect("baseline active contact fixture should solve");
+
+    let scale = 1.75;
+    let scaled = solve_contact_gap_1d(&request(
+        load * scale,
+        spring_stiffness,
+        gap * scale,
+        contact_stiffness,
+    ))
+    .expect("scaled active contact fixture should solve");
+
+    assert!(baseline.converged);
+    assert!(scaled.converged);
+    assert_eq!(baseline.active_contact_count, 1);
+    assert_eq!(scaled.active_contact_count, 1);
+    assert!(baseline.contacts[0].active);
+    assert!(scaled.contacts[0].active);
+    assert_close(scaled.nodes[1].ux / baseline.nodes[1].ux, scale);
+    assert_close(
+        scaled.contacts[0].penetration / baseline.contacts[0].penetration,
+        scale,
+    );
+    assert_close(scaled.elements[0].force / baseline.elements[0].force, scale);
+    assert_close(scaled.contacts[0].force / baseline.contacts[0].force, scale);
+    assert_close(
+        scaled.elements[0].force + scaled.contacts[0].force,
+        load * scale,
+    );
+}
+
 fn request(
     load: f64,
     spring_stiffness: f64,

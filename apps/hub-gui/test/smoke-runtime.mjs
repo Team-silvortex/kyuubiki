@@ -45,6 +45,8 @@ test("hub shell registers section switching behavior", () => {
   const projectActions = read("ui/hub-project-actions.js");
   const desktopActions = read("ui/hub-desktop-actions.js");
   const startupPhases = read("ui/hub-startup-phases.js");
+  const languagePackDocs = read("ui/docs/language-packs.html");
+  const localizationPosture = read("../../config/localization/surface-posture.json");
   const appRuntimeSource = [
     js,
     startupPhases,
@@ -87,6 +89,13 @@ test("hub shell registers section switching behavior", () => {
   assertMatches(appRuntimeSource, HUB_APP_RUNTIME_PATTERNS);
   assert.match(read("ui/hub-localization-panel.js"), /"pt-BR": "Português \(Brasil\)"/);
   assert.match(read("ui/hub-localization-panel.js"), /"zh-TW": "繁體中文 · Traditional Chinese"/);
+  assert.match(languagePackDocs, /30 Workbench packs plus 30 Hub packs/);
+  assert.match(languagePackDocs, /surface-posture\.json/);
+  assert.match(languagePackDocs, /Installer reuses Hub packs through an adapter/);
+  assert.match(languagePackDocs, /No standalone Installer language-pack catalog yet/);
+  assert.match(localizationPosture, /"workbench"[\s\S]*"posture": "shipped-pack-surface"/);
+  assert.match(localizationPosture, /"hub"[\s\S]*"posture": "shipped-pack-surface"/);
+  assert.match(localizationPosture, /"installer"[\s\S]*"posture": "adapter-surface"/);
   assert.match(appEvents, /function languageChangeSummary/);
   assert.doesNotMatch(appEvents, /Language changed to/);
   assertMatches(bridge, HUB_MODULE_PATTERNS.bridge);

@@ -41,6 +41,58 @@ fn acoustic_bar_1d_reports_zero_loss_for_undamped_closed_form_case() {
     assert_close(result.total_damping_loss, 0.0);
 }
 
+#[test]
+fn acoustic_bar_1d_tracks_material_wave_speed_scaling() {
+    let baseline_request = request(180.0);
+    let baseline_expected = expected_from_request(&baseline_request);
+    let baseline =
+        solve_acoustic_bar_1d(&baseline_request).expect("baseline acoustic material case");
+
+    let bulk_scale: f64 = 1.21;
+    let mut stiffer_request = baseline_request.clone();
+    stiffer_request.elements[0].bulk_modulus *= bulk_scale;
+    let stiffer_expected = expected_from_request(&stiffer_request);
+    let stiffer =
+        solve_acoustic_bar_1d(&stiffer_request).expect("stiffer acoustic material case");
+
+    assert_close(
+        stiffer.elements[0].speed_of_sound / baseline.elements[0].speed_of_sound,
+        bulk_scale.sqrt(),
+    );
+    assert_close(
+        stiffer.elements[0].wave_number / baseline.elements[0].wave_number,
+        1.0 / bulk_scale.sqrt(),
+    );
+    assert_close(stiffer.nodes[1].pressure, stiffer_expected.source_pressure);
+    assert_close(
+        stiffer.elements[0].particle_velocity,
+        stiffer_expected.particle_velocity,
+    );
+    assert_close(stiffer.total_damping_loss, stiffer_expected.damping_loss);
+
+    let density_scale: f64 = 1.44;
+    let mut denser_request = baseline_request.clone();
+    denser_request.elements[0].density *= density_scale;
+    let denser_expected = expected_from_request(&denser_request);
+    let denser = solve_acoustic_bar_1d(&denser_request).expect("denser acoustic material case");
+
+    assert_close(
+        denser.elements[0].speed_of_sound / baseline.elements[0].speed_of_sound,
+        1.0 / density_scale.sqrt(),
+    );
+    assert_close(
+        denser.elements[0].wave_number / baseline.elements[0].wave_number,
+        density_scale.sqrt(),
+    );
+    assert_close(denser.nodes[1].pressure, denser_expected.source_pressure);
+    assert_close(
+        denser.elements[0].particle_velocity,
+        denser_expected.particle_velocity,
+    );
+    assert_close(denser.total_damping_loss, denser_expected.damping_loss);
+    assert_close(baseline.nodes[1].pressure, baseline_expected.source_pressure);
+}
+
 fn request(frequency_hz: f64) -> SolveAcousticBar1dRequest {
     SolveAcousticBar1dRequest {
         frequency_hz,
@@ -78,11 +130,15 @@ fn node(
 
 fn expected_closed_form(frequency_hz: f64) -> ExpectedAcousticResponse {
     let request = request(frequency_hz);
+    expected_from_request(&request)
+}
+
+fn expected_from_request(request: &SolveAcousticBar1dRequest) -> ExpectedAcousticResponse {
     let element = &request.elements[0];
     let fixed_pressure = request.nodes[0].pressure;
     let source = request.nodes[1].volume_velocity_source;
     let length = request.nodes[element.node_j].x - request.nodes[element.node_i].x;
-    let omega = 2.0 * std::f64::consts::PI * frequency_hz;
+    let omega = 2.0 * std::f64::consts::PI * request.frequency_hz;
     let stiffness = element.area / (element.density * length);
     let mass = element.area * length / (6.0 * element.bulk_modulus);
     let dynamic = omega * omega * mass * (1.0 + element.damping_ratio);

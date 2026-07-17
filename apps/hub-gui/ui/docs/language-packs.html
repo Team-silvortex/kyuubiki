@@ -32,9 +32,12 @@
           <h2>Current product posture</h2>
           <ul class="docs-list">
             <li><strong>Built-in languages</strong>: English, Chinese, Japanese, and Spanish remain first-class in the shipped UI.</li>
+            <li><strong>Shipped packs</strong>: moxi 2.0.x currently ships 30 Workbench packs plus 30 Hub packs.</li>
             <li><strong>Growth path</strong>: future languages should prefer language packs over hard-coded repo-wide copy forks.</li>
             <li><strong>Current delivery</strong>: packs are local-first today, imported as JSON through the Workbench system surface.</li>
+            <li><strong>Surface posture</strong>: <code>config/localization/surface-posture.json</code> records Workbench and Hub as shipped-pack surfaces, while Installer is an adapter surface.</li>
             <li><strong>Hub alignment</strong>: Hub now resolves copy through a local override registry so future pack delivery has the same deep-merge seam.</li>
+            <li><strong>Installer alignment</strong>: Installer reuses Hub packs through an adapter today, with local Installer-only copy for restricted diagnostics such as Pwdt status.</li>
             <li><strong>Surface guard</strong>: new packs can declare <code>targetSurface</code> as <code>workbench</code> or <code>hub</code> to prevent cross-surface imports.</li>
             <li><strong>Import safety</strong>: shipped packs, Workbench imports, and Hub override imports reject UI text that looks like HTML, JavaScript URLs, inline handlers, browser-storage access, or script evaluation.</li>
             <li><strong>Hub entry</strong>: the current management card lives at <strong>Home -> Guides -> Localization overrides</strong>.</li>
@@ -75,10 +78,26 @@
         </article>
 
         <article class="docs-card">
+          <h2>Installer posture</h2>
+          <p class="docs-copy">
+            Installer is not a third independent 30-pack surface yet. It uses
+            the Hub pack envelope as the translated shell source, then applies
+            Installer-owned copy for setup, lifecycle, and restricted Pwdt
+            diagnostics.
+          </p>
+          <ul class="docs-list">
+            <li>Installer built-ins remain <code>en</code>, <code>zh</code>, <code>ja</code>, and <code>es</code>.</li>
+            <li>The language selector still exposes the 30 mainstream locale targets.</li>
+            <li>Future standalone Installer packs should use their own <code>targetSurface</code> once the surface grows beyond shell-level setup copy.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
           <h2>What is intentionally not finished yet</h2>
           <ul class="docs-list">
             <li>No remote language-pack catalog download flow yet.</li>
             <li>No signature or provenance chain yet.</li>
+            <li>No standalone Installer language-pack catalog yet; Installer reuses Hub packs through an adapter for now.</li>
             <li>No heavyweight browser-side schema validator dependency yet; local import currently uses lightweight structural and unsafe-text checks.</li>
             <li>No multi-pack conflict manager or priority stack yet.</li>
           </ul>

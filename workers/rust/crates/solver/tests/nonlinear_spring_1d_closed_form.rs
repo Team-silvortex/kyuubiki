@@ -43,6 +43,46 @@ fn nonlinear_spring_1d_closed_form_matches_cardano_root() {
     assert!(element.tangent_stiffness > stiffness);
 }
 
+#[test]
+fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
+    let stiffness = 850.0;
+    let cubic_stiffness = 42_000.0;
+    let load = 95.0;
+    let baseline =
+        solve_nonlinear_spring_1d(&single_hardening_spring(stiffness, cubic_stiffness, load))
+            .expect("baseline hardening spring should solve");
+
+    let scale = 1.7;
+    let scaled = solve_nonlinear_spring_1d(&single_hardening_spring(
+        stiffness * scale,
+        cubic_stiffness * scale,
+        load * scale,
+    ))
+    .expect("scaled hardening spring should solve");
+
+    assert!(baseline.converged);
+    assert!(scaled.converged);
+    assert_eq!(baseline.steps.len(), scaled.steps.len());
+    assert_close(scaled.nodes[1].ux, baseline.nodes[1].ux);
+    assert_close(scaled.elements[0].extension, baseline.elements[0].extension);
+    assert_close(scaled.elements[0].force / baseline.elements[0].force, scale);
+    assert_close(scaled.max_force / baseline.max_force, scale);
+    assert_close(
+        scaled.elements[0].tangent_stiffness / baseline.elements[0].tangent_stiffness,
+        scale,
+    );
+    assert_close(
+        scaled.elements[0].force,
+        stiffness * scale * scaled.elements[0].extension
+            + cubic_stiffness * scale * scaled.elements[0].extension.powi(3),
+    );
+    for (scaled_step, baseline_step) in scaled.steps.iter().zip(&baseline.steps) {
+        assert_eq!(scaled_step.step, baseline_step.step);
+        assert_close(scaled_step.load_factor, baseline_step.load_factor);
+        assert!(scaled_step.converged);
+    }
+}
+
 fn single_hardening_spring(
     stiffness: f64,
     cubic_stiffness: f64,

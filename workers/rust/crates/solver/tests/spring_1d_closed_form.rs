@@ -50,6 +50,54 @@ fn spring_1d_reports_zero_response_for_zero_load() {
     }
 }
 
+#[test]
+fn spring_1d_tracks_load_and_stiffness_scaling() {
+    let load = 900.0;
+    let stiffnesses = [18_000.0, 27_000.0, 36_000.0];
+    let baseline =
+        solve_spring_1d(&series_request(load, &stiffnesses)).expect("baseline spring chain");
+
+    let load_scale = 1.6;
+    let load_scaled = solve_spring_1d(&series_request(load * load_scale, &stiffnesses))
+        .expect("load-scaled spring chain");
+    assert_close(
+        load_scaled.max_displacement / baseline.max_displacement,
+        load_scale,
+    );
+    assert_close(load_scaled.max_force / baseline.max_force, load_scale);
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+    for (scaled, base) in load_scaled.elements.iter().zip(&baseline.elements) {
+        assert_close(scaled.extension / base.extension, load_scale);
+        assert_close(scaled.force / base.force, load_scale);
+        assert_close(scaled.strain_energy / base.strain_energy, load_scale * load_scale);
+    }
+
+    let stiffness_scale = 1.8;
+    let stiffened = stiffnesses
+        .iter()
+        .map(|stiffness| stiffness * stiffness_scale)
+        .collect::<Vec<_>>();
+    let stiffness_scaled = solve_spring_1d(&series_request(load, &stiffened))
+        .expect("stiffness-scaled spring chain");
+    assert_close(
+        stiffness_scaled.max_displacement / baseline.max_displacement,
+        1.0 / stiffness_scale,
+    );
+    assert_close(stiffness_scaled.max_force, baseline.max_force);
+    assert_close(
+        stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
+        1.0 / stiffness_scale,
+    );
+    for (scaled, base) in stiffness_scaled.elements.iter().zip(&baseline.elements) {
+        assert_close(scaled.extension / base.extension, 1.0 / stiffness_scale);
+        assert_close(scaled.force, base.force);
+        assert_close(scaled.strain_energy / base.strain_energy, 1.0 / stiffness_scale);
+    }
+}
+
 fn series_request(load: f64, stiffnesses: &[f64]) -> SolveSpring1dRequest {
     let mut nodes = Vec::with_capacity(stiffnesses.len() + 1);
     for index in 0..=stiffnesses.len() {

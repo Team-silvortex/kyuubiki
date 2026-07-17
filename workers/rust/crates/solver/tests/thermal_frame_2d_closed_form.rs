@@ -63,6 +63,94 @@ fn thermal_frame_2d_matches_restrained_uniform_temperature_closed_form() {
     assert_close(result.total_strain_energy, expected_energy);
 }
 
+#[test]
+fn thermal_frame_2d_tracks_temperature_area_and_modulus_scaling() {
+    let length = 1.7;
+    let area = 0.016;
+    let youngs_modulus = 205.0e9;
+    let thermal_expansion = 11.0e-6;
+    let temperature_delta = 30.0;
+    let baseline = solve_thermal_frame_2d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("baseline restrained thermal frame 2d should solve");
+
+    let temperature_scale = 1.5;
+    let hotter = solve_thermal_frame_2d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta * temperature_scale,
+    ))
+    .expect("temperature-scaled thermal frame 2d should solve");
+    assert_close(
+        hotter.elements[0].thermal_strain / baseline.elements[0].thermal_strain,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.elements[0].axial_stress / baseline.elements[0].axial_stress,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.total_strain_energy / baseline.total_strain_energy,
+        temperature_scale * temperature_scale,
+    );
+
+    let area_scale = 1.7;
+    let wider = solve_thermal_frame_2d(&restrained_member(
+        length,
+        area * area_scale,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("area-scaled thermal frame 2d should solve");
+    assert_close(wider.elements[0].axial_stress, baseline.elements[0].axial_stress);
+    assert_close(
+        wider.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
+        area_scale,
+    );
+    assert_close(
+        wider.total_strain_energy / baseline.total_strain_energy,
+        area_scale,
+    );
+
+    let modulus_scale = 1.25;
+    let stiffer = solve_thermal_frame_2d(&restrained_member(
+        length,
+        area,
+        youngs_modulus * modulus_scale,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("modulus-scaled thermal frame 2d should solve");
+    assert_close(
+        stiffer.elements[0].thermal_strain,
+        baseline.elements[0].thermal_strain,
+    );
+    assert_close(
+        stiffer.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
+        modulus_scale,
+    );
+    assert_close(
+        stiffer.elements[0].axial_stress / baseline.elements[0].axial_stress,
+        modulus_scale,
+    );
+    assert_close(
+        stiffer.total_strain_energy / baseline.total_strain_energy,
+        modulus_scale,
+    );
+}
+
 fn restrained_member(
     length: f64,
     area: f64,

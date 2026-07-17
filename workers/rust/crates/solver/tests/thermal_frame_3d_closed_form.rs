@@ -93,6 +93,118 @@ fn thermal_frame_3d_matches_restrained_temperature_gradient_closed_form() {
     assert_close(result.total_strain_energy, strain_energy);
 }
 
+#[test]
+fn thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling() {
+    let length = 1.5;
+    let area = 0.016;
+    let youngs_modulus = 205.0e9;
+    let thermal_expansion = 10.5e-6;
+    let temperature_delta = 25.0;
+    let gradient_y = 20.0;
+    let gradient_z = 16.0;
+    let inertia_y = 6.0e-6;
+    let inertia_z = 4.5e-6;
+    let section_modulus_y = 1.2e-4;
+    let section_modulus_z = 9.5e-5;
+    let section_depth_y = 0.2;
+    let section_depth_z = 0.15;
+    let baseline = solve_thermal_frame_3d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+        gradient_y,
+        gradient_z,
+        inertia_y,
+        inertia_z,
+        section_modulus_y,
+        section_modulus_z,
+        section_depth_y,
+        section_depth_z,
+    ))
+    .expect("baseline thermal frame 3d should solve");
+
+    let thermal_scale = 1.4;
+    let hotter = solve_thermal_frame_3d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta * thermal_scale,
+        gradient_y * thermal_scale,
+        gradient_z * thermal_scale,
+        inertia_y,
+        inertia_z,
+        section_modulus_y,
+        section_modulus_z,
+        section_depth_y,
+        section_depth_z,
+    ))
+    .expect("thermal-scaled frame 3d should solve");
+    assert_close(
+        hotter.elements[0].thermal_strain / baseline.elements[0].thermal_strain,
+        thermal_scale,
+    );
+    assert_close(
+        hotter.elements[0].thermal_curvature_y / baseline.elements[0].thermal_curvature_y,
+        thermal_scale,
+    );
+    assert_close(
+        hotter.elements[0].thermal_curvature_z / baseline.elements[0].thermal_curvature_z,
+        thermal_scale,
+    );
+    assert_close(
+        hotter.elements[0].axial_force_i / baseline.elements[0].axial_force_i,
+        thermal_scale,
+    );
+    assert_close(hotter.elements[0].moment_y_i / baseline.elements[0].moment_y_i, thermal_scale);
+    assert_close(hotter.elements[0].moment_z_i / baseline.elements[0].moment_z_i, thermal_scale);
+    assert_close(
+        hotter.elements[0].strain_energy / baseline.elements[0].strain_energy,
+        thermal_scale * thermal_scale,
+    );
+
+    let inertia_scale = 1.6;
+    let heavier = solve_thermal_frame_3d(&restrained_member(
+        length,
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+        gradient_y,
+        gradient_z,
+        inertia_y * inertia_scale,
+        inertia_z * inertia_scale,
+        section_modulus_y,
+        section_modulus_z,
+        section_depth_y,
+        section_depth_z,
+    ))
+    .expect("inertia-scaled frame 3d should solve");
+    assert_close(
+        heavier.elements[0].thermal_curvature_y,
+        baseline.elements[0].thermal_curvature_y,
+    );
+    assert_close(
+        heavier.elements[0].thermal_curvature_z,
+        baseline.elements[0].thermal_curvature_z,
+    );
+    assert_close(
+        heavier.elements[0].moment_y_i / baseline.elements[0].moment_y_i,
+        inertia_scale,
+    );
+    assert_close(
+        heavier.elements[0].moment_z_i / baseline.elements[0].moment_z_i,
+        inertia_scale,
+    );
+    assert_close(
+        heavier.elements[0].axial_force_i,
+        baseline.elements[0].axial_force_i,
+    );
+    assert!(heavier.elements[0].strain_energy > baseline.elements[0].strain_energy);
+}
+
 #[allow(clippy::too_many_arguments)]
 fn restrained_member(
     length: f64,

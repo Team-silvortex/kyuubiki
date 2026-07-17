@@ -66,6 +66,55 @@ fn thermal_beam_1d_reports_zero_response_for_zero_gradient() {
     assert_close(element.moment_j, 0.0);
 }
 
+#[test]
+fn thermal_beam_1d_tracks_gradient_and_section_depth_scaling() {
+    let length = 2.1;
+    let thermal_expansion = 11.0e-6;
+    let gradient = 36.0;
+    let section_depth = 0.28;
+    let baseline = solve_thermal_beam_1d(&request(
+        length,
+        thermal_expansion,
+        gradient,
+        section_depth,
+    ))
+    .expect("baseline free-curvature thermal beam should solve");
+
+    let gradient_scale = 1.6;
+    let hotter = solve_thermal_beam_1d(&request(
+        length,
+        thermal_expansion,
+        gradient * gradient_scale,
+        section_depth,
+    ))
+    .expect("gradient-scaled thermal beam should solve");
+    assert_close(
+        hotter.elements[0].thermal_curvature / baseline.elements[0].thermal_curvature,
+        gradient_scale,
+    );
+    assert_close(hotter.nodes[1].rz / baseline.nodes[1].rz, gradient_scale);
+    assert_close(hotter.nodes[1].uy / baseline.nodes[1].uy, gradient_scale);
+    assert!(hotter.max_moment < 1.0e-8);
+    assert!(hotter.total_strain_energy.abs() < 1.0e-12);
+
+    let depth_scale = 1.4;
+    let deeper = solve_thermal_beam_1d(&request(
+        length,
+        thermal_expansion,
+        gradient,
+        section_depth * depth_scale,
+    ))
+    .expect("depth-scaled thermal beam should solve");
+    assert_close(
+        deeper.elements[0].thermal_curvature / baseline.elements[0].thermal_curvature,
+        1.0 / depth_scale,
+    );
+    assert_close(deeper.nodes[1].rz / baseline.nodes[1].rz, 1.0 / depth_scale);
+    assert_close(deeper.nodes[1].uy / baseline.nodes[1].uy, 1.0 / depth_scale);
+    assert!(deeper.max_moment < 1.0e-8);
+    assert!(deeper.total_strain_energy.abs() < 1.0e-12);
+}
+
 fn request(
     length: f64,
     thermal_expansion: f64,

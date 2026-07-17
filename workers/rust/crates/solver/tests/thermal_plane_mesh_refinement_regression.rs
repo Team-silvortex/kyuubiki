@@ -37,6 +37,44 @@ fn heat_plane_triangle_refinement_matches_quad_patch_temperatures_and_heat_flow(
 }
 
 #[test]
+fn heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scaled() {
+    let diagonal_a = solve_heat_plane_triangle_2d(&heat_triangle_patch())
+        .expect("first diagonal heat patch should solve");
+    let diagonal_b = solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch(CONDUCTIVITY))
+        .expect("second diagonal heat patch should solve");
+    let perturbed =
+        solve_heat_plane_triangle_2d(&heat_triangle_cross_diagonal_patch(CONDUCTIVITY * 1.07))
+            .expect("conductivity-perturbed heat patch should solve");
+
+    assert_eq!(diagonal_a.nodes.len(), diagonal_b.nodes.len());
+    for (left, right) in diagonal_a.nodes.iter().zip(diagonal_b.nodes.iter()) {
+        assert_close(left.temperature, right.temperature);
+    }
+
+    for element in diagonal_b.elements.iter() {
+        assert_close(element.temperature_gradient_x, 0.0);
+        assert_close(element.temperature_gradient_y, -80.0);
+        assert_close(element.heat_flux_x, 0.0);
+        assert_close(element.heat_flux_y, 3600.0);
+    }
+
+    assert_close(diagonal_a.max_heat_flux, diagonal_b.max_heat_flux);
+    assert_close(
+        diagonal_a.total_abs_heat_flow_rate,
+        diagonal_b.total_abs_heat_flow_rate,
+    );
+    assert_close(perturbed.max_heat_flux / diagonal_b.max_heat_flux, 1.07);
+    assert_close(
+        perturbed.total_abs_heat_flow_rate / diagonal_b.total_abs_heat_flow_rate,
+        1.07,
+    );
+    assert_close(
+        perturbed.elements[0].temperature_gradient_y,
+        diagonal_b.elements[0].temperature_gradient_y,
+    );
+}
+
+#[test]
 fn thermal_plane_triangle_refinement_matches_quad_patch_stress_and_energy() {
     let triangle = solve_thermal_plane_triangle_2d(&thermal_triangle_patch())
         .expect("two-triangle thermal patch should solve");
@@ -79,6 +117,16 @@ fn heat_quad_patch() -> SolveHeatPlaneQuad2dRequest {
             thickness: THICKNESS,
             conductivity: CONDUCTIVITY,
         }],
+    }
+}
+
+fn heat_triangle_cross_diagonal_patch(conductivity: f64) -> SolveHeatPlaneTriangle2dRequest {
+    SolveHeatPlaneTriangle2dRequest {
+        nodes: heat_nodes(),
+        elements: vec![
+            heat_tri_with_conductivity("left", 0, 1, 3, conductivity),
+            heat_tri_with_conductivity("right", 1, 2, 3, conductivity),
+        ],
     }
 }
 
@@ -161,6 +209,23 @@ fn heat_tri(
         node_k,
         thickness: THICKNESS,
         conductivity: CONDUCTIVITY,
+    }
+}
+
+fn heat_tri_with_conductivity(
+    id: &str,
+    node_i: usize,
+    node_j: usize,
+    node_k: usize,
+    conductivity: f64,
+) -> HeatPlaneTriangleElementInput {
+    HeatPlaneTriangleElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        node_k,
+        thickness: THICKNESS,
+        conductivity,
     }
 }
 

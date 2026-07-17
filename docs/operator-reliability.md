@@ -198,6 +198,10 @@ and refined quad/triangle meshes to verify stable area, divergence, shear,
 velocity, pressure-drop, and viscous-stress diagnostics. That is enough to
 qualify the Stokes screening boundary, but not enough to claim general CFD,
 Navier-Stokes, turbulence, compressible-flow, or industrial design accuracy.
+The same retained regression now checks material-parameter scaling for the
+linear screening field: viscosity changes scale viscous stress and dissipation
+while leaving the prescribed velocity and shear rate unchanged, and density
+changes scale Reynolds diagnostics without changing viscous stress.
 
 ## CFD Stokes Divergence Tolerance
 
@@ -244,6 +248,11 @@ over field-energy, material-provenance, and orientation evidence. Its retained
 validation report executes the electrostatic and magnetostatic triangle and
 quad review fixtures together and is attached at
 `releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json`.
+The magnetostatic retained reliability suite also includes a linear-field
+diagonal-invariance check: changing the two-triangle split preserves nodal
+vector potential and flux density, while a permeability perturbation scales
+vector potential, flux density, and stored energy but leaves magnetic field
+strength stable for the same source density.
 The matching review decision promotes `solve.electrostatic_plane_triangle_2d`,
 `solve.electrostatic_plane_quad_2d`,
 `solve.magnetostatic_plane_triangle_2d`, and
@@ -284,6 +293,10 @@ boundary coverage, material-parameter provenance, and mesh/refinement
 equivalence. Its validation profile executes the heat and thermoelastic
 triangle/quad review fixtures together, then checks that a two-triangle split
 matches the quad patch response for heat flow and restrained thermal stress.
+The retained heat-plane mesh regression also carries a linear-field manufactured
+check: changing the triangle diagonal preserves nodal temperatures, gradients,
+heat flux, and total heat-flow rate, while a conductivity perturbation scales
+heat flux without changing the recovered temperature gradient.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
 
@@ -359,16 +372,22 @@ The acoustic 1D bar is now qualified for the retained linear frequency-domain
 duct scope. Its closed-form evidence solves the reduced scalar pressure
 response at two frequencies, checks wave number and particle velocity against
 the analytic formulas, and verifies that an undamped fixture reports zero
-damping loss. This does not claim branched duct networks, nonlinear acoustics,
-transient propagation, or 3D acoustic cavities.
+damping loss. The material perturbation regression also checks that bulk
+modulus and density changes drive speed of sound and wave number by the
+expected square-root scaling while pressure response, particle velocity, and
+damping loss remain closed-form matched. This does not claim branched duct
+networks, nonlinear acoustics, transient propagation, or 3D acoustic cavities.
 
 The advection-diffusion 1D bar is now qualified for the retained steady
 constant-coefficient transport scope. Its closed-form evidence checks
 diffusive, advective, and total flux across diffusion-dominant and
 advection-dominant Peclet regimes, plus the zero-velocity limit where
-advective flux must vanish. This does not claim transient transport, nonlinear
-reaction, multidimensional flow, turbulent mixing, or arbitrary stabilization
-schemes.
+advective flux must vanish. The retained material/flow perturbation regression
+also verifies that fixed-boundary concentrations stay unchanged while
+diffusivity scales diffusive flux and inversely scales Peclet number, and
+velocity scales advective flux and Peclet number. This does not claim transient
+transport, nonlinear reaction, multidimensional flow, turbulent mixing, or
+arbitrary stabilization schemes.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
 permeance scope. Its closed-form evidence checks magnetic potential, field
@@ -379,71 +398,103 @@ fields.
 
 The spring 1D chain is now qualified for the retained linear static series
 scope. Its closed-form evidence checks equivalent series stiffness, member
-force continuity, element strain energy, and the zero-load response. This does
-not claim nonlinear springs, transient dynamics, contact, or arbitrary vector
-spring networks.
+force continuity, element strain energy, and the zero-load response. The
+retained scaling regression also verifies that load scaling linearly scales
+displacement and member force while scaling strain energy quadratically, and
+that uniform stiffness scaling inversely scales displacement and strain energy
+while preserving series force continuity. This does not claim nonlinear
+springs, transient dynamics, contact, or arbitrary vector spring networks.
 
 The spring 2D and 3D operators are now qualified for the retained linear static
 orthogonal vector-spring scope. Their closed-form evidence checks inverse
 diagonal stiffness displacement, fixed-support displacement, member force,
 extension sign, and strain energy for planar and spatial spring projections.
+The retained vector-spring scaling regressions also verify that load scaling
+linearly scales free-node displacement and member force while scaling strain
+energy quadratically, and that uniform stiffness scaling inversely scales
+free-node displacement and strain energy while preserving reaction/member force.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
 The thermal beam 1D operator is now qualified for the retained linear
 free-curvature scope. Its closed-form evidence checks thermal curvature, tip
 rotation, tip displacement, zero-gradient response, and near-zero internal
-force for a single fixed-free member. This does not claim thermal frame
-assemblies, nonlinear material behavior, transient heat transfer, buckling, or
-plasticity.
+force for a single fixed-free member. The retained scaling regression verifies
+that temperature-gradient changes linearly scale curvature, tip rotation, and
+tip displacement, while section-depth changes inversely scale those same
+free-curvature diagnostics without introducing internal moment or strain energy.
+This does not claim thermal frame assemblies, nonlinear material behavior,
+transient heat transfer, buckling, or plasticity.
 
 The thermal truss 3D operator is now qualified for the retained fully
 restrained uniform-temperature scope. Its closed-form evidence checks zero
 node displacement, thermal/mechanical strain split, compressive stress, axial
-force, and member energy summation. This does not claim partial restraint,
-temperature gradients, buckling, plasticity, contact, or dynamic response.
+force, and member energy summation. The retained scaling regression verifies
+that temperature changes scale thermal strain, stress, and axial force while
+scaling strain energy quadratically, and that area changes scale axial force
+and total energy without changing stress or energy density. This does not claim
+partial restraint, temperature gradients, buckling, plasticity, contact, or
+dynamic response.
 
 The thermal truss 2D operator is now qualified for the retained fully
 restrained uniform-temperature scope. Its closed-form evidence mirrors the 3D
 thermal truss lane by checking fixed node displacement, thermal/mechanical
 strain split, compressive stress, axial force, and member energy summation.
-This does not claim partial restraint, mixed thermal loading, temperature
-gradients, buckling, plasticity, contact, or dynamic response.
+The retained 2D scaling regression applies the same temperature and area checks
+to the planar restrained triangle. This does not claim partial restraint, mixed
+thermal loading, temperature gradients, buckling, plasticity, contact, or
+dynamic response.
 
 The thermal frame 2D operator is now qualified for the retained fully
 restrained uniform-temperature single-member scope. Its closed-form evidence
 checks fixed end displacement and rotation, thermal/mechanical strain split,
 axial force, axial stress, zero-gradient moment and shear response, and strain
-energy. This does not claim partial restraint, temperature gradients, frame
-assemblies, geometric nonlinearity, buckling, plasticity, contact, or dynamic
-response.
+energy. The retained scaling regression verifies that temperature changes
+scale thermal strain, axial force, and axial stress while scaling strain energy
+quadratically, that area changes scale axial force and energy without changing
+stress, and that modulus changes scale force, stress, and energy without
+changing thermal strain. This does not claim partial restraint, temperature
+gradients, frame assemblies, geometric nonlinearity, buckling, plasticity,
+contact, or dynamic response.
 
 The thermal frame 3D operator is now qualified for the retained fully
 restrained single-member scope with uniform temperature and linear gradients.
 Its closed-form evidence checks fixed end translations and rotations,
 thermal/mechanical strain split, thermal curvatures, axial force, bending
-moments, combined stress, and strain energy. This does not claim partial
+moments, combined stress, and strain energy. The retained scaling regression
+verifies that uniform temperature and gradient scaling drives thermal strain,
+thermal curvatures, axial force, bending moments, and energy by the expected
+linear/quadratic factors, while inertia scaling changes bending moments without
+changing thermal curvature or axial force. This does not claim partial
 restraint, arbitrary 3D frame assemblies, torsion-dominant response, geometric
 nonlinearity, buckling, plasticity, contact, or dynamic response.
 
 The contact gap 1D operator is now qualified for the retained penalty stop
 scope. Its closed-form evidence checks inactive gap response, active penalty
 penetration, contact activation count, spring force, contact force, and
-force-split equilibrium. This does not claim multidimensional contact,
-friction, impact, large deformation, or industrial contact search.
+force-split equilibrium. The retained scaling regression also verifies that
+active contact remains active when load and gap are scaled together, with tip
+displacement, penetration, spring force, and contact force preserving the same
+scale factor. This does not claim multidimensional contact, friction, impact,
+large deformation, or industrial contact search.
 
 The truss 2D operator is now qualified for the retained symmetric two-bar
 scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
 displacement, equal axial member force, stress, strain, and strain energy.
-This does not claim arbitrary truss topology, geometric nonlinearity, buckling,
-dynamic response, damaged members, or 3D space truss behavior.
+The retained scaling regression also verifies that load changes linearly scale
+apex displacement, axial force, and stress while scaling energy quadratically,
+and that area changes inversely scale displacement, stress, and energy while
+preserving axial force. This does not claim arbitrary truss topology, geometric
+nonlinearity, buckling, dynamic response, damaged members, or 3D space truss
+behavior.
 
 The truss 3D operator is now qualified for the retained symmetric tripod scope.
 Its closed-form evidence checks fixed base supports, zero lateral apex motion,
 vertical displacement, equal axial leg force, stress, strain, and strain
-energy. This does not claim arbitrary space-frame topology, geometric
-nonlinearity, buckling, damaged members, joint eccentricity, or dynamic
-response.
+energy. The retained tripod scaling regression applies the same load and area
+checks to the 3D leg-force/stress/energy response. This does not claim
+arbitrary space-frame topology, geometric nonlinearity, buckling, damaged
+members, joint eccentricity, or dynamic response.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
@@ -480,17 +531,24 @@ missing.
 tetrahedron scope. The retained evidence derives the reduced stiffness for a
 three-node restrained base with one loaded free tip, then checks displacement,
 constitutive stress components, von Mises stress, and strain energy against
-`workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs`. This remains
-a single-element linear-elastic qualification, not a mesh-convergence,
-plasticity, contact, or large-deformation claim.
+`workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs`. The retained
+scaling regression verifies that load scaling drives displacement, stress, von
+Mises stress, and energy by the expected linear/quadratic factors, while
+elastic-modulus scaling inversely changes displacement and energy without
+changing load-controlled stress. This remains a single-element linear-elastic
+qualification, not a mesh-convergence, plasticity, contact, or
+large-deformation claim.
 
 `solve.nonlinear_spring_1d` is now qualified for the current single hardening
 spring scope. The retained evidence derives the Cardano root for
 `F = k u + c u^3`, then checks the Newton result, force balance, tangent
 stiffness, residuals, and monotonic load-step factors against
-`workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs`. This is
-a monotone one-dimensional hardening qualification, not a hysteresis,
-softening, snap-through, or dynamics claim.
+`workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs`. The
+retained scaling regression also verifies that scaling the linear stiffness,
+cubic stiffness, and load together preserves displacement while scaling force
+and tangent stiffness by the same factor. This is a monotone one-dimensional
+hardening qualification, not a hysteresis, softening, snap-through, or dynamics
+claim.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

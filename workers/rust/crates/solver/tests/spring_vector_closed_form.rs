@@ -93,6 +93,150 @@ fn spring_3d_matches_orthogonal_vector_stiffness_closed_form() {
     );
 }
 
+#[test]
+fn spring_2d_tracks_load_and_stiffness_scaling() {
+    let baseline = solve_spring_2d(&spring_2d_request(700.0, -500.0, 35_000.0, 25_000.0))
+        .expect("baseline 2D vector spring should solve");
+
+    let load_scale = 1.4;
+    let load_scaled = solve_spring_2d(&spring_2d_request(
+        700.0 * load_scale,
+        -500.0 * load_scale,
+        35_000.0,
+        25_000.0,
+    ))
+    .expect("load-scaled 2D vector spring should solve");
+    assert_close(load_scaled.nodes[0].ux / baseline.nodes[0].ux, load_scale);
+    assert_close(load_scaled.nodes[0].uy / baseline.nodes[0].uy, load_scale);
+    assert_close(load_scaled.elements[0].force / baseline.elements[0].force, load_scale);
+    assert_close(load_scaled.elements[1].force / baseline.elements[1].force, load_scale);
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let stiffness_scale = 1.6;
+    let stiffness_scaled = solve_spring_2d(&spring_2d_request(
+        700.0,
+        -500.0,
+        35_000.0 * stiffness_scale,
+        25_000.0 * stiffness_scale,
+    ))
+    .expect("stiffness-scaled 2D vector spring should solve");
+    assert_close(
+        stiffness_scaled.nodes[0].ux / baseline.nodes[0].ux,
+        1.0 / stiffness_scale,
+    );
+    assert_close(
+        stiffness_scaled.nodes[0].uy / baseline.nodes[0].uy,
+        1.0 / stiffness_scale,
+    );
+    assert_close(stiffness_scaled.elements[0].force, baseline.elements[0].force);
+    assert_close(stiffness_scaled.elements[1].force, baseline.elements[1].force);
+    assert_close(
+        stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
+        1.0 / stiffness_scale,
+    );
+}
+
+#[test]
+fn spring_3d_tracks_load_and_stiffness_scaling() {
+    let baseline =
+        solve_spring_3d(&spring_3d_request(420.0, -280.0, 700.0, 42_000.0, 28_000.0, 56_000.0))
+            .expect("baseline 3D vector spring should solve");
+
+    let load_scale = 1.5;
+    let load_scaled = solve_spring_3d(&spring_3d_request(
+        420.0 * load_scale,
+        -280.0 * load_scale,
+        700.0 * load_scale,
+        42_000.0,
+        28_000.0,
+        56_000.0,
+    ))
+    .expect("load-scaled 3D vector spring should solve");
+    assert_close(load_scaled.nodes[0].ux / baseline.nodes[0].ux, load_scale);
+    assert_close(load_scaled.nodes[0].uy / baseline.nodes[0].uy, load_scale);
+    assert_close(load_scaled.nodes[0].uz / baseline.nodes[0].uz, load_scale);
+    assert_close(load_scaled.max_force / baseline.max_force, load_scale);
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+    );
+
+    let stiffness_scale = 1.75;
+    let stiffness_scaled = solve_spring_3d(&spring_3d_request(
+        420.0,
+        -280.0,
+        700.0,
+        42_000.0 * stiffness_scale,
+        28_000.0 * stiffness_scale,
+        56_000.0 * stiffness_scale,
+    ))
+    .expect("stiffness-scaled 3D vector spring should solve");
+    assert_close(
+        stiffness_scaled.nodes[0].ux / baseline.nodes[0].ux,
+        1.0 / stiffness_scale,
+    );
+    assert_close(
+        stiffness_scaled.nodes[0].uy / baseline.nodes[0].uy,
+        1.0 / stiffness_scale,
+    );
+    assert_close(
+        stiffness_scaled.nodes[0].uz / baseline.nodes[0].uz,
+        1.0 / stiffness_scale,
+    );
+    assert_close(stiffness_scaled.max_force, baseline.max_force);
+    assert_close(
+        stiffness_scaled.total_strain_energy / baseline.total_strain_energy,
+        1.0 / stiffness_scale,
+    );
+}
+
+fn spring_2d_request(
+    load_x: f64,
+    load_y: f64,
+    stiffness_x: f64,
+    stiffness_y: f64,
+) -> SolveSpring2dRequest {
+    SolveSpring2dRequest {
+        nodes: vec![
+            node_2d("free", 0.0, 0.0, false, false, load_x, load_y),
+            node_2d("fixed-x", 1.0, 0.0, true, true, 0.0, 0.0),
+            node_2d("fixed-y", 0.0, 1.0, true, true, 0.0, 0.0),
+        ],
+        elements: vec![
+            element_2d("kx", 0, 1, stiffness_x),
+            element_2d("ky", 0, 2, stiffness_y),
+        ],
+    }
+}
+
+fn spring_3d_request(
+    load_x: f64,
+    load_y: f64,
+    load_z: f64,
+    stiffness_x: f64,
+    stiffness_y: f64,
+    stiffness_z: f64,
+) -> SolveSpring3dRequest {
+    SolveSpring3dRequest {
+        nodes: vec![
+            node_3d(
+                "free", 0.0, 0.0, 0.0, false, false, false, load_x, load_y, load_z,
+            ),
+            node_3d("fixed-x", 1.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
+            node_3d("fixed-y", 0.0, 1.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
+            node_3d("fixed-z", 0.0, 0.0, 1.0, true, true, true, 0.0, 0.0, 0.0),
+        ],
+        elements: vec![
+            element_3d("kx", 0, 1, stiffness_x),
+            element_3d("ky", 0, 2, stiffness_y),
+            element_3d("kz", 0, 3, stiffness_z),
+        ],
+    }
+}
+
 fn node_2d(
     id: &str,
     x: f64,

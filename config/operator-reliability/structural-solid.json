@@ -42,7 +42,8 @@
             "evidence/operator-qualification/solid-tetra-3d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs"
+            "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
+            "solid_tetra_3d_tracks_load_and_modulus_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",

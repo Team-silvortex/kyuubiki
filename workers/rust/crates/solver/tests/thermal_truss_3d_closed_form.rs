@@ -54,6 +54,68 @@ fn thermal_truss_3d_matches_restrained_uniform_temperature_closed_form() {
     );
 }
 
+#[test]
+fn thermal_truss_3d_tracks_temperature_and_area_scaling() {
+    let area = 0.013;
+    let youngs_modulus = 72.0e9;
+    let thermal_expansion = 10.0e-6;
+    let temperature_delta = 42.0;
+    let baseline = solve_thermal_truss_3d(&restrained_triangle(
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("baseline restrained thermal truss 3d should solve");
+
+    let temperature_scale = 1.4;
+    let hotter = solve_thermal_truss_3d(&restrained_triangle(
+        area,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta * temperature_scale,
+    ))
+    .expect("temperature-scaled thermal truss 3d should solve");
+    assert_close(
+        hotter.elements[0].thermal_strain / baseline.elements[0].thermal_strain,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.elements[0].stress / baseline.elements[0].stress,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.elements[0].axial_force / baseline.elements[0].axial_force,
+        temperature_scale,
+    );
+    assert_close(
+        hotter.total_strain_energy / baseline.total_strain_energy,
+        temperature_scale * temperature_scale,
+    );
+
+    let area_scale = 1.7;
+    let larger = solve_thermal_truss_3d(&restrained_triangle(
+        area * area_scale,
+        youngs_modulus,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("area-scaled thermal truss 3d should solve");
+    assert_close(larger.elements[0].stress, baseline.elements[0].stress);
+    assert_close(
+        larger.elements[0].strain_energy_density,
+        baseline.elements[0].strain_energy_density,
+    );
+    assert_close(
+        larger.elements[0].axial_force / baseline.elements[0].axial_force,
+        area_scale,
+    );
+    assert_close(
+        larger.total_strain_energy / baseline.total_strain_energy,
+        area_scale,
+    );
+}
+
 fn restrained_triangle(
     area: f64,
     youngs_modulus: f64,

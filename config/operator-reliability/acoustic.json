@@ -43,7 +43,8 @@
             "evidence/operator-qualification/acoustic-bar-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs"
+            "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
+            "acoustic_bar_1d_tracks_material_wave_speed_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json",

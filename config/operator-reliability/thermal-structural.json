@@ -103,7 +103,8 @@
             "evidence/operator-qualification/thermal-beam-1d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+            "thermal_beam_1d_tracks_gradient_and_section_depth_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
@@ -163,7 +164,8 @@
             "evidence/operator-qualification/thermal-frame-2d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs"
+            "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs",
+            "thermal_frame_2d_tracks_temperature_area_and_modulus_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json",
@@ -225,7 +227,8 @@
             "evidence/operator-qualification/thermal-frame-3d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs"
+            "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
+            "thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
@@ -286,7 +289,8 @@
             "evidence/operator-qualification/thermal-truss-2d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs"
+            "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
+            "thermal_truss_2d_tracks_temperature_and_area_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
@@ -346,7 +350,8 @@
             "evidence/operator-qualification/thermal-truss-3d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs"
+            "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs",
+            "thermal_truss_3d_tracks_temperature_and_area_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json",

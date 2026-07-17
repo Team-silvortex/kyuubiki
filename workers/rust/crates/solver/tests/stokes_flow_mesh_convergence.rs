@@ -60,7 +60,46 @@ fn stokes_flow_triangle_2d_preserves_linear_screening_field_under_refinement() {
     assert_close(refined.max_shear_rate, 1.0);
 }
 
+#[test]
+fn stokes_flow_linear_field_scales_viscosity_and_density_diagnostics() {
+    let baseline = solve_stokes_flow_plane_quad_2d(&quad_mesh_with_material(1, 2.0, 1.0, 1.0))
+        .expect("baseline Stokes material scaling fixture should solve");
+    let viscous = solve_stokes_flow_plane_quad_2d(&quad_mesh_with_material(1, 2.4, 1.0, 1.0))
+        .expect("viscosity-perturbed Stokes fixture should solve");
+    let dense = solve_stokes_flow_plane_quad_2d(&quad_mesh_with_material(1, 2.0, 1.25, 1.0))
+        .expect("density-perturbed Stokes fixture should solve");
+
+    assert_close(viscous.max_velocity, baseline.max_velocity);
+    assert_close(viscous.max_shear_rate, baseline.max_shear_rate);
+    assert_close(
+        viscous.max_viscous_shear_stress / baseline.max_viscous_shear_stress,
+        1.2,
+    );
+    assert_close(
+        viscous.elements[0].viscous_dissipation / baseline.elements[0].viscous_dissipation,
+        1.2,
+    );
+    assert_close(baseline.max_reynolds_number / viscous.max_reynolds_number, 1.2);
+
+    assert_close(dense.max_velocity, baseline.max_velocity);
+    assert_close(dense.max_shear_rate, baseline.max_shear_rate);
+    assert_close(dense.max_reynolds_number / baseline.max_reynolds_number, 1.25);
+    assert_close(
+        dense.max_viscous_shear_stress,
+        baseline.max_viscous_shear_stress,
+    );
+}
+
 fn quad_mesh(subdivisions: usize) -> SolveStokesFlowPlaneQuad2dRequest {
+    quad_mesh_with_material(subdivisions, 2.0, 1.0, 1.0)
+}
+
+fn quad_mesh_with_material(
+    subdivisions: usize,
+    viscosity: f64,
+    density: f64,
+    thickness: f64,
+) -> SolveStokesFlowPlaneQuad2dRequest {
     let mut nodes = Vec::new();
     for y_index in 0..=subdivisions {
         for x_index in 0..=subdivisions {
@@ -81,9 +120,9 @@ fn quad_mesh(subdivisions: usize) -> SolveStokesFlowPlaneQuad2dRequest {
                 node_j,
                 node_k,
                 node_l,
-                thickness: 1.0,
-                viscosity: 2.0,
-                density: 1.0,
+                thickness,
+                viscosity,
+                density,
             });
         }
     }

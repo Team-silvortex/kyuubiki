@@ -50,6 +50,71 @@ fn truss_2d_matches_symmetric_two_bar_closed_form() {
     }
 }
 
+#[test]
+fn truss_2d_tracks_load_and_area_scaling() {
+    let half_span = 0.45;
+    let height = 0.8;
+    let load = -900.0;
+    let area = 0.012;
+    let youngs_modulus = 68.0e9;
+    let baseline = solve_truss_2d(&symmetric_request(
+        half_span,
+        height,
+        load,
+        area,
+        youngs_modulus,
+    ))
+    .expect("baseline two-bar truss should solve");
+
+    let load_scale = 1.4;
+    let load_scaled = solve_truss_2d(&symmetric_request(
+        half_span,
+        height,
+        load * load_scale,
+        area,
+        youngs_modulus,
+    ))
+    .expect("load-scaled two-bar truss should solve");
+    assert_close(
+        load_scaled.nodes[2].uy / baseline.nodes[2].uy,
+        load_scale,
+        TOL,
+    );
+    assert_close(
+        load_scaled.elements[0].axial_force / baseline.elements[0].axial_force,
+        load_scale,
+        TOL,
+    );
+    assert_close(
+        load_scaled.max_stress / baseline.max_stress,
+        load_scale,
+        TOL,
+    );
+    assert_close(
+        load_scaled.total_strain_energy / baseline.total_strain_energy,
+        load_scale * load_scale,
+        TOL,
+    );
+
+    let area_scale = 1.6;
+    let area_scaled = solve_truss_2d(&symmetric_request(
+        half_span,
+        height,
+        load,
+        area * area_scale,
+        youngs_modulus,
+    ))
+    .expect("area-scaled two-bar truss should solve");
+    assert_close(area_scaled.nodes[2].uy / baseline.nodes[2].uy, 1.0 / area_scale, TOL);
+    assert_close(area_scaled.elements[0].axial_force, baseline.elements[0].axial_force, TOL);
+    assert_close(area_scaled.max_stress / baseline.max_stress, 1.0 / area_scale, TOL);
+    assert_close(
+        area_scaled.total_strain_energy / baseline.total_strain_energy,
+        1.0 / area_scale,
+        TOL,
+    );
+}
+
 fn symmetric_request(
     half_span: f64,
     height: f64,

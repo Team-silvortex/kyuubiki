@@ -162,7 +162,8 @@
             "evidence/operator-qualification/spring-1d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/spring_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+            "spring_1d_tracks_load_and_stiffness_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
@@ -222,7 +223,8 @@
             "evidence/operator-qualification/spring-vector-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs"
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "spring_2d_tracks_load_and_stiffness_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
@@ -282,7 +284,8 @@
             "evidence/operator-qualification/spring-vector-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs"
+            "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "spring_3d_tracks_load_and_stiffness_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
@@ -343,7 +346,8 @@
             "evidence/operator-qualification/contact-gap-1d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+            "contact_gap_1d_preserves_active_force_split_under_load_gap_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json",
@@ -586,7 +590,8 @@
             "evidence/operator-qualification/truss-2d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/truss_2d_closed_form.rs"
+            "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
+            "truss_2d_tracks_load_and_area_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json",
@@ -646,7 +651,8 @@
             "evidence/operator-qualification/truss-3d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/truss_3d_closed_form.rs"
+            "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+            "truss_3d_tracks_load_and_area_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json",

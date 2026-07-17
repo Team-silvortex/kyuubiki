@@ -104,10 +104,12 @@
         "qualification": {
           "validation_sources": [
             "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
-            "evidence/operator-qualification/thermal-plane-material-provenance.json"
+            "evidence/operator-qualification/thermal-plane-material-provenance.json",
+            "linear-field-manufactured-heat-plane-regression"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs"
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+            "heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scaled"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
@@ -171,10 +173,12 @@
         "qualification": {
           "validation_sources": [
             "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
-            "evidence/operator-qualification/thermal-plane-material-provenance.json"
+            "evidence/operator-qualification/thermal-plane-material-provenance.json",
+            "linear-field-manufactured-heat-plane-regression"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs"
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+            "heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scaled"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",

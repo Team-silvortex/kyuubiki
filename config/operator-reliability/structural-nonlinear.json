@@ -42,7 +42,8 @@
             "evidence/operator-qualification/nonlinear-spring-1d-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs",
+            "nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",

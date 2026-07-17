@@ -41,7 +41,8 @@
             "evidence/operator-qualification/advection-diffusion-bar-closed-form.md"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+            "advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",

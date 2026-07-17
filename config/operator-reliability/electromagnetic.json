@@ -165,10 +165,12 @@
         "qualification": {
           "validation_sources": [
             "docs/operator-reliability.md#electromagnetic-plane-review-scope",
-            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes",
+            "linear-field-magnetostatic-plane-diagonal-invariance"
           ],
           "convergence_checks": [
-            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "magnetostatic_triangle_linear_field_is_diagonal_invariant_and_permeability_scaled"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
@@ -231,10 +233,12 @@
         "qualification": {
           "validation_sources": [
             "docs/operator-reliability.md#electromagnetic-plane-review-scope",
-            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes"
+            "docs/operator-reliability.md#electromagnetic-plane-material-and-energy-notes",
+            "linear-field-magnetostatic-plane-diagonal-invariance"
           ],
           "convergence_checks": [
-            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json"
+            "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
+            "magnetostatic_triangle_linear_field_is_diagonal_invariant_and_permeability_scaled"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/electromagnetic-plane-patch-release-evidence.json",
