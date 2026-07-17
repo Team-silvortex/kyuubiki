@@ -79,14 +79,72 @@ fn stokes_flow_linear_field_scales_viscosity_and_density_diagnostics() {
         viscous.elements[0].viscous_dissipation / baseline.elements[0].viscous_dissipation,
         1.2,
     );
-    assert_close(baseline.max_reynolds_number / viscous.max_reynolds_number, 1.2);
+    assert_close(
+        baseline.max_reynolds_number / viscous.max_reynolds_number,
+        1.2,
+    );
 
     assert_close(dense.max_velocity, baseline.max_velocity);
     assert_close(dense.max_shear_rate, baseline.max_shear_rate);
-    assert_close(dense.max_reynolds_number / baseline.max_reynolds_number, 1.25);
+    assert_close(
+        dense.max_reynolds_number / baseline.max_reynolds_number,
+        1.25,
+    );
     assert_close(
         dense.max_viscous_shear_stress,
         baseline.max_viscous_shear_stress,
+    );
+}
+
+#[test]
+fn stokes_flow_triangle_linear_field_scales_material_diagnostics() {
+    let baseline =
+        solve_stokes_flow_plane_triangle_2d(&triangle_mesh_with_material(1, 2.0, 1.0, 1.0))
+            .expect("baseline triangle Stokes material scaling fixture should solve");
+    let viscous =
+        solve_stokes_flow_plane_triangle_2d(&triangle_mesh_with_material(1, 2.4, 1.0, 1.0))
+            .expect("viscosity-perturbed triangle Stokes fixture should solve");
+    let dense =
+        solve_stokes_flow_plane_triangle_2d(&triangle_mesh_with_material(1, 2.0, 1.25, 1.0))
+            .expect("density-perturbed triangle Stokes fixture should solve");
+    let thick = solve_stokes_flow_plane_triangle_2d(&triangle_mesh_with_material(1, 2.0, 1.0, 1.5))
+        .expect("thickness-perturbed triangle Stokes fixture should solve");
+
+    assert_close(viscous.max_velocity, baseline.max_velocity);
+    assert_close(viscous.max_shear_rate, baseline.max_shear_rate);
+    assert_close(
+        viscous.max_viscous_shear_stress / baseline.max_viscous_shear_stress,
+        1.2,
+    );
+    assert_close(
+        viscous.elements[0].viscous_dissipation / baseline.elements[0].viscous_dissipation,
+        1.2,
+    );
+    assert_close(
+        baseline.max_reynolds_number / viscous.max_reynolds_number,
+        1.2,
+    );
+
+    assert_close(dense.max_velocity, baseline.max_velocity);
+    assert_close(dense.max_shear_rate, baseline.max_shear_rate);
+    assert_close(
+        dense.max_reynolds_number / baseline.max_reynolds_number,
+        1.25,
+    );
+    assert_close(
+        dense.max_viscous_shear_stress,
+        baseline.max_viscous_shear_stress,
+    );
+
+    assert_close(thick.max_velocity, baseline.max_velocity);
+    assert_close(thick.max_shear_rate, baseline.max_shear_rate);
+    assert_close(
+        thick.max_viscous_shear_stress,
+        baseline.max_viscous_shear_stress,
+    );
+    assert_close(
+        thick.elements[0].viscous_dissipation / baseline.elements[0].viscous_dissipation,
+        1.5,
     );
 }
 
@@ -131,6 +189,15 @@ fn quad_mesh_with_material(
 }
 
 fn triangle_mesh(subdivisions: usize) -> SolveStokesFlowPlaneTriangle2dRequest {
+    triangle_mesh_with_material(subdivisions, 2.0, 1.0, 1.0)
+}
+
+fn triangle_mesh_with_material(
+    subdivisions: usize,
+    viscosity: f64,
+    density: f64,
+    thickness: f64,
+) -> SolveStokesFlowPlaneTriangle2dRequest {
     let mut nodes = Vec::new();
     for y_index in 0..=subdivisions {
         for x_index in 0..=subdivisions {
@@ -150,12 +217,18 @@ fn triangle_mesh(subdivisions: usize) -> SolveStokesFlowPlaneTriangle2dRequest {
                 lower_left,
                 lower_right,
                 upper_right,
+                viscosity,
+                density,
+                thickness,
             ));
             elements.push(triangle(
                 format!("tri-b-{x_index}-{y_index}"),
                 lower_left,
                 upper_right,
                 upper_left,
+                viscosity,
+                density,
+                thickness,
             ));
         }
     }
@@ -190,15 +263,18 @@ fn triangle(
     node_i: usize,
     node_j: usize,
     node_k: usize,
+    viscosity: f64,
+    density: f64,
+    thickness: f64,
 ) -> StokesFlowPlaneTriangleElementInput {
     StokesFlowPlaneTriangleElementInput {
         id,
         node_i,
         node_j,
         node_k,
-        thickness: 1.0,
-        viscosity: 2.0,
-        density: 1.0,
+        thickness,
+        viscosity,
+        density,
     }
 }
 

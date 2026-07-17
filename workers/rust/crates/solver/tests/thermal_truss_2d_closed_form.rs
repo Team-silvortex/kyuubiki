@@ -92,6 +92,56 @@ fn thermal_truss_2d_tracks_temperature_and_area_scaling() {
         temperature_scale * temperature_scale,
     );
 
+    let expansion_scale = 1.3;
+    let expanded = solve_thermal_truss_2d(&restrained_triangle(
+        area,
+        youngs_modulus,
+        thermal_expansion * expansion_scale,
+        temperature_delta,
+    ))
+    .expect("thermal-expansion-scaled thermal truss 2d should solve");
+    assert_close(
+        expanded.elements[0].thermal_strain / baseline.elements[0].thermal_strain,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.elements[0].stress / baseline.elements[0].stress,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.elements[0].axial_force / baseline.elements[0].axial_force,
+        expansion_scale,
+    );
+    assert_close(
+        expanded.total_strain_energy / baseline.total_strain_energy,
+        expansion_scale * expansion_scale,
+    );
+
+    let modulus_scale = 1.2;
+    let stiffer = solve_thermal_truss_2d(&restrained_triangle(
+        area,
+        youngs_modulus * modulus_scale,
+        thermal_expansion,
+        temperature_delta,
+    ))
+    .expect("modulus-scaled thermal truss 2d should solve");
+    assert_close(
+        stiffer.elements[0].thermal_strain,
+        baseline.elements[0].thermal_strain,
+    );
+    assert_close(
+        stiffer.elements[0].stress / baseline.elements[0].stress,
+        modulus_scale,
+    );
+    assert_close(
+        stiffer.elements[0].axial_force / baseline.elements[0].axial_force,
+        modulus_scale,
+    );
+    assert_close(
+        stiffer.total_strain_energy / baseline.total_strain_energy,
+        modulus_scale,
+    );
+
     let area_scale = 1.8;
     let larger = solve_thermal_truss_2d(&restrained_triangle(
         area * area_scale,

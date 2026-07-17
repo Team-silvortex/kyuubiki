@@ -1,0 +1,306 @@
+use kyuubiki_protocol::{
+    SolveHarmonicSpring1dRequest, SolveTransientSpring1dRequest, TransientSpring1dElementInput,
+    TransientSpring1dNodeInput,
+};
+use kyuubiki_solver::{solve_harmonic_spring_1d, solve_transient_spring_1d};
+
+const TOL: f64 = 1.0e-10;
+const BETA: f64 = 0.25;
+const GAMMA: f64 = 0.5;
+
+#[test]
+fn transient_spring_1d_matches_newmark_step_and_load_scaling() {
+    let baseline_case = TransientCase {
+        mass: 2.0,
+        stiffness: 120.0,
+        damping: 0.6,
+        load: 15.0,
+        initial_displacement: 0.015,
+        initial_velocity: -0.02,
+        time_step: 0.02,
+    };
+    let baseline =
+        solve_transient_spring_1d(&transient_request(baseline_case)).expect("baseline transient");
+    assert_transient_response(&baseline, newmark_single_step(baseline_case), baseline_case);
+
+    let load_scale = 2.4;
+    let loaded_case = TransientCase {
+        load: baseline_case.load * load_scale,
+        initial_displacement: baseline_case.initial_displacement * load_scale,
+        initial_velocity: baseline_case.initial_velocity * load_scale,
+        ..baseline_case
+    };
+    let loaded =
+        solve_transient_spring_1d(&transient_request(loaded_case)).expect("load-scaled transient");
+    assert_transient_response(&loaded, newmark_single_step(loaded_case), loaded_case);
+    assert_close(loaded.nodes[1].ux / baseline.nodes[1].ux, load_scale);
+    assert_close(loaded.nodes[1].vx / baseline.nodes[1].vx, load_scale);
+    assert_close(loaded.nodes[1].ax / baseline.nodes[1].ax, load_scale);
+    assert_close(
+        loaded.history[1].kinetic_energy / baseline.history[1].kinetic_energy,
+        load_scale * load_scale,
+    );
+    assert_close(
+        loaded.history[1].strain_energy / baseline.history[1].strain_energy,
+        load_scale * load_scale,
+    );
+}
+
+#[test]
+fn harmonic_spring_1d_matches_frequency_response_and_load_scaling() {
+    let baseline_case = HarmonicCase {
+        mass: 2.0,
+        stiffness: 1_000.0,
+        damping: 2.0,
+        load: 40.0,
+    };
+    let frequencies = [0.0, 1.0, 2.5, 4.0];
+    let baseline = solve_harmonic_spring_1d(&harmonic_request(baseline_case, &frequencies))
+        .expect("baseline harmonic response");
+    assert_harmonic_response(&baseline, baseline_case, &frequencies);
+
+    let load_scale = 2.25;
+    let loaded_case = HarmonicCase {
+        load: baseline_case.load * load_scale,
+        ..baseline_case
+    };
+    let loaded = solve_harmonic_spring_1d(&harmonic_request(loaded_case, &frequencies))
+        .expect("load-scaled harmonic response");
+    assert_harmonic_response(&loaded, loaded_case, &frequencies);
+    assert_close(loaded.peak_frequency_hz, baseline.peak_frequency_hz);
+    assert_close(
+        loaded.max_displacement / baseline.max_displacement,
+        load_scale,
+    );
+    assert_close(loaded.max_velocity / baseline.max_velocity, load_scale);
+    assert_close(
+        loaded.max_acceleration / baseline.max_acceleration,
+        load_scale,
+    );
+    assert_close(loaded.max_force / baseline.max_force, load_scale);
+}
+
+#[derive(Clone, Copy)]
+struct TransientCase {
+    mass: f64,
+    stiffness: f64,
+    damping: f64,
+    load: f64,
+    initial_displacement: f64,
+    initial_velocity: f64,
+    time_step: f64,
+}
+
+#[derive(Clone, Copy)]
+struct HarmonicCase {
+    mass: f64,
+    stiffness: f64,
+    damping: f64,
+    load: f64,
+}
+
+struct NewmarkExpected {
+    displacement: f64,
+    velocity: f64,
+    acceleration: f64,
+}
+
+struct HarmonicExpected {
+    angular_frequency: f64,
+    displacement_amplitude: f64,
+    velocity_amplitude: f64,
+    acceleration_amplitude: f64,
+    force_amplitude: f64,
+}
+
+fn assert_transient_response(
+    result: &kyuubiki_protocol::SolveTransientSpring1dResult,
+    expected: NewmarkExpected,
+    case: TransientCase,
+) {
+    let final_step = &result.history[1];
+    let tip = &result.nodes[1];
+    let element = &result.elements[0];
+
+    assert_eq!(result.history.len(), 2);
+    assert_close(result.final_time, case.time_step);
+    assert_close(tip.ux, expected.displacement);
+    assert_close(tip.vx, expected.velocity);
+    assert_close(tip.ax, expected.acceleration);
+    assert_close(final_step.displacements[1], expected.displacement);
+    assert_close(final_step.velocities[1], expected.velocity);
+    assert_close(element.extension, expected.displacement);
+    assert_close(element.relative_velocity, expected.velocity);
+    assert_close(element.spring_force, case.stiffness * expected.displacement);
+    assert_close(element.damping_force, case.damping * expected.velocity);
+    assert_close(
+        final_step.kinetic_energy,
+        0.5 * case.mass * expected.velocity.powi(2),
+    );
+    assert_close(
+        final_step.strain_energy,
+        0.5 * case.stiffness * expected.displacement.powi(2),
+    );
+}
+
+fn assert_harmonic_response(
+    result: &kyuubiki_protocol::SolveHarmonicSpring1dResult,
+    case: HarmonicCase,
+    frequencies: &[f64],
+) {
+    let expected_peak = frequencies
+        .iter()
+        .copied()
+        .map(|frequency_hz| {
+            (
+                frequency_hz,
+                harmonic_closed_form(case, frequency_hz).displacement_amplitude,
+            )
+        })
+        .max_by(|left, right| left.1.total_cmp(&right.1))
+        .expect("frequency list should not be empty");
+
+    assert_eq!(result.frequencies.len(), frequencies.len());
+    assert_close(result.peak_frequency_hz, expected_peak.0);
+
+    for (frequency_result, &frequency_hz) in result.frequencies.iter().zip(frequencies.iter()) {
+        let expected = harmonic_closed_form(case, frequency_hz);
+        let tip = &frequency_result.nodes[1];
+        let element = &frequency_result.elements[0];
+
+        assert_close(frequency_result.frequency_hz, frequency_hz);
+        assert_close(
+            frequency_result.angular_frequency,
+            expected.angular_frequency,
+        );
+        assert_close(tip.displacement_amplitude, expected.displacement_amplitude);
+        assert_close(tip.velocity_amplitude, expected.velocity_amplitude);
+        assert_close(tip.acceleration_amplitude, expected.acceleration_amplitude);
+        assert_close(element.extension_amplitude, expected.displacement_amplitude);
+        assert_close(element.force_amplitude, expected.force_amplitude);
+    }
+}
+
+fn newmark_single_step(case: TransientCase) -> NewmarkExpected {
+    let dt = case.time_step;
+    let initial_acceleration = (case.load
+        - case.stiffness * case.initial_displacement
+        - case.damping * case.initial_velocity)
+        / case.mass;
+    let a0 = 1.0 / (BETA * dt * dt);
+    let a1 = GAMMA / (BETA * dt);
+    let a2 = 1.0 / (BETA * dt);
+    let a3 = 1.0 / (2.0 * BETA) - 1.0;
+    let a4 = GAMMA / BETA - 1.0;
+    let a5 = dt * (GAMMA / (2.0 * BETA) - 1.0);
+    let effective = case.stiffness + a1 * case.damping + a0 * case.mass;
+    let rhs = case.load
+        + case.mass
+            * (a0 * case.initial_displacement
+                + a2 * case.initial_velocity
+                + a3 * initial_acceleration)
+        + case.damping
+            * (a1 * case.initial_displacement
+                + a4 * case.initial_velocity
+                + a5 * initial_acceleration);
+    let displacement = rhs / effective;
+    let acceleration = a0 * (displacement - case.initial_displacement)
+        - a2 * case.initial_velocity
+        - a3 * initial_acceleration;
+    let velocity =
+        case.initial_velocity + dt * ((1.0 - GAMMA) * initial_acceleration + GAMMA * acceleration);
+
+    NewmarkExpected {
+        displacement,
+        velocity,
+        acceleration,
+    }
+}
+
+fn harmonic_closed_form(case: HarmonicCase, frequency_hz: f64) -> HarmonicExpected {
+    let angular_frequency = std::f64::consts::TAU * frequency_hz;
+    let real = case.stiffness - angular_frequency.powi(2) * case.mass;
+    let imag = angular_frequency * case.damping;
+    let dynamic_stiffness = (real * real + imag * imag).sqrt();
+    let displacement_amplitude = case.load / dynamic_stiffness;
+    let velocity_amplitude = angular_frequency * displacement_amplitude;
+    let acceleration_amplitude = angular_frequency.powi(2) * displacement_amplitude;
+    let force_amplitude = displacement_amplitude * (case.stiffness.powi(2) + imag.powi(2)).sqrt();
+
+    HarmonicExpected {
+        angular_frequency,
+        displacement_amplitude,
+        velocity_amplitude,
+        acceleration_amplitude,
+        force_amplitude,
+    }
+}
+
+fn transient_request(case: TransientCase) -> SolveTransientSpring1dRequest {
+    SolveTransientSpring1dRequest {
+        nodes: vec![
+            dynamic_node("fixed", 0.0, true, 0.0, 1.0, 0.0, 0.0),
+            dynamic_node(
+                "tip",
+                1.0,
+                false,
+                case.load,
+                case.mass,
+                case.initial_displacement,
+                case.initial_velocity,
+            ),
+        ],
+        elements: vec![dynamic_element(case.stiffness, case.damping)],
+        time_step: case.time_step,
+        steps: 1,
+    }
+}
+
+fn harmonic_request(case: HarmonicCase, frequencies_hz: &[f64]) -> SolveHarmonicSpring1dRequest {
+    SolveHarmonicSpring1dRequest {
+        nodes: vec![
+            dynamic_node("fixed", 0.0, true, 0.0, 1.0, 0.0, 0.0),
+            dynamic_node("tip", 1.0, false, case.load, case.mass, 0.0, 0.0),
+        ],
+        elements: vec![dynamic_element(case.stiffness, case.damping)],
+        frequencies_hz: frequencies_hz.to_vec(),
+    }
+}
+
+fn dynamic_element(stiffness: f64, damping: f64) -> TransientSpring1dElementInput {
+    TransientSpring1dElementInput {
+        id: "s0".to_string(),
+        node_i: 0,
+        node_j: 1,
+        stiffness,
+        damping,
+    }
+}
+
+fn dynamic_node(
+    id: &str,
+    x: f64,
+    fix_x: bool,
+    load_x: f64,
+    mass: f64,
+    initial_displacement: f64,
+    initial_velocity: f64,
+) -> TransientSpring1dNodeInput {
+    TransientSpring1dNodeInput {
+        id: id.to_string(),
+        x,
+        fix_x,
+        load_x,
+        mass,
+        initial_displacement,
+        initial_velocity,
+    }
+}
+
+fn assert_close(actual: f64, expected: f64) {
+    let scale = expected.abs().max(1.0);
+    assert!(
+        (actual - expected).abs() <= TOL * scale,
+        "expected {actual} to be close to {expected}",
+    );
+}

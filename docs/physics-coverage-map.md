@@ -127,6 +127,11 @@ stress objectives. Thermal scores now include dominant, watch-count, and
 blocking-term fields for automated recovery and next-step selection. Solver
 aliases such as `temperature_min`/`temperature_max`, `peak_heat_flux`,
 `thermal_stress_peak`, and `thermal_energy_total` are normalized too.
+The solver-side `transient_heat_bar_closed_form.rs` regression now keeps a
+positive-conductance implicit Euler thermal-bar transient reference
+promotion-ready, covering lumped capacity, fixed-temperature reduction,
+heat-load linearity, heat flux, and thermal energy history before transient
+heat is promoted into the release-gated physics matrix.
 
 The electrostatic line now mirrors that optimization shape:
 `transform.evaluate_electrostatic_guard`,
@@ -171,6 +176,11 @@ frequency, velocity, acceleration, watch/missing counts, dominant terms, and
 blocking terms so automated sweeps can explain why a dynamic candidate is held.
 Harmonic response entries can use aliases such as `freq_hz`,
 `displacement_amplitude`, `acceleration_amplitude`, and `force_amplitude`.
+The solver-side `dynamic_spring_closed_form.rs` regression now keeps
+single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
+including load-scaling checks, but those dynamic spring operators remain outside
+the release-gated 38-operator `physics-coverage` qualification manifest until
+the dynamic line is promoted into that matrix.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

@@ -105,12 +105,50 @@ fn truss_2d_tracks_load_and_area_scaling() {
         youngs_modulus,
     ))
     .expect("area-scaled two-bar truss should solve");
-    assert_close(area_scaled.nodes[2].uy / baseline.nodes[2].uy, 1.0 / area_scale, TOL);
-    assert_close(area_scaled.elements[0].axial_force, baseline.elements[0].axial_force, TOL);
-    assert_close(area_scaled.max_stress / baseline.max_stress, 1.0 / area_scale, TOL);
+    assert_close(
+        area_scaled.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / area_scale,
+        TOL,
+    );
+    assert_close(
+        area_scaled.elements[0].axial_force,
+        baseline.elements[0].axial_force,
+        TOL,
+    );
+    assert_close(
+        area_scaled.max_stress / baseline.max_stress,
+        1.0 / area_scale,
+        TOL,
+    );
     assert_close(
         area_scaled.total_strain_energy / baseline.total_strain_energy,
         1.0 / area_scale,
+        TOL,
+    );
+
+    let modulus_scale = 1.25;
+    let stiffened = solve_truss_2d(&symmetric_request(
+        half_span,
+        height,
+        load,
+        area,
+        youngs_modulus * modulus_scale,
+    ))
+    .expect("modulus-scaled two-bar truss should solve");
+    assert_close(
+        stiffened.nodes[2].uy / baseline.nodes[2].uy,
+        1.0 / modulus_scale,
+        TOL,
+    );
+    assert_close(
+        stiffened.elements[0].axial_force,
+        baseline.elements[0].axial_force,
+        TOL,
+    );
+    assert_close(stiffened.max_stress, baseline.max_stress, TOL);
+    assert_close(
+        stiffened.total_strain_energy / baseline.total_strain_energy,
+        1.0 / modulus_scale,
         TOL,
     );
 }

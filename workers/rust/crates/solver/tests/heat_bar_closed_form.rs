@@ -54,6 +54,26 @@ fn heat_bar_1d_tracks_heat_load_and_conductivity_scaling() {
         conductive_result.elements[0].heat_flux,
         baseline_result.elements[0].heat_flux,
     );
+
+    let area_factor = 2.0;
+    let wider = HeatCase {
+        area: baseline.area * area_factor,
+        ..baseline
+    };
+    let wider_result = solve_heat_bar_1d(&wider.request()).expect("area-scaled heat bar");
+    assert_response(&wider_result, wider.expected());
+    assert_close(
+        wider_result.nodes[1].temperature,
+        baseline_result.nodes[1].temperature / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].temperature_gradient,
+        baseline_result.elements[0].temperature_gradient / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].heat_flux,
+        baseline_result.elements[0].heat_flux / area_factor,
+    );
 }
 
 #[derive(Clone, Copy)]

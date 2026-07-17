@@ -199,8 +199,9 @@ velocity, pressure-drop, and viscous-stress diagnostics. That is enough to
 qualify the Stokes screening boundary, but not enough to claim general CFD,
 Navier-Stokes, turbulence, compressible-flow, or industrial design accuracy.
 The same retained regression now checks material-parameter scaling for the
-linear screening field: viscosity changes scale viscous stress and dissipation
-while leaving the prescribed velocity and shear rate unchanged, and density
+linear screening field: quad and triangle viscosity changes scale viscous
+stress and dissipation while leaving the prescribed velocity and shear rate
+unchanged, triangle thickness changes scale dissipation only, and density
 changes scale Reynolds diagnostics without changing viscous stress.
 
 ## CFD Stokes Divergence Tolerance
@@ -365,8 +366,9 @@ The CFD-facing Stokes operators remain `screening_only` in scope, but the
 quad lane has body-force and lid-driven shear boundary fixtures, the triangle
 lane adds geometry rejection plus heterogeneous viscosity response, and the
 mesh-refinement fixture verifies a linear Stokes field on coarse and refined
-quad/triangle meshes. The test suite encodes a screening divergence tolerance
-and the retained screening policy documents its current limits. The
+quad/triangle meshes with material-diagnostic scaling on both element shapes.
+The test suite encodes a screening divergence tolerance and the retained
+screening policy documents its current limits. The
 `screening-cfd-boundary` validation profile now acts as the release-candidate
 aggregation lane, while `stokes-flow-screening` remains the narrower component
 profile. Future Navier-Stokes or industrial CFD claims still need separate
@@ -389,9 +391,12 @@ advection-dominant Peclet regimes, plus the zero-velocity limit where
 advective flux must vanish. The retained material/flow perturbation regression
 also verifies that fixed-boundary concentrations stay unchanged while
 diffusivity scales diffusive flux and inversely scales Peclet number, and
-velocity scales advective flux and Peclet number. This does not claim transient
-transport, nonlinear reaction, multidimensional flow, turbulent mixing, or
-arbitrary stabilization schemes.
+velocity scales advective flux and Peclet number. The source-response
+regression adds a three-node free concentration DOF and verifies that internal
+source strength scales the middle concentration linearly while cross-sectional
+area inversely scales the source-driven concentration increment. This does not
+claim transient transport, nonlinear reaction, multidimensional flow,
+turbulent mixing, or arbitrary stabilization schemes.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
 permeance scope. Its closed-form evidence checks magnetic potential, field
@@ -424,9 +429,10 @@ The thermal beam 1D operator is now qualified for the retained linear
 free-curvature scope. Its closed-form evidence checks thermal curvature, tip
 rotation, tip displacement, zero-gradient response, and near-zero internal
 force for a single fixed-free member. The retained scaling regression verifies
-that temperature-gradient changes linearly scale curvature, tip rotation, and
-tip displacement, while section-depth changes inversely scale those same
-free-curvature diagnostics without introducing internal moment or strain energy.
+that temperature-gradient and thermal-expansion changes linearly scale
+curvature, tip rotation, and tip displacement, while section-depth changes
+inversely scale those same free-curvature diagnostics without introducing
+internal moment or strain energy.
 This does not claim thermal frame assemblies, nonlinear material behavior,
 transient heat transfer, buckling, or plasticity.
 
@@ -434,20 +440,21 @@ The thermal truss 3D operator is now qualified for the retained fully
 restrained uniform-temperature scope. Its closed-form evidence checks zero
 node displacement, thermal/mechanical strain split, compressive stress, axial
 force, and member energy summation. The retained scaling regression verifies
-that temperature changes scale thermal strain, stress, and axial force while
-scaling strain energy quadratically, and that area changes scale axial force
-and total energy without changing stress or energy density. This does not claim
-partial restraint, temperature gradients, buckling, plasticity, contact, or
-dynamic response.
+that temperature and thermal-expansion changes scale thermal strain, stress,
+and axial force while scaling strain energy quadratically, that Young's
+modulus changes scale stress, axial force, and energy without changing thermal
+strain, and that area changes scale axial force and total energy without
+changing stress or energy density. This does not claim partial restraint,
+temperature gradients, buckling, plasticity, contact, or dynamic response.
 
 The thermal truss 2D operator is now qualified for the retained fully
 restrained uniform-temperature scope. Its closed-form evidence mirrors the 3D
 thermal truss lane by checking fixed node displacement, thermal/mechanical
 strain split, compressive stress, axial force, and member energy summation.
-The retained 2D scaling regression applies the same temperature and area checks
-to the planar restrained triangle. This does not claim partial restraint, mixed
-thermal loading, temperature gradients, buckling, plasticity, contact, or
-dynamic response.
+The retained 2D scaling regression applies the same temperature,
+thermal-expansion, Young's-modulus, and area checks to the planar restrained
+triangle. This does not claim partial restraint, mixed thermal loading,
+temperature gradients, buckling, plasticity, contact, or dynamic response.
 
 The thermal frame 2D operator is now qualified for the retained fully
 restrained uniform-temperature single-member scope. Its closed-form evidence
@@ -488,17 +495,21 @@ displacement, equal axial member force, stress, strain, and strain energy.
 The retained scaling regression also verifies that load changes linearly scale
 apex displacement, axial force, and stress while scaling energy quadratically,
 and that area changes inversely scale displacement, stress, and energy while
-preserving axial force. This does not claim arbitrary truss topology, geometric
-nonlinearity, buckling, dynamic response, damaged members, or 3D space truss
-behavior.
+preserving axial force. It also verifies that Young's modulus changes
+inversely scale displacement and strain energy while preserving
+load-controlled axial force and stress. This does not claim arbitrary truss
+topology, geometric nonlinearity, buckling, dynamic response, damaged members,
+or 3D space truss behavior.
 
 The truss 3D operator is now qualified for the retained symmetric tripod scope.
 Its closed-form evidence checks fixed base supports, zero lateral apex motion,
 vertical displacement, equal axial leg force, stress, strain, and strain
 energy. The retained tripod scaling regression applies the same load and area
-checks to the 3D leg-force/stress/energy response. This does not claim
-arbitrary space-frame topology, geometric nonlinearity, buckling, damaged
-members, joint eccentricity, or dynamic response.
+checks to the 3D leg-force/stress/energy response, and now also verifies
+Young's-modulus inverse displacement and energy scaling while preserving
+load-controlled leg force and stress. This does not claim arbitrary
+space-frame topology, geometric nonlinearity, buckling, damaged members, joint
+eccentricity, or dynamic response.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
@@ -518,10 +529,13 @@ stress and axial force. The heat and electrostatic line fields also have
 source/material scaling regressions:
 `heat_bar_1d_tracks_heat_load_and_conductivity_scaling` verifies heat-load
 linearity plus conductivity-inverse temperature response while preserving
-source-controlled flux, and
+source-controlled flux, and also checks area-inverse temperature, gradient,
+and heat-flux response for the same heat load; and
 `electrostatic_bar_1d_tracks_charge_and_permittivity_scaling` verifies charge
 linearity, quadratic stored-energy scaling, and permittivity-inverse potential
-response while preserving source-controlled electric flux density.
+response while preserving source-controlled electric flux density; it also
+checks area-inverse potential, field, flux-density, and stored-energy response
+for the same charge source.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`

@@ -66,6 +66,31 @@ fn electrostatic_bar_1d_tracks_charge_and_permittivity_scaling() {
         dielectric_result.total_stored_energy,
         baseline_result.total_stored_energy / permittivity_factor,
     );
+
+    let area_factor = 2.0;
+    let wider = ElectrostaticCase {
+        area: baseline.area * area_factor,
+        ..baseline
+    };
+    let wider_result =
+        solve_electrostatic_bar_1d(&wider.request()).expect("area-scaled electrostatic bar");
+    assert_response(&wider_result, wider.expected());
+    assert_close(
+        wider_result.nodes[1].potential,
+        baseline_result.nodes[1].potential / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].electric_field,
+        baseline_result.elements[0].electric_field / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].electric_flux_density,
+        baseline_result.elements[0].electric_flux_density / area_factor,
+    );
+    assert_close(
+        wider_result.total_stored_energy,
+        baseline_result.total_stored_energy / area_factor,
+    );
 }
 
 #[derive(Clone, Copy)]

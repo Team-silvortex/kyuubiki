@@ -89,8 +89,14 @@ fn advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling() {
         .expect("diffusivity-scaled transport case should solve");
     let diffusive_element = &diffusive.elements[0];
 
-    assert_close(diffusive.nodes[0].concentration, baseline.nodes[0].concentration);
-    assert_close(diffusive.nodes[1].concentration, baseline.nodes[1].concentration);
+    assert_close(
+        diffusive.nodes[0].concentration,
+        baseline.nodes[0].concentration,
+    );
+    assert_close(
+        diffusive.nodes[1].concentration,
+        baseline.nodes[1].concentration,
+    );
     assert_close(
         diffusive_element.concentration_gradient,
         baseline_element.concentration_gradient,
@@ -117,8 +123,14 @@ fn advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling() {
         .expect("velocity-scaled transport case should solve");
     let advective_element = &advective.elements[0];
 
-    assert_close(advective.nodes[0].concentration, baseline.nodes[0].concentration);
-    assert_close(advective.nodes[1].concentration, baseline.nodes[1].concentration);
+    assert_close(
+        advective.nodes[0].concentration,
+        baseline.nodes[0].concentration,
+    );
+    assert_close(
+        advective.nodes[1].concentration,
+        baseline.nodes[1].concentration,
+    );
     assert_close(
         advective_element.concentration_gradient,
         baseline_element.concentration_gradient,
@@ -137,6 +149,50 @@ fn advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling() {
     );
 }
 
+#[test]
+fn advection_diffusion_bar_1d_tracks_internal_source_and_area_scaling() {
+    let baseline_case = TransportSourceCase {
+        half_length: 0.9,
+        area: 0.04,
+        left_concentration: 0.25,
+        right_concentration: 0.75,
+        diffusivity: 0.08,
+        velocity: 0.03,
+        source: 0.012,
+    };
+    let baseline = solve_advection_diffusion_bar_1d(&baseline_case.request())
+        .expect("baseline transport source case should solve");
+    assert_source_response(&baseline, baseline_case);
+
+    let source_scale = 2.0;
+    let sourced_case = TransportSourceCase {
+        source: baseline_case.source * source_scale,
+        ..baseline_case
+    };
+    let sourced = solve_advection_diffusion_bar_1d(&sourced_case.request())
+        .expect("source-scaled transport case should solve");
+    assert_source_response(&sourced, sourced_case);
+    assert_close(
+        sourced.nodes[1].concentration - baseline_case.no_source_mid_concentration(),
+        (baseline.nodes[1].concentration - baseline_case.no_source_mid_concentration())
+            * source_scale,
+    );
+
+    let area_scale = 2.5;
+    let wider_case = TransportSourceCase {
+        area: baseline_case.area * area_scale,
+        ..baseline_case
+    };
+    let wider = solve_advection_diffusion_bar_1d(&wider_case.request())
+        .expect("area-scaled transport case should solve");
+    assert_source_response(&wider, wider_case);
+    assert_close(
+        wider.nodes[1].concentration - baseline_case.no_source_mid_concentration(),
+        (baseline.nodes[1].concentration - baseline_case.no_source_mid_concentration())
+            / area_scale,
+    );
+}
+
 #[derive(Clone, Copy)]
 struct TransportCase {
     length: f64,
@@ -144,6 +200,93 @@ struct TransportCase {
     right_concentration: f64,
     diffusivity: f64,
     velocity: f64,
+}
+
+#[derive(Clone, Copy)]
+struct TransportSourceCase {
+    half_length: f64,
+    area: f64,
+    left_concentration: f64,
+    right_concentration: f64,
+    diffusivity: f64,
+    velocity: f64,
+    source: f64,
+}
+
+impl TransportSourceCase {
+    fn request(self) -> SolveAdvectionDiffusionBar1dRequest {
+        SolveAdvectionDiffusionBar1dRequest {
+            nodes: vec![
+                transport_node("inlet", 0.0, true, self.left_concentration, 0.0),
+                transport_node("source", self.half_length, false, 0.0, self.source),
+                transport_node(
+                    "outlet",
+                    2.0 * self.half_length,
+                    true,
+                    self.right_concentration,
+                    0.0,
+                ),
+            ],
+            elements: vec![
+                self.element("transport-left", 0, 1),
+                self.element("transport-right", 1, 2),
+            ],
+        }
+    }
+
+    fn element(
+        self,
+        id: &str,
+        node_i: usize,
+        node_j: usize,
+    ) -> AdvectionDiffusionBar1dElementInput {
+        AdvectionDiffusionBar1dElementInput {
+            id: id.to_string(),
+            node_i,
+            node_j,
+            area: self.area,
+            diffusivity: self.diffusivity,
+            velocity: self.velocity,
+        }
+    }
+
+    fn diffusion(self) -> f64 {
+        self.diffusivity * self.area / self.half_length
+    }
+
+    fn advection(self) -> f64 {
+        self.velocity * self.area * 0.5
+    }
+
+    fn no_source_mid_concentration(self) -> f64 {
+        let diffusion = self.diffusion();
+        let advection = self.advection();
+        ((diffusion + advection) * self.left_concentration
+            + (diffusion - advection) * self.right_concentration)
+            / (2.0 * diffusion)
+    }
+
+    fn mid_concentration(self) -> f64 {
+        self.no_source_mid_concentration() + self.source / (2.0 * self.diffusion())
+    }
+
+    fn expected_element(self, left: f64, right: f64) -> ExpectedTransport {
+        let average_concentration = 0.5 * (left + right);
+        let concentration_gradient = (right - left) / self.half_length;
+        let diffusive_flux = -self.diffusivity * concentration_gradient;
+        let advective_flux = self.velocity * average_concentration;
+        let total_flux = diffusive_flux + advective_flux;
+        let peclet_number = self.velocity.abs() * self.half_length / (2.0 * self.diffusivity);
+        ExpectedTransport {
+            average_concentration,
+            concentration_gradient,
+            diffusive_flux,
+            advective_flux,
+            total_flux,
+            peclet_number,
+            max_concentration: left.abs().max(right.abs()),
+        }
+    }
 }
 
 impl TransportCase {
@@ -198,13 +341,69 @@ struct ExpectedTransport {
 }
 
 fn node(id: &str, x: f64, concentration: f64) -> AdvectionDiffusionBar1dNodeInput {
+    transport_node(id, x, true, concentration, 0.0)
+}
+
+fn transport_node(
+    id: &str,
+    x: f64,
+    fix_concentration: bool,
+    concentration: f64,
+    source: f64,
+) -> AdvectionDiffusionBar1dNodeInput {
     AdvectionDiffusionBar1dNodeInput {
         id: id.to_string(),
         x,
-        fix_concentration: true,
+        fix_concentration,
         concentration,
-        source: 0.0,
+        source,
     }
+}
+
+fn assert_source_response(
+    result: &kyuubiki_protocol::SolveAdvectionDiffusionBar1dResult,
+    case: TransportSourceCase,
+) {
+    let mid_concentration = case.mid_concentration();
+    let left_expected = case.expected_element(case.left_concentration, mid_concentration);
+    let right_expected = case.expected_element(mid_concentration, case.right_concentration);
+
+    assert_close(result.nodes[0].concentration, case.left_concentration);
+    assert_close(result.nodes[1].concentration, mid_concentration);
+    assert_close(result.nodes[2].concentration, case.right_concentration);
+    assert_close(
+        result.max_concentration,
+        case.left_concentration
+            .abs()
+            .max(mid_concentration.abs())
+            .max(case.right_concentration.abs()),
+    );
+    assert_close(
+        result.elements[0].diffusive_flux,
+        left_expected.diffusive_flux,
+    );
+    assert_close(
+        result.elements[0].advective_flux,
+        left_expected.advective_flux,
+    );
+    assert_close(result.elements[0].total_flux, left_expected.total_flux);
+    assert_close(
+        result.elements[1].diffusive_flux,
+        right_expected.diffusive_flux,
+    );
+    assert_close(
+        result.elements[1].advective_flux,
+        right_expected.advective_flux,
+    );
+    assert_close(result.elements[1].total_flux, right_expected.total_flux);
+    assert_close(
+        result.max_total_flux,
+        left_expected
+            .total_flux
+            .abs()
+            .max(right_expected.total_flux.abs()),
+    );
+    assert_close(result.max_peclet_number, left_expected.peclet_number);
 }
 
 fn assert_close(actual: f64, expected: f64) {

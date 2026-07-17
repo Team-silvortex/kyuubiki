@@ -73,7 +73,20 @@ stiffness and density scaling.
 spring checks. The transient path verifies one-step Newmark average
 acceleration updates against a hand-derived single-DOF reference; the harmonic
 path checks single-DOF dynamic-stiffness amplitudes, velocity/acceleration
-amplitudes, element force amplitude, and peak-frequency selection.
+amplitudes, element force amplitude, and peak-frequency selection. The focused
+`dynamic_spring_closed_form.rs` regression keeps the same closed-form references
+as a promotion-ready evidence entry and adds load-scaling checks: transient
+displacement, velocity, acceleration, spring/damping force, kinetic energy, and
+strain energy scale by the expected linear/quadratic factors when load and
+initial state are scaled together, while harmonic amplitudes scale linearly and
+the peak frequency remains unchanged.
+
+`transient_heat_bar_1d` adds a focused heat-transfer transient check. The
+`transient_heat_bar_closed_form.rs` regression verifies the implicit Euler
+single-free-node thermal recurrence for a lumped-capacity bar with positive
+conductance, fixed root temperature, tip heat load, every history step, final
+gradient, final heat flux, and thermal energy. It also checks heat-load
+linearity and confirms larger lumped capacity slows the same transient load.
 
 `nonlinear_spring_1d` and `contact_gap_1d` add the first nonlinear mechanical
 checks. The hardening spring is compared against the Cardano closed-form root
@@ -119,6 +132,8 @@ These baselines are enforced in:
 
 - [accuracy_baselines.rs](../workers/rust/crates/solver/tests/accuracy_baselines.rs)
 - [mechanical_convergence.rs](../workers/rust/crates/solver/tests/mechanical_convergence.rs)
+- [dynamic_spring_closed_form.rs](../workers/rust/crates/solver/tests/dynamic_spring_closed_form.rs)
+- [transient_heat_bar_closed_form.rs](../workers/rust/crates/solver/tests/transient_heat_bar_closed_form.rs)
 
 The first qualification-oriented evidence packet for the 1D closed-form subset
 is tracked in:
@@ -188,13 +203,19 @@ The eighth approved qualification packet is
 [advection-diffusion-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json).
 It promotes `solve.advection_diffusion_bar_1d` for the retained 1D steady
 constant-coefficient transport scope after closed-form flux, Peclet, and
-zero-velocity checks pass.
+zero-velocity checks pass. The focused closed-form regression also now covers a
+three-node internal-source fixture where source strength scales the free middle
+concentration linearly and cross-sectional area inversely scales the
+source-driven concentration increment.
 
 The ninth approved qualification packet is
 [magnetostatic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json).
 It promotes `solve.magnetostatic_bar_1d` for the retained 1D linear
 magnetostatic permeance scope after closed-form potential, field, flux, energy,
-and zero-source checks pass.
+and zero-source checks pass. The focused closed-form regression also now
+checks source-driven linear/quadratic response, permeability-inverse potential
+and energy response while preserving source-controlled flux density, and
+area-inverse potential, field, flux-density, and stored-energy response.
 
 The tenth approved qualification packet is
 [spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json).
@@ -212,7 +233,10 @@ The twelfth approved qualification packet is
 [thermal-beam-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json).
 It promotes `solve.thermal_beam_1d` for the retained linear thermal
 free-curvature scope after tip displacement, tip rotation, zero-gradient, and
-near-zero internal-force checks pass.
+near-zero internal-force checks pass. The focused closed-form regression also
+checks that temperature-gradient and thermal-expansion changes linearly scale
+curvature, tip rotation, and tip displacement, while section-depth changes
+scale the same free-curvature diagnostics inversely.
 
 The thirteenth approved qualification packet is
 [contact-gap-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json).
@@ -223,25 +247,33 @@ The fourteenth approved qualification packet is
 [truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json).
 It promotes `solve.truss_2d` for the retained symmetric two-bar truss scope
 after axial force, apex displacement, stress, strain, and strain-energy checks
-pass.
+pass. The focused closed-form regression also checks that Young's modulus
+inversely scales apex displacement and strain energy while preserving
+load-controlled axial force and stress.
 
 The fifteenth approved qualification packet is
 [truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json).
 It promotes `solve.truss_3d` for the retained symmetric tripod truss scope
 after axial force, apex displacement, stress, strain, and strain-energy checks
-pass.
+pass. The focused closed-form regression also checks that Young's modulus
+inversely scales apex displacement and strain energy while preserving
+load-controlled leg force and stress.
 
 The sixteenth approved qualification packet is
 [thermal-truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json).
 It promotes `solve.thermal_truss_3d` for the retained fully restrained
 uniform-temperature scope after strain split, stress, axial force, and
-strain-energy checks pass.
+strain-energy checks pass. The focused closed-form regression also checks
+thermal-expansion and Young's-modulus scaling alongside temperature and area
+scaling.
 
 The seventeenth approved qualification packet is
 [thermal-truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json).
 It promotes `solve.thermal_truss_2d` for the retained fully restrained
 uniform-temperature scope after strain split, stress, axial force, and
-strain-energy checks pass.
+strain-energy checks pass. The focused closed-form regression mirrors the 3D
+thermal truss lane with temperature, thermal-expansion, Young's-modulus, and
+area scaling.
 
 The eighteenth approved qualification packet is
 [thermal-frame-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json).

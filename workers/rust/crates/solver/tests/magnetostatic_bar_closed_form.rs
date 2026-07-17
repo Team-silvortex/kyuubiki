@@ -68,6 +68,93 @@ fn magnetostatic_bar_1d_reports_zero_energy_for_zero_source() {
     assert_close(result.total_stored_energy, 0.0);
 }
 
+#[test]
+fn magnetostatic_bar_1d_tracks_source_permeability_and_area_scaling() {
+    let baseline = MagneticCase {
+        length: 2.25,
+        area: 0.15,
+        permeability: 4.0e-7 * std::f64::consts::PI,
+        source: 3.0e-6,
+    };
+    let baseline_result =
+        solve_magnetostatic_bar_1d(&baseline.request()).expect("baseline magnetic scaling case");
+
+    let source_factor = 2.5;
+    let sourced = MagneticCase {
+        source: baseline.source * source_factor,
+        ..baseline
+    };
+    let sourced_result =
+        solve_magnetostatic_bar_1d(&sourced.request()).expect("source-scaled magnetic case");
+    assert_case(&sourced_result, sourced.expected());
+    assert_close(
+        sourced_result.nodes[1].magnetic_potential,
+        baseline_result.nodes[1].magnetic_potential * source_factor,
+    );
+    assert_close(
+        sourced_result.elements[0].magnetic_field_strength,
+        baseline_result.elements[0].magnetic_field_strength * source_factor,
+    );
+    assert_close(
+        sourced_result.elements[0].magnetic_flux_density,
+        baseline_result.elements[0].magnetic_flux_density * source_factor,
+    );
+    assert_close(
+        sourced_result.total_stored_energy,
+        baseline_result.total_stored_energy * source_factor * source_factor,
+    );
+
+    let permeability_factor = 4.0;
+    let permeable = MagneticCase {
+        permeability: baseline.permeability * permeability_factor,
+        ..baseline
+    };
+    let permeable_result = solve_magnetostatic_bar_1d(&permeable.request())
+        .expect("permeability-scaled magnetic case");
+    assert_case(&permeable_result, permeable.expected());
+    assert_close(
+        permeable_result.nodes[1].magnetic_potential,
+        baseline_result.nodes[1].magnetic_potential / permeability_factor,
+    );
+    assert_close(
+        permeable_result.elements[0].magnetic_field_strength,
+        baseline_result.elements[0].magnetic_field_strength / permeability_factor,
+    );
+    assert_close(
+        permeable_result.elements[0].magnetic_flux_density,
+        baseline_result.elements[0].magnetic_flux_density,
+    );
+    assert_close(
+        permeable_result.total_stored_energy,
+        baseline_result.total_stored_energy / permeability_factor,
+    );
+
+    let area_factor = 3.0;
+    let wider = MagneticCase {
+        area: baseline.area * area_factor,
+        ..baseline
+    };
+    let wider_result =
+        solve_magnetostatic_bar_1d(&wider.request()).expect("area-scaled magnetic case");
+    assert_case(&wider_result, wider.expected());
+    assert_close(
+        wider_result.nodes[1].magnetic_potential,
+        baseline_result.nodes[1].magnetic_potential / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].magnetic_field_strength,
+        baseline_result.elements[0].magnetic_field_strength / area_factor,
+    );
+    assert_close(
+        wider_result.elements[0].magnetic_flux_density,
+        baseline_result.elements[0].magnetic_flux_density / area_factor,
+    );
+    assert_close(
+        wider_result.total_stored_energy,
+        baseline_result.total_stored_energy / area_factor,
+    );
+}
+
 #[derive(Clone, Copy)]
 struct MagneticCase {
     length: f64,
@@ -117,6 +204,36 @@ struct ExpectedMagneticResponse {
     field_strength: f64,
     flux_density: f64,
     stored_energy: f64,
+}
+
+fn assert_case(
+    result: &kyuubiki_protocol::SolveMagnetostaticBar1dResult,
+    expected: ExpectedMagneticResponse,
+) {
+    let element = &result.elements[0];
+    assert_close(result.nodes[0].magnetic_potential, 0.0);
+    assert_close(
+        result.nodes[1].magnetic_potential,
+        expected.magnetic_potential,
+    );
+    assert_close(
+        result.max_magnetic_potential,
+        expected.magnetic_potential.abs(),
+    );
+    assert_close(
+        result.max_magnetic_field_strength,
+        expected.field_strength.abs(),
+    );
+    assert_close(result.max_flux_density, expected.flux_density.abs());
+    assert_close(result.total_stored_energy, expected.stored_energy);
+    assert_close(
+        element.average_magnetic_potential,
+        expected.magnetic_potential / 2.0,
+    );
+    assert_close(element.magnetic_potential_gradient, expected.gradient);
+    assert_close(element.magnetic_field_strength, expected.field_strength);
+    assert_close(element.magnetic_flux_density, expected.flux_density);
+    assert_close(element.stored_energy, expected.stored_energy);
 }
 
 fn node(
