@@ -459,7 +459,13 @@ fn assert_transport_summary(result: &SolveAdvectionDiffusionBar1dResult) {
     let max_concentration = result
         .nodes
         .iter()
-        .map(|node| node.concentration.abs())
+        .map(|node| {
+            let input = &result.input.nodes[node.index];
+            assert_eq!(node.id, input.id);
+            assert_close(node.x, input.x);
+            assert_close(node.source, input.source);
+            node.concentration.abs()
+        })
         .fold(0.0_f64, f64::max);
     let max_total_flux = result
         .elements

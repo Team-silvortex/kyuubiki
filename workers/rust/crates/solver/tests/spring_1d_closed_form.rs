@@ -187,6 +187,9 @@ fn assert_energy_balance(result: &SolveSpring1dResult) {
 fn assert_spring_summary(result: &SolveSpring1dResult) {
     let mut max_displacement: f64 = 0.0;
     for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
         max_displacement = max_displacement.max(node.ux.abs());
     }
     assert_close(result.max_displacement, max_displacement);

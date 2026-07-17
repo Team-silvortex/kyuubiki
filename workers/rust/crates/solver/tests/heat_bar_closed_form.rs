@@ -175,6 +175,13 @@ fn assert_response(result: &SolveHeatBar1dResult, expected: ExpectedHeatResponse
 }
 
 fn assert_heat_bar_summary(result: &SolveHeatBar1dResult) {
+    for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.heat_load, input.heat_load);
+    }
+
     let max_temperature = result
         .nodes
         .iter()

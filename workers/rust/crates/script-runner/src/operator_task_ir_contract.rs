@@ -325,25 +325,39 @@ fn validate_golden_manifest(root: &Path, tasks_by_path: &Map<String, Value>) -> 
             "{GOLDEN_MANIFEST_PATH}: schema_version must be {GOLDEN_MANIFEST_SCHEMA}"
         ));
     }
-    if manifest.get("line").and_then(Value::as_str).unwrap_or_default() != "moxi 2.x" {
+    if manifest
+        .get("line")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        != "moxi 2.x"
+    {
         return Err(format!("{GOLDEN_MANIFEST_PATH}: line must be moxi 2.x"));
     }
     let Some(examples) = manifest.get("examples").and_then(Value::as_array) else {
-        return Err(format!("{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"));
+        return Err(format!(
+            "{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"
+        ));
     };
     if examples.is_empty() {
-        return Err(format!("{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"));
+        return Err(format!(
+            "{GOLDEN_MANIFEST_PATH}: examples must be a non-empty array"
+        ));
     }
     let mut manifest_paths = Vec::new();
     for (index, entry) in examples.iter().enumerate() {
         let context = format!("{GOLDEN_MANIFEST_PATH}:examples[{index}]");
-        let example_path = entry.get("path").and_then(Value::as_str).unwrap_or_default();
+        let example_path = entry
+            .get("path")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         if example_path.is_empty() {
             return Err(format!("{context}: path must be a non-empty string"));
         }
         manifest_paths.push(example_path.to_string());
         let Some(tasks) = tasks_by_path.get(example_path).and_then(Value::as_array) else {
-            return Err(format!("{context}: no collected TaskIR examples for {example_path}"));
+            return Err(format!(
+                "{context}: no collected TaskIR examples for {example_path}"
+            ));
         };
         validate_manifest_values(&context, tasks, "/task_id", entry, "task_ids")?;
         validate_manifest_values(
@@ -387,10 +401,14 @@ fn validate_manifest_values(
     field: &str,
 ) -> Result<(), String> {
     let Some(expected) = entry.get(field).and_then(Value::as_array) else {
-        return Err(format!("{context}: manifest field {field} must be a non-empty array"));
+        return Err(format!(
+            "{context}: manifest field {field} must be a non-empty array"
+        ));
     };
     if expected.is_empty() {
-        return Err(format!("{context}: manifest field {field} must be a non-empty array"));
+        return Err(format!(
+            "{context}: manifest field {field} must be a non-empty array"
+        ));
     }
     let actual = tasks
         .iter()
@@ -399,7 +417,11 @@ fn validate_manifest_values(
     let missing = expected
         .iter()
         .filter_map(Value::as_str)
-        .filter(|expected_value| !actual.iter().any(|actual_value| actual_value == expected_value))
+        .filter(|expected_value| {
+            !actual
+                .iter()
+                .any(|actual_value| actual_value == expected_value)
+        })
         .collect::<Vec<_>>();
     if !missing.is_empty() {
         return Err(format!(

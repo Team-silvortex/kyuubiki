@@ -505,7 +505,10 @@ fn operator_task_runtime_rejects_digest_valid_inconsistent_package_mirrors() {
         error.details["schema_version"],
         "kyuubiki.agent-operator-task-failure/v1"
     );
-    assert_eq!(error.details["failure_stage"], "summarize_execution_program");
+    assert_eq!(
+        error.details["failure_stage"],
+        "summarize_execution_program"
+    );
     assert_eq!(error.details["operator_id"], "transform.fixture");
     assert_eq!(
         error.details["recovery"]["required_action"],

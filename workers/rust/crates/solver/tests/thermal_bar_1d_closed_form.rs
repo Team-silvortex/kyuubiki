@@ -196,6 +196,13 @@ fn assert_response(result: &SolveThermalBar1dResult, expected: ExpectedThermalBa
 }
 
 fn assert_thermal_bar_summary(result: &SolveThermalBar1dResult) {
+    for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.temperature_delta, input.temperature_delta);
+    }
+
     let max_displacement = result
         .nodes
         .iter()

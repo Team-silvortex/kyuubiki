@@ -447,12 +447,7 @@ fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
             let message = details["message"].as_str().unwrap_or_default().to_string();
             return AgentReply::Stream(
                 Vec::new(),
-                RpcResponse::error_with_details(
-                    request_id,
-                    error.code,
-                    message,
-                    details,
-                ),
+                RpcResponse::error_with_details(request_id, error.code, message, details),
             );
         }
     };

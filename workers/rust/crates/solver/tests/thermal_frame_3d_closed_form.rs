@@ -446,6 +446,12 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame3dResult) {
             .nodes
             .iter()
             .map(|node| {
+                let input = &result.input.nodes[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x);
+                assert_close(node.y, input.y);
+                assert_close(node.z, input.z);
+                assert_close(node.temperature_delta, input.temperature_delta);
                 assert_close(
                     node.displacement_magnitude,
                     (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),

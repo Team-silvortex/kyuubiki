@@ -40,10 +40,10 @@ fn prepare_operator_task_payload_checked(
     })?;
 
     verify_operator_task_digest(task).map_err(|error| classify_digest_error(error, task))?;
-    let summary =
-        summarize_operator_task_execution_checked(task).map_err(|error| classify_summary_error(error, task))?;
-    let execution_preview =
-        preview_operator_task_execution(task).map_err(|error| classify_summary_error(error, task))?;
+    let summary = summarize_operator_task_execution_checked(task)
+        .map_err(|error| classify_summary_error(error, task))?;
+    let execution_preview = preview_operator_task_execution(task)
+        .map_err(|error| classify_summary_error(error, task))?;
 
     Ok(Value::Object(Map::from_iter([
         ("status".to_string(), Value::from("verified")),
@@ -281,16 +281,21 @@ fn classify_digest_error(error: OperatorTaskDigestError, task: &Value) -> Operat
             "verify_digest",
             Some(task),
         ),
-        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskPreviewError::with_task(
-            "operator_task_digest_mismatch",
-            format!("operator task digest mismatch: expected {expected}, actual {actual}"),
-            "verify_digest",
-            Some(task),
-        ),
+        OperatorTaskDigestError::Mismatch { expected, actual } => {
+            OperatorTaskPreviewError::with_task(
+                "operator_task_digest_mismatch",
+                format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+                "verify_digest",
+                Some(task),
+            )
+        }
     }
 }
 
-fn classify_summary_error(error: OperatorTaskSummaryError, task: &Value) -> OperatorTaskPreviewError {
+fn classify_summary_error(
+    error: OperatorTaskSummaryError,
+    task: &Value,
+) -> OperatorTaskPreviewError {
     let code = match error.code {
         OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
         OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
@@ -302,7 +307,12 @@ fn classify_summary_error(error: OperatorTaskSummaryError, task: &Value) -> Oper
             "operator_task_invalid"
         }
     };
-    OperatorTaskPreviewError::with_task(code, error.message, "summarize_execution_program", Some(task))
+    OperatorTaskPreviewError::with_task(
+        code,
+        error.message,
+        "summarize_execution_program",
+        Some(task),
+    )
 }
 
 fn operator_task_error_preview_checked(error: OperatorTaskPreviewError) -> Value {
@@ -330,7 +340,9 @@ fn operator_task_failure_receipt(
         ("message".to_string(), Value::from(message.to_string())),
         (
             "task_id".to_string(),
-            task.and_then(|entry| entry.get("task_id")).cloned().unwrap_or(Value::Null),
+            task.and_then(|entry| entry.get("task_id"))
+                .cloned()
+                .unwrap_or(Value::Null),
         ),
         (
             "operator_id".to_string(),
@@ -352,7 +364,10 @@ fn operator_task_failure_receipt(
                     "required_action".to_string(),
                     Value::from(required_failure_action(code)),
                 ),
-                ("safe_to_continue_other_tasks".to_string(), Value::from(true)),
+                (
+                    "safe_to_continue_other_tasks".to_string(),
+                    Value::from(true),
+                ),
             ])),
         ),
     ]))

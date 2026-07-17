@@ -189,6 +189,9 @@ fn assert_thermal_beam_summary(result: &SolveThermalBeam1dResult) {
             .nodes
             .iter()
             .map(|node| {
+                let input = &result.input.nodes[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x);
                 assert_close(node.displacement_magnitude, node.uy.abs());
                 node.displacement_magnitude
             })

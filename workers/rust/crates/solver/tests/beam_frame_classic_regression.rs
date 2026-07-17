@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
-    Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, SolveBeam1dRequest,
-    SolveFrame2dRequest, SolveTorsion1dRequest, Torsion1dElementInput, Torsion1dNodeInput,
+    Beam1dElementInput, Beam1dElementResult, Beam1dNodeInput, Frame2dElementInput,
+    Frame2dElementResult, Frame2dNodeInput, SolveBeam1dRequest, SolveFrame2dRequest,
+    SolveTorsion1dRequest, Torsion1dElementInput, Torsion1dElementResult, Torsion1dNodeInput,
 };
 use kyuubiki_solver::{solve_beam_1d, solve_frame_2d, solve_torsion_1d};
 
@@ -512,7 +513,10 @@ fn assert_beam_summary(result: &kyuubiki_protocol::SolveBeam1dResult) {
         result
             .elements
             .iter()
-            .map(|element| element.max_bending_stress)
+            .map(|element| {
+                assert_beam_element_law(result, element);
+                element.max_bending_stress
+            })
             .fold(0.0_f64, f64::max),
     );
     assert_close(
@@ -569,6 +573,7 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame2dResult) {
             .elements
             .iter()
             .map(|element| {
+                assert_frame_element_law(result, element);
                 assert_close(
                     element.max_combined_stress,
                     element.axial_stress + element.max_bending_stress,
@@ -594,6 +599,43 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame2dResult) {
         })
         .sum::<f64>();
     assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_beam_element_law(
+    result: &kyuubiki_protocol::SolveBeam1dResult,
+    element: &Beam1dElementResult,
+) {
+    let input = &result.input.elements[element.index];
+    let node_i = &result.nodes[element.node_i];
+    let node_j = &result.nodes[element.node_j];
+    let expected_length = (node_j.x - node_i.x).abs();
+    let expected_stress =
+        element.moment_i.abs().max(element.moment_j.abs()) / input.section_modulus;
+    assert_close(element.length, expected_length);
+    assert_close(element.max_bending_stress, expected_stress);
+}
+
+fn assert_frame_element_law(
+    result: &kyuubiki_protocol::SolveFrame2dResult,
+    element: &Frame2dElementResult,
+) {
+    let input = &result.input.elements[element.index];
+    let node_i = &result.nodes[element.node_i];
+    let node_j = &result.nodes[element.node_j];
+    let dx = node_j.x - node_i.x;
+    let dy = node_j.y - node_i.y;
+    let expected_length = (dx * dx + dy * dy).sqrt();
+    let expected_axial_stress =
+        element.axial_force_i.abs().max(element.axial_force_j.abs()) / input.area;
+    let expected_bending_stress =
+        element.moment_i.abs().max(element.moment_j.abs()) / input.section_modulus;
+    assert_close(element.length, expected_length);
+    assert_close(element.axial_stress, expected_axial_stress);
+    assert_close(element.max_bending_stress, expected_bending_stress);
+    assert_close(
+        element.max_combined_stress,
+        expected_axial_stress + expected_bending_stress,
+    );
 }
 
 fn assert_torsion_summary(result: &kyuubiki_protocol::SolveTorsion1dResult) {
@@ -629,6 +671,9 @@ fn assert_torsion_summary(result: &kyuubiki_protocol::SolveTorsion1dResult) {
             .map(|element| element.strain_energy)
             .sum::<f64>(),
     );
+    for element in &result.elements {
+        assert_torsion_element_law(result, element);
+    }
     let external_work = result
         .nodes
         .iter()
@@ -636,6 +681,26 @@ fn assert_torsion_summary(result: &kyuubiki_protocol::SolveTorsion1dResult) {
         .map(|(node, input)| input.torque_z * node.rz)
         .sum::<f64>();
     assert_close(result.total_strain_energy, 0.5 * external_work);
+}
+
+fn assert_torsion_element_law(
+    result: &kyuubiki_protocol::SolveTorsion1dResult,
+    element: &Torsion1dElementResult,
+) {
+    let input = &result.input.elements[element.index];
+    let node_i = &result.nodes[element.node_i];
+    let node_j = &result.nodes[element.node_j];
+    let expected_length = (node_j.x - node_i.x).abs();
+    let expected_twist = node_j.rz - node_i.rz;
+    let expected_torque =
+        input.shear_modulus * input.polar_moment * expected_twist / expected_length;
+    let expected_stress = expected_torque.abs() / input.section_modulus;
+    let expected_energy = 0.5 * expected_torque * expected_twist;
+    assert_close(element.length, expected_length);
+    assert_close(element.twist, expected_twist);
+    assert_close(element.torque, expected_torque);
+    assert_close(element.shear_stress, expected_stress);
+    assert_close(element.strain_energy, expected_energy);
 }
 
 fn assert_close(actual: f64, expected: f64) {

@@ -33,6 +33,7 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
 
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 1);
+    assert_node_passthrough(&result.input.nodes, &result.nodes);
     assert_close(result.nodes[0].vector_potential, 0.0);
     assert_close(result.nodes[1].vector_potential, 0.0);
     assert_close(result.nodes[2].vector_potential, expected_vector_potential);
@@ -44,7 +45,15 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
     assert_close(result.total_stored_energy, expected_energy);
 
     let element = &result.elements[0];
-    assert_close(element.area, 1.0);
+    assert_close(
+        element.area,
+        quad_area(
+            &result.nodes[element.node_i],
+            &result.nodes[element.node_j],
+            &result.nodes[element.node_k],
+            &result.nodes[element.node_l],
+        ),
+    );
     assert_close(
         element.average_vector_potential,
         expected_vector_potential / 2.0,
@@ -58,8 +67,59 @@ fn magnetostatic_plane_quad_2d_review_bundle_checks_source_patch_flux_and_energy
     assert_close(element.magnetic_flux_density_y, 0.0);
     assert_close(element.magnetic_field_strength_x, 100.0);
     assert_close(element.magnetic_field_strength_y, 0.0);
+    assert_close(
+        element.magnetic_flux_density_magnitude,
+        magnitude(
+            element.magnetic_flux_density_x,
+            element.magnetic_flux_density_y,
+        ),
+    );
+    assert_close(
+        element.magnetic_field_strength_magnitude,
+        magnitude(
+            element.magnetic_field_strength_x,
+            element.magnetic_field_strength_y,
+        ),
+    );
     assert_close(element.magnetic_energy_density, expected_energy_density);
-    assert_close(element.stored_energy, expected_energy);
+    assert_close(
+        element.stored_energy,
+        element.magnetic_energy_density * element.area * result.input.elements[0].thickness,
+    );
+}
+
+fn quad_area(
+    a: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+    b: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+    c: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+    d: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+) -> f64 {
+    triangle_area(a, b, c) + triangle_area(a, c, d)
+}
+
+fn triangle_area(
+    a: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+    b: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+    c: &kyuubiki_protocol::MagnetostaticPlaneNodeResult,
+) -> f64 {
+    0.5 * ((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)).abs()
+}
+
+fn magnitude(x: f64, y: f64) -> f64 {
+    (x * x + y * y).sqrt()
+}
+
+fn assert_node_passthrough(
+    inputs: &[MagnetostaticPlaneNodeInput],
+    nodes: &[kyuubiki_protocol::MagnetostaticPlaneNodeResult],
+) {
+    for node in nodes {
+        let input = &inputs[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.current_density, input.current_density);
+    }
 }
 
 fn node(

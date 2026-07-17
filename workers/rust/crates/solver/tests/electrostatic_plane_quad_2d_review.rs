@@ -29,6 +29,7 @@ fn electrostatic_plane_quad_2d_review_bundle_checks_patch_gradient_flux_and_ener
 
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 1);
+    assert_node_passthrough(&result.input.nodes, &result.nodes);
     assert_close(result.max_potential, 12.0);
     assert_close(result.max_electric_field, 8.0);
     assert_close(result.max_flux_density, 24.0);
@@ -36,7 +37,15 @@ fn electrostatic_plane_quad_2d_review_bundle_checks_patch_gradient_flux_and_ener
     assert_close(result.total_stored_energy, 9.6);
 
     let element = &result.elements[0];
-    assert_close(element.area, 1.0);
+    assert_close(
+        element.area,
+        quad_area(
+            &result.nodes[element.node_i],
+            &result.nodes[element.node_j],
+            &result.nodes[element.node_k],
+            &result.nodes[element.node_l],
+        ),
+    );
     assert_close(element.average_potential, 8.0);
     assert_close(element.potential_gradient_x, -8.0);
     assert_close(element.potential_gradient_y, 0.0);
@@ -44,8 +53,57 @@ fn electrostatic_plane_quad_2d_review_bundle_checks_patch_gradient_flux_and_ener
     assert_close(element.electric_field_y, 0.0);
     assert_close(element.electric_flux_density_x, 24.0);
     assert_close(element.electric_flux_density_y, 0.0);
+    assert_close(
+        element.electric_field_magnitude,
+        magnitude(element.electric_field_x, element.electric_field_y),
+    );
+    assert_close(
+        element.electric_flux_density_magnitude,
+        magnitude(
+            element.electric_flux_density_x,
+            element.electric_flux_density_y,
+        ),
+    );
     assert_close(element.electric_energy_density, 96.0);
-    assert_close(element.stored_energy, 9.6);
+    assert_close(
+        element.stored_energy,
+        element.electric_energy_density * element.area * result.input.elements[0].thickness,
+    );
+}
+
+fn quad_area(
+    a: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    b: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    c: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    d: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+) -> f64 {
+    triangle_area(a, b, c) + triangle_area(a, c, d)
+}
+
+fn triangle_area(
+    a: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    b: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    c: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+) -> f64 {
+    0.5 * ((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)).abs()
+}
+
+fn magnitude(x: f64, y: f64) -> f64 {
+    (x * x + y * y).sqrt()
+}
+
+fn assert_node_passthrough(
+    inputs: &[ElectrostaticPlaneNodeInput],
+    nodes: &[kyuubiki_protocol::ElectrostaticPlaneNodeResult],
+) {
+    for node in nodes {
+        let input = &inputs[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.potential, input.potential);
+        assert_close(node.charge_density, input.charge_density);
+    }
 }
 
 fn node(id: &str, x: f64, y: f64, potential: f64) -> ElectrostaticPlaneNodeInput {

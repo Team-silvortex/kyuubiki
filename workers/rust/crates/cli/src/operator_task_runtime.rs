@@ -7,8 +7,8 @@ use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
 };
 use crate::operator_task_receipts::{
-    operator_task_failure_receipt,
-    operator_task_provenance_receipt, operator_task_validation_receipt,
+    operator_task_failure_receipt, operator_task_provenance_receipt,
+    operator_task_validation_receipt,
 };
 use kyuubiki_protocol::{
     OperatorTaskDigestError, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
@@ -155,13 +155,10 @@ pub(crate) fn run_operator_task_ir_with_runtime(
 
     verify_operator_task_digest(task_ir).map_err(|error| classify_digest_error(error, task_ir))?;
 
-    let summary =
-        summarize_operator_task_execution_checked(task_ir).map_err(|error| {
-            classify_operator_task_error(error, task_ir)
-        })?;
-    let preview = preview_operator_task_execution(task_ir).map_err(|error| {
-        classify_operator_task_error(error, task_ir)
-    })?;
+    let summary = summarize_operator_task_execution_checked(task_ir)
+        .map_err(|error| classify_operator_task_error(error, task_ir))?;
+    let preview = preview_operator_task_execution(task_ir)
+        .map_err(|error| classify_operator_task_error(error, task_ir))?;
 
     if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
     {
@@ -190,7 +187,10 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     ))
 }
 
-fn classify_digest_error(error: OperatorTaskDigestError, task_ir: &Value) -> OperatorTaskRuntimeError {
+fn classify_digest_error(
+    error: OperatorTaskDigestError,
+    task_ir: &Value,
+) -> OperatorTaskRuntimeError {
     match error {
         OperatorTaskDigestError::Missing => OperatorTaskRuntimeError::with_task(
             "operator_task_digest_missing",
@@ -198,19 +198,27 @@ fn classify_digest_error(error: OperatorTaskDigestError, task_ir: &Value) -> Ope
             "verify_digest",
             Some(task_ir),
         ),
-        OperatorTaskDigestError::Mismatch { expected, actual } => OperatorTaskRuntimeError::with_task(
-            "operator_task_digest_mismatch",
-            format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+        OperatorTaskDigestError::Mismatch { expected, actual } => {
+            OperatorTaskRuntimeError::with_task(
+                "operator_task_digest_mismatch",
+                format!("operator task digest mismatch: expected {expected}, actual {actual}"),
+                "verify_digest",
+                Some(task_ir),
+            )
+        }
+        OperatorTaskDigestError::InvalidTask(message) => OperatorTaskRuntimeError::with_task(
+            "operator_task_digest_invalid",
+            message,
             "verify_digest",
             Some(task_ir),
         ),
-        OperatorTaskDigestError::InvalidTask(message) => {
-            OperatorTaskRuntimeError::with_task("operator_task_digest_invalid", message, "verify_digest", Some(task_ir))
-        }
     }
 }
 
-fn classify_operator_task_error(error: OperatorTaskSummaryError, task_ir: &Value) -> OperatorTaskRuntimeError {
+fn classify_operator_task_error(
+    error: OperatorTaskSummaryError,
+    task_ir: &Value,
+) -> OperatorTaskRuntimeError {
     let code = match error.code {
         OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
         OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
@@ -222,7 +230,12 @@ fn classify_operator_task_error(error: OperatorTaskSummaryError, task_ir: &Value
             "operator_task_invalid"
         }
     };
-    OperatorTaskRuntimeError::with_task(code, error.message, "summarize_execution_program", Some(task_ir))
+    OperatorTaskRuntimeError::with_task(
+        code,
+        error.message,
+        "summarize_execution_program",
+        Some(task_ir),
+    )
 }
 
 fn runtime_binding() -> &'static Mutex<OperatorPackageRuntimeBinding> {

@@ -230,7 +230,13 @@ fn assert_truss_summary(result: &SolveTruss2dResult) {
         result
             .nodes
             .iter()
-            .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+            .map(|node| {
+                let input = &result.input.nodes[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x, TOL);
+                assert_close(node.y, input.y, TOL);
+                (node.ux * node.ux + node.uy * node.uy).sqrt()
+            })
             .fold(0.0_f64, f64::max),
         TOL,
     );

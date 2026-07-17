@@ -1,7 +1,7 @@
 use kyuubiki_protocol::{
-    PlaneNodeInput, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
-    PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
-    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
+    PlaneNodeInput, PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult,
+    PlaneTriangleElementInput, PlaneTriangleElementResult, SolvePlaneQuad2dRequest,
+    SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
 };
 use kyuubiki_solver::{solve_plane_quad_2d, solve_plane_triangle_2d};
 
@@ -335,13 +335,22 @@ fn assert_triangle_summary(result: &SolvePlaneTriangle2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        assert_close(
+            element.area,
+            triangle_area(
+                &result.nodes[element.node_i],
+                &result.nodes[element.node_j],
+                &result.nodes[element.node_k],
+            ),
+            1.0e-12,
+        );
         assert_plane_element_metrics(element, true, true);
         max_stress = max_stress.max(element.von_mises);
         max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
         total_strain_energy += element.strain_energy_density * element.area * input.thickness;
     }
 
-    assert_node_displacement_summary(result.max_displacement, &result.nodes);
+    assert_node_displacement_summary(result.max_displacement, &result.input.nodes, &result.nodes);
     assert_close(result.max_stress, max_stress, 1.0e-10);
     assert_close(
         result.max_strain_energy_density,
@@ -363,13 +372,23 @@ fn assert_quad_summary(result: &SolvePlaneQuad2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        assert_close(
+            element.area,
+            quad_area(
+                &result.nodes[element.node_i],
+                &result.nodes[element.node_j],
+                &result.nodes[element.node_k],
+                &result.nodes[element.node_l],
+            ),
+            1.0e-12,
+        );
         assert_plane_element_metrics(element, false, false);
         max_stress = max_stress.max(element.von_mises);
         max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
         total_strain_energy += element.strain_energy_density * element.area * input.thickness;
     }
 
-    assert_node_displacement_summary(result.max_displacement, &result.nodes);
+    assert_node_displacement_summary(result.max_displacement, &result.input.nodes, &result.nodes);
     assert_close(result.max_stress, max_stress, 1.0e-10);
     assert_close(
         result.max_strain_energy_density,
@@ -627,12 +646,30 @@ impl PlaneElementMetrics for PlaneQuadElementResult {
     }
 }
 
+fn triangle_area(a: &PlaneNodeResult, b: &PlaneNodeResult, c: &PlaneNodeResult) -> f64 {
+    0.5 * ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)).abs()
+}
+
+fn quad_area(
+    a: &PlaneNodeResult,
+    b: &PlaneNodeResult,
+    c: &PlaneNodeResult,
+    d: &PlaneNodeResult,
+) -> f64 {
+    triangle_area(a, b, c) + triangle_area(a, c, d)
+}
+
 fn assert_node_displacement_summary(
     max_displacement: f64,
+    inputs: &[kyuubiki_protocol::PlaneNodeInput],
     nodes: &[kyuubiki_protocol::PlaneNodeResult],
 ) {
     let mut derived_max = 0.0_f64;
     for node in nodes {
+        let input = &inputs[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x, 1.0e-12);
+        assert_close(node.y, input.y, 1.0e-12);
         assert_close(
             node.displacement_magnitude,
             (node.ux * node.ux + node.uy * node.uy).sqrt(),

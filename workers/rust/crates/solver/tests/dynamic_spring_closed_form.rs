@@ -286,11 +286,31 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientSpring1dRe
             .iter()
             .zip(final_step.velocities.iter()),
     ) {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
         assert_close(node.ux, displacement);
         assert_close(node.vx, velocity);
     }
 
-    for step in &result.history {
+    let initial_step = result
+        .history
+        .first()
+        .expect("history includes initial step");
+    assert_eq!(initial_step.step, 0);
+    assert_close(initial_step.time, 0.0);
+    for (node_input, (&displacement, &velocity)) in result.input.nodes.iter().zip(
+        initial_step
+            .displacements
+            .iter()
+            .zip(initial_step.velocities.iter()),
+    ) {
+        assert_close(displacement, node_input.initial_displacement);
+        assert_close(velocity, node_input.initial_velocity);
+    }
+
+    for (expected_step, step) in result.history.iter().enumerate() {
+        assert_eq!(step.step, expected_step);
         assert_eq!(step.displacements.len(), result.input.nodes.len());
         assert_eq!(step.velocities.len(), result.input.nodes.len());
         assert_close(step.time, step.step as f64 * result.input.time_step);
@@ -373,7 +393,8 @@ fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResu
         .expect("frequency list should not be empty");
     assert_close(result.peak_frequency_hz, peak.frequency_hz);
 
-    for frequency in &result.frequencies {
+    for (index, frequency) in result.frequencies.iter().enumerate() {
+        assert_close(frequency.frequency_hz, result.input.frequencies_hz[index]);
         assert_close(
             frequency.angular_frequency,
             std::f64::consts::TAU * frequency.frequency_hz,
@@ -412,6 +433,12 @@ fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResu
         );
 
         for node in &frequency.nodes {
+            let input = &result.input.nodes[node.index];
+            assert_eq!(node.id, input.id);
+            if input.fix_x {
+                assert_close(node.displacement_amplitude, 0.0);
+                assert_close(node.displacement_phase_deg, 0.0);
+            }
             assert_close(
                 node.velocity_amplitude,
                 frequency.angular_frequency * node.displacement_amplitude,

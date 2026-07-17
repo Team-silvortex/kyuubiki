@@ -281,7 +281,14 @@ fn assert_thermal_truss_summary(result: &SolveThermalTruss2dResult) {
         result
             .nodes
             .iter()
-            .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+            .map(|node| {
+                let input = &result.input.nodes[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x);
+                assert_close(node.y, input.y);
+                assert_close(node.temperature_delta, input.temperature_delta);
+                (node.ux * node.ux + node.uy * node.uy).sqrt()
+            })
             .fold(0.0_f64, f64::max),
     );
     assert_close(

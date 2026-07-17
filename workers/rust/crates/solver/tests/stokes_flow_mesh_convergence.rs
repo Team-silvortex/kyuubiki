@@ -397,6 +397,7 @@ fn total_triangle_dissipation(
 
 fn assert_quad_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dResult) {
     assert_flow_summary(
+        &result.input.nodes,
         &result.nodes,
         result.max_velocity,
         result.max_pressure,
@@ -411,6 +412,8 @@ fn assert_quad_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dRes
             average_velocity_y: element.average_velocity_y,
             average_velocity_magnitude: element.average_velocity_magnitude,
             average_pressure: element.average_pressure,
+            velocity_gradient_x: element.velocity_gradient_x,
+            velocity_gradient_y: element.velocity_gradient_y,
             shear_rate: element.shear_rate,
             max_viscous_shear_stress: element.max_viscous_shear_stress,
             divergence_error: element.divergence_error,
@@ -418,6 +421,7 @@ fn assert_quad_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dRes
             viscous_dissipation: element.viscous_dissipation,
             viscosity: result.input.elements[element.index].viscosity,
             density: result.input.elements[element.index].density,
+            thickness: result.input.elements[element.index].thickness,
             node_indices: vec![
                 element.node_i,
                 element.node_j,
@@ -430,6 +434,7 @@ fn assert_quad_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneQuad2dRes
 
 fn assert_triangle_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneTriangle2dResult) {
     assert_flow_summary(
+        &result.input.nodes,
         &result.nodes,
         result.max_velocity,
         result.max_pressure,
@@ -444,6 +449,8 @@ fn assert_triangle_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneTrian
             average_velocity_y: element.average_velocity_y,
             average_velocity_magnitude: element.average_velocity_magnitude,
             average_pressure: element.average_pressure,
+            velocity_gradient_x: element.velocity_gradient_x,
+            velocity_gradient_y: element.velocity_gradient_y,
             shear_rate: element.shear_rate,
             max_viscous_shear_stress: element.max_viscous_shear_stress,
             divergence_error: element.divergence_error,
@@ -451,6 +458,7 @@ fn assert_triangle_summary(result: &kyuubiki_protocol::SolveStokesFlowPlaneTrian
             viscous_dissipation: element.viscous_dissipation,
             viscosity: result.input.elements[element.index].viscosity,
             density: result.input.elements[element.index].density,
+            thickness: result.input.elements[element.index].thickness,
             node_indices: vec![element.node_i, element.node_j, element.node_k],
         }),
     );
@@ -462,6 +470,8 @@ struct FlowElementFields {
     average_velocity_y: f64,
     average_velocity_magnitude: f64,
     average_pressure: f64,
+    velocity_gradient_x: f64,
+    velocity_gradient_y: f64,
     shear_rate: f64,
     max_viscous_shear_stress: f64,
     divergence_error: f64,
@@ -469,11 +479,13 @@ struct FlowElementFields {
     viscous_dissipation: f64,
     viscosity: f64,
     density: f64,
+    thickness: f64,
     node_indices: Vec<usize>,
 }
 
 #[allow(clippy::too_many_arguments)]
 fn assert_flow_summary(
+    inputs: &[kyuubiki_protocol::StokesFlowPlaneNodeInput],
     nodes: &[kyuubiki_protocol::StokesFlowPlaneNodeResult],
     max_velocity: f64,
     max_pressure: f64,
@@ -489,6 +501,12 @@ fn assert_flow_summary(
         nodes
             .iter()
             .map(|node| {
+                let input = &inputs[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x);
+                assert_close(node.y, input.y);
+                assert_close(node.body_force_x, input.body_force_x);
+                assert_close(node.body_force_y, input.body_force_y);
                 assert_close(
                     node.velocity_magnitude,
                     (node.velocity_x * node.velocity_x + node.velocity_y * node.velocity_y).sqrt(),
@@ -573,10 +591,44 @@ fn assert_flow_summary(
                 .sqrt(),
         );
         assert_close(element.average_pressure, average_pressure);
+        let kinematics = flow_kinematics(nodes, &element.node_indices);
+        assert_close(element.area, kinematics.area);
+        assert_close(element.velocity_gradient_x, kinematics.velocity_gradient_x);
+        assert_close(element.velocity_gradient_y, kinematics.velocity_gradient_y);
+        assert_close(
+            element.divergence_error,
+            (kinematics.du_dx + kinematics.dv_dy).abs(),
+        );
+        let engineering_shear_rate =
+            kinematics.velocity_gradient_x + kinematics.velocity_gradient_y;
+        assert_close(
+            element.shear_rate,
+            (2.0 * kinematics.du_dx * kinematics.du_dx
+                + 2.0 * kinematics.dv_dy * kinematics.dv_dy
+                + engineering_shear_rate * engineering_shear_rate)
+                .sqrt(),
+        );
+        assert_close(
+            element.max_viscous_shear_stress,
+            element.viscosity
+                * (2.0 * kinematics.du_dx.abs())
+                    .max(2.0 * kinematics.dv_dy.abs())
+                    .max(engineering_shear_rate.abs()),
+        );
         assert_close(
             element.reynolds_number,
             element.density * element.average_velocity_magnitude * element.area.sqrt()
                 / element.viscosity,
+        );
+        assert_close(
+            element.viscous_dissipation,
+            element.viscosity
+                * (kinematics.du_dx * kinematics.du_dx
+                    + kinematics.dv_dy * kinematics.dv_dy
+                    + kinematics.velocity_gradient_x * kinematics.velocity_gradient_x
+                    + kinematics.velocity_gradient_y * kinematics.velocity_gradient_y)
+                * element.area
+                * element.thickness,
         );
         assert!(element.area > 0.0);
         assert!(element.shear_rate >= 0.0);
@@ -585,6 +637,93 @@ fn assert_flow_summary(
         assert!(element.reynolds_number >= 0.0);
         assert!(element.viscous_dissipation >= 0.0);
     }
+}
+
+struct FlowKinematics {
+    area: f64,
+    du_dx: f64,
+    dv_dy: f64,
+    velocity_gradient_x: f64,
+    velocity_gradient_y: f64,
+}
+
+fn flow_kinematics(
+    nodes: &[kyuubiki_protocol::StokesFlowPlaneNodeResult],
+    node_indices: &[usize],
+) -> FlowKinematics {
+    match node_indices {
+        [a, b, c] => triangle_flow_kinematics([&nodes[*a], &nodes[*b], &nodes[*c]]),
+        [a, b, c, d] => quad_flow_kinematics([&nodes[*a], &nodes[*b], &nodes[*c], &nodes[*d]]),
+        _ => panic!("unsupported Stokes element arity"),
+    }
+}
+
+fn triangle_flow_kinematics(
+    nodes: [&kyuubiki_protocol::StokesFlowPlaneNodeResult; 3],
+) -> FlowKinematics {
+    let area = polygon_area(&nodes);
+    let (du_dx, velocity_gradient_y) = triangle_gradient(nodes, |node| node.velocity_x, area);
+    let (velocity_gradient_x, dv_dy) = triangle_gradient(nodes, |node| node.velocity_y, area);
+    FlowKinematics {
+        area,
+        du_dx,
+        dv_dy,
+        velocity_gradient_x,
+        velocity_gradient_y,
+    }
+}
+
+fn quad_flow_kinematics(
+    nodes: [&kyuubiki_protocol::StokesFlowPlaneNodeResult; 4],
+) -> FlowKinematics {
+    let area = polygon_area(&nodes);
+    let width = ((nodes[1].x - nodes[0].x).abs() + (nodes[2].x - nodes[3].x).abs()) / 2.0;
+    let height = ((nodes[3].y - nodes[0].y).abs() + (nodes[2].y - nodes[1].y).abs()) / 2.0;
+    let du_dx = ((nodes[1].velocity_x + nodes[2].velocity_x)
+        - (nodes[0].velocity_x + nodes[3].velocity_x))
+        / (2.0 * width);
+    let dv_dy = ((nodes[2].velocity_y + nodes[3].velocity_y)
+        - (nodes[0].velocity_y + nodes[1].velocity_y))
+        / (2.0 * height);
+    let velocity_gradient_x = ((nodes[1].velocity_y + nodes[2].velocity_y)
+        - (nodes[0].velocity_y + nodes[3].velocity_y))
+        / (2.0 * width);
+    let velocity_gradient_y = ((nodes[2].velocity_x + nodes[3].velocity_x)
+        - (nodes[0].velocity_x + nodes[1].velocity_x))
+        / (2.0 * height);
+    FlowKinematics {
+        area,
+        du_dx,
+        dv_dy,
+        velocity_gradient_x,
+        velocity_gradient_y,
+    }
+}
+
+fn triangle_gradient(
+    nodes: [&kyuubiki_protocol::StokesFlowPlaneNodeResult; 3],
+    value: impl Fn(&kyuubiki_protocol::StokesFlowPlaneNodeResult) -> f64,
+    area: f64,
+) -> (f64, f64) {
+    let two_area = 2.0 * area;
+    let gradient_x = (value(nodes[0]) * (nodes[1].y - nodes[2].y)
+        + value(nodes[1]) * (nodes[2].y - nodes[0].y)
+        + value(nodes[2]) * (nodes[0].y - nodes[1].y))
+        / two_area;
+    let gradient_y = (value(nodes[0]) * (nodes[2].x - nodes[1].x)
+        + value(nodes[1]) * (nodes[0].x - nodes[2].x)
+        + value(nodes[2]) * (nodes[1].x - nodes[0].x))
+        / two_area;
+    (gradient_x, gradient_y)
+}
+
+fn polygon_area(nodes: &[&kyuubiki_protocol::StokesFlowPlaneNodeResult]) -> f64 {
+    let mut twice_area = 0.0_f64;
+    for index in 0..nodes.len() {
+        let next = (index + 1) % nodes.len();
+        twice_area += nodes[index].x * nodes[next].y - nodes[next].x * nodes[index].y;
+    }
+    0.5 * twice_area.abs()
 }
 
 fn assert_close(actual: f64, expected: f64) {

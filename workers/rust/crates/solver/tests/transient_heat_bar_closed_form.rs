@@ -226,7 +226,8 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dR
     assert_close(final_step.max_temperature, result.max_temperature);
     assert_close(final_step.total_thermal_energy, result.total_thermal_energy);
 
-    for step in &result.history {
+    for (expected_step, step) in result.history.iter().enumerate() {
+        assert_eq!(step.step, expected_step);
         assert_eq!(step.nodal_temperatures.len(), result.nodes.len());
         assert_close(step.time, step.step as f64 * result.input.time_step);
         assert_close(
@@ -246,6 +247,10 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dR
         let input = &result.input.elements[element.index];
         let left = &result.nodes[element.node_i];
         let right = &result.nodes[element.node_j];
+        assert_close(
+            element.length,
+            (result.input.nodes[input.node_j].x - result.input.nodes[input.node_i].x).abs(),
+        );
         assert_close(
             element.average_temperature,
             0.5 * (left.temperature + right.temperature),

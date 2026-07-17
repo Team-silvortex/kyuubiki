@@ -241,6 +241,13 @@ fn assert_case(result: &SolveMagnetostaticBar1dResult, expected: ExpectedMagneti
 }
 
 fn assert_field_balance(result: &SolveMagnetostaticBar1dResult) {
+    for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.magnetomotive_source, input.magnetomotive_source);
+    }
+
     let max_magnetic_potential = result
         .nodes
         .iter()

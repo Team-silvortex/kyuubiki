@@ -223,6 +223,13 @@ fn assert_response(
 }
 
 fn assert_field_balance(result: &SolveElectrostaticBar1dResult) {
+    for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.charge_density, input.charge_density);
+    }
+
     let max_potential = result
         .nodes
         .iter()

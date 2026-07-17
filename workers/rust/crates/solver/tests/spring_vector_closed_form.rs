@@ -464,7 +464,13 @@ fn assert_spring_summary_2d(result: &SolveSpring2dResult) {
     let max_displacement = result
         .nodes
         .iter()
-        .map(|node| hypot2(node.ux, node.uy))
+        .map(|node| {
+            let input = &result.input.nodes[node.index];
+            assert_eq!(node.id, input.id);
+            assert_close(node.x, input.x);
+            assert_close(node.y, input.y);
+            hypot2(node.ux, node.uy)
+        })
         .fold(0.0, f64::max);
     assert_close(result.max_displacement, max_displacement);
 
@@ -518,7 +524,14 @@ fn assert_spring_summary_3d(result: &SolveSpring3dResult) {
     let max_displacement = result
         .nodes
         .iter()
-        .map(|node| hypot3(node.ux, node.uy, node.uz))
+        .map(|node| {
+            let input = &result.input.nodes[node.index];
+            assert_eq!(node.id, input.id);
+            assert_close(node.x, input.x);
+            assert_close(node.y, input.y);
+            assert_close(node.z, input.z);
+            hypot3(node.ux, node.uy, node.uz)
+        })
         .fold(0.0, f64::max);
     assert_close(result.max_displacement, max_displacement);
 

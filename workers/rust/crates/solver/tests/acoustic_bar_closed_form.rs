@@ -291,6 +291,10 @@ fn assert_acoustic_summary(result: &SolveAcousticBar1dResult) {
         .nodes
         .iter()
         .map(|node| {
+            let input = &result.input.nodes[node.index];
+            assert_eq!(node.id, input.id);
+            assert_close(node.x, input.x);
+            assert_close(node.volume_velocity_source, input.volume_velocity_source);
             assert_close(
                 node.sound_pressure_level_db,
                 sound_pressure_level_db(node.pressure),

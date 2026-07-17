@@ -206,6 +206,11 @@ fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
     let mut total_strain_energy = 0.0_f64;
 
     for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.z, input.z);
         assert_close(
             node.displacement_magnitude,
             magnitude3(node.ux, node.uy, node.uz),
@@ -213,7 +218,7 @@ fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
     }
 
     for element in &result.elements {
-        assert_solid_element_contract(element);
+        assert_solid_element_contract(result, element);
         total_volume += element.volume;
         max_von_mises = max_von_mises.max(element.von_mises_stress);
         max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
@@ -245,7 +250,12 @@ fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
     assert_close(result.total_strain_energy, 0.5 * external_work);
 }
 
-fn assert_solid_element_contract(element: &SolidTetra3dElementResult) {
+fn assert_solid_element_contract(
+    result: &SolveSolidTetra3dResult,
+    element: &SolidTetra3dElementResult,
+) {
+    assert_close(element.volume, tetra_volume(result, element));
+
     let expected_von_mises = (0.5
         * ((element.stress_x - element.stress_y).powi(2)
             + (element.stress_y - element.stress_z).powi(2)
@@ -265,6 +275,22 @@ fn assert_solid_element_contract(element: &SolidTetra3dElementResult) {
 
     assert_close(element.von_mises_stress, expected_von_mises);
     assert_close(element.strain_energy_density, expected_energy_density);
+}
+
+fn tetra_volume(result: &SolveSolidTetra3dResult, element: &SolidTetra3dElementResult) -> f64 {
+    let a = &result.nodes[element.node_a];
+    let b = &result.nodes[element.node_b];
+    let c = &result.nodes[element.node_c];
+    let d = &result.nodes[element.node_d];
+    let ab = [b.x - a.x, b.y - a.y, b.z - a.z];
+    let ac = [c.x - a.x, c.y - a.y, c.z - a.z];
+    let ad = [d.x - a.x, d.y - a.y, d.z - a.z];
+    let cross = [
+        ac[1] * ad[2] - ac[2] * ad[1],
+        ac[2] * ad[0] - ac[0] * ad[2],
+        ac[0] * ad[1] - ac[1] * ad[0],
+    ];
+    (ab[0] * cross[0] + ab[1] * cross[1] + ab[2] * cross[2]).abs() / 6.0
 }
 
 fn restrained_tip_load_request(

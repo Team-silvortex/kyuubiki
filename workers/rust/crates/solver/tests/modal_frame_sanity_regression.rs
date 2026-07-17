@@ -258,6 +258,7 @@ fn assert_modal_shape(shape: &[f64], free_dofs: &[usize], expected_len: usize) {
 
 fn assert_modal_2d_summary(result: &kyuubiki_protocol::SolveModalFrame2dResult, dof_count: usize) {
     assert_eq!(result.free_dofs.len(), dof_count / 2);
+    assert_close(result.total_mass, modal_2d_mass(&result.input));
     assert_modal_summary(
         result.min_frequency_hz,
         result.max_frequency_hz,
@@ -277,6 +278,7 @@ fn assert_modal_2d_summary(result: &kyuubiki_protocol::SolveModalFrame2dResult, 
 
 fn assert_modal_3d_summary(result: &kyuubiki_protocol::SolveModalFrame3dResult, dof_count: usize) {
     assert_eq!(result.free_dofs.len(), dof_count / 2);
+    assert_close(result.total_mass, modal_3d_mass(&result.input));
     assert_modal_summary(
         result.min_frequency_hz,
         result.max_frequency_hz,
@@ -292,6 +294,32 @@ fn assert_modal_3d_summary(result: &kyuubiki_protocol::SolveModalFrame3dResult, 
             shape: &mode.shape,
         }),
     );
+}
+
+fn modal_2d_mass(request: &SolveModalFrame2dRequest) -> f64 {
+    request
+        .elements
+        .iter()
+        .map(|element| {
+            let a = &request.nodes[element.node_i];
+            let b = &request.nodes[element.node_j];
+            let length = ((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt();
+            element.density * element.area * length
+        })
+        .sum()
+}
+
+fn modal_3d_mass(request: &SolveModalFrame3dRequest) -> f64 {
+    request
+        .elements
+        .iter()
+        .map(|element| {
+            let a = &request.nodes[element.node_i];
+            let b = &request.nodes[element.node_j];
+            let length = ((b.x - a.x).powi(2) + (b.y - a.y).powi(2) + (b.z - a.z).powi(2)).sqrt();
+            element.density * element.area * length
+        })
+        .sum()
 }
 
 struct ModalFields<'a> {

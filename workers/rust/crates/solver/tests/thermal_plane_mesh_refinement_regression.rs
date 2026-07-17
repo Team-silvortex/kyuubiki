@@ -210,6 +210,17 @@ fn assert_heat_triangle_summary(result: &SolveHeatPlaneTriangle2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let node_k = &result.nodes[element.node_k];
+        assert_close(
+            element.area,
+            triangle_area(
+                (node_i.x, node_i.y),
+                (node_j.x, node_j.y),
+                (node_k.x, node_k.y),
+            ),
+        );
         let average_temperature = (result.nodes[element.node_i].temperature
             + result.nodes[element.node_j].temperature
             + result.nodes[element.node_k].temperature)
@@ -246,6 +257,19 @@ fn assert_heat_quad_summary(result: &SolveHeatPlaneQuad2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let node_k = &result.nodes[element.node_k];
+        let node_l = &result.nodes[element.node_l];
+        assert_close(
+            element.area,
+            quad_area(
+                (node_i.x, node_i.y),
+                (node_j.x, node_j.y),
+                (node_k.x, node_k.y),
+                (node_l.x, node_l.y),
+            ),
+        );
         let average_temperature = (result.nodes[element.node_i].temperature
             + result.nodes[element.node_j].temperature
             + result.nodes[element.node_k].temperature
@@ -284,6 +308,17 @@ fn assert_thermal_triangle_summary(result: &SolveThermalPlaneTriangle2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let node_k = &result.nodes[element.node_k];
+        assert_close(
+            element.area,
+            triangle_area(
+                (node_i.x, node_i.y),
+                (node_j.x, node_j.y),
+                (node_k.x, node_k.y),
+            ),
+        );
         let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
             + result.nodes[element.node_j].temperature_delta
             + result.nodes[element.node_k].temperature_delta)
@@ -323,6 +358,19 @@ fn assert_thermal_quad_summary(result: &SolveThermalPlaneQuad2dResult) {
 
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        let node_i = &result.nodes[element.node_i];
+        let node_j = &result.nodes[element.node_j];
+        let node_k = &result.nodes[element.node_k];
+        let node_l = &result.nodes[element.node_l];
+        assert_close(
+            element.area,
+            quad_area(
+                (node_i.x, node_i.y),
+                (node_j.x, node_j.y),
+                (node_k.x, node_k.y),
+                (node_l.x, node_l.y),
+            ),
+        );
         let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
             + result.nodes[element.node_j].temperature_delta
             + result.nodes[element.node_k].temperature_delta
@@ -697,6 +745,14 @@ fn von_mises(stress_x: f64, stress_y: f64, tau_xy: f64) -> f64 {
 fn in_plane_shear(stress_x: f64, stress_y: f64, tau_xy: f64) -> f64 {
     let half_delta = 0.5 * (stress_x - stress_y);
     (half_delta * half_delta + tau_xy * tau_xy).sqrt()
+}
+
+fn triangle_area(a: (f64, f64), b: (f64, f64), c: (f64, f64)) -> f64 {
+    0.5 * ((b.0 - a.0) * (c.1 - a.1) - (c.0 - a.0) * (b.1 - a.1)).abs()
+}
+
+fn quad_area(a: (f64, f64), b: (f64, f64), c: (f64, f64), d: (f64, f64)) -> f64 {
+    triangle_area(a, b, c) + triangle_area(a, c, d)
 }
 
 fn magnitude(x: f64, y: f64) -> f64 {

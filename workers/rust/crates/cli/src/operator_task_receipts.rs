@@ -91,9 +91,9 @@ pub(crate) fn operator_task_failure_receipt(
 
 fn required_failure_action(code: &str) -> &'static str {
     match code {
-        "operator_task_digest_missing" | "operator_task_digest_mismatch" | "operator_task_digest_invalid" => {
-            "rebuild_task_ir_and_recompute_digest"
-        }
+        "operator_task_digest_missing"
+        | "operator_task_digest_mismatch"
+        | "operator_task_digest_invalid" => "rebuild_task_ir_and_recompute_digest",
         "operator_task_mirror_mismatch"
         | "operator_task_execution_abi_mismatch"
         | "operator_task_program_mismatch"

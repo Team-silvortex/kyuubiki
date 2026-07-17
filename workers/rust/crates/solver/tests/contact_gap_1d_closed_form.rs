@@ -256,8 +256,18 @@ fn assert_penalty_contact_law(result: &kyuubiki_protocol::SolveContactGap1dResul
 fn assert_contact_summary(result: &kyuubiki_protocol::SolveContactGap1dResult) {
     let mut max_force = 0.0_f64;
 
+    for node in &result.nodes {
+        let input = &result.input.nodes[node.index];
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+    }
+
     for element in &result.elements {
         let input = &result.input.elements[element.index];
+        assert_close(
+            element.length,
+            (result.input.nodes[input.node_j].x - result.input.nodes[input.node_i].x).abs(),
+        );
         let extension = result.nodes[element.node_j].ux - result.nodes[element.node_i].ux;
         assert_close(element.extension, extension);
         assert_close(

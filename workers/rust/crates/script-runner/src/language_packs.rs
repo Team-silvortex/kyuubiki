@@ -538,7 +538,10 @@ fn value_at_dotted_path<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
 
 fn missing_override_paths(pack: &Value, required_paths: &[&str]) -> Vec<String> {
     let Some(overrides) = pack.get("overrides") else {
-        return required_paths.iter().map(|entry| (*entry).to_string()).collect();
+        return required_paths
+            .iter()
+            .map(|entry| (*entry).to_string())
+            .collect();
     };
     required_paths
         .iter()

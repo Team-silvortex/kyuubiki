@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{Frame3dElementInput, Frame3dNodeInput, SolveFrame3dRequest};
+use kyuubiki_protocol::{
+    Frame3dElementInput, Frame3dElementResult, Frame3dNodeInput, SolveFrame3dRequest,
+};
 use kyuubiki_solver::solve_frame_3d;
 
 const TOL: f64 = 1.0e-10;
@@ -246,6 +248,11 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
             .nodes
             .iter()
             .map(|node| {
+                let input = &result.input.nodes[node.index];
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x);
+                assert_close(node.y, input.y);
+                assert_close(node.z, input.z);
                 assert_close(
                     node.displacement_magnitude,
                     (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
@@ -288,7 +295,10 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
         result
             .elements
             .iter()
-            .map(|element| element.max_combined_stress)
+            .map(|element| {
+                assert_frame_element_law(result, element);
+                element.max_combined_stress
+            })
             .fold(0.0_f64, f64::max),
     );
     assert_close(
@@ -304,6 +314,32 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
                 element.strain_energy
             })
             .sum::<f64>(),
+    );
+}
+
+fn assert_frame_element_law(
+    result: &kyuubiki_protocol::SolveFrame3dResult,
+    element: &Frame3dElementResult,
+) {
+    let input = &result.input.elements[element.index];
+    let node_i = &result.nodes[element.node_i];
+    let node_j = &result.nodes[element.node_j];
+    let dx = node_j.x - node_i.x;
+    let dy = node_j.y - node_i.y;
+    let dz = node_j.z - node_i.z;
+    let expected_length = (dx * dx + dy * dy + dz * dz).sqrt();
+    let expected_axial_stress =
+        element.axial_force_i.abs().max(element.axial_force_j.abs()) / input.area;
+    let bending_y =
+        element.moment_y_i.abs().max(element.moment_y_j.abs()) / input.section_modulus_y;
+    let bending_z =
+        element.moment_z_i.abs().max(element.moment_z_j.abs()) / input.section_modulus_z;
+    assert_close(element.length, expected_length);
+    assert_close(element.axial_stress, expected_axial_stress);
+    assert_close(element.max_bending_stress, bending_y + bending_z);
+    assert_close(
+        element.max_combined_stress,
+        expected_axial_stress + element.max_bending_stress,
     );
 }
 
