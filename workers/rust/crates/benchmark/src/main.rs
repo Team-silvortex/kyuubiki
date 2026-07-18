@@ -36,7 +36,14 @@ use runner::{build_report, build_report_with_progress};
 use shape_report::{build_shape_report, print_shape_table};
 
 fn main() {
-    let config = BenchmarkConfig::from_env();
+    if let Err(error) = run() {
+        eprintln!("benchmark configuration error: {error}");
+        process::exit(2);
+    }
+}
+
+fn run() -> Result<(), String> {
+    let config = BenchmarkConfig::from_env()?;
     let cases = if is_headless_sdk_matrix(&config.matrix) {
         headless_sdk_cases()
     } else {
@@ -55,7 +62,7 @@ fn main() {
             }
             OutputFormat::Table => print_shape_table(&report),
         }
-        return;
+        return Ok(());
     }
 
     let report = if config.progress {
@@ -120,4 +127,6 @@ fn main() {
             process::exit(1);
         }
     }
+
+    Ok(())
 }

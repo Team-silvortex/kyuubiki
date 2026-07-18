@@ -16,18 +16,19 @@ fn solver_preconditioner_all_expands_truss_cases() {
         "all",
     );
 
-    assert_eq!(report.cases.len(), 2);
+    assert_eq!(report.cases.len(), 3);
     assert!(report.cases.iter().any(|case| case.id.ends_with("#jacobi")));
     assert!(report
         .cases
         .iter()
         .any(|case| case.id.ends_with("#symmetric-gauss-seidel")));
+    assert!(report.cases.iter().any(|case| case.id.ends_with("#ic0")));
     assert_eq!(report.preconditioner_comparisons.len(), 1);
     assert_eq!(
         report.preconditioner_comparisons[0].base_case_id,
         "truss-roof-medium"
     );
-    assert_eq!(report.preconditioner_comparisons[0].compared.len(), 2);
+    assert_eq!(report.preconditioner_comparisons[0].compared.len(), 3);
     assert!(report.preconditioner_comparisons[0].winner_speedup_ratio >= 1.0);
     let json = serde_json::to_value(&report).expect("benchmark report should serialize");
     assert!(json.get("preconditioner_comparisons").is_some());

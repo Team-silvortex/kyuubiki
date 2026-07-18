@@ -61,7 +61,7 @@ impl BenchmarkProfile {
 }
 
 impl BenchmarkConfig {
-    pub(crate) fn from_env() -> Self {
+    pub(crate) fn from_env() -> Result<Self, String> {
         let mut config = Self {
             repeat: 10,
             case_filter: None,
@@ -109,21 +109,7 @@ impl BenchmarkConfig {
                 }
                 "--profile" => {
                     if let Some(value) = args.next() {
-                        config.profile = match value.as_str() {
-                            "medium" => BenchmarkProfile::Medium,
-                            "large" => BenchmarkProfile::Large,
-                            "v2" => BenchmarkProfile::V2,
-                            "10k" => BenchmarkProfile::TenK,
-                            "15k" => BenchmarkProfile::FifteenK,
-                            "20k" => BenchmarkProfile::TwentyK,
-                            "100k" => BenchmarkProfile::HundredK,
-                            "200k" => BenchmarkProfile::TwoHundredK,
-                            "300k" => BenchmarkProfile::ThreeHundredK,
-                            "400k" => BenchmarkProfile::FourHundredK,
-                            "500k" => BenchmarkProfile::FiveHundredK,
-                            "1m" | "1000k" | "one_million" => BenchmarkProfile::OneMillion,
-                            other => panic!("unsupported benchmark profile: {other}"),
-                        };
+                        config.profile = parse_profile(value)?;
                     }
                 }
                 "--baseline-out" => {
@@ -172,6 +158,63 @@ impl BenchmarkConfig {
             }
         }
 
-        config
+        validate_solver_preconditioner(&config.solver_preconditioner)?;
+        Ok(config)
+    }
+}
+
+fn parse_profile(value: &str) -> Result<BenchmarkProfile, String> {
+    match value {
+        "medium" => Ok(BenchmarkProfile::Medium),
+        "large" => Ok(BenchmarkProfile::Large),
+        "v2" => Ok(BenchmarkProfile::V2),
+        "10k" => Ok(BenchmarkProfile::TenK),
+        "15k" => Ok(BenchmarkProfile::FifteenK),
+        "20k" => Ok(BenchmarkProfile::TwentyK),
+        "100k" => Ok(BenchmarkProfile::HundredK),
+        "200k" => Ok(BenchmarkProfile::TwoHundredK),
+        "300k" => Ok(BenchmarkProfile::ThreeHundredK),
+        "400k" => Ok(BenchmarkProfile::FourHundredK),
+        "500k" => Ok(BenchmarkProfile::FiveHundredK),
+        "1m" | "1000k" | "one_million" => Ok(BenchmarkProfile::OneMillion),
+        other => Err(format!("unsupported benchmark profile: {other}")),
+    }
+}
+
+fn validate_solver_preconditioner(value: &str) -> Result<(), String> {
+    match value {
+        "jacobi"
+        | "sgs"
+        | "symmetric-gauss-seidel"
+        | "ic0"
+        | "incomplete-cholesky"
+        | "auto"
+        | "all"
+        | "compare" => Ok(()),
+        other => Err(format!("unsupported solver preconditioner: {other}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BenchmarkProfile, parse_profile, validate_solver_preconditioner};
+
+    #[test]
+    fn rejects_unknown_profiles_without_panicking() {
+        assert_eq!(
+            parse_profile("invalid").unwrap_err(),
+            "unsupported benchmark profile: invalid"
+        );
+        assert_eq!(parse_profile("1m").unwrap(), BenchmarkProfile::OneMillion);
+    }
+
+    #[test]
+    fn rejects_unknown_preconditioners_without_silent_fallback() {
+        assert_eq!(
+            validate_solver_preconditioner("not-a-preconditioner").unwrap_err(),
+            "unsupported solver preconditioner: not-a-preconditioner"
+        );
+        assert!(validate_solver_preconditioner("symmetric-gauss-seidel").is_ok());
+        assert!(validate_solver_preconditioner("auto").is_ok());
     }
 }

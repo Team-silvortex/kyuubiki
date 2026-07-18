@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpdPreconditioner {
+    IncompleteCholesky,
     Jacobi,
     SymmetricGaussSeidel,
 }
@@ -7,6 +8,7 @@ pub enum SpdPreconditioner {
 #[derive(Debug, Clone)]
 pub struct SpdSolveOptions {
     pub preconditioner: SpdPreconditioner,
+    pub progress_interval: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -28,6 +30,7 @@ impl Default for SpdSolveOptions {
     fn default() -> Self {
         Self {
             preconditioner: SpdPreconditioner::Jacobi,
+            progress_interval: None,
         }
     }
 }

@@ -13,13 +13,26 @@ pub fn solve_stokes_flow_plane_quad_2d(
     request: &SolveStokesFlowPlaneQuad2dRequest,
 ) -> Result<SolveStokesFlowPlaneQuad2dResult, String> {
     validate_quad_request(request)?;
+    let local_viscosities = average_node_viscosities(
+        request.nodes.len(),
+        request.elements.iter().flat_map(|element| {
+            [
+                element.node_i,
+                element.node_j,
+                element.node_k,
+                element.node_l,
+            ]
+            .into_iter()
+            .map(move |index| (index, element.viscosity))
+        }),
+    );
 
     let nodes = request
         .nodes
         .iter()
         .enumerate()
         .map(|(index, node)| {
-            let local_viscosity = average_viscosity_for_node(request, index).max(1.0e-12);
+            let local_viscosity = local_viscosities[index].max(1.0e-12);
             let velocity_x = if node.fix_velocity_x {
                 node.velocity_x
             } else {
@@ -77,12 +90,20 @@ pub fn solve_stokes_flow_plane_triangle_2d(
     request: &SolveStokesFlowPlaneTriangle2dRequest,
 ) -> Result<SolveStokesFlowPlaneTriangle2dResult, String> {
     validate_triangle_request(request)?;
+    let local_viscosities = average_node_viscosities(
+        request.nodes.len(),
+        request.elements.iter().flat_map(|element| {
+            [element.node_i, element.node_j, element.node_k]
+                .into_iter()
+                .map(move |index| (index, element.viscosity))
+        }),
+    );
     let nodes = request
         .nodes
         .iter()
         .enumerate()
         .map(|(index, node)| {
-            let local_viscosity = average_triangle_viscosity_for_node(request, index).max(1.0e-12);
+            let local_viscosity = local_viscosities[index].max(1.0e-12);
             let velocity_x = if node.fix_velocity_x {
                 node.velocity_x
             } else {
@@ -133,41 +154,38 @@ pub fn solve_stokes_flow_plane_triangle_2d(
     })
 }
 
-fn average_viscosity_for_node(
-    request: &SolveStokesFlowPlaneQuad2dRequest,
-    node_index: usize,
-) -> f64 {
-    let mut total = 0.0;
-    let mut count = 0.0;
-
-    for element in &request.elements {
-        if [
-            element.node_i,
-            element.node_j,
-            element.node_k,
-            element.node_l,
-        ]
-        .contains(&node_index)
-        {
-            total += element.viscosity;
-            count += 1.0;
-        }
+fn average_node_viscosities(
+    node_count: usize,
+    contributions: impl IntoIterator<Item = (usize, f64)>,
+) -> Vec<f64> {
+    let mut totals = vec![0.0; node_count];
+    let mut counts = vec![0_u32; node_count];
+    for (index, viscosity) in contributions {
+        totals[index] += viscosity;
+        counts[index] += 1;
     }
-
-    if count == 0.0 { 1.0 } else { total / count }
+    totals
+        .into_iter()
+        .zip(counts)
+        .map(|(total, count)| {
+            if count == 0 {
+                1.0
+            } else {
+                total / f64::from(count)
+            }
+        })
+        .collect()
 }
 
-fn average_triangle_viscosity_for_node(
-    request: &SolveStokesFlowPlaneTriangle2dRequest,
-    node_index: usize,
-) -> f64 {
-    let mut total = 0.0;
-    let mut count = 0.0;
-    for element in &request.elements {
-        if [element.node_i, element.node_j, element.node_k].contains(&node_index) {
-            total += element.viscosity;
-            count += 1.0;
-        }
+#[cfg(test)]
+mod tests {
+    use super::average_node_viscosities;
+
+    #[test]
+    fn averages_incident_element_viscosities_in_one_pass() {
+        assert_eq!(
+            average_node_viscosities(4, [(0, 2.0), (1, 2.0), (1, 4.0), (2, 4.0)]),
+            vec![2.0, 3.0, 4.0, 1.0]
+        );
     }
-    if count == 0.0 { 1.0 } else { total / count }
 }

@@ -17,8 +17,14 @@ pub(crate) fn run_build_benchmark_profile_index(
 ) -> RunnerResult<u8> {
     let options = parse_args(repo_root, args)?;
     let coverage_targets = read_coverage_targets(&options.coverage_targets)?;
-    let discovery = discover_runs(&options.root)?;
-    let gate = evaluate_gate(&discovery.runs, &discovery.skipped, &coverage_targets);
+    let mut discovery = discover_runs(&options.root)?;
+    annotate_resolved_failures(&mut discovery.failures, &discovery.runs);
+    let gate = evaluate_gate(
+        &discovery.runs,
+        &discovery.failures,
+        &discovery.skipped,
+        &coverage_targets,
+    );
     let payload = json!({
         "schema_version": "kyuubiki.benchmark-profile-index/v1",
         "root": display_path(repo_root, &options.root),
@@ -27,6 +33,8 @@ pub(crate) fn run_build_benchmark_profile_index(
         "gate": gate,
         "coverage_summaries": coverage_summaries(&discovery.runs, &coverage_targets),
         "matrix_summaries": matrix_summaries(&discovery.runs),
+        "solver_strategy_summaries": solver_strategy_summaries(&discovery.runs),
+        "failed_runs": discovery.failures,
         "skipped_runs": discovery.skipped,
         "retained_runs": discovery.runs,
     });
@@ -164,15 +172,21 @@ fn validate_coverage_target(
 }
 
 struct Discovery {
+    failures: Vec<Value>,
     runs: Vec<Value>,
     skipped: Vec<Value>,
 }
 
 fn discover_runs(root: &Path) -> RunnerResult<Discovery> {
+    let mut failures = Vec::new();
     let mut runs = Vec::new();
     let mut skipped = Vec::new();
     let Ok(entries) = fs::read_dir(root) else {
-        return Ok(Discovery { runs, skipped });
+        return Ok(Discovery {
+            failures: Vec::new(),
+            runs,
+            skipped,
+        });
     };
     for entry in entries {
         let entry = entry.map_err(|error| format!("failed to read {}: {error}", root.display()))?;
@@ -181,23 +195,39 @@ fn discover_runs(root: &Path) -> RunnerResult<Discovery> {
             continue;
         }
         let summary_path = run_dir.join("summary.json");
-        if !summary_path.exists() {
-            continue;
-        }
         let slug = entry.file_name().to_string_lossy().to_string();
-        match read_json(&summary_path) {
-            Ok(summary) => runs.push(run_row(root, &slug, &run_dir, &summary_path, &summary)?),
-            Err(error) => skipped.push(
-                json!({ "slug": slug, "reason": format!("failed to parse summary.json: {error}") }),
-            ),
+        if summary_path.exists() {
+            match read_json(&summary_path) {
+                Ok(summary) => runs.push(run_row(root, &slug, &run_dir, &summary_path, &summary)?),
+                Err(error) => skipped.push(
+                    json!({ "slug": slug, "reason": format!("failed to parse summary.json: {error}") }),
+                ),
+            }
+        }
+        let failure_path = run_dir.join("failure.json");
+        if failure_path.exists() {
+            match read_json(&failure_path) {
+                Ok(failure) => failures.push(failure_row(root, &slug, &failure_path, &failure)?),
+                Err(error) => skipped.push(
+                    json!({ "slug": slug, "reason": format!("failed to parse failure.json: {error}") }),
+                ),
+            }
         }
     }
     runs.sort_by(|left, right| {
         number_field(right, "generated_at_unix_s")
             .total_cmp(&number_field(left, "generated_at_unix_s"))
     });
+    failures.sort_by(|left, right| {
+        number_field(right, "generated_at_unix_s")
+            .total_cmp(&number_field(left, "generated_at_unix_s"))
+    });
     skipped.sort_by(|left, right| string_field(left, "slug").cmp(&string_field(right, "slug")));
-    Ok(Discovery { runs, skipped })
+    Ok(Discovery {
+        failures,
+        runs,
+        skipped,
+    })
 }
 
 fn run_row(
@@ -222,6 +252,8 @@ fn run_row(
         "case_ids": summary.get("case_ids").and_then(Value::as_array).map(|items| {
             items.iter().filter_map(Value::as_str).map(Value::from).collect::<Vec<_>>()
         }).unwrap_or_default(),
+        "solver_case_metrics": summary_case_metrics(summary, run_dir),
+        "solver_preconditioners": summary_preconditioners(summary, run_dir),
         "total_median_ms": summary.get("total_median_ms").cloned().unwrap_or_else(|| json!(0)),
         "peak_rss_mib": summary.get("peak_rss_mib").cloned().unwrap_or_else(|| json!(0)),
         "slowest_case": string_field(summary, "slowest_case").if_empty("--"),
@@ -230,6 +262,140 @@ fn run_row(
             "readme_md": display_path(root, &run_dir.join("README.md")),
         },
     }))
+}
+
+fn summary_case_metrics(summary: &Value, run_dir: &Path) -> Vec<Value> {
+    let declared = summary
+        .get("solver_case_metrics")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if !declared.is_empty() {
+        return declared;
+    }
+    raw_reports(run_dir)
+        .into_iter()
+        .flat_map(|report| report_case_metrics(&report))
+        .collect()
+}
+
+fn summary_preconditioners(summary: &Value, run_dir: &Path) -> Vec<Value> {
+    let declared = array_strings(summary, "solver_preconditioners");
+    if !declared.is_empty() {
+        return declared.into_iter().map(Value::from).collect();
+    }
+    raw_reports(run_dir)
+        .iter()
+        .flat_map(|report| report_preconditioners(&report))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(Value::from)
+        .collect()
+}
+
+fn raw_reports(run_dir: &Path) -> Vec<Value> {
+    let Ok(entries) = fs::read_dir(run_dir) else {
+        return Vec::new();
+    };
+    let mut paths = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+                && !matches!(
+                    path.file_name().and_then(|name| name.to_str()),
+                    Some("summary.json" | "failure.json")
+                )
+        })
+        .collect::<Vec<_>>();
+    paths.sort();
+    paths
+        .iter()
+        .filter_map(|path| read_json(path).ok())
+        .collect()
+}
+
+fn report_preconditioners(report: &Value) -> Vec<String> {
+    report
+        .get("cases")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|case| non_empty_string(case, "solver_preconditioner"))
+        .collect()
+}
+
+fn report_case_metrics(report: &Value) -> Vec<Value> {
+    report
+        .get("cases")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|case| {
+            let id = non_empty_string(case, "id")?;
+            let preconditioner = non_empty_string(case, "solver_preconditioner")?;
+            Some(json!({
+                "id": id,
+                "solver_preconditioner": preconditioner,
+                "solver_iterations": case["solver_iterations"].clone(),
+                "solver_residual_norm": case["solver_residual_norm"].clone(),
+            }))
+        })
+        .collect()
+}
+
+fn failure_row(
+    root: &Path,
+    slug: &str,
+    failure_path: &Path,
+    failure: &Value,
+) -> RunnerResult<Value> {
+    let modified = failure_path
+        .metadata()
+        .and_then(|meta| meta.modified())
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |duration| duration.as_secs());
+    Ok(json!({
+        "slug": slug,
+        "generated_at_unix_s": modified,
+        "profile": string_field(failure, "profile").if_empty("unknown"),
+        "matrix": string_field(failure, "matrix").if_empty("unknown"),
+        "case": string_field(failure, "case").if_empty("--"),
+        "phase": string_field(failure, "phase").if_empty("unknown"),
+        "failure_kind": normalized_failure_kind(failure),
+        "exit_code": failure.get("exit_code").cloned().unwrap_or_else(|| json!(0)),
+        "timed_out": failure.get("timed_out").and_then(Value::as_bool).unwrap_or(false),
+        "resolved_by_success": false,
+        "remote_host": string_field(failure, "remote_host").if_empty("unknown"),
+        "files": { "failure_json": display_path(root, failure_path) },
+    }))
+}
+
+fn annotate_resolved_failures(failures: &mut [Value], runs: &[Value]) {
+    let mut successful_cases = BTreeMap::new();
+    for run in runs {
+        let matrix = string_field(run, "matrix");
+        let profile = string_field(run, "profile");
+        let slug = string_field(run, "slug");
+        for case in observed_case_ids(run) {
+            successful_cases
+                .entry(benchmark_case_key(&matrix, &profile, &case))
+                .or_insert_with(|| slug.clone());
+        }
+    }
+    for failure in failures {
+        let key = benchmark_case_key(
+            &string_field(failure, "matrix"),
+            &string_field(failure, "profile"),
+            &string_field(failure, "case"),
+        );
+        if let Some(slug) = successful_cases.get(&key) {
+            failure["resolved_by_success"] = Value::Bool(true);
+            failure["resolved_by_slug"] = Value::String(slug.clone());
+        }
+    }
 }
 
 trait EmptyFallback {
@@ -246,7 +412,12 @@ impl EmptyFallback for String {
     }
 }
 
-fn evaluate_gate(runs: &[Value], skipped: &[Value], coverage_targets: &[CoverageTarget]) -> Value {
+fn evaluate_gate(
+    runs: &[Value],
+    failures: &[Value],
+    skipped: &[Value],
+    coverage_targets: &[CoverageTarget],
+) -> Value {
     let mut reasons = skipped
         .iter()
         .map(|item| {
@@ -257,6 +428,34 @@ fn evaluate_gate(runs: &[Value], skipped: &[Value], coverage_targets: &[Coverage
             )
         })
         .collect::<Vec<_>>();
+    for failure in failures {
+        if failure
+            .get("resolved_by_success")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let outcome = match normalized_failure_kind(failure).as_str() {
+            "configuration" => "configuration error".to_string(),
+            "timeout" => "timed out".to_string(),
+            _ if failure
+                .get("timed_out")
+                .and_then(Value::as_bool)
+                .unwrap_or(false) =>
+            {
+                "timed out".to_string()
+            }
+            _ => format!("exited {}", number_field(failure, "exit_code") as u64),
+        };
+        reasons.push(format!(
+            "failed run {} ({}/{} {}): {outcome}",
+            string_field(failure, "slug"),
+            string_field(failure, "matrix"),
+            string_field(failure, "profile"),
+            string_field(failure, "phase"),
+        ));
+    }
     for entry in coverage_summaries(runs, coverage_targets) {
         let missing = number_field(&entry, "missing_case_count") as usize;
         let covered = number_field(&entry, "covered_case_count") as usize;
@@ -312,6 +511,75 @@ fn matrix_summaries(runs: &[Value]) -> Vec<Value> {
         .into_values()
         .map(MatrixSummary::into_value)
         .collect()
+}
+
+fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
+    let mut groups = BTreeMap::<(String, String, String), BTreeMap<String, Value>>::new();
+    for run in runs {
+        if number_field(run, "case_count") != 1.0 {
+            continue;
+        }
+        let case_ids = array_strings(run, "case_ids");
+        let preconditioners = array_strings(run, "solver_preconditioners");
+        if case_ids.len() != 1 || preconditioners.len() != 1 {
+            continue;
+        }
+        let key = (
+            string_field(run, "matrix"),
+            string_field(run, "profile"),
+            normalize_case_id(&case_ids[0]),
+        );
+        let preconditioner = preconditioners[0].clone();
+        let metrics = case_solver_metrics(run, &case_ids[0], &preconditioner);
+        // Retained runs arrive newest-first, so retain the latest observation.
+        groups
+            .entry(key)
+            .or_default()
+            .entry(preconditioner)
+            .or_insert_with(|| {
+                json!({
+                    "slug": string_field(run, "slug"),
+                "median_ms": number_field(run, "total_median_ms"),
+                "peak_rss_mib": number_field(run, "peak_rss_mib"),
+                "solver_iterations": metrics["solver_iterations"].clone(),
+                "solver_residual_norm": metrics["solver_residual_norm"].clone(),
+                })
+            });
+    }
+    groups
+        .into_iter()
+        .filter(|(_, strategies)| strategies.len() > 1)
+        .map(|((matrix, profile, case_id), strategies)| {
+            json!({
+                "matrix": matrix,
+                "profile": profile,
+                "case_id": case_id,
+                "strategies": strategies.into_iter().map(|(preconditioner, result)| {
+                    json!({
+                        "preconditioner": preconditioner,
+                        "slug": string_field(&result, "slug"),
+                        "median_ms": number_field(&result, "median_ms"),
+                        "peak_rss_mib": number_field(&result, "peak_rss_mib"),
+                        "solver_iterations": result["solver_iterations"].clone(),
+                        "solver_residual_norm": result["solver_residual_norm"].clone(),
+                    })
+                }).collect::<Vec<_>>(),
+            })
+        })
+        .collect()
+}
+
+fn case_solver_metrics(run: &Value, case_id: &str, preconditioner: &str) -> Value {
+    run.get("solver_case_metrics")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .find(|metrics| {
+            string_field(metrics, "id") == case_id
+                && string_field(metrics, "solver_preconditioner") == preconditioner
+        })
+        .cloned()
+        .unwrap_or(Value::Null)
 }
 
 struct MatrixSummary {
@@ -412,6 +680,46 @@ fn observed_case_ids(run: &Value) -> Vec<String> {
 
 fn normalize_case_id(case_id: &str) -> String {
     case_id.split('#').next().unwrap_or(case_id).to_string()
+}
+
+fn benchmark_case_key(matrix: &str, profile: &str, case: &str) -> String {
+    format!(
+        "{}|{}|{}",
+        matrix,
+        normalized_profile(profile),
+        normalize_case_id(case)
+    )
+}
+
+fn normalized_profile(profile: &str) -> &str {
+    match profile {
+        "1m" | "1000k" => "one_million",
+        "500k" => "five_hundred_k",
+        "400k" => "four_hundred_k",
+        "300k" => "three_hundred_k",
+        "200k" => "two_hundred_k",
+        "100k" => "hundred_k",
+        "20k" => "twenty_k",
+        "15k" => "fifteen_k",
+        "10k" => "ten_k",
+        other => other,
+    }
+}
+
+fn normalized_failure_kind(failure: &Value) -> String {
+    let configured = string_field(failure, "failure_kind");
+    if !configured.is_empty() {
+        return configured;
+    }
+    if failure
+        .get("timed_out")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        "timeout".to_string()
+    } else {
+        "execution".to_string()
+    }
 }
 
 fn read_json(path: &Path) -> RunnerResult<Value> {

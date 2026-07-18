@@ -78,13 +78,23 @@ Focused reference for benchmark and regression script entry points.
 - Remote profile probes are capped at 900 seconds by default. Override this
   deliberately with `REMOTE_TIMEOUT_SECONDS=<seconds>` for a reviewed long-run
   case; the remote runner sends `SIGINT` before forcefully stopping a timeout.
+  A failed execution or artifact copy writes `failure.json` beside the local
+  report directory, with a `progress.log` when the remote process emits
+  diagnostics. Iterative SPD solves emit residual, tolerance, and elapsed-time
+  checkpoints every 256 iterations. The receipt includes the final progress
+  lines, so timeout evidence remains auditable without claiming a successful
+  benchmark result.
+- `REPORT_ONLY=1` rebuilds a local summary without SSH. Supply the original
+  `PROFILE`, `MATRIX`, and `CASE` with `OUTPUT_SLUG`, or set `LOCAL_JSON_PATH`
+  explicitly; a slug alone does not encode the report filename.
 - benchmark JSON and table output include `hotspot_label`, `hotspot_elapsed_ms`,
   `hotspot_share_pct`, and `hotspot_hint`. When nested `solve_spd_*` stages are
   present, the hotspot prefers the leaf solver kernel over the outer
   `solve_system` wrapper so large runs point at the actual optimization target.
 - `./scripts/build-benchmark-profile-index.mjs`
   rebuilds the exploratory benchmark profile index from retained
-  `summary.json` files under `tmp/benchmark-profile/`. Coverage summaries
+  `summary.json` files and failure receipts under `tmp/benchmark-profile/`.
+  Coverage summaries
   track 400k and 500k targets across `mechanical-core`, `thermal-core`,
   `compound-core`, and `thermal-structural`.
 - `./scripts/run-standard-benchmark-regression.sh`

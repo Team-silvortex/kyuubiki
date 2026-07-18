@@ -2,15 +2,17 @@ use std::time::Instant;
 
 use crate::linear_algebra::{CompressedSparseMatrix, SparseMatrix, sparse_to_dense};
 use crate::linear_dense::solve_linear_system;
-use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveProfile, SpdSolveStage};
+use crate::linear_solver_profile::{SpdSolveOptions, SpdSolveProfile, SpdSolveStage};
 
 pub(crate) fn solve_spd_compressed(
     matrix: &CompressedSparseMatrix,
     rhs: &[f64],
     fallback_source: &SparseMatrix,
-    preconditioner: SpdPreconditioner,
+    options: &SpdSolveOptions,
 ) -> Result<SpdSolveProfile, String> {
     let size = rhs.len();
+    let solve_started = Instant::now();
+    let preconditioner = options.preconditioner;
 
     let mut x = vec![0.0; size];
     let mut r = rhs.to_vec();
@@ -84,6 +86,18 @@ pub(crate) fn solve_spd_compressed(
         }
 
         let residual_norm = residual_squared.sqrt();
+        if options
+            .progress_interval
+            .is_some_and(|interval| interval > 0 && (iteration + 1) % interval == 0)
+        {
+            eprintln!(
+                "solver progress: iteration={} residual={:.6e} tolerance={:.6e} elapsed_ms={:.3}",
+                iteration + 1,
+                residual_norm,
+                tolerance,
+                elapsed_ms(solve_started)
+            );
+        }
         if residual_norm <= tolerance {
             return Ok(SpdSolveProfile {
                 solution: x,

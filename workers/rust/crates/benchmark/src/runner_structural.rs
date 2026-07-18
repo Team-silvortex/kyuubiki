@@ -25,9 +25,11 @@ pub(crate) struct WorkloadMetrics {
 pub(crate) fn run_thermal_structural_workload(
     workload: &BenchmarkWorkload,
     solver_preconditioner: &str,
+    progress: bool,
 ) -> Option<Result<WorkloadMetrics, String>> {
     let solve_options = SpdSolveOptions {
         preconditioner: parse_preconditioner(solver_preconditioner),
+        progress_interval: progress.then_some(256),
     };
     let result = match workload {
         BenchmarkWorkload::ThermalBar1d(request) => {

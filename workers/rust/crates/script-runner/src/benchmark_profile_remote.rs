@@ -1,6 +1,7 @@
 use crate::benchmark_profile_remote_summary::write_profile_outputs;
 use crate::native_time::utc_timestamp_slug;
 use crate::remote_host::{rsync_to, scp_from, shell_escape, ssh_status};
+use serde_json::json;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -12,12 +13,14 @@ struct Options {
     local_json_path: PathBuf,
     local_md_path: PathBuf,
     local_output_dir: PathBuf,
+    local_progress_path: PathBuf,
     local_summary_path: PathBuf,
     matrix: String,
     profile: String,
     remote_dir: String,
     remote_host: String,
     remote_json_path: String,
+    remote_progress_path: String,
     remote_timeout_seconds: u64,
     report_only: bool,
     repeat: String,
@@ -63,6 +66,12 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
 
     let status = ssh_status(root, &options.remote_host, remote_command(&options))?;
     if status != 0 {
+        copy_progress_log(root, &options);
+        let receipt = write_failure_receipt(&options, "remote-execution", status)?;
+        eprintln!(
+            "remote benchmark profile failed; receipt: {}",
+            receipt.display()
+        );
         return Ok(status);
     }
 
@@ -73,8 +82,16 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
         &options.local_json_path,
     )?;
     if scp_status != 0 {
+        copy_progress_log(root, &options);
+        let receipt = write_failure_receipt(&options, "artifact-copy", scp_status)?;
+        eprintln!(
+            "remote benchmark artifact copy failed; receipt: {}",
+            receipt.display()
+        );
         return Ok(scp_status);
     }
+
+    copy_progress_log(root, &options);
 
     write_profile_outputs(
         &options.local_json_path,
@@ -89,6 +106,41 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
     println!("summary: {}", options.local_md_path.display());
     println!("summary json: {}", options.local_summary_path.display());
     Ok(0)
+}
+
+fn write_failure_receipt(options: &Options, phase: &str, exit_code: u8) -> RunnerResult<PathBuf> {
+    let path = options.local_output_dir.join("failure.json");
+    let payload = json!({
+        "schema_version": "moxi.benchmark-profile-failure.v1",
+        "phase": phase,
+        "exit_code": exit_code,
+        "failure_kind": failure_kind(exit_code),
+        "timed_out": exit_code == 124,
+        "profile": options.profile,
+        "matrix": options.matrix,
+        "case": options.case_filter,
+        "repeat": options.repeat,
+        "remote_host": options.remote_host,
+        "remote_json_path": options.remote_json_path,
+        "remote_timeout_seconds": options.remote_timeout_seconds,
+        "solver_preconditioner": options.solver_preconditioner,
+        "progress_log": "progress.log",
+        "progress_tail": read_progress_tail(&options.local_progress_path),
+    });
+    let content = serde_json::to_string_pretty(&payload).map_err(|error| {
+        format!("failed to serialize remote benchmark failure receipt: {error}")
+    })?;
+    std::fs::write(&path, format!("{content}\n"))
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
+    Ok(path)
+}
+
+fn failure_kind(exit_code: u8) -> &'static str {
+    match exit_code {
+        2 => "configuration",
+        124 => "timeout",
+        _ => "execution",
+    }
 }
 
 impl Options {
@@ -116,6 +168,7 @@ impl Options {
             root.join("tmp/benchmark-profile").join(&output_slug),
         );
         let local_summary_path = local_output_dir.join("summary.json");
+        let local_progress_path = local_output_dir.join("progress.log");
         let local_json_path = env_path_or(
             "LOCAL_JSON_PATH",
             local_output_dir.join(format!("{output_name}.json")),
@@ -133,11 +186,13 @@ impl Options {
             local_json_path,
             local_md_path: local_output_dir.join("README.md"),
             local_output_dir,
+            local_progress_path,
             local_summary_path,
             matrix,
             profile,
             remote_dir,
             remote_host: env::var("KYUUBIKI_LAB_HOST").unwrap_or_else(|_| "kyuubiki-lab".into()),
+            remote_progress_path: format!("{}/progress.log", dirname(&remote_json_path)),
             remote_json_path,
             remote_timeout_seconds,
             report_only: env::var("REPORT_ONLY").unwrap_or_else(|_| "0".into()) == "1",
@@ -149,6 +204,36 @@ impl Options {
             sync_to_remote: env::var("SYNC_TO_REMOTE").unwrap_or_else(|_| "1".into()) == "1",
         })
     }
+}
+
+fn copy_progress_log(root: &Path, options: &Options) {
+    match scp_from(
+        root,
+        &options.remote_host,
+        &options.remote_progress_path,
+        &options.local_progress_path,
+    ) {
+        Ok(0) => {}
+        Ok(status) => eprintln!("remote benchmark progress log copy exited {status}"),
+        Err(error) => eprintln!("failed to copy remote benchmark progress log: {error}"),
+    }
+}
+
+fn read_progress_tail(path: &Path) -> Vec<String> {
+    const MAX_LINES: usize = 8;
+    std::fs::read_to_string(path)
+        .map(|content| {
+            content
+                .lines()
+                .rev()
+                .take(MAX_LINES)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
@@ -190,7 +275,7 @@ fn remote_command(options: &Options) -> String {
         .map(|case| format!(" --case {}", shell_escape(case)))
         .unwrap_or_default();
     format!(
-        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} timeout --signal=INT --kill-after=30s {}s cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {} --progress{} > {}",
+        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} timeout --signal=INT --kill-after=30s {}s cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {} --progress{} > {} 2> {}",
         shell_escape(&dirname(&options.remote_json_path)),
         shell_escape(&options.remote_dir),
         shell_escape(&options.rustup_toolchain),
@@ -200,7 +285,8 @@ fn remote_command(options: &Options) -> String {
         shell_escape(&options.repeat),
         shell_escape(&options.solver_preconditioner),
         case_arg,
-        shell_escape(&options.remote_json_path)
+        shell_escape(&options.remote_json_path),
+        shell_escape(&options.remote_progress_path)
     )
 }
 
@@ -239,6 +325,18 @@ fn print_usage() {
         "Usage:\n  ./scripts/kyuubiki benchmark-profile-remote\n\n\
 Runs one Rust benchmark profile/matrix on the shared lab machine without a\n\
 checked baseline, then copies JSON back and writes a Markdown summary.\n\n\
-Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  CASE\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  SOLVER_PRECONDITIONER (default: auto)\n  REMOTE_TIMEOUT_SECONDS (default: 900)\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  LOCAL_JSON_PATH\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n  REPORT_ONLY (1 regenerates local summary without SSH)\n"
+Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  CASE\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  SOLVER_PRECONDITIONER (default: auto)\n  REMOTE_TIMEOUT_SECONDS (default: 900)\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  LOCAL_JSON_PATH\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n  REPORT_ONLY (1 regenerates local summary without SSH; also set PROFILE, MATRIX, and CASE, or LOCAL_JSON_PATH)\n"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::failure_kind;
+
+    #[test]
+    fn classifies_remote_failure_exit_codes() {
+        assert_eq!(failure_kind(2), "configuration");
+        assert_eq!(failure_kind(124), "timeout");
+        assert_eq!(failure_kind(1), "execution");
+    }
 }

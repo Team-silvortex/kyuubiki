@@ -57,7 +57,7 @@ pub(crate) fn build_report_with_progress(
                     print_case_start(case, effective_preconditioner, repeat);
                 }
                 let mut result =
-                    run_case_with_preconditioner(case, repeat, effective_preconditioner);
+                    run_case_with_preconditioner(case, repeat, effective_preconditioner, progress);
                 if tag_results && result.solver_preconditioner.is_some() {
                     result.id = format!("{}#{}", result.id, effective_preconditioner);
                 }
@@ -81,13 +81,14 @@ pub(crate) fn build_report_with_progress(
 
 #[cfg(test)]
 pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
-    run_case_with_preconditioner(case, repeat, "jacobi")
+    run_case_with_preconditioner(case, repeat, "jacobi", false)
 }
 
 pub(crate) fn run_case_with_preconditioner(
     case: &BenchmarkCase,
     repeat: usize,
     solver_preconditioner: &str,
+    progress: bool,
 ) -> BenchmarkResult {
     let mut durations = Vec::with_capacity(repeat);
     let (mut node_count, mut element_count, mut dof_count) = workload_shape(&case.workload);
@@ -104,7 +105,7 @@ pub(crate) fn run_case_with_preconditioner(
     for _ in 0..repeat {
         let started = Instant::now();
         let outcome = if let Some(outcome) =
-            run_thermal_structural_workload(&case.workload, solver_preconditioner)
+            run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
         {
             outcome.map(|metrics| {
                 apply_metrics(
@@ -335,6 +336,7 @@ pub(crate) fn run_case_with_preconditioner(
                 BenchmarkWorkload::Truss2d(request) => {
                     let options = SpdSolveOptions {
                         preconditioner: parse_preconditioner(solver_preconditioner),
+                        progress_interval: progress.then_some(256),
                     };
                     profile_truss_2d_with_options(request, options).map(|profile| {
                         let result = profile.result;
@@ -361,6 +363,7 @@ pub(crate) fn run_case_with_preconditioner(
                 BenchmarkWorkload::HeatPlaneQuad2d(request) => {
                     let options = SpdSolveOptions {
                         preconditioner: parse_preconditioner(solver_preconditioner),
+                        progress_interval: progress.then_some(256),
                     };
                     profile_heat_plane_quad_2d_with_options(request, options).map(|profile| {
                         let result = profile.result;

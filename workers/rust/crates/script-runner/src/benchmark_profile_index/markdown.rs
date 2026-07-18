@@ -2,6 +2,7 @@ use serde_json::Value;
 
 pub(super) fn render_readme(root_label: &str, coverage_label: &str, payload: &Value) -> String {
     let runs = array_field(payload, "retained_runs");
+    let failures = array_field(payload, "failed_runs");
     let skipped = array_field(payload, "skipped_runs");
     let gate = payload.get("gate").unwrap_or(&Value::Null);
     let mut lines = vec![
@@ -10,6 +11,7 @@ pub(super) fn render_readme(root_label: &str, coverage_label: &str, payload: &Va
         format!("- Root: `{root_label}`"),
         format!("- Coverage targets: `{coverage_label}`"),
         format!("- Indexed runs: `{}`", runs.len()),
+        format!("- Failed runs: `{}`", failures.len()),
         format!("- Skipped runs: `{}`", skipped.len()),
         format!("- Gate status: `{}`", string_field(gate, "status")),
         String::new(),
@@ -28,9 +30,75 @@ pub(super) fn render_readme(root_label: &str, coverage_label: &str, payload: &Va
     }
     render_matrix_table(&mut lines, payload);
     render_coverage_table(&mut lines, payload);
+    render_solver_strategy_table(&mut lines, payload);
     render_runs_table(&mut lines, runs);
+    render_failures_table(&mut lines, failures);
     render_skipped_table(&mut lines, skipped);
     trim_join(lines)
+}
+
+fn render_solver_strategy_table(lines: &mut Vec<String>, payload: &Value) {
+    let summaries = array_field(payload, "solver_strategy_summaries");
+    if summaries.is_empty() {
+        return;
+    }
+    lines.extend([
+        "## Solver strategy summaries".to_string(),
+        String::new(),
+        "| Matrix | Profile | Case | Strategy | Iterations | Latest median ms | Peak RSS MiB |"
+            .to_string(),
+        "| --- | --- | --- | --- | ---: | ---: | ---: |".to_string(),
+    ]);
+    for summary in summaries {
+        for strategy in array_field(summary, "strategies") {
+            lines.push(format!(
+                "| `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` |",
+                string_field(summary, "matrix"),
+                string_field(summary, "profile"),
+                string_field(summary, "case_id"),
+                string_field(strategy, "preconditioner"),
+                number_field(strategy, "solver_iterations") as u64,
+                number_field(strategy, "median_ms"),
+                number_field(strategy, "peak_rss_mib"),
+            ));
+        }
+    }
+    lines.push(String::new());
+}
+
+fn render_failures_table(lines: &mut Vec<String>, failures: &[Value]) {
+    if failures.is_empty() {
+        return;
+    }
+    lines.extend([
+        "## Failed runs".to_string(),
+        String::new(),
+        "| Slug | Profile | Matrix | Case | Phase | Kind | Exit | Resolved | Host |".to_string(),
+        "| --- | --- | --- | --- | --- | --- | ---: | --- | --- |".to_string(),
+    ]);
+    for failure in failures {
+        lines.push(format!(
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` |",
+            string_field(failure, "slug"),
+            string_field(failure, "profile"),
+            string_field(failure, "matrix"),
+            string_field(failure, "case"),
+            string_field(failure, "phase"),
+            string_field(failure, "failure_kind"),
+            number_field(failure, "exit_code") as u64,
+            if failure
+                .get("resolved_by_success")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+            {
+                format!("yes: {}", string_field(failure, "resolved_by_slug"))
+            } else {
+                "no".to_string()
+            },
+            string_field(failure, "remote_host"),
+        ));
+    }
+    lines.push(String::new());
 }
 
 fn render_matrix_table(lines: &mut Vec<String>, payload: &Value) {
@@ -88,16 +156,17 @@ fn render_runs_table(lines: &mut Vec<String>, runs: &[Value]) {
     lines.extend([
         "## Runs".to_string(),
         String::new(),
-        "| Slug | Profile | Matrix | Cases | Total median ms | Peak RSS MiB | Slowest case |"
+        "| Slug | Profile | Matrix | Solver | Cases | Total median ms | Peak RSS MiB | Slowest case |"
             .to_string(),
-        "| --- | --- | --- | ---: | ---: | ---: | --- |".to_string(),
+        "| --- | --- | --- | --- | ---: | ---: | ---: | --- |".to_string(),
     ]);
     for run in runs {
         lines.push(format!(
-            "| `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` |",
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` |",
             string_field(run, "slug"),
             string_field(run, "profile"),
             string_field(run, "matrix"),
+            array_strings(run, "solver_preconditioners").join(", "),
             number_field(run, "case_count") as u64,
             number_field(run, "total_median_ms"),
             number_field(run, "peak_rss_mib"),

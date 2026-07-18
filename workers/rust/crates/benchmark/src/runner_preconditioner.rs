@@ -7,6 +7,7 @@ use crate::models::{
 
 pub(crate) fn parse_preconditioner(value: &str) -> SpdPreconditioner {
     match value {
+        "ic0" | "incomplete-cholesky" => SpdPreconditioner::IncompleteCholesky,
         "sgs" | "symmetric-gauss-seidel" => SpdPreconditioner::SymmetricGaussSeidel,
         _ => SpdPreconditioner::Jacobi,
     }
@@ -14,8 +15,9 @@ pub(crate) fn parse_preconditioner(value: &str) -> SpdPreconditioner {
 
 pub(crate) fn solver_preconditioners(value: &str) -> Vec<&'static str> {
     match value {
-        "all" | "compare" => vec!["jacobi", "symmetric-gauss-seidel"],
+        "all" | "compare" => vec!["jacobi", "symmetric-gauss-seidel", "ic0"],
         "auto" => vec!["auto"],
+        "ic0" | "incomplete-cholesky" => vec!["ic0"],
         "sgs" | "symmetric-gauss-seidel" => vec!["symmetric-gauss-seidel"],
         _ => vec!["jacobi"],
     }

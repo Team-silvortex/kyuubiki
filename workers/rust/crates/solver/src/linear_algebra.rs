@@ -1,7 +1,11 @@
+use self::linear_ic0::IncompleteCholesky;
 use crate::linear_dense::{solve_linear_system, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
+use std::time::Instant;
 
+#[path = "linear_ic0.rs"]
+mod linear_ic0;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
 
@@ -18,6 +22,7 @@ pub(crate) struct CompressedSparseMatrix {
     pub(crate) columns: Vec<usize>,
     pub(crate) values: Vec<f64>,
     pub(crate) diagonal: Vec<f64>,
+    incomplete_cholesky: Option<IncompleteCholesky>,
     inverse_diagonal: Vec<f64>,
 }
 
@@ -117,7 +122,7 @@ impl SparseMatrix {
             .unwrap_or(0.0)
     }
 
-    fn compress(&self) -> CompressedSparseMatrix {
+    fn compress(&self, preconditioner: SpdPreconditioner) -> CompressedSparseMatrix {
         let size = self.size();
         let mut row_offsets = Vec::with_capacity(size + 1);
         let mut lower_end_offsets = Vec::with_capacity(size);
@@ -143,11 +148,20 @@ impl SparseMatrix {
             row_offsets.push(columns.len());
         }
 
-        let inverse_diagonal = diagonal
+        let inverse_diagonal: Vec<f64> = diagonal
             .iter()
             .map(|value| safe_diagonal(*value).recip())
             .collect();
-
+        let incomplete_cholesky = matches!(preconditioner, SpdPreconditioner::IncompleteCholesky)
+            .then(|| {
+                IncompleteCholesky::build(
+                    &row_offsets,
+                    &lower_end_offsets,
+                    &columns,
+                    &values,
+                    &diagonal,
+                )
+            });
         CompressedSparseMatrix {
             row_offsets,
             lower_end_offsets,
@@ -155,11 +169,16 @@ impl SparseMatrix {
             columns,
             values,
             diagonal,
+            incomplete_cholesky,
             inverse_diagonal,
         }
     }
 
-    fn compress_scaled(&self, scaling: &[f64]) -> CompressedSparseMatrix {
+    fn compress_scaled(
+        &self,
+        scaling: &[f64],
+        preconditioner: SpdPreconditioner,
+    ) -> CompressedSparseMatrix {
         let size = self.size();
         debug_assert_eq!(scaling.len(), size);
 
@@ -191,11 +210,20 @@ impl SparseMatrix {
             row_offsets.push(columns.len());
         }
 
-        let inverse_diagonal = diagonal
+        let inverse_diagonal: Vec<f64> = diagonal
             .iter()
             .map(|value| safe_diagonal(*value).recip())
             .collect();
-
+        let incomplete_cholesky = matches!(preconditioner, SpdPreconditioner::IncompleteCholesky)
+            .then(|| {
+                IncompleteCholesky::build(
+                    &row_offsets,
+                    &lower_end_offsets,
+                    &columns,
+                    &values,
+                    &diagonal,
+                )
+            });
         CompressedSparseMatrix {
             row_offsets,
             lower_end_offsets,
@@ -203,6 +231,7 @@ impl SparseMatrix {
             columns,
             values,
             diagonal,
+            incomplete_cholesky,
             inverse_diagonal,
         }
     }
@@ -248,6 +277,11 @@ impl CompressedSparseMatrix {
         workspace: &mut [f64],
     ) {
         match kind {
+            SpdPreconditioner::IncompleteCholesky => self
+                .incomplete_cholesky
+                .as_ref()
+                .expect("IC(0) preconditioner must be prepared")
+                .apply(residual, result, workspace),
             SpdPreconditioner::Jacobi => {
                 for index in 0..self.size() {
                     result[index] = residual[index] * self.inverse_diagonal(index);
@@ -438,9 +472,11 @@ pub(crate) fn solve_spd_system_profile_with_options(
     let scaling = scaling::diagonal_sparse_scaling(matrix);
     let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling);
     let diagonal_scale = scaling::average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
-    let compressed = matrix.compress_scaled(&scaling);
+    let setup_started = Instant::now();
+    let compressed = matrix.compress_scaled(&scaling, options.preconditioner);
+    let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
 
-    match solve_spd_compressed(&compressed, &scaled_rhs, matrix, options.preconditioner) {
+    match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
         Ok(profile) => Ok(profile),
         Err(error) => {
             let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
@@ -448,13 +484,13 @@ pub(crate) fn solve_spd_system_profile_with_options(
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 let regularized =
                     scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
-                let compressed_regularized = regularized.compress();
+                let compressed_regularized = regularized.compress(options.preconditioner);
 
                 if let Ok(profile) = solve_spd_compressed(
                     &compressed_regularized,
                     &scaled_rhs,
                     &regularized,
-                    options.preconditioner,
+                    &options,
                 ) {
                     return Ok(scaling::unscale_profile(profile, &scaling));
                 }
@@ -463,7 +499,15 @@ pub(crate) fn solve_spd_system_profile_with_options(
             Err(error)
         }
     }
-    .map(|profile| scaling::unscale_profile(profile, &scaling))
+    .map(|mut profile| {
+        profile
+            .stages
+            .push(crate::linear_solver_profile::SpdSolveStage {
+                label: "solve_spd_preconditioner_setup",
+                elapsed_ms: setup_elapsed_ms,
+            });
+        scaling::unscale_profile(profile, &scaling)
+    })
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {

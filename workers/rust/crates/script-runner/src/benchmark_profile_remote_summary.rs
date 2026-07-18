@@ -1,5 +1,6 @@
 use crate::RunnerResult;
 use serde_json::{Value, json};
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -98,6 +99,8 @@ fn write_json_summary(report: &Value, summary_path: &Path) -> RunnerResult<()> {
         "repeat": report["repeat"].clone(),
         "case_count": cases.len(),
         "case_ids": summary.case_ids,
+        "solver_case_metrics": summary.solver_case_metrics,
+        "solver_preconditioners": summary.solver_preconditioners,
         "total_median_ms": summary.total_median_ms,
         "peak_rss_mib": summary.peak_rss_mib,
         "slowest_case": summary.slowest_case,
@@ -111,6 +114,8 @@ fn write_json_summary(report: &Value, summary_path: &Path) -> RunnerResult<()> {
 
 struct SummaryStats {
     case_ids: Vec<String>,
+    solver_case_metrics: Vec<Value>,
+    solver_preconditioners: Vec<String>,
     total_median_ms: f64,
     peak_rss_mib: f64,
     slowest_case: String,
@@ -121,6 +126,26 @@ impl SummaryStats {
         let case_ids = cases
             .iter()
             .map(|entry| string_field(entry, "id"))
+            .collect();
+        let solver_preconditioners = cases
+            .iter()
+            .filter_map(|entry| entry["solver_preconditioner"].as_str())
+            .map(str::to_string)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        let solver_case_metrics = cases
+            .iter()
+            .filter_map(|entry| {
+                let id = entry["id"].as_str()?;
+                let preconditioner = entry["solver_preconditioner"].as_str()?;
+                Some(json!({
+                    "id": id,
+                    "solver_preconditioner": preconditioner,
+                    "solver_iterations": entry["solver_iterations"].clone(),
+                    "solver_residual_norm": entry["solver_residual_norm"].clone(),
+                }))
+            })
             .collect();
         let total_median_ms = cases
             .iter()
@@ -144,6 +169,8 @@ impl SummaryStats {
 
         Self {
             case_ids,
+            solver_case_metrics,
+            solver_preconditioners,
             total_median_ms,
             peak_rss_mib,
             slowest_case,
@@ -266,12 +293,14 @@ mod tests {
             json!({
                 "id": "thermal-plane-triangle-400k",
                 "median_ms": 64092.147,
-                "peak_rss_kib": 1549000
+                "peak_rss_kib": 1549000,
+                "solver_preconditioner": "ic0"
             }),
             json!({
                 "id": "thermal-plane-quad-400k",
                 "median_ms": 57214.733,
-                "peak_rss_kib": 1664800
+                "peak_rss_kib": 1664800,
+                "solver_preconditioner": "symmetric-gauss-seidel"
             }),
         ];
 
@@ -283,6 +312,10 @@ mod tests {
                 "thermal-plane-triangle-400k".to_string(),
                 "thermal-plane-quad-400k".to_string()
             ]
+        );
+        assert_eq!(
+            summary.solver_preconditioners,
+            vec!["ic0".to_string(), "symmetric-gauss-seidel".to_string()]
         );
         assert_eq!(summary.slowest_case, "thermal-plane-triangle-400k");
         assert!((summary.total_median_ms - 121306.88).abs() < 0.001);

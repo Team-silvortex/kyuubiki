@@ -72,6 +72,7 @@ fn profile_metrics(
 ) -> Value {
     json!([
         {"name": "retained_runs", "unit": "run", "value": array_len(index.pointer("/retained_runs"))},
+        {"name": "failed_runs", "unit": "run", "value": array_len(index.pointer("/failed_runs"))},
         {"name": "skipped_runs", "unit": "run", "value": array_len(index.pointer("/skipped_runs"))},
         {"name": "leading_matrix_total_median", "unit": "ms", "value": round(number_at(matrix, "/total_median_ms").max(number_at(latest, "/total_median_ms")), 3)},
         {"name": "leading_matrix_peak_rss", "unit": "MiB", "value": round(number_at(matrix, "/peak_rss_mib").max(number_at(latest, "/peak_rss_mib")), 3)},

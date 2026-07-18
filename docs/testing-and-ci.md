@@ -348,9 +348,11 @@ Use these entrypoints:
   Run a narrow 300k mechanical probe before attempting a full mechanical
   matrix.
 - `make benchmark-profile-remote PROFILE=300k MATRIX=mechanical-core CASE=truss-roof-300k REPEAT=1 SOLVER_PRECONDITIONER=all`
-  Run the truss solver strategy probe with both Jacobi and symmetric
-  Gauss-Seidel preconditioners. Use `jacobi` or `symmetric-gauss-seidel` to
-  force one strategy.
+  Run the truss solver strategy probe with Jacobi, symmetric Gauss-Seidel, and
+  IC(0) candidates. Use `jacobi` or `symmetric-gauss-seidel` to force one
+  strategy. `ic0` selects the explicit incomplete-Cholesky candidate for large
+  SPD systems; it is not part of `auto` yet. Unknown names are rejected rather
+  than silently falling back to Jacobi.
 - `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1`
   Run the first remote 400k smoke as a narrow, low-risk probe before promoting
   broader matrices.
@@ -402,6 +404,9 @@ Use these entrypoints:
   profile run. Use an explicit larger value only after the narrow probe has
   established a reason to retain the server load; timeout requests `SIGINT`
   before the final forced stop.
+  Failed remote runs retain a local `failure.json` receipt with the profile,
+  case, host, timeout budget, phase, semantic failure kind, exit code, and final `progress.log`
+  lines. This is failure evidence, not a benchmark result.
 
 Baseline and report surfaces:
 
@@ -426,7 +431,9 @@ Baseline and report surfaces:
   `make benchmark-profile-index` rebuilds `tmp/benchmark-profile/index.json`
   and `tmp/benchmark-profile/README.md` from retained `summary.json` files;
   its gate is advisory and checks only for retained runs plus finite case/time/RSS
-  metrics. Malformed retained summaries are listed under `skipped_runs` instead
+  metrics. Failed remote attempts are retained separately under `failed_runs`
+  and make the advisory gate warn without being counted as coverage. Malformed
+  retained summaries or failure receipts are listed under `skipped_runs` instead
   of aborting the index refresh. Matrix-level rollups are emitted under
   `matrix_summaries` for quick mechanical/thermal coverage review, and
   `coverage_summaries` tracks release-scale completeness for the standard
@@ -434,8 +441,14 @@ Baseline and report surfaces:
   `compound-core`, and `thermal-structural`. Coverage targets live in
   `config/benchmark-profile-coverage.json`; use
   `./scripts/build-benchmark-profile-index.mjs --coverage-targets <manifest>`
-  for experimental matrix contracts. The manifest is validated strictly, so
-  malformed or empty coverage targets fail the index refresh.
+  for experimental matrix contracts. When an older summary lacks
+  `solver_preconditioners`, the index reads that run's retained raw report to
+  recover `cases[].solver_preconditioner`; the manifest is validated strictly,
+  so malformed or empty coverage targets fail the index refresh. Its
+  `solver_strategy_summaries` compares the latest single-case observation for
+  each recorded strategy without treating multi-case totals as a per-case
+  measurement, including solver iterations and final residual when retained
+  raw reports provide them.
 - local run index:
   `tmp/standard-benchmark/index.json`, `tmp/standard-benchmark/README.md`, and
   `tmp/standard-benchmark/index.html`
@@ -444,6 +457,25 @@ Current behavior notes:
 
 - local laptop runs are useful for functional regression gates, but reference
   timing should prefer `kyuubiki-lab`
+- the 500k compound surface panel establishes the current 2D mechanical limit:
+  symmetric Gauss-Seidel completed in about 67.7 seconds over 2,381 iterations,
+  while an exploratory 2x2 block-Jacobi variant took about 102.1 seconds over
+  7,442 iterations. Do not promote block-Jacobi; the next credible step is a
+  multilevel or AMG-style preconditioner with its own validation lane.
+- the compact explicit IC(0) candidate completed the same 500k panel in about
+  59.9 seconds over 2,159 iterations at 2,190,268 KiB peak RSS. Its compact
+  index/transpose layout reduced that panel's earlier 2,254,828 KiB peak by
+  about 2.9% without changing convergence. It also completed the 1M compound
+  surface panel in about 168.9 seconds over 3,061 iterations at roughly 4.4
+  GiB peak RSS. Keep it opt-in until additional matrix families establish a
+  broader default policy.
+- IC(0) also improved the 500k thermal-plane triangle from about 70.7 seconds
+  and 2,544 iterations to about 66.0 seconds and 2,262 iterations. The 1M
+  thermal-plane triangle subsequently completed in about 176.0 seconds over
+  3,194 iterations at 5,260,592 KiB peak RSS under a reviewed 300-second
+  budget. This resolves the retained 180-second attempt; keep multilevel/AMG
+  work as a scalability improvement, not as a reason to relax solver
+  tolerances.
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
 - `200k`, `300k`, `400k`, and `500k` are remote-first: CI checks the catalog
@@ -453,8 +485,14 @@ Current behavior notes:
   treated as hard failures by default
 - the remote wrapper syncs the Rust workspace without `target/` and does not
   rely on checked-in server-specific runtime configuration files
+- `REPORT_ONLY=1` regenerates a local profile summary without SSH when it is
+  given the original `PROFILE`, `MATRIX`, and `CASE` alongside `OUTPUT_SLUG`,
+  or an explicit `LOCAL_JSON_PATH`
 - remote profile runs enable benchmark `--progress`, which prints per-case
-  start/done lines to stderr while keeping stdout valid JSON for report files
+  start/done lines and, for iterative SPD solves, every 256th iteration's
+  residual, tolerance, and elapsed time to stderr while keeping stdout valid
+  JSON for report files. The remote wrapper retains this stream as
+  `progress.log` for both successful reports and failure receipts.
 - heat-plane quad profile reports include timed memory stages, so large 400k and
   500k thermal probes can distinguish assembly, reduction, solve, and result
   scatter hotspots instead of reporting RSS-only stages
@@ -497,7 +535,10 @@ Current behavior notes:
   `heat-plane-quad-1m`, completes in about `21.0-21.3 s` at roughly `1.19 GiB`
   peak RSS with `symmetric-gauss-seidel`; the retained hotspot-aware run marks
   `solve_spd_preconditioner` at about `11.3 s`, roughly `54%` of total median
-  time. Treat 1m as exploratory lab evidence, not a scheduled coverage gate yet.
+  time. The explicit IC(0) comparison reduced iterations from 1,182 to 1,122
+  but took about `23.56 s` at the same peak RSS, so `auto` intentionally keeps
+  symmetric Gauss-Seidel for this heat-plane family. Treat 1m as exploratory
+  lab evidence, not a scheduled coverage gate yet.
 - current 500k compound evidence matches the mechanical profile: the compound
   surface panel passes in about `67.7 s` at roughly `2.0 GiB` peak RSS, while
   the compound heat-plane quad passes in about `8.2 s`.
