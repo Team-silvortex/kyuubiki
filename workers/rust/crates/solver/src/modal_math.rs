@@ -1,3 +1,14 @@
+const MAX_DENSE_MODAL_DOFS: usize = 4_096;
+
+pub(crate) fn ensure_dense_modal_size(dof_count: usize, label: &str) -> Result<(), String> {
+    if dof_count > MAX_DENSE_MODAL_DOFS {
+        return Err(format!(
+            "{label} has {dof_count} dofs; the dense modal solver supports at most {MAX_DENSE_MODAL_DOFS}. Use the sparse modal solver for larger models"
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) fn mass_normalized_stiffness(
     stiffness: &[Vec<f64>],
     mass: &[f64],
@@ -106,5 +117,17 @@ fn rotate(matrix: &mut [Vec<f64>], vectors: &mut [Vec<f64>], p: usize, q: usize,
         let viq = vectors[index][q];
         vectors[index][p] = c * vip - s * viq;
         vectors[index][q] = s * vip + c * viq;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ensure_dense_modal_size;
+
+    #[test]
+    fn dense_modal_solver_rejects_unsafe_matrix_sizes() {
+        assert!(ensure_dense_modal_size(4_096, "modal").is_ok());
+        let error = ensure_dense_modal_size(4_097, "modal").unwrap_err();
+        assert!(error.contains("sparse modal solver"));
     }
 }

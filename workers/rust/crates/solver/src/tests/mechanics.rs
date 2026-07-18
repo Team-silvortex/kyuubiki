@@ -116,6 +116,50 @@ fn solves_a_small_spring_1d_chain() {
 }
 
 #[test]
+fn solves_a_multi_element_spring_1d_chain() {
+    let result = solve_spring_1d(&SolveSpring1dRequest {
+        nodes: vec![
+            Spring1dNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                fix_x: true,
+                load_x: 0.0,
+            },
+            Spring1dNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                fix_x: false,
+                load_x: 0.0,
+            },
+            Spring1dNodeInput {
+                id: "n2".to_string(),
+                x: 2.0,
+                fix_x: false,
+                load_x: 0.0,
+            },
+            Spring1dNodeInput {
+                id: "n3".to_string(),
+                x: 3.0,
+                fix_x: false,
+                load_x: 120.0,
+            },
+        ],
+        elements: (0..3)
+            .map(|index| Spring1dElementInput {
+                id: format!("s{index}"),
+                node_i: index,
+                node_j: index + 1,
+                stiffness: 120.0,
+            })
+            .collect(),
+    })
+    .expect("multi-element spring chain should solve");
+
+    assert!((result.nodes[3].ux - 3.0).abs() < 1.0e-12);
+    assert!((result.max_force - 120.0).abs() < 1.0e-9);
+}
+
+#[test]
 fn solves_a_small_spring_2d_chain() {
     let result = solve_spring_2d(&SolveSpring2dRequest {
         nodes: vec![

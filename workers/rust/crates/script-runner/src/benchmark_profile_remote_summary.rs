@@ -61,21 +61,22 @@ fn write_markdown_summary(report: &Value, md_path: &Path) -> RunnerResult<()> {
 fn write_case_table(output: &mut File, cases: &[Value]) -> RunnerResult<()> {
     writeln!(
         output,
-        "| Case | Nodes | Elements | Median ms | Peak RSS MiB | Solver | Iterations | Residual |"
+        "| Case | Nodes | Elements | Median ms | Peak RSS MiB | Solver | Solver reason | Iterations | Residual |"
     )
     .map_err(|error| format!("failed to write markdown: {error}"))?;
-    writeln!(output, "|---|---:|---:|---:|---:|---|---:|---:|")
+    writeln!(output, "|---|---:|---:|---:|---:|---|---|---:|---:|")
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     for entry in cases {
         writeln!(
             output,
-            "| `{}` | {} | {} | {:.3} | {} | `{}` | {} | {} |",
+            "| `{}` | {} | {} | {:.3} | {} | `{}` | `{}` | {} | {} |",
             string_field(entry, "id"),
             number_field(entry, "node_count"),
             number_field(entry, "element_count"),
             entry["median_ms"].as_f64().unwrap_or(0.0),
             rss_mib_field(entry),
             string_field(entry, "solver_preconditioner"),
+            string_field(entry, "solver_preconditioner_reason"),
             number_field(entry, "solver_iterations"),
             residual_field(entry)
         )
@@ -142,6 +143,7 @@ impl SummaryStats {
                 Some(json!({
                     "id": id,
                     "solver_preconditioner": preconditioner,
+                    "solver_preconditioner_reason": entry["solver_preconditioner_reason"].clone(),
                     "solver_iterations": entry["solver_iterations"].clone(),
                     "solver_residual_norm": entry["solver_residual_norm"].clone(),
                 }))

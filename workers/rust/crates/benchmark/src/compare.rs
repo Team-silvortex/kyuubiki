@@ -333,6 +333,7 @@ mod tests {
             solver_matrix_non_zero_count: None,
             solver_residual_norm: None,
             solver_preconditioner: None,
+            solver_preconditioner_reason: None,
             hotspot_label: None,
             hotspot_elapsed_ms: None,
             hotspot_share_pct: None,

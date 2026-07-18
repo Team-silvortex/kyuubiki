@@ -72,9 +72,19 @@ Focused reference for benchmark and regression script entry points.
 - `PROFILE=1m MATRIX=mechanical-core CASE=axial-bar-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   runs the matching one-million-node mechanical 1D sanity probe before trying
   more expensive 1m surface, truss, or frame cases.
+- `PROFILE=1m MATRIX=structural-extended CASE=spring-chain-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the one-million-node structural chain probe. It validates the guarded
+  linear-time tridiagonal path; non-chain spring topologies remain on the
+  generic sparse solver.
+- `PROFILE=1m MATRIX=extended-physics CASE=torsion-shaft-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the corresponding one-million-node torsion chain probe and exercises
+  the same guarded scalar-chain solver route.
 - `PROFILE=1m MATRIX=thermal-core CASE=heat-plane-quad-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   runs the first one-million-node 2D thermal probe. Expect this to be
   solver-bound, with preconditioner and matrix-vector stages dominating.
+- `PROFILE=1m MATRIX=extended-physics CASE=heat-plane-triangle-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
+  runs the one-million-node triangular heat-field probe. It is a high-memory
+  scalar-field stress case and should remain a remote-only exploratory run.
 - Remote profile probes are capped at 900 seconds by default. Override this
   deliberately with `REMOTE_TIMEOUT_SECONDS=<seconds>` for a reviewed long-run
   case; the remote runner sends `SIGINT` before forcefully stopping a timeout.

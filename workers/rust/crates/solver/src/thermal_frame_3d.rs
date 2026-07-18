@@ -4,7 +4,10 @@ use crate::frame_3d_math::{
     multiply_matrix_vector_12x12, subtract_vector_12, transform_frame3d_stiffness, transpose_12x12,
 };
 use crate::frame_energy::thermal_frame3d_strain_energy;
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dElementResult,
@@ -13,6 +16,13 @@ use kyuubiki_protocol::{
 
 pub fn solve_thermal_frame_3d(
     request: &SolveThermalFrame3dRequest,
+) -> Result<SolveThermalFrame3dResult, String> {
+    solve_thermal_frame_3d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_frame_3d_with_options(
+    request: &SolveThermalFrame3dRequest,
+    options: SpdSolveOptions,
 ) -> Result<SolveThermalFrame3dResult, String> {
     validate_request(request)?;
 
@@ -61,7 +71,9 @@ pub fn solve_thermal_frame_3d(
     let constrained = constrained_thermal_frame_3d_dofs(request);
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

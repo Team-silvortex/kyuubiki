@@ -115,6 +115,8 @@ pub(crate) struct BenchmarkResult {
     #[serde(default)]
     pub(crate) solver_preconditioner: Option<String>,
     #[serde(default)]
+    pub(crate) solver_preconditioner_reason: Option<String>,
+    #[serde(default)]
     pub(crate) hotspot_label: Option<String>,
     #[serde(default)]
     pub(crate) hotspot_elapsed_ms: Option<f64>,
@@ -163,10 +165,7 @@ pub(crate) fn select_cases<'a>(
     filter: Option<&str>,
 ) -> Vec<&'a BenchmarkCase> {
     match filter {
-        Some(filter) => cases
-            .iter()
-            .filter(|case| case.id.contains(filter))
-            .collect(),
+        Some(filter) => cases.iter().filter(|case| case.id == filter).collect(),
         None => cases.iter().collect(),
     }
 }

@@ -1,4 +1,6 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+};
 use crate::nonlinear_spring_1d_validation::{validate_contact_request, validate_request};
 use kyuubiki_protocol::{
     ContactGap1dContactResult, NonlinearSpring1dElementResult, NonlinearSpring1dNodeResult,
@@ -57,7 +59,7 @@ pub fn solve_nonlinear_spring_1d(
                 break;
             }
 
-            let delta = solve_spd_system(&reduced_tangent, &reduced_residual)?;
+            let delta = solve_chain_tangent(&reduced_tangent, &reduced_residual)?;
             for (index, &dof) in free.iter().enumerate() {
                 displacement[dof] += delta[index];
             }
@@ -186,7 +188,7 @@ pub fn solve_contact_gap_1d(
                 break;
             }
 
-            let delta = solve_spd_system(&reduced_tangent, &reduced_residual)?;
+            let delta = solve_chain_tangent(&reduced_tangent, &reduced_residual)?;
             for (index, &dof) in free.iter().enumerate() {
                 displacement[dof] += delta[index];
             }
@@ -237,6 +239,15 @@ pub fn solve_contact_gap_1d(
         max_contact_force,
         active_contact_count,
     })
+}
+
+// Chain benchmarks retain a tridiagonal tangent after constraints and contact penalties.
+// Preserve the general sparse fallback for caller-provided non-chain topologies.
+fn solve_chain_tangent(tangent: &SparseMatrix, residual: &[f64]) -> Result<Vec<f64>, String> {
+    match solve_tridiagonal_system(tangent, residual) {
+        Some(result) => result,
+        None => solve_spd_system(tangent, residual),
+    }
 }
 
 fn assemble_tangent_and_internal(

@@ -86,6 +86,95 @@
         "thermal-frame-2d-500k",
         "thermal-frame-3d-500k"
       ]
+    },
+    {
+      "matrix": "mechanical-core",
+      "profile": "one_million",
+      "expected_cases": [
+        "axial-bar-1m",
+        "truss-roof-1m",
+        "space-frame-1m",
+        "plane-panel-1m",
+        "plane-quad-panel-1m"
+      ]
+    },
+    {
+      "matrix": "thermal-core",
+      "profile": "one_million",
+      "expected_cases": [
+        "heat-plane-quad-1m"
+      ]
+    },
+    {
+      "matrix": "compound-core",
+      "profile": "one_million",
+      "expected_cases": [
+        "compound-surface-panel-1m"
+      ]
+    },
+    {
+      "matrix": "thermal-structural",
+      "profile": "one_million",
+      "expected_cases": [
+        "thermal-bar-1m",
+        "thermal-truss-2d-1m",
+        "thermal-truss-3d-1m",
+        "thermal-plane-triangle-1m",
+        "thermal-plane-quad-1m",
+        "frame-2d-1m",
+        "frame-3d-1m",
+        "thermal-frame-2d-1m",
+        "thermal-frame-3d-1m"
+      ]
+    },
+    {
+      "matrix": "extended-physics",
+      "profile": "one_million",
+      "expected_cases": [
+        "heat-bar-1m",
+        "heat-plane-triangle-1m",
+        "acoustic-bar-1m",
+        "advection-diffusion-bar-1m",
+        "electrostatic-bar-1m",
+        "electrostatic-plane-triangle-1m",
+        "electrostatic-plane-quad-1m",
+        "magnetostatic-bar-1m",
+        "magnetostatic-plane-triangle-1m",
+        "magnetostatic-plane-quad-1m",
+        "stokes-plane-triangle-1m",
+        "stokes-plane-quad-1m",
+        "torsion-shaft-1m"
+      ]
+    },
+    {
+      "matrix": "structural-extended",
+      "profile": "one_million",
+      "expected_cases": [
+        "beam-line-1m",
+        "thermal-beam-line-1m",
+        "spring-chain-1m",
+        "nonlinear-spring-chain-1m",
+        "contact-gap-chain-1m",
+        "spring-grid-1m",
+        "spring-cage-1m",
+        "modal-frame-2d-1m",
+        "modal-frame-3d-1m",
+        "solid-tetra-3d-1m"
+      ],
+      "scale_limit_reasons": {
+        "spring-grid-1m": "Requires a structured-grid spring generator and scalable block or matrix-free solver path.",
+        "spring-cage-1m": "Requires a volumetric spring-cage generator and scalable block or matrix-free solver path.",
+        "modal-frame-2d-1m": "Current dense Jacobi eigensolver is intentionally capped; requires sparse modal eigensolver support.",
+        "modal-frame-3d-1m": "Current dense Jacobi eigensolver is intentionally capped; requires sparse modal eigensolver support.",
+        "solid-tetra-3d-1m": "Requires scalable tetrahedral volume-mesh generation and sparse solid assembly."
+      },
+      "scale_limit_remediations": {
+        "spring-grid-1m": "Structured-grid generator plus block-preconditioned or matrix-free spring solver.",
+        "spring-cage-1m": "Volumetric cage generator plus block-preconditioned or matrix-free spring solver.",
+        "modal-frame-2d-1m": "Sparse generalized eigensolver with a scalable 2D modal-frame generator.",
+        "modal-frame-3d-1m": "Sparse generalized eigensolver with a scalable 3D modal-frame generator.",
+        "solid-tetra-3d-1m": "Structured tetra volume generator plus sparse solid assembly and iterative solve."
+      }
     }
   ]
 }

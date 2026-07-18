@@ -351,8 +351,9 @@ Use these entrypoints:
   Run the truss solver strategy probe with Jacobi, symmetric Gauss-Seidel, and
   IC(0) candidates. Use `jacobi` or `symmetric-gauss-seidel` to force one
   strategy. `ic0` selects the explicit incomplete-Cholesky candidate for large
-  SPD systems; it is not part of `auto` yet. Unknown names are rejected rather
-  than silently falling back to Jacobi.
+  SPD systems; `auto` selects it for thermal-plane triangle workloads backed by
+  500k and 1M evidence. Unknown names are rejected rather than silently
+  falling back to Jacobi.
 - `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-core CASE=heat-plane-quad-400k REPEAT=1`
   Run the first remote 400k smoke as a narrow, low-risk probe before promoting
   broader matrices.
@@ -364,8 +365,9 @@ Use these entrypoints:
   Gauss-Seidel before choosing a default iterative-solver lane.
 - `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-triangle-400k REPEAT=1 SOLVER_PRECONDITIONER=auto`
   Run the 400k thermal structural surface probe with the benchmark-selected
-  thermal-plane preconditioner. `auto` keeps Jacobi for general cases but uses
-  symmetric Gauss-Seidel for thermal plane triangle/quad workloads.
+  thermal-plane preconditioner. `auto` keeps Jacobi for general cases, uses
+  IC(0) for thermal-plane triangles and one-million-node thermal-plane quads,
+  and uses symmetric Gauss-Seidel for smaller thermal-plane quads.
 - `make benchmark-profile-remote PROFILE=400k MATRIX=thermal-structural CASE=thermal-plane-quad-400k REPEAT=1 SOLVER_PRECONDITIONER=auto`
   Run the matching 400k thermal quad surface probe. Current lab evidence is
   comparable to the triangle path and useful as a second FEM surface-shape
@@ -467,8 +469,9 @@ Current behavior notes:
   index/transpose layout reduced that panel's earlier 2,254,828 KiB peak by
   about 2.9% without changing convergence. It also completed the 1M compound
   surface panel in about 168.9 seconds over 3,061 iterations at roughly 4.4
-  GiB peak RSS. Keep it opt-in until additional matrix families establish a
-  broader default policy.
+  GiB peak RSS. Keep it opt-in outside the evidence-backed thermal-plane
+  triangle auto path until additional matrix families establish a broader
+  default policy.
 - IC(0) also improved the 500k thermal-plane triangle from about 70.7 seconds
   and 2,544 iterations to about 66.0 seconds and 2,262 iterations. The 1M
   thermal-plane triangle subsequently completed in about 176.0 seconds over
@@ -488,21 +491,27 @@ Current behavior notes:
 - `REPORT_ONLY=1` regenerates a local profile summary without SSH when it is
   given the original `PROFILE`, `MATRIX`, and `CASE` alongside `OUTPUT_SLUG`,
   or an explicit `LOCAL_JSON_PATH`
+- `CASE` selects one exact benchmark case ID. This avoids substring matching,
+  so `frame-2d-1m` cannot also run `thermal-frame-2d-1m`.
 - remote profile runs enable benchmark `--progress`, which prints per-case
   start/done lines and, for iterative SPD solves, every 256th iteration's
-  residual, tolerance, and elapsed time to stderr while keeping stdout valid
-  JSON for report files. The remote wrapper retains this stream as
+  residual, tolerance, and elapsed time to stderr. Start/done lines include
+  the selected preconditioner and its reason while keeping stdout valid JSON
+  for report files. The remote wrapper retains this stream as
   `progress.log` for both successful reports and failure receipts.
 - heat-plane quad profile reports include timed memory stages, so large 400k and
   500k thermal probes can distinguish assembly, reduction, solve, and result
   scatter hotspots instead of reporting RSS-only stages
 - benchmark result JSON now includes `hotspot_label`, `hotspot_elapsed_ms`,
-  `hotspot_share_pct`, and `hotspot_hint`. Solver-heavy cases prefer nested
+  `hotspot_share_pct`, `hotspot_hint`, and
+  `solver_preconditioner_reason`. Solver-heavy cases prefer nested
   `solve_spd_*` kernels over the outer `solve_system` wrapper, so large thermal
-  and structural probes point at the actual optimization target.
+  and structural probes point at the actual optimization target and the chosen
+  solver strategy remains auditable.
 - `SOLVER_PRECONDITIONER=auto` is available for exploratory large thermal
-  structural and heat-plane quad probes; it selects symmetric Gauss-Seidel for
-  heat-plane quad plus thermal plane triangle/quad cases and Jacobi elsewhere
+  structural and heat-plane quad probes; it selects IC(0) for thermal-plane
+  triangles and one-million-node thermal-plane quads, symmetric Gauss-Seidel
+  for heat-plane and smaller thermal-plane quads, and Jacobi elsewhere
 - current 500k heat-plane quad remote evidence is solver-bound: with `auto`,
   `heat-plane-quad-500k` completes in about `8.13 s` at roughly `596 MiB` peak
   RSS, with most leaf solver time under `solve_spd_preconditioner`; the next
@@ -531,7 +540,14 @@ Current behavior notes:
 - current 1m exploratory evidence covers two simple 1D probes:
   `axial-bar-1m` completes on `kyuubiki-lab` in about `45 ms` at roughly
   `1.49 GiB` peak RSS, and `thermal-bar-1m` completes in about `505 ms` at
-  roughly `2.68 GiB` peak RSS. The first 1m 2D thermal probe,
+  roughly `2.68 GiB` peak RSS. `spring-chain-1m` now completes in about
+  `553 ms` at roughly `1.23 GiB` peak RSS through the guarded tridiagonal
+  chain path; arbitrary spring topologies continue to use the generic sparse
+  SPD path. `torsion-shaft-1m` uses the same guarded scalar-chain route and
+  completes in about `546 ms` at roughly `3.44 GiB` peak RSS. The first 1m 2D
+  thermal triangle probe, `heat-plane-triangle-1m`, completes in about
+  `23.17 s` at roughly `4.16 GiB` peak RSS. The first 1m 2D thermal quad
+  probe,
   `heat-plane-quad-1m`, completes in about `21.0-21.3 s` at roughly `1.19 GiB`
   peak RSS with `symmetric-gauss-seidel`; the retained hotspot-aware run marks
   `solve_spd_preconditioner` at about `11.3 s`, roughly `54%` of total median
@@ -539,6 +555,30 @@ Current behavior notes:
   but took about `23.56 s` at the same peak RSS, so `auto` intentionally keeps
   symmetric Gauss-Seidel for this heat-plane family. Treat 1m as exploratory
   lab evidence, not a scheduled coverage gate yet.
+- `truss-roof-1m` completes in about `134.15 s` at roughly `3.39 GiB` peak
+  RSS using IC(0), after 3,072 iterations. Auto selection therefore uses IC(0)
+  for one-million-node trusses while retaining symmetric Gauss-Seidel below
+  that scale.
+- `plane-quad-panel-1m` completes in about `165.94 s` at roughly `4.26 GiB`
+  peak RSS using IC(0), after 2,816 iterations. Auto selection likewise uses
+  IC(0) for one-million-node structural quad panels.
+- `plane-panel-1m` completes in about `169.10 s` at roughly `4.17 GiB` peak
+  RSS using IC(0). Auto selection likewise uses IC(0) for one-million-node
+  structural triangle panels.
+- `space-frame-1m` completes in about `2.71 s` at roughly `3.84 GiB` peak
+  RSS. Its current solver path is not the generic iterative SPD path, so the
+  benchmark preconditioner argument is intentionally not reported as active.
+- `thermal-truss-2d-1m` completes in about `152.65 s` at roughly `4.20 GiB`
+  peak RSS. Its profile path reports `ic0` with
+  `auto-large-thermal-truss-ic0`, so the large-scale strategy is auditable.
+- the 1M benchmark catalog has retained successful evidence for all `39/39`
+  case IDs. The profile index separately reports a strict node-scale result:
+  `34/39` cases have at least 1,000,000 nodes and `5/39` remain below that
+  threshold. The frame and thermal-frame 2D/3D cases have independently
+  completed at the full scale with IC(0) selected automatically. The nonlinear
+  spring and contact-gap chains use the tridiagonal direct path at full scale.
+  Spring-grid/cage, modal, and solid-tetra cases remain intentionally small
+  until scalable generators are added.
 - current 500k compound evidence matches the mechanical profile: the compound
   surface panel passes in about `67.7 s` at roughly `2.0 GiB` peak RSS, while
   the compound heat-plane quad passes in about `8.2 s`.
@@ -555,7 +595,13 @@ Current behavior notes:
   `thermal-plane-quad-400k` auto probe is about `64.42 s` with roughly
   `1.59 GiB` peak RSS. A full `thermal-structural-400k` auto smoke now passes
   all nine cases in about `121.50 s` summed median time with roughly `1.59 GiB`
-  peak RSS. Checked-baseline promotion should still wait for repeat runs.
+  peak RSS. At 500k, explicit IC(0) improves thermal-plane quad from about
+  `73.39 s` and 2,544 iterations to `62.57 s` and 2,262 iterations, but raises
+  peak RSS from `1.85 GiB` to `2.66 GiB`. At 1M, IC(0) completes in about
+  `177.30 s` and 3,194 iterations versus SGS at `200.91 s` and 3,600
+  iterations, with only about 5% more peak RSS; `auto` selects IC(0) at that
+  validated node scale. Checked-baseline promotion should still wait for repeat
+  runs.
 
 ## Nightly lane map
 

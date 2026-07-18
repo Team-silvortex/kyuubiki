@@ -4,6 +4,9 @@ use kyuubiki_solver::{
     PlaneQuadProfileStage, SpdSolveOptions, ThermalPlaneProfileStage,
     profile_plane_quad_2d_with_options, profile_plane_triangle_2d_with_options,
     profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
+    solve_frame_2d_with_options, solve_frame_3d_with_options, solve_thermal_frame_2d_with_options,
+    solve_thermal_frame_3d_with_options, solve_thermal_truss_2d_with_options,
+    solve_thermal_truss_3d_with_options,
 };
 
 use crate::models::{BenchmarkMemoryStage, BenchmarkWorkload};
@@ -47,10 +50,7 @@ pub(crate) fn run_thermal_structural_workload(
             })
         }
         BenchmarkWorkload::ThermalTruss2d(request) => {
-            solve(EngineSolveRequest::ThermalTruss2d(request.clone())).map(|result| {
-                let AnalysisResult::ThermalTruss2d(result) = result else {
-                    unreachable!("thermal truss 2d solve should return thermal result")
-                };
+            solve_thermal_truss_2d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -58,13 +58,11 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
+                .with_preconditioner(solver_preconditioner)
             })
         }
         BenchmarkWorkload::ThermalTruss3d(request) => {
-            solve(EngineSolveRequest::ThermalTruss3d(request.clone())).map(|result| {
-                let AnalysisResult::ThermalTruss3d(result) = result else {
-                    unreachable!("thermal truss 3d solve should return thermal result")
-                };
+            solve_thermal_truss_3d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -72,6 +70,7 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
+                .with_preconditioner(solver_preconditioner)
             })
         }
         BenchmarkWorkload::ThermalPlaneTriangle2d(request) => {
@@ -152,11 +151,8 @@ pub(crate) fn run_thermal_structural_workload(
                 )
             })
         }
-        BenchmarkWorkload::Frame2d(request) => solve(EngineSolveRequest::Frame2d(request.clone()))
-            .map(|result| {
-                let AnalysisResult::Frame2d(result) = result else {
-                    unreachable!("frame 2d solve should return frame result")
-                };
+        BenchmarkWorkload::Frame2d(request) => {
+            solve_frame_2d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -164,12 +160,11 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
-            }),
-        BenchmarkWorkload::Frame3d(request) => solve(EngineSolveRequest::Frame3d(request.clone()))
-            .map(|result| {
-                let AnalysisResult::Frame3d(result) = result else {
-                    unreachable!("frame 3d solve should return frame result")
-                };
+                .with_preconditioner(solver_preconditioner)
+            })
+        }
+        BenchmarkWorkload::Frame3d(request) => {
+            solve_frame_3d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -177,12 +172,11 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
-            }),
+                .with_preconditioner(solver_preconditioner)
+            })
+        }
         BenchmarkWorkload::ThermalFrame2d(request) => {
-            solve(EngineSolveRequest::ThermalFrame2d(request.clone())).map(|result| {
-                let AnalysisResult::ThermalFrame2d(result) = result else {
-                    unreachable!("thermal frame 2d solve should return thermal frame result")
-                };
+            solve_thermal_frame_2d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -190,13 +184,11 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
+                .with_preconditioner(solver_preconditioner)
             })
         }
         BenchmarkWorkload::ThermalFrame3d(request) => {
-            solve(EngineSolveRequest::ThermalFrame3d(request.clone())).map(|result| {
-                let AnalysisResult::ThermalFrame3d(result) = result else {
-                    unreachable!("thermal frame 3d solve should return thermal frame result")
-                };
+            solve_thermal_frame_3d_with_options(request, solve_options.clone()).map(|result| {
                 WorkloadMetrics::from_counts(
                     result.nodes.len(),
                     result.elements.len(),
@@ -204,6 +196,7 @@ pub(crate) fn run_thermal_structural_workload(
                     result.max_displacement,
                     result.max_stress,
                 )
+                .with_preconditioner(solver_preconditioner)
             })
         }
         _ => return None,
@@ -246,6 +239,11 @@ impl WorkloadMetrics {
         self.solver_iterations = Some(solver_iterations);
         self.solver_matrix_non_zero_count = Some(solver_matrix_non_zero_count);
         self.solver_residual_norm = Some(solver_residual_norm);
+        self.solver_preconditioner = Some(solver_preconditioner.to_string());
+        self
+    }
+
+    fn with_preconditioner(mut self, solver_preconditioner: &str) -> Self {
         self.solver_preconditioner = Some(solver_preconditioner.to_string());
         self
     }

@@ -19,6 +19,8 @@ pub(crate) fn run_build_benchmark_profile_index(
     let coverage_targets = read_coverage_targets(&options.coverage_targets)?;
     let mut discovery = discover_runs(&options.root)?;
     annotate_resolved_failures(&mut discovery.failures, &discovery.runs);
+    let coverage_summaries = coverage_summaries(&discovery.runs, &coverage_targets);
+    let profile_coverage_summaries = profile_coverage_summaries(&coverage_summaries);
     let gate = evaluate_gate(
         &discovery.runs,
         &discovery.failures,
@@ -31,7 +33,8 @@ pub(crate) fn run_build_benchmark_profile_index(
         "coverage_targets_manifest": display_path(repo_root, &options.coverage_targets),
         "generated_at_unix_s": unix_seconds_now(),
         "gate": gate,
-        "coverage_summaries": coverage_summaries(&discovery.runs, &coverage_targets),
+        "coverage_summaries": coverage_summaries,
+        "profile_coverage_summaries": profile_coverage_summaries,
         "matrix_summaries": matrix_summaries(&discovery.runs),
         "solver_strategy_summaries": solver_strategy_summaries(&discovery.runs),
         "failed_runs": discovery.failures,
@@ -104,6 +107,8 @@ struct CoverageTarget {
     expected_cases: Vec<String>,
     matrix: String,
     profile: String,
+    scale_limit_reasons: BTreeMap<String, String>,
+    scale_limit_remediations: BTreeMap<String, String>,
 }
 
 fn read_coverage_targets(path: &Path) -> RunnerResult<Vec<CoverageTarget>> {
@@ -164,10 +169,54 @@ fn validate_coverage_target(
         }
         expected_cases.push(case.to_string());
     }
+    let mut scale_limit_reasons = BTreeMap::new();
+    let mut scale_limit_remediations = BTreeMap::new();
+    if let Some(reasons) = target.get("scale_limit_reasons") {
+        let reasons = reasons.as_object().ok_or_else(|| {
+            format!("{prefix} scale_limit_reasons must be an object when provided")
+        })?;
+        for (case, reason) in reasons {
+            if !seen.contains(case) {
+                return Err(format!(
+                    "{prefix} scale_limit_reasons contains unknown case {case}"
+                ));
+            }
+            let reason = reason
+                .as_str()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| {
+                    format!("{prefix} scale_limit_reasons[{case}] must be a non-empty string")
+                })?;
+            scale_limit_reasons.insert(case.clone(), reason.to_string());
+        }
+    }
+    if let Some(remediations) = target.get("scale_limit_remediations") {
+        let remediations = remediations.as_object().ok_or_else(|| {
+            format!("{prefix} scale_limit_remediations must be an object when provided")
+        })?;
+        for (case, remediation) in remediations {
+            if !seen.contains(case) {
+                return Err(format!(
+                    "{prefix} scale_limit_remediations contains unknown case {case}"
+                ));
+            }
+            let remediation = remediation
+                .as_str()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| {
+                    format!("{prefix} scale_limit_remediations[{case}] must be a non-empty string")
+                })?;
+            scale_limit_remediations.insert(case.clone(), remediation.to_string());
+        }
+    }
     Ok(CoverageTarget {
         expected_cases,
         matrix,
         profile,
+        scale_limit_reasons,
+        scale_limit_remediations,
     })
 }
 
@@ -252,6 +301,7 @@ fn run_row(
         "case_ids": summary.get("case_ids").and_then(Value::as_array).map(|items| {
             items.iter().filter_map(Value::as_str).map(Value::from).collect::<Vec<_>>()
         }).unwrap_or_default(),
+        "case_shapes": run_case_shapes(run_dir),
         "solver_case_metrics": summary_case_metrics(summary, run_dir),
         "solver_preconditioners": summary_preconditioners(summary, run_dir),
         "total_median_ms": summary.get("total_median_ms").cloned().unwrap_or_else(|| json!(0)),
@@ -338,9 +388,33 @@ fn report_case_metrics(report: &Value) -> Vec<Value> {
             Some(json!({
                 "id": id,
                 "solver_preconditioner": preconditioner,
+                "solver_preconditioner_reason": case["solver_preconditioner_reason"].clone(),
                 "solver_iterations": case["solver_iterations"].clone(),
                 "solver_residual_norm": case["solver_residual_norm"].clone(),
             }))
+        })
+        .collect()
+}
+
+fn run_case_shapes(run_dir: &Path) -> Vec<Value> {
+    raw_reports(run_dir)
+        .into_iter()
+        .flat_map(|report| {
+            report
+                .get("cases")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|case| {
+                    let id = non_empty_string(case, "id")?;
+                    Some(json!({
+                        "id": id,
+                        "node_count": case["node_count"].clone(),
+                        "element_count": case["element_count"].clone(),
+                        "dof_count": case["dof_count"].clone(),
+                    }))
+                })
+                .collect::<Vec<_>>()
         })
         .collect()
 }
@@ -541,6 +615,7 @@ fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
                     "slug": string_field(run, "slug"),
                 "median_ms": number_field(run, "total_median_ms"),
                 "peak_rss_mib": number_field(run, "peak_rss_mib"),
+                "solver_preconditioner_reason": metrics["solver_preconditioner_reason"].clone(),
                 "solver_iterations": metrics["solver_iterations"].clone(),
                 "solver_residual_norm": metrics["solver_residual_norm"].clone(),
                 })
@@ -560,6 +635,7 @@ fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
                         "slug": string_field(&result, "slug"),
                         "median_ms": number_field(&result, "median_ms"),
                         "peak_rss_mib": number_field(&result, "peak_rss_mib"),
+                        "solver_preconditioner_reason": result["solver_preconditioner_reason"].clone(),
                         "solver_iterations": result["solver_iterations"].clone(),
                         "solver_residual_norm": result["solver_residual_norm"].clone(),
                     })
@@ -653,6 +729,52 @@ fn coverage_summaries(runs: &[Value], coverage_targets: &[CoverageTarget]) -> Ve
                 .filter(|case| !observed.contains(*case))
                 .cloned()
                 .collect::<Vec<_>>();
+            let scale_threshold = (target.profile == "one_million").then_some(1_000_000_u64);
+            let observed_nodes = runs
+                .iter()
+                .filter(|run| {
+                    string_field(run, "matrix") == target.matrix
+                        && string_field(run, "profile") == target.profile
+                })
+                .flat_map(run_case_shapes_from_row)
+                .fold(
+                    BTreeMap::<String, u64>::new(),
+                    |mut nodes, (id, node_count)| {
+                        nodes
+                            .entry(normalize_case_id(&id))
+                            .and_modify(|current| *current = (*current).max(node_count))
+                            .or_insert(node_count);
+                        nodes
+                    },
+                );
+            let qualified_covered_cases = scale_threshold.map_or_else(Vec::new, |threshold| {
+                covered_cases
+                    .iter()
+                    .filter(|case| {
+                        observed_nodes
+                            .get(*case)
+                            .is_some_and(|nodes| *nodes >= threshold)
+                    })
+                    .cloned()
+                    .collect()
+            });
+            let below_scale_threshold_cases = scale_threshold.map_or_else(Vec::new, |_| {
+                covered_cases
+                    .iter()
+                    .filter(|case| !qualified_covered_cases.contains(*case))
+                    .cloned()
+                    .collect()
+            });
+            let below_scale_threshold_details = below_scale_threshold_cases
+                .iter()
+                .map(|case| {
+                    json!({
+                        "id": case,
+                        "reason": target.scale_limit_reasons.get(case),
+                        "remediation": target.scale_limit_remediations.get(case),
+                    })
+                })
+                .collect::<Vec<_>>();
             json!({
                 "matrix": target.matrix,
                 "profile": target.profile,
@@ -661,7 +783,59 @@ fn coverage_summaries(runs: &[Value], coverage_targets: &[CoverageTarget]) -> Ve
                 "missing_case_count": missing_cases.len(),
                 "covered_cases": covered_cases,
                 "missing_cases": missing_cases,
+                "scale_qualified_node_threshold": scale_threshold,
+                "scale_qualified_covered_case_count": qualified_covered_cases.len(),
+                "scale_qualified_covered_cases": qualified_covered_cases,
+                "below_scale_threshold_case_count": below_scale_threshold_cases.len(),
+                "below_scale_threshold_cases": below_scale_threshold_cases,
+                "below_scale_threshold_details": below_scale_threshold_details,
             })
+        })
+        .collect()
+}
+
+fn profile_coverage_summaries(coverage: &[Value]) -> Vec<Value> {
+    let mut summaries = BTreeMap::<String, (u64, u64, u64, Option<u64>)>::new();
+    for entry in coverage {
+        let profile = string_field(&entry, "profile");
+        let summary = summaries.entry(profile).or_insert((0, 0, 0, None));
+        summary.0 += number_field(&entry, "expected_case_count") as u64;
+        summary.1 += number_field(&entry, "covered_case_count") as u64;
+        summary.2 += number_field(&entry, "scale_qualified_covered_case_count") as u64;
+        if let Some(threshold) = entry
+            .get("scale_qualified_node_threshold")
+            .and_then(Value::as_u64)
+        {
+            summary.3 = Some(threshold);
+        }
+    }
+    summaries
+        .into_iter()
+        .map(|(profile, (expected, covered, qualified, threshold))| {
+            json!({
+                "profile": profile,
+                "expected_case_count": expected,
+                "covered_case_count": covered,
+                "missing_case_count": expected.saturating_sub(covered),
+                "scale_qualified_node_threshold": threshold,
+                "scale_qualified_covered_case_count": qualified,
+                "below_scale_threshold_case_count": threshold
+                    .map(|_| covered.saturating_sub(qualified))
+                    .unwrap_or(0),
+            })
+        })
+        .collect()
+}
+
+fn run_case_shapes_from_row(run: &Value) -> Vec<(String, u64)> {
+    run.get("case_shapes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|shape| {
+            let id = non_empty_string(shape, "id")?;
+            let node_count = shape.get("node_count")?.as_u64()?;
+            Some((id, node_count))
         })
         .collect()
 }

@@ -1,4 +1,6 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+};
 use crate::torsion_1d_validation::validate_request;
 use kyuubiki_protocol::{
     SolveTorsion1dRequest, SolveTorsion1dResult, Torsion1dElementResult, Torsion1dNodeResult,
@@ -44,7 +46,8 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
 
     let (reduced_stiffness, reduced_torque, free) =
         reduce_sparse_system(&global_stiffness, &torque_vector, &constrained);
-    let reduced_rotations = solve_spd_system(&reduced_stiffness, &reduced_torque)?;
+    let reduced_rotations = solve_tridiagonal_system(&reduced_stiffness, &reduced_torque)
+        .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_torque))?;
 
     let mut rotations = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

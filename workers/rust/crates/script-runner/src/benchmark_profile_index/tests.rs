@@ -1,7 +1,7 @@
 use super::{
     CoverageTarget, annotate_resolved_failures, coverage_summaries, evaluate_gate,
-    matrix_summaries, normalized_failure_kind, report_case_metrics, report_preconditioners,
-    solver_strategy_summaries,
+    matrix_summaries, normalized_failure_kind, profile_coverage_summaries, report_case_metrics,
+    report_preconditioners, solver_strategy_summaries,
 };
 use serde_json::json;
 
@@ -22,6 +22,11 @@ fn strategy_summary_keeps_the_latest_single_case_result_per_preconditioner() {
             "case_count": 1,
             "case_ids": ["heat-plane-quad-1m"],
             "solver_preconditioners": ["ic0"],
+            "solver_case_metrics": [{
+                "id": "heat-plane-quad-1m",
+                "solver_preconditioner": "ic0",
+                "solver_preconditioner_reason": "auto-large-thermal-plane-quad-ic0",
+            }],
             "total_median_ms": 23.0,
             "peak_rss_mib": 100.0,
         }),
@@ -48,6 +53,10 @@ fn strategy_summary_keeps_the_latest_single_case_result_per_preconditioner() {
     ]);
     assert_eq!(summaries.len(), 1);
     assert_eq!(summaries[0]["strategies"][0]["slug"], "latest-ic0");
+    assert_eq!(
+        summaries[0]["strategies"][0]["solver_preconditioner_reason"],
+        "auto-large-thermal-plane-quad-ic0"
+    );
     assert_eq!(summaries[0]["strategies"][1]["slug"], "sgs");
 }
 
@@ -150,6 +159,8 @@ fn coverage_counts_normalized_case_ids() {
         &[CoverageTarget {
             matrix: "mechanical-core".to_string(),
             profile: "four_hundred_k".to_string(),
+            scale_limit_reasons: Default::default(),
+            scale_limit_remediations: Default::default(),
             expected_cases: vec![
                 "axial-bar-400k".to_string(),
                 "truss-roof-400k".to_string(),
@@ -159,6 +170,86 @@ fn coverage_counts_normalized_case_ids() {
     );
     assert_eq!(coverage[0]["covered_case_count"], 2);
     assert_eq!(coverage[0]["missing_cases"][0], "space-frame-400k");
+}
+
+#[test]
+fn one_million_coverage_separates_scale_qualified_and_fixture_cases() {
+    let runs = vec![json!({
+        "matrix": "structural-extended",
+        "profile": "one_million",
+        "case_ids": ["spring-chain-1m", "modal-frame-2d-1m"],
+        "case_shapes": [
+            { "id": "spring-chain-1m", "node_count": 1_000_001 },
+            { "id": "modal-frame-2d-1m", "node_count": 2 }
+        ],
+    })];
+    let coverage = coverage_summaries(
+        &runs,
+        &[CoverageTarget {
+            matrix: "structural-extended".to_string(),
+            profile: "one_million".to_string(),
+            scale_limit_reasons: [(
+                "modal-frame-2d-1m".to_string(),
+                "dense eigensolver".to_string(),
+            )]
+            .into_iter()
+            .collect(),
+            scale_limit_remediations: [(
+                "modal-frame-2d-1m".to_string(),
+                "sparse eigensolver".to_string(),
+            )]
+            .into_iter()
+            .collect(),
+            expected_cases: vec![
+                "spring-chain-1m".to_string(),
+                "modal-frame-2d-1m".to_string(),
+            ],
+        }],
+    );
+    assert_eq!(coverage[0]["covered_case_count"], 2);
+    assert_eq!(coverage[0]["scale_qualified_covered_case_count"], 1);
+    assert_eq!(
+        coverage[0]["scale_qualified_covered_cases"][0],
+        "spring-chain-1m"
+    );
+    assert_eq!(coverage[0]["below_scale_threshold_case_count"], 1);
+    assert_eq!(
+        coverage[0]["below_scale_threshold_cases"][0],
+        "modal-frame-2d-1m"
+    );
+    assert_eq!(
+        coverage[0]["below_scale_threshold_details"][0]["reason"],
+        "dense eigensolver"
+    );
+    assert_eq!(
+        coverage[0]["below_scale_threshold_details"][0]["remediation"],
+        "sparse eigensolver"
+    );
+}
+
+#[test]
+fn profile_coverage_summary_aggregates_scale_results() {
+    let runs = vec![json!({
+        "matrix": "mechanical-core",
+        "profile": "one_million",
+        "case_ids": ["axial-bar-1m", "modal-frame-2d-1m"],
+        "case_shapes": [
+            { "id": "axial-bar-1m", "node_count": 1_000_001 },
+            { "id": "modal-frame-2d-1m", "node_count": 2 }
+        ],
+    })];
+    let targets = vec![CoverageTarget {
+        matrix: "mechanical-core".to_string(),
+        profile: "one_million".to_string(),
+        scale_limit_reasons: Default::default(),
+        scale_limit_remediations: Default::default(),
+        expected_cases: vec!["axial-bar-1m".to_string(), "modal-frame-2d-1m".to_string()],
+    }];
+    let coverage = coverage_summaries(&runs, &targets);
+    let summary = profile_coverage_summaries(&coverage);
+    assert_eq!(summary[0]["covered_case_count"], 2);
+    assert_eq!(summary[0]["scale_qualified_covered_case_count"], 1);
+    assert_eq!(summary[0]["below_scale_threshold_case_count"], 1);
 }
 
 #[test]

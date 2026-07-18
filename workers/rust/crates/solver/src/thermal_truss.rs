@@ -1,4 +1,7 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use crate::thermal_truss_validation::{
     validate_small_displacement_thermal_truss_2d, validate_small_displacement_thermal_truss_3d,
     validate_thermal_truss_2d_request, validate_thermal_truss_3d_request,
@@ -11,6 +14,13 @@ use kyuubiki_protocol::{
 
 pub fn solve_thermal_truss_2d(
     request: &SolveThermalTruss2dRequest,
+) -> Result<SolveThermalTruss2dResult, String> {
+    solve_thermal_truss_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_truss_2d_with_options(
+    request: &SolveThermalTruss2dRequest,
+    options: SpdSolveOptions,
 ) -> Result<SolveThermalTruss2dResult, String> {
     validate_thermal_truss_2d_request(request)?;
 
@@ -90,7 +100,9 @@ pub fn solve_thermal_truss_2d(
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -198,6 +210,13 @@ pub fn solve_thermal_truss_2d(
 pub fn solve_thermal_truss_3d(
     request: &SolveThermalTruss3dRequest,
 ) -> Result<SolveThermalTruss3dResult, String> {
+    solve_thermal_truss_3d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_truss_3d_with_options(
+    request: &SolveThermalTruss3dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalTruss3dResult, String> {
     validate_thermal_truss_3d_request(request)?;
 
     let dof_count = request.nodes.len() * 3;
@@ -288,7 +307,9 @@ pub fn solve_thermal_truss_3d(
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

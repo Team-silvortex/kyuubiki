@@ -1,6 +1,8 @@
 use crate::frame_2d_math::{frame_local_stiffness, frame_transform, transform_frame_stiffness};
 use crate::modal_frame_validation::validate_modal_frame_2d_request;
-use crate::modal_math::{expand_mode_shape, jacobi_eigenpairs, mass_normalized_stiffness};
+use crate::modal_math::{
+    ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs, mass_normalized_stiffness,
+};
 use kyuubiki_protocol::{
     ModalFrame2dModeResult, SolveModalFrame2dRequest, SolveModalFrame2dResult,
 };
@@ -11,6 +13,7 @@ pub fn solve_modal_frame_2d(
     validate_modal_frame_2d_request(request)?;
 
     let dof_count = request.nodes.len() * 3;
+    ensure_dense_modal_size(dof_count, "modal frame 2d")?;
     let mut stiffness = vec![vec![0.0; dof_count]; dof_count];
     let mut mass = vec![0.0; dof_count];
     let mut total_mass = 0.0;

@@ -275,14 +275,14 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "nonlinear_spring_1d",
             workload: BenchmarkWorkload::NonlinearSpring1d(generate_nonlinear_spring_1d_case(
-                profile.axial_elements.min(120),
+                profile.axial_elements,
             )),
         },
         BenchmarkFamily::ContactGap1d => BenchmarkCase {
             id,
             family: "contact_gap_1d",
             workload: BenchmarkWorkload::ContactGap1d(generate_contact_gap_1d_case(
-                profile.axial_elements.min(120),
+                profile.axial_elements,
             )),
         },
         BenchmarkFamily::Beam1d => BenchmarkCase {
@@ -301,7 +301,7 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "frame_2d",
             workload: BenchmarkWorkload::Frame2d(generate_frame_2d_case(
-                frame_chain_segments(&profile.space_frame),
+                profile.axial_elements,
                 profile.space_frame.width,
             )),
         },
@@ -309,7 +309,7 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "frame_3d",
             workload: BenchmarkWorkload::Frame3d(generate_frame_3d_case(
-                frame_chain_segments(&profile.space_frame),
+                profile.axial_elements,
                 profile.space_frame.width,
             )),
         },
@@ -317,7 +317,7 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "thermal_frame_2d",
             workload: BenchmarkWorkload::ThermalFrame2d(generate_thermal_frame_2d_case(
-                frame_chain_segments(&profile.space_frame),
+                profile.axial_elements,
                 profile.space_frame.width,
             )),
         },
@@ -325,7 +325,7 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "thermal_frame_3d",
             workload: BenchmarkWorkload::ThermalFrame3d(generate_thermal_frame_3d_case(
-                frame_chain_segments(&profile.space_frame),
+                profile.axial_elements,
                 profile.space_frame.width,
             )),
         },
@@ -543,10 +543,6 @@ fn build_thermal_truss_2d_case(
             height,
         } => generate_thermal_lattice_truss_2d_case(*nx, *ny, *width, *height),
     }
-}
-
-fn frame_chain_segments(scale: &FrameGridScale) -> usize {
-    (scale.nx * scale.ny).max(scale.nx).max(1)
 }
 
 pub(crate) fn catalog_spec_path_candidates() -> [String; 2] {

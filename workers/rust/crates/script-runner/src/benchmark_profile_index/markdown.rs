@@ -29,12 +29,94 @@ pub(super) fn render_readme(root_label: &str, coverage_label: &str, payload: &Va
         return trim_join(lines);
     }
     render_matrix_table(&mut lines, payload);
+    render_profile_coverage_table(&mut lines, payload);
     render_coverage_table(&mut lines, payload);
+    render_scale_limitations_table(&mut lines, payload);
     render_solver_strategy_table(&mut lines, payload);
     render_runs_table(&mut lines, runs);
     render_failures_table(&mut lines, failures);
     render_skipped_table(&mut lines, skipped);
     trim_join(lines)
+}
+
+fn render_scale_limitations_table(lines: &mut Vec<String>, payload: &Value) {
+    let limitations = array_field(payload, "coverage_summaries")
+        .iter()
+        .flat_map(|entry| {
+            array_field(entry, "below_scale_threshold_details")
+                .iter()
+                .filter_map(|detail| {
+                    let reason = string_field(detail, "reason");
+                    (!reason.is_empty()).then(|| {
+                        (
+                            string_field(entry, "matrix"),
+                            string_field(entry, "profile"),
+                            string_field(detail, "id"),
+                            reason,
+                            string_field(detail, "remediation"),
+                        )
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    if limitations.is_empty() {
+        return;
+    }
+    lines.extend([
+        "## Scale limitations".to_string(),
+        String::new(),
+        "| Matrix | Profile | Case | Current limitation | Planned remediation |".to_string(),
+        "| --- | --- | --- | --- | --- |".to_string(),
+    ]);
+    for (matrix, profile, case, reason, remediation) in limitations {
+        lines.push(format!(
+            "| `{matrix}` | `{profile}` | `{case}` | {reason} | {} |",
+            if remediation.is_empty() {
+                "--"
+            } else {
+                &remediation
+            }
+        ));
+    }
+    lines.push(String::new());
+}
+
+fn render_profile_coverage_table(lines: &mut Vec<String>, payload: &Value) {
+    let summaries = array_field(payload, "profile_coverage_summaries");
+    if summaries.is_empty() {
+        return;
+    }
+    lines.extend([
+        "## Profile coverage summaries".to_string(),
+        String::new(),
+        "| Profile | Covered | Scale-qualified | Below threshold | Missing |".to_string(),
+        "| --- | ---: | ---: | ---: | ---: |".to_string(),
+    ]);
+    for entry in summaries {
+        let threshold = entry
+            .get("scale_qualified_node_threshold")
+            .and_then(Value::as_u64);
+        lines.push(format!(
+            "| `{}` | `{}/{}` | {} | `{}` | `{}` |",
+            string_field(entry, "profile"),
+            number_field(entry, "covered_case_count") as u64,
+            number_field(entry, "expected_case_count") as u64,
+            threshold.map_or_else(
+                || "--".to_string(),
+                |value| {
+                    format!(
+                        "{}/{} (>= {value} nodes)",
+                        number_field(entry, "scale_qualified_covered_case_count") as u64,
+                        number_field(entry, "expected_case_count") as u64,
+                    )
+                }
+            ),
+            number_field(entry, "below_scale_threshold_case_count") as u64,
+            number_field(entry, "missing_case_count") as u64,
+        ));
+    }
+    lines.push(String::new());
 }
 
 fn render_solver_strategy_table(lines: &mut Vec<String>, payload: &Value) {
@@ -45,18 +127,19 @@ fn render_solver_strategy_table(lines: &mut Vec<String>, payload: &Value) {
     lines.extend([
         "## Solver strategy summaries".to_string(),
         String::new(),
-        "| Matrix | Profile | Case | Strategy | Iterations | Latest median ms | Peak RSS MiB |"
+        "| Matrix | Profile | Case | Strategy | Reason | Iterations | Latest median ms | Peak RSS MiB |"
             .to_string(),
-        "| --- | --- | --- | --- | ---: | ---: | ---: |".to_string(),
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: |".to_string(),
     ]);
     for summary in summaries {
         for strategy in array_field(summary, "strategies") {
             lines.push(format!(
-                "| `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` |",
+                "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` |",
                 string_field(summary, "matrix"),
                 string_field(summary, "profile"),
                 string_field(summary, "case_id"),
                 string_field(strategy, "preconditioner"),
+                string_field(strategy, "solver_preconditioner_reason"),
                 number_field(strategy, "solver_iterations") as u64,
                 number_field(strategy, "median_ms"),
                 number_field(strategy, "peak_rss_mib"),
@@ -126,8 +209,9 @@ fn render_coverage_table(lines: &mut Vec<String>, payload: &Value) {
     lines.extend([
         "## Coverage summaries".to_string(),
         String::new(),
-        "| Matrix | Profile | Covered | Missing | Missing cases |".to_string(),
-        "| --- | --- | ---: | ---: | --- |".to_string(),
+        "| Matrix | Profile | Covered | Scale-qualified | Below threshold | Missing | Missing cases |"
+            .to_string(),
+        "| --- | --- | ---: | ---: | ---: | ---: | --- |".to_string(),
     ]);
     for entry in array_field(payload, "coverage_summaries") {
         let missing = array_strings(entry, "missing_cases")
@@ -136,11 +220,21 @@ fn render_coverage_table(lines: &mut Vec<String>, payload: &Value) {
             .collect::<Vec<_>>()
             .join(", ");
         lines.push(format!(
-            "| `{}` | `{}` | `{}/{}` | `{}` | {} |",
+            "| `{}` | `{}` | `{}/{}` | `{}/{}` | `{}` | `{}` | {} |",
             string_field(entry, "matrix"),
             string_field(entry, "profile"),
             number_field(entry, "covered_case_count") as u64,
             number_field(entry, "expected_case_count") as u64,
+            number_field(entry, "scale_qualified_covered_case_count") as u64,
+            if entry
+                .get("scale_qualified_node_threshold")
+                .is_some_and(|value| !value.is_null())
+            {
+                number_field(entry, "expected_case_count") as u64
+            } else {
+                0
+            },
+            number_field(entry, "below_scale_threshold_case_count") as u64,
             number_field(entry, "missing_case_count") as u64,
             if missing.is_empty() {
                 "--".to_string()

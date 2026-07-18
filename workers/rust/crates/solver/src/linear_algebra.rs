@@ -432,6 +432,63 @@ pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec
     solve_spd_system_profile(matrix, rhs).map(|profile| profile.solution)
 }
 
+/// Solves a symmetric tridiagonal system in linear time when its sparse shape
+/// proves it is safe to do so. Callers can retain the generic SPD solver for
+/// arbitrary meshes by treating `None` as "not a chain".
+pub(crate) fn solve_tridiagonal_system(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+) -> Option<Result<Vec<f64>, String>> {
+    if matrix.size() != rhs.len() {
+        return Some(Err("tridiagonal system dimensions must match".to_string()));
+    }
+    if rhs.is_empty() {
+        return Some(Ok(Vec::new()));
+    }
+
+    let size = rhs.len();
+    let mut lower = vec![0.0; size];
+    let mut diagonal = vec![0.0; size];
+    let mut upper = vec![0.0; size];
+    for (row_index, row) in matrix.rows.iter().enumerate() {
+        for &(column, value) in row {
+            if column + 1 < row_index || column > row_index + 1 {
+                return None;
+            }
+            if column == row_index {
+                diagonal[row_index] = value;
+            } else if column < row_index {
+                lower[row_index] = value;
+            } else {
+                upper[row_index] = value;
+            }
+        }
+        if !diagonal[row_index].is_finite() || diagonal[row_index].abs() <= 1.0e-18 {
+            return Some(Err("tridiagonal system has a singular diagonal".to_string()));
+        }
+    }
+
+    let mut reduced_upper = vec![0.0; size];
+    let mut reduced_rhs = vec![0.0; size];
+    reduced_upper[0] = upper[0] / diagonal[0];
+    reduced_rhs[0] = rhs[0] / diagonal[0];
+    for row in 1..size {
+        let pivot = diagonal[row] - lower[row] * reduced_upper[row - 1];
+        if !pivot.is_finite() || pivot.abs() <= 1.0e-18 {
+            return Some(Err("tridiagonal system has a singular pivot".to_string()));
+        }
+        reduced_upper[row] = upper[row] / pivot;
+        reduced_rhs[row] = (rhs[row] - lower[row] * reduced_rhs[row - 1]) / pivot;
+    }
+
+    let mut solution = vec![0.0; size];
+    solution[size - 1] = reduced_rhs[size - 1];
+    for row in (0..size - 1).rev() {
+        solution[row] = reduced_rhs[row] - reduced_upper[row] * solution[row + 1];
+    }
+    Some(Ok(solution))
+}
+
 pub(crate) fn solve_spd_system_profile(
     matrix: &SparseMatrix,
     rhs: &[f64],
@@ -527,4 +584,42 @@ pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
         }
     }
     dense
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SparseMatrix, add_at, solve_tridiagonal_system};
+
+    #[test]
+    fn solves_a_tridiagonal_sparse_system_in_linear_time_path() {
+        let mut matrix = SparseMatrix::new(3);
+        for (row, column, value) in [
+            (0, 0, 2.0),
+            (0, 1, -1.0),
+            (1, 0, -1.0),
+            (1, 1, 2.0),
+            (1, 2, -1.0),
+            (2, 1, -1.0),
+            (2, 2, 2.0),
+        ] {
+            add_at(&mut matrix, row, column, value);
+        }
+
+        let solution = solve_tridiagonal_system(&matrix, &[1.0, 0.0, 1.0])
+            .expect("tridiagonal matrix should use the chain path")
+            .expect("tridiagonal system should solve");
+        assert!(solution.iter().all(|value| (value - 1.0).abs() < 1.0e-12));
+    }
+
+    #[test]
+    fn declines_non_tridiagonal_sparse_systems() {
+        let mut matrix = SparseMatrix::new(3);
+        for row in 0..3 {
+            add_at(&mut matrix, row, row, 2.0);
+        }
+        add_at(&mut matrix, 0, 2, -1.0);
+        add_at(&mut matrix, 2, 0, -1.0);
+
+        assert!(solve_tridiagonal_system(&matrix, &[1.0, 0.0, 1.0]).is_none());
+    }
 }

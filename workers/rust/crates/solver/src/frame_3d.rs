@@ -2,12 +2,22 @@ use crate::frame_3d_math::{
     frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation, frame3d_transform,
     multiply_matrix_vector_12x12, transform_frame3d_stiffness,
 };
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     Frame3dElementResult, Frame3dNodeResult, SolveFrame3dRequest, SolveFrame3dResult,
 };
 
 pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResult, String> {
+    solve_frame_3d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_frame_3d_with_options(
+    request: &SolveFrame3dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveFrame3dResult, String> {
     validate_frame_3d_request(request)?;
 
     let dof_count = request.nodes.len() * 6;
@@ -59,7 +69,9 @@ pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResul
     let constrained = constrained_frame_3d_dofs(request);
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

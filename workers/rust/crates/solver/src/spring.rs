@@ -1,4 +1,6 @@
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+};
 use crate::spring_validation::{
     validate_spring_1d_request, validate_spring_2d_request, validate_spring_3d_request,
 };
@@ -47,7 +49,8 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements = solve_tridiagonal_system(&reduced_stiffness, &reduced_force)
+        .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_force))?;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

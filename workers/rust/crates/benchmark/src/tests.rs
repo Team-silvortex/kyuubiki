@@ -423,6 +423,40 @@ mod tests {
     }
 
     #[test]
+    fn one_million_frame_cases_use_the_profile_node_target() {
+        let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
+        for case_id in [
+            "frame-2d-1m",
+            "frame-3d-1m",
+            "thermal-frame-2d-1m",
+            "thermal-frame-3d-1m",
+        ] {
+            let case = cases
+                .iter()
+                .find(|case| case.id == case_id)
+                .unwrap_or_else(|| panic!("{case_id} should exist"));
+            let (nodes, elements, _) = crate::runner_shape::workload_shape(&case.workload);
+            assert_eq!(nodes, 1_000_001, "{case_id} node count");
+            assert_eq!(elements, 1_000_000, "{case_id} element count");
+        }
+    }
+
+    #[test]
+    fn one_million_chain_nonlinear_cases_use_the_profile_node_target() {
+        let cases = benchmark_cases(BenchmarkProfile::OneMillion, "structural-extended");
+        for case_id in ["nonlinear-spring-chain-1m", "contact-gap-chain-1m"] {
+            let case = cases
+                .iter()
+                .find(|case| case.id == case_id)
+                .unwrap_or_else(|| panic!("{case_id} should exist"));
+            let (nodes, elements, dofs) = crate::runner_shape::workload_shape(&case.workload);
+            assert_eq!(nodes, 1_000_001, "{case_id} node count");
+            assert_eq!(elements, 1_000_000, "{case_id} element count");
+            assert_eq!(dofs, 1_000_001, "{case_id} dof count");
+        }
+    }
+
+    #[test]
     fn three_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
             ("mechanical-core", 5, 300_000),

@@ -74,12 +74,18 @@ pub use acoustic_bar_1d::solve_acoustic_bar_1d;
 pub use bar_1d::{
     solve_bar_1d, solve_electrostatic_bar_1d, solve_heat_bar_1d, solve_thermal_bar_1d,
 };
-pub use beam_1d::{solve_beam_1d, solve_thermal_beam_1d};
+pub use beam_1d::{
+    solve_beam_1d, solve_beam_1d_with_options, solve_thermal_beam_1d,
+    solve_thermal_beam_1d_with_options,
+};
 pub use electrostatic_plane_2d::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
 };
-pub use frame_2d::{solve_frame_2d, solve_thermal_frame_2d};
-pub use frame_3d::solve_frame_3d;
+pub use frame_2d::{
+    solve_frame_2d, solve_frame_2d_with_options, solve_thermal_frame_2d,
+    solve_thermal_frame_2d_with_options,
+};
+pub use frame_3d::{solve_frame_3d, solve_frame_3d_with_options};
 pub use harmonic_spring_1d::solve_harmonic_spring_1d;
 pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
@@ -106,7 +112,7 @@ pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
 pub use stokes_flow_plane_2d::{
     solve_stokes_flow_plane_quad_2d, solve_stokes_flow_plane_triangle_2d,
 };
-pub use thermal_frame_3d::solve_thermal_frame_3d;
+pub use thermal_frame_3d::{solve_thermal_frame_3d, solve_thermal_frame_3d_with_options};
 pub use thermal_plane_2d::{
     profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
@@ -114,7 +120,10 @@ pub use thermal_plane_2d::{
 pub use thermal_plane_2d_profile::{
     ThermalPlaneProfileStage, ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile,
 };
-pub use thermal_truss::{solve_thermal_truss_2d, solve_thermal_truss_3d};
+pub use thermal_truss::{
+    solve_thermal_truss_2d, solve_thermal_truss_2d_with_options, solve_thermal_truss_3d,
+    solve_thermal_truss_3d_with_options,
+};
 pub use torsion_1d::solve_torsion_1d;
 pub use transient_heat_bar_1d::solve_transient_heat_bar_1d;
 pub use transient_spring_1d::solve_transient_spring_1d;

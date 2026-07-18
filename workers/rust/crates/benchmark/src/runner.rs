@@ -5,6 +5,7 @@ use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_ma
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::{
     SpdSolveOptions, profile_heat_plane_quad_2d_with_options, profile_truss_2d_with_options,
+    solve_beam_1d_with_options, solve_thermal_beam_1d_with_options,
 };
 
 use crate::models::{
@@ -14,7 +15,7 @@ use crate::runner_hotspot::summarize_hotspot;
 use crate::runner_metrics::apply_metrics;
 use crate::runner_preconditioner::{
     effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
-    solver_preconditioners,
+    preconditioner_selection_reason, solver_preconditioners,
 };
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
@@ -53,11 +54,13 @@ pub(crate) fn build_report_with_progress(
         .flat_map(|case| {
             preconditioners.iter().map(move |preconditioner| {
                 let effective_preconditioner = effective_preconditioner(case, preconditioner);
+                let selection_reason = preconditioner_selection_reason(case, preconditioner);
                 if progress {
-                    print_case_start(case, effective_preconditioner, repeat);
+                    print_case_start(case, effective_preconditioner, selection_reason, repeat);
                 }
                 let mut result =
                     run_case_with_preconditioner(case, repeat, effective_preconditioner, progress);
+                result.solver_preconditioner_reason = Some(selection_reason.to_string());
                 if tag_results && result.solver_preconditioner.is_some() {
                     result.id = format!("{}#{}", result.id, effective_preconditioner);
                 }
@@ -274,27 +277,31 @@ pub(crate) fn run_case_with_preconditioner(
                     })
                 }
                 BenchmarkWorkload::Beam1d(request) => {
-                    solve(EngineSolveRequest::Beam1d(request.clone())).map(|result| {
-                        let AnalysisResult::Beam1d(result) = result else {
-                            unreachable!("beam solve should return beam result")
-                        };
+                    let options = SpdSolveOptions {
+                        preconditioner: parse_preconditioner(solver_preconditioner),
+                        progress_interval: progress.then_some(256),
+                    };
+                    solve_beam_1d_with_options(request, options).map(|result| {
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len() * 2;
                         max_displacement = result.max_displacement;
                         max_stress = result.max_stress;
+                        solver_preconditioner_name = Some(solver_preconditioner.to_string());
                     })
                 }
                 BenchmarkWorkload::ThermalBeam1d(request) => {
-                    solve(EngineSolveRequest::ThermalBeam1d(request.clone())).map(|result| {
-                        let AnalysisResult::ThermalBeam1d(result) = result else {
-                            unreachable!("thermal beam solve should return thermal beam result")
-                        };
+                    let options = SpdSolveOptions {
+                        preconditioner: parse_preconditioner(solver_preconditioner),
+                        progress_interval: progress.then_some(256),
+                    };
+                    solve_thermal_beam_1d_with_options(request, options).map(|result| {
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len() * 2;
                         max_displacement = result.max_displacement;
                         max_stress = result.max_stress;
+                        solver_preconditioner_name = Some(solver_preconditioner.to_string());
                     })
                 }
                 BenchmarkWorkload::ModalFrame2d(request) => {
@@ -577,6 +584,7 @@ pub(crate) fn run_case_with_preconditioner(
         solver_matrix_non_zero_count,
         solver_residual_norm,
         solver_preconditioner: solver_preconditioner_name,
+        solver_preconditioner_reason: None,
         hotspot_label: hotspot.as_ref().map(|summary| summary.label.clone()),
         hotspot_elapsed_ms: hotspot.as_ref().map(|summary| summary.elapsed_ms),
         hotspot_share_pct: hotspot.as_ref().map(|summary| summary.share_pct),

@@ -5,7 +5,10 @@ use crate::frame_2d_math::{
 };
 use crate::frame_2d_validation::{validate_frame_2d_request, validate_thermal_frame_2d_request};
 use crate::frame_energy::{frame_strain_energy_6, thermal_frame2d_strain_energy};
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     Frame2dElementResult, Frame2dNodeResult, SolveFrame2dRequest, SolveFrame2dResult,
     SolveThermalFrame2dRequest, SolveThermalFrame2dResult, ThermalFrame2dElementResult,
@@ -13,6 +16,13 @@ use kyuubiki_protocol::{
 };
 
 pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResult, String> {
+    solve_frame_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_frame_2d_with_options(
+    request: &SolveFrame2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveFrame2dResult, String> {
     validate_frame_2d_request(request)?;
 
     let dof_count = request.nodes.len() * 3;
@@ -76,7 +86,9 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -194,6 +206,13 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
 pub fn solve_thermal_frame_2d(
     request: &SolveThermalFrame2dRequest,
 ) -> Result<SolveThermalFrame2dResult, String> {
+    solve_thermal_frame_2d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_frame_2d_with_options(
+    request: &SolveThermalFrame2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalFrame2dResult, String> {
     validate_thermal_frame_2d_request(request)?;
 
     let dof_count = request.nodes.len() * 3;
@@ -276,7 +295,9 @@ pub fn solve_thermal_frame_2d(
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

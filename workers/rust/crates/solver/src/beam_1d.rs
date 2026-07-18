@@ -1,5 +1,8 @@
 use crate::beam_1d_validation::{validate_beam_1d_request, validate_thermal_beam_1d_request};
-use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+};
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, SolveBeam1dRequest, SolveBeam1dResult,
     SolveThermalBeam1dRequest, SolveThermalBeam1dResult, ThermalBeam1dElementResult,
@@ -7,6 +10,13 @@ use kyuubiki_protocol::{
 };
 
 pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, String> {
+    solve_beam_1d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_beam_1d_with_options(
+    request: &SolveBeam1dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveBeam1dResult, String> {
     validate_beam_1d_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
@@ -66,7 +76,9 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -166,6 +178,13 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
 pub fn solve_thermal_beam_1d(
     request: &SolveThermalBeam1dRequest,
 ) -> Result<SolveThermalBeam1dResult, String> {
+    solve_thermal_beam_1d_with_options(request, SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_beam_1d_with_options(
+    request: &SolveThermalBeam1dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalBeam1dResult, String> {
     validate_thermal_beam_1d_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
@@ -234,7 +253,9 @@ pub fn solve_thermal_beam_1d(
 
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+    let reduced_displacements =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
+            .solution;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
