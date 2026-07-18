@@ -168,7 +168,7 @@ export function WorkbenchWorkflowTopologyCard({
       <div className="card-head">
         <h2>{labels.topologyEditorTitle}</h2>
         <div className="button-row">
-          <button onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
+          <button data-workflow-topology-action="add-edge" onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
         </div>
       </div>
       <div className="form-grid compact workflow-topology-toolbar" data-workflow-topology-toolbar="controls">
@@ -197,7 +197,7 @@ export function WorkbenchWorkflowTopologyCard({
           selectedSourceNode={selectedNodes[0] ?? null}
           validationFilter={nextOperatorValidationFilter}
         />
-        <button onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
+        <button data-workflow-topology-action="add-node" onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
       </div>
       <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
       <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />

@@ -250,6 +250,8 @@ fn assert_harmonic_response(
 }
 
 fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientSpring1dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
     let final_step = result.history.last().expect("history includes final step");
     assert_close(
         result.final_time,
@@ -338,7 +340,8 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientSpring1dRe
         );
     }
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let left = &result.nodes[element.node_i];
         let right = &result.nodes[element.node_j];
@@ -353,6 +356,7 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientSpring1dRe
 }
 
 fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResult) {
+    assert_eq!(result.frequencies.len(), result.input.frequencies_hz.len());
     assert_close(
         result.max_displacement,
         result
@@ -394,6 +398,8 @@ fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResu
     assert_close(result.peak_frequency_hz, peak.frequency_hz);
 
     for (index, frequency) in result.frequencies.iter().enumerate() {
+        assert_eq!(frequency.nodes.len(), result.input.nodes.len());
+        assert_eq!(frequency.elements.len(), result.input.elements.len());
         assert_close(frequency.frequency_hz, result.input.frequencies_hz[index]);
         assert_close(
             frequency.angular_frequency,
@@ -432,7 +438,8 @@ fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResu
                 .fold(0.0_f64, f64::max),
         );
 
-        for node in &frequency.nodes {
+        for (node_index, node) in frequency.nodes.iter().enumerate() {
+            assert_eq!(node.index, node_index);
             let input = &result.input.nodes[node.index];
             assert_eq!(node.id, input.id);
             if input.fix_x {
@@ -447,6 +454,10 @@ fn assert_harmonic_summary(result: &kyuubiki_protocol::SolveHarmonicSpring1dResu
                 node.acceleration_amplitude,
                 frequency.angular_frequency.powi(2) * node.displacement_amplitude,
             );
+        }
+
+        for (element_index, element) in frequency.elements.iter().enumerate() {
+            assert_eq!(element.index, element_index);
         }
     }
 }

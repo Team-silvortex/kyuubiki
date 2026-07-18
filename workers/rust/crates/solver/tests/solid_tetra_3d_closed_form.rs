@@ -204,9 +204,12 @@ fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
     let mut max_von_mises = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
 
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
         assert_close(node.y, input.y);
@@ -217,7 +220,8 @@ fn assert_solid_summary(result: &SolveSolidTetra3dResult) {
         );
     }
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_solid_element_contract(result, element);
         total_volume += element.volume;
         max_von_mises = max_von_mises.max(element.von_mises_stress);

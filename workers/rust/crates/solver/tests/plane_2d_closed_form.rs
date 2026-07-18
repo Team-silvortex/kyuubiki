@@ -332,9 +332,12 @@ fn assert_triangle_summary(result: &SolvePlaneTriangle2dResult) {
     let mut max_stress = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(
             element.area,
             triangle_area(
@@ -369,9 +372,12 @@ fn assert_quad_summary(result: &SolvePlaneQuad2dResult) {
     let mut max_stress = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(
             element.area,
             quad_area(
@@ -665,8 +671,10 @@ fn assert_node_displacement_summary(
     nodes: &[kyuubiki_protocol::PlaneNodeResult],
 ) {
     let mut derived_max = 0.0_f64;
-    for node in nodes {
-        let input = &inputs[node.index];
+    assert_eq!(nodes.len(), inputs.len());
+    for (index, node) in nodes.iter().enumerate() {
+        let input = &inputs[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x, 1.0e-12);
         assert_close(node.y, input.y, 1.0e-12);

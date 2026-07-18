@@ -101,7 +101,7 @@ fn heat_plane_triangle_linear_field_is_diagonal_invariant_and_conductivity_scale
 
 #[test]
 fn heat_plane_quad_manufactured_linear_field_is_refinement_invariant() {
-    for subdivisions in [1_usize, 2, 4] {
+    for subdivisions in [1_usize, 2, 4, 8] {
         let result = solve_heat_plane_quad_2d(&heat_quad_mesh(subdivisions))
             .expect("refined quad heat manufactured field should solve");
 
@@ -110,10 +110,12 @@ fn heat_plane_quad_manufactured_linear_field_is_refinement_invariant() {
         assert_close(result.total_abs_heat_flow_rate, 72.0);
         assert_eq!(result.elements.len(), subdivisions * subdivisions);
 
-        for node in &result.nodes {
+        for (index, node) in result.nodes.iter().enumerate() {
+            assert_eq!(node.index, index);
             assert_close(node.temperature, manufactured_temperature(node.y));
         }
-        for element in &result.elements {
+        for (index, element) in result.elements.iter().enumerate() {
+            assert_eq!(element.index, index);
             assert_close(element.temperature_gradient_x, 0.0);
             assert_close(element.temperature_gradient_y, -80.0);
             assert_close(element.heat_flux_x, 0.0);
@@ -125,7 +127,7 @@ fn heat_plane_quad_manufactured_linear_field_is_refinement_invariant() {
 
 #[test]
 fn heat_plane_triangle_manufactured_linear_field_is_refinement_invariant() {
-    for subdivisions in [1_usize, 2, 4] {
+    for subdivisions in [1_usize, 2, 4, 8] {
         let result = solve_heat_plane_triangle_2d(&heat_triangle_mesh(subdivisions))
             .expect("refined triangle heat manufactured field should solve");
 
@@ -134,10 +136,12 @@ fn heat_plane_triangle_manufactured_linear_field_is_refinement_invariant() {
         assert_close(result.total_abs_heat_flow_rate, 72.0);
         assert_eq!(result.elements.len(), subdivisions * subdivisions * 2);
 
-        for node in &result.nodes {
+        for (index, node) in result.nodes.iter().enumerate() {
+            assert_eq!(node.index, index);
             assert_close(node.temperature, manufactured_temperature(node.y));
         }
-        for element in &result.elements {
+        for (index, element) in result.elements.iter().enumerate() {
+            assert_eq!(element.index, index);
             assert_close(element.temperature_gradient_x, 0.0);
             assert_close(element.temperature_gradient_y, -80.0);
             assert_close(element.heat_flux_x, 0.0);
@@ -208,7 +212,8 @@ fn assert_heat_triangle_summary(result: &SolveHeatPlaneTriangle2dResult) {
     let mut max_heat_flux = 0.0_f64;
     let mut total_abs_heat_flow_rate = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
@@ -255,7 +260,8 @@ fn assert_heat_quad_summary(result: &SolveHeatPlaneQuad2dResult) {
     let mut max_heat_flux = 0.0_f64;
     let mut total_abs_heat_flow_rate = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
@@ -306,7 +312,8 @@ fn assert_thermal_triangle_summary(result: &SolveThermalPlaneTriangle2dResult) {
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
@@ -356,7 +363,8 @@ fn assert_thermal_quad_summary(result: &SolveThermalPlaneQuad2dResult) {
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];

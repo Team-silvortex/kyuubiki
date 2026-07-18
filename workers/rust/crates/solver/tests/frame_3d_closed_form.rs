@@ -242,17 +242,26 @@ fn node(
 }
 
 fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.z, input.z);
+        assert_close(
+            node.displacement_magnitude,
+            (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
+        );
+    }
     assert_close(
         result.max_displacement,
         result
             .nodes
             .iter()
             .map(|node| {
-                let input = &result.input.nodes[node.index];
-                assert_eq!(node.id, input.id);
-                assert_close(node.x, input.x);
-                assert_close(node.y, input.y);
-                assert_close(node.z, input.z);
                 assert_close(
                     node.displacement_magnitude,
                     (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
@@ -290,31 +299,23 @@ fn assert_frame_summary(result: &kyuubiki_protocol::SolveFrame3dResult) {
             })
             .fold(0.0_f64, f64::max),
     );
-    assert_close(
-        result.max_stress,
-        result
-            .elements
-            .iter()
-            .map(|element| {
-                assert_frame_element_law(result, element);
-                element.max_combined_stress
-            })
-            .fold(0.0_f64, f64::max),
-    );
-    assert_close(
-        result.total_strain_energy,
-        result
-            .elements
-            .iter()
-            .map(|element| {
-                assert_close(
-                    element.max_combined_stress,
-                    element.axial_stress + element.max_bending_stress,
-                );
-                element.strain_energy
-            })
-            .sum::<f64>(),
-    );
+    let mut max_stress = 0.0_f64;
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
+        assert_frame_element_law(result, element);
+        max_stress = max_stress.max(element.max_combined_stress);
+    }
+    assert_close(result.max_stress, max_stress);
+    let mut total_strain_energy = 0.0_f64;
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
+        assert_close(
+            element.max_combined_stress,
+            element.axial_stress + element.max_bending_stress,
+        );
+        total_strain_energy += element.strain_energy;
+    }
+    assert_close(result.total_strain_energy, total_strain_energy);
 }
 
 fn assert_frame_element_law(

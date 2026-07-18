@@ -28,7 +28,8 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
 
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 6);
-    for support in &result.nodes[0..3] {
+    for (index, support) in result.nodes[0..3].iter().enumerate() {
+        assert_eq!(support.index, index);
         assert_close(support.ux, 0.0, 1.0e-12);
         assert_close(support.uy, 0.0, 1.0e-12);
         assert_close(support.uz, 0.0, 1.0e-12);
@@ -47,7 +48,8 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
     assert!(result.total_strain_energy > 0.0);
     assert!(result.max_strain_energy_density > 0.0);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert!(element.length > 0.0);
         assert!(element.strain.is_finite());
         assert!(element.stress.is_finite());
@@ -63,7 +65,8 @@ fn truss_3d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
         total_strain_energy(&request, &result.elements),
         TOL,
     );
-    for base_element in &result.elements[0..3] {
+    for (index, base_element) in result.elements[0..3].iter().enumerate() {
+        assert_eq!(base_element.index, index);
         assert_close(base_element.strain, 0.0, 1.0e-12);
         assert_close(base_element.stress, 0.0, 1.0e-12);
         assert_close(base_element.axial_force, 0.0, 1.0e-12);

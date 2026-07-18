@@ -30,7 +30,8 @@ fn electrostatic_bar_1d_review_bundle_checks_dirichlet_gradient_flux_and_energy(
     assert_close(result.max_flux_density, 12.0);
     assert_close(result.total_stored_energy, 0.48);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.length, 1.0);
         assert_close(element.potential_gradient, -4.0);
         assert_close(element.electric_field, 4.0);

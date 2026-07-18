@@ -40,7 +40,8 @@ fn thermal_truss_2d_review_bundle_checks_mixed_temperature_load_and_node_balance
     assert_close(result.elements[0].average_temperature_delta, 32.5, 1.0e-12);
     assert_close(result.elements[1].average_temperature_delta, 32.5, 1.0e-12);
     assert_close(result.elements[2].average_temperature_delta, 40.0, 1.0e-12);
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert!(element.length > 0.0);
         assert!(element.thermal_strain.is_finite());
         assert!(element.mechanical_strain.is_finite());

@@ -112,9 +112,9 @@ export function WorkbenchWorkflowBuilderToolbar({
       ) : null}
       {selectedWorkflow.local?.notes ? <p className="card-copy">{selectedWorkflow.local.notes}</p> : null}
       <div className="button-row button-row--adaptive" data-workflow-builder-toolbar="actions">
-        <button onClick={onRunCatalog} type="button">{labels.runLabel}</button>
-        <button disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
-        <button onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
+        <button data-workflow-builder-action="run-catalog" onClick={onRunCatalog} type="button">{labels.runLabel}</button>
+        <button data-workflow-builder-action="run-draft" disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
+        <button data-workflow-builder-action="save-draft" onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
         <button disabled={!canRunDraft} onClick={onPromoteDraft} type="button">{labels.promoteDraftLabel}</button>
         {selectedWorkflow.local ? (
           <>

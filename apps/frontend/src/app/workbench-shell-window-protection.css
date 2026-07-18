@@ -3,7 +3,7 @@
 }
 
 .workbench-shell[data-workbench-window-mode="compact"] {
-  grid-template-columns: 70px minmax(232px, 16.5vw) minmax(0, 1fr) minmax(228px, 16vw);
+  grid-template-columns: 70px minmax(176px, 13vw) minmax(0, 1fr) minmax(164px, 10.8vw);
 }
 
 .workbench-shell[data-workbench-window-mode="narrow"] {
@@ -19,7 +19,7 @@
 }
 
 .workbench-shell[data-workbench-window-mode="compact"][data-workbench-fullscreen="true"] {
-  grid-template-columns: 66px minmax(220px, 15.5vw) minmax(0, 1fr) minmax(216px, 15vw);
+  grid-template-columns: 66px minmax(168px, 12.6vw) minmax(0, 1fr) minmax(156px, 10.4vw);
 }
 
 .workbench-shell[data-workbench-window-mode="narrow"][data-workbench-fullscreen="true"] {

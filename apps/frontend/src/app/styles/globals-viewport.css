@@ -48,6 +48,18 @@
   padding-bottom: 2px;
 }
 
+.viewport-3d-shell {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 70%),
+    rgba(16, 21, 29, 0.92);
+}
+
 .viewport-dock__grid {
   display: flex;
   flex-wrap: wrap;

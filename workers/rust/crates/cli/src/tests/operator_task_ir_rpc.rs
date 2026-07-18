@@ -260,6 +260,35 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
         "attach_operator_package_runtime"
     );
     assert_eq!(
+        result["execution_reliability"]["schema_version"],
+        "kyuubiki.agent-operator-task-reliability/v1"
+    );
+    assert_eq!(
+        result["execution_reliability"]["readiness_status"],
+        "blocked"
+    );
+    assert_eq!(
+        result["execution_reliability"]["execution_path"],
+        "package_fetch_blocked"
+    );
+    assert_eq!(result["execution_reliability"]["path_health_score"], 70);
+    assert_eq!(
+        result["execution_reliability"]["package_runtime"]["attached"],
+        false
+    );
+    assert_eq!(
+        result["execution_reliability"]["package_runtime"]["package_fetch_required"],
+        true
+    );
+    assert_eq!(
+        result["execution_reliability"]["blocking_reason"],
+        OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED
+    );
+    assert_eq!(
+        result["execution_reliability"]["recommended_actions"][0],
+        "attach_operator_package_runtime"
+    );
+    assert_eq!(
         result["package_fetch_request"]["schema_version"],
         "kyuubiki.operator-package-fetch-request/v1"
     );
@@ -463,6 +492,30 @@ fn operator_task_runtime_can_report_attached_package_host_readiness() {
     assert_eq!(
         result["operator_package_runtime"]["activated_package_count"],
         2
+    );
+    assert_eq!(
+        result["execution_reliability"]["schema_version"],
+        "kyuubiki.agent-operator-task-reliability/v1"
+    );
+    assert_eq!(
+        result["execution_reliability"]["readiness_status"],
+        "ready_for_package_resolution"
+    );
+    assert_eq!(
+        result["execution_reliability"]["execution_path"],
+        "package_fetch_and_dispatch"
+    );
+    assert_eq!(result["execution_reliability"]["path_health_score"], 100);
+    assert_eq!(
+        result["execution_reliability"]["package_runtime"]["attached"],
+        true
+    );
+    assert_eq!(
+        result["execution_reliability"]["recommended_actions"]
+            .as_array()
+            .expect("recommended_actions array")
+            .len(),
+        0
     );
 }
 

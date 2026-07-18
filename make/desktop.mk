@@ -51,16 +51,16 @@ hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev
 
 hub-gui-build:
-	@$(ENTRYPOINT) hub-gui-build $(PLATFORM)
+	@$(ENTRYPOINT) build-hub-gui $(PLATFORM)
 
 installer-gui-dev:
 	@$(ENTRYPOINT) installer-gui-dev
 
 installer-gui-build:
-	@$(ENTRYPOINT) installer-gui-build $(PLATFORM)
+	@$(ENTRYPOINT) build-installer-gui $(PLATFORM)
 
 workbench-gui-dev:
 	@$(ENTRYPOINT) workbench-gui-dev
 
 workbench-gui-build:
-	@$(ENTRYPOINT) workbench-gui-build $(PLATFORM)
+	@$(ENTRYPOINT) build-workbench-gui $(PLATFORM)

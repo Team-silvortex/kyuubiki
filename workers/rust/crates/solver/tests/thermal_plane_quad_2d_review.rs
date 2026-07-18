@@ -35,7 +35,8 @@ fn thermal_plane_quad_2d_review_bundle_checks_restrained_thermal_stress_diagnost
 
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 1);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.displacement_magnitude, 0.0);

@@ -88,12 +88,14 @@ button:focus-visible,
 
 .hub-shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  width: min(var(--desktop-content-max-width), 100%);
+  margin: 0 auto;
+  grid-template-columns: var(--desktop-sidebar-width) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 1.1rem;
+  gap: var(--desktop-content-gap);
   height: 100vh;
   min-height: 0;
-  padding: 1.1rem;
+  padding: var(--desktop-content-gutter);
 }
 
 .hub-rail,
@@ -105,13 +107,13 @@ button:focus-visible,
 .hub-rail {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--desktop-content-gap);
 }
 
 .hub-rail {
   grid-column: 1;
   grid-row: 1;
-  padding: 1rem;
+  padding: var(--desktop-shell-rail-pad);
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-shell);
   background: linear-gradient(180deg, var(--panel), rgba(36, 39, 45, 0.98));
@@ -216,18 +218,18 @@ button:focus-visible,
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: var(--desktop-content-gap);
   overflow: auto;
   padding-right: 0.1rem;
 }
 
 .hub-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 1.1rem;
+  grid-template-columns: minmax(0, 1.14fr) minmax(290px, 0.96fr);
+  gap: var(--desktop-content-gap);
   align-items: stretch;
-  min-height: 310px;
-  padding: 1.55rem 1.7rem 1.45rem;
+  min-height: clamp(248px, 21vh, 308px);
+  padding: var(--desktop-shell-rail-pad) var(--desktop-content-gutter-wide);
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-shell);
   background: linear-gradient(180deg, var(--panel), rgba(35, 38, 44, 0.98));
@@ -278,7 +280,7 @@ button:focus-visible,
 .hub-head__signals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.95rem;
+  gap: var(--desktop-content-gap);
 }
 
 .hub-signal-card {

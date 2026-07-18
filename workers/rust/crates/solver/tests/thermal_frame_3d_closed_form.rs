@@ -55,7 +55,8 @@ fn thermal_frame_3d_matches_restrained_temperature_gradient_closed_form() {
             + inertia_y * curvature_z.powi(2))
         * length;
 
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.uz, 0.0);
@@ -370,9 +371,29 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame3dResult) {
     let mut max_axial_force = 0.0_f64;
     let mut max_temperature_gradient = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.z, input.z);
+        assert_close(node.temperature_delta, input.temperature_delta);
+        assert_close(
+            node.displacement_magnitude,
+            (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
+        );
+        assert_close(
+            node.rotation_magnitude,
+            (node.rx * node.rx + node.ry * node.ry + node.rz * node.rz).sqrt(),
+        );
+    }
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
             + result.nodes[element.node_j].temperature_delta)
             / 2.0;
@@ -445,19 +466,7 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame3dResult) {
         result
             .nodes
             .iter()
-            .map(|node| {
-                let input = &result.input.nodes[node.index];
-                assert_eq!(node.id, input.id);
-                assert_close(node.x, input.x);
-                assert_close(node.y, input.y);
-                assert_close(node.z, input.z);
-                assert_close(node.temperature_delta, input.temperature_delta);
-                assert_close(
-                    node.displacement_magnitude,
-                    (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt(),
-                );
-                node.displacement_magnitude
-            })
+            .map(|node| node.displacement_magnitude)
             .fold(0.0_f64, f64::max),
     );
     assert_close(
@@ -465,13 +474,7 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame3dResult) {
         result
             .nodes
             .iter()
-            .map(|node| {
-                assert_close(
-                    node.rotation_magnitude,
-                    (node.rx * node.rx + node.ry * node.ry + node.rz * node.rz).sqrt(),
-                );
-                node.rotation_magnitude
-            })
+            .map(|node| node.rotation_magnitude)
             .fold(0.0_f64, f64::max),
     );
     assert_close(

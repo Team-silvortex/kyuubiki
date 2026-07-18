@@ -26,7 +26,8 @@ fn axial_bar_refinement_is_closed_form_invariant() {
         assert_close(result.total_strain_energy, expected_energy, "strain energy");
 
         let expected_element_length = base.length / elements as f64;
-        for element in &result.elements {
+        for (index, element) in result.elements.iter().enumerate() {
+            assert_eq!(element.index, index);
             assert_close(
                 element.x2 - element.x1,
                 expected_element_length,

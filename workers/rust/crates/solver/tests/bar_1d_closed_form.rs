@@ -160,7 +160,8 @@ fn assert_response(result: &SolveBarResult, expected: ExpectedBarResponse) {
         expected.strain_energy_density.abs(),
     );
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.strain, expected.strain);
         assert_close(element.stress, expected.stress);
         assert_close(element.axial_force, expected.axial_force);
@@ -196,6 +197,16 @@ fn assert_energy_balance(result: &SolveBarResult) {
 }
 
 fn assert_bar_summary(result: &SolveBarResult) {
+    assert_eq!(result.nodes.len(), result.input.elements + 1);
+    assert_eq!(result.elements.len(), result.input.elements);
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
+        assert_close(
+            node.x,
+            result.input.length * node.index as f64 / result.input.elements as f64,
+        );
+    }
+
     let max_displacement = result
         .nodes
         .iter()
@@ -213,7 +224,10 @@ fn assert_bar_summary(result: &SolveBarResult) {
 
     let mut max_stress = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
+        assert_close(element.x1, result.nodes[element.index].x);
+        assert_close(element.x2, result.nodes[element.index + 1].x);
         assert_element_law(result, element);
         max_stress = max_stress.max(element.stress.abs());
         max_energy_density = max_energy_density.max(element.strain_energy_density.abs());

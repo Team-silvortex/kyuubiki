@@ -213,6 +213,72 @@ fn required_selectors() -> Vec<RequiredSelector> {
             &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
             "workbench-sample:",
         ),
+        RequiredSelector::with_ts(
+            "workflowSurface",
+            "[data-workbench-workflow-surface]",
+            "workflowSurface:",
+            &["apps/frontend/src/components/workbench/workflow/workbench-workflow-sidebar.tsx"],
+            "data-workbench-workflow-surface",
+        ),
+        RequiredSelector::with_ts(
+            "workflowSurfaceTab(tab)",
+            "[data-workflow-surface-tab=\"${tab}\"]",
+            "workflowSurfaceTab:",
+            &["apps/frontend/src/components/workbench/workflow/workbench-workflow-sidebar.tsx"],
+            "data-workflow-surface-tab",
+        ),
+        RequiredSelector::with_ts(
+            "workflowCatalogAction(action)",
+            "[data-workflow-catalog-action=\"${action}\"]",
+            "workflowCatalogAction:",
+            &[
+                "apps/frontend/src/components/workbench/workflow/workbench-workflow-catalog-card.tsx",
+            ],
+            "data-workflow-catalog-action",
+        ),
+        RequiredSelector::with_ts(
+            "workflowCatalogSearch",
+            "[data-workflow-catalog-search=\"query\"]",
+            "workflowCatalogSearch:",
+            &["apps/frontend/src/components/workbench/workflow/workbench-workflow-sidebar.tsx"],
+            "data-workflow-catalog-search",
+        ),
+        RequiredSelector::with_ts(
+            "workflowBuilder",
+            "[data-workflow-builder-shell=\"builder\"]",
+            "workflowBuilder:",
+            &[
+                "apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-card.tsx",
+            ],
+            "data-workflow-builder-shell",
+        ),
+        RequiredSelector::with_ts(
+            "workflowBuilderAction(action)",
+            "[data-workflow-builder-action=\"${action}\"]",
+            "workflowBuilderAction:",
+            &[
+                "apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-toolbar.tsx",
+            ],
+            "data-workflow-builder-action",
+        ),
+        RequiredSelector::with_ts(
+            "workflowOperatorAction(action)",
+            "[data-workflow-operator-action=\"${action}\"]",
+            "workflowOperatorAction:",
+            &[
+                "apps/frontend/src/components/workbench/workflow/workbench-workflow-operator-search.tsx",
+            ],
+            "data-workflow-operator-action",
+        ),
+        RequiredSelector::with_ts(
+            "workflowOperatorSearch",
+            "[data-workflow-operator-search=\"query\"]",
+            "workflowOperatorSearch:",
+            &[
+                "apps/frontend/src/components/workbench/workflow/workbench-workflow-operator-search.tsx",
+            ],
+            "data-workflow-operator-search",
+        ),
         RequiredSelector::new(
             "runtimePanel",
             "[data-workbench-runtime=\"panel\"]",

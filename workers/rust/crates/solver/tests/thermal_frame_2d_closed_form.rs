@@ -28,7 +28,8 @@ fn thermal_frame_2d_matches_restrained_uniform_temperature_closed_form() {
     let expected_axial_stress = youngs_modulus * expected_thermal_strain;
     let expected_energy = 0.5 * youngs_modulus * area * expected_thermal_strain.powi(2) * length;
 
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.rz, 0.0);
@@ -227,9 +228,24 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame2dResult) {
     let mut max_axial_force = 0.0_f64;
     let mut max_temperature_gradient = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.y, input.y);
+        assert_close(node.temperature_delta, input.temperature_delta);
+        assert_close(
+            node.displacement_magnitude,
+            (node.ux * node.ux + node.uy * node.uy).sqrt(),
+        );
+    }
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let average_temperature_delta = (result.nodes[element.node_i].temperature_delta
             + result.nodes[element.node_j].temperature_delta)
             / 2.0;
@@ -271,18 +287,7 @@ fn assert_thermal_frame_summary(result: &SolveThermalFrame2dResult) {
         result
             .nodes
             .iter()
-            .map(|node| {
-                let input = &result.input.nodes[node.index];
-                assert_eq!(node.id, input.id);
-                assert_close(node.x, input.x);
-                assert_close(node.y, input.y);
-                assert_close(node.temperature_delta, input.temperature_delta);
-                assert_close(
-                    node.displacement_magnitude,
-                    (node.ux * node.ux + node.uy * node.uy).sqrt(),
-                );
-                node.displacement_magnitude
-            })
+            .map(|node| node.displacement_magnitude)
             .fold(0.0_f64, f64::max),
     );
     assert_close(

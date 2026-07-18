@@ -255,14 +255,19 @@ fn assert_penalty_contact_law(result: &kyuubiki_protocol::SolveContactGap1dResul
 
 fn assert_contact_summary(result: &kyuubiki_protocol::SolveContactGap1dResult) {
     let mut max_force = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    assert_eq!(result.contacts.len(), result.input.contacts.len());
 
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
+        let input = &result.input.nodes[index];
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
     }
 
-    for element in &result.elements {
+    for (idx, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, idx);
         let input = &result.input.elements[element.index];
         assert_close(
             element.length,

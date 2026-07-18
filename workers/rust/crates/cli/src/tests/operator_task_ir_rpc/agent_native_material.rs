@@ -22,6 +22,23 @@ fn operator_task_runtime_executes_agent_native_material_thermal_shock() {
     assert_eq!(result["execution_readiness"]["ready_to_dispatch"], true);
     assert!(result["execution_readiness"]["blocking_stage"].is_null());
     assert_eq!(
+        result["execution_reliability"]["schema_version"],
+        "kyuubiki.agent-operator-task-reliability/v1"
+    );
+    assert_eq!(
+        result["execution_reliability"]["readiness_status"],
+        "executed"
+    );
+    assert_eq!(
+        result["execution_reliability"]["execution_path"],
+        "direct_dispatch"
+    );
+    assert_eq!(result["execution_reliability"]["path_health_score"], 100);
+    assert_eq!(
+        result["execution_reliability"]["package_runtime"]["package_fetch_required"],
+        true
+    );
+    assert_eq!(
         result["result"]["material_thermal_shock_candidate_count"],
         2
     );

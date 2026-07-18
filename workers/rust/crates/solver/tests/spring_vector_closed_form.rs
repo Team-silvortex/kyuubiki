@@ -77,7 +77,8 @@ fn spring_3d_matches_orthogonal_vector_stiffness_closed_form() {
     assert_close(free.ux, expected_ux);
     assert_close(free.uy, expected_uy);
     assert_close(free.uz, expected_uz);
-    for fixed in &result.nodes[1..] {
+    for (index, fixed) in result.nodes[1..].iter().enumerate() {
+        assert_eq!(fixed.index, index + 1);
         assert_close(fixed.ux, 0.0);
         assert_close(fixed.uy, 0.0);
         assert_close(fixed.uz, 0.0);
@@ -461,11 +462,15 @@ fn assert_energy_balance_2d(result: &SolveSpring2dResult) {
 }
 
 fn assert_spring_summary_2d(result: &SolveSpring2dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
     let max_displacement = result
         .nodes
         .iter()
-        .map(|node| {
-            let input = &result.input.nodes[node.index];
+        .enumerate()
+        .map(|(index, node)| {
+            let input = &result.input.nodes[index];
+            assert_eq!(node.index, index);
             assert_eq!(node.id, input.id);
             assert_close(node.x, input.x);
             assert_close(node.y, input.y);
@@ -476,8 +481,9 @@ fn assert_spring_summary_2d(result: &SolveSpring2dResult) {
 
     let mut max_force: f64 = 0.0;
     let mut total_energy = 0.0;
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
         let dx = node_j.x - node_i.x;
@@ -521,11 +527,15 @@ fn assert_energy_balance_3d(result: &SolveSpring3dResult) {
 }
 
 fn assert_spring_summary_3d(result: &SolveSpring3dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
     let max_displacement = result
         .nodes
         .iter()
-        .map(|node| {
-            let input = &result.input.nodes[node.index];
+        .enumerate()
+        .map(|(index, node)| {
+            let input = &result.input.nodes[index];
+            assert_eq!(node.index, index);
             assert_eq!(node.id, input.id);
             assert_close(node.x, input.x);
             assert_close(node.y, input.y);
@@ -537,8 +547,9 @@ fn assert_spring_summary_3d(result: &SolveSpring3dResult) {
 
     let mut max_force: f64 = 0.0;
     let mut total_energy = 0.0;
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
         let dx = node_j.x - node_i.x;

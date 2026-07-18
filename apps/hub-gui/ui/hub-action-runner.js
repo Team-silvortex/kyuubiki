@@ -52,9 +52,9 @@ export function createHubActionRunner(context) {
                 setProjectsPage: context.setProjectsPage,
                 setBusy: context.setBusy,
                 runProjectBundleAction: context.runProjectBundleAction,
-                currentProjectBundlePayload,
-                currentProjectBundleOutputPayload,
-                currentProjectBundleComparePayload,
+                currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
+                currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
+                currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),
                 setProjectBundleOutput: context.setProjectBundleOutput,
             }))) {
                 handled = true;

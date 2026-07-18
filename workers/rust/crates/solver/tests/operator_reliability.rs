@@ -158,7 +158,8 @@ fn valid_structural_quad_result_stays_finite() {
     assert_finite("plane max_stress", result.max_stress);
     assert!(result.max_displacement > 0.0);
     assert!(result.max_stress > 0.0);
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_finite("plane element strain_x", element.strain_x);
         assert_finite("plane element stress_x", element.stress_x);
         assert_finite("plane element von_mises", element.von_mises);

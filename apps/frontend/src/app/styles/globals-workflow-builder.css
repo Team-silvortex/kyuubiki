@@ -179,6 +179,11 @@
   filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.4));
 }
 
+.workflow-control-flow-wire-overlay {
+  pointer-events: none;
+  overflow: visible;
+}
+
 .workflow-control-flow-wire-overlay__socket--target {
   fill: rgba(250, 204, 21, 0.94);
   stroke: rgba(255, 251, 235, 0.82);
@@ -194,6 +199,17 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+}
+
+.workflow-control-flow-canvas--condition,
+.workflow-control-flow-canvas--merge {
+  border-left-color: color-mix(in srgb, rgba(125, 211, 252, 0.38), var(--line));
+  border-left-width: 2px;
+}
+
+.workflow-control-flow-canvas--merge {
+  border-top-color: color-mix(in srgb, rgba(245, 166, 46, 0.28), var(--line));
+  border-top-width: 2px;
 }
 
 .workflow-control-flow-lane {

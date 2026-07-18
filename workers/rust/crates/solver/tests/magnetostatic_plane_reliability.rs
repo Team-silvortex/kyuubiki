@@ -84,6 +84,79 @@ fn magnetostatic_triangle_linear_field_is_diagonal_invariant_and_permeability_sc
     );
 }
 
+#[test]
+fn magnetostatic_quad_manufactured_linear_potential_is_refinement_invariant() {
+    for subdivisions in [1_usize, 2, 4, 8] {
+        let result = solve_magnetostatic_plane_quad_2d(&magnetostatic_quad_mesh(subdivisions))
+            .expect("refined quad magnetostatic manufactured field should solve");
+
+        assert_eq!(result.elements.len(), subdivisions * subdivisions);
+        assert_close(result.max_vector_potential, MANUFACTURED_POTENTIAL_GRADIENT);
+        assert_close(result.max_flux_density, MANUFACTURED_POTENTIAL_GRADIENT);
+        assert_close(
+            result.max_magnetic_field_strength,
+            MANUFACTURED_POTENTIAL_GRADIENT / MU_0,
+        );
+        assert_close(
+            result.total_stored_energy,
+            0.5 * MANUFACTURED_POTENTIAL_GRADIENT.powi(2) * THICKNESS / MU_0,
+        );
+
+        for node in &result.nodes {
+            assert_close(node.vector_potential, manufactured_vector_potential(node.y));
+        }
+        for element in &result.elements {
+            assert_close(element.vector_potential_gradient_x, 0.0);
+            assert_close(
+                element.vector_potential_gradient_y,
+                MANUFACTURED_POTENTIAL_GRADIENT,
+            );
+            assert_close(
+                element.magnetic_flux_density_x,
+                MANUFACTURED_POTENTIAL_GRADIENT,
+            );
+            assert_close(element.magnetic_flux_density_y, 0.0);
+        }
+    }
+}
+
+#[test]
+fn magnetostatic_triangle_manufactured_linear_potential_is_refinement_invariant() {
+    for subdivisions in [1_usize, 2, 4, 8] {
+        let result =
+            solve_magnetostatic_plane_triangle_2d(&magnetostatic_triangle_mesh(subdivisions))
+                .expect("refined triangle magnetostatic manufactured field should solve");
+
+        assert_eq!(result.elements.len(), subdivisions * subdivisions * 2);
+        assert_close(result.max_vector_potential, MANUFACTURED_POTENTIAL_GRADIENT);
+        assert_close(result.max_flux_density, MANUFACTURED_POTENTIAL_GRADIENT);
+        assert_close(
+            result.max_magnetic_field_strength,
+            MANUFACTURED_POTENTIAL_GRADIENT / MU_0,
+        );
+        assert_close(
+            result.total_stored_energy,
+            0.5 * MANUFACTURED_POTENTIAL_GRADIENT.powi(2) * THICKNESS / MU_0,
+        );
+
+        for node in &result.nodes {
+            assert_close(node.vector_potential, manufactured_vector_potential(node.y));
+        }
+        for element in &result.elements {
+            assert_close(element.vector_potential_gradient_x, 0.0);
+            assert_close(
+                element.vector_potential_gradient_y,
+                MANUFACTURED_POTENTIAL_GRADIENT,
+            );
+            assert_close(
+                element.magnetic_flux_density_x,
+                MANUFACTURED_POTENTIAL_GRADIENT,
+            );
+            assert_close(element.magnetic_flux_density_y, 0.0);
+        }
+    }
+}
+
 fn request() -> SolveMagnetostaticPlaneTriangle2dRequest {
     SolveMagnetostaticPlaneTriangle2dRequest {
         nodes: vec![
@@ -140,6 +213,86 @@ fn cross_diagonal_patch(permeability: f64) -> SolveMagnetostaticPlaneTriangle2dR
             triangle("right", 1, 2, 3, permeability),
         ],
     }
+}
+
+const MANUFACTURED_POTENTIAL_GRADIENT: f64 = 5.0;
+
+fn magnetostatic_quad_mesh(subdivisions: usize) -> SolveMagnetostaticPlaneQuad2dRequest {
+    let mut elements = Vec::new();
+    for y_index in 0..subdivisions {
+        for x_index in 0..subdivisions {
+            elements.push(MagnetostaticPlaneQuadElementInput {
+                id: format!("quad-{x_index}-{y_index}"),
+                node_i: grid_index(x_index, y_index, subdivisions),
+                node_j: grid_index(x_index + 1, y_index, subdivisions),
+                node_k: grid_index(x_index + 1, y_index + 1, subdivisions),
+                node_l: grid_index(x_index, y_index + 1, subdivisions),
+                thickness: THICKNESS,
+                permeability: MU_0,
+            });
+        }
+    }
+    SolveMagnetostaticPlaneQuad2dRequest {
+        nodes: magnetostatic_grid_nodes(subdivisions),
+        elements,
+    }
+}
+
+fn magnetostatic_triangle_mesh(subdivisions: usize) -> SolveMagnetostaticPlaneTriangle2dRequest {
+    let mut elements = Vec::new();
+    for y_index in 0..subdivisions {
+        for x_index in 0..subdivisions {
+            let lower_left = grid_index(x_index, y_index, subdivisions);
+            let lower_right = grid_index(x_index + 1, y_index, subdivisions);
+            let upper_right = grid_index(x_index + 1, y_index + 1, subdivisions);
+            let upper_left = grid_index(x_index, y_index + 1, subdivisions);
+            elements.push(triangle(
+                &format!("tri-a-{x_index}-{y_index}"),
+                lower_left,
+                lower_right,
+                upper_right,
+                MU_0,
+            ));
+            elements.push(triangle(
+                &format!("tri-b-{x_index}-{y_index}"),
+                lower_left,
+                upper_right,
+                upper_left,
+                MU_0,
+            ));
+        }
+    }
+    SolveMagnetostaticPlaneTriangle2dRequest {
+        nodes: magnetostatic_grid_nodes(subdivisions),
+        elements,
+    }
+}
+
+fn magnetostatic_grid_nodes(subdivisions: usize) -> Vec<MagnetostaticPlaneNodeInput> {
+    let mut nodes = Vec::new();
+    for y_index in 0..=subdivisions {
+        for x_index in 0..=subdivisions {
+            let x = x_index as f64 / subdivisions as f64;
+            let y = y_index as f64 / subdivisions as f64;
+            nodes.push(node(
+                &format!("node-{x_index}-{y_index}"),
+                x,
+                y,
+                true,
+                manufactured_vector_potential(y),
+                0.0,
+            ));
+        }
+    }
+    nodes
+}
+
+fn grid_index(x_index: usize, y_index: usize, subdivisions: usize) -> usize {
+    y_index * (subdivisions + 1) + x_index
+}
+
+fn manufactured_vector_potential(y: f64) -> f64 {
+    MANUFACTURED_POTENTIAL_GRADIENT * y
 }
 
 fn patch_nodes() -> Vec<MagnetostaticPlaneNodeInput> {

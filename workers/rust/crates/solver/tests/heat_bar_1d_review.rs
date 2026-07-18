@@ -27,7 +27,8 @@ fn heat_bar_1d_review_bundle_checks_boundaries_flux_and_gradient_diagnostics() {
     assert_close(result.max_temperature, 100.0);
     assert_close(result.max_heat_flux, expected_flux);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.length, 0.5);
         assert_close(element.temperature_gradient, expected_gradient);
         assert_close(element.heat_flux, expected_flux);

@@ -12,7 +12,7 @@ fn stokes_flow_quad_2d_preserves_linear_screening_field_under_refinement() {
         .expect("baseline quad Stokes refinement fixture should solve");
     let baseline_dissipation = total_quad_dissipation(&baseline);
 
-    for subdivisions in [1_usize, 2, 4] {
+    for subdivisions in [1_usize, 2, 4, 8] {
         let result = solve_stokes_flow_plane_quad_2d(&quad_mesh(subdivisions))
             .expect("refined quad Stokes refinement fixture should solve");
 
@@ -42,7 +42,7 @@ fn stokes_flow_triangle_2d_preserves_linear_screening_field_under_refinement() {
         .expect("baseline triangle Stokes refinement fixture should solve");
     let baseline_dissipation = total_triangle_dissipation(&baseline);
 
-    for subdivisions in [1_usize, 2, 4] {
+    for subdivisions in [1_usize, 2, 4, 8] {
         let result = solve_stokes_flow_plane_triangle_2d(&triangle_mesh(subdivisions))
             .expect("refined triangle Stokes refinement fixture should solve");
 

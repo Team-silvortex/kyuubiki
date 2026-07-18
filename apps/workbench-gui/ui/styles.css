@@ -30,38 +30,36 @@ body {
 .shell-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--desktop-content-gap);
   min-height: 100vh;
-  padding: 18px;
+  padding: var(--desktop-content-gutter);
+  width: min(var(--desktop-content-max-width), 100%);
+  margin: 0 auto;
 }
 
 .shell-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(250px, 0.92fr);
+  gap: var(--desktop-content-gap);
   align-items: center;
-  padding: 18px 20px;
+  padding: var(--desktop-shell-rail-pad) var(--desktop-content-gutter-wide);
 }
 
 .brand {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  padding: 18px;
+  min-width: 0;
+  padding: var(--desktop-pane-padding);
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-card);
   background: var(--panel);
   box-shadow: var(--shadow);
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
 }
 
 .brand__icon {
-  width: 56px;
-  height: 56px;
+  width: 62px;
+  height: 62px;
   border-radius: 16px;
 }
 
@@ -74,7 +72,7 @@ body {
 
 .brand__title {
   margin: 4px 0;
-  font-size: 22px;
+  font-size: clamp(1.25rem, 1.5vw, 1.45rem);
   line-height: 1.05;
 }
 
@@ -119,10 +117,10 @@ kbd {
   border-radius: var(--desktop-radius-card);
   background: var(--panel);
   box-shadow: var(--shadow);
-  padding: 16px;
+  padding: var(--desktop-pane-padding);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--desktop-content-gap);
   min-width: 0;
   height: 100%;
 }
@@ -174,9 +172,14 @@ kbd {
 
 .control-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(240px, 1fr) minmax(280px, 1.15fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--desktop-content-gap);
   align-items: start;
+}
+
+.panel,
+.viewer {
+  min-width: 0;
 }
 
 .panel__title {
@@ -293,7 +296,7 @@ button:hover {
   display: flex;
   flex-direction: column;
   padding: 0;
-  gap: 12px;
+  gap: var(--desktop-content-gap);
   flex: 1;
   position: relative;
 }
@@ -303,10 +306,10 @@ button:hover {
   border-radius: 18px;
   background: var(--panel);
   box-shadow: var(--shadow);
-  padding: 14px 16px;
+  padding: var(--desktop-pane-padding);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--desktop-content-gap);
 }
 
 .viewer__toolbar-actions {
@@ -352,7 +355,7 @@ button:hover {
 #workbench-frame {
   flex: 1;
   width: 100%;
-  min-height: calc(100vh - 300px);
+  min-height: max(360px, calc(100dvh - clamp(250px, 38vh, 340px)));
   border: 1px solid var(--line);
   border-radius: 24px;
   background: white;
@@ -364,14 +367,15 @@ button:hover {
 }
 
 .shell-shell--workbench .viewer {
-  min-height: 100vh;
+  min-height: calc(100dvh - 84px);
   gap: 0;
 }
 
 .shell-shell--workbench .viewer__toolbar {
-  position: absolute;
-  left: 18px;
-  bottom: 26px;
+  position: fixed;
+  left: var(--desktop-content-gutter);
+  right: var(--desktop-content-gutter);
+  bottom: clamp(12px, 1.6vw, 20px);
   z-index: 3;
   gap: 0;
   padding: 0;
@@ -379,6 +383,7 @@ button:hover {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  width: auto;
 }
 
 .shell-shell--workbench .viewer__dock-icon,
@@ -403,7 +408,7 @@ button:hover {
 }
 
 .shell-shell--workbench #workbench-frame {
-  min-height: 100vh;
+  min-height: max(360px, calc(100dvh - 86px));
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -412,7 +417,7 @@ button:hover {
 @media (max-width: 1100px) {
   .shell-head,
   .control-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .brand {
@@ -436,11 +441,12 @@ button:hover {
   }
 
   #workbench-frame {
-    min-height: calc(100vh - 420px);
+    min-height: max(300px, calc(100vh - 420px));
   }
 
   .shell-shell--workbench .viewer__toolbar {
-    left: 10px;
-    bottom: 18px;
+    left: var(--desktop-content-gutter);
+    right: var(--desktop-content-gutter);
+    bottom: clamp(8px, 2vw, 12px);
   }
 }

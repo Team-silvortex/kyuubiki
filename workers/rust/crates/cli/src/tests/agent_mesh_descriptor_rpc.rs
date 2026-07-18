@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
 use super::*;
+use crate::operator_task_runtime::{
+    OperatorPackageRuntimeAttachment, OperatorPackageRuntimeBinding,
+    operator_task_execution_reliability_snapshot_for_binding,
+};
 
 #[test]
 fn handles_ping_rpc_requests() {
@@ -59,6 +63,22 @@ fn handles_describe_agent_rpc_requests() {
         descriptor_payload["deployment_readiness"]["cleanup_policy"],
         "installer_owned_paths_only"
     );
+    assert_eq!(
+        descriptor_payload["operator_task_reliability"]["schema_version"],
+        "kyuubiki.agent-operator-task-reliability/v1"
+    );
+    assert_eq!(
+        descriptor_payload["operator_task_reliability"]["readiness_status"],
+        "blocked"
+    );
+    assert_eq!(
+        descriptor_payload["operator_task_reliability"]["execution_path"],
+        "package_fetch_blocked"
+    );
+    assert_eq!(
+        descriptor_payload["operator_task_reliability"]["package_runtime"]["attached"],
+        false
+    );
 
     let descriptor: AgentDescriptor =
         serde_json::from_value(descriptor_payload).expect("agent descriptor");
@@ -77,6 +97,46 @@ fn handles_describe_agent_rpc_requests() {
     assert_eq!(descriptor.engine.lifecycle, "agent_embedded");
     assert_eq!(descriptor.engine.task_source, "manual_or_sdk");
     assert_eq!(descriptor.engine.operator_source, "bound_orchestra_fetch");
+}
+
+#[test]
+fn operator_task_reliability_snapshot_reports_attached_runtime() {
+    let attached_binding =
+        OperatorPackageRuntimeBinding::Attached(OperatorPackageRuntimeAttachment {
+            host_id: "agent-a/runtime".to_string(),
+            packages_root: "/var/lib/kyuubiki/operator-packages".to_string(),
+            activated_package_count: 3,
+        });
+    let snapshot = operator_task_execution_reliability_snapshot_for_binding(&attached_binding);
+
+    assert_eq!(
+        snapshot["schema_version"],
+        "kyuubiki.agent-operator-task-reliability/v1"
+    );
+    assert_eq!(snapshot["readiness_status"], "ready_for_package_resolution");
+    assert_eq!(snapshot["execution_path"], "direct_dispatch");
+    assert_eq!(snapshot["package_runtime"]["attached"], true);
+    assert_eq!(
+        snapshot["package_runtime"]["expected_host"],
+        "kyuubiki-engine.operator-sdk-host/v1"
+    );
+    assert_eq!(snapshot["path_health_score"], 100);
+    assert!(
+        snapshot["recommended_actions"]
+            .as_array()
+            .map_or(false, |actions| actions.is_empty())
+    );
+}
+
+#[test]
+fn operator_task_reliability_snapshot_reports_detached_runtime() {
+    let snapshot = operator_task_execution_reliability_snapshot_for_binding(
+        &OperatorPackageRuntimeBinding::Detached,
+    );
+
+    assert_eq!(snapshot["readiness_status"], "blocked");
+    assert_eq!(snapshot["execution_path"], "package_fetch_blocked");
+    assert_eq!(snapshot["package_runtime"]["attached"], false);
 }
 
 #[test]

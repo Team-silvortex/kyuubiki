@@ -91,7 +91,8 @@ fn spring_2d_orthogonal_vector_stiffness_matches_closed_form_under_perturbations
 
         assert_close(free.ux, expected.ux, "spring 2d free ux");
         assert_close(free.uy, expected.uy, "spring 2d free uy");
-        for fixed in &result.nodes[1..] {
+        for (index, fixed) in result.nodes[1..].iter().enumerate() {
+            assert_eq!(fixed.index, index + 1);
             assert_close(fixed.ux, 0.0, "spring 2d fixed ux");
             assert_close(fixed.uy, 0.0, "spring 2d fixed uy");
         }
@@ -156,7 +157,8 @@ fn spring_3d_orthogonal_vector_stiffness_matches_closed_form_under_perturbations
         assert_close(free.ux, expected.ux, "spring 3d free ux");
         assert_close(free.uy, expected.uy, "spring 3d free uy");
         assert_close(free.uz, expected.uz, "spring 3d free uz");
-        for fixed in &result.nodes[1..] {
+        for (index, fixed) in result.nodes[1..].iter().enumerate() {
+            assert_eq!(fixed.index, index + 1);
             assert_close(fixed.ux, 0.0, "spring 3d fixed ux");
             assert_close(fixed.uy, 0.0, "spring 3d fixed uy");
             assert_close(fixed.uz, 0.0, "spring 3d fixed uz");

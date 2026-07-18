@@ -12,7 +12,7 @@
 .PHONY: test-integration-workflow-catalog-compare
 .PHONY: test-integration-workflow-catalog-report
 .PHONY: test-integration-workflow-catalog-nightly
-.PHONY: test-integration-ui-mechanical test-integration-ui-thermal
+.PHONY: test-integration-ui-mechanical test-integration-ui-thermal test-integration-ui-workflow test-integration-ui-invocation
 .PHONY: format format-web format-rust tdd-web tdd-rust
 
 test: test-web test-rust test-frontend test-sdk test-playground
@@ -121,6 +121,16 @@ test-integration-ui-mechanical:
 
 test-integration-ui-thermal:
 	@$(ENTRYPOINT) integration-ui-thermal-node-test
+
+test-integration-ui-workflow:
+	@$(ENTRYPOINT) integration-ui-workflow-node-test
+
+test-integration-ui-invocation:
+	@$(MAKE) check-ui-automation-contract
+	@$(MAKE) test-integration-desktop-gui
+	@$(MAKE) test-integration-ui-workflow
+	@$(MAKE) test-integration-ui-mechanical
+	@$(MAKE) test-integration-ui-thermal
 
 format: format-web format-rust
 

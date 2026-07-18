@@ -65,7 +65,8 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
 
     assert_eq!(result.nodes.len(), 2);
     assert_eq!(result.elements.len(), 1);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.uz, 0.0);

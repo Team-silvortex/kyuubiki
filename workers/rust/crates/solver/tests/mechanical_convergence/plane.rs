@@ -68,7 +68,11 @@ fn plane_triangle_2d_load_material_and_thickness_scaling_is_linear() {
             "triangle max energy density scaling",
         );
 
-        for (base_element, element) in base.elements.iter().zip(result.elements.iter()) {
+        for (index, (base_element, element)) in
+            base.elements.iter().zip(result.elements.iter()).enumerate()
+        {
+            assert_eq!(base_element.index, index);
+            assert_eq!(element.index, index);
             assert_close(element.area, base_element.area, "triangle area invariant");
             assert_scaled_plane_quantity(
                 element.strain_x,
@@ -179,6 +183,8 @@ fn plane_quad_2d_load_material_and_thickness_scaling_is_linear() {
 
         let base_element = &base.elements[0];
         let element = &result.elements[0];
+        assert_eq!(base_element.index, 0);
+        assert_eq!(element.index, 0);
         assert_close(element.area, base_element.area, "quad area invariant");
         assert_scaled_plane_quantity(
             element.strain_x,

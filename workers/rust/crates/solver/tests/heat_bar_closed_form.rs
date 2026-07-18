@@ -175,8 +175,11 @@ fn assert_response(result: &SolveHeatBar1dResult, expected: ExpectedHeatResponse
 }
 
 fn assert_heat_bar_summary(result: &SolveHeatBar1dResult) {
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
         assert_close(node.heat_load, input.heat_load);
@@ -196,8 +199,9 @@ fn assert_heat_bar_summary(result: &SolveHeatBar1dResult) {
         .fold(0.0_f64, f64::max);
     assert_close(result.max_heat_flux, max_heat_flux);
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
         let expected_length = (node_j.x - node_i.x).abs();

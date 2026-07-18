@@ -34,7 +34,10 @@ body {
 
 .shell {
   min-height: 100vh;
-  padding: 28px;
+  width: min(var(--desktop-content-max-width), 100%);
+  margin: 0 auto;
+  padding: var(--desktop-content-gutter);
+  box-sizing: border-box;
 }
 
 .eyebrow,

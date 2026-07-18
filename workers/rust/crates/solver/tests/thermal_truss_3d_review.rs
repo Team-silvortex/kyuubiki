@@ -32,7 +32,8 @@ fn thermal_truss_3d_review_bundle_checks_restrained_uniform_temperature_response
 
     assert_eq!(result.nodes.len(), 3);
     assert_eq!(result.elements.len(), 3);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.uz, 0.0);
@@ -42,7 +43,8 @@ fn thermal_truss_3d_review_bundle_checks_restrained_uniform_temperature_response
     assert_close(result.elements[0].length, 1.0);
     assert_close(result.elements[1].length, 2.0_f64.sqrt());
     assert_close(result.elements[2].length, 1.0);
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.average_temperature_delta, temperature_delta);
         assert_close(element.thermal_strain, expected_thermal_strain);
         assert_close(element.mechanical_strain, -expected_thermal_strain);

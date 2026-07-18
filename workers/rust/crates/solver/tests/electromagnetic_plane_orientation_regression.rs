@@ -191,7 +191,8 @@ fn assert_electrostatic_triangle_contract(result: &SolveElectrostaticPlaneTriang
     let mut max_energy_density = 0.0_f64;
     let mut total_stored_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let potentials = [
             result.nodes[element.node_i].potential,
@@ -230,7 +231,8 @@ fn assert_electrostatic_quad_contract(result: &SolveElectrostaticPlaneQuad2dResu
     let mut max_energy_density = 0.0_f64;
     let mut total_stored_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let potentials = [
             result.nodes[element.node_i].potential,
@@ -423,7 +425,8 @@ fn assert_magnetostatic_triangle_contract(result: &SolveMagnetostaticPlaneTriang
     let mut max_energy_density = 0.0_f64;
     let mut total_stored_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let vector_potentials = [
             result.nodes[element.node_i].vector_potential,
@@ -462,7 +465,8 @@ fn assert_magnetostatic_quad_contract(result: &SolveMagnetostaticPlaneQuad2dResu
     let mut max_energy_density = 0.0_f64;
     let mut total_stored_energy = 0.0_f64;
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         let input = &result.input.elements[element.index];
         let vector_potentials = [
             result.nodes[element.node_i].vector_potential,

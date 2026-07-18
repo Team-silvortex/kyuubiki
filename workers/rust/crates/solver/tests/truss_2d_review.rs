@@ -31,7 +31,8 @@ fn truss_2d_review_bundle_checks_supports_member_forces_and_loaded_node_balance(
     assert!(result.total_strain_energy > 0.0);
     assert!(result.max_strain_energy_density > 0.0);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert!(element.length > 0.0);
         assert!(element.strain.is_finite());
         assert!(element.stress.is_finite());

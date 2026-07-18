@@ -184,6 +184,8 @@ fn assert_response(
 
 fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dResult) {
     let capacities = lumped_capacities(&result.input);
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
     let final_temperatures = result
         .nodes
         .iter()
@@ -214,13 +216,16 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dR
     );
 
     let final_step = result.history.last().expect("history includes final step");
+    assert_eq!(result.history.len(), result.input.steps + 1);
     assert_eq!(final_step.step, result.input.steps);
     assert_close(final_step.time, result.final_time);
-    for (node, temperature) in result
+    for (index, (node, temperature)) in result
         .nodes
         .iter()
         .zip(final_step.nodal_temperatures.iter())
+        .enumerate()
     {
+        assert_eq!(node.index, index);
         assert_close(node.temperature, *temperature);
     }
     assert_close(final_step.max_temperature, result.max_temperature);
@@ -243,8 +248,9 @@ fn assert_transient_summary(result: &kyuubiki_protocol::SolveTransientHeatBar1dR
         );
     }
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let left = &result.nodes[element.node_i];
         let right = &result.nodes[element.node_j];
         assert_close(

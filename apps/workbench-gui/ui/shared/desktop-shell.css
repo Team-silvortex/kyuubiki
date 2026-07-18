@@ -5,6 +5,13 @@
   --desktop-font-family: "SF Pro Display", "Segoe UI", sans-serif;
   --desktop-display-font-family: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
   --desktop-mono-font-family: "SF Mono", "Menlo", monospace;
+  --desktop-content-max-width: min(1680px, calc(100vw - 2.4rem));
+  --desktop-content-gutter: clamp(0.75rem, 2vw, 1.4rem);
+  --desktop-content-gutter-wide: clamp(1rem, 1.7vw, 1.55rem);
+  --desktop-content-gap: clamp(0.75rem, 1.6vw, 1.25rem);
+  --desktop-pane-padding: clamp(0.95rem, 1.4vw, 1.2rem);
+  --desktop-shell-rail-pad: clamp(0.85rem, 1.2vw, 1rem);
+  --desktop-sidebar-width: clamp(210px, 17vw, 250px);
   --desktop-radius-card: 14px;
   --desktop-radius-shell: 20px;
   --desktop-radius-pill: 999px;

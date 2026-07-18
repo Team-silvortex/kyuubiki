@@ -306,6 +306,7 @@ export function WorkbenchWorkflowSidebar({
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "overview" ? " panel-tab--active" : ""}`}
+          data-workflow-surface-tab="overview"
           onClick={() => openSurfaceTab("overview")}
           type="button"
         >
@@ -313,6 +314,7 @@ export function WorkbenchWorkflowSidebar({
         </button>
         <button
           className={`panel-tab${surfaceTab === "catalog" ? " panel-tab--active" : ""}`}
+          data-workflow-surface-tab="catalog"
           onClick={() => openSurfaceTab("catalog")}
           type="button"
         >
@@ -320,6 +322,7 @@ export function WorkbenchWorkflowSidebar({
         </button>
         <button
           className={`panel-tab${surfaceTab === "builder" ? " panel-tab--active" : ""}`}
+          data-workflow-surface-tab="builder"
           onClick={() => openSurfaceTab("builder")}
           type="button"
         >
@@ -327,6 +330,7 @@ export function WorkbenchWorkflowSidebar({
         </button>
         <button
           className={`panel-tab${surfaceTab === "runs" ? " panel-tab--active" : ""}`}
+          data-workflow-surface-tab="runs"
           onClick={() => openSurfaceTab("runs")}
           type="button"
         >

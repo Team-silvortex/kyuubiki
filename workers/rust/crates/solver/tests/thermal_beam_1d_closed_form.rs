@@ -59,7 +59,8 @@ fn thermal_beam_1d_reports_zero_response_for_zero_gradient() {
     assert_close(result.total_strain_energy, 0.0);
     assert_member_energy_balance(&result.elements, result.total_strain_energy);
     assert_thermal_beam_summary(&result);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.uy, 0.0);
         assert_close(node.rz, 0.0);
     }
@@ -168,9 +169,12 @@ fn assert_thermal_beam_summary(result: &SolveThermalBeam1dResult) {
     let mut max_stress = 0.0_f64;
     let mut max_temperature_gradient = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(
             element.thermal_curvature,
             input.thermal_expansion * element.temperature_gradient_y / input.section_depth,
@@ -183,18 +187,19 @@ fn assert_thermal_beam_summary(result: &SolveThermalBeam1dResult) {
         total_strain_energy += element.strain_energy;
     }
 
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x);
+        assert_close(node.displacement_magnitude, node.uy.abs());
+    }
     assert_close(
         result.max_displacement,
         result
             .nodes
             .iter()
-            .map(|node| {
-                let input = &result.input.nodes[node.index];
-                assert_eq!(node.id, input.id);
-                assert_close(node.x, input.x);
-                assert_close(node.displacement_magnitude, node.uy.abs());
-                node.displacement_magnitude
-            })
+            .map(|node| node.displacement_magnitude)
             .fold(0.0_f64, f64::max),
     );
     assert_close(

@@ -23,7 +23,8 @@ fn plane_triangle_2d_review_bundle_checks_panel_boundaries_stress_and_strain_dia
     assert!(result.total_strain_energy > 0.0);
     assert!(result.max_strain_energy_density > 0.0);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.area, 0.5, 1.0e-12);
         assert_finite_plane_stress_state(element);
         assert!(element.von_mises >= 0.0);

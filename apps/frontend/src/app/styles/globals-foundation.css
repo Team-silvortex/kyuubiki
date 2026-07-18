@@ -305,3 +305,84 @@ button {
     0 0 0 3px rgba(19, 115, 154, 0.14),
     0 0 0 1px rgba(19, 115, 154, 0.3);
 }
+
+.text-input:focus-visible,
+.shell-textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(19, 115, 154, 0.14),
+    0 0 0 1px rgba(19, 115, 154, 0.3);
+}
+
+.muted-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.warning-copy {
+  margin: 0;
+  color: #ffd1a3;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.status-pill,
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  padding: 0.12rem 0.52rem;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.status-pill--watch,
+.status-chip--watch {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #ffd59a 24%, rgba(255, 255, 255, 0.07)), transparent 100%);
+  color: #ffdca5;
+  border-color: color-mix(in srgb, #f7a14a 45%, var(--line));
+}
+
+.status-pill--good,
+.status-chip--good {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #94e0b5 24%, rgba(255, 255, 255, 0.07)), transparent 100%);
+  color: #c8ffde;
+  border-color: color-mix(in srgb, #5dcf96 42%, var(--line));
+}
+
+.status-pill--risk,
+.status-chip--risk {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #ff8c8c 28%, rgba(255, 255, 255, 0.07)), transparent 100%);
+  color: #ffd2d2;
+  border-color: color-mix(in srgb, #d94f4f 50%, var(--line));
+}
+
+.shell-textarea {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 11px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 50%),
+    rgba(31, 35, 40, 0.9);
+  color: var(--ink);
+  line-height: 1.45;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+}

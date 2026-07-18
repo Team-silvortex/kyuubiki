@@ -28,14 +28,16 @@ fn thermal_plane_triangle_2d_review_bundle_checks_restrained_thermal_stress_diag
 
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 2);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
         assert_close(node.uy, 0.0);
         assert_close(node.displacement_magnitude, 0.0);
         assert_close(node.temperature_delta, temperature_delta);
     }
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.area, 0.5);
         assert_close(element.average_temperature_delta, temperature_delta);
         assert_close(element.thermal_strain, expected_thermal_strain);

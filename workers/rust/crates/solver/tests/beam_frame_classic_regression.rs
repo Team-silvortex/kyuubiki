@@ -671,7 +671,8 @@ fn assert_torsion_summary(result: &kyuubiki_protocol::SolveTorsion1dResult) {
             .map(|element| element.strain_energy)
             .sum::<f64>(),
     );
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_torsion_element_law(result, element);
     }
     let external_work = result

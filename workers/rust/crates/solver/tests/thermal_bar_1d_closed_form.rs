@@ -196,8 +196,11 @@ fn assert_response(result: &SolveThermalBar1dResult, expected: ExpectedThermalBa
 }
 
 fn assert_thermal_bar_summary(result: &SolveThermalBar1dResult) {
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
         assert_close(node.temperature_delta, input.temperature_delta);
@@ -220,8 +223,9 @@ fn assert_thermal_bar_summary(result: &SolveThermalBar1dResult) {
     let mut max_axial_force = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_energy = 0.0_f64;
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_element_law(result, element);
         max_stress = max_stress.max(element.stress.abs());
         max_axial_force = max_axial_force.max(element.axial_force.abs());

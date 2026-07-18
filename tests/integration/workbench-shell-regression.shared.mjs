@@ -50,6 +50,7 @@ function workbenchMockSource() {
 
   return `(() => {
   window.__mockErrors = [];
+  window.__mockInvocations = [];
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -85,6 +86,7 @@ function workbenchMockSource() {
   window.__TAURI__ = {
     core: {
       invoke: async (command, payload) => {
+        window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
             return { language: "en" };
@@ -167,6 +169,29 @@ function overlaps(left, right) {
   return x > 1 && y > 1;
 }
 
+async function assertActionInvokes(page, action, command, guardedAction) {
+  const before = await page.evaluate(
+    ({ expectedCommand, expectedAction }) =>
+      (window.__mockInvocations || []).filter(
+        (entry) =>
+          entry.command === expectedCommand &&
+          (!expectedAction || entry.payload?.payload?.action === expectedAction),
+      ).length,
+    { expectedCommand: command, expectedAction: guardedAction },
+  );
+  const button = page.locator(`button[data-action="${action}"]:visible`).first();
+  await button.click();
+  await page.waitForFunction(
+    ({ expectedCommand, expectedAction, count }) =>
+      (window.__mockInvocations || []).filter(
+        (entry) =>
+          entry.command === expectedCommand &&
+          (!expectedAction || entry.payload?.payload?.action === expectedAction),
+      ).length > count,
+    { expectedCommand: command, expectedAction: guardedAction, count: before },
+  );
+}
+
 async function rectsFor(page, selectors) {
   return page.evaluate((passedSelectors) => {
     return passedSelectors.map((selector) => {
@@ -233,6 +258,11 @@ export async function assertWorkbenchShellRegression(page, viewport) {
   await page.locator('[data-log-service="agent-5002"]').click();
   assert.equal(await page.locator("#log-output").textContent(), "agent-5002 log mock");
 
+  await assertActionInvokes(page, "refresh", "service_status");
+  await assertActionInvokes(page, "start-local", "guarded_mutation_action", "service_start");
+  await assertActionInvokes(page, "restart-local", "guarded_mutation_action", "service_restart");
+  await assertActionInvokes(page, "stop", "guarded_mutation_action", "service_stop");
+
   await page.locator('[data-shell-target="workbench"]').click();
   await page.waitForSelector('[data-shell-pane="workbench"]:not(.hidden) #workbench-frame');
   const frameSrc = await page.locator("#workbench-frame").getAttribute("src");
@@ -240,6 +270,13 @@ export async function assertWorkbenchShellRegression(page, viewport) {
 
   await page.locator(".viewer__back-button").click();
   await page.waitForSelector('[data-shell-pane="control"]:not(.hidden) .control-grid');
+
+  const commands = await page.evaluate(() =>
+    (window.__mockInvocations || []).map((entry) => entry.command),
+  );
+  for (const command of ["workbench_environment", "service_status", "read_runtime_log"]) {
+    assert.ok(commands.includes(command), `expected Tauri invocation: ${command}`);
+  }
 
   const errors = await page.evaluate(() => window.__mockErrors || []);
   assert.deepEqual(errors, []);

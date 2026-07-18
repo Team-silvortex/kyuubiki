@@ -194,7 +194,7 @@ The current qualification evidence covers compact quad and triangle fixtures:
 the quad lane checks body-force and lid-driven shear responses, while the
 triangle lane checks geometry rejection and heterogeneous viscosity response.
 The retained mesh-refinement regression uses a linear Stokes field on 1x1,
-2x2, and 4x4 quad/triangle meshes to verify stable area, divergence, shear,
+2x2, 4x4, and 8x8 quad/triangle meshes to verify stable area, divergence, shear,
 velocity, pressure-drop, viscous-stress, and total viscous-dissipation
 diagnostics. That is enough to
 qualify the Stokes screening boundary, but not enough to claim general CFD,
@@ -265,6 +265,15 @@ diagonal-invariance check: changing the two-triangle split preserves nodal
 vector potential and flux density, while a permeability perturbation scales
 vector potential, flux density, and stored energy but leaves magnetic field
 strength stable for the same source density.
+It now also verifies the Dirichlet manufactured potential `A_z = 5y` over
+1x1, 2x2, 4x4, and 8x8 triangle and quad meshes. The recovered flux density
+is `B_x = 5`, `B_y = 0`, and total stored energy remains analytic across the
+refinement ladder. This is linear-field mesh evidence only; it does not expand
+the qualification claim to arbitrary magnetostatic geometries or sources.
+The matching electrostatic paths verify `V = 8x` over the same triangle and
+quad refinement ladder, recovering `E_x = -8`, `D_x = -24`, and analytic
+stored energy. Together these checks make the linear field-energy contract
+independent of the plane element shape and refinement level.
 The plane-orientation regression also perturbs element thickness. For the
 Dirichlet electrostatic patch, field terms and energy density stay fixed while
 total stored energy scales linearly with thickness. For the current-driven
@@ -326,7 +335,7 @@ manufactured field now perturbs thickness and verifies that temperature
 gradient plus heat-flux density stay fixed while total heat-flow rate scales
 linearly with thickness.
 Quad and triangle heat-plane meshes also run the same manufactured linear
-temperature field over 1x1, 2x2, and 4x4 refinements, preserving nodal
+temperature field over 1x1, 2x2, 4x4, and 8x8 refinements, preserving nodal
 temperatures, gradients, heat-flux density, and total heat-flow rate across
 the refinement ladder. The retained executable check also re-derives maximum
 temperature, maximum heat flux, average element temperature, Fourier heat-flux
@@ -424,7 +433,7 @@ The CFD-facing Stokes operators remain `screening_only` in scope, but the
 `screening-cfd-boundary` evidence kit is now qualified for that boundary: the
 quad lane has body-force and lid-driven shear boundary fixtures, the triangle
 lane adds geometry rejection plus heterogeneous viscosity response, and the
-mesh-refinement fixture verifies a linear Stokes field on 1x1, 2x2, and 4x4
+mesh-refinement fixture verifies a linear Stokes field on 1x1, 2x2, 4x4, and 8x8
 quad/triangle meshes with material-diagnostic scaling on both element shapes.
 The retained screening tests also re-derive Stokes summary and element
 diagnostics from public node/element fields, including node
@@ -716,8 +725,9 @@ response while preserving stress, strain-energy density, and axial force. Its
 closed-form regression now also checks that summary strain energy equals the
 element energy-density integral and the work-conjugate value
 `0.5 * tip_force * tip_displacement`, while re-deriving tip displacement,
-reaction force, element strain, stress, axial force, strain-energy density, and
-summary maxima from public node and element fields. The thermal bar now has
+reaction force, node index/coordinate mesh passthrough, element index/endpoints,
+element strain, stress, axial force, strain-energy density, and summary maxima
+from public node and element fields. The thermal bar now has
 `thermal_bar_1d_tracks_restrained_uniform_rise_scaling`, which verifies
 temperature, thermal-expansion, modulus, area, and length scaling for the
 fully restrained uniform-rise scope. Its retained regression re-derives element

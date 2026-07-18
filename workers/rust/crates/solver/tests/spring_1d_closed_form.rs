@@ -44,10 +44,12 @@ fn spring_1d_reports_zero_response_for_zero_load() {
     assert_close(result.max_force, 0.0);
     assert_close(result.total_strain_energy, 0.0);
     assert_energy_balance(&result);
-    for node in &result.nodes {
+    for (index, node) in result.nodes.iter().enumerate() {
+        assert_eq!(node.index, index);
         assert_close(node.ux, 0.0);
     }
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.extension, 0.0);
         assert_close(element.force, 0.0);
         assert_close(element.strain_energy, 0.0);
@@ -186,8 +188,11 @@ fn assert_energy_balance(result: &SolveSpring1dResult) {
 
 fn assert_spring_summary(result: &SolveSpring1dResult) {
     let mut max_displacement: f64 = 0.0;
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
         max_displacement = max_displacement.max(node.ux.abs());
@@ -196,8 +201,9 @@ fn assert_spring_summary(result: &SolveSpring1dResult) {
 
     let mut max_force: f64 = 0.0;
     let mut total_energy = 0.0;
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
         let expected_extension = node_j.ux - node_i.ux;

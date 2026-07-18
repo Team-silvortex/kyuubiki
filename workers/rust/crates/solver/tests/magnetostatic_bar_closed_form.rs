@@ -241,8 +241,11 @@ fn assert_case(result: &SolveMagnetostaticBar1dResult, expected: ExpectedMagneti
 }
 
 fn assert_field_balance(result: &SolveMagnetostaticBar1dResult) {
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
         assert_close(node.magnetomotive_source, input.magnetomotive_source);
@@ -273,8 +276,9 @@ fn assert_field_balance(result: &SolveMagnetostaticBar1dResult) {
     assert_close(result.max_flux_density, max_flux_density);
     assert_close(result.total_stored_energy, total_stored_energy);
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         let node_i = &result.nodes[element.node_i];
         let node_j = &result.nodes[element.node_j];
         let expected_length = (node_j.x - node_i.x).abs();

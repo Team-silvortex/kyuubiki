@@ -40,7 +40,8 @@ fn truss_2d_matches_symmetric_two_bar_closed_form() {
     assert_close(result.total_strain_energy, expected_energy, TOL);
     assert_apex_force_energy(result.total_strain_energy, load, result.nodes[2].uy);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.length, length, TOL);
         assert_close(element.axial_force, axial_force, TOL);
         assert_close(element.stress, expected_stress, TOL);
@@ -210,9 +211,29 @@ fn assert_truss_summary(result: &SolveTruss2dResult) {
     let mut max_stress = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    assert_close(
+        result.max_displacement,
+        result
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(index, node)| {
+                let input = &result.input.nodes[index];
+                assert_eq!(node.index, index);
+                assert_eq!(node.id, input.id);
+                assert_close(node.x, input.x, TOL);
+                assert_close(node.y, input.y, TOL);
+                (node.ux * node.ux + node.uy * node.uy).sqrt()
+            })
+            .fold(0.0_f64, f64::max),
+        TOL,
+    );
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(element.stress, input.youngs_modulus * element.strain, TOL);
         assert_close(element.axial_force, element.stress * input.area, TOL);
         assert_close(
@@ -224,22 +245,6 @@ fn assert_truss_summary(result: &SolveTruss2dResult) {
         max_energy_density = max_energy_density.max(element.strain_energy_density.abs());
         total_strain_energy += element.strain_energy_density * input.area * element.length;
     }
-
-    assert_close(
-        result.max_displacement,
-        result
-            .nodes
-            .iter()
-            .map(|node| {
-                let input = &result.input.nodes[node.index];
-                assert_eq!(node.id, input.id);
-                assert_close(node.x, input.x, TOL);
-                assert_close(node.y, input.y, TOL);
-                (node.ux * node.ux + node.uy * node.uy).sqrt()
-            })
-            .fold(0.0_f64, f64::max),
-        TOL,
-    );
     assert_close(result.max_stress, max_stress, TOL);
     assert_close(result.max_strain_energy_density, max_energy_density, TOL);
     assert_close(result.total_strain_energy, total_strain_energy, TOL);

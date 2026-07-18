@@ -2,7 +2,7 @@
   min-height: 100vh;
   padding: 8px;
   display: grid;
-  grid-template-columns: 70px minmax(248px, 18vw) minmax(0, 1fr) minmax(248px, 17vw);
+  grid-template-columns: 70px minmax(188px, 14vw) minmax(0, 1fr) minmax(176px, 11vw);
   gap: var(--editor-gap);
   position: relative;
 }
@@ -279,6 +279,34 @@
 .panel-tabs--editor {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+}
+
+.panel-tabs--wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel-tabs--wrap > button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.panel-tabs--wrap > .active {
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 60%),
+    var(--accent-soft);
+  border-color: rgba(217, 131, 44, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(19, 115, 154, 0.18);
 }
 
 .panel-tab {

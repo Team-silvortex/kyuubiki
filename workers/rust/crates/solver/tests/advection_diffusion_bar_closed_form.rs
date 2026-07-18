@@ -456,11 +456,16 @@ fn assert_source_response(result: &SolveAdvectionDiffusionBar1dResult, case: Tra
 }
 
 fn assert_transport_summary(result: &SolveAdvectionDiffusionBar1dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+
     let max_concentration = result
         .nodes
         .iter()
-        .map(|node| {
-            let input = &result.input.nodes[node.index];
+        .enumerate()
+        .map(|(index, node)| {
+            assert_eq!(node.index, index);
+            let input = &result.input.nodes[index];
             assert_eq!(node.id, input.id);
             assert_close(node.x, input.x);
             assert_close(node.source, input.source);
@@ -482,7 +487,8 @@ fn assert_transport_summary(result: &SolveAdvectionDiffusionBar1dResult) {
     assert_close(result.max_total_flux, max_total_flux);
     assert_close(result.max_peclet_number, max_peclet_number);
 
-    for element in &result.elements {
+    for (idx, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, idx);
         let input = &result.input.elements[element.index];
         let left = &result.nodes[element.node_i];
         let right = &result.nodes[element.node_j];

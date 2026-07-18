@@ -282,6 +282,9 @@ struct ExpectedAcousticResponse {
 }
 
 fn assert_acoustic_summary(result: &SolveAcousticBar1dResult) {
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+
     assert_close(
         result.angular_frequency,
         std::f64::consts::TAU * result.frequency_hz,
@@ -290,8 +293,10 @@ fn assert_acoustic_summary(result: &SolveAcousticBar1dResult) {
     let max_pressure = result
         .nodes
         .iter()
-        .map(|node| {
-            let input = &result.input.nodes[node.index];
+        .enumerate()
+        .map(|(index, node)| {
+            assert_eq!(node.index, index);
+            let input = &result.input.nodes[index];
             assert_eq!(node.id, input.id);
             assert_close(node.x, input.x);
             assert_close(node.volume_velocity_source, input.volume_velocity_source);
@@ -332,7 +337,8 @@ fn assert_acoustic_summary(result: &SolveAcousticBar1dResult) {
     assert_close(result.max_acoustic_intensity, max_acoustic_intensity);
     assert_close(result.total_damping_loss, total_damping_loss);
 
-    for element in &result.elements {
+    for (idx, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, idx);
         let input = &result.input.elements[element.index];
         let left = &result.nodes[element.node_i];
         let right = &result.nodes[element.node_j];

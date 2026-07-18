@@ -368,21 +368,21 @@ const assistantAudit: Record<string, WorkbenchAssistantAuditCopy> = {
   },
 };
 
-function normalize(language: string) {
-  return language.toLowerCase();
+function normalize(language?: string) {
+  return (language ?? "en").toLowerCase();
 }
 
-function resolveRecord<T>(records: Record<string, T>, language: string): T {
+function resolveRecord<T>(records: Record<string, T>, language?: string): T {
   const key = normalize(language);
   return records[key] ?? records[key.split("-")[0]] ?? records.en;
 }
 
-export function getWorkbenchGuardrailCopy(language: string): WorkbenchGuardrailCopy {
+export function getWorkbenchGuardrailCopy(language?: string): WorkbenchGuardrailCopy {
   const key = normalize(language);
   return guardrail[key] ?? guardrail[key.split("-")[0]] ?? guardrail.en;
 }
 
-export function getWorkbenchRuntimeAuditCopy(language: string): RuntimeAuditCopy {
+export function getWorkbenchRuntimeAuditCopy(language?: string): RuntimeAuditCopy {
   const key = normalize(language);
   const direct = audit[key] ?? audit[key.split("-")[0]];
   if (direct) return direct;
@@ -399,11 +399,11 @@ export function getWorkbenchRuntimeAuditCopy(language: string): RuntimeAuditCopy
   };
 }
 
-export function getWorkbenchMaterialCopy(language: string): MaterialCopy {
+export function getWorkbenchMaterialCopy(language?: string): MaterialCopy {
   return resolveRecord(material, language);
 }
 
-export function getWorkbenchMaterialLibraryCopy(language: string): WorkbenchMaterialLibraryCopy {
+export function getWorkbenchMaterialLibraryCopy(language?: string): WorkbenchMaterialLibraryCopy {
   const key = normalize(language);
   const direct = materialLibrary[key] ?? materialLibrary[key.split("-")[0]];
   if (direct) return direct;
@@ -423,7 +423,7 @@ export function getWorkbenchMaterialLibraryCopy(language: string): WorkbenchMate
   };
 }
 
-export function getWorkbenchScriptErrorCopy(language: string): WorkbenchScriptErrorCopy {
+export function getWorkbenchScriptErrorCopy(language?: string): WorkbenchScriptErrorCopy {
   const key = normalize(language);
   const direct = scriptErrors[key] ?? scriptErrors[key.split("-")[0]];
   if (direct) return direct;
@@ -436,7 +436,7 @@ export function getWorkbenchScriptErrorCopy(language: string): WorkbenchScriptEr
   };
 }
 
-export function getWorkbenchScriptInspectCopy(language: string): WorkbenchScriptInspectCopy {
+export function getWorkbenchScriptInspectCopy(language?: string): WorkbenchScriptInspectCopy {
   const key = normalize(language);
   const direct = inspect[key] ?? inspect[key.split("-")[0]];
   if (direct) return direct;
@@ -458,7 +458,7 @@ export function getWorkbenchScriptInspectCopy(language: string): WorkbenchScript
   };
 }
 
-export function getWorkbenchProtocolAgentCopy(language: string): WorkbenchProtocolAgentCopy {
+export function getWorkbenchProtocolAgentCopy(language?: string): WorkbenchProtocolAgentCopy {
   const key = normalize(language);
   const copy = protocolAgent[key] ?? protocolAgent[key.split("-")[0]] ?? {
     reachableAgents: getWorkbenchRuntimeAuditCopy(language).assistant,
@@ -472,12 +472,12 @@ export function getWorkbenchProtocolAgentCopy(language: string): WorkbenchProtoc
   };
 }
 
-export function getWorkbenchRuntimeAuditEmptyLabel(language: string): string {
+export function getWorkbenchRuntimeAuditEmptyLabel(language?: string): string {
   const key = normalize(language);
   return auditEmpty[key] ?? auditEmpty[key.split("-")[0]] ?? getWorkbenchRuntimeAuditCopy(language).failed;
 }
 
-export function getWorkbenchProjectFlowCopy(language: string): WorkbenchProjectFlowCopy {
+export function getWorkbenchProjectFlowCopy(language?: string): WorkbenchProjectFlowCopy {
   const key = normalize(language);
   const direct = projectFlow[key] ?? projectFlow[key.split("-")[0]];
   if (direct) return direct;
@@ -495,7 +495,7 @@ export function getWorkbenchProjectFlowCopy(language: string): WorkbenchProjectF
   };
 }
 
-export function getWorkbenchAssistantAuditCopy(language: string): WorkbenchAssistantAuditCopy {
+export function getWorkbenchAssistantAuditCopy(language?: string): WorkbenchAssistantAuditCopy {
   const key = normalize(language);
   const direct = assistantAudit[key] ?? assistantAudit[key.split("-")[0]];
   if (direct) return direct;

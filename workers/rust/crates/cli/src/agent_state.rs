@@ -14,6 +14,7 @@ use crate::agent_watchdog;
 use crate::config::AgentConfig;
 use crate::operator_task_runtime::{
     operator_package_runtime_snapshot, operator_package_runtime_snapshot_for_config,
+    operator_task_execution_reliability_snapshot,
 };
 
 pub(crate) fn agent_descriptor() -> AgentDescriptor {
@@ -167,6 +168,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         object.insert(
             "operator_package_runtime".to_string(),
             operator_package_runtime_snapshot(),
+        );
+        object.insert(
+            "operator_task_reliability".to_string(),
+            operator_task_execution_reliability_snapshot(),
         );
         object.insert(
             "headless_bridge".to_string(),

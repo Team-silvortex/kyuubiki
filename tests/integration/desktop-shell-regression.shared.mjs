@@ -112,6 +112,7 @@ function writePreviewMock(destination, mockSource) {
 function hubMockSource() {
   return `(() => {
   window.__mockErrors = [];
+  window.__mockInvocations = [];
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -188,6 +189,7 @@ function hubMockSource() {
   window.__TAURI__ = {
     core: {
       invoke: async (command, payload) => {
+        window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
             return { language: "en" };
@@ -206,6 +208,14 @@ function hubMockSource() {
             return directMeshSnapshot;
           case "hub_regression_gate_report":
             return regressionGateReport;
+          case "launch_workbench_gui":
+            return "workbench launch mock";
+          case "open_docs_index":
+            return "docs index mock";
+          case "project_bundle_inspect":
+            return "project bundle inspect mock";
+          case "project_bundle_validate":
+            return "project bundle validate mock";
           default:
             return null;
         }
@@ -221,6 +231,7 @@ function hubMockSource() {
 function installerMockSource() {
   return `(() => {
   window.__mockErrors = [];
+  window.__mockInvocations = [];
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -250,6 +261,7 @@ function installerMockSource() {
   window.__TAURI__ = {
     core: {
       invoke: async (command, payload) => {
+        window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
             return { language: "en" };
@@ -307,9 +319,37 @@ function installerMockSource() {
           case "latest_applied_update_record":
           case "latest_staged_update_record":
           case "read_env_file":
-          case "remote_deploy_policy":
-          case "remote_node_registry":
             return null;
+          case "remote_deploy_policy":
+            return {
+              allowed_hosts: "solver-a",
+              allowed_workspace_roots: "/opt/kyuubiki",
+              effective_allowed_hosts: "solver-a",
+              effective_allowed_workspace_roots: "/opt/kyuubiki",
+              config_path: "config/installer-remote-policy.json",
+              rendered: "remote policy mock",
+            };
+          case "certificate_authority_policy":
+            return {
+              storage_root: ".kyuubiki/credentials/installer/certificates",
+              root_common_name: "kyuubiki-test-ca",
+              default_validity_days: 365,
+              require_for_orchestrated: true,
+              require_for_offline_mesh: true,
+              allow_ssh_trust_bootstrap: false,
+              ca_initialized: false,
+              config_path: "config/installer-certificate-policy.json",
+              inventory_path: ".kyuubiki/credentials/installer/certificates/inventory.json",
+              certificates: [],
+              active_certificate_count: 0,
+              revoked_certificate_count: 0,
+              rendered: "certificate policy mock",
+            };
+          case "remote_node_registry":
+            return {
+              nodes: [],
+              rendered: "remote node registry mock",
+            };
           case "service_status":
             return {
               rendered: "frontend healthy | orchestrator healthy | agents healthy",
@@ -427,6 +467,53 @@ export async function assertNoPageErrors(page) {
   assert.deepEqual(errors, []);
 }
 
+async function assertTauriInvocations(page, expectedCommands) {
+  const commands = await page.evaluate(() =>
+    (window.__mockInvocations || []).map((entry) => entry.command),
+  );
+  for (const command of expectedCommands) {
+    assert.ok(commands.includes(command), `expected Tauri invocation: ${command}`);
+  }
+}
+
+async function assertActionInvokes(page, action, command, guardedAction, selector) {
+  const before = await page.evaluate(
+    ({ expectedCommand, expectedAction }) =>
+      (window.__mockInvocations || []).filter(
+        (entry) =>
+          entry.command === expectedCommand &&
+          (!expectedAction || entry.payload?.payload?.action === expectedAction),
+      ).length,
+    { expectedCommand: command, expectedAction: guardedAction },
+  );
+  const button = selector
+    ? page.locator(selector)
+    : page.locator(`button[data-action="${action}"]:visible`).first();
+  await button.click();
+  try {
+    await page.waitForFunction(
+      ({ expectedCommand, expectedAction, count }) =>
+        (window.__mockInvocations || []).filter(
+          (entry) =>
+            entry.command === expectedCommand &&
+            (!expectedAction || entry.payload?.payload?.action === expectedAction),
+        ).length > count,
+      { expectedCommand: command, expectedAction: guardedAction, count: before },
+      { timeout: 5_000 },
+    );
+  } catch (error) {
+    const observed = await page.evaluate(() => ({
+      busy: document.body?.dataset?.busy || null,
+      lastAction: window.__kyuubikiHubLastAction || null,
+      lastCompletedAction: window.__kyuubikiHubLastCompletedAction || null,
+      invocations: (window.__mockInvocations || []).map((entry) => entry.command),
+    }));
+    throw new Error(
+      `action ${action} did not invoke ${command}: ${JSON.stringify(observed)}; ${String(error)}`,
+    );
+  }
+}
+
 export async function assertHubRegression(page, viewport) {
   await page.setViewportSize(viewport);
   await page.goto(page.url(), { waitUntil: "networkidle", timeout: 60_000 });
@@ -453,6 +540,39 @@ export async function assertHubRegression(page, viewport) {
   });
   assert.equal(overlaps(rects[0], rects[1]), false, "Hub guides cards should not overlap");
 
+  await page.locator("#projects-tab-start").click();
+  await page.waitForSelector('[data-projects-pane="start"]:not(.hidden) #home-action-open');
+  await assertActionInvokes(
+    page,
+    "open-workbench",
+    "launch_workbench_gui",
+    undefined,
+    "#home-action-open",
+  );
+
+  await page.locator("#projects-tab-guides").click();
+  await page.waitForSelector('[data-projects-pane="guides"]:not(.hidden) #guides-gate-status-value');
+  await assertActionInvokes(page, "open-docs-index", "open_docs_index");
+
+  await page.locator("#projects-tab-bundles").click();
+  await page.waitForSelector('[data-projects-pane="bundles"]:not(.hidden) #project-bundle-path');
+  await page.locator("#project-bundle-path").fill("/tmp/ui-invocation.kyuubiki");
+  await assertActionInvokes(
+    page,
+    "project-inspect",
+    "project_bundle_inspect",
+    undefined,
+    "#bundles-action-inspect",
+  );
+  await assertActionInvokes(
+    page,
+    "project-validate",
+    "project_bundle_validate",
+    undefined,
+    "#bundles-action-validate",
+  );
+
+  await assertTauriInvocations(page, ["hub_environment", "hub_regression_gate_report"]);
   await assertNoPageErrors(page);
 }
 
@@ -480,11 +600,20 @@ export async function assertInstallerRegression(page, viewport) {
     await page.locator("#integrity-headline").textContent(),
     /Standard install contract is healthy/,
   );
+  await assertActionInvokes(page, "refresh-integrity", "installation_integrity_report");
 
   await page.locator('button.sidebar-tab[data-tab="updates"]').click();
   await page.waitForSelector('[data-panel="updates"].panel-visible #update-state-headline');
   assert.match(await page.locator("#update-state-headline").textContent(), /Update state is unknown/);
   assert.equal(await page.locator("#update-source-output").textContent(), "local update source");
+  await assertActionInvokes(page, "refresh-update-plan", "unified_update_plan");
+  await assertActionInvokes(page, "refresh-update-preview", "unified_update_preview");
+  await assertActionInvokes(
+    page,
+    "save-update-source",
+    "guarded_mutation_action",
+    "write_update_source_config",
+  );
 
   const rects = await visibleRects(page, [
     '[data-panel="updates"].panel-visible .update-summary-card:nth-of-type(1)',
@@ -502,6 +631,63 @@ export async function assertInstallerRegression(page, viewport) {
   await page.locator('button.sidebar-tab[data-tab="services"]').click();
   await page.waitForSelector('[data-panel="services"].panel-visible #runtime-log');
   assert.equal(await page.locator("#runtime-log").textContent(), "runtime log mock");
+  await assertActionInvokes(page, "service-start-local", "guarded_mutation_action", "service_start");
+  await assertActionInvokes(page, "load-log", "read_runtime_log");
 
+  await page.locator('button.sidebar-tab[data-tab="setup"]').click();
+  await page.waitForSelector('[data-panel="setup"].panel-visible');
+  await page.locator('button[data-action="use-cloud-mode"]:visible').first().click();
+  await page.waitForFunction(() => /Cloud PostgreSQL profile selected/.test(
+    document.querySelector("#completion-message")?.textContent || "",
+  ));
+
+  await page.locator('button.sidebar-tab[data-tab="remote"]').click();
+  await page.waitForSelector('[data-panel="remote"].panel-visible #remote-target-host');
+  await assertActionInvokes(page, "refresh-remote-policy", "remote_deploy_policy");
+  await assertActionInvokes(
+    page,
+    "save-remote-policy",
+    "guarded_mutation_action",
+    "write_remote_policy",
+  );
+  await assertActionInvokes(
+    page,
+    "initialize-certificate-authority",
+    "guarded_mutation_action",
+    "initialize_certificate_authority",
+  );
+  await assertActionInvokes(page, "refresh-remote-nodes", "remote_node_registry");
+  await assertActionInvokes(
+    page,
+    "probe-remote-node",
+    "guarded_mutation_action",
+    "probe_remote_node",
+  );
+  await assertActionInvokes(
+    page,
+    "remote-start-agent",
+    "guarded_mutation_action",
+    "remote_start_agent",
+  );
+
+  await page.locator('button.sidebar-tab[data-tab="release"]').click();
+  await page.waitForSelector('[data-panel="release"].panel-visible #release-platform');
+  await assertActionInvokes(page, "stage-release", "guarded_mutation_action", "stage_release");
+  await assertActionInvokes(page, "export-launch", "export_launch");
+  await assertActionInvokes(
+    page,
+    "build-installer",
+    "guarded_mutation_action",
+    "build_installer_bundle",
+  );
+
+  await assertTauriInvocations(page, [
+    "doctor_report",
+    "installation_integrity_report",
+    "unified_update_plan",
+    "update_source_config",
+    "service_status",
+    "read_runtime_log",
+  ]);
   await assertNoPageErrors(page);
 }

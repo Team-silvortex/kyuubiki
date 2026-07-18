@@ -47,7 +47,8 @@ It currently covers `axial_bar_1d` with:
 - length perturbation scaling for displacement and energy while preserving
   stress and axial force
 - result-field recovery of tip displacement, reaction force, element strain,
-  stress, axial force, strain-energy density, and summary maxima from public
+  stress, axial force, strain-energy density, node index/coordinate mesh
+  passthrough, element index/endpoints, and summary maxima from public
   node/element fields
 
 `spring_1d`, `spring_2d`, and `spring_3d` add foundational discrete stiffness
@@ -236,7 +237,12 @@ The third approved qualification packet is
 It promotes the electrostatic and magnetostatic triangle/quad plane operators
 after retained field, flux, stored-energy, orientation, electrostatic thickness
 energy scaling, current-driven magnetostatic inverse-thickness scaling, and
-material-provenance checks pass. The retained regression also re-derives
+material-provenance checks pass. Magnetostatic triangle and quad paths also
+preserve the analytic Dirichlet field `A_z = 5y` through 1x1/2x2/4x4/8x8
+refinement, recovering constant flux density and stored energy; electrostatic
+paths mirror that ladder with `V = 8x`, constant field and flux density, and
+analytic stored energy. The retained
+regression also re-derives
 summary maxima, node id/coordinate/source passthrough, element average
 potentials, field/flux magnitudes, element area from node coordinates,
 constitutive field/flux laws, and stored-energy totals directly from the
@@ -263,7 +269,7 @@ The sixth approved qualification packet is
 [stokes-flow-screening-release-evidence.json](../releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json).
 It promotes the Stokes quad and triangle screening operators only for the
 retained screening-boundary scope, after boundary, divergence, heterogeneous
-material, and 1x1/2x2/4x4 linear-field mesh-refinement checks pass. The retained
+material, and 1x1/2x2/4x4/8x8 linear-field mesh-refinement checks pass. The retained
 quad and triangle screening regressions also cover total viscous-dissipation
 invariance under refinement and geometry-area scaling with fixed velocity
 boundary data. Every retained branch also re-derives summary maxima, pressure

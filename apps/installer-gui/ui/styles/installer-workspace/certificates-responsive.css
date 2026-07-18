@@ -65,6 +65,7 @@
 @media (max-width: 1120px) {
   .workspace {
     grid-template-columns: 1fr;
+    gap: var(--desktop-content-gap);
   }
 }
 

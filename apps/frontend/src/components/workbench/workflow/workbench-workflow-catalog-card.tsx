@@ -155,10 +155,10 @@ export function WorkbenchWorkflowCatalogCard(props: {
       ) : null}
       {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
       <div className="button-row button-row--adaptive">
-        <button onClick={onSelectForBuilder} type="button">
+        <button data-workflow-catalog-action="open-builder" onClick={onSelectForBuilder} type="button">
           {labels.selectForBuilderLabel}
         </button>
-        <button onClick={onRun} type="button">
+        <button data-workflow-catalog-action="run" onClick={onRun} type="button">
           {labels.runLabel}
         </button>
         {onDelete ? (

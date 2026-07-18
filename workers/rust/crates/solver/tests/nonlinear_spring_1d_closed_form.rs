@@ -129,15 +129,19 @@ fn nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling() {
 
 fn assert_nonlinear_spring_summary(result: &SolveNonlinearSpring1dResult) {
     let mut max_force = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
 
-    for node in &result.nodes {
-        let input = &result.input.nodes[node.index];
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
         assert_eq!(node.id, input.id);
         assert_close(node.x, input.x);
     }
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(
             element.length,
             (result.input.nodes[input.node_j].x - result.input.nodes[input.node_i].x).abs(),

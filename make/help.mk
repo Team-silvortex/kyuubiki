@@ -67,6 +67,8 @@ help:
 	@echo "  make check-native-script-audit Verify native runner shell-migration audit logic"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language packs, paths, and unsafe-text guards"
 	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
+	@echo "  make test-integration-ui-invocation Run end-to-end UI action, bridge, and visible-result checks"
+	@echo "  make test-integration-ui-workflow Run the Workbench workflow catalog-to-execution UI chain"
 	@echo "  make check-gui-runtime-capability-contract Verify GUI-to-runtime capability manifests stay decoupled from backend implementations"
 	@echo "  make check-version-line Verify release, snapshot, package, docs, and language-pack version contracts"
 	@echo "  make check-workflow-dataset-contract Verify workflow dataset schema, examples, and graph dataset references"

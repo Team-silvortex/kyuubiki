@@ -28,7 +28,8 @@ fn spring_3d_review_bundle_checks_cage_supports_top_displacement_and_member_forc
     let top = &result.nodes[3];
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 6);
-    for fixed in &result.nodes[0..3] {
+    for (index, fixed) in result.nodes[0..3].iter().enumerate() {
+        assert_eq!(fixed.index, index);
         assert_close(fixed.ux, 0.0);
         assert_close(fixed.uy, 0.0);
         assert_close(fixed.uz, 0.0);

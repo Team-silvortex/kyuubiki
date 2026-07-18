@@ -26,7 +26,8 @@
     "check:workflow-search-layout": "../../scripts/kyuubiki frontend-workflow-search-layout-check",
     "check:workflow-topology": "../../scripts/kyuubiki frontend-workflow-topology-check",
     "typecheck": "../../scripts/kyuubiki frontend-typecheck",
-    "benchmark:workflow": "../../scripts/kyuubiki frontend-workflow-benchmark"
+    "benchmark:workflow": "../../scripts/kyuubiki frontend-workflow-benchmark",
+    "check:ui-mock-unused": "node ../../scripts/check-ui-mock-unused.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.1",

@@ -434,6 +434,8 @@ export function WorkbenchWorkflowOperatorSearch(props: {
               <div key={`quick:${entry.preset.id}`} style={{ display: "grid", gap: "0.2rem" }}>
                 <div style={{ display: "flex", gap: "0.35rem" }}>
                 <button
+                  data-workflow-operator-action="quick-insert"
+                  data-workflow-operator-id={entry.preset.operatorId}
                   onClick={() => {
                     rememberOperator(entry.preset.operatorId!);
                     onQuickInsert(entry.preset.operatorId!);

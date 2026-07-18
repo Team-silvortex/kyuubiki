@@ -37,7 +37,8 @@ fn symmetric_truss_geometry_and_load_perturbations_match_closed_form() {
             "truss strain energy",
         );
 
-        for element in &result.elements {
+        for (index, element) in result.elements.iter().enumerate() {
+            assert_eq!(element.index, index);
             assert_close(
                 element.length,
                 expected.member_length,
@@ -84,7 +85,8 @@ fn tripod_truss_3d_geometry_and_load_perturbations_match_closed_form() {
             "tripod strain energy",
         );
 
-        for element in &result.elements {
+        for (index, element) in result.elements.iter().enumerate() {
+            assert_eq!(element.index, index);
             assert_close(
                 element.length,
                 expected.member_length,

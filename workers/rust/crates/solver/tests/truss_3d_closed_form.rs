@@ -24,7 +24,8 @@ fn truss_3d_matches_symmetric_tripod_closed_form() {
     let expected_strain = expected_stress / youngs_modulus;
     let expected_energy = 3.0 * 0.5 * expected_stress * expected_strain * area * length;
 
-    for support in &result.nodes[0..3] {
+    for (index, support) in result.nodes[0..3].iter().enumerate() {
+        assert_eq!(support.index, index);
         assert_close(support.ux, 0.0, 1.0e-12);
         assert_close(support.uy, 0.0, 1.0e-12);
         assert_close(support.uz, 0.0, 1.0e-12);
@@ -39,7 +40,8 @@ fn truss_3d_matches_symmetric_tripod_closed_form() {
     assert_close(result.total_strain_energy, expected_energy, TOL);
     assert_apex_force_energy(result.total_strain_energy, load, apex.uz);
 
-    for element in &result.elements {
+    for (index, element) in result.elements.iter().enumerate() {
+        assert_eq!(element.index, index);
         assert_close(element.length, length, TOL);
         assert_close(element.axial_force, axial_force, TOL);
         assert_close(element.stress, expected_stress, TOL);
@@ -203,9 +205,20 @@ fn assert_truss_summary(result: &SolveTruss3dResult) {
     let mut max_stress = 0.0_f64;
     let mut max_energy_density = 0.0_f64;
     let mut total_strain_energy = 0.0_f64;
+    assert_eq!(result.nodes.len(), result.input.nodes.len());
+    assert_eq!(result.elements.len(), result.input.elements.len());
+    for (index, node) in result.nodes.iter().enumerate() {
+        let input = &result.input.nodes[index];
+        assert_eq!(node.index, index);
+        assert_eq!(node.id, input.id);
+        assert_close(node.x, input.x, TOL);
+        assert_close(node.y, input.y, TOL);
+        assert_close(node.z, input.z, TOL);
+    }
 
-    for element in &result.elements {
-        let input = &result.input.elements[element.index];
+    for (index, element) in result.elements.iter().enumerate() {
+        let input = &result.input.elements[index];
+        assert_eq!(element.index, index);
         assert_close(element.stress, input.youngs_modulus * element.strain, TOL);
         assert_close(element.axial_force, element.stress * input.area, TOL);
         assert_close(

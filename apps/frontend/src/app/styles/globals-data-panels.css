@@ -119,6 +119,36 @@
   color: var(--ink);
 }
 
+.field-label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.text-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 9px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 50%),
+    rgba(31, 35, 40, 0.92);
+  color: var(--ink);
+}
+
+.field-label .text-input,
+.form-field .text-input {
+  margin-top: 1px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 html[data-theme="graphite"] .form-grid input,
 html[data-theme="graphite"] .form-grid select,
 html[data-theme="graphite"] .form-grid textarea,
