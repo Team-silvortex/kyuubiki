@@ -67,6 +67,32 @@ fn modal_frame_2d_review_bundle_checks_cantilever_modes_and_shape_contract() {
     }
 }
 
+#[test]
+fn single_mode_request_uses_the_sparse_inverse_iteration_path() {
+    let result = solve_modal_frame_2d(&SolveModalFrame2dRequest {
+        nodes: vec![
+            node("fixed", 0.0, 0.0, true, true, true),
+            node("tip", 2.0, 0.0, false, false, false),
+        ],
+        elements: vec![ModalFrame2dElementInput {
+            id: "beam".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 8.333e-6,
+            section_modulus: 1.667e-4,
+            density: 7850.0,
+        }],
+        mode_count: Some(1),
+    })
+    .expect("sparse single-mode modal frame should solve");
+
+    assert_eq!(result.modes.len(), 1);
+    assert!(result.modes[0].eigenvalue_rad_s_squared > 0.0);
+    assert!(result.modes[0].participation_norm > 0.0);
+}
+
 fn node(id: &str, x: f64, y: f64, fix_x: bool, fix_y: bool, fix_rz: bool) -> Frame2dNodeInput {
     Frame2dNodeInput {
         id: id.to_string(),

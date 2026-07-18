@@ -20,9 +20,9 @@ use crate::{
         generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
     },
     generators_structural::{
-        generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_case,
-        generate_modal_frame_3d_case, generate_nonlinear_spring_1d_case,
-        generate_solid_tetra_3d_case, generate_spring_1d_case, generate_spring_2d_case,
+        generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_chain_case,
+        generate_modal_frame_3d_chain_case, generate_nonlinear_spring_1d_case,
+        generate_solid_tetra_3d_case, generate_spring_1d_case, generate_spring_2d_ladder_case,
         generate_spring_3d_case, generate_thermal_beam_1d_case,
     },
     generators_thermal_structural::{
@@ -264,7 +264,9 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::Spring2d => BenchmarkCase {
             id,
             family: "spring_2d",
-            workload: BenchmarkWorkload::Spring2d(generate_spring_2d_case()),
+            workload: BenchmarkWorkload::Spring2d(generate_spring_2d_ladder_case(
+                profile.axial_elements.saturating_add(1),
+            )),
         },
         BenchmarkFamily::Spring3d => BenchmarkCase {
             id,
@@ -332,12 +334,18 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::ModalFrame2d => BenchmarkCase {
             id,
             family: "modal_frame_2d",
-            workload: BenchmarkWorkload::ModalFrame2d(generate_modal_frame_2d_case()),
+            workload: BenchmarkWorkload::ModalFrame2d(generate_modal_frame_2d_chain_case(
+                profile.axial_elements,
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::ModalFrame3d => BenchmarkCase {
             id,
             family: "modal_frame_3d",
-            workload: BenchmarkWorkload::ModalFrame3d(generate_modal_frame_3d_case()),
+            workload: BenchmarkWorkload::ModalFrame3d(generate_modal_frame_3d_chain_case(
+                profile.axial_elements,
+                profile.space_frame.width,
+            )),
         },
         BenchmarkFamily::SolidTetra3d => BenchmarkCase {
             id,

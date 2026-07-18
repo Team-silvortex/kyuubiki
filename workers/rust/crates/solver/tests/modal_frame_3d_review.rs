@@ -66,6 +66,31 @@ fn modal_frame_3d_review_bundle_checks_cantilever_modes_and_shape_contract() {
     }
 }
 
+#[test]
+fn single_mode_request_uses_the_sparse_inverse_iteration_path() {
+    let result = solve_modal_frame_3d(&SolveModalFrame3dRequest {
+        nodes: vec![node("fixed", 0.0, true), node("tip", 2.0, false)],
+        elements: vec![ModalFrame3dElementInput {
+            id: "beam".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            shear_modulus: 80.0e9,
+            torsion_constant: 1.0e-5,
+            moment_of_inertia_y: 8.333e-6,
+            moment_of_inertia_z: 8.333e-6,
+            density: 7850.0,
+        }],
+        mode_count: Some(1),
+    })
+    .expect("sparse single-mode 3d modal frame should solve");
+
+    assert_eq!(result.modes.len(), 1);
+    assert!(result.modes[0].eigenvalue_rad_s_squared > 0.0);
+    assert!(result.modes[0].participation_norm > 0.0);
+}
+
 fn node(id: &str, x: f64, fixed: bool) -> Frame3dNodeInput {
     Frame3dNodeInput {
         id: id.to_string(),

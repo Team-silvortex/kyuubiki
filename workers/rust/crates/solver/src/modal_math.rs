@@ -9,28 +9,6 @@ pub(crate) fn ensure_dense_modal_size(dof_count: usize, label: &str) -> Result<(
     Ok(())
 }
 
-pub(crate) fn mass_normalized_stiffness(
-    stiffness: &[Vec<f64>],
-    mass: &[f64],
-    free_dofs: &[usize],
-    label: &str,
-) -> Result<Vec<Vec<f64>>, String> {
-    let size = free_dofs.len();
-    let mut reduced = vec![vec![0.0; size]; size];
-    for (row_index, &row_dof) in free_dofs.iter().enumerate() {
-        let row_mass = mass[row_dof];
-        if !(row_mass.is_finite() && row_mass > 0.0) {
-            return Err(format!("{label} free dof has non-positive mass"));
-        }
-        for (column_index, &column_dof) in free_dofs.iter().enumerate() {
-            let column_mass = mass[column_dof];
-            reduced[row_index][column_index] =
-                stiffness[row_dof][column_dof] / (row_mass.sqrt() * column_mass.sqrt());
-        }
-    }
-    Ok(reduced)
-}
-
 pub(crate) fn expand_mode_shape(
     vector: &[f64],
     mass: &[f64],

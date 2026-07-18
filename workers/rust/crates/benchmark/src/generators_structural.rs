@@ -122,22 +122,49 @@ pub(crate) fn generate_thermal_beam_1d_case(elements: usize) -> SolveThermalBeam
     SolveThermalBeam1dRequest { nodes, elements }
 }
 
-pub(crate) fn generate_spring_2d_case() -> SolveSpring2dRequest {
-    SolveSpring2dRequest {
-        nodes: vec![
-            spring_2d_node("s0", 0.0, 0.0, true, true, 0.0, 0.0),
-            spring_2d_node("s1", 1.0, 0.0, false, true, 0.0, 0.0),
-            spring_2d_node("s2", 1.0, 1.0, false, false, 1200.0, -600.0),
-            spring_2d_node("s3", 0.0, 1.0, true, false, 0.0, 0.0),
-        ],
-        elements: vec![
-            spring_2d_element("sp0", 0, 1, 25_000.0),
-            spring_2d_element("sp1", 1, 2, 18_000.0),
-            spring_2d_element("sp2", 2, 3, 22_000.0),
-            spring_2d_element("sp3", 3, 0, 18_000.0),
-            spring_2d_element("sp4", 0, 2, 12_000.0),
-        ],
+/// Generates a supported two-row spring lattice with diagonal bracing.
+/// Periodic supports bound each span's condition number while retaining a real 2D topology.
+pub(crate) fn generate_spring_2d_ladder_case(target_nodes: usize) -> SolveSpring2dRequest {
+    const SUPPORT_INTERVAL: usize = 64;
+    let columns = (target_nodes.max(4) / 2).max(2);
+    let nodes = (0..columns)
+        .flat_map(|column| {
+            [0, 1].into_iter().map(move |row| Spring2dNodeInput {
+                id: format!("sg-{column}-{row}"),
+                x: column as f64,
+                y: row as f64,
+                fix_x: column % SUPPORT_INTERVAL == 0,
+                fix_y: true,
+                load_x: if column % SUPPORT_INTERVAL == SUPPORT_INTERVAL - 1 {
+                    20.0
+                } else {
+                    0.0
+                },
+                load_y: 0.0,
+            })
+        })
+        .collect::<Vec<_>>();
+    let mut elements = Vec::with_capacity((columns - 1) * 4);
+    for column in 0..columns - 1 {
+        let left_top = column * 2;
+        let left_bottom = left_top + 1;
+        let right_top = left_top + 2;
+        let right_bottom = left_top + 3;
+        for (suffix, node_i, node_j) in [
+            ("top", left_top, right_top),
+            ("bottom", left_bottom, right_bottom),
+            ("diag-a", left_top, right_bottom),
+            ("diag-b", left_bottom, right_top),
+        ] {
+            elements.push(Spring2dElementInput {
+                id: format!("sg-{column}-{suffix}"),
+                node_i,
+                node_j,
+                stiffness: 48_000.0,
+            });
+        }
     }
+    SolveSpring2dRequest { nodes, elements }
 }
 
 pub(crate) fn generate_spring_3d_case() -> SolveSpring3dRequest {
@@ -181,36 +208,77 @@ pub(crate) fn generate_solid_tetra_3d_case() -> SolveSolidTetra3dRequest {
     }
 }
 
-pub(crate) fn generate_modal_frame_2d_case() -> SolveModalFrame2dRequest {
-    SolveModalFrame2dRequest {
-        nodes: vec![
-            frame_2d_node("m0", 0.0, 0.0, true),
-            frame_2d_node("m1", 2.0, 0.0, false),
-        ],
-        elements: vec![ModalFrame2dElementInput {
-            id: "me0".to_string(),
-            node_i: 0,
-            node_j: 1,
+pub(crate) fn generate_modal_frame_2d_chain_case(
+    segments: usize,
+    length: f64,
+) -> SolveModalFrame2dRequest {
+    let segments = segments.max(1);
+    let dx = length / segments as f64;
+    let nodes = (0..=segments)
+        .map(|index| Frame2dNodeInput {
+            id: format!("mf2n{index}"),
+            x: index as f64 * dx,
+            y: 0.0,
+            fix_x: index == 0,
+            // This benchmark isolates the axial modal branch of a frame chain.
+            fix_y: true,
+            fix_rz: true,
+            load_x: 0.0,
+            load_y: 0.0,
+            moment_z: 0.0,
+        })
+        .collect();
+    let elements = (0..segments)
+        .map(|index| ModalFrame2dElementInput {
+            id: format!("mf2e{index}"),
+            node_i: index,
+            node_j: index + 1,
             area: 0.01,
             youngs_modulus: 210.0e9,
             moment_of_inertia: 8.333e-6,
             section_modulus: 1.667e-4,
             density: 7850.0,
-        }],
-        mode_count: Some(3),
+        })
+        .collect();
+    SolveModalFrame2dRequest {
+        nodes,
+        elements,
+        mode_count: Some(1),
     }
 }
 
-pub(crate) fn generate_modal_frame_3d_case() -> SolveModalFrame3dRequest {
-    SolveModalFrame3dRequest {
-        nodes: vec![
-            frame_3d_node("m0", 0.0, true),
-            frame_3d_node("m1", 2.0, false),
-        ],
-        elements: vec![ModalFrame3dElementInput {
-            id: "m3e0".to_string(),
-            node_i: 0,
-            node_j: 1,
+pub(crate) fn generate_modal_frame_3d_chain_case(
+    segments: usize,
+    length: f64,
+) -> SolveModalFrame3dRequest {
+    let segments = segments.max(1);
+    let dx = length / segments as f64;
+    let nodes = (0..=segments)
+        .map(|index| Frame3dNodeInput {
+            id: format!("mf3n{index}"),
+            x: index as f64 * dx,
+            y: 0.0,
+            z: 0.0,
+            fix_x: index == 0,
+            // This benchmark isolates the axial modal branch of a space-frame chain.
+            fix_y: true,
+            fix_z: true,
+            fix_rx: true,
+            fix_ry: true,
+            fix_rz: true,
+            load_x: 0.0,
+            load_y: 0.0,
+            load_z: 0.0,
+            moment_x: 0.0,
+            moment_y: 0.0,
+            moment_z: 0.0,
+        })
+        .collect();
+    let elements = (0..segments)
+        .map(|index| ModalFrame3dElementInput {
+            id: format!("mf3e{index}"),
+            node_i: index,
+            node_j: index + 1,
             area: 0.01,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,
@@ -218,8 +286,12 @@ pub(crate) fn generate_modal_frame_3d_case() -> SolveModalFrame3dRequest {
             moment_of_inertia_y: 8.333e-6,
             moment_of_inertia_z: 8.333e-6,
             density: 7850.0,
-        }],
-        mode_count: Some(3),
+        })
+        .collect();
+    SolveModalFrame3dRequest {
+        nodes,
+        elements,
+        mode_count: Some(1),
     }
 }
 
@@ -234,40 +306,6 @@ fn beam_nodes<T>(elements: usize, mut build: impl FnMut(usize, f64, usize) -> T)
             )
         })
         .collect()
-}
-
-fn spring_2d_node(
-    id: &str,
-    x: f64,
-    y: f64,
-    fix_x: bool,
-    fix_y: bool,
-    load_x: f64,
-    load_y: f64,
-) -> Spring2dNodeInput {
-    Spring2dNodeInput {
-        id: id.to_string(),
-        x,
-        y,
-        fix_x,
-        fix_y,
-        load_x,
-        load_y,
-    }
-}
-
-fn spring_2d_element(
-    id: &str,
-    node_i: usize,
-    node_j: usize,
-    stiffness: f64,
-) -> Spring2dElementInput {
-    Spring2dElementInput {
-        id: id.to_string(),
-        node_i,
-        node_j,
-        stiffness,
-    }
 }
 
 fn spring_3d_node(
@@ -329,40 +367,5 @@ fn solid_tetra_3d_node(
         load_x: 0.0,
         load_y: 0.0,
         load_z,
-    }
-}
-
-fn frame_2d_node(id: &str, x: f64, y: f64, fixed: bool) -> Frame2dNodeInput {
-    Frame2dNodeInput {
-        id: id.to_string(),
-        x,
-        y,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_rz: fixed,
-        load_x: 0.0,
-        load_y: 0.0,
-        moment_z: 0.0,
-    }
-}
-
-fn frame_3d_node(id: &str, x: f64, fixed: bool) -> Frame3dNodeInput {
-    Frame3dNodeInput {
-        id: id.to_string(),
-        x,
-        y: 0.0,
-        z: 0.0,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_z: fixed,
-        fix_rx: fixed,
-        fix_ry: fixed,
-        fix_rz: fixed,
-        load_x: 0.0,
-        load_y: 0.0,
-        load_z: 0.0,
-        moment_x: 0.0,
-        moment_y: 0.0,
-        moment_z: 0.0,
     }
 }

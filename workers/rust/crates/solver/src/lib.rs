@@ -34,6 +34,7 @@ mod modal_frame_2d;
 mod modal_frame_3d;
 mod modal_frame_validation;
 mod modal_math;
+mod modal_sparse;
 mod nonlinear_spring_1d;
 mod nonlinear_spring_1d_validation;
 mod plane_2d;

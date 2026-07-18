@@ -41,7 +41,7 @@ impl SparseMatrix {
         }
     }
 
-    fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.rows.len()
     }
 
@@ -122,7 +122,7 @@ impl SparseMatrix {
             .unwrap_or(0.0)
     }
 
-    fn compress(&self, preconditioner: SpdPreconditioner) -> CompressedSparseMatrix {
+    pub(crate) fn compress(&self, preconditioner: SpdPreconditioner) -> CompressedSparseMatrix {
         let size = self.size();
         let mut row_offsets = Vec::with_capacity(size + 1);
         let mut lower_end_offsets = Vec::with_capacity(size);

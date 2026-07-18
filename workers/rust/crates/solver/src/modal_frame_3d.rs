@@ -2,9 +2,11 @@ use crate::frame_3d_math::{
     frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation, frame3d_transform,
     transform_frame3d_stiffness,
 };
+use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::modal_frame_validation::validate_modal_frame_3d_request;
-use crate::modal_math::{
-    ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs, mass_normalized_stiffness,
+use crate::modal_math::{ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs};
+use crate::modal_sparse::{
+    InverseIterationOptions, inverse_power_iteration, reduce_sparse_modal_system,
 };
 use kyuubiki_protocol::{
     ModalFrame3dModeResult, SolveModalFrame3dRequest, SolveModalFrame3dResult,
@@ -16,8 +18,7 @@ pub fn solve_modal_frame_3d(
     validate_modal_frame_3d_request(request)?;
 
     let dof_count = request.nodes.len() * 6;
-    ensure_dense_modal_size(dof_count, "modal frame 3d")?;
-    let mut stiffness = vec![vec![0.0; dof_count]; dof_count];
+    let mut stiffness = SparseMatrix::new(dof_count);
     let mut mass = vec![0.0; dof_count];
     let mut total_mass = 0.0;
 
@@ -44,7 +45,12 @@ pub fn solve_modal_frame_3d(
 
         for row in 0..12 {
             for column in 0..12 {
-                stiffness[map[row]][map[column]] += element_stiffness[row][column];
+                add_at(
+                    &mut stiffness,
+                    map[row],
+                    map[column],
+                    element_stiffness[row][column],
+                );
             }
         }
 
@@ -64,15 +70,26 @@ pub fn solve_modal_frame_3d(
     }
 
     let constrained = constrained_modal_frame_3d_dofs(request);
-    let free_dofs = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-    if free_dofs.is_empty() {
-        return Err("modal frame 3d must leave at least one free degree of freedom".to_string());
-    }
-
-    let reduced = mass_normalized_stiffness(&stiffness, &mass, &free_dofs, "modal frame 3d")?;
-    let eigenpairs = jacobi_eigenpairs(reduced);
+    let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
+    let free_dofs = sparse_system.free_dofs.clone();
+    let eigenpairs = if request.mode_count == Some(1) {
+        let options = InverseIterationOptions::default();
+        let pair = sparse_system
+            .operator
+            .smallest_tridiagonal_eigenpair(options.tolerance)
+            .unwrap_or_else(|| {
+                inverse_power_iteration(
+                    free_dofs.len(),
+                    options,
+                    |vector| sparse_system.operator.apply(vector),
+                    |rhs| sparse_system.solve_normalized_inverse(rhs),
+                )
+            })?;
+        vec![(pair.eigenvalue, pair.vector)]
+    } else {
+        ensure_dense_modal_size(dof_count, "modal frame 3d")?;
+        jacobi_eigenpairs(sparse_system.operator.dense_fallback_matrix()?)
+    };
     let mode_limit = request.mode_count.unwrap_or(6).max(1).min(eigenpairs.len());
 
     let modes = eigenpairs
