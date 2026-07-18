@@ -1,3 +1,4 @@
+use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
 };
@@ -12,55 +13,7 @@ pub fn solve_magnetostatic_bar_1d(
 ) -> Result<SolveMagnetostaticBar1dResult, String> {
     validate_request(request)?;
 
-    let dof_count = request.nodes.len();
-    let mut global_stiffness = SparseMatrix::new(dof_count);
-    let mut source_vector = vec![0.0; dof_count];
-
-    for (index, node) in request.nodes.iter().enumerate() {
-        source_vector[index] = node.magnetomotive_source;
-    }
-
-    for element in &request.elements {
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = (node_j.x - node_i.x).abs();
-        let permeance = element.permeability * element.area / length;
-        let local = [[permeance, -permeance], [-permeance, permeance]];
-        let map = [element.node_i, element.node_j];
-
-        for row in 0..2 {
-            for column in 0..2 {
-                add_at(
-                    &mut global_stiffness,
-                    map[row],
-                    map[column],
-                    local[row][column],
-                );
-            }
-        }
-    }
-
-    let prescribed = request
-        .nodes
-        .iter()
-        .enumerate()
-        .filter_map(|(index, node)| {
-            node.fix_magnetic_potential
-                .then_some((index, node.magnetic_potential))
-        })
-        .collect::<Vec<_>>();
-
-    let (reduced_stiffness, reduced_source, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
-    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
-
-    let mut magnetic_potentials = vec![0.0; dof_count];
-    for &(index, value) in &prescribed {
-        magnetic_potentials[index] = value;
-    }
-    for (index, &dof) in free.iter().enumerate() {
-        magnetic_potentials[dof] = reduced_potentials[index];
-    }
+    let magnetic_potentials = solve_magnetic_potentials(request)?;
 
     let nodes = request
         .nodes
@@ -135,4 +88,69 @@ pub fn solve_magnetostatic_bar_1d(
         max_flux_density,
         total_stored_energy,
     })
+}
+
+fn solve_magnetic_potentials(request: &SolveMagnetostaticBar1dRequest) -> Result<Vec<f64>, String> {
+    let node_count = request.nodes.len();
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| {
+            node.fix_magnetic_potential
+                .then_some((index, node.magnetic_potential))
+        })
+        .collect::<Vec<_>>();
+    let source_vector = request
+        .nodes
+        .iter()
+        .map(|node| node.magnetomotive_source)
+        .collect::<Vec<_>>();
+
+    if is_indexed_chain(
+        node_count,
+        request
+            .elements
+            .iter()
+            .map(|element| (element.node_i, element.node_j)),
+    ) {
+        let mut diagonal = vec![0.0; node_count];
+        let mut lower = vec![0.0; node_count - 1];
+        let mut upper = vec![0.0; node_count - 1];
+        for element in &request.elements {
+            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+            let permeance = element.permeability * element.area / length;
+            let left = element.node_i.min(element.node_j);
+            diagonal[element.node_i] += permeance;
+            diagonal[element.node_j] += permeance;
+            lower[left] -= permeance;
+            upper[left] -= permeance;
+        }
+        return solve_with_prescribed(&diagonal, &lower, &upper, &source_vector, &prescribed);
+    }
+
+    let mut global_stiffness = SparseMatrix::new(node_count);
+    for element in &request.elements {
+        let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+        let permeance = element.permeability * element.area / length;
+        for (row, column, value) in [
+            (element.node_i, element.node_i, permeance),
+            (element.node_i, element.node_j, -permeance),
+            (element.node_j, element.node_i, -permeance),
+            (element.node_j, element.node_j, permeance),
+        ] {
+            add_at(&mut global_stiffness, row, column, value);
+        }
+    }
+    let (reduced_stiffness, reduced_rhs, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+    let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
+    let mut values = vec![0.0; node_count];
+    for &(index, value) in &prescribed {
+        values[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        values[dof] = reduced_values[index];
+    }
+    Ok(values)
 }

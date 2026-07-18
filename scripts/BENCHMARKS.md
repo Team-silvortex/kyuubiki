@@ -75,6 +75,9 @@ Focused reference for benchmark and regression script entry points.
 - `PROFILE=1m MATRIX=thermal-core CASE=heat-plane-quad-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   runs the first one-million-node 2D thermal probe. Expect this to be
   solver-bound, with preconditioner and matrix-vector stages dominating.
+- Remote profile probes are capped at 900 seconds by default. Override this
+  deliberately with `REMOTE_TIMEOUT_SECONDS=<seconds>` for a reviewed long-run
+  case; the remote runner sends `SIGINT` before forcefully stopping a timeout.
 - benchmark JSON and table output include `hotspot_label`, `hotspot_elapsed_ms`,
   `hotspot_share_pct`, and `hotspot_hint`. When nested `solve_spd_*` stages are
   present, the hotspot prefers the leaf solver kernel over the outer

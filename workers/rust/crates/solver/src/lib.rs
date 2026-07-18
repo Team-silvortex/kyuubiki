@@ -6,6 +6,7 @@ mod bar_1d;
 mod bar_1d_validation;
 mod beam_1d;
 mod beam_1d_validation;
+mod chain_tridiagonal;
 mod dynamic_spring_1d_validation;
 mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_element;

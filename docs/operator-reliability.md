@@ -349,6 +349,12 @@ total energy linearly. Its retained regression also re-derives displacement,
 temperature-delta, von Mises stress, in-plane shear, thermal strain,
 element geometry area, strain-energy density, and total strain-energy summaries
 from public result fields.
+An independent triangle/quad refinement regression now applies the same fully
+restrained uniform temperature rise on 1x1, 2x2, 4x4, and 8x8 meshes. It keeps
+zero displacement, thermal strain, peak stress, energy density, and total
+strain energy invariant across both discretizations. This is a uniform-field
+thermoelastic proof point, not a claim for arbitrary coupled thermal boundary
+conditions.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
 
@@ -474,6 +480,10 @@ damping loss, element length, node coordinate/source passthrough, and material
 echo fields from node, element, and material fields. This does not claim
 branched duct networks, nonlinear acoustics, transient propagation, or 3D
 acoustic cavities.
+The fixed-pressure linear manufactured field also runs through 1, 2, 4, 8, and
+16 duct elements, preserving nodal pressure, pressure gradient, particle
+velocity, and wave number. It is a one-dimensional field-recovery check, not a
+claim of mesh convergence for resonant, branched, or transient acoustics.
 
 The advection-diffusion 1D bar is now qualified for the retained steady
 constant-coefficient transport scope. Its closed-form evidence checks
@@ -497,6 +507,18 @@ concentration gradient, `diffusive_flux = -D * grad(c)`, `advective_flux =
 velocity * c_avg`, `total_flux = diffusive_flux + advective_flux`, and the
 Peclet formula. This does not claim transient transport, nonlinear reaction,
 multidimensional flow, turbulent mixing, or arbitrary stabilization schemes.
+The zero-velocity manufactured linear concentration field now runs through
+1, 2, 4, 8, 16, and 32 elements. It preserves every nodal concentration,
+element gradient, diffusive flux, and total flux while keeping Peclet and
+advective flux at zero. This is a pure-diffusion refinement and conservation
+proof point; advection-dominant convergence remains separately scoped.
+
+For continuous, index-adjacent 1D chains, the heat, electrostatic,
+magnetostatic, advection-diffusion, and acoustic bar solvers use a constrained
+tridiagonal direct path. Branched, reordered, or otherwise non-chain inputs
+remain on their established sparse or dense fallback paths. This keeps the
+specialization topology-scoped while making million-node chain studies bounded
+by linear storage and solve work rather than iterative convergence.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
 permeance scope. Its closed-form evidence checks magnetic potential, field

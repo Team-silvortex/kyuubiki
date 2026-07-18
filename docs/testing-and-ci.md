@@ -398,6 +398,10 @@ Use these entrypoints:
 - `PROFILE=1m MATRIX=thermal-structural CASE=thermal-bar-1m REPEAT=1 ./scripts/run-benchmark-profile-remote.sh`
   Run the first exploratory one-million-node probe on `kyuubiki-lab`. Keep
   `1m` as a single-case lab stress tier for now, not a scheduled coverage gate.
+- `REMOTE_TIMEOUT_SECONDS=900` is the default safety budget for every remote
+  profile run. Use an explicit larger value only after the narrow probe has
+  established a reason to retain the server load; timeout requests `SIGINT`
+  before the final forced stop.
 
 Baseline and report surfaces:
 

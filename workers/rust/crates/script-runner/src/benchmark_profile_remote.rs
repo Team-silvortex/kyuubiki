@@ -18,6 +18,7 @@ struct Options {
     remote_dir: String,
     remote_host: String,
     remote_json_path: String,
+    remote_timeout_seconds: u64,
     report_only: bool,
     repeat: String,
     rustup_toolchain: String,
@@ -33,7 +34,7 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
     if !args.is_empty() {
         return Err("benchmark-profile-remote does not accept positional arguments".into());
     }
-    let options = Options::from_env(root);
+    let options = Options::from_env(root)?;
     std::fs::create_dir_all(&options.local_output_dir).map_err(|error| {
         format!(
             "failed to create {}: {error}",
@@ -91,7 +92,7 @@ pub(crate) fn run_benchmark_profile_remote(root: &Path, args: Vec<OsString>) -> 
 }
 
 impl Options {
-    fn from_env(root: &Path) -> Self {
+    fn from_env(root: &Path) -> RunnerResult<Self> {
         let profile = env::var("PROFILE").unwrap_or_else(|_| "200k".to_string());
         let matrix = env::var("MATRIX").unwrap_or_else(|_| "thermal-core".to_string());
         let case_filter = env::var("CASE")
@@ -119,7 +120,15 @@ impl Options {
             "LOCAL_JSON_PATH",
             local_output_dir.join(format!("{output_name}.json")),
         );
-        Self {
+        let remote_timeout_seconds = env::var("REMOTE_TIMEOUT_SECONDS")
+            .unwrap_or_else(|_| "900".to_string())
+            .parse::<u64>()
+            .map_err(|_| "REMOTE_TIMEOUT_SECONDS must be a positive integer".to_string())?;
+        if remote_timeout_seconds == 0 {
+            return Err("REMOTE_TIMEOUT_SECONDS must be greater than zero".to_string());
+        }
+
+        Ok(Self {
             case_filter,
             local_json_path,
             local_md_path: local_output_dir.join("README.md"),
@@ -130,6 +139,7 @@ impl Options {
             remote_dir,
             remote_host: env::var("KYUUBIKI_LAB_HOST").unwrap_or_else(|_| "kyuubiki-lab".into()),
             remote_json_path,
+            remote_timeout_seconds,
             report_only: env::var("REPORT_ONLY").unwrap_or_else(|_| "0".into()) == "1",
             repeat: env::var("REPEAT").unwrap_or_else(|_| "3".to_string()),
             rustup_toolchain: env::var("RUSTUP_TOOLCHAIN_OVERRIDE")
@@ -137,7 +147,7 @@ impl Options {
             solver_preconditioner: env::var("SOLVER_PRECONDITIONER")
                 .unwrap_or_else(|_| "auto".to_string()),
             sync_to_remote: env::var("SYNC_TO_REMOTE").unwrap_or_else(|_| "1".into()) == "1",
-        }
+        })
     }
 }
 
@@ -180,10 +190,11 @@ fn remote_command(options: &Options) -> String {
         .map(|case| format!(" --case {}", shell_escape(case)))
         .unwrap_or_default();
     format!(
-        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {} --progress{} > {}",
+        "set -euo pipefail; mkdir -p {}; cd {}/workers/rust; RUSTUP_TOOLCHAIN={} timeout --signal=INT --kill-after=30s {}s cargo run --release -q -p kyuubiki-benchmark -- --profile {} --matrix {} --repeat {} --format json --solver-preconditioner {} --progress{} > {}",
         shell_escape(&dirname(&options.remote_json_path)),
         shell_escape(&options.remote_dir),
         shell_escape(&options.rustup_toolchain),
+        options.remote_timeout_seconds,
         shell_escape(&options.profile),
         shell_escape(&options.matrix),
         shell_escape(&options.repeat),
@@ -228,6 +239,6 @@ fn print_usage() {
         "Usage:\n  ./scripts/kyuubiki benchmark-profile-remote\n\n\
 Runs one Rust benchmark profile/matrix on the shared lab machine without a\n\
 checked baseline, then copies JSON back and writes a Markdown summary.\n\n\
-Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  CASE\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  SOLVER_PRECONDITIONER (default: auto)\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  LOCAL_JSON_PATH\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n  REPORT_ONLY (1 regenerates local summary without SSH)\n"
+Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_BENCH_DIR\n  PROFILE\n  MATRIX\n  CASE\n  REPEAT\n  RUSTUP_TOOLCHAIN_OVERRIDE\n  SOLVER_PRECONDITIONER (default: auto)\n  REMOTE_TIMEOUT_SECONDS (default: 900)\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  LOCAL_JSON_PATH\n  REMOTE_OUTPUT_DIR\n  SYNC_TO_REMOTE\n  REPORT_ONLY (1 regenerates local summary without SSH)\n"
     );
 }
