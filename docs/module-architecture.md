@@ -224,7 +224,6 @@ The flow keeps future growth boring in the good way:
 Owned paths:
 
 - `apps/hub-gui`
-- `apps/desktop-shared`
 - `assets/brand`
 
 Responsibilities:
@@ -237,6 +236,23 @@ Responsibilities:
 
 Hub should not own workflow semantics, solver execution, or deployment
 internals. It is the operator's system shell.
+
+### Desktop Shared UI
+
+Owned paths:
+
+- `apps/desktop-shared`
+
+Responsibilities:
+
+- source-of-truth CSS, typed bridge helpers, and shared runtime-status UI
+- deterministic mirrors for Hub, Workbench, and Installer local WebView assets
+- shared language-pack and brand mirror validation
+- stable cross-shell automation anchors
+
+This module does not own a Tauri application or a backend API. Each desktop
+application remains independently packaged and owns its local `ui/` mirror;
+the shared module owns the source and the synchronization contract only.
 
 ### Workbench
 

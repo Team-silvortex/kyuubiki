@@ -1,0 +1,8 @@
+{
+  "schema_version": "kyuubiki.language-pack-fragment/v1",
+  "language": "fr",
+  "targetSurface": "workbench",
+  "batch": "extended-02",
+  "updatedAt": "2026-07-19T00:00:00.000Z",
+  "overrides": {}
+}

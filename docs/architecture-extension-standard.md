@@ -39,6 +39,11 @@ contract evidence, the tensor reports `weak_evidence`.
 Do not create a top-level module for an internal service face. Use a service
 surface when the code and ownership remain inside an existing module.
 
+A shared source layer that is consumed by independently packaged product shells
+is a module when it owns its own synchronization, validation, and automation
+contract. `desktop-shared-ui` is the reference: it does not merge the three
+desktop applications, but it owns their common source assets and mirror gate.
+
 ## Adding A Function Paradigm
 
 1. Add the paradigm to `module-function-coverage-matrix.json`.

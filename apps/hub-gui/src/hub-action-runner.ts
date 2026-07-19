@@ -28,6 +28,9 @@ type HubActionRunnerContext = UnknownRecord & {
   elements: {
     actionState: Element | null;
     workloadImportInput?: HTMLElement | null;
+    projectBundlePath?: HTMLInputElement | null;
+    projectBundleOutPath?: HTMLInputElement | null;
+    projectBundleComparePath?: HTMLInputElement | null;
   };
   setEventMessage?: (message: string, tag?: string) => void;
   setOperationOutput: (value: unknown) => void;
@@ -127,9 +130,9 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
         setProjectsPage: context.setProjectsPage,
         setBusy: context.setBusy,
         runProjectBundleAction: context.runProjectBundleAction,
-        currentProjectBundlePayload,
-        currentProjectBundleOutputPayload,
-        currentProjectBundleComparePayload,
+        currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
+        currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
+        currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),
         setProjectBundleOutput: context.setProjectBundleOutput,
       }))) {
         handled = true;

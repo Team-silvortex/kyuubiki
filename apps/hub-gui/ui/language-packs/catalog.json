@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.language-pack-catalog/v1",
   "line": "moxi 2.x",
-  "shipping_version": "2.0.0",
+  "shipping_version": "2.2.8",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "packs": [
     {

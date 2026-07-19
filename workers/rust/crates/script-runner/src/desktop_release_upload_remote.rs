@@ -2,17 +2,15 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::desktop::host_platform;
+use crate::desktop::{Platform, desktop_target_cache_dir, host_platform};
 use crate::remote_host;
 
 type RunnerResult<T> = Result<T, String>;
 
 #[derive(Clone, Copy)]
-enum ReleasePlatform {
-    Macos,
-    Linux,
-    Windows,
+enum ReleaseTarget {
     All,
+    Platform(Platform),
 }
 
 pub(crate) fn run_desktop_release_upload_remote(
@@ -23,14 +21,14 @@ pub(crate) fn run_desktop_release_upload_remote(
         print_help();
         return Ok(0);
     }
-    let platform = args
+    let target = args
         .first()
         .and_then(|value| value.to_str())
-        .map(parse_platform)
+        .map(parse_release_target)
         .transpose()?
-        .unwrap_or_else(default_platform);
-    let config = UploadConfig::from_env(root, platform)?;
-    let paths = collect_existing_paths(root, config.version.as_str(), platform);
+        .unwrap_or_else(|| ReleaseTarget::Platform(host_platform()));
+    let config = UploadConfig::from_env(root)?;
+    let paths = collect_existing_paths(root, config.version.as_str(), target);
     if paths.is_empty() {
         eprintln!("no local release outputs were found to upload");
         return Ok(1);
@@ -65,7 +63,7 @@ pub(crate) fn run_desktop_release_upload_remote(
     }
 
     if config.purge_local {
-        purge_local_outputs(root, platform)?;
+        purge_local_outputs(root, target)?;
     }
 
     println!("uploaded release artifacts for version {}", config.version);
@@ -89,7 +87,7 @@ struct UploadConfig {
 }
 
 impl UploadConfig {
-    fn from_env(root: &Path, platform: ReleasePlatform) -> RunnerResult<Self> {
+    fn from_env(root: &Path) -> RunnerResult<Self> {
         let version = std::env::var("KYUUBIKI_RELEASE_VERSION")
             .ok()
             .filter(|value| !value.trim().is_empty())
@@ -99,7 +97,6 @@ impl UploadConfig {
                 "unable to determine release version from deploy/update-channels.json".into(),
             );
         }
-        let _ = platform;
         Ok(Self {
             remote_host: std::env::var("KYUUBIKI_RELEASE_REMOTE_HOST")
                 .unwrap_or_else(|_| "kyuubiki-lab".to_string()),
@@ -120,25 +117,17 @@ impl UploadConfig {
     }
 }
 
-fn parse_platform(value: &str) -> RunnerResult<ReleasePlatform> {
+fn parse_release_target(value: &str) -> RunnerResult<ReleaseTarget> {
     match value {
-        "macos" => Ok(ReleasePlatform::Macos),
-        "linux" => Ok(ReleasePlatform::Linux),
-        "windows" => Ok(ReleasePlatform::Windows),
-        "all" => Ok(ReleasePlatform::All),
+        "macos" => Ok(ReleaseTarget::Platform(Platform::Macos)),
+        "linux" => Ok(ReleaseTarget::Platform(Platform::Linux)),
+        "windows" => Ok(ReleaseTarget::Platform(Platform::Windows)),
+        "all" => Ok(ReleaseTarget::All),
         other => Err(format!("unsupported platform: {other}")),
     }
 }
 
-fn default_platform() -> ReleasePlatform {
-    match host_platform().as_str() {
-        "macos" => ReleasePlatform::Macos,
-        "linux" => ReleasePlatform::Linux,
-        _ => ReleasePlatform::Windows,
-    }
-}
-
-fn collect_existing_paths(root: &Path, version: &str, platform: ReleasePlatform) -> Vec<PathBuf> {
+fn collect_existing_paths(root: &Path, version: &str, target: ReleaseTarget) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     for path in [
         "releases/index.json".to_string(),
@@ -153,24 +142,28 @@ fn collect_existing_paths(root: &Path, version: &str, platform: ReleasePlatform)
     ] {
         append_if_exists(root, &mut paths, path);
     }
-    for target in expanded_platforms(platform) {
-        append_if_exists(root, &mut paths, format!("dist/{}", target.name()));
-        collect_bundle_paths(root, &mut paths, target);
+    for platform in expanded_platforms(target) {
+        append_if_exists(root, &mut paths, format!("dist/{}", platform.as_str()));
+        collect_bundle_paths(root, &mut paths, platform);
     }
     paths
 }
 
-fn collect_bundle_paths(root: &Path, paths: &mut Vec<PathBuf>, platform: ReleasePlatform) {
-    for subdir in bundle_subdirs(platform) {
-        append_if_exists(
-            root,
-            paths,
-            format!(
-                "target/desktop-cache/{}/release/bundle/{subdir}",
-                platform.name()
-            ),
-        );
+fn collect_bundle_paths(root: &Path, paths: &mut Vec<PathBuf>, platform: Platform) {
+    for subdir in platform.bundle_subdirs() {
+        let bundle_path = desktop_target_cache_dir(root, platform)
+            .join("release")
+            .join("bundle")
+            .join(subdir);
+        append_if_exists(root, paths, workspace_relative_path(root, &bundle_path));
     }
+}
+
+fn workspace_relative_path(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 fn append_if_exists(root: &Path, paths: &mut Vec<PathBuf>, relative: String) {
@@ -179,34 +172,23 @@ fn append_if_exists(root: &Path, paths: &mut Vec<PathBuf>, relative: String) {
     }
 }
 
-fn expanded_platforms(platform: ReleasePlatform) -> Vec<ReleasePlatform> {
-    match platform {
-        ReleasePlatform::All => vec![
-            ReleasePlatform::Macos,
-            ReleasePlatform::Linux,
-            ReleasePlatform::Windows,
-        ],
-        other => vec![other],
+fn expanded_platforms(target: ReleaseTarget) -> Vec<Platform> {
+    match target {
+        ReleaseTarget::All => Platform::all().to_vec(),
+        ReleaseTarget::Platform(platform) => vec![platform],
     }
 }
 
-fn bundle_subdirs(platform: ReleasePlatform) -> &'static [&'static str] {
-    match platform {
-        ReleasePlatform::Macos => &["macos", "dmg"],
-        ReleasePlatform::Linux => &["appimage", "deb", "rpm"],
-        ReleasePlatform::Windows => &["msi", "nsis"],
-        ReleasePlatform::All => &[],
-    }
-}
-
-fn purge_local_outputs(root: &Path, platform: ReleasePlatform) -> RunnerResult<()> {
-    for target in expanded_platforms(platform) {
-        remove_dir_if_exists(root.join(format!("dist/{}", target.name())))?;
-        for subdir in bundle_subdirs(target) {
-            remove_dir_if_exists(root.join(format!(
-                "target/desktop-cache/{}/release/bundle/{subdir}",
-                target.name()
-            )))?;
+fn purge_local_outputs(root: &Path, target: ReleaseTarget) -> RunnerResult<()> {
+    for platform in expanded_platforms(target) {
+        remove_dir_if_exists(root.join(format!("dist/{}", platform.as_str())))?;
+        for subdir in platform.bundle_subdirs() {
+            remove_dir_if_exists(
+                desktop_target_cache_dir(root, platform)
+                    .join("release")
+                    .join("bundle")
+                    .join(subdir),
+            )?;
         }
     }
     Ok(())
@@ -358,17 +340,6 @@ fn release_remote_password() -> RunnerResult<Option<String>> {
     Ok(password)
 }
 
-impl ReleasePlatform {
-    fn name(self) -> &'static str {
-        match self {
-            ReleasePlatform::Macos => "macos",
-            ReleasePlatform::Linux => "linux",
-            ReleasePlatform::Windows => "windows",
-            ReleasePlatform::All => "all",
-        }
-    }
-}
-
 fn print_help() {
     println!(
         "Usage:\n  ./scripts/kyuubiki desktop-release-upload-remote [macos|linux|windows|all]\n  \
@@ -385,4 +356,49 @@ KYUUBIKI_RELEASE_REMOTE_RSYNC_BIN Override rsync binary. Default: rsync\n  \
 KYUUBIKI_RELEASE_REMOTE_SSH_OPTS Extra SSH options\n  \
 PURGE_LOCAL                    Set to 1 to delete uploaded bundle outputs"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_release_target_expands_to_the_shared_platform_set() {
+        assert_eq!(
+            expanded_platforms(ReleaseTarget::All),
+            vec![Platform::Macos, Platform::Linux, Platform::Windows]
+        );
+    }
+
+    #[test]
+    fn bundle_collection_keeps_shared_cache_paths_relative_to_the_workspace() {
+        let root = unique_temp_dir();
+        let bundle_dir = desktop_target_cache_dir(&root, Platform::Linux)
+            .join("release")
+            .join("bundle")
+            .join("deb");
+        std::fs::create_dir_all(&bundle_dir).unwrap();
+
+        let mut paths = Vec::new();
+        collect_bundle_paths(&root, &mut paths, Platform::Linux);
+
+        assert_eq!(
+            paths,
+            vec![PathBuf::from(
+                "target/desktop-cache/linux/release/bundle/deb"
+            )]
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    fn unique_temp_dir() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "kyuubiki-desktop-release-upload-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ))
+    }
 }

@@ -34,9 +34,9 @@ Those belong to:
 | `apps/frontend` | browser workbench | `make build-frontend` | `apps/frontend/.next` |
 | `apps/web` | Phoenix orchestrator / control plane | `make build-orchestrator` | `apps/web/_build` |
 | `workers/rust/crates/cli` | headless Rust solver agent | `make build-agent` | `workers/rust/target/release/kyuubiki-cli` |
-| `apps/hub-gui` | Tauri desktop hub shell | `make build-hub-gui` | `apps/hub-gui/src-tauri/target` |
-| `apps/installer-gui` | Tauri installer shell | `make build-installer-gui` | `apps/installer-gui/src-tauri/target` |
-| `apps/workbench-gui` | Tauri desktop workbench shell | `make build-workbench-gui` | `apps/workbench-gui/src-tauri/target` |
+| `apps/hub-gui` | Tauri desktop hub shell | `make build-hub-gui` | `target/desktop-cache/<platform>` |
+| `apps/installer-gui` | Tauri installer shell | `make build-installer-gui` | `target/desktop-cache/<platform>` |
+| `apps/workbench-gui` | Tauri desktop workbench shell | `make build-workbench-gui` | `target/desktop-cache/<platform>` |
 | `workers/rust/crates/installer` | release staging / portable layout generator | `make package-runtime` | `dist/<platform>` |
 
 ## Build entry points
@@ -78,7 +78,8 @@ Use these commands when building deployable layouts:
 - `make desktop-stage PLATFORM=macos|linux|windows|all`
   Stages the release scaffold and desktop manifests under `dist/<platform>`
 - `make desktop-build-host`
-  Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host
+  Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host using
+  one shared, platform-scoped Cargo cache
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -208,8 +209,9 @@ Environment overrides:
   Optional SSH flags. Defaults to `-o StrictHostKeyChecking=yes`. Use an
   explicit temporary override only for disposable bootstrap hosts.
 - `PURGE_LOCAL=1`
-  Removes uploaded local `dist/<platform>` trees and Tauri `target/release/bundle`
-  directories for the selected platform after a successful upload.
+  Removes uploaded local `dist/<platform>` trees and shared
+  `target/desktop-cache/<platform>/release/bundle` directories for the selected platform after
+  a successful upload.
 
 This keeps the release source-of-truth on the remote server while preserving
 the local repository as the place where metadata is authored and generated.
@@ -349,6 +351,15 @@ Desktop packaging now follows a simple rule:
 That keeps `macos`, `linux`, and `windows` deployment paths visible and
 manageable even when you are not cross-compiling on the current machine.
 
+### Shared desktop build boundary
+
+Hub, Workbench, and Installer remain three independent Tauri applications with
+their own manifests, UI trees, bundle identities, and installation targets.
+They share only Rust compilation intermediates at
+`target/desktop-cache/<platform>`. The platform segment prevents macOS, Linux,
+and Windows artifacts from contaminating one another, while the shared cache
+avoids compiling common Tauri and Kyuubiki crates three times on the same host.
+
 ## Recommended operator flow
 
 When packaging desktop deliverables, the smoothest path is now:
@@ -374,7 +385,7 @@ to see:
 - whether `dist/<platform>` scaffolds are already present
 - whether each desktop app has a staged manifest
 - whether required icon inputs are ready for each platform
-- whether host-native Tauri bundle directories already exist
+- whether each platform's shared Cargo cache and host-native Tauri bundle directories already exist
 - which next command makes sense from the current state
 
 ## Recommended desktop release flow

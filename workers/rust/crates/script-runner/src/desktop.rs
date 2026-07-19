@@ -10,7 +10,7 @@ pub enum DesktopApp {
     Workbench,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Platform {
     Linux,
     Macos,
@@ -61,7 +61,7 @@ pub fn run_desktop_build(
 pub fn run_package_desktop(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
     match parse_desktop_target(rest.first())? {
         DesktopTarget::All => {
-            for platform in all_platforms() {
+            for platform in Platform::all() {
                 let stage = stage_desktop_platform(paths, platform)?;
                 if stage != 0 {
                     return Ok(stage);
@@ -89,7 +89,7 @@ pub fn run_package_desktop(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
 pub fn run_desktop_stage(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
     match parse_desktop_target(rest.first())? {
         DesktopTarget::All => {
-            for platform in all_platforms() {
+            for platform in Platform::all() {
                 let status = stage_desktop_platform(paths, platform)?;
                 if status != 0 {
                     return Ok(status);
@@ -126,7 +126,7 @@ pub fn run_desktop_release(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
 pub fn run_desktop_status(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
     match parse_desktop_target(rest.first())? {
         DesktopTarget::All => {
-            for platform in all_platforms() {
+            for platform in Platform::all() {
                 print_desktop_status(paths, platform);
             }
         }
@@ -142,7 +142,7 @@ pub fn run_desktop_verify(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResul
             if status != 0 {
                 return Ok(status);
             }
-            for platform in all_platforms() {
+            for platform in Platform::all() {
                 verify_desktop_stage(paths, platform)?;
                 verify_desktop_icons(paths, platform)?;
             }
@@ -166,6 +166,10 @@ pub fn host_platform() -> Platform {
 }
 
 impl Platform {
+    pub fn all() -> [Self; 3] {
+        [Self::Macos, Self::Linux, Self::Windows]
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Platform::Linux => "linux",
@@ -173,6 +177,20 @@ impl Platform {
             Platform::Windows => "windows",
         }
     }
+
+    pub fn bundle_subdirs(self) -> &'static [&'static str] {
+        match self {
+            Self::Macos => &["macos", "dmg"],
+            Self::Linux => &["appimage", "deb", "rpm"],
+            Self::Windows => &["msi", "nsis"],
+        }
+    }
+}
+
+pub fn desktop_target_cache_dir(root: &Path, platform: Platform) -> std::path::PathBuf {
+    root.join("target")
+        .join("desktop-cache")
+        .join(platform.as_str())
 }
 
 fn run_host_desktop_build(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
@@ -195,7 +213,7 @@ fn run_desktop_tauri_command<I>(
 where
     I: IntoIterator<Item = OsString>,
 {
-    let target_dir = desktop_target_cache_dir(paths, host_platform());
+    let target_dir = desktop_target_cache_dir(&paths.root, host_platform());
     let target_dir_text = target_dir
         .to_str()
         .ok_or_else(|| format!("desktop target path is not UTF-8: {}", target_dir.display()))?;
@@ -209,14 +227,6 @@ where
     run_with_env(cwd, program, args, &[("CARGO_TARGET_DIR", target_dir_text)])
 }
 
-fn desktop_target_cache_dir(paths: &RepoPaths, platform: Platform) -> std::path::PathBuf {
-    paths
-        .root
-        .join("target")
-        .join("desktop-cache")
-        .join(platform.as_str())
-}
-
 fn stage_desktop_platform(paths: &RepoPaths, platform: Platform) -> RunnerResult<u8> {
     run_installer(
         paths,
@@ -227,7 +237,7 @@ fn stage_desktop_platform(paths: &RepoPaths, platform: Platform) -> RunnerResult
 
 fn print_desktop_status(paths: &RepoPaths, platform: Platform) {
     let dist_root = paths.root.join("dist").join(platform.as_str());
-    let cache_root = desktop_target_cache_dir(paths, platform);
+    let cache_root = desktop_target_cache_dir(&paths.root, platform);
     println!("platform: {}", platform.as_str());
     println!(
         "  runtime stage: {}",
@@ -365,10 +375,6 @@ fn desktop_apps() -> [DesktopApp; 3] {
         DesktopApp::Installer,
         DesktopApp::Workbench,
     ]
-}
-
-fn all_platforms() -> [Platform; 3] {
-    [Platform::Macos, Platform::Linux, Platform::Windows]
 }
 
 fn required_icon_extensions(platform: Platform) -> &'static [&'static str] {

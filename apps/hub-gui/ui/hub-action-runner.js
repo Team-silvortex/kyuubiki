@@ -52,7 +52,6 @@ export function createHubActionRunner(context) {
                 setProjectsPage: context.setProjectsPage,
                 setBusy: context.setBusy,
                 runProjectBundleAction: context.runProjectBundleAction,
-                // Payload helpers require the live project-bundle controls.
                 currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
                 currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
                 currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),

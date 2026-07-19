@@ -357,6 +357,22 @@ const frontendCatalogTest = spawnSync(
   },
 );
 
+const frontendCatalogDataCheck = spawnSync(
+  "node",
+  ["./scripts/build-workbench-language-pack-catalog.mjs", "--check"],
+  { cwd: repoRoot, encoding: "utf8" },
+);
+
+if (frontendCatalogDataCheck.status !== 0) {
+  fail(
+    [
+      "apps/frontend/src/components/workbench/workbench-language-pack-catalog-data.ts is stale",
+      frontendCatalogDataCheck.stdout.trim(),
+      frontendCatalogDataCheck.stderr.trim(),
+    ].filter(Boolean).join("\n"),
+  );
+}
+
 if (frontendCatalogTest.status !== 0) {
   fail(
     [

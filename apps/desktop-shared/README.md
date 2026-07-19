@@ -41,7 +41,10 @@ Current shared source files:
   Generated JavaScript runtime status renderer consumed by desktop shells.
 - `scripts/sync-desktop-shared.mjs`
   Compiles shared TypeScript, then refreshes lightweight app-local wrappers plus
-  the canonical brand manifest into each desktop app.
+  the canonical brand manifest into each desktop app. Run it with `--check` to
+  compile in a temporary directory and verify generated files, app-local
+  mirrors, language packs, installer styling, and stale mirror entries without
+  writing product assets.
 
 Canonical brand data still lives under:
 

@@ -35,6 +35,20 @@
     ],
     "validation": [
       {
+        "id": "desktop-shared-asset-mirror-contract",
+        "files": [
+          "apps/desktop-shared/README.md",
+          "apps/desktop-shared/scripts/sync-desktop-shared.mjs",
+          "config/architecture/module-topology.json"
+        ],
+        "required_text": [
+          "source-of-truth frontend assets",
+          "--check",
+          "desktop-shared-ui",
+          "shared_asset_mirror_drift"
+        ]
+      },
+      {
         "id": "operator-qualification-readiness",
         "files": [
           "config/operator-qualification-roadmap.json",

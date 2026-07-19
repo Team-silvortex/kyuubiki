@@ -209,6 +209,7 @@ The tensor is the three-axis review map:
 - `apps/frontend`: browser Workbench
 - `apps/workbench-gui`: native Workbench wrapper
 - `apps/installer-gui`: Installer desktop shell
+- `apps/desktop-shared`: source-of-truth UI assets synchronized into the three independent desktop shells
 - `apps/web`: Orchestra control plane
 - `workers/rust/crates/protocol`: shared runtime contracts
 - `workers/rust/crates/cli`: Rust agent and CLI process

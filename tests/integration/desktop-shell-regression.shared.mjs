@@ -497,7 +497,14 @@ async function assertLanguageChange(page, language) {
   assert.equal(await page.locator("#shell-language-select").inputValue(), language);
 }
 
-async function assertActionInvokes(page, action, command, guardedAction, selector) {
+async function assertActionInvokes(
+  page,
+  action,
+  command,
+  guardedAction,
+  selector,
+  { acceptConfirmation = false } = {},
+) {
   const before = await page.evaluate(
     ({ expectedCommand, expectedAction }) =>
       (window.__mockInvocations || []).filter(
@@ -510,6 +517,9 @@ async function assertActionInvokes(page, action, command, guardedAction, selecto
   const button = selector
     ? page.locator(selector)
     : page.locator(`button[data-action="${action}"]:visible`).first();
+  if (acceptConfirmation) {
+    page.once("dialog", (dialog) => dialog.accept());
+  }
   await button.click();
   try {
     await page.waitForFunction(
@@ -609,6 +619,39 @@ export async function assertHubRegression(page, viewport) {
     "project_bundle_validate",
     undefined,
     "#bundles-action-validate",
+  );
+  await page.locator("#project-bundle-out-path").fill("/tmp/ui-output.kyuubiki");
+  await page.locator("#project-bundle-compare-path").fill("/tmp/ui-compare.kyuubiki");
+  await assertActionInvokes(
+    page,
+    "project-normalize",
+    "guarded_mutation_action",
+    "project_bundle_normalize",
+    "#bundles-action-normalize",
+    { acceptConfirmation: true },
+  );
+  await assertActionInvokes(
+    page,
+    "project-unpack",
+    "guarded_mutation_action",
+    "project_bundle_unpack",
+    "#bundles-action-unpack",
+    { acceptConfirmation: true },
+  );
+  await assertActionInvokes(
+    page,
+    "project-pack",
+    "guarded_mutation_action",
+    "project_bundle_pack",
+    "#bundles-action-pack",
+    { acceptConfirmation: true },
+  );
+  await assertActionInvokes(
+    page,
+    "project-diff",
+    "project_bundle_diff",
+    undefined,
+    "#bundles-action-diff",
   );
 
   await assertTauriInvocations(page, ["hub_environment", "hub_regression_gate_report"]);

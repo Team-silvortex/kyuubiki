@@ -1,6 +1,6 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
-.PHONY: check-language-packs check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
+.PHONY: check-language-packs report-full-language-pack-coverage check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
@@ -97,6 +97,24 @@ check-native-script-audit:
 
 check-language-packs:
 	@$(ENTRYPOINT) validate-language-packs
+
+report-full-language-pack-coverage:
+	@node ./scripts/report-full-language-pack-coverage.mjs
+
+check-full-language-pack-coverage:
+	@node ./scripts/report-full-language-pack-coverage.mjs --strict
+
+check-language-pack-coverage:
+	@test -n "$(LANGUAGE)" || (echo "LANGUAGE is required"; exit 2)
+	@node ./scripts/report-full-language-pack-coverage.mjs --strict-language "$(LANGUAGE)"
+
+export-language-pack-translation-batch:
+	@test -n "$(LANGUAGE)" && test -n "$(BATCH)" || (echo "LANGUAGE and BATCH are required"; exit 2)
+	@node ./scripts/report-full-language-pack-coverage.mjs --language "$(LANGUAGE)" --batch "$(BATCH)" --template-out "$${OUT:-tmp/language-pack-translation-batches/$(LANGUAGE)-$(BATCH).json}"
+
+apply-language-pack-translation-batch:
+	@test -n "$(INPUT)" || (echo "INPUT is required"; exit 2)
+	@node ./scripts/report-full-language-pack-coverage.mjs --apply-from "$(INPUT)"
 
 check-ui-automation-contract:
 	@$(ENTRYPOINT) check-ui-automation-contract --self-test

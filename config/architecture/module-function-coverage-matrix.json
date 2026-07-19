@@ -25,6 +25,11 @@
       "security",
       "deployment_update"
     ],
+    "desktop-shared-ui": [
+      "product_surface",
+      "validation",
+      "security"
+    ],
     "workbench-shell": [
       "product_surface",
       "workflow_composition",
@@ -97,6 +102,11 @@
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered"
+    },
+    "desktop-shared-ui": {
+      "product_surface": "covered",
+      "validation": "covered",
+      "security": "covered"
     },
     "workbench-shell": {
       "product_surface": "covered",

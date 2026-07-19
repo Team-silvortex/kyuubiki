@@ -28,6 +28,11 @@
           "scope": "local"
         },
         {
+          "id": "desktop-shared-mirror",
+          "command": "node apps/desktop-shared/scripts/sync-desktop-shared.mjs --check",
+          "scope": "local"
+        },
+        {
           "id": "ui-mechanical-smoke",
           "command": "make test-integration-ui-mechanical",
           "scope": "integration"
@@ -315,11 +320,11 @@
       "summary": "Desktop entrypoint, workload overview, docs shelf, runtime posture, and navigation shell.",
       "owned_paths": [
         "apps/hub-gui",
-        "apps/desktop-shared",
         "assets"
       ],
       "depends_on": [
-        "contracts"
+        "contracts",
+        "desktop-shared-ui"
       ],
       "benchmark_lanes": [
         "ui_startup",
@@ -336,6 +341,29 @@
       ]
     },
     {
+      "id": "desktop-shared-ui",
+      "layer": "product_shell",
+      "summary": "Source-of-truth desktop UI assets, typed bridge helpers, language-pack mirrors, and cross-shell automation anchors.",
+      "owned_paths": [
+        "apps/desktop-shared"
+      ],
+      "depends_on": [
+        "contracts"
+      ],
+      "benchmark_lanes": [
+        "ui_startup"
+      ],
+      "security_lanes": [
+        "ui_boundary",
+        "data_contract"
+      ],
+      "risk_tags": [
+        "shared_asset_mirror_drift",
+        "language_pack_drift",
+        "automation_anchor_regression"
+      ]
+    },
+    {
       "id": "workbench-shell",
       "layer": "product_shell",
       "summary": "Project workflow UX, operator graph authoring, study setup, result inspection, and WebView automation.",
@@ -345,7 +373,8 @@
       ],
       "depends_on": [
         "contracts",
-        "sdk-headless"
+        "sdk-headless",
+        "desktop-shared-ui"
       ],
       "benchmark_lanes": [
         "ui_startup",
@@ -374,7 +403,8 @@
       ],
       "depends_on": [
         "contracts",
-        "runtime-installer"
+        "runtime-installer",
+        "desktop-shared-ui"
       ],
       "benchmark_lanes": [
         "ui_startup",

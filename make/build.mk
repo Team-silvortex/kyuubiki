@@ -1,7 +1,7 @@
 .PHONY: build-frontend build-orchestrator build-agent
 .PHONY: package-runtime package-desktop package
 .PHONY: operator-package-preflight operator-package-dynamic-smoke check-operator-package-dynamic-smoke sync-desktop-shared
-.PHONY: build-installation-docs build-update-catalog
+.PHONY: build-installation-docs build-update-catalog build-workbench-language-pack-catalog
 
 build-frontend:
 	@$(ENTRYPOINT) build-frontend
@@ -40,3 +40,6 @@ build-installation-docs:
 
 build-update-catalog:
 	@$(ENTRYPOINT) build-update-catalog
+
+build-workbench-language-pack-catalog:
+	@node ./scripts/build-workbench-language-pack-catalog.mjs

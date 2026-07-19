@@ -195,13 +195,17 @@ export function bindHubAppEvents({
     answerWithLocalGuide();
   });
   
-  for (const button of document.querySelectorAll("[data-action]")) {
-    button.addEventListener("click", async () => {
-      window.__kyuubikiHubDomClickAt = Date.now();
-      setEventMessage?.(`button click: ${button.dataset.action}`, "dom:click");
-      await runAction(button.dataset.action);
-    });
-  }
+  // Project, guide, and assistant cards are mounted after startup. Delegate once
+  // so their actions share the same backend path as controls present at boot.
+  document.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.("[data-action]");
+    if (!button || button.disabled) {
+      return;
+    }
+    window.__kyuubikiHubDomClickAt = Date.now();
+    setEventMessage?.(`button click: ${button.dataset.action}`, "dom:click");
+    await runAction(button.dataset.action);
+  });
   
   elements.sectionJumpButtons.forEach((button) => {
     button.addEventListener("click", () => {
