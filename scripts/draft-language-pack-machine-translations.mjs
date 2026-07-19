@@ -7,7 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const input = option("--in");
 const output = option("--out");
 const target = option("--target");
-const endpoint = option("--endpoint") ?? "https://translate.googleapis.com/translate_a/single";
+const customEndpoint = option("--endpoint");
+const endpoint = customEndpoint ?? "https://translate.googleapis.com/translate_a/single";
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -20,7 +21,7 @@ function isBlank(value) {
 
 async function translate(text) {
   let lastError;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
     try {
       const url = new URL(endpoint);
       url.searchParams.set("client", "gtx");
@@ -29,17 +30,43 @@ async function translate(text) {
       url.searchParams.set("dt", "t");
       url.searchParams.set("q", text);
       const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-      if (!response.ok) throw new Error(`translation request failed: ${response.status}`);
+      if (!response.ok) {
+        const retryAfter = Number(response.headers.get("retry-after"));
+        const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1_000
+          : 2 ** attempt * 500;
+        const error = new Error(`translation request failed: ${response.status}`);
+        error.status = response.status;
+        error.delayMs = delayMs;
+        throw error;
+      }
       const payload = await response.json();
       const translated = payload?.[0]?.map((entry) => entry?.[0]).join("");
       if (typeof translated !== "string" || !translated.trim()) throw new Error("translation response was empty");
       return translated;
     } catch (error) {
       lastError = error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      if (error.status === 429 && !customEndpoint) return translateWithMyMemory(text, error);
+      if (attempt < 6) {
+        const delayMs = Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 250;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
   }
-  throw lastError;
+  if (customEndpoint) throw lastError;
+  return translateWithMyMemory(text, lastError);
+}
+
+async function translateWithMyMemory(text, primaryError) {
+  const url = new URL("https://api.mymemory.translated.net/get");
+  url.searchParams.set("q", text);
+  url.searchParams.set("langpair", `en|${target}`);
+  const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) throw primaryError;
+  const payload = await response.json();
+  const translated = payload?.responseData?.translatedText;
+  if (typeof translated !== "string" || !translated.trim()) throw primaryError;
+  return translated;
 }
 
 if (!input || !output || !target) {
