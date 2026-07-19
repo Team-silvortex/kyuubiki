@@ -68,6 +68,8 @@ help:
 	@echo "  make check-native-script-audit Verify native runner shell-migration audit logic"
 	@echo "  make check-language-packs Validate shipped Workbench/Hub language packs, paths, and unsafe-text guards"
 	@echo "  make report-full-language-pack-coverage Report every visible Workbench copy key covered by each shipped language pack"
+	@echo "  make plan-language-pack-translations [LANGUAGE=<code>] Show the unified static translation queue"
+	@echo "  make next-language-pack-translation [LANGUAGE=<code>] Show the next incomplete translation batch"
 	@echo "  make check-full-language-pack-coverage Strictly require complete visible-copy coverage for every shipped Workbench language pack"
 	@echo "  make check-language-pack-coverage Strictly require full visible-copy coverage for LANGUAGE=<code>"
 	@echo "  make export-language-pack-translation-batch Write source/translation pairs for LANGUAGE=<code> BATCH=<core-01|...> to OUT=tmp/..."
