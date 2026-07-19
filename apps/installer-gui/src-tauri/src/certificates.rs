@@ -435,10 +435,8 @@ mod tests {
 
     #[test]
     fn renders_subject_alt_name_entries_for_dns_and_ip() {
-        let rendered = render_subject_alt_name_ext(&[
-            "solver-a.local".to_string(),
-            "192.0.2.12".to_string(),
-        ]);
+        let rendered =
+            render_subject_alt_name_ext(&["solver-a.local".to_string(), "192.0.2.12".to_string()]);
         assert!(rendered.contains("DNS.1 = solver-a.local"));
         assert!(rendered.contains("IP.2 = 192.0.2.12"));
     }

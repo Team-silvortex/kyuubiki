@@ -122,24 +122,84 @@ export function readDesktopBundleVersion(appRelativePath) {
   }
 }
 
-export function desktopArtifactPaths(version) {
-  return {
-    hub_app: "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-    hub_dmg: `apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_${version}_aarch64.dmg`,
-    hub_macos_manifest: "dist/macos/desktop/hub-gui/manifest.json",
-    hub_linux_manifest: "dist/linux/desktop/hub-gui/manifest.json",
-    hub_windows_manifest: "dist/windows/desktop/hub-gui/manifest.json",
-    workbench_app: "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-    workbench_dmg: `apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_${version}_aarch64.dmg`,
-    workbench_macos_manifest: "dist/macos/desktop/workbench-gui/manifest.json",
-    workbench_linux_manifest: "dist/linux/desktop/workbench-gui/manifest.json",
-    workbench_windows_manifest: "dist/windows/desktop/workbench-gui/manifest.json",
-    installer_app: "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-    installer_dmg: `apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_${version}_aarch64.dmg`,
-    installer_macos_manifest: "dist/macos/desktop/installer-gui/manifest.json",
-    installer_linux_manifest: "dist/linux/desktop/installer-gui/manifest.json",
-    installer_windows_manifest: "dist/windows/desktop/installer-gui/manifest.json",
-  };
+const desktopProducts = [
+  ["hub", "Kyuubiki Hub", "hub-gui"],
+  ["workbench", "Kyuubiki Workbench", "workbench-gui"],
+  ["installer", "Kyuubiki Installer", "installer-gui"],
+];
+
+function desktopCacheBundleRoot(platform) {
+  if (!["macos", "linux", "windows"].includes(platform)) {
+    throw new Error(`unsupported desktop artifact platform: ${platform}`);
+  }
+  return `target/desktop-cache/${platform}/release/bundle`;
+}
+
+function firstBundleFile(platform, subdir, extension, fallback) {
+  const relativeDir = `${desktopCacheBundleRoot(platform)}/${subdir}`;
+  const absoluteDir = path.join(rootDir, relativeDir);
+  if (fs.existsSync(absoluteDir)) {
+    const file = fs
+      .readdirSync(absoluteDir)
+      .sort()
+      .find((entry) => entry.toLowerCase().endsWith(extension));
+    if (file) {
+      return `${relativeDir}/${file}`;
+    }
+  }
+  return `${relativeDir}/${fallback}`;
+}
+
+function desktopManifestPaths() {
+  return Object.fromEntries(
+    desktopProducts.flatMap(([id, , app]) => [
+      [`${id}_macos_manifest`, `dist/macos/desktop/${app}/manifest.json`],
+      [`${id}_linux_manifest`, `dist/linux/desktop/${app}/manifest.json`],
+      [`${id}_windows_manifest`, `dist/windows/desktop/${app}/manifest.json`],
+    ]),
+  );
+}
+
+export function desktopArtifactPaths(version, platform = "macos") {
+  const manifests = desktopManifestPaths();
+  if (platform === "macos") {
+    return {
+      ...Object.fromEntries(
+        desktopProducts.flatMap(([id, name]) => [
+          [`${id}_app`, `${desktopCacheBundleRoot(platform)}/macos/${name}.app`],
+          [`${id}_dmg`, firstBundleFile(platform, "dmg", ".dmg", `${name}_${version}_aarch64.dmg`)],
+        ]),
+      ),
+      ...manifests,
+    };
+  }
+
+  if (platform === "linux") {
+    return {
+      ...Object.fromEntries(
+        desktopProducts.flatMap(([id, name]) => [
+          [`${id}_linux_appimage`, firstBundleFile(platform, "appimage", ".appimage", `${name}_${version}_amd64.AppImage`)],
+          [`${id}_linux_deb`, firstBundleFile(platform, "deb", ".deb", `${name}_${version}_amd64.deb`)],
+          [`${id}_linux_rpm`, firstBundleFile(platform, "rpm", ".rpm", `${name}-${version}-1.x86_64.rpm`)],
+        ]),
+      ),
+      ...manifests,
+    };
+  }
+
+  if (platform === "windows") {
+    return {
+      ...Object.fromEntries(
+        desktopProducts.flatMap(([id, name]) => [
+          [`${id}_windows_msi`, firstBundleFile(platform, "msi", ".msi", `${name}_${version}_x64_en-US.msi`)],
+          [`${id}_windows_nsis`, firstBundleFile(platform, "nsis", ".exe", `${name}_${version}_x64-setup.exe`)],
+        ]),
+      ),
+      ...manifests,
+    };
+  }
+
+  throw new Error(`unsupported desktop artifact platform: ${platform}`);
 }
 
 export function syncCurrentReleaseContracts({ version, codename, line }) {

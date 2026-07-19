@@ -476,6 +476,27 @@ async function assertTauriInvocations(page, expectedCommands) {
   }
 }
 
+async function assertLanguageChange(page, language) {
+  const before = await page.evaluate(
+    () =>
+      (window.__mockInvocations || []).filter(
+        (entry) => entry.command === "set_global_language_preference",
+      ).length,
+  );
+  await page.locator("#shell-language-select").selectOption(language);
+  await page.waitForFunction(
+    ({ expectedLanguage, count }) =>
+      (window.__mockInvocations || []).filter(
+        (entry) =>
+          entry.command === "set_global_language_preference" &&
+          entry.payload?.payload?.language === expectedLanguage,
+      ).length > count,
+    { expectedLanguage: language, count: before },
+    { timeout: 5_000 },
+  );
+  assert.equal(await page.locator("#shell-language-select").inputValue(), language);
+}
+
 async function assertActionInvokes(page, action, command, guardedAction, selector) {
   const before = await page.evaluate(
     ({ expectedCommand, expectedAction }) =>
@@ -517,6 +538,23 @@ async function assertActionInvokes(page, action, command, guardedAction, selecto
 export async function assertHubRegression(page, viewport) {
   await page.setViewportSize(viewport);
   await page.goto(page.url(), { waitUntil: "networkidle", timeout: 60_000 });
+
+  const homeLayout = await page.evaluate(() => {
+    const header = document.querySelector(".hub-head")?.getBoundingClientRect();
+    return {
+      headerHeight: header?.height || 0,
+      viewportHeight: window.innerHeight,
+      assistantPromptCount: document.querySelectorAll("#assistant-local-prompt").length,
+      docsTitleCount: document.querySelectorAll("#assistant-docs-label").length,
+    };
+  });
+  assert.ok(
+    homeLayout.headerHeight >= homeLayout.viewportHeight * 0.45,
+    "Hub operator runway should keep priority over secondary guide content",
+  );
+  assert.equal(homeLayout.assistantPromptCount, 1, "Hub assistant prompt should mount once");
+  assert.equal(homeLayout.docsTitleCount, 1, "Hub assistant docs should mount once");
+
   await page.locator("#projects-tab-guides").click();
   await page.waitForSelector('[data-projects-pane="guides"]:not(.hidden) #guides-gate-status-value');
 
@@ -539,6 +577,7 @@ export async function assertHubRegression(page, viewport) {
     assert.ok(rect.height > 40, `${rect.selector} should have height`);
   });
   assert.equal(overlaps(rects[0], rects[1]), false, "Hub guides cards should not overlap");
+  await assertLanguageChange(page, "zh");
 
   await page.locator("#projects-tab-start").click();
   await page.waitForSelector('[data-projects-pane="start"]:not(.hidden) #home-action-open');
@@ -593,6 +632,7 @@ export async function assertInstallerRegression(page, viewport) {
   assert.equal(await page.locator("#doctor-grid > *").count(), 3);
   assert.equal(await page.locator("#regression-gate-status").textContent(), "warn");
   assert.match(await page.locator("#regression-gate-reasons").textContent(), /Workflow catalog:/);
+  await assertLanguageChange(page, "zh");
 
   await page.locator('button.sidebar-tab[data-tab="integrity"]').click();
   await page.waitForSelector('[data-panel="integrity"].panel-visible #integrity-headline');

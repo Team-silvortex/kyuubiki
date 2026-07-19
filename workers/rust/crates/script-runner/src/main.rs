@@ -378,16 +378,9 @@ fn run() -> RunnerResult<u8> {
             if unit != 0 {
                 return Ok(unit);
             }
-            let topology = node_tests::run_frontend_check(
-                &paths.frontend,
-                "./scripts/check-workflow-topology-regression.mjs",
-            )?;
-            if topology != 0 {
-                return Ok(topology);
-            }
             node_tests::run_frontend_check(
                 &paths.frontend,
-                "./scripts/check-workflow-search-layout.mjs",
+                "./scripts/workflow-browser-preflight.mjs",
             )
         }
         "benchmark-profile-remote" => {

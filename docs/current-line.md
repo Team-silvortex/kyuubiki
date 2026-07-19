@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.0.0`.
+The current development point in this line is `moxi 2.2.8`.
 
 The 2.x line optimizes for:
 

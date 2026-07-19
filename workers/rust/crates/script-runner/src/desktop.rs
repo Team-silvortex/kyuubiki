@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 
-use crate::{RepoPaths, RunnerResult, run_command, run_installer};
+use crate::{RepoPaths, RunnerResult, run_installer, run_with_env};
 
 #[derive(Clone, Copy)]
 pub enum DesktopApp {
@@ -23,7 +23,9 @@ enum DesktopTarget {
 }
 
 pub fn run_desktop_dev(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
-    run_command(
+    run_desktop_tauri_command(
+        paths,
+        app,
         desktop_app_dir(paths, app),
         "npm",
         ["run", "tauri:dev"].map(OsString::from),
@@ -174,11 +176,45 @@ impl Platform {
 }
 
 fn run_host_desktop_build(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
-    run_command(
+    run_desktop_tauri_command(
+        paths,
+        app,
         desktop_app_dir(paths, app),
         "npm",
         ["run", "tauri:build"].map(OsString::from),
     )
+}
+
+fn run_desktop_tauri_command<I>(
+    paths: &RepoPaths,
+    app: DesktopApp,
+    cwd: &Path,
+    program: &str,
+    args: I,
+) -> RunnerResult<u8>
+where
+    I: IntoIterator<Item = OsString>,
+{
+    let target_dir = desktop_target_cache_dir(paths, host_platform());
+    let target_dir_text = target_dir
+        .to_str()
+        .ok_or_else(|| format!("desktop target path is not UTF-8: {}", target_dir.display()))?;
+
+    println!(
+        "{} uses shared {} Cargo target cache: {}",
+        desktop_app_name(app),
+        host_platform().as_str(),
+        target_dir.display()
+    );
+    run_with_env(cwd, program, args, &[("CARGO_TARGET_DIR", target_dir_text)])
+}
+
+fn desktop_target_cache_dir(paths: &RepoPaths, platform: Platform) -> std::path::PathBuf {
+    paths
+        .root
+        .join("target")
+        .join("desktop-cache")
+        .join(platform.as_str())
 }
 
 fn stage_desktop_platform(paths: &RepoPaths, platform: Platform) -> RunnerResult<u8> {
@@ -191,10 +227,20 @@ fn stage_desktop_platform(paths: &RepoPaths, platform: Platform) -> RunnerResult
 
 fn print_desktop_status(paths: &RepoPaths, platform: Platform) {
     let dist_root = paths.root.join("dist").join(platform.as_str());
+    let cache_root = desktop_target_cache_dir(paths, platform);
     println!("platform: {}", platform.as_str());
     println!(
         "  runtime stage: {}",
         if dist_root.exists() {
+            "present"
+        } else {
+            "missing"
+        }
+    );
+    println!(
+        "  shared Cargo cache: {} ({})",
+        cache_root.display(),
+        if cache_root.exists() {
             "present"
         } else {
             "missing"

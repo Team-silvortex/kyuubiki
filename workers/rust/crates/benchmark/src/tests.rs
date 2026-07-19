@@ -356,6 +356,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn two_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
             ("mechanical-core", 5, 200_000),
@@ -409,6 +410,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn one_million_profile_exposes_simple_probe_shapes_without_solving() {
         let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
         let case = cases
@@ -423,6 +425,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn one_million_frame_cases_use_the_profile_node_target() {
         let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
         for case_id in [
@@ -442,6 +445,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn one_million_chain_nonlinear_cases_use_the_profile_node_target() {
         let cases = benchmark_cases(BenchmarkProfile::OneMillion, "structural-extended");
         for case_id in ["nonlinear-spring-chain-1m", "contact-gap-chain-1m"] {
@@ -457,6 +461,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn one_million_modal_frame_cases_use_sparse_single_mode_shapes() {
         let cases = benchmark_cases(BenchmarkProfile::OneMillion, "structural-extended");
         for case_id in ["modal-frame-2d-1m", "modal-frame-3d-1m"] {
@@ -471,6 +476,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn three_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
             ("mechanical-core", 5, 300_000),
@@ -497,6 +503,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn four_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
             ("mechanical-core", 5, 400_000),
@@ -523,6 +530,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn five_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
         let matrix_cases = [
             ("mechanical-core", 5, 500_000),
@@ -561,6 +569,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
     fn profile_coverage_manifest_matches_generated_cases() {
         let manifest_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../../config/benchmark-profile-coverage.json");

@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  acquireLocalRuntimeLock,
+  assertNoUnmanagedLocalRuntime,
+  releaseLocalRuntimeLock,
+} from "./support/local-runtime-lock.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
@@ -22,16 +27,43 @@ const SECURITY_ENV = {
 };
 
 function runKyuubiki(args, extraEnv = {}) {
-  return execFileSync("node", [ENTRYPOINT, ...args], {
-    cwd: ROOT,
-    stdio: "pipe",
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      ...SECURITY_ENV,
-      ...extraEnv,
-    },
-  });
+  const command = args[0];
+  const startsRuntime = command?.startsWith("start") || command?.startsWith("restart");
+  if (startsRuntime) {
+    acquireLocalRuntimeLock();
+    try {
+      assertNoUnmanagedLocalRuntime(execFileSync("node", [ENTRYPOINT, "status"], {
+        cwd: ROOT,
+        stdio: "pipe",
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          ...SECURITY_ENV,
+          ...extraEnv,
+        },
+      }));
+    } catch (error) {
+      releaseLocalRuntimeLock();
+      throw error;
+    }
+  }
+  try {
+    return execFileSync("node", [ENTRYPOINT, ...args], {
+      cwd: ROOT,
+      stdio: "pipe",
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        ...SECURITY_ENV,
+        ...extraEnv,
+      },
+    });
+  } catch (error) {
+    if (startsRuntime) releaseLocalRuntimeLock();
+    throw error;
+  } finally {
+    if (command === "stop") releaseLocalRuntimeLock();
+  }
 }
 
 async function waitFor(url, predicate, timeoutMs = 30_000, intervalMs = 500) {

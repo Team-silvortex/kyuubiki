@@ -63,6 +63,9 @@ function usage() {
 Examples:
   node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged --dry-run
   node ./scripts/create-release-snapshot.mjs 1.6.1 --status current
+
+Environment:
+  KYUUBIKI_DESKTOP_ARTIFACT_PLATFORM  macos, linux, or windows; defaults to macos
 `);
 }
 
@@ -192,11 +195,16 @@ function assertCurrentSourceVersions(version, status) {
 }
 
 function buildSnapshot(version, options) {
-  const desktopArtifacts = desktopArtifactPaths(version);
+  const desktopPlatform = process.env.KYUUBIKI_DESKTOP_ARTIFACT_PLATFORM ?? "macos";
+  const desktopArtifacts = desktopArtifactPaths(version, desktopPlatform);
   const collectedDesktopBundleVersions = {
-    hub: readDesktopBundleVersion(desktopArtifacts.hub_app),
-    workbench: readDesktopBundleVersion(desktopArtifacts.workbench_app),
-    installer: readDesktopBundleVersion(desktopArtifacts.installer_app),
+    hub: desktopArtifacts.hub_app ? readDesktopBundleVersion(desktopArtifacts.hub_app) : null,
+    workbench: desktopArtifacts.workbench_app
+      ? readDesktopBundleVersion(desktopArtifacts.workbench_app)
+      : null,
+    installer: desktopArtifacts.installer_app
+      ? readDesktopBundleVersion(desktopArtifacts.installer_app)
+      : null,
   };
   const worktreeStatus = gitStatusLines();
 

@@ -42,6 +42,8 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
     let elixir = section(contract, "elixir")?;
     let node = section(contract, "node")?;
 
+    validate_elixir_baselines(&mut issues, elixir)?;
+
     let rust_toolchain = read_text(root, "rust-toolchain.toml")?;
     require_contains(
         &mut issues,
@@ -198,6 +200,64 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
     Ok(issues)
 }
 
+/// Keep installer and lab defaults usable with the published support floor.
+fn validate_elixir_baselines(issues: &mut Vec<String>, elixir: &Value) -> RunnerResult<()> {
+    require_minimum_version(
+        issues,
+        "config/toolchains.json#/elixir/lab_elixir",
+        required_str(elixir, "lab_elixir")?,
+        "config/toolchains.json#/elixir/minimum",
+        required_str(elixir, "minimum")?,
+    );
+    require_minimum_version(
+        issues,
+        "config/toolchains.json#/elixir/lab_otp",
+        required_str(elixir, "lab_otp")?,
+        "config/toolchains.json#/elixir/otp_minimum",
+        required_str(elixir, "otp_minimum")?,
+    );
+    Ok(())
+}
+
+fn require_minimum_version(
+    issues: &mut Vec<String>,
+    actual_label: &str,
+    actual: &str,
+    minimum_label: &str,
+    minimum: &str,
+) {
+    let Some(actual_version) = parse_version(actual) else {
+        issues.push(format!("{actual_label}: invalid version {actual:?}"));
+        return;
+    };
+    let Some(minimum_version) = parse_version(minimum) else {
+        issues.push(format!("{minimum_label}: invalid version {minimum:?}"));
+        return;
+    };
+    if actual_version < minimum_version {
+        issues.push(format!(
+            "{actual_label} is {actual:?}, below {minimum_label} {minimum:?}"
+        ));
+    }
+}
+
+fn parse_version(value: &str) -> Option<(u64, u64, u64)> {
+    let normalized = value
+        .split_once("-otp-")
+        .map_or(value, |(version, _)| version);
+    let normalized = normalized
+        .split_once('-')
+        .map_or(normalized, |(version, _)| version);
+    let mut parts = normalized.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().map_or(Some(0), |part| part.parse().ok())?;
+    let patch = parts.next().map_or(Some(0), |part| part.parse().ok())?;
+    if parts.next().is_some() {
+        return None;
+    }
+    Some((major, minor, patch))
+}
+
 fn require_file_tokens(
     root: &Path,
     issues: &mut Vec<String>,
@@ -286,7 +346,7 @@ fn wants_help(args: &[OsString]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{require_contains, require_package_engine};
+    use super::{parse_version, require_contains, require_minimum_version, require_package_engine};
     use serde_json::json;
 
     #[test]
@@ -302,5 +362,28 @@ mod tests {
         let mut issues = Vec::new();
         require_package_engine(&mut issues, "package.json", &manifest, ">=20 <25");
         assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn lab_elixir_must_not_fall_below_the_supported_minimum() {
+        let mut issues = Vec::new();
+        require_minimum_version(
+            &mut issues,
+            "lab_elixir",
+            "1.20.1-otp-28",
+            "minimum",
+            "2.0.0",
+        );
+        assert_eq!(
+            issues,
+            ["lab_elixir is \"1.20.1-otp-28\", below minimum \"2.0.0\""]
+        );
+    }
+
+    #[test]
+    fn version_parser_accepts_lab_and_container_style_versions() {
+        assert_eq!(parse_version("1.20.1-otp-28"), Some((1, 20, 1)));
+        assert_eq!(parse_version("28.4"), Some((28, 4, 0)));
+        assert_eq!(parse_version("invalid"), None);
     }
 }

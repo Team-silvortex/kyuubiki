@@ -228,7 +228,8 @@ button:focus-visible,
   grid-template-columns: minmax(0, 1.14fr) minmax(290px, 0.96fr);
   gap: var(--desktop-content-gap);
   align-items: stretch;
-  min-height: clamp(248px, 21vh, 308px);
+  /* The operator runway is the Hub's primary surface, not a summary strip. */
+  min-height: clamp(420px, 52vh, 620px);
   padding: var(--desktop-shell-rail-pad) var(--desktop-content-gutter-wide);
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-shell);

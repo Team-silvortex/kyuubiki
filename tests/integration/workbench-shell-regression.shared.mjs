@@ -192,6 +192,27 @@ async function assertActionInvokes(page, action, command, guardedAction) {
   );
 }
 
+async function assertLanguageChange(page, language) {
+  const before = await page.evaluate(
+    () =>
+      (window.__mockInvocations || []).filter(
+        (entry) => entry.command === "set_global_language_preference",
+      ).length,
+  );
+  await page.locator("#shell-language-select").selectOption(language);
+  await page.waitForFunction(
+    ({ expectedLanguage, count }) =>
+      (window.__mockInvocations || []).filter(
+        (entry) =>
+          entry.command === "set_global_language_preference" &&
+          entry.payload?.payload?.language === expectedLanguage,
+      ).length > count,
+    { expectedLanguage: language, count: before },
+    { timeout: 5_000 },
+  );
+  assert.equal(await page.locator("#shell-language-select").inputValue(), language);
+}
+
 async function rectsFor(page, selectors) {
   return page.evaluate((passedSelectors) => {
     return passedSelectors.map((selector) => {
@@ -237,6 +258,7 @@ export async function assertWorkbenchShellRegression(page, viewport) {
   assert.equal(await page.locator("#deployment-mode").textContent(), "direct_mesh_gui");
   assert.match(await page.locator("#status-output").textContent(), /runtimes:\s*\d+/);
   assert.match(await page.locator("#viewer-caption").textContent(), /^data:text\/html/);
+  await assertLanguageChange(page, "zh");
 
   const panelRects = await rectsFor(page, [
     '[data-shell-pane="control"]:not(.hidden) .panel:nth-of-type(1)',

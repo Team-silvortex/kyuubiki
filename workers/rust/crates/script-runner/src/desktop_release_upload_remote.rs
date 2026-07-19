@@ -161,14 +161,15 @@ fn collect_existing_paths(root: &Path, version: &str, platform: ReleasePlatform)
 }
 
 fn collect_bundle_paths(root: &Path, paths: &mut Vec<PathBuf>, platform: ReleasePlatform) {
-    for app in ["hub-gui", "workbench-gui", "installer-gui"] {
-        for subdir in bundle_subdirs(platform) {
-            append_if_exists(
-                root,
-                paths,
-                format!("apps/{app}/src-tauri/target/release/bundle/{subdir}"),
-            );
-        }
+    for subdir in bundle_subdirs(platform) {
+        append_if_exists(
+            root,
+            paths,
+            format!(
+                "target/desktop-cache/{}/release/bundle/{subdir}",
+                platform.name()
+            ),
+        );
     }
 }
 
@@ -201,12 +202,11 @@ fn bundle_subdirs(platform: ReleasePlatform) -> &'static [&'static str] {
 fn purge_local_outputs(root: &Path, platform: ReleasePlatform) -> RunnerResult<()> {
     for target in expanded_platforms(platform) {
         remove_dir_if_exists(root.join(format!("dist/{}", target.name())))?;
-        for app in ["hub-gui", "workbench-gui", "installer-gui"] {
-            for subdir in bundle_subdirs(target) {
-                remove_dir_if_exists(root.join(format!(
-                    "apps/{app}/src-tauri/target/release/bundle/{subdir}"
-                )))?;
-            }
+        for subdir in bundle_subdirs(target) {
+            remove_dir_if_exists(root.join(format!(
+                "target/desktop-cache/{}/release/bundle/{subdir}",
+                target.name()
+            )))?;
         }
     }
     Ok(())

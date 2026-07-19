@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "codename": "moxi",
   "line": "2.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-07-15",
   "git_commit": "4263d0c99889172d3289df19f8997bb84fc6db5c",
   "summary": "moxi 2.0.0 opens the first formal Kyuubiki 2.x line, carrying the finalized operator, workflow, installer, integrity, and documentation contracts forward from tamamono.",

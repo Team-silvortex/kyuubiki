@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 mod certificates;
@@ -42,8 +41,7 @@ use kyuubiki_installer::{
     init_env as installer_init_env, parse_platform, prepare_layout as installer_prepare_layout,
     prepare_staged_update as installer_prepare_staged_update,
     repair_installation as installer_repair_installation, stage_release as installer_stage_release,
-    validate_env_file, workspace_root,
-    write_update_source_config as installer_write_update_source_config,
+    validate_env_file, write_update_source_config as installer_write_update_source_config,
 };
 use remote::{
     RemoteAgentPayload, RemoteBootstrapPayload, WriteRemoteDeployPolicyPayload, probe_remote_node,
@@ -225,40 +223,17 @@ fn parse_service_mode(mode: Option<&str>) -> ServiceMode {
 
 #[tauri::command]
 fn build_installer_bundle(payload: BuildPayload) -> Result<String, String> {
-    let installer_gui_dir = workspace_root().join("apps").join("installer-gui");
     let bundle_mode = payload
         .bundle_mode
         .unwrap_or_else(|| "debug-check".to_string());
-    let extra_args: Vec<&str> = match bundle_mode.as_str() {
-        "release-bundle" => vec!["run", "tauri:build"],
-        "release-no-bundle" => vec!["run", "tauri:build", "--", "--no-bundle"],
-        "debug-check" => vec!["run", "tauri:build", "--", "--debug", "--no-bundle"],
+    match bundle_mode.as_str() {
+        "release-bundle" | "release-no-bundle" | "debug-check" => {}
         other => return Err(format!("unknown build mode: {other}")),
-    };
-
-    let output = Command::new("npm")
-        .args(&extra_args)
-        .current_dir(&installer_gui_dir)
-        .output()
-        .map_err(|error| format!("failed to run installer build: {error}"))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        Ok(if stdout.is_empty() {
-            format!("installer build completed ({bundle_mode})")
-        } else {
-            stdout
-        })
-    } else {
-        let detail = if stderr.is_empty() { stdout } else { stderr };
-        Err(if detail.is_empty() {
-            "installer build failed".to_string()
-        } else {
-            detail
-        })
     }
+    installer_stage_release(parse_platform(None), None)?;
+    Ok(format!(
+        "native installer release staging completed ({bundle_mode})"
+    ))
 }
 
 #[tauri::command]

@@ -84,6 +84,7 @@ fn solver_preconditioner_auto_uses_evidence_backed_iterative_strategies() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn thermal_quad_auto_uses_ic0_only_at_the_validated_scale() {
     let medium = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
     let medium_quad = medium
@@ -112,6 +113,7 @@ fn thermal_quad_auto_uses_ic0_only_at_the_validated_scale() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn one_million_truss_auto_uses_ic0() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "mechanical-core");
     let truss = cases
@@ -127,6 +129,7 @@ fn one_million_truss_auto_uses_ic0() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn one_million_plane_quad_auto_uses_ic0() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "mechanical-core");
     let panel = cases
@@ -142,6 +145,7 @@ fn one_million_plane_quad_auto_uses_ic0() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn one_million_plane_triangle_auto_uses_ic0() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "mechanical-core");
     let panel = cases
@@ -157,6 +161,7 @@ fn one_million_plane_triangle_auto_uses_ic0() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn one_million_thermal_truss_auto_uses_ic0() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
     let truss = cases
@@ -172,6 +177,7 @@ fn one_million_thermal_truss_auto_uses_ic0() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn one_million_frame_cases_auto_use_ic0() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
     for (case_id, reason) in [
@@ -190,6 +196,7 @@ fn one_million_frame_cases_auto_use_ic0() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn case_selection_uses_exact_ids() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
     let selected = select_cases(&cases, Some("frame-2d-1m"));
@@ -327,6 +334,7 @@ fn heat_quad_benchmark_exposes_timed_memory_stages() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn thermal_structural_500k_frame_and_truss_cases_are_profile_scaled() {
     let cases = benchmark_cases(BenchmarkProfile::FiveHundredK, "thermal-structural");
 
@@ -352,6 +360,7 @@ fn thermal_structural_500k_frame_and_truss_cases_are_profile_scaled() {
 }
 
 #[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
 fn dry_run_shape_report_exposes_selected_case_scale_without_solving() {
     let cases = benchmark_cases(BenchmarkProfile::FiveHundredK, "thermal-structural");
     let selected = cases

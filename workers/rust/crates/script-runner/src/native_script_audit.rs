@@ -24,6 +24,13 @@ struct EmbeddedShellRecord {
     pattern: &'static str,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+struct DesktopRuntimeNodeRecord {
+    relative_path: String,
+    line_number: usize,
+    pattern: &'static str,
+}
+
 pub(crate) fn run_native_script_audit(
     root: &Path,
     host_label: &str,
@@ -39,8 +46,13 @@ pub(crate) fn run_native_script_audit(
 
     let records = collect_shell_script_records(root)?;
     let embedded = collect_embedded_shell_records(root)?;
-    print_report(root, host_label, &records, &embedded);
-    Ok(if embedded.is_empty() { 0 } else { 1 })
+    let desktop_node = collect_desktop_runtime_node_records(root)?;
+    print_report(root, host_label, &records, &embedded, &desktop_node);
+    Ok(if embedded.is_empty() && desktop_node.is_empty() {
+        0
+    } else {
+        1
+    })
 }
 
 fn collect_shell_script_records(root: &Path) -> RunnerResult<Vec<ShellScriptRecord>> {
@@ -140,6 +152,61 @@ fn collect_embedded_shell_records_in(
     Ok(())
 }
 
+fn collect_desktop_runtime_node_records(
+    root: &Path,
+) -> RunnerResult<Vec<DesktopRuntimeNodeRecord>> {
+    let mut records = Vec::new();
+    for app in ["hub-gui", "installer-gui", "workbench-gui"] {
+        let scan_root = root.join("apps").join(app).join("src-tauri").join("src");
+        if scan_root.exists() {
+            collect_desktop_runtime_node_records_in(root, &scan_root, &mut records)?;
+        }
+    }
+    records.sort_by(|left, right| {
+        left.relative_path
+            .cmp(&right.relative_path)
+            .then(left.line_number.cmp(&right.line_number))
+    });
+    Ok(records)
+}
+
+fn collect_desktop_runtime_node_records_in(
+    root: &Path,
+    dir: &Path,
+    records: &mut Vec<DesktopRuntimeNodeRecord>,
+) -> RunnerResult<()> {
+    for entry in
+        fs::read_dir(dir).map_err(|error| format!("failed to scan {}: {error}", dir.display()))?
+    {
+        let path = entry
+            .map_err(|error| format!("failed to read directory entry: {error}"))?
+            .path();
+        if path.is_dir() {
+            collect_desktop_runtime_node_records_in(root, &path, records)?;
+            continue;
+        }
+        if path.extension().and_then(|value| value.to_str()) != Some("rs") {
+            continue;
+        }
+
+        let relative = relative_path(root, &path);
+        let content = fs::read_to_string(&path)
+            .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+        for (index, line) in content.lines().enumerate() {
+            for pattern in desktop_runtime_node_patterns() {
+                if line.contains(pattern) {
+                    records.push(DesktopRuntimeNodeRecord {
+                        relative_path: relative.clone(),
+                        line_number: index + 1,
+                        pattern,
+                    });
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn should_skip_embedded_shell_path(relative_path: &str) -> bool {
     relative_path == "workers/rust/crates/script-runner/src/native_script_audit.rs"
         || relative_path.contains("/target/")
@@ -157,6 +224,15 @@ fn is_embedded_shell_scan_candidate(path: &Path) -> bool {
 
 fn embedded_shell_patterns() -> &'static [&'static str] {
     &["sh -lc", "bash -lc", "ExecStart=/bin/sh"]
+}
+
+fn desktop_runtime_node_patterns() -> &'static [&'static str] {
+    &[
+        "Command::new(\"node\")",
+        "Command::new(\"npm\")",
+        "node_command(",
+        "npm_command(",
+    ]
 }
 
 fn is_test_assertion_line(line: &str) -> bool {
@@ -226,6 +302,7 @@ fn print_report(
     host_label: &str,
     records: &[ShellScriptRecord],
     embedded: &[EmbeddedShellRecord],
+    desktop_node: &[DesktopRuntimeNodeRecord],
 ) {
     println!("native script migration audit");
     println!("  host: {host_label}");
@@ -259,6 +336,17 @@ fn print_report(
             );
         }
     }
+    println!("  desktop runtime Node/npm invocations:");
+    if desktop_node.is_empty() {
+        println!("  - none");
+    } else {
+        for record in desktop_node {
+            println!(
+                "  - {}:{} ({})",
+                record.relative_path, record.line_number, record.pattern
+            );
+        }
+    }
     println!("  summary:");
     for kind in [
         ShellScriptKind::TinyLauncher,
@@ -269,6 +357,10 @@ fn print_report(
         println!("    {}: {count}", shell_script_kind_label(kind));
     }
     println!("    embedded shell invocation: {}", embedded.len());
+    println!(
+        "    desktop runtime Node/npm invocation: {}",
+        desktop_node.len()
+    );
 }
 
 fn host_tool_boundary() -> &'static [&'static str] {
@@ -342,6 +434,7 @@ fn run_self_test() {
     assert!(host_tool_boundary().contains(&"swift"));
     assert!(host_tool_boundary().contains(&"sips"));
     assert!(embedded_shell_patterns().contains(&"sh -lc"));
+    assert!(desktop_runtime_node_patterns().contains(&"Command::new(\"node\")"));
     assert!(embedded_shell_scan_roots().contains(&"apps"));
     assert!(embedded_shell_scan_roots().contains(&"workers"));
     assert!(embedded_shell_scan_roots().contains(&"deploy"));
@@ -440,6 +533,23 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(patterns.contains(&"ExecStart=/bin/sh"));
         assert!(patterns.contains(&"sh -lc"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn detects_node_invocations_in_desktop_runtime_sources() {
+        let root = unique_temp_dir();
+        let source_root = root.join("apps/hub-gui/src-tauri/src");
+        fs::create_dir_all(&source_root).unwrap();
+        fs::write(
+            source_root.join("legacy.rs"),
+            r#"let command = Command::new("node");"#,
+        )
+        .unwrap();
+
+        let records = collect_desktop_runtime_node_records(&root).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].pattern, "Command::new(\"node\")");
         fs::remove_dir_all(root).unwrap();
     }
 

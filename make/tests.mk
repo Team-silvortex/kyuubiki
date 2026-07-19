@@ -1,4 +1,4 @@
-.PHONY: test test-web test-rust test-frontend workflow-preflight test-runtime-surfaces test-sdk
+.PHONY: test test-web test-rust test-rust-scale-profiles test-frontend workflow-preflight test-runtime-surfaces test-sdk
 .PHONY: test-agent-capability-smoke test-playground
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
@@ -22,6 +22,9 @@ test-web:
 
 test-rust:
 	@$(ENTRYPOINT) rust-test
+
+test-rust-scale-profiles:
+	@cd workers/rust && cargo test -p kyuubiki-benchmark -- --ignored --test-threads=1
 
 test-frontend:
 	@cd apps/frontend && npm run typecheck && npm run build

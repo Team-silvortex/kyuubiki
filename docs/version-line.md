@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.0.0`
-- current documentation target: `moxi 2.0.x` line
+- current development point: `moxi 2.2.8`
+- current documentation target: `moxi 2.2.x` line
 - first 2.x baseline:
   `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
   `tamamono 1.x` industrialization bridge

@@ -170,13 +170,6 @@ fn workspace_root() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."))
 }
 
-fn npm_command() -> &'static str {
-    if cfg!(target_os = "windows") {
-        "npm.cmd"
-    } else {
-        "npm"
-    }
-}
 
 fn required_icon_patterns(platform: Platform) -> &'static [&'static str] {
     match platform {

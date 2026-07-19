@@ -1,55 +1,6 @@
-fn run_npm(dir: &Path, args: &[&str]) -> Result<String, String> {
-    let output = Command::new(npm_command())
-        .current_dir(dir)
-        .args(args)
-        .output()
-        .map_err(|error| format!("failed to run npm in {}: {error}", dir.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        let combined = [stdout, stderr]
-            .into_iter()
-            .filter(|value| !value.is_empty())
-            .collect::<Vec<_>>()
-            .join("\n");
-        Ok(if combined.is_empty() {
-            format!("npm {} succeeded in {}", args.join(" "), dir.display())
-        } else {
-            combined
-        })
-    } else {
-        let combined = [stdout, stderr]
-            .into_iter()
-            .filter(|value| !value.is_empty())
-            .collect::<Vec<_>>()
-            .join("\n");
-        Err(if combined.is_empty() {
-            format!("npm {} failed in {}", args.join(" "), dir.display())
-        } else {
-            combined
-        })
-    }
-}
-
 fn build_host_desktop_bundles() -> Result<String, String> {
-    let root = workspace_root();
-    let mut lines = Vec::new();
-
-    for (app, label) in [
-        ("apps/hub-gui", "hub-gui"),
-        ("apps/installer-gui", "installer-gui"),
-        ("apps/workbench-gui", "workbench-gui"),
-    ] {
-        let dir = root.join(app);
-        lines.push(format!("syncing shared desktop assets for {}", label));
-        lines.push(run_npm(&dir, &["run", "sync:shared"])?);
-        lines.push(format!("building host desktop bundle for {}", label));
-        lines.push(run_npm(&dir, &["run", "tauri:build"])?);
-    }
-
-    Ok(lines.join("\n\n"))
+    stage_release(parse_platform(None), None)?;
+    Ok("desktop release staging completed; installed applications update through the Installer, not an npm build command".to_string())
 }
 
 fn spawn_background_command(mut command: Command, failure_context: &str) -> Result<(), String> {
@@ -88,46 +39,72 @@ fn installed_app_candidates(product_name: &str) -> Vec<PathBuf> {
 
 fn built_app_candidates(app_dir: &str, product_name: &str, crate_name: &str) -> Vec<PathBuf> {
     let root = workspace_root();
-    let tauri_target = root.join("apps").join(app_dir).join("src-tauri").join("target");
+    let shared_tauri_target = root
+        .join("target")
+        .join("desktop-cache")
+        .join(current_desktop_platform());
+    let legacy_tauri_target = root.join("apps").join(app_dir).join("src-tauri").join("target");
     let binary_name = current_platform_binary_name(crate_name);
 
     if cfg!(target_os = "macos") {
         let mut candidates = installed_app_candidates(product_name);
-        candidates.extend([
-            tauri_target
-                .join("release")
-                .join("bundle")
-                .join("macos")
-                .join(format!("{product_name}.app")),
-            tauri_target
-                .join("debug")
-                .join("bundle")
-                .join("macos")
-                .join(format!("{product_name}.app")),
-            tauri_target.join("release").join(&binary_name),
-            tauri_target.join("debug").join(&binary_name),
-        ]);
+        for tauri_target in [shared_tauri_target, legacy_tauri_target] {
+            candidates.extend([
+                tauri_target
+                    .join("release")
+                    .join("bundle")
+                    .join("macos")
+                    .join(format!("{product_name}.app")),
+                tauri_target
+                    .join("debug")
+                    .join("bundle")
+                    .join("macos")
+                    .join(format!("{product_name}.app")),
+                tauri_target.join("release").join(&binary_name),
+                tauri_target.join("debug").join(&binary_name),
+            ]);
+        }
         candidates
     } else if cfg!(target_os = "windows") {
-        vec![
-            tauri_target.join("release").join(&binary_name),
-            tauri_target.join("debug").join(&binary_name),
-        ]
+        [shared_tauri_target, legacy_tauri_target]
+            .into_iter()
+            .flat_map(|tauri_target| {
+                [
+                    tauri_target.join("release").join(&binary_name),
+                    tauri_target.join("debug").join(&binary_name),
+                ]
+            })
+            .collect()
     } else {
-        vec![
-            tauri_target
-                .join("release")
-                .join("bundle")
-                .join("appimage")
-                .join(format!("{product_name}.AppImage")),
-            tauri_target
-                .join("debug")
-                .join("bundle")
-                .join("appimage")
-                .join(format!("{product_name}.AppImage")),
-            tauri_target.join("release").join(&binary_name),
-            tauri_target.join("debug").join(&binary_name),
-        ]
+        [shared_tauri_target, legacy_tauri_target]
+            .into_iter()
+            .flat_map(|tauri_target| {
+                [
+                    tauri_target
+                        .join("release")
+                        .join("bundle")
+                        .join("appimage")
+                        .join(format!("{product_name}.AppImage")),
+                    tauri_target
+                        .join("debug")
+                        .join("bundle")
+                        .join("appimage")
+                        .join(format!("{product_name}.AppImage")),
+                    tauri_target.join("release").join(&binary_name),
+                    tauri_target.join("debug").join(&binary_name),
+                ]
+            })
+            .collect()
+    }
+}
+
+fn current_desktop_platform() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "windows") {
+        "windows"
+    } else {
+        "linux"
     }
 }
 

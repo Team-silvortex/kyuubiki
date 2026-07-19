@@ -1,7 +1,7 @@
 # Installer Remote Control Surface
 
 Use this page as the source-of-truth note for the Installer remote deployment
-and remote runtime control surface in the `moxi 2.0.x` line.
+and remote runtime control surface in the `moxi 2.2.x` line.
 
 For maturity tracking, pair this control-surface note with
 [remote-deployment-roadmap.html](remote-deployment-roadmap.html). The current
