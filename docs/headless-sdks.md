@@ -55,6 +55,12 @@ The stable headless surface is the contract set: task and workflow envelopes,
 operator descriptors, result bundles, report schemas, review records,
 materialization plans, lineage metadata, and execution status semantics.
 
+Coupled multiphysics routes are discoverable through the Rust SDK's
+`coupled_workflow_catalog()`, `find_coupled_workflow()`, and
+`search_coupled_workflows()` APIs. The catalog is projected from protocol-owned
+descriptors, so SDK callers receive the same source artifact, result artifact,
+physical-domain, and bridge-operator contracts that the engine dispatches.
+
 The Rust headless SDK now exposes a machine-readable surface index through
 `headless_sdk_surface_manifest()` under `workers/rust/crates/headless-sdk`.
 Treat that manifest as the compact source-of-truth for headless capability

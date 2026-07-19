@@ -48,6 +48,7 @@ mod workflow_security;
 mod workflow_solve_executor;
 mod workflow_summary_transforms;
 mod workflow_summary_validation;
+mod workflow_topology;
 
 #[cfg(test)]
 mod tests;
@@ -55,9 +56,10 @@ mod tests;
 pub use catalog::{built_in_operator_descriptors, describe_built_in_operator};
 pub use chunking::chunk_result;
 pub use coupled_workflows::{
-    run_electrostatic_to_heat_to_thermo_plane_quad_2d_workflow,
+    run_coupled_workflow, run_electrostatic_to_heat_to_thermo_plane_quad_2d_workflow,
     run_electrostatic_to_heat_to_thermo_plane_triangle_2d_workflow,
     run_heat_to_thermo_plane_quad_2d_workflow, run_heat_to_thermo_plane_triangle_2d_workflow,
+    run_magnetostatic_to_heat_to_thermo_plane_quad_2d_workflow, supported_coupled_workflow_kinds,
 };
 pub use heat_bridge::{
     bridge_heat_result_to_thermal_plane_quad_model,
@@ -78,6 +80,7 @@ pub use workflow_executor::{
     is_supported_workflow_operator, run_solve_operator, solve_operator_runtime_manifest,
     supported_workflow_operator_ids,
 };
+pub use workflow_topology::{WorkflowTopologyProfile, analyze_workflow_topology};
 
 use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,

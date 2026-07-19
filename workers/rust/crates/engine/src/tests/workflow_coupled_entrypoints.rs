@@ -1,13 +1,17 @@
 use crate::{
-    run_electrostatic_to_heat_to_thermo_plane_quad_2d_workflow,
+    run_coupled_workflow, run_electrostatic_to_heat_to_thermo_plane_quad_2d_workflow,
     run_electrostatic_to_heat_to_thermo_plane_triangle_2d_workflow,
+    run_magnetostatic_to_heat_to_thermo_plane_quad_2d_workflow, supported_coupled_workflow_kinds,
 };
 use kyuubiki_protocol::{
+    CoupledWorkflowKind, CoupledWorkflowRequest, CoupledWorkflowResult,
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowRequest,
     ElectrostaticHeatToThermoPlaneTriangle2dWorkflowRequest, ElectrostaticPlaneNodeInput,
     ElectrostaticPlaneQuadElementInput, ElectrostaticPlaneTriangleElementInput, HeatPlaneNodeInput,
-    HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, ThermalPlaneNodeInput,
-    ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
+    HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,
+    MagnetostaticHeatToThermoPlaneQuad2dWorkflowRequest, MagnetostaticPlaneNodeInput,
+    MagnetostaticPlaneQuadElementInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+    ThermalPlaneTriangleElementInput,
 };
 
 #[test]
@@ -78,6 +82,67 @@ fn runs_electrostatic_to_heat_to_thermo_plane_triangle_workflow() {
     assert!(result.thermo_result.max_stress > 0.0);
 }
 
+#[test]
+fn runs_magnetostatic_to_heat_to_thermo_plane_quad_workflow() {
+    let result = run_magnetostatic_to_heat_to_thermo_plane_quad_2d_workflow(
+        MagnetostaticHeatToThermoPlaneQuad2dWorkflowRequest {
+            magnetostatic_model: quad_magnetostatic_model(),
+            heat_seed_model: quad_heat_seed_model(),
+            thermo_seed_model: quad_thermo_seed_model(),
+        },
+    )
+    .expect("magnetostatic -> heat -> thermo quad workflow should run");
+
+    assert_eq!(
+        result.workflow_id,
+        "workflow.magnetostatic-heat-to-thermo-quad-2d"
+    );
+    assert!(result.magnetostatic_result.max_flux_density > 0.0);
+    assert!(
+        result
+            .bridged_heat_model
+            .nodes
+            .iter()
+            .any(|node| node.heat_load > 0.0)
+    );
+    assert!(result.heat_result.max_heat_flux > 0.0);
+    assert!(
+        result
+            .bridged_thermo_model
+            .nodes
+            .iter()
+            .any(|node| node.temperature_delta > 30.0)
+    );
+    assert!(result.thermo_result.max_stress > 0.0);
+}
+
+#[test]
+fn coupled_workflow_dispatch_exposes_and_runs_the_supported_series() {
+    assert_eq!(supported_coupled_workflow_kinds().len(), 4);
+    assert!(
+        supported_coupled_workflow_kinds()
+            .contains(&CoupledWorkflowKind::MagnetostaticHeatToThermoPlaneQuad2d)
+    );
+
+    let result = run_coupled_workflow(
+        CoupledWorkflowRequest::MagnetostaticHeatToThermoPlaneQuad2d(
+            MagnetostaticHeatToThermoPlaneQuad2dWorkflowRequest {
+                magnetostatic_model: quad_magnetostatic_model(),
+                heat_seed_model: quad_heat_seed_model(),
+                thermo_seed_model: quad_thermo_seed_model(),
+            },
+        ),
+    )
+    .expect("series dispatcher should run the magnetostatic route");
+
+    match result {
+        CoupledWorkflowResult::MagnetostaticHeatToThermoPlaneQuad2d(result) => {
+            assert!(result.thermo_result.max_stress > 0.0);
+        }
+        _ => panic!("series dispatcher returned an unexpected workflow result"),
+    }
+}
+
 fn quad_electrostatic_model() -> kyuubiki_protocol::SolveElectrostaticPlaneQuad2dRequest {
     kyuubiki_protocol::SolveElectrostaticPlaneQuad2dRequest {
         nodes: vec![
@@ -122,6 +187,54 @@ fn quad_electrostatic_model() -> kyuubiki_protocol::SolveElectrostaticPlaneQuad2
             node_l: 3,
             thickness: 0.05,
             permittivity: 2.5,
+        }],
+    }
+}
+
+fn quad_magnetostatic_model() -> kyuubiki_protocol::SolveMagnetostaticPlaneQuad2dRequest {
+    kyuubiki_protocol::SolveMagnetostaticPlaneQuad2dRequest {
+        nodes: vec![
+            MagnetostaticPlaneNodeInput {
+                id: "m0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_vector_potential: true,
+                vector_potential: 0.0,
+                current_density: 0.0,
+            },
+            MagnetostaticPlaneNodeInput {
+                id: "m1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_vector_potential: true,
+                vector_potential: 0.0,
+                current_density: 0.0,
+            },
+            MagnetostaticPlaneNodeInput {
+                id: "m2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_vector_potential: false,
+                vector_potential: 0.0,
+                current_density: 5.0,
+            },
+            MagnetostaticPlaneNodeInput {
+                id: "m3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_vector_potential: false,
+                vector_potential: 0.0,
+                current_density: 5.0,
+            },
+        ],
+        elements: vec![MagnetostaticPlaneQuadElementInput {
+            id: "mq0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.1,
+            permeability: 1.256_637_061_435_917_3e-6,
         }],
     }
 }

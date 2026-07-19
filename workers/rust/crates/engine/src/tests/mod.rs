@@ -21,6 +21,7 @@ mod workflow_coupled_readiness_lineage;
 mod workflow_coupled_readiness_next_round;
 mod workflow_coupled_readiness_roundtrip;
 mod workflow_coupled_readiness_sweep;
+mod workflow_coupled_topology;
 mod workflow_coupled_triangle;
 mod workflow_diagnostics;
 mod workflow_diagnostics_bundle;

@@ -573,7 +573,7 @@ Current behavior notes:
   `auto-large-thermal-truss-ic0`, so the large-scale strategy is auditable.
 - the 1M benchmark catalog has retained successful evidence for all `39/39`
   case IDs. The profile index separately reports a strict node-scale result:
-  `37/39` cases have at least 1,000,000 nodes and `2/39` remain below that
+  all `39/39` cases have at least 1,000,000 nodes with no remaining below-threshold cases.
   threshold. The frame and thermal-frame 2D/3D cases have independently
   completed at the full scale with IC(0) selected automatically. The nonlinear
   spring and contact-gap chains use the tridiagonal direct path at full scale.

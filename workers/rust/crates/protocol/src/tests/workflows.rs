@@ -1,6 +1,25 @@
 use super::prelude::*;
 
 #[test]
+fn serializes_coupled_workflow_envelope_with_a_stable_route_tag() {
+    let request: CoupledWorkflowRequest = serde_json::from_value(serde_json::json!({
+        "kind": "magnetostatic_heat_to_thermo_plane_quad_2d",
+        "request": {
+            "magnetostatic_model": { "nodes": [], "elements": [] },
+            "heat_seed_model": { "nodes": [], "elements": [] },
+            "thermo_seed_model": { "nodes": [], "elements": [] }
+        }
+    }))
+    .expect("tagged coupled workflow request should deserialize");
+
+    let encoded = serde_json::to_value(request).expect("tagged workflow request should serialize");
+    assert_eq!(
+        encoded["kind"],
+        "magnetostatic_heat_to_thermo_plane_quad_2d"
+    );
+}
+
+#[test]
 fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
     let request = HeatToThermoPlaneQuad2dWorkflowRequest {
         heat_model: SolveHeatPlaneQuad2dRequest {

@@ -22,8 +22,9 @@ use crate::{
     generators_structural::{
         generate_beam_1d_case, generate_contact_gap_1d_case, generate_modal_frame_2d_chain_case,
         generate_modal_frame_3d_chain_case, generate_nonlinear_spring_1d_case,
-        generate_solid_tetra_3d_case, generate_spring_1d_case, generate_spring_2d_ladder_case,
-        generate_spring_3d_case, generate_thermal_beam_1d_case,
+        generate_solid_tetra_3d_specimen_batch, generate_spring_1d_case,
+        generate_spring_2d_ladder_case, generate_spring_3d_cage_case,
+        generate_thermal_beam_1d_case,
     },
     generators_thermal_structural::{
         generate_frame_2d_case, generate_frame_3d_case, generate_thermal_bar_case,
@@ -271,7 +272,9 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::Spring3d => BenchmarkCase {
             id,
             family: "spring_3d",
-            workload: BenchmarkWorkload::Spring3d(generate_spring_3d_case()),
+            workload: BenchmarkWorkload::Spring3d(generate_spring_3d_cage_case(
+                profile.axial_elements.saturating_add(1),
+            )),
         },
         BenchmarkFamily::NonlinearSpring1d => BenchmarkCase {
             id,
@@ -350,7 +353,9 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
         BenchmarkFamily::SolidTetra3d => BenchmarkCase {
             id,
             family: "solid_tetra_3d",
-            workload: BenchmarkWorkload::SolidTetra3d(generate_solid_tetra_3d_case()),
+            workload: BenchmarkWorkload::SolidTetra3d(generate_solid_tetra_3d_specimen_batch(
+                profile.axial_elements.saturating_add(1),
+            )),
         },
         BenchmarkFamily::Truss2d => build_truss_case(id, &profile.truss),
         BenchmarkFamily::TrussFrame3d => BenchmarkCase {

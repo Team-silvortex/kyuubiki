@@ -66,15 +66,18 @@ pub use types::rpc::*;
 pub use types::space_structural::*;
 pub use types::transport_results::*;
 pub use workflow::{
+    CoupledWorkflowDescriptor, CoupledWorkflowKind, CoupledWorkflowRequest, CoupledWorkflowResult,
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowRequest,
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowResult,
     ElectrostaticHeatToThermoPlaneTriangle2dWorkflowRequest,
     ElectrostaticHeatToThermoPlaneTriangle2dWorkflowResult, HeatToThermoPlaneQuad2dWorkflowRequest,
     HeatToThermoPlaneQuad2dWorkflowResult, HeatToThermoPlaneTriangle2dWorkflowRequest,
-    HeatToThermoPlaneTriangle2dWorkflowResult, WorkflowArtifactLineage, WorkflowBranchDecision,
-    WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest,
-    WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef,
-    WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort, WorkflowProgressEvent,
+    HeatToThermoPlaneTriangle2dWorkflowResult, MagnetostaticHeatToThermoPlaneQuad2dWorkflowRequest,
+    MagnetostaticHeatToThermoPlaneQuad2dWorkflowResult, WorkflowArtifactLineage,
+    WorkflowBranchDecision, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
+    WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
+    WorkflowNodePortRef, WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort,
+    WorkflowProgressEvent, coupled_workflow_descriptors, supported_coupled_workflow_kinds,
 };
 
 pub const RPC_VERSION: u8 = 1;

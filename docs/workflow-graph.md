@@ -141,6 +141,8 @@ This should become the reference workflow for:
 The first headless reference runner now exists in the Rust engine for:
 
 - `heat_plane_quad_2d -> bridge.temperature_field_to_thermo_quad_2d -> thermal_plane_quad_2d`
+- `electrostatic_plane_quad_2d -> bridge.electrostatic_field_to_heat_quad_2d -> heat_plane_quad_2d -> bridge.temperature_field_to_thermo_quad_2d -> thermal_plane_quad_2d`
+- `magnetostatic_plane_quad_2d -> bridge.magnetostatic_field_to_heat_quad_2d -> heat_plane_quad_2d -> bridge.temperature_field_to_thermo_quad_2d -> thermal_plane_quad_2d`
 
 That means this workflow is no longer only a UI direction:
 
@@ -149,6 +151,38 @@ That means this workflow is no longer only a UI direction:
 - the runtime can already execute the first linear reference path headlessly
 - the runner is a contract demonstrator, not the only supported headless
   entrypoint
+
+### Coupled workflow series
+
+Coupled workflows are maintained as a series, not as one-off showcase graphs.
+Every member uses the same five-stage contract: source solve, typed field bridge,
+heat solve, temperature bridge, and target solve. The Rust headless API exposes a
+typed request/result pair for each supported route, while the graph executor uses
+the same built-in bridge identities. This gives scale testing one stable axis:
+grow mesh size or batch count without changing artifact types or the bridge
+semantics.
+
+The initial series is intentionally quad-based so geometry alignment, field
+projection, and thermal-stress transfer are directly comparable. Triangle and
+additional multiphysics routes extend this family only by adding a new typed
+source/bridge pair; they must not invent a separate workflow lifecycle.
+
+For programmatic discovery and batch dispatch, the Rust engine also exposes
+`supported_coupled_workflow_kinds()` and a tagged `CoupledWorkflowRequest` /
+`CoupledWorkflowResult` envelope. This is the series-level API: clients can
+queue mixed routes through one entrypoint while each route retains its typed
+source and result contract.
+
+The 3.0 composite-workflow floor is a 20-layer fan-out/fan-in topology. The
+engine regression suite executes this 62-node graph and verifies end-to-end
+artifact propagation. It proves graph expression and deterministic execution;
+parallel scheduling remains an orchestration/runtime concern and is measured
+separately.
+
+Before submission, Rust callers can use `analyze_workflow_topology()` to obtain
+`WorkflowTopologyProfile`: node and edge totals, dependency depth, parallel
+width, and declared entry/output counts. Orchestra and other schedulers can use
+these metrics to make capacity decisions without executing a workflow first.
 
 The first generic executor layer now also exists for a small but real node set:
 

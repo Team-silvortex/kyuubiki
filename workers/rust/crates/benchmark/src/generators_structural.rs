@@ -167,45 +167,95 @@ pub(crate) fn generate_spring_2d_ladder_case(target_nodes: usize) -> SolveSpring
     SolveSpring2dRequest { nodes, elements }
 }
 
-pub(crate) fn generate_spring_3d_case() -> SolveSpring3dRequest {
-    SolveSpring3dRequest {
-        nodes: vec![
-            spring_3d_node("s0", 0.0, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
-            spring_3d_node("s1", 1.2, 0.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
-            spring_3d_node("s2", 0.0, 1.0, 0.0, true, true, true, 0.0, 0.0, 0.0),
-            spring_3d_node(
-                "top", 0.45, 0.35, 1.1, false, false, false, 250.0, 0.0, -1100.0,
-            ),
-        ],
-        elements: vec![
-            spring_3d_element("k0", 0, 3, 18_000.0),
-            spring_3d_element("k1", 1, 3, 22_000.0),
-            spring_3d_element("k2", 2, 3, 16_000.0),
-            spring_3d_element("k3", 0, 1, 9_000.0),
-            spring_3d_element("k4", 1, 2, 9_000.0),
-            spring_3d_element("k5", 2, 0, 9_000.0),
-        ],
+/// Generates a supported four-corner space-spring cage with cross-bracing.
+pub(crate) fn generate_spring_3d_cage_case(target_nodes: usize) -> SolveSpring3dRequest {
+    const SUPPORT_INTERVAL: usize = 64;
+    let columns = (target_nodes.max(8) / 4).max(2);
+    let corners = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)];
+    let nodes = (0..columns)
+        .flat_map(|column| {
+            corners
+                .into_iter()
+                .enumerate()
+                .map(move |(corner, (y, z))| Spring3dNodeInput {
+                    id: format!("sc-{column}-{corner}"),
+                    x: column as f64,
+                    y,
+                    z,
+                    fix_x: column % SUPPORT_INTERVAL == 0,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: if column % SUPPORT_INTERVAL == SUPPORT_INTERVAL - 1 {
+                        16.0
+                    } else {
+                        0.0
+                    },
+                    load_y: 0.0,
+                    load_z: 0.0,
+                })
+        })
+        .collect::<Vec<_>>();
+    let mut elements = Vec::with_capacity((columns - 1) * 8);
+    for column in 0..columns - 1 {
+        for corner in 0..4 {
+            elements.push(Spring3dElementInput {
+                id: format!("sc-{column}-rail-{corner}"),
+                node_i: column * 4 + corner,
+                node_j: (column + 1) * 4 + corner,
+                stiffness: 52_000.0,
+            });
+            elements.push(Spring3dElementInput {
+                id: format!("sc-{column}-brace-{corner}"),
+                node_i: column * 4 + corner,
+                node_j: (column + 1) * 4 + (corner + 1) % 4,
+                stiffness: 42_000.0,
+            });
+        }
     }
+    SolveSpring3dRequest { nodes, elements }
 }
 
-pub(crate) fn generate_solid_tetra_3d_case() -> SolveSolidTetra3dRequest {
-    SolveSolidTetra3dRequest {
-        nodes: vec![
-            solid_tetra_3d_node("s0", 0.0, 0.0, 0.0, true, 0.0),
-            solid_tetra_3d_node("s1", 1.0, 0.0, 0.0, true, 0.0),
-            solid_tetra_3d_node("s2", 0.0, 1.0, 0.0, true, 0.0),
-            solid_tetra_3d_node("tip", 0.0, 0.0, 1.0, false, -1000.0),
-        ],
-        elements: vec![SolidTetra3dElementInput {
-            id: "tet0".to_string(),
-            node_a: 0,
-            node_b: 1,
-            node_c: 2,
-            node_d: 3,
+/// Generates independent, fully constrained tetrahedral material specimens for batch scaling.
+/// Each cell has three fixed base nodes and a loaded free apex, exercising full 3D elasticity.
+pub(crate) fn generate_solid_tetra_3d_specimen_batch(
+    target_nodes: usize,
+) -> SolveSolidTetra3dRequest {
+    let specimen_count = (target_nodes.max(4) / 4).max(1);
+    let mut nodes = Vec::with_capacity(specimen_count * 4);
+    let mut elements = Vec::with_capacity(specimen_count);
+    for specimen in 0..specimen_count {
+        let offset = specimen as f64 * 2.0;
+        let base = specimen * 4;
+        for (suffix, x, y, z, fix, load_z) in [
+            ("a", offset, 0.0, 0.0, true, 0.0),
+            ("b", offset + 1.0, 0.0, 0.0, true, 0.0),
+            ("c", offset, 1.0, 0.0, true, 0.0),
+            ("tip", offset, 0.0, 1.0, false, -250.0),
+        ] {
+            nodes.push(SolidTetra3dNodeInput {
+                id: format!("st-{specimen}-{suffix}"),
+                x,
+                y,
+                z,
+                fix_x: fix,
+                fix_y: fix,
+                fix_z: fix,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z,
+            });
+        }
+        elements.push(SolidTetra3dElementInput {
+            id: format!("st-{specimen}"),
+            node_a: base,
+            node_b: base + 1,
+            node_c: base + 2,
+            node_d: base + 3,
             youngs_modulus: 70.0e9,
             poisson_ratio: 0.33,
-        }],
+        });
     }
+    SolveSolidTetra3dRequest { nodes, elements }
 }
 
 pub(crate) fn generate_modal_frame_2d_chain_case(
@@ -306,66 +356,4 @@ fn beam_nodes<T>(elements: usize, mut build: impl FnMut(usize, f64, usize) -> T)
             )
         })
         .collect()
-}
-
-fn spring_3d_node(
-    id: &str,
-    x: f64,
-    y: f64,
-    z: f64,
-    fix_x: bool,
-    fix_y: bool,
-    fix_z: bool,
-    load_x: f64,
-    load_y: f64,
-    load_z: f64,
-) -> Spring3dNodeInput {
-    Spring3dNodeInput {
-        id: id.to_string(),
-        x,
-        y,
-        z,
-        fix_x,
-        fix_y,
-        fix_z,
-        load_x,
-        load_y,
-        load_z,
-    }
-}
-
-fn spring_3d_element(
-    id: &str,
-    node_i: usize,
-    node_j: usize,
-    stiffness: f64,
-) -> Spring3dElementInput {
-    Spring3dElementInput {
-        id: id.to_string(),
-        node_i,
-        node_j,
-        stiffness,
-    }
-}
-
-fn solid_tetra_3d_node(
-    id: &str,
-    x: f64,
-    y: f64,
-    z: f64,
-    fixed: bool,
-    load_z: f64,
-) -> SolidTetra3dNodeInput {
-    SolidTetra3dNodeInput {
-        id: id.to_string(),
-        x,
-        y,
-        z,
-        fix_x: fixed,
-        fix_y: fixed,
-        fix_z: fixed,
-        load_x: 0.0,
-        load_y: 0.0,
-        load_z,
-    }
 }

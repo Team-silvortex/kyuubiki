@@ -3,6 +3,7 @@ mod capabilities;
 mod contract_tests;
 mod contracts;
 mod contracts_types;
+mod coupled_workflows;
 mod direct_fem;
 mod engine_solver_bridge;
 mod executor;
@@ -74,6 +75,10 @@ pub use capabilities::{
 pub use contracts::{all_action_contracts, find_action_contract};
 pub use contracts_types::{
     HeadlessActionContract, HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle,
+};
+pub use coupled_workflows::{
+    CoupledWorkflowCatalogEntry, coupled_workflow_catalog, find_coupled_workflow,
+    search_coupled_workflows,
 };
 pub use direct_fem::{
     DirectFemCapability, DirectFemRoute, all_direct_fem_routes, direct_fem_capability_manifest,
