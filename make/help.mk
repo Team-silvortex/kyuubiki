@@ -71,6 +71,7 @@ help:
 	@echo "  make check-full-language-pack-coverage Strictly require complete visible-copy coverage for every shipped Workbench language pack"
 	@echo "  make check-language-pack-coverage Strictly require full visible-copy coverage for LANGUAGE=<code>"
 	@echo "  make export-language-pack-translation-batch Write source/translation pairs for LANGUAGE=<code> BATCH=<core-01|...> to OUT=tmp/..."
+	@echo "  make draft-language-pack-translation-batch Create a reviewed machine-translation draft for LANGUAGE=<code> BATCH=<...>; no product files are changed"
 	@echo "  make apply-language-pack-translation-batch Validate and merge a reviewed translation batch from INPUT=<path>"
 	@echo "  make check-ui-automation-contract Verify product-owned Workbench automation selector contracts"
 	@echo "  make test-integration-ui-invocation Run end-to-end UI action, bridge, and visible-result checks"

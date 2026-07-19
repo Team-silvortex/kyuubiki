@@ -1,6 +1,6 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
-.PHONY: check-language-packs report-full-language-pack-coverage check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
+.PHONY: check-language-packs report-full-language-pack-coverage check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch draft-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-version-line
 .PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
@@ -111,6 +111,11 @@ check-language-pack-coverage:
 export-language-pack-translation-batch:
 	@test -n "$(LANGUAGE)" && test -n "$(BATCH)" || (echo "LANGUAGE and BATCH are required"; exit 2)
 	@node ./scripts/report-full-language-pack-coverage.mjs --language "$(LANGUAGE)" --batch "$(BATCH)" --template-out "$${OUT:-tmp/language-pack-translation-batches/$(LANGUAGE)-$(BATCH).json}"
+
+draft-language-pack-translation-batch:
+	@test -n "$(LANGUAGE)" && test -n "$(BATCH)" || (echo "LANGUAGE and BATCH are required"; exit 2)
+	@$(MAKE) export-language-pack-translation-batch LANGUAGE="$(LANGUAGE)" BATCH="$(BATCH)" OUT="$${IN:-tmp/language-pack-translation-batches/$(LANGUAGE)-$(BATCH).json}"
+	@node ./scripts/draft-language-pack-machine-translations.mjs --in "$${IN:-tmp/language-pack-translation-batches/$(LANGUAGE)-$(BATCH).json}" --out "$${OUT:-tmp/language-pack-translation-drafts/$(LANGUAGE)-$(BATCH).json}" --target "$(LANGUAGE)"
 
 apply-language-pack-translation-batch:
 	@test -n "$(INPUT)" || (echo "INPUT is required"; exit 2)
