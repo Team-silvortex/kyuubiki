@@ -2,7 +2,7 @@
 
 import type { WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
-import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/lib/workbench/workflow-bridge-contract";
 
 type WorkflowOperatorOptionPreset = {
   id: string;

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createRuntimeStatusBackendService } from "../../src/lib/workbench/runtime-status-backend-service-core.ts";
+import { createRuntimeStatusGateway as createRuntimeStatusBackendService } from "../../src/lib/runtime-gateway/runtime-status-gateway.ts";
 import type {
   DirectMeshAgentListPayload,
   HealthPayload,

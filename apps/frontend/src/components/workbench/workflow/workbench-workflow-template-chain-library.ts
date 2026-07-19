@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
-import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { createBridgeConfigForOperator } from "@/lib/workbench/workflow-bridge-contract";
 import {
   DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
   PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,

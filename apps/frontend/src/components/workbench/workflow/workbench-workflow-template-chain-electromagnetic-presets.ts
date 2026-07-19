@@ -3,7 +3,7 @@
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import {
   createBridgeConfigForOperator,
-} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+} from "@/lib/workbench/workflow-bridge-contract";
 import type {
   WorkflowTemplateChainConnection,
   WorkflowTemplateChainDefinition,

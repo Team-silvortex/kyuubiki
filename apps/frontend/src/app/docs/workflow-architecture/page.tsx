@@ -33,7 +33,7 @@ const LAYERS = [
     body:
       "Bridge contracts define how one solver domain feeds the next. Summary contracts define a shared artifact payload family for extracts, transforms, exports, benchmarks, and headless flows. This layer is the real cross-operator glue of the system.",
     references: [
-      "apps/frontend/src/components/workbench/workflow/workbench-workflow-bridge-contract.ts",
+      "apps/frontend/src/lib/workbench/workflow-bridge-contract.ts",
       "apps/frontend/src/components/workbench/workflow/workbench-workflow-summary-contract.ts",
       "apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
       "apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",

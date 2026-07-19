@@ -46,7 +46,9 @@ async function translate(text) {
       return translated;
     } catch (error) {
       lastError = error;
-      if (error.status === 429 && !customEndpoint) return translateWithMyMemory(text, error);
+      if (error.status === 429 && !customEndpoint) {
+        return translateWithMyMemory(text, error);
+      }
       if (attempt < 6) {
         const delayMs = Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 250;
         await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -54,7 +56,9 @@ async function translate(text) {
     }
   }
   if (customEndpoint) throw lastError;
-  return translateWithMyMemory(text, lastError);
+  try {
+    return await translateWithMyMemory(text, lastError);
+  } catch { throw lastError; }
 }
 
 async function translateWithMyMemory(text, primaryError) {
@@ -65,7 +69,12 @@ async function translateWithMyMemory(text, primaryError) {
   if (!response.ok) throw primaryError;
   const payload = await response.json();
   const translated = payload?.responseData?.translatedText;
-  if (typeof translated !== "string" || !translated.trim()) throw primaryError;
+  if (
+    payload?.responseStatus !== 200
+    || typeof translated !== "string"
+    || !translated.trim()
+    || translated.includes("MYMEMORY WARNING")
+  ) throw primaryError;
   return translated;
 }
 

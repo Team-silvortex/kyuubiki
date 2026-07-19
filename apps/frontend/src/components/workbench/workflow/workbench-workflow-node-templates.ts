@@ -9,7 +9,7 @@ import type {
 import {
   createBridgeConfigForOperator,
   normalizeBridgeConfigForOperator,
-} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+} from "@/lib/workbench/workflow-bridge-contract";
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { DATASET_VALUE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-dataset-presets";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";

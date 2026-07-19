@@ -8,7 +8,7 @@ import {
   getWorkbenchRuntimeAuditCopy,
 } from "@/components/workbench/workbench-extended-language-copy";
 import { getWorkbenchScriptActionSummary } from "@/components/workbench/workbench-script-catalog-copy";
-import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/lib/workbench/workflow-bridge-contract";
 
 type AssistantMode = "local" | "llm";
 

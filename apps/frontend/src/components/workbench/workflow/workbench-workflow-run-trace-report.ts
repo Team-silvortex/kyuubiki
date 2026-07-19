@@ -30,7 +30,7 @@ import {
   isWorkflowBridgeContractOperator,
   resolveBridgeContractForOperator,
   resolveBridgeSeedModelForOperator,
-} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+} from "@/lib/workbench/workflow-bridge-contract";
 import {
   resolveWorkflowTraceBranchPredicateTone,
   resolveWorkflowTraceContractHealthTone,
