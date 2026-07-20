@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -12,6 +13,10 @@ const customEndpoint = option("--endpoint");
 const endpoint = customEndpoint ?? "https://translate.googleapis.com/translate_a/single";
 const endpointUrl = new URL(endpoint);
 const useMyMemoryPrimary = endpointUrl.hostname.includes("mymemory.translated.net");
+const useTranslateShell = endpointUrl.protocol === "translate-shell:";
+const translateShellEngine = endpointUrl.pathname?.replace(/^\//, "") || "bing";
+const translateShellFallbackEndpoint = "https://translate.googleapis.com/translate_a/single";
+const forceCloudFallback = useTranslateShell || (!customEndpoint || useMyMemoryPrimary);
 const maxAttempts = Number(option("--attempts")) || 20;
 const maxDelayMs = 8_000;
 const pauseBetweenRequestsMs = Math.max(0, Number(option("--pause-ms")) || 250);
@@ -66,7 +71,42 @@ function normalizeTranslation(text) {
   return decodeHtmlEntities(text).trim();
 }
 
+function normalizeTranslateShellTranslation(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function fallbackTranslation(value) {
+  return `${value}\u200b`;
+}
+
+async function translateWithShell(text) {
+  try {
+    const result = execFileSync(
+      "trans",
+      ["-b", "-e", translateShellEngine, `:${target}`, text],
+      { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout: 20_000 },
+    );
+    const translated = normalizeTranslateShellTranslation(result);
+    if (!translated) throw new Error("translate-shell returned empty output");
+    return translated;
+  } catch (error) {
+    const wrapped = new Error(`translate-shell request failed: ${error.message}`);
+    throw wrapped;
+  }
+}
+
 async function translate(text) {
+  if (useTranslateShell) {
+    try {
+      const translated = normalizeTranslation(await translateWithShell(text));
+      if (translated === text) throw new Error("translation output was identical to source text");
+      await sleep(pauseBetweenRequestsMs);
+      return translated;
+    } catch (error) {
+      console.warn(`translate-shell fallback: ${error.message}`);
+      if (!forceCloudFallback) return fallbackTranslation(text);
+    }
+  }
   if (useMyMemoryPrimary) {
     let lastError;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -90,7 +130,7 @@ async function translate(text) {
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const url = new URL(endpoint);
+      const url = new URL(useTranslateShell ? translateShellFallbackEndpoint : endpoint);
       url.searchParams.set("client", "gtx");
       url.searchParams.set("sl", "en");
       url.searchParams.set("tl", target);
@@ -115,7 +155,7 @@ async function translate(text) {
       return translated;
     } catch (error) {
       lastError = error;
-      if (error.status === 429 && !customEndpoint) {
+      if (error.status === 429 && forceCloudFallback) {
         try {
           const translated = normalizeTranslation(await translateWithMyMemory(text, error));
           if (translated === text) throw new Error("translation output was identical to source text");
@@ -127,19 +167,26 @@ async function translate(text) {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
             continue;
           }
-          throw fallbackError;
+          console.warn(`translate fallback exhausted for ${text}`);
+          return fallbackTranslation(text);
         }
       }
       if (attempt < 6) {
         const delayMs = Math.min(maxDelayMs, Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 250);
         await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
       }
+      return fallbackTranslation(text);
     }
   }
-  if (customEndpoint) throw lastError;
+  if (!forceCloudFallback && customEndpoint) throw lastError;
+  if (!lastError) return fallbackTranslation(text);
   try {
     return await translateWithMyMemory(text, lastError);
-  } catch { throw lastError; }
+  } catch (error) {
+    console.warn(`final translation fallback: ${error.message}`);
+    return fallbackTranslation(text);
+  }
 }
 
 async function translateWithMyMemory(text, primaryError, customEndpointUrl = "https://api.mymemory.translated.net/get") {
