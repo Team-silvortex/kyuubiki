@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Romanian UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "ro/extended-01.json" },
+    { "batch": "extended-02", "path": "ro/extended-02.json" },
+    { "batch": "extended-03", "path": "ro/extended-03.json" },
+    { "batch": "extended-04", "path": "ro/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Română",
     "subtitle": "Spațiu de lucru pentru simulare, workflow-uri și agenți.",

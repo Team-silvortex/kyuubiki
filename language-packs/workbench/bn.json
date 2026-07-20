@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Bengali UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "bn/extended-01.json" },
+    { "batch": "extended-02", "path": "bn/extended-02.json" },
+    { "batch": "extended-03", "path": "bn/extended-03.json" },
+    { "batch": "extended-04", "path": "bn/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · বাংলা",
     "subtitle": "সিমুলেশন, ওয়ার্কফ্লো এবং এজেন্টের কর্মক্ষেত্র।",
