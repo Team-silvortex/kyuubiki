@@ -3,12 +3,12 @@
   "language": "de",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T00:00:00.000Z",
+  "updatedAt": "2026-07-20T12:15:13.741Z",
   "overrides": {
     "stabilityRisk": "Gefährdet",
     "stabilityScore": "Stabilitätsbewertung",
     "stabilityWatch": "Überwachen",
-    "status": "Status",
+    "status": "Statusanzeige",
     "stress": "Spannung (Pa)",
     "suggestedFixes": "Vorgeschlagene Korrekturen",
     "suggestionAppliedLink": "Der Knoten wurde mit seinem nächsten verfügbaren Nachbarn verbunden.",
@@ -55,7 +55,7 @@
     "tipDisp": "Spitzenverschiebung",
     "tipForce": "Spitzenkraft (N)",
     "toggleMember": "Verbindung umschalten",
-    "topN": "Top N",
+    "topN": "Oben N",
     "torqueZ": "Torsionsmoment Z",
     "torsionHint": "Wellenstudien konzentrieren sich auf Verdrehung, Drehmomentübertragung und Schubspannung entlang der Achse.",
     "torsionStress": "Torsionsspannung",
@@ -79,7 +79,7 @@
     "versionRenamed": "Version umbenannt.",
     "versions": "Versionen",
     "waitingJobs": "Auf Ergebnis wartend",
-    "worker": "Worker",
+    "worker": "Arbeiter",
     "yes": "Ja"
   }
 }

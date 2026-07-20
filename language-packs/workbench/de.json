@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T00:00:00.000Z",
+  "updatedAt": "2026-07-20T12:15:09.504Z",
   "description": "German UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "de/extended-01.json" },
-    { "batch": "extended-02", "path": "de/extended-02.json" },
-    { "batch": "extended-03", "path": "de/extended-03.json" },
-    { "batch": "extended-04", "path": "de/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "de/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "de/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "de/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "de/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Deutsch",
@@ -22,10 +34,10 @@
     "rail": {
       "study": "Studie",
       "model": "Modell",
-      "workflow": "Workflow",
-      "store": "Store",
+      "workflow": "Arbeitsablauf",
+      "store": "Speichern",
       "library": "Verlauf",
-      "system": "System"
+      "system": "Systembereich"
     },
     "sections": {
       "study": "Studieneinrichtung",
@@ -33,17 +45,17 @@
       "workflow": "Workflow-Studio",
       "store": "Projekt-Store",
       "library": "Aufgabenverlauf",
-      "system": "System"
+      "system": "Systembereich"
     },
-    "workflowBuilderPage": "Builder",
+    "workflowBuilderPage": "Bauer",
     "workflowRunsPage": "Läufe",
     "workflowCatalogTitle": "Workflow-Katalog",
     "workflowTemplateChainLibraryLabel": "Kettenbibliothek",
     "languagePacksTitle": "Installierte Sprachpakete",
     "languagePacksHint": "Lokale JSON-Pakete jetzt importieren; derselbe Umschlag bleibt für spätere Remote-Verteilung bereit.",
     "languagePacksEmptyLabel": "Noch kein eigenes Sprachpaket installiert.",
-    "languagePackName": "Name",
-    "languagePackVersion": "Version",
+    "languagePackName": "Paketname",
+    "languagePackVersion": "Paketversion",
     "languagePackSourceImported": "Importiert",
     "languagePackSourceDownloaded": "Heruntergeladen",
     "languagePackDownloadTemplate": "Vorlage herunterladen",
@@ -134,7 +146,7 @@
       "script": "Skript"
     },
     "auditSourceStatusTitle": "Quelle x Status",
-    "auditStatus": "Status",
+    "auditStatus": "Statusmeldung",
     "auditStatusOptions": {
       "all": "Alle",
       "cancelled": "Abgebrochen",
@@ -156,7 +168,7 @@
       "h24": "Letzte 24 Stunden"
     },
     "axialSample": "1D-Beispiel öffnen",
-    "backend": "Backend",
+    "backend": "Backend-Dienst",
     "browserLimitsNote": "Browsererweiterungen können auf der Seite nicht vollständig deaktiviert werden, doch die Ansicht kann Auswahl- und Kopierinteraktionen einschränken.",
     "cancelJob": "Auftrag abbrechen",
     "capabilities": "Fähigkeiten",
@@ -164,7 +176,7 @@
     "clearFilters": "Filter löschen",
     "clearLoads": "Lasten löschen",
     "close": "Schließen",
-    "cluster": "Cluster",
+    "cluster": "Cluster-Knoten",
     "clusterHealth": "Clusterzustand",
     "clusterSize": "Clustergröße",
     "clusterTokenHelp": "Wird für Agentenregistrierung, Heartbeats und das Entfernen von Cluster-Routen verwendet; bei Leerwert wird das Token der Steuerungsebene genutzt.",
@@ -183,7 +195,7 @@
     "deleteNodeAction": "Knoten gelöscht",
     "deleteRecord": "Datensatz löschen",
     "deploymentMode": "Bereitstellungsmodus",
-    "details": "Details",
+    "details": "Einzelheiten",
     "directMeshCompleted": "Direkte Mesh-Berechnung abgeschlossen",
     "directMeshEndpoints": "Direkte Mesh-Endpunkte",
     "directMeshEndpointsHelp": "Durch Komma oder Zeilenumbruch getrennte Host:Port-Agenten für den LAN-Mesh-GUI-Pfad.",
@@ -277,8 +289,8 @@
     "lastHeartbeat": "Letzter Heartbeat",
     "linkedProjectOpened": "Verknüpfter Projektkontext geöffnet.",
     "load": "Laden",
-    "material": "Material",
-    "mesh": "Mesh",
+    "material": "Werkstoff",
+    "mesh": "Netz",
     "messages": "Meldungen",
     "methods": "Methoden",
     "metrics": "Solver-Metriken",
@@ -290,7 +302,7 @@
     "modelName": "Modell",
     "modelOverviewPage": "Übersicht",
     "modelSavedPage": "Gespeichert",
-    "modelStudioPage": "Studio",
+    "modelStudioPage": "Modellstudio",
     "modelStudyPage": "Studie",
     "modelVersionsPage": "Versionen",
     "noDomainStudies": "In dieser Domäne sind noch keine Studien veröffentlicht.",
@@ -303,7 +315,7 @@
     "overview": "Übersicht",
     "packs": "Sprachpakete",
     "peerState": "Peer-Zustand",
-    "peers": "Peers",
+    "peers": "Gleichaltrige",
     "projectExchangePage": "Austausch",
     "projectManagePage": "Verwalten",
     "protocolAgents": "Protokoll-Agenten",
@@ -359,7 +371,7 @@
     },
     "studyTypeLabel": "Studientyp",
     "support": "Lager",
-    "theme": "Theme",
+    "theme": "Thema",
     "timedOutJobs": "Aufträge mit Zeitüberschreitung",
     "timeoutAfter": "Zeitlimit",
     "toggleMemberAction": "Elementverbindung geändert",
@@ -370,7 +382,7 @@
     "useCurrentProject": "Aktuelles Projekt verwenden",
     "useCurrentVersion": "Aktuelle Version verwenden",
     "viewport": "Ansichtsfenster",
-    "watchdog": "Watchdog",
+    "watchdog": "Kontrollinstanz",
     "workflowAddConnectedNodeLabel": "Verbundenen Knoten hinzufügen",
     "workflowAddEdgeLabel": "Kante hinzufügen",
     "workflowAddInputPortLabel": "Eingabeport hinzufügen",
@@ -457,7 +469,7 @@
     "workflowDatasetPortMappingsTitle": "Portzuordnungen",
     "workflowDatasetRemoveAxisLabel": "Achse entfernen",
     "workflowDatasetRemoveValueLabel": "Wert entfernen",
-    "workflowDatasetSchemaLabel": "Schema",
+    "workflowDatasetSchemaLabel": "Datensatz-Schema",
     "workflowDatasetSemanticTypeLabel": "Semantischer Typ",
     "workflowDatasetShapeLabel": "Form",
     "workflowDatasetUnassignedLabel": "Nicht zugewiesen",
@@ -513,7 +525,7 @@
     "workflowLocalWorkflowSaveMetadataLabel": "Metadaten speichern",
     "workflowLocalWorkflowSourceLabel": "Quelle",
     "workflowLocalWorkflowSummaryLabel": "Zusammenfassung",
-    "workflowLocalWorkflowTagsLabel": "Tags",
+    "workflowLocalWorkflowTagsLabel": "Schlagworte",
     "workflowLocalWorkflowVariantOfLabel": "Variante von",
     "workflowNoSelection": "Wählen Sie zuerst einen benannten Arbeitsablauf, damit der Builder seinen Graphen anzeigen kann.",
     "workflowNodeIdLabel": "Knoten-ID",
@@ -534,7 +546,7 @@
     "workflowOperatorFilterMatchesLabel": "Treffer",
     "workflowOperatorFilterSummaryLabel": "Filterübersicht",
     "workflowOperatorInputSchemaLabel": "Eingabeschema",
-    "workflowOperatorLabel": "Operator",
+    "workflowOperatorLabel": "Schnittstelle",
     "workflowOperatorOutputSchemaLabel": "Ausgabeschema",
     "workflowOperatorRecentLabel": "Zuletzt verwendet",
     "workflowOperatorSearchEmptyLabel": "Keine Operatoren entsprechen dieser Suche.",
@@ -636,7 +648,7 @@
     "workflowTemplateChainSearchPlaceholder": "Vorlagenketten nach Name, Zusammenfassung oder Operator-ID durchsuchen",
     "workflowTemplateChainSummaryEditLabel": "Zusammenfassung bearbeiten",
     "workflowTemplateChainSummaryPrompt": "Zusammenfassung dieser Vorlagenkette bearbeiten",
-    "workflowTemplateChainTagsLabel": "Tags",
+    "workflowTemplateChainTagsLabel": "Schlagworte",
     "workflowToLabel": "Nach",
     "workflowTopologyEditorTitle": "Topologieeditor",
     "workflowValidationAutoFixedLabel": "{count} Probleme im Arbeitsablauf wurden automatisch korrigiert.",

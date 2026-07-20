@@ -76,7 +76,7 @@ function normalizeTranslateShellTranslation(value) {
 }
 
 function fallbackTranslation(value) {
-  return `${value}\u200b`;
+  return "";
 }
 
 async function translateWithShell(text) {
