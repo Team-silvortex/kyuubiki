@@ -3,7 +3,7 @@
   "language": "da",
   "targetSurface": "workbench",
   "batch": "extended-03",
-  "updatedAt": "2026-07-20T03:30:00.000Z",
+  "updatedAt": "2026-07-20T04:11:27.835Z",
   "overrides": {
     "planeHotspots": "Viktigaste hotspot-element",
     "planeResultLegend": "Fyllning: von Mises · Överlagring: deformerad form",
@@ -111,6 +111,7 @@
     "spaceStudioHint": "Använd rotation, pan och zoom för att navigera rumsramen. 3D-noder och -element kan väljas och redigeras numeriskt.",
     "span": "Spännvidd",
     "spatialTrussElements": "Rumsfackverkselement",
-    "stabilityGood": "Stabil"
+    "stabilityGood": "Stabil",
+    "projectUpdated": "Project updated."
   }
 }
