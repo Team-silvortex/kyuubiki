@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Malay UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "ms/extended-01.json" },
+    { "batch": "extended-02", "path": "ms/extended-02.json" },
+    { "batch": "extended-03", "path": "ms/extended-03.json" },
+    { "batch": "extended-04", "path": "ms/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Bahasa Melayu",
     "subtitle": "Ruang kerja untuk simulasi, aliran kerja dan ejen.",

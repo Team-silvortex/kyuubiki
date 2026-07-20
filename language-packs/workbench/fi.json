@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Finnish UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "fi/extended-01.json" },
+    { "batch": "extended-02", "path": "fi/extended-02.json" },
+    { "batch": "extended-03", "path": "fi/extended-03.json" },
+    { "batch": "extended-04", "path": "fi/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Suomi",
     "subtitle": "Työtila simulaatioille, työnkuluille ja agenteille.",

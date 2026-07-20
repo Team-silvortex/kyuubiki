@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Czech UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "cs/extended-01.json" },
+    { "batch": "extended-02", "path": "cs/extended-02.json" },
+    { "batch": "extended-03", "path": "cs/extended-03.json" },
+    { "batch": "extended-04", "path": "cs/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Čeština",
     "subtitle": "Pracovní prostor pro simulace, workflow a agenty.",

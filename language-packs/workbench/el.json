@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Greek UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "el/extended-01.json" },
+    { "batch": "extended-02", "path": "el/extended-02.json" },
+    { "batch": "extended-03", "path": "el/extended-03.json" },
+    { "batch": "extended-04", "path": "el/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Ελληνικά",
     "subtitle": "Χώρος εργασίας για προσομοίωση, ροές και agents.",

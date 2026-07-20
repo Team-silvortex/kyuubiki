@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Indonesian UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "id/extended-01.json" },
+    { "batch": "extended-02", "path": "id/extended-02.json" },
+    { "batch": "extended-03", "path": "id/extended-03.json" },
+    { "batch": "extended-04", "path": "id/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Bahasa Indonesia",
     "subtitle": "Ruang kerja untuk simulasi, workflow, dan agen.",

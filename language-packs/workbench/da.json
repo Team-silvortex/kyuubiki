@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Danish UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "da/extended-01.json" },
+    { "batch": "extended-02", "path": "da/extended-02.json" },
+    { "batch": "extended-03", "path": "da/extended-03.json" },
+    { "batch": "extended-04", "path": "da/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Dansk",
     "subtitle": "Arbejdsrum til simulering, workflow og agenter.",

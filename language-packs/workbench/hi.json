@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Hindi UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "hi/extended-01.json" },
+    { "batch": "extended-02", "path": "hi/extended-02.json" },
+    { "batch": "extended-03", "path": "hi/extended-03.json" },
+    { "batch": "extended-04", "path": "hi/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · हिन्दी",
     "subtitle": "सिमुलेशन, वर्कफ्लो और एजेंटों के लिए कार्यक्षेत्र।",

@@ -10,6 +10,12 @@
   "source": "downloaded",
   "updatedAt": "2026-07-16T00:00:00.000Z",
   "description": "Norwegian UI translations for Workbench navigation, workflow, store, and system surfaces.",
+  "fragments": [
+    { "batch": "extended-01", "path": "no/extended-01.json" },
+    { "batch": "extended-02", "path": "no/extended-02.json" },
+    { "batch": "extended-03", "path": "no/extended-03.json" },
+    { "batch": "extended-04", "path": "no/extended-04.json" }
+  ],
   "overrides": {
     "title": "Kyuubiki Workbench · Norsk",
     "subtitle": "Arbeidsrom for simulering, arbeidsflyt og agenter.",
