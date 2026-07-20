@@ -7,8 +7,18 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const input = option("--in");
 const output = option("--out");
 const target = option("--target");
+const force = process.argv.includes("--force");
 const customEndpoint = option("--endpoint");
 const endpoint = customEndpoint ?? "https://translate.googleapis.com/translate_a/single";
+const endpointUrl = new URL(endpoint);
+const useMyMemoryPrimary = endpointUrl.hostname.includes("mymemory.translated.net");
+const maxAttempts = Number(option("--attempts")) || 20;
+const maxDelayMs = 8_000;
+const pauseBetweenRequestsMs = Math.max(0, Number(option("--pause-ms")) || 250);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -19,9 +29,66 @@ function isBlank(value) {
   return typeof value === "string" ? !value.trim() : Array.isArray(value) && value.length === 0;
 }
 
+function isSourceTranslation(translation, source) {
+  return JSON.stringify(translation) === JSON.stringify(source);
+}
+
+function decodeHtmlEntities(value) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function normalizeTranslationCandidate(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function pickMymemoryTranslation(payload) {
+  const responseText = normalizeTranslationCandidate(payload?.responseData?.translatedText);
+  if (responseText) return responseText;
+
+  const matches = Array.isArray(payload?.matches) ? payload.matches : [];
+  for (const match of matches) {
+    const candidate = normalizeTranslationCandidate(match?.translation);
+    if (candidate) return candidate;
+  }
+
+  const responseTextNoPunctuation = normalizeTranslationCandidate(payload?.responseData?.match);
+  if (responseTextNoPunctuation) return responseTextNoPunctuation;
+
+  return "";
+}
+
+function normalizeTranslation(text) {
+  return decodeHtmlEntities(text).trim();
+}
+
 async function translate(text) {
+  if (useMyMemoryPrimary) {
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const translated = normalizeTranslation(await translateWithMyMemory(text, undefined, endpoint));
+        if (translated === text) throw new Error("translation output was identical to source text");
+        await sleep(pauseBetweenRequestsMs);
+        return translated;
+      } catch (error) {
+        lastError = error;
+        if (error.status === 429 && attempt < maxAttempts) {
+          const delayMs = Math.min(maxDelayMs, Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 500);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  }
   let lastError;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const url = new URL(endpoint);
       url.searchParams.set("client", "gtx");
@@ -41,16 +108,30 @@ async function translate(text) {
         throw error;
       }
       const payload = await response.json();
-      const translated = payload?.[0]?.map((entry) => entry?.[0]).join("");
+      const translated = normalizeTranslation(payload?.[0]?.map((entry) => entry?.[0]).join(""));
       if (typeof translated !== "string" || !translated.trim()) throw new Error("translation response was empty");
+      if (translated === text) throw new Error("translation output was identical to source text");
+      await sleep(pauseBetweenRequestsMs);
       return translated;
     } catch (error) {
       lastError = error;
       if (error.status === 429 && !customEndpoint) {
-        return translateWithMyMemory(text, error);
+        try {
+          const translated = normalizeTranslation(await translateWithMyMemory(text, error));
+          if (translated === text) throw new Error("translation output was identical to source text");
+          await sleep(pauseBetweenRequestsMs);
+          return translated;
+        } catch (fallbackError) {
+          if (attempt < maxAttempts) {
+            const delayMs = Math.min(maxDelayMs, Number.isFinite(fallbackError.delayMs) ? fallbackError.delayMs : 2 ** attempt * 500);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            continue;
+          }
+          throw fallbackError;
+        }
       }
       if (attempt < 6) {
-        const delayMs = Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 250;
+        const delayMs = Math.min(maxDelayMs, Number.isFinite(error.delayMs) ? error.delayMs : 2 ** attempt * 250);
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
@@ -61,20 +142,33 @@ async function translate(text) {
   } catch { throw lastError; }
 }
 
-async function translateWithMyMemory(text, primaryError) {
-  const url = new URL("https://api.mymemory.translated.net/get");
+async function translateWithMyMemory(text, primaryError, customEndpointUrl = "https://api.mymemory.translated.net/get") {
+  const url = new URL(customEndpointUrl);
   url.searchParams.set("q", text);
   url.searchParams.set("langpair", `en|${target}`);
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-  if (!response.ok) throw primaryError;
+  if (!response.ok) {
+    if (primaryError instanceof Error) throw primaryError;
+    const error = new Error(`mymemory translation request failed: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   const payload = await response.json();
-  const translated = payload?.responseData?.translatedText;
+  const translated = normalizeTranslation(pickMymemoryTranslation(payload));
   if (
     payload?.responseStatus !== 200
     || typeof translated !== "string"
     || !translated.trim()
     || translated.includes("MYMEMORY WARNING")
-  ) throw primaryError;
+  ) {
+    const error = new Error("mymemory translation response was invalid");
+    error.status = payload?.responseStatus;
+    error.body = payload;
+    if (primaryError instanceof Error) {
+      error.cause = primaryError;
+    }
+    throw error;
+  }
   return translated;
 }
 
@@ -93,7 +187,10 @@ function checkpoint() {
   fs.renameSync(temporaryPath, outputPath);
 }
 for (const [index, entry] of batch.strings.entries()) {
-  if (!isBlank(entry.translation)) continue;
+  const shouldTranslate = force
+    ? isBlank(entry.translation) || isSourceTranslation(entry.translation, entry.source)
+    : isBlank(entry.translation);
+  if (!shouldTranslate) continue;
   entry.translation = Array.isArray(entry.source)
     ? await Promise.all(entry.source.map(translate))
     : await translate(entry.source);

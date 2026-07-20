@@ -72,6 +72,16 @@ function hasTranslation(value, source) {
     && value.every((entry) => typeof entry === "string" && entry.trim().length > 0);
 }
 
+function isSourceTranslation(value, source) {
+  if (!hasTranslation(value, source)) return false;
+  if (typeof source === "string") return value === source;
+  return Array.isArray(value) && value.length === source.length && value.every((entry, index) => entry === source[index]);
+}
+
+function hasMeaningfulTranslation(value, source) {
+  return hasTranslation(value, source) && !isSourceTranslation(value, source);
+}
+
 function setValueAtPath(value, dottedPath, nextValue) {
   const parts = dottedPath.split(".");
   const last = parts.pop();
@@ -129,11 +139,17 @@ const packs = fs.readdirSync(path.join(root, "language-packs/workbench"))
 const rows = packs
   .map((entry) => {
     const missing = requiredKeys.filter((key) => !hasTranslation(valueAtPath(entry.overrides, key), sourceStrings[key]));
+    const meaningful = requiredKeys.filter((key) => hasMeaningfulTranslation(valueAtPath(entry.overrides, key), sourceStrings[key]));
+    const sourceMatchedCount = requiredKeys.filter((key) => isSourceTranslation(valueAtPath(entry.overrides, key), sourceStrings[key])).length;
     return {
       language: entry.pack.language,
-      covered: requiredKeys.length - missing.length,
+      covered: meaningful.length,
+      meaningful,
+      sourceMatchedCount,
+      missingOrSourceMatch: requiredKeys.length - meaningful.length,
       required: requiredKeys.length,
-      percent: Number((((requiredKeys.length - missing.length) / requiredKeys.length) * 100).toFixed(1)),
+      percent: Number(((meaningful.length / requiredKeys.length) * 100).toFixed(1)),
+      percentRaw: Number((((requiredKeys.length - missing.length) / requiredKeys.length) * 100).toFixed(1)),
       missing,
     };
   });
@@ -152,9 +168,9 @@ const batches = sourceKeySets.flatMap(({ relativePath, keys }) => keys
     keys: batchKeys,
     coverage: rows.map((row) => ({
       language: row.language,
-      covered: batchKeys.length - row.missing.filter((key) => batchKeys.includes(key)).length,
+      covered: batchKeys.filter((key) => row.meaningful.includes(key)).length,
     })),
-  })));
+  }))); 
 const complete = rows.every((row) => row.covered === row.required);
 const report = {
   schema_version: "kyuubiki.language-pack-full-coverage/v1",
@@ -175,9 +191,9 @@ const markdown = [
   "",
   "## Language Coverage",
   "",
-  "| Language | Covered | Required | Coverage |",
-  "| --- | ---: | ---: | ---: |",
-  ...rows.map((row) => `| ${row.language} | ${row.covered} | ${row.required} | ${row.percent}% |`),
+  "| Language | Covered | Source-matches | Required | Coverage |",
+  "| --- | ---: | ---: | ---: | ---: |",
+  ...rows.map((row) => `| ${row.language} | ${row.covered} | ${row.sourceMatchedCount} | ${row.required} | ${row.percent}% |`),
   "",
   "## Delivery Batches",
   "",
@@ -244,7 +260,7 @@ if (applyFrom) {
     if (JSON.stringify(entry.source) !== JSON.stringify(sourceStrings[key])) {
       throw new Error(`translation batch source drift for ${key}`);
     }
-    if (!hasTranslation(entry.translation, sourceStrings[key])) {
+    if (!hasMeaningfulTranslation(entry.translation, sourceStrings[key])) {
       throw new Error(`translation is missing or has the wrong shape for ${key}`);
     }
   }

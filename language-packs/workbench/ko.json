@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T12:30:00.000Z",
+  "updatedAt": "2026-07-20T04:25:40.703Z",
   "description": "Korean UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "ko/extended-01.json" },
-    { "batch": "extended-02", "path": "ko/extended-02.json" },
-    { "batch": "extended-03", "path": "ko/extended-03.json" },
-    { "batch": "extended-04", "path": "ko/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "ko/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "ko/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "ko/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "ko/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · 한국어",
