@@ -3,12 +3,12 @@
   "language": "id",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-20T03:35:00.000Z",
+  "updatedAt": "2026-07-21T04:19:26.243Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
     "stabilityWatch": "Övervaka",
-    "status": "Status",
+    "status": "Keadaan",
     "stress": "Spänning (Pa)",
     "suggestedFixes": "Föreslagna korrigeringar",
     "suggestionAppliedLink": "Noden har kopplats till närmaste tillgängliga granne.",
@@ -55,7 +55,7 @@
     "tipDisp": "Toppförskjutning",
     "tipForce": "Toppkraft (N)",
     "toggleMember": "Växla element",
-    "topN": "Top N",
+    "topN": "N atas",
     "torqueZ": "Vridmoment Z",
     "torsionHint": "Vridstudier fokuserar på vridning, momentöverföring och skjuvspänning längs axeln.",
     "torsionStress": "Torsionsspänning",
@@ -79,7 +79,7 @@
     "versionRenamed": "Version bytt namn.",
     "versions": "Versioner",
     "waitingJobs": "Väntar på resultat",
-    "worker": "Worker",
+    "worker": "Pekerja",
     "yes": "Ja"
   }
 }

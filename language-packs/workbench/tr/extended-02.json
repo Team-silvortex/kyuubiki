@@ -3,7 +3,7 @@
   "language": "tr",
   "targetSurface": "workbench",
   "batch": "extended-02",
-  "updatedAt": "2026-07-19T14:21:21.545Z",
+  "updatedAt": "2026-07-21T06:27:54.430Z",
   "overrides": {
     "integrityDuplicateElementId": "Eleman \"{id}\" birden fazla görünüyor.",
     "integrityDuplicateMaterialId": "Malzeme \"{id}\" birden fazla görünüyor.",
@@ -20,15 +20,15 @@
     "jobWorkspaceHint": "Önce çözücü çalıştırmalarını izleyin.",
     "jobWorkspaceTitle": "İş çalışma alanı",
     "jumpEnd": "Son",
-    "jumpMid": "50%",
-    "jumpQuarter": "25%",
+    "jumpMid": "%50",
+    "jumpQuarter": "%25",
     "jumpStart": "Başlangıç",
-    "jumpThreeQuarter": "75%",
+    "jumpThreeQuarter": "%75",
     "languages": {
-      "en": "English",
-      "es": "Español",
-      "ja": "日本語",
-      "zh": "中文"
+      "en": "İngilizce",
+      "es": "İspanyolca",
+      "ja": "Japonca",
+      "zh": "Çince"
     },
     "length": "Açıklık (m)",
     "linkMode": "Bağlantı modu",

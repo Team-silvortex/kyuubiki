@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T14:53:31.127Z",
+  "updatedAt": "2026-07-21T05:38:24.288Z",
   "description": "Ukrainian UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "uk/extended-01.json" },
-    { "batch": "extended-02", "path": "uk/extended-02.json" },
-    { "batch": "extended-03", "path": "uk/extended-03.json" },
-    { "batch": "extended-04", "path": "uk/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "uk/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "uk/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "uk/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "uk/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Українська",
@@ -22,7 +34,7 @@
     "rail": {
       "study": "Дослідження",
       "model": "Робочий простір",
-      "workflow": "Workflow",
+      "workflow": "робочий процес",
       "store": "Магазин",
       "library": "Історія",
       "system": "Система"
@@ -303,7 +315,7 @@
     "overview": "Огляд",
     "packs": "Мовні пакети",
     "peerState": "Стан peer",
-    "peers": "Peers",
+    "peers": "Однолітки",
     "projectExchangePage": "Обмін",
     "projectManagePage": "Керувати",
     "protocolAgents": "Агенти протоколу",
@@ -370,7 +382,7 @@
     "useCurrentProject": "Використати поточний проєкт",
     "useCurrentVersion": "Використати поточну версію",
     "viewport": "Вікно перегляду",
-    "watchdog": "Watchdog",
+    "watchdog": "Сторожовий пес",
     "workflowAddConnectedNodeLabel": "Додати пов'язаний вузол",
     "workflowAddEdgeLabel": "Додати ребро",
     "workflowAddInputPortLabel": "Додати порт введення",

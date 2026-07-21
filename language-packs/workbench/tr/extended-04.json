@@ -3,7 +3,7 @@
   "language": "tr",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T14:24:36.202Z",
+  "updatedAt": "2026-07-21T05:33:32.256Z",
   "overrides": {
     "stabilityRisk": "Risk altında",
     "stabilityScore": "Kararlılık puanı",
@@ -36,9 +36,9 @@
     "temperatureGradientX": "Sıcaklık gradyanı X",
     "temperatureGradientY": "Sıcaklık gradyanı Y",
     "themes": {
-      "graphite": "Blender Forge",
-      "linen": "Workshop Slate",
-      "marine": "Blueprint Teal"
+      "graphite": "Blender Ocağı",
+      "linen": "Atölye Listesi",
+      "marine": "Plan Deniz Mavisi"
     },
     "thermalBarResponse": "Kısıtlı çubuk yanıtı",
     "thermalBeamResponse": "Kiriş termal yanıtı",

@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T12:30:00.000Z",
+  "updatedAt": "2026-07-21T05:40:49.499Z",
   "description": "Traditional Chinese UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "zh-tw/extended-01.json" },
-    { "batch": "extended-02", "path": "zh-tw/extended-02.json" },
-    { "batch": "extended-03", "path": "zh-tw/extended-03.json" },
-    { "batch": "extended-04", "path": "zh-tw/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "zh-tw/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "zh-tw/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "zh-tw/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "zh-tw/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · 繁體中文",
@@ -278,7 +290,7 @@
     "linkedProjectOpened": "已開啟連結的專案內容。",
     "load": "載入",
     "material": "材料",
-    "mesh": "Mesh",
+    "mesh": "網",
     "messages": "訊息",
     "methods": "方法",
     "metrics": "求解器指標",
@@ -364,7 +376,7 @@
     "timeoutAfter": "逾時限制",
     "toggleMemberAction": "已變更構件連接性",
     "trussSample": "開啟 2D 範例",
-    "ui": "Next.js UI",
+    "ui": "Next.js 使用者介面",
     "undo": "復原",
     "undoApplied": "已還原最近一次變更。",
     "useCurrentProject": "使用目前專案",

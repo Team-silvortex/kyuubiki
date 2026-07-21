@@ -8,7 +8,7 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T14:04:01.487Z",
+  "updatedAt": "2026-07-21T05:16:17.529Z",
   "description": "Polish UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
     {
@@ -168,7 +168,7 @@
       "h24": "Ostatnie 24 godziny"
     },
     "axialSample": "Otwórz przykład 1D",
-    "backend": "Backend",
+    "backend": "Zaplecze",
     "browserLimitsNote": "Rozszerzeń przeglądarki nie można całkowicie wyłączyć ze strony, ale widok może ograniczyć wybór i kopiowanie.",
     "cancelJob": "Anuluj zadanie",
     "capabilities": "Możliwości",
@@ -382,7 +382,7 @@
     "useCurrentProject": "Użyj bieżącego projektu",
     "useCurrentVersion": "Użyj bieżącej wersji",
     "viewport": "Widok",
-    "watchdog": "Watchdog",
+    "watchdog": "Pies podwórzowy",
     "workflowAddConnectedNodeLabel": "Dodaj połączony węzeł",
     "workflowAddEdgeLabel": "Dodaj krawędź",
     "workflowAddInputPortLabel": "Dodaj port wejściowy",

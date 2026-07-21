@@ -3,7 +3,7 @@
   "language": "ko",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T12:52:23.308Z",
+  "updatedAt": "2026-07-21T05:07:56.947Z",
   "overrides": {
     "stabilityRisk": "위험",
     "stabilityScore": "안정성 점수",
@@ -36,9 +36,9 @@
     "temperatureGradientX": "온도 구배 X",
     "temperatureGradientY": "온도 구배 Y",
     "themes": {
-      "graphite": "Blender Forge",
-      "linen": "Workshop Slate",
-      "marine": "Blueprint Teal"
+      "graphite": "블렌더 포지",
+      "linen": "워크샵 슬레이트",
+      "marine": "청사진 청록"
     },
     "thermalBarResponse": "구속 막대 응답",
     "thermalBeamResponse": "보 열 응답",

@@ -3,18 +3,18 @@
   "language": "ms",
   "targetSurface": "workbench",
   "batch": "extended-03",
-  "updatedAt": "2026-07-20T04:12:48.515Z",
+  "updatedAt": "2026-07-21T02:56:35.118Z",
   "overrides": {
     "planeHotspots": "Viktigaste hotspot-element",
     "planeResultLegend": "Fyllning: von Mises · Överlagring: deformerad form",
     "planeThickness": "Tjocklek",
     "planeViewMaxShear": "Maximal skjuvspänning",
     "planeViewPrincipal1": "Huvudspänning 1",
-    "planeViewVonMises": "von Mises",
+    "planeViewVonMises": "Paparan plano von Mises",
     "poisson": "Poisson-tal",
     "poissonRatio": "Poisson-tal",
     "pollingDetached": "Live-avpollning pausad för att hålla gränssnittet responsivt. Uppdatera jobbstatus när du är redo.",
-    "potential": "Potential",
+    "potential": "Potensi",
     "potentialGradient": "Potentialgradient",
     "precheckPrefix": "Förkontroll misslyckades",
     "prescribedTemperatureNodes": "Noder med föreskriven temperatur",
@@ -56,7 +56,7 @@
     "renderModeLine": "Linjär",
     "renderModePlane": "Yta",
     "renderModeSpace": "Rum",
-    "renderStatusLabel": "Status",
+    "renderStatusLabel": "Status render",
     "renderStatusProgressive": "Progressiv",
     "renderStatusStable": "Stabil",
     "renderStrategyAuto": "Automatisk",
@@ -75,7 +75,7 @@
     "resultWorkspaceHint": "Öppna senaste beräknade körning här och växla sedan till rapporter, export och länkade dataset.",
     "resultWorkspaceTitle": "Resultatarbetsyta",
     "results": "Resultat",
-    "rotationZ": "Rotation Z",
+    "rotationZ": "Putaran Z",
     "run": "Kör studie",
     "running": "Kör...",
     "sampleLibrary": "Exempelbibliotek",
@@ -112,6 +112,6 @@
     "span": "Spännvidd",
     "spatialTrussElements": "Rumsfackverkselement",
     "stabilityGood": "Stabil",
-    "projectUpdated": "Project updated."
+    "projectUpdated": "Projek dikemas kini."
   }
 }

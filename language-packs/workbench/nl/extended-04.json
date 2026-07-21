@@ -3,12 +3,12 @@
   "language": "nl",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T15:33:28.536Z",
+  "updatedAt": "2026-07-21T04:48:26.193Z",
   "overrides": {
     "stabilityRisk": "Risico",
     "stabilityScore": "Stabiliteitsscore",
     "stabilityWatch": "Bewaken",
-    "status": "Status",
+    "status": "Toestand",
     "stress": "Spanning (Pa)",
     "suggestedFixes": "Voorgestelde oplossingen",
     "suggestionAppliedLink": "Knooppunt verbonden met de dichtstbijzijnde beschikbare buur.",
@@ -36,9 +36,9 @@
     "temperatureGradientX": "Temperatuurgradiënt X",
     "temperatureGradientY": "Temperatuurgradiënt Y",
     "themes": {
-      "graphite": "Blender Forge",
-      "linen": "Workshop Slate",
-      "marine": "Blueprint Teal"
+      "graphite": "Blender smeden",
+      "linen": "Werkplaats Leisteen",
+      "marine": "Blauwdruk Wintertaling"
     },
     "thermalBarResponse": "Respons van beperkte staaf",
     "thermalBeamResponse": "Thermische balkrespons",
@@ -55,7 +55,7 @@
     "tipDisp": "Puntverplaatsing",
     "tipForce": "Puntkracht (N)",
     "toggleMember": "Koppeling wisselen",
-    "topN": "Top N",
+    "topN": "TopN",
     "torqueZ": "Koppel Z",
     "torsionHint": "Asstudies richten zich op verdraaiing, koppeloverdracht en schuifspanning langs de as.",
     "torsionStress": "Torsiespanning",
@@ -79,7 +79,7 @@
     "versionRenamed": "Versie hernoemd.",
     "versions": "Versies",
     "waitingJobs": "Wachten op resultaat",
-    "worker": "Worker",
+    "worker": "Werknemer",
     "yes": "Ja"
   }
 }

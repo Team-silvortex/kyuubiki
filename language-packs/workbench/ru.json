@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T10:01:06.537Z",
+  "updatedAt": "2026-07-21T05:24:17.247Z",
   "description": "Russian UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "ru/extended-01.json" },
-    { "batch": "extended-02", "path": "ru/extended-02.json" },
-    { "batch": "extended-03", "path": "ru/extended-03.json" },
-    { "batch": "extended-04", "path": "ru/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "ru/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "ru/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "ru/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "ru/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Русский",
@@ -22,7 +34,7 @@
     "rail": {
       "study": "Исследование",
       "model": "Модель",
-      "workflow": "Workflow",
+      "workflow": "Рабочий процесс",
       "store": "Магазин",
       "library": "История",
       "system": "Система"
@@ -58,7 +70,7 @@
     "activeJobs": "Активные вакансии ",
     "addNodeAction": "Добавлен узел",
     "adminBrowsePage": "Обзор",
-    "adminCaseId": "Simulation case",
+    "adminCaseId": "Случай моделирования",
     "adminEditPage": "Правка",
     "adminJobs": "Вакансии",
     "adminMessage": "message",
@@ -141,7 +153,7 @@
       "completed": "Завершено",
       "confirmed": "Договор подтвержден",
       "failed": "Не удалось",
-      "prompted": "Prompted"
+      "prompted": "Подсказка"
     },
     "auditStudyFacetTitle": "Аспекты исследования",
     "auditSummaryTitle": "Сводка событий:",
@@ -200,7 +212,7 @@
     "editMemberAction": "Отредактированные свойства элемента",
     "editNodeAction": "Отредактированные свойства узла",
     "editParametric": "Отредактированный параметрический генератор",
-    "enterImmersive": "Immersive",
+    "enterImmersive": "иммерсивный",
     "exitImmersive": "Выход ИММЕРСИВНЫЙ",
     "exportDatabase": "Экспорт моментального снимка базы данных",
     "exportRecord": "Экспортировать запись",
@@ -235,7 +247,7 @@
     "immersiveModel": "Модель",
     "immersiveModels": "Сохранено",
     "immersiveNoNodeSelection": "Выберите 3D-узел для редактирования его координат, опор и нагрузок.",
-    "immersiveNodeOps": "Node ops",
+    "immersiveNodeOps": "Операции узла",
     "immersiveNodeSelection": "Выбранные узлы",
     "immersiveQuickProps": "Быстрые свойства",
     "immersiveSamples": "Примеры",
@@ -304,7 +316,7 @@
     "packs": "Локализации",
     "peerState": "Состояние однорангового узла",
     "peers": "Равные наставники",
-    "projectExchangePage": "Exchange",
+    "projectExchangePage": "Обмен",
     "projectManagePage": "Управление",
     "protocolAgents": "Агенты протокола",
     "protocols": "Протоколы",
@@ -370,7 +382,7 @@
     "useCurrentProject": "Текущий проект",
     "useCurrentVersion": "Текущая версия",
     "viewport": "Область просмотра",
-    "watchdog": "Watchdog",
+    "watchdog": "Сторожевой пес",
     "workflowAddConnectedNodeLabel": "Добавить подключенный узел",
     "workflowAddEdgeLabel": "Добавить границу",
     "workflowAddInputPortLabel": "входной порт",

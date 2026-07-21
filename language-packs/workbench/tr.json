@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T14:16:14.566Z",
+  "updatedAt": "2026-07-21T05:34:39.072Z",
   "description": "Turkish UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "tr/extended-01.json" },
-    { "batch": "extended-02", "path": "tr/extended-02.json" },
-    { "batch": "extended-03", "path": "tr/extended-03.json" },
-    { "batch": "extended-04", "path": "tr/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "tr/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "tr/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "tr/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "tr/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Türkçe",
@@ -22,7 +34,7 @@
     "rail": {
       "study": "Çalışma",
       "model": "Çalışma alanı",
-      "workflow": "Workflow",
+      "workflow": "İş akışı",
       "store": "Mağaza",
       "library": "Geçmiş",
       "system": "Sistem"
@@ -232,7 +244,7 @@
     "immersiveMemberOps": "Eleman işlemleri",
     "immersiveModeDisabled": "Sürükleyici görünüm kapatıldı.",
     "immersiveModeEnabled": "Sürükleyici görünüm etkinleştirildi.",
-    "immersiveModel": "Model",
+    "immersiveModel": "Modeli",
     "immersiveModels": "Kaydedildi",
     "immersiveNoNodeSelection": "Koordinatları, destekleri ve yükleri düzenlemek için 3D düğüm seçin.",
     "immersiveNodeOps": "Düğüm işlemleri",
@@ -287,7 +299,7 @@
     "mirrorZ": "Z yansıt",
     "modelGeneratePage": "Üret",
     "modelMaterialsPage": "Malzemeler",
-    "modelName": "Model",
+    "modelName": "Modeli",
     "modelOverviewPage": "Genel bakış",
     "modelSavedPage": "Kaydedildi",
     "modelStudioPage": "Stüdyo",
@@ -364,13 +376,13 @@
     "timeoutAfter": "Zaman aşımı limiti",
     "toggleMemberAction": "Eleman bağlantısı değiştirildi",
     "trussSample": "2D örneği aç",
-    "ui": "Next.js UI",
+    "ui": "Next.js kullanıcı arayüzü",
     "undo": "Geri al",
     "undoApplied": "Son değişiklik geri alındı.",
     "useCurrentProject": "Geçerli projeyi kullan",
     "useCurrentVersion": "Geçerli sürümü kullan",
     "viewport": "Görünüm",
-    "watchdog": "Watchdog",
+    "watchdog": "Bekçi köpeği",
     "workflowAddConnectedNodeLabel": "Bağlı düğüm ekle",
     "workflowAddEdgeLabel": "Kenar ekle",
     "workflowAddInputPortLabel": "Girdi bağlantı noktası ekle",

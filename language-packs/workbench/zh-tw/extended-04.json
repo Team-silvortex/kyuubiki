@@ -3,7 +3,7 @@
   "language": "zh-TW",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T11:47:05.992Z",
+  "updatedAt": "2026-07-21T05:40:10.578Z",
   "overrides": {
     "stabilityRisk": "有風險",
     "stabilityScore": "穩定性分數",
@@ -36,9 +36,9 @@
     "temperatureGradientX": "X 向溫度梯度",
     "temperatureGradientY": "Y 向溫度梯度",
     "themes": {
-      "graphite": "Blender Forge",
-      "linen": "Workshop Slate",
-      "marine": "Blueprint Teal"
+      "graphite": "攪拌機鍛造",
+      "linen": "工作坊石板",
+      "marine": "藍圖青色"
     },
     "thermalBarResponse": "受限制桿件熱響應",
     "thermalBeamResponse": "梁熱響應",

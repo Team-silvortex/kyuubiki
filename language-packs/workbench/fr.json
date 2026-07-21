@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T00:00:00.000Z",
+  "updatedAt": "2026-07-21T05:02:36.686Z",
   "description": "French UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "fr/extended-01.json" },
-    { "batch": "extended-02", "path": "fr/extended-02.json" },
-    { "batch": "extended-03", "path": "fr/extended-03.json" },
-    { "batch": "extended-04", "path": "fr/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "fr/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "fr/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "fr/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "fr/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Français",
@@ -164,7 +176,7 @@
     "clearFilters": "Effacer les filtres",
     "clearLoads": "Effacer les charges",
     "close": "Fermer",
-    "cluster": "Cluster",
+    "cluster": "Grappe",
     "clusterHealth": "Santé du cluster",
     "clusterSize": "Taille du cluster",
     "clusterTokenHelp": "Utilisé pour l'inscription, le heartbeat et la suppression des routes de cluster des agents ; utilise le jeton du plan de contrôle s'il est vide.",

@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T08:03:38.910Z",
+  "updatedAt": "2026-07-21T05:06:38.105Z",
   "description": "Italian UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "it/extended-01.json" },
-    { "batch": "extended-02", "path": "it/extended-02.json" },
-    { "batch": "extended-03", "path": "it/extended-03.json" },
-    { "batch": "extended-04", "path": "it/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "it/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "it/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "it/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "it/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Italiano",
@@ -35,7 +47,7 @@
       "library": "Cronologia attività",
       "system": "Sistema"
     },
-    "workflowBuilderPage": "Builder",
+    "workflowBuilderPage": "Costruttore",
     "workflowRunsPage": "Esecuzioni",
     "workflowCatalogTitle": "Catalogo workflow",
     "workflowTemplateChainLibraryLabel": "Libreria catene",

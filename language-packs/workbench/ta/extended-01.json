@@ -3,7 +3,7 @@
   "language": "ta",
   "targetSurface": "workbench",
   "batch": "extended-01",
-  "updatedAt": "2026-07-20T05:00:48.382Z",
+  "updatedAt": "2026-07-21T04:36:45.232Z",
   "overrides": {
     "addBranchNode": "கிளை முனை",
     "addMember": "உறுப்பினரைச் சேர்க்கவும்",
@@ -56,7 +56,7 @@
     "electricFluxDensityMagnitude": "ஃப்ளக்ஸ் அடர்த்தி அளவு",
     "elementHeatTable": "எலிமெண்ட் ஹீட் டேபிள்",
     "elements": "தனிம எண்:",
-    "exportCsv": "CSV",
+    "exportCsv": "ส่งออก CSV",
     "exportData": "தரவை ஏற்றுமதி செய்க",
     "exportHotspots": "ஹாட்ஸ்பாட்களை ஏற்றுமதி செய்யவும்",
     "exportJson": "யேசண்",

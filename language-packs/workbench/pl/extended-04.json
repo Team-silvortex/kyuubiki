@@ -3,7 +3,7 @@
   "language": "pl",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T14:01:32.956Z",
+  "updatedAt": "2026-07-21T05:15:15.243Z",
   "overrides": {
     "stabilityRisk": "Zagrożone",
     "stabilityScore": "Ocena stabilności",
@@ -36,9 +36,9 @@
     "temperatureGradientX": "Gradient temperatury X",
     "temperatureGradientY": "Gradient temperatury Y",
     "themes": {
-      "graphite": "Blender Forge",
-      "linen": "Workshop Slate",
-      "marine": "Blueprint Teal"
+      "graphite": "Kuźnia Blendera",
+      "linen": "Łupek warsztatowy",
+      "marine": "Projekt turkusowy"
     },
     "thermalBarResponse": "Odpowiedź ograniczonego pręta",
     "thermalBeamResponse": "Odpowiedź cieplna belki",
@@ -79,7 +79,7 @@
     "versionRenamed": "Zmieniono nazwę wersji.",
     "versions": "Wersje",
     "waitingJobs": "Oczekiwanie na wynik",
-    "worker": "Worker",
+    "worker": "Pracownik",
     "yes": "Tak"
   }
 }
