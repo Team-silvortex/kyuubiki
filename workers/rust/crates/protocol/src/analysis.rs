@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use crate::{
     SolveAcousticBar1dResult, SolveAdvectionDiffusionBar1dResult, SolveBarResult,
-    SolveBeam1dResult, SolveBucklingBeam1dResult, SolveContactGap1dResult,
-    SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dResult,
+    SolveBeam1dResult, SolveBucklingBeam1dResult, SolveBucklingFrame2dResult,
+    SolveContactGap1dResult, SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dResult,
     SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dResult, SolveFrame3dResult,
     SolveHarmonicSpring1dResult, SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult,
     SolveHeatPlaneTriangle2dResult, SolveMagnetostaticBar1dResult,
@@ -65,6 +65,7 @@ pub enum AnalysisResult {
     ThermalFrame2d(SolveThermalFrame2dResult),
     ThermalFrame3d(SolveThermalFrame3dResult),
     BucklingBeam1d(SolveBucklingBeam1dResult),
+    BucklingFrame2d(SolveBucklingFrame2dResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

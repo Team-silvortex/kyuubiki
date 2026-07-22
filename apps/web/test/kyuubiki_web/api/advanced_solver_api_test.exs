@@ -74,6 +74,47 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     "frequencies_hz" => [0.0, 0.5, 1.0]
   }
 
+  @buckling_frame_request %{
+    "frame" => %{
+      "nodes" => [
+        %{
+          "id" => "base",
+          "x" => 0.0,
+          "y" => 0.0,
+          "fix_x" => true,
+          "fix_y" => true,
+          "fix_rz" => false,
+          "load_x" => 0.0,
+          "load_y" => 0.0,
+          "moment_z" => 0.0
+        },
+        %{
+          "id" => "top",
+          "x" => 0.0,
+          "y" => 2.0,
+          "fix_x" => true,
+          "fix_y" => false,
+          "fix_rz" => false,
+          "load_x" => 0.0,
+          "load_y" => -100_000.0,
+          "moment_z" => 0.0
+        }
+      ],
+      "elements" => [
+        %{
+          "id" => "column",
+          "node_i" => 0,
+          "node_j" => 1,
+          "area" => 0.01,
+          "youngs_modulus" => 210.0e9,
+          "moment_of_inertia" => 8.0e-6,
+          "section_modulus" => 1.0e-4
+        }
+      ]
+    },
+    "mode_count" => 1
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
@@ -82,6 +123,7 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
+    {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},
     {"/api/v1/fem/modal-frame-3d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/solid-tetra-3d/jobs", "max_von_mises_stress", @solid_tetra_request},
     {"/api/v1/fem/transient-heat-bar-1d/jobs", "final_time", @transient_heat_request},

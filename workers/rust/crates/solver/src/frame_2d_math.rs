@@ -1,4 +1,4 @@
-pub(super) fn frame_local_stiffness(
+pub(crate) fn frame_local_stiffness(
     area: f64,
     youngs_modulus: f64,
     moment_of_inertia: f64,
@@ -69,7 +69,7 @@ pub(super) fn frame_thermal_gradient_vector(
     [0.0, 0.0, -thermal_moment, 0.0, 0.0, thermal_moment]
 }
 
-pub(super) fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
+pub(crate) fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
     [
         [c, s, 0.0, 0.0, 0.0, 0.0],
         [-s, c, 0.0, 0.0, 0.0, 0.0],
@@ -80,7 +80,7 @@ pub(super) fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
     ]
 }
 
-pub(super) fn transform_frame_stiffness(
+pub(crate) fn transform_frame_stiffness(
     local_stiffness: &[[f64; 6]; 6],
     transform: &[[f64; 6]; 6],
 ) -> [[f64; 6]; 6] {

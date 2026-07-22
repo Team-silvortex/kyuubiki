@@ -1,0 +1,21 @@
+{
+  "kind": "buckling_frame_2d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "preloaded-pinned-column-2d",
+  "frame": {
+    "nodes": [
+      { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0 },
+      { "id": "n1", "x": 0.0, "y": 0.5, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0 },
+      { "id": "n2", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0 },
+      { "id": "n3", "x": 0.0, "y": 1.5, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0 },
+      { "id": "n4", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -100000.0, "moment_z": 0.0 }
+    ],
+    "elements": [
+      { "id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001 },
+      { "id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001 },
+      { "id": "e2", "node_i": 2, "node_j": 3, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001 },
+      { "id": "e3", "node_i": 3, "node_j": 4, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001 }
+    ]
+  },
+  "mode_count": 3
+}

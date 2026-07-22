@@ -50,6 +50,7 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_modal_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_buckling_beam_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_buckling_frame_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_frame_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_solid_tetra_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_modal_frame_3d(params), to: AnalysisSolverSubmissions

@@ -17,6 +17,14 @@ export type ContactGap1dJobInput = AdvancedFemGraphJobInput & {
   contacts: AdvancedFemContactInput[];
 };
 
+export type BucklingFrame2dJobInput = {
+  frame: AdvancedFemGraphJobInput;
+  mode_count?: number;
+  project_id?: string;
+  model_version_id?: string;
+  [key: string]: unknown;
+};
+
 export type AdvancedFemResult = Record<string, unknown>;
 
 export function createAcousticBar1dJob(
@@ -59,6 +67,16 @@ export function createBucklingBeam1dJob(
   input: AdvancedFemGraphJobInput,
 ): Promise<JobEnvelope<AdvancedFemResult>> {
   return createAdvancedFemJob("/api/v1/fem/buckling-beam-1d/jobs", input);
+}
+
+export function createBucklingFrame2dJob(
+  input: BucklingFrame2dJobInput,
+): Promise<JobEnvelope<AdvancedFemResult>> {
+  return requestJson<JobEnvelope<AdvancedFemResult>>("/api/v1/fem/buckling-frame-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 export function createModalFrame3dJob(

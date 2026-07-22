@@ -351,6 +351,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.buckling_frame_2d",
+            "mechanical",
+            "buckling_frame_2d",
+            "Solve a statically preloaded 2D frame linear eigenvalue buckling model and emit extracted member compression, critical load factors, and normalized mode shapes.",
+            &[
+                "screening",
+                "mechanical",
+                "buckling",
+                "stability",
+                "frame",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.modal_frame_3d",
             "mechanical",
             "modal_frame_3d",

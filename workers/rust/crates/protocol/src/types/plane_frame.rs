@@ -379,6 +379,40 @@ pub struct SolveBucklingBeam1dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBucklingFrame2dRequest {
+    pub frame: SolveFrame2dRequest,
+    #[serde(default)]
+    pub mode_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucklingFrame2dElementPreloadResult {
+    pub index: usize,
+    pub id: String,
+    pub signed_axial_force: f64,
+    pub reference_compressive_force: f64,
+    pub active_in_geometric_stiffness: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucklingFrame2dModeResult {
+    pub index: usize,
+    pub load_factor: f64,
+    pub residual_norm: f64,
+    pub shape: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBucklingFrame2dResult {
+    pub input: SolveBucklingFrame2dRequest,
+    pub static_result: SolveFrame2dResult,
+    pub element_preloads: Vec<BucklingFrame2dElementPreloadResult>,
+    pub modes: Vec<BucklingFrame2dModeResult>,
+    pub free_dofs: Vec<usize>,
+    pub minimum_load_factor: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalFrame2dNodeResult {
     pub index: usize,
     pub id: String,

@@ -41,6 +41,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.frame_2d",
     "solve.modal_frame_2d",
     "solve.buckling_beam_1d",
+    "solve.buckling_frame_2d",
     "solve.modal_frame_3d",
     "solve.beam_1d",
     "solve.thermal_beam_1d",
@@ -392,6 +393,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::BucklingBeam1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::BucklingBeam1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.buckling_frame_2d" => encode_solve_result(
+            solve(EngineSolveRequest::BucklingFrame2d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::BucklingFrame2d(result) => Some(result),
                 _ => None,
             },
             operator_id,

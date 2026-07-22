@@ -92,6 +92,53 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test buckling_beam_workflow -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "buckling-frame-2d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "buckling-frame-2d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.buckling_frame_2d"
+      ],
+      "validation_methods": [
+        "static_preload_extraction",
+        "euler_column_closed_form",
+        "mesh_convergence",
+        "global_orientation_invariance",
+        "semidefinite_generalized_eigenproblem",
+        "input_boundary_rejection"
+      ],
+      "formal_invariants": [
+        "reference_compression_is_derived_from_static_member_end_forces",
+        "pinned_frame_column_converges_to_pi_squared_ei_over_l_squared",
+        "critical_factor_is_invariant_to_global_column_orientation",
+        "positive_modes_are_sorted_and_normalized",
+        "tension_only_and_zero_reference_states_are_rejected"
+      ],
+      "evidence_paths": [
+        "evidence/operator-screening/buckling-frame-2d-linear-eigenvalue.md",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_input_reliability.rs",
+        "workers/rust/crates/engine/tests/buckling_frame_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "buckling-frame-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "buckling-frame-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_input_reliability -- --nocapture"
+        },
+        {
+          "id": "buckling-frame-workflow-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test buckling_frame_workflow -- --nocapture"
+        }
+      ]
     }
   ]
 }

@@ -25,7 +25,8 @@ export type SampleEntry = {
     | "plane_triangle_2d"
     | "plane_quad_2d"
     | "frame_2d"
-    | "buckling_beam_1d";
+    | "buckling_beam_1d"
+    | "buckling_frame_2d";
   href: string;
   summary: string;
 };
@@ -240,5 +241,12 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "buckling_beam_1d",
     href: "/models/buckling-beam-1d.json",
     summary: "Pinned Euler column for linear eigenvalue buckling convergence and critical-load screening.",
+  },
+  {
+    id: "buckling-frame-column-2d",
+    name: "Preloaded Buckling Frame 2D",
+    kind: "buckling_frame_2d",
+    href: "/models/buckling-frame-2d.json",
+    summary: "Pinned 2D frame column with static preload extraction and linear eigenvalue buckling modes.",
   },
 ];

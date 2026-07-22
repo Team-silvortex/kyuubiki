@@ -234,6 +234,12 @@ pub fn chunk_result(
         (AnalysisResult::BucklingBeam1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.modes)?
         }
+        (AnalysisResult::BucklingFrame2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.static_result.nodes)?
+        }
+        (AnalysisResult::BucklingFrame2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.modes)?
+        }
     };
 
     let offset = request.offset.min(items.len());

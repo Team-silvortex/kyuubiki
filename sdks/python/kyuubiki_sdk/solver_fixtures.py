@@ -202,6 +202,16 @@ _FRAME_2D = {
     "elements": [{"id": "fe0", "node_i": 0, "node_j": 1, "area": 0.02, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.00016}],
 }
 
+_BUCKLING_FRAME_2D = {
+    "nodes": [
+        {"id": "bf0", "x": 0.0, "y": 0.0, "fix_x": True, "fix_y": True, "fix_rz": False, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+        {"id": "bf1", "x": 0.0, "y": 2.0, "fix_x": True, "fix_y": False, "fix_rz": False, "load_x": 0.0, "load_y": -100_000.0, "moment_z": 0.0},
+    ],
+    "elements": [
+        {"id": "bfe0", "node_i": 0, "node_j": 1, "area": 0.02, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.00016},
+    ],
+}
+
 _TRUSS_3D = {
     "nodes": [
         {"id": "n0", "x": 0.0, "y": 0.0, "z": 0.0, "fix_x": True, "fix_y": True, "fix_z": True, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0},
@@ -297,6 +307,10 @@ _PAYLOADS = {
             {"id": "e0", "node_i": 0, "node_j": 1, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "reference_compressive_force": 100_000.0},
             {"id": "e1", "node_i": 1, "node_j": 2, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "reference_compressive_force": 100_000.0},
         ],
+        "mode_count": 1,
+    },
+    "buckling_frame_2d": {
+        "frame": _BUCKLING_FRAME_2D,
         "mode_count": 1,
     },
     "frame_3d": _FRAME_3D,

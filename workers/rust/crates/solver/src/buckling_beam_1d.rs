@@ -1,4 +1,5 @@
-use crate::modal_math::{ensure_dense_modal_size, jacobi_eigenpairs};
+use crate::buckling_math::{generalized_eigenpairs, reduce_dense};
+use crate::modal_math::ensure_dense_modal_size;
 use kyuubiki_protocol::{
     BucklingBeam1dModeResult, SolveBucklingBeam1dRequest, SolveBucklingBeam1dResult,
 };
@@ -39,41 +40,15 @@ pub fn solve_buckling_beam_1d(
     let reduced_elastic = reduce_dense(&elastic, &free_dofs);
     let reduced_geometric = reduce_dense(&geometric, &free_dofs);
     let mode_limit = request.mode_count.unwrap_or(3).max(1);
-    let physical_eigenpairs = if mode_limit == 1 {
-        vec![smallest_generalized_eigenpair(
-            &reduced_elastic,
-            &reduced_geometric,
-        )?]
-    } else {
-        let cholesky = cholesky(&reduced_geometric)?;
-        let normalized = symmetric_generalized_operator(&reduced_elastic, &cholesky);
-        jacobi_eigenpairs(normalized)
-            .into_iter()
-            .map(|(load_factor, normalized_shape)| {
-                (
-                    load_factor,
-                    solve_upper_transpose(&cholesky, &normalized_shape),
-                )
-            })
-            .collect()
-    };
-    let modes = physical_eigenpairs
+    let modes = generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?
         .into_iter()
-        .filter(|(value, _)| value.is_finite() && *value > 1.0e-9)
-        .take(mode_limit)
         .enumerate()
-        .map(|(index, (load_factor, reduced_shape))| {
-            let residual_norm = generalized_residual(
-                &reduced_elastic,
-                &reduced_geometric,
-                &reduced_shape,
-                load_factor,
-            );
-            let shape = expand_and_normalize(&reduced_shape, &free_dofs, dof_count);
+        .map(|(index, pair)| {
+            let shape = expand_and_normalize(&pair.vector, &free_dofs, dof_count);
             BucklingBeam1dModeResult {
                 index,
-                load_factor,
-                residual_norm,
+                load_factor: pair.eigenvalue,
+                residual_norm: pair.residual_norm,
                 shape,
             }
         })
@@ -87,83 +62,6 @@ pub fn solve_buckling_beam_1d(
         modes,
         free_dofs,
     })
-}
-
-fn smallest_generalized_eigenpair(
-    stiffness: &[Vec<f64>],
-    geometric: &[Vec<f64>],
-) -> Result<(f64, Vec<f64>), String> {
-    let lower = cholesky(stiffness).map_err(|_| {
-        "buckling elastic stiffness is not positive definite after constraints".to_string()
-    })?;
-    let size = stiffness.len();
-    let mut shape = (0..size)
-        .map(|index| {
-            let phase = std::f64::consts::PI * (index + 1) as f64 / (size + 1) as f64;
-            phase.sin() + 0.173 * (2.0 * phase).cos()
-        })
-        .collect::<Vec<_>>();
-    normalize(&mut shape)?;
-    let mut previous_factor = f64::NAN;
-
-    for _ in 0..256 {
-        let geometric_product = matrix_vector(geometric, &shape);
-        let forward = solve_lower(&lower, &geometric_product);
-        let mut next = solve_upper_transpose(&lower, &forward);
-        normalize(&mut next)?;
-        let elastic_product = matrix_vector(stiffness, &next);
-        let next_geometric_product = matrix_vector(geometric, &next);
-        let denominator = dot(&next, &next_geometric_product);
-        if !(denominator.is_finite() && denominator > 1.0e-18) {
-            return Err("buckling reference load pattern has no positive modal work".to_string());
-        }
-        let load_factor = dot(&next, &elastic_product) / denominator;
-        let residual = elastic_product
-            .iter()
-            .zip(&next_geometric_product)
-            .map(|(elastic, geometric)| elastic - load_factor * geometric)
-            .collect::<Vec<_>>();
-        let scale = l2_norm(&elastic_product)
-            .max(load_factor.abs() * l2_norm(&next_geometric_product))
-            .max(1.0);
-        let relative_residual = l2_norm(&residual) / scale;
-        let factor_change = (load_factor - previous_factor).abs() / load_factor.abs().max(1.0);
-        shape = next;
-        if relative_residual <= 1.0e-6 && factor_change <= 1.0e-8 {
-            return Ok((load_factor, shape));
-        }
-        previous_factor = load_factor;
-    }
-    Err("buckling inverse iteration did not converge within 256 iterations".to_string())
-}
-
-fn matrix_vector(matrix: &[Vec<f64>], vector: &[f64]) -> Vec<f64> {
-    matrix
-        .iter()
-        .map(|row| {
-            row.iter()
-                .zip(vector)
-                .map(|(value, item)| value * item)
-                .sum()
-        })
-        .collect()
-}
-
-fn normalize(vector: &mut [f64]) -> Result<(), String> {
-    let norm = l2_norm(vector);
-    if !(norm.is_finite() && norm > f64::EPSILON) {
-        return Err("buckling eigenvector normalization failed".to_string());
-    }
-    vector.iter_mut().for_each(|value| *value /= norm);
-    Ok(())
-}
-
-fn dot(left: &[f64], right: &[f64]) -> f64 {
-    left.iter().zip(right).map(|(a, b)| a * b).sum()
-}
-
-fn l2_norm(values: &[f64]) -> f64 {
-    dot(values, values).sqrt()
 }
 
 fn validate(request: &SolveBucklingBeam1dRequest) -> Result<(), String> {
@@ -255,76 +153,6 @@ fn constrained_dofs(request: &SolveBucklingBeam1dRequest) -> Vec<usize> {
         .collect()
 }
 
-fn reduce_dense(matrix: &[Vec<f64>], free: &[usize]) -> Vec<Vec<f64>> {
-    free.iter()
-        .map(|&row| free.iter().map(|&column| matrix[row][column]).collect())
-        .collect()
-}
-
-fn cholesky(matrix: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, String> {
-    let size = matrix.len();
-    let mut lower = vec![vec![0.0; size]; size];
-    for row in 0..size {
-        for column in 0..=row {
-            let sum = (0..column)
-                .map(|index| lower[row][index] * lower[column][index])
-                .sum::<f64>();
-            if row == column {
-                let diagonal = matrix[row][row] - sum;
-                if !(diagonal.is_finite() && diagonal > 1.0e-14) {
-                    return Err(
-                        "buckling reference geometric stiffness is not positive definite"
-                            .to_string(),
-                    );
-                }
-                lower[row][column] = diagonal.sqrt();
-            } else {
-                lower[row][column] = (matrix[row][column] - sum) / lower[column][column];
-            }
-        }
-    }
-    Ok(lower)
-}
-
-fn symmetric_generalized_operator(stiffness: &[Vec<f64>], lower: &[Vec<f64>]) -> Vec<Vec<f64>> {
-    let size = stiffness.len();
-    let mut left = vec![vec![0.0; size]; size];
-    for column in 0..size {
-        let rhs = (0..size)
-            .map(|row| stiffness[row][column])
-            .collect::<Vec<_>>();
-        let solved = solve_lower(lower, &rhs);
-        for row in 0..size {
-            left[row][column] = solved[row];
-        }
-    }
-    (0..size)
-        .map(|row| solve_lower(lower, &left[row]))
-        .collect()
-}
-
-fn solve_lower(lower: &[Vec<f64>], rhs: &[f64]) -> Vec<f64> {
-    let mut result = vec![0.0; rhs.len()];
-    for row in 0..rhs.len() {
-        let sum = (0..row)
-            .map(|column| lower[row][column] * result[column])
-            .sum::<f64>();
-        result[row] = (rhs[row] - sum) / lower[row][row];
-    }
-    result
-}
-
-fn solve_upper_transpose(lower: &[Vec<f64>], rhs: &[f64]) -> Vec<f64> {
-    let mut result = vec![0.0; rhs.len()];
-    for row in (0..rhs.len()).rev() {
-        let sum = ((row + 1)..rhs.len())
-            .map(|column| lower[column][row] * result[column])
-            .sum::<f64>();
-        result[row] = (rhs[row] - sum) / lower[row][row];
-    }
-    result
-}
-
 fn expand_and_normalize(reduced: &[f64], free: &[usize], size: usize) -> Vec<f64> {
     let mut shape = vec![0.0; size];
     for (index, &dof) in free.iter().enumerate() {
@@ -333,23 +161,4 @@ fn expand_and_normalize(reduced: &[f64], free: &[usize], size: usize) -> Vec<f64
     let norm = shape.iter().map(|value| value * value).sum::<f64>().sqrt();
     shape.iter_mut().for_each(|value| *value /= norm);
     shape
-}
-
-fn generalized_residual(
-    stiffness: &[Vec<f64>],
-    geometric: &[Vec<f64>],
-    shape: &[f64],
-    factor: f64,
-) -> f64 {
-    (0..shape.len())
-        .map(|row| {
-            (0..shape.len())
-                .map(|column| {
-                    (stiffness[row][column] - factor * geometric[row][column]) * shape[column]
-                })
-                .sum::<f64>()
-        })
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt()
 }

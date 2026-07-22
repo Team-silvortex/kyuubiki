@@ -246,6 +246,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_buckling_beam_1d"
       )
 
+  def submit_buckling_frame_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_buckling_frame_2d/1,
+        "solve_buckling_frame_2d"
+      )
+
   def submit_frame_3d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
 
