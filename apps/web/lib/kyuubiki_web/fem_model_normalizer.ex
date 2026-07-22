@@ -99,6 +99,9 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_modal_frame_2d(params),
     do: normalize_graph_model(params, :invalid_modal_frame_model)
 
+  def normalize_buckling_beam_1d(params),
+    do: normalize_graph_model(params, :invalid_buckling_beam_model)
+
   def normalize_modal_frame_3d(params),
     do: normalize_graph_model(params, :invalid_modal_frame_3d_model)
 

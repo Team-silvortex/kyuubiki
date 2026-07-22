@@ -337,6 +337,48 @@ pub struct SolveModalFrame2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucklingBeam1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_y: bool,
+    pub fix_rz: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucklingBeam1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub youngs_modulus: f64,
+    pub moment_of_inertia: f64,
+    pub reference_compressive_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBucklingBeam1dRequest {
+    pub nodes: Vec<BucklingBeam1dNodeInput>,
+    pub elements: Vec<BucklingBeam1dElementInput>,
+    #[serde(default)]
+    pub mode_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucklingBeam1dModeResult {
+    pub index: usize,
+    pub load_factor: f64,
+    pub residual_norm: f64,
+    pub shape: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBucklingBeam1dResult {
+    pub input: SolveBucklingBeam1dRequest,
+    pub modes: Vec<BucklingBeam1dModeResult>,
+    pub free_dofs: Vec<usize>,
+    pub minimum_load_factor: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalFrame2dNodeResult {
     pub index: usize,
     pub id: String,

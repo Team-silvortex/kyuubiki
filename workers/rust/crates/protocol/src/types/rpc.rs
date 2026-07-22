@@ -162,6 +162,8 @@ pub enum RpcMethod {
     SolveFrame2d,
     #[serde(rename = "solve_modal_frame_2d")]
     SolveModalFrame2d,
+    #[serde(rename = "solve_buckling_beam_1d")]
+    SolveBucklingBeam1d,
     #[serde(rename = "solve_thermal_frame_2d")]
     SolveThermalFrame2d,
     #[serde(rename = "solve_thermal_frame_3d")]

@@ -6,6 +6,7 @@ mod bar_1d;
 mod bar_1d_validation;
 mod beam_1d;
 mod beam_1d_validation;
+mod buckling_beam_1d;
 mod chain_tridiagonal;
 mod dynamic_spring_1d_validation;
 mod electrostatic_plane_2d;
@@ -80,6 +81,7 @@ pub use beam_1d::{
     solve_beam_1d, solve_beam_1d_with_options, solve_thermal_beam_1d,
     solve_thermal_beam_1d_with_options,
 };
+pub use buckling_beam_1d::solve_buckling_beam_1d;
 pub use electrostatic_plane_2d::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
 };

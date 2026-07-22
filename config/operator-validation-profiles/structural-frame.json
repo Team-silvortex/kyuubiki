@@ -48,6 +48,50 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_input_reliability -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "buckling-beam-1d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "buckling-beam-1d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.buckling_beam_1d"
+      ],
+      "validation_methods": [
+        "euler_column_closed_form",
+        "mesh_convergence",
+        "dimensional_scaling",
+        "input_boundary_rejection"
+      ],
+      "formal_invariants": [
+        "pinned_column_converges_to_pi_squared_ei_over_l_squared",
+        "critical_factor_scales_with_ei_over_reference_force_l_squared",
+        "mode_shape_is_normalized",
+        "invalid_topology_and_non_positive_properties_are_rejected"
+      ],
+      "evidence_paths": [
+        "evidence/operator-screening/buckling-beam-1d-linear-eigenvalue.md",
+        "workers/rust/crates/solver/tests/buckling_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_beam_1d_input_reliability.rs",
+        "workers/rust/crates/engine/tests/buckling_beam_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "buckling-beam-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "buckling-beam-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_input_reliability -- --nocapture"
+        },
+        {
+          "id": "buckling-beam-workflow-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test buckling_beam_workflow -- --nocapture"
+        }
+      ]
     }
   ]
 }

@@ -40,6 +40,7 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/plane-quad-2d/jobs", :submit_plane_quad_2d},
     {"/api/v1/fem/frame-2d/jobs", :submit_frame_2d},
     {"/api/v1/fem/modal-frame-2d/jobs", :submit_modal_frame_2d},
+    {"/api/v1/fem/buckling-beam-1d/jobs", :submit_buckling_beam_1d},
     {"/api/v1/fem/frame-3d/jobs", :submit_frame_3d},
     {"/api/v1/fem/solid-tetra-3d/jobs", :submit_solid_tetra_3d},
     {"/api/v1/fem/modal-frame-3d/jobs", :submit_modal_frame_3d}

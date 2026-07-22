@@ -228,6 +228,12 @@ pub fn chunk_result(
         (AnalysisResult::ModalFrame3d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.modes)?
         }
+        (AnalysisResult::BucklingBeam1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.input.nodes)?
+        }
+        (AnalysisResult::BucklingBeam1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.modes)?
+        }
     };
 
     let offset = request.offset.min(items.len());

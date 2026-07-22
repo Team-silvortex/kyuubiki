@@ -72,6 +72,14 @@ const PRESETS: WorkflowNodeTemplatePreset[] = [
     outputs: [{ id: "result", artifact_type: "result/thermal_frame_3d", description: "Thermal 3D frame result", dataset_value: "thermal_frame_result" }],
   },
   {
+    id: "solve.buckling_beam_1d",
+    kind: "solve",
+    label: "Solve beam buckling",
+    operatorId: "solve.buckling_beam_1d",
+    inputs: [{ id: "model", artifact_type: "study_model/buckling_beam_1d", description: "Beam-column buckling model", dataset_value: "buckling_beam_model" }],
+    outputs: [{ id: "result", artifact_type: "result/buckling_beam_1d", description: "Buckling load factors and mode shapes", dataset_value: "buckling_beam_result" }],
+  },
+  {
     id: "solve.thermal_truss_3d",
     kind: "solve",
     label: "Solve thermal 3D truss",

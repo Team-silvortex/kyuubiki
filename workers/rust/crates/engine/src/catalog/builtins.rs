@@ -337,6 +337,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.buckling_beam_1d",
+            "mechanical",
+            "buckling_beam_1d",
+            "Solve a linear eigenvalue buckling beam-column model and emit critical load factors with normalized mode shapes.",
+            &[
+                "screening",
+                "mechanical",
+                "buckling",
+                "stability",
+                "beam",
+                "1d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.modal_frame_3d",
             "mechanical",
             "modal_frame_3d",

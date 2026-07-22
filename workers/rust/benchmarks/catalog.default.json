@@ -20,6 +20,7 @@
     { "stem": "thermal-frame-2d", "family": "thermal_frame2d" },
     { "stem": "thermal-frame-3d", "family": "thermal_frame3d" },
     { "stem": "modal-frame-2d", "family": "modal_frame2d" },
+    { "stem": "buckling-beam-1d", "family": "buckling_beam1d" },
     { "stem": "modal-frame-3d", "family": "modal_frame3d" },
     { "stem": "solid-tetra-3d", "family": "solid_tetra3d" },
     { "stem": "truss-roof", "family": "truss2d" },
@@ -132,6 +133,11 @@
         "thermal-frame-2d",
         "thermal-frame-3d"
       ],
+      "owned_templates": []
+    },
+    {
+      "name": "stability-screening",
+      "template_stems": ["buckling-beam-1d"],
       "owned_templates": []
     },
     {

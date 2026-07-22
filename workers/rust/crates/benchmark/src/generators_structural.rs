@@ -1,8 +1,9 @@
 use kyuubiki_protocol::{
-    Beam1dElementInput, Beam1dNodeInput, ContactGap1dContactInput, Frame2dNodeInput,
-    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
-    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolidTetra3dElementInput,
-    SolidTetra3dNodeInput, SolveBeam1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
+    Beam1dElementInput, Beam1dNodeInput, BucklingBeam1dElementInput, BucklingBeam1dNodeInput,
+    ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
+    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
+    SolidTetra3dElementInput, SolidTetra3dNodeInput, SolveBeam1dRequest,
+    SolveBucklingBeam1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
     SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest,
     Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
@@ -293,6 +294,35 @@ pub(crate) fn generate_modal_frame_2d_chain_case(
     SolveModalFrame2dRequest {
         nodes,
         elements,
+        mode_count: Some(1),
+    }
+}
+
+pub(crate) fn generate_buckling_beam_1d_case(
+    segments: usize,
+    length: f64,
+) -> SolveBucklingBeam1dRequest {
+    let segments = segments.max(1);
+    let dx = length / segments as f64;
+    SolveBucklingBeam1dRequest {
+        nodes: (0..=segments)
+            .map(|index| BucklingBeam1dNodeInput {
+                id: format!("bbn{index}"),
+                x: index as f64 * dx,
+                fix_y: index == 0 || index == segments,
+                fix_rz: false,
+            })
+            .collect(),
+        elements: (0..segments)
+            .map(|index| BucklingBeam1dElementInput {
+                id: format!("bbe{index}"),
+                node_i: index,
+                node_j: index + 1,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 8.333e-6,
+                reference_compressive_force: 100_000.0,
+            })
+            .collect(),
         mode_count: Some(1),
     }
 }

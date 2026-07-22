@@ -287,6 +287,18 @@ _PAYLOADS = {
         "elements": [{**_FRAME_2D["elements"][0], "density": 7850.0}],
         "mode_count": 2,
     },
+    "buckling_beam_1d": {
+        "nodes": [
+            {"id": "n0", "x": 0.0, "fix_y": True, "fix_rz": False},
+            {"id": "n1", "x": 1.0, "fix_y": False, "fix_rz": False},
+            {"id": "n2", "x": 2.0, "fix_y": True, "fix_rz": False},
+        ],
+        "elements": [
+            {"id": "e0", "node_i": 0, "node_j": 1, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "reference_compressive_force": 100_000.0},
+            {"id": "e1", "node_i": 1, "node_j": 2, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.000008, "reference_compressive_force": 100_000.0},
+        ],
+        "mode_count": 1,
+    },
     "frame_3d": _FRAME_3D,
     "modal_frame_3d": {
         "nodes": [{**node, "load_y": 0.0} for node in _FRAME_3D["nodes"]],

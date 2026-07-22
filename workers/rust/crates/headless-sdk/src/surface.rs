@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn headless_sdk_surface_lookup_returns_owned_area_records() {
         let area = find_headless_sdk_surface_area("direct_fem").expect("direct FEM area");
-        assert_eq!(area.title, "Direct FEM routes");
+        assert_eq!(area.title, "Direct FEM and engine solver bridge");
         assert!(area.anchor_exports.contains(&"direct_fem_submit_route"));
         assert!(find_headless_sdk_surface_area("missing").is_none());
     }

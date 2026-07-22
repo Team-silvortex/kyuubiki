@@ -27,6 +27,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "thermal_truss_2d" => "solve_thermal_truss_2d",
     "frame_2d" => "solve_frame_2d",
     "modal_frame_2d" => "solve_modal_frame_2d",
+    "buckling_beam_1d" => "solve_buckling_beam_1d",
     "thermal_frame_2d" => "solve_thermal_frame_2d",
     "plane_triangle_2d" => "solve_plane_triangle_2d",
     "heat_plane_triangle_2d" => "solve_heat_plane_triangle_2d",
@@ -62,6 +63,9 @@ defmodule KyuubikiSdk.SolverRpcClient do
   def solve_truss_2d(client, payload), do: solve_study(client, "truss_2d", payload)
   def solve_truss_3d(client, payload), do: solve_study(client, "truss_3d", payload)
   def solve_modal_frame_2d(client, payload), do: solve_study(client, "modal_frame_2d", payload)
+
+  def solve_buckling_beam_1d(client, payload),
+    do: solve_study(client, "buckling_beam_1d", payload)
   def solve_modal_frame_3d(client, payload), do: solve_study(client, "modal_frame_3d", payload)
   def solve_solid_tetra_3d(client, payload), do: solve_study(client, "solid_tetra_3d", payload)
 

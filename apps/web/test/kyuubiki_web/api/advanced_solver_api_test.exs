@@ -81,6 +81,7 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     {"/api/v1/fem/nonlinear-spring-1d/jobs", "converged", %{}},
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
+    {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/modal-frame-3d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/solid-tetra-3d/jobs", "max_von_mises_stress", @solid_tetra_request},
     {"/api/v1/fem/transient-heat-bar-1d/jobs", "final_time", @transient_heat_request},

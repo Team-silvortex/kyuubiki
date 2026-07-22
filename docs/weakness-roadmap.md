@@ -90,6 +90,12 @@ Current progress:
   orthonormal nullspace elimination rather than penalty stiffness, recover
   reactions from the full residual, reject dependent directions, and retain
   coupled closed-form plus rotated branch evidence
+- `solve.buckling_beam_1d` now provides the first geometric-stability slice:
+  linear eigenvalue beam-column buckling, critical reference-load factors,
+  normalized modes, Euler-column convergence, and dimensional scaling checks
+- stability remains screening-only until static frame preload extraction,
+  independent cross-checks, imperfections, and nonlinear post-buckling paths
+  are available
 
 Qualification focus:
 

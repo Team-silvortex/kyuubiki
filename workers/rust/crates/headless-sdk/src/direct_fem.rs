@@ -167,6 +167,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/modal-frame-2d/jobs",
     },
     DirectFemRoute {
+        action: "solve_buckling_beam_1d",
+        route: "/api/v1/fem/buckling-beam-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_frame_3d",
         route: "/api/v1/fem/frame-3d/jobs",
     },
@@ -301,7 +305,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 40);
+        assert_eq!(routes.len(), 41);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 
@@ -324,6 +328,7 @@ mod tests {
         assert_eq!(manifest.len(), all_direct_fem_routes().len());
         assert_eq!(actions.len(), manifest.len());
         assert!(actions.contains("solve_thermal_frame_3d"));
+        assert!(actions.contains("solve_buckling_beam_1d"));
 
         for entry in &manifest {
             assert_eq!(entry.engine, HeadlessEngine::Service);

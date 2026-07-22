@@ -33,6 +33,7 @@ _SOLVER_METHODS: dict[str, str] = {
     "thermal_truss_2d": "solve_thermal_truss_2d",
     "frame_2d": "solve_frame_2d",
     "modal_frame_2d": "solve_modal_frame_2d",
+    "buckling_beam_1d": "solve_buckling_beam_1d",
     "thermal_frame_2d": "solve_thermal_frame_2d",
     "plane_triangle_2d": "solve_plane_triangle_2d",
     "heat_plane_triangle_2d": "solve_heat_plane_triangle_2d",
@@ -133,6 +134,9 @@ class SolverRpcClient:
 
     def solve_modal_frame_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("modal_frame_2d", payload)
+
+    def solve_buckling_beam_1d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("buckling_beam_1d", payload)
 
     def solve_modal_frame_3d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("modal_frame_3d", payload)

@@ -7,10 +7,10 @@ use serde::de::DeserializeOwned;
 use kyuubiki_protocol::{
     CancelJobRequest, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse, SolveAcousticBar1dRequest,
     SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
-    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
-    SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveBucklingBeam1dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
     SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
@@ -24,9 +24,9 @@ use kyuubiki_protocol::{
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
-    solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
-    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d,
-    solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
+    solve_buckling_beam_1d, solve_contact_gap_1d, solve_electrostatic_bar_1d,
+    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
+    solve_frame_3d, solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
     solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
     solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
     solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_solid_tetra_3d,
@@ -385,6 +385,14 @@ pub(crate) fn handle_request(
             "modal frame result",
             |params| params.nodes.len(),
             solve_modal_frame_2d,
+        ),
+        RpcMethod::SolveBucklingBeam1d => run_solver::<SolveBucklingBeam1dRequest, _, _, _>(
+            request,
+            writer,
+            "1d buckling beam",
+            "buckling beam result",
+            |params| params.nodes.len(),
+            solve_buckling_beam_1d,
         ),
         RpcMethod::SolveThermalFrame2d => run_solver::<SolveThermalFrame2dRequest, _, _, _>(
             request,

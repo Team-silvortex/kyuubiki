@@ -55,6 +55,12 @@ export function createModalFrame2dJob(
   return createAdvancedFemJob("/api/v1/fem/modal-frame-2d/jobs", input);
 }
 
+export function createBucklingBeam1dJob(
+  input: AdvancedFemGraphJobInput,
+): Promise<JobEnvelope<AdvancedFemResult>> {
+  return createAdvancedFemJob("/api/v1/fem/buckling-beam-1d/jobs", input);
+}
+
 export function createModalFrame3dJob(
   input: AdvancedFemGraphJobInput,
 ): Promise<JobEnvelope<AdvancedFemResult>> {
