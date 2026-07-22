@@ -28,4 +28,27 @@ defmodule KyuubikiWeb.FemModelNormalizerTest do
     assert normalized["elements"] == params.elements
     assert normalized[:frequencies_hz] == [0.0, 0.5, 1.0]
   end
+
+  test "preserves corotational continuation controls" do
+    params = %{
+      "buckling" => %{
+        "frame" => %{
+          "nodes" => [%{"id" => "base"}, %{"id" => "top"}],
+          "elements" => [%{"id" => "column", "node_i" => 0, "node_j" => 1}]
+        },
+        "mode_count" => 1
+      },
+      "imperfection_amplitude" => 0.002,
+      "kinematics" => "corotational",
+      "max_iterations" => 24,
+      "tolerance" => 1.0e-9,
+      "max_step_cutbacks" => 6
+    }
+
+    assert {:ok, normalized} = FemModelNormalizer.normalize_frame_2d_p_delta(params)
+    assert normalized["kinematics"] == "corotational"
+    assert normalized["max_iterations"] == 24
+    assert normalized["tolerance"] == 1.0e-9
+    assert normalized["max_step_cutbacks"] == 6
+  end
 end

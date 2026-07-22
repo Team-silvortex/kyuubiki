@@ -66,6 +66,30 @@ fn rejects_malformed_explicit_imperfection_fields() {
     let error =
         solve_frame_2d_p_delta(&zero_shape).expect_err("zero explicit imperfection must fail");
     assert!(error.contains("has no translational imperfection"));
+
+    let mut invalid_iterations = portal_request(0.0);
+    invalid_iterations.max_iterations = Some(0);
+    assert!(
+        solve_frame_2d_p_delta(&invalid_iterations)
+            .expect_err("zero Newton iterations must fail")
+            .contains("max_iterations")
+    );
+
+    let mut invalid_tolerance = portal_request(0.0);
+    invalid_tolerance.tolerance = Some(f64::NAN);
+    assert!(
+        solve_frame_2d_p_delta(&invalid_tolerance)
+            .expect_err("non-finite tolerance must fail")
+            .contains("tolerance")
+    );
+
+    let mut excessive_cutbacks = portal_request(0.0);
+    excessive_cutbacks.max_step_cutbacks = Some(17);
+    assert!(
+        solve_frame_2d_p_delta(&excessive_cutbacks)
+            .expect_err("excessive cutbacks must fail")
+            .contains("max_step_cutbacks")
+    );
 }
 
 #[test]
@@ -130,6 +154,39 @@ fn corotational_portal_matches_linearized_response_at_low_load() {
     );
 }
 
+#[test]
+fn adaptive_cutback_recovers_a_difficult_corotational_step() {
+    let critical_factor = solve_frame_2d_p_delta(&portal_request(0.0))
+        .expect("critical-factor probe should solve")
+        .buckling_result
+        .minimum_load_factor;
+    let mut request = portal_request(0.0);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.maximum_load_factor = Some(0.9 * critical_factor);
+    request.load_steps = Some(1);
+    request.max_iterations = Some(4);
+    request.tolerance = Some(1.0e-8);
+    request.max_step_cutbacks = Some(0);
+
+    let without_cutback =
+        solve_frame_2d_p_delta(&request).expect("failed equilibrium should remain inspectable");
+    assert!(!without_cutback.converged);
+    assert_eq!(without_cutback.steps[0].achieved_load_factor, Some(0.0));
+
+    request.max_step_cutbacks = Some(8);
+    let adaptive = solve_frame_2d_p_delta(&request).expect("adaptive equilibrium should solve");
+    let step = &adaptive.steps[0];
+    assert!(adaptive.converged);
+    assert!(step.converged);
+    assert!(step.cutbacks > 0);
+    assert!(step.substeps > 1);
+    assert_relative(
+        step.achieved_load_factor.unwrap(),
+        step.load_factor,
+        1.0e-12,
+    );
+}
+
 fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
     let points = [(0.0, 0.0), (4.0, 0.0), (0.0, 3.0), (4.0, 3.0)];
     let nodes = points
@@ -175,6 +232,9 @@ fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
         imperfection_mode_index: None,
         maximum_load_factor: None,
         load_steps: Some(6),
+        max_iterations: None,
+        tolerance: None,
+        max_step_cutbacks: None,
     }
 }
 

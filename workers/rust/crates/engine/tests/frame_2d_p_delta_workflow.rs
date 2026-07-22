@@ -61,13 +61,18 @@ fn workflow_route_executes_corotational_equilibrium() {
             "imperfection_amplitude": 0.002,
             "imperfection_mode_index": 0,
             "kinematics": "corotational",
-            "load_steps": 4
+            "load_steps": 4,
+            "max_iterations": 24,
+            "tolerance": 1.0e-9,
+            "max_step_cutbacks": 6
         }),
     )
     .expect("workflow corotational route should solve");
 
     assert_eq!(result["kinematics"], "corotational");
     assert_eq!(result["converged"], true);
+    assert_eq!(result["input"]["max_iterations"], 24);
+    assert_eq!(result["input"]["max_step_cutbacks"], 6);
     assert_eq!(result["steps"].as_array().unwrap().len(), 4);
     assert!(
         result["steps"]
@@ -75,6 +80,13 @@ fn workflow_route_executes_corotational_equilibrium() {
             .unwrap()
             .iter()
             .all(|step| step["converged"] == true)
+    );
+    assert!(
+        result["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|step| step["achieved_load_factor"] == step["load_factor"])
     );
     assert!(
         result["steps"]

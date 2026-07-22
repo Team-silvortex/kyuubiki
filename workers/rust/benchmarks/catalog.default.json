@@ -23,6 +23,7 @@
     { "stem": "buckling-beam-1d", "family": "buckling_beam1d" },
     { "stem": "buckling-frame-2d", "family": "buckling_frame2d" },
     { "stem": "frame-2d-p-delta", "family": "frame2d_p_delta" },
+    { "stem": "frame-2d-corotational", "family": "frame2d_corotational" },
     { "stem": "modal-frame-3d", "family": "modal_frame3d" },
     { "stem": "solid-tetra-3d", "family": "solid_tetra3d" },
     { "stem": "truss-roof", "family": "truss2d" },
@@ -139,7 +140,7 @@
     },
     {
       "name": "stability-screening",
-      "template_stems": ["buckling-beam-1d", "buckling-frame-2d", "frame-2d-p-delta"],
+      "template_stems": ["buckling-beam-1d", "buckling-frame-2d", "frame-2d-p-delta", "frame-2d-corotational"],
       "owned_templates": []
     },
     {

@@ -1,15 +1,15 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, BucklingBeam1dElementInput, BucklingBeam1dNodeInput,
-    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame3dNodeInput,
-    ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
-    NonlinearSpring1dNodeInput, SolidTetra3dElementInput, SolidTetra3dNodeInput,
-    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveContactGap1dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
-    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
-    SolveSolidTetra3dRequest, SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-    SolveThermalBeam1dRequest, Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput,
-    Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput, ThermalBeam1dElementInput,
-    ThermalBeam1dNodeInput,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame2dStabilityKinematics,
+    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
+    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolidTetra3dElementInput,
+    SolidTetra3dNodeInput, SolveBeam1dRequest, SolveBucklingBeam1dRequest,
+    SolveBucklingFrame2dRequest, SolveContactGap1dRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest, SolveSpring1dRequest,
+    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest, Spring1dElementInput,
+    Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput,
+    Spring3dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
 };
 
 pub(crate) fn generate_spring_1d_case(elements: usize) -> SolveSpring1dRequest {
@@ -377,7 +377,19 @@ pub(crate) fn generate_frame_2d_p_delta_case(
         imperfection_mode_index: Some(0),
         maximum_load_factor: None,
         load_steps: Some(8),
+        max_iterations: None,
+        tolerance: None,
+        max_step_cutbacks: None,
     }
+}
+
+pub(crate) fn generate_frame_2d_corotational_case(
+    segments: usize,
+    length: f64,
+) -> SolveFrame2dPDeltaRequest {
+    let mut request = generate_frame_2d_p_delta_case(segments, length);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request
 }
 
 pub(crate) fn generate_modal_frame_3d_chain_case(

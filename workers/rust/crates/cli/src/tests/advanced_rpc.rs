@@ -297,6 +297,9 @@ fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
         imperfection_mode_index: Some(0),
         maximum_load_factor: None,
         load_steps: Some(4),
+        max_iterations: None,
+        tolerance: None,
+        max_step_cutbacks: None,
     }
 }
 

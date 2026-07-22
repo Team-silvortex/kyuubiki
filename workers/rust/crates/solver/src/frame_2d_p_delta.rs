@@ -141,6 +141,9 @@ fn solve_linearized_steps(
             critical_factor_ratio: load_factor / critical_factor,
             iterations: 1,
             converged: true,
+            achieved_load_factor: Some(load_factor),
+            substeps: 1,
+            cutbacks: 0,
             residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
@@ -167,6 +170,17 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
     }
     if request.load_steps == Some(0) {
         return Err("frame 2d p-delta load_steps must be positive".into());
+    }
+    if matches!(request.max_iterations, Some(0 | 257..)) {
+        return Err("frame 2d p-delta max_iterations must be between 1 and 256".into());
+    }
+    if let Some(tolerance) = request.tolerance
+        && !(tolerance.is_finite() && tolerance > 0.0)
+    {
+        return Err("frame 2d p-delta tolerance must be positive and finite".into());
+    }
+    if matches!(request.max_step_cutbacks, Some(17..)) {
+        return Err("frame 2d p-delta max_step_cutbacks must not exceed 16".into());
     }
     if let Some(shape) = &request.imperfection_shape {
         let expected = request.buckling.frame.nodes.len() * 3;

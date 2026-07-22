@@ -100,9 +100,9 @@ Current progress:
   an elastic precritical load path, accepts explicit measured-shape profiles,
   supports linearized P-Delta and incremental corotational kinematics, and
   retains secant-amplification plus multi-member objectivity evidence
-- stability remains screening-only until adaptive continuation, corotational
-  large-model qualification, residual stress, material nonlinearity,
-  post-buckling paths, and external multi-member correlation are available
+- stability remains screening-only until arc-length branch continuation,
+  residual stress, material nonlinearity, post-buckling paths, and external
+  correlation are available
 
 Qualification focus:
 

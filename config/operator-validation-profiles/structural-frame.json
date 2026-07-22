@@ -198,6 +198,7 @@
         "explicit_imperfection_field",
         "precritical_secant_amplification",
         "corotational_incremental_equilibrium",
+        "adaptive_load_step_cutback",
         "multi_member_rigid_rotation_objectivity",
         "critical_limit_rejection",
         "workflow_route_contract"
@@ -208,10 +209,14 @@
         "corotational_steps_converge_under_incremental_newton_iteration",
         "corotational_internal_force_is_objective_under_rigid_motion",
         "corotational_analytic_tangent_matches_central_difference",
+        "short_element_geometry_avoids_near_equal_subtraction",
         "corotational_response_recovers_linearized_response_at_low_load",
+        "failed_nominal_step_reports_the_last_achieved_load_factor",
+        "adaptive_cutback_recovers_the_same_difficult_load_target",
         "rotated_geometry_loads_and_imperfections_preserve_the_response",
         "amplification_increases_monotonically_toward_the_critical_factor",
         "equilibrium_residual_remains_bounded",
+        "invalid_newton_and_cutback_controls_are_rejected",
         "load_path_stays_below_the_explicit_critical_limit_ratio"
       ],
       "evidence_paths": [

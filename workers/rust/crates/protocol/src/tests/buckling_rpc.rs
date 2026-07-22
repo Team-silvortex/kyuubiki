@@ -64,6 +64,9 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             imperfection_mode_index: None,
             maximum_load_factor: Some(2.0),
             load_steps: Some(8),
+            max_iterations: Some(24),
+            tolerance: Some(1.0e-9),
+            max_step_cutbacks: Some(6),
         })
         .expect("p-delta request should serialize"),
     };
@@ -78,16 +81,26 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(params.imperfection_amplitude, 0.002);
     assert_eq!(params.imperfection_shape.as_ref().unwrap()[3], 1.0);
     assert_eq!(params.load_steps, Some(8));
+    assert_eq!(params.max_iterations, Some(24));
+    assert_eq!(params.tolerance, Some(1.0e-9));
+    assert_eq!(params.max_step_cutbacks, Some(6));
     assert_eq!(params.kinematics, Frame2dStabilityKinematics::Corotational);
 
     let mut legacy = decoded.params;
-    legacy.as_object_mut().unwrap().remove("kinematics");
+    let legacy_object = legacy.as_object_mut().unwrap();
+    legacy_object.remove("kinematics");
+    legacy_object.remove("max_iterations");
+    legacy_object.remove("tolerance");
+    legacy_object.remove("max_step_cutbacks");
     let legacy: SolveFrame2dPDeltaRequest =
         serde_json::from_value(legacy).expect("legacy p-delta params should decode");
     assert_eq!(
         legacy.kinematics,
         Frame2dStabilityKinematics::LinearizedPDelta
     );
+    assert_eq!(legacy.max_iterations, None);
+    assert_eq!(legacy.tolerance, None);
+    assert_eq!(legacy.max_step_cutbacks, None);
 }
 
 #[test]

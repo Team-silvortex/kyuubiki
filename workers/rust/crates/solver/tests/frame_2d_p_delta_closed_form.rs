@@ -94,6 +94,9 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         imperfection_mode_index: Some(0),
         maximum_load_factor,
         load_steps: Some(load_steps),
+        max_iterations: None,
+        tolerance: None,
+        max_step_cutbacks: None,
     }
 }
 

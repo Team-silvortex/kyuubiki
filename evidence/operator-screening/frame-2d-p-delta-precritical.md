@@ -14,7 +14,10 @@ The optional `corotational` mode treats the imperfect mesh as stress-free,
 updates each member's chord and relative end rotations, and follows the same
 precritical load path with incremental Newton iterations and backtracking. Its
 energy-consistent analytic tangent is cross-checked component by component
-against central differences.
+against central differences. Failed nominal steps are bisected and retried from
+the last accepted state, up to the configured `max_step_cutbacks` limit. The
+defaults are a `1e-7` relative force tolerance and 12 cutbacks; explicit user
+values are applied without hidden model-size scaling.
 
 Both modes are elastic precritical screening paths. Neither is a
 material-plasticity model, arc-length continuation, or post-buckling solver.
@@ -32,6 +35,16 @@ material-plasticity model, arc-length continuation, or post-buckling solver.
   the low-load response recovers the linearized P-Delta result.
 - The analytic corotational tangent matches a retained central-difference
   Jacobian at a finite translated and rotated element state.
+- Stable incremental length and relative-angle identities preserve short-member
+  geometry changes that disappear under direct subtraction of near-equal
+  lengths or angles.
+- A difficult `0.9 lambda_cr` single-step path fails transparently when cutback
+  is disabled, including its last achieved factor, then reaches the same target
+  through five accepted substeps when adaptive cutback is enabled.
+- Newton iteration limit, residual tolerance, and cutback limit are explicit
+  request fields. Invalid or excessive values are rejected before assembly;
+  every result step reports iterations, substeps, cutbacks, convergence, and
+  achieved load factor.
 - Explicit fields with the wrong DOF count, non-finite entries, or no
   translational imperfection are rejected rather than falling back to a mode.
 - Amplification increases monotonically and reduced equilibrium residuals stay
@@ -45,28 +58,37 @@ material-plasticity model, arc-length continuation, or post-buckling solver.
 
 ## Promotion Gaps
 
-- corotational large-model performance qualification
-- adaptive load stepping and arc-length equilibrium continuation
+- arc-length equilibrium continuation through limit points
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation
 
 ## Performance Reproduction
 
-On the local macOS release build, the retained medium case (121 nodes, 120
-elements, 363 total DOFs, eight load steps) completed with a `161.8531 ms`
-median over five repetitions and `9 MiB` peak RSS. The precritical tangent
-path uses banded Cholesky when its storage budget permits and falls back to the
-general sparse SPD path for broader topologies.
+On the local macOS release build, paired medium cases (121 nodes, 120 elements,
+363 total DOFs, eight load steps) completed with a `106.8162 ms` linearized
+median and a `91.0838 ms` corotational median over three repetitions. Both used
+`9 MiB` peak RSS. The shared buckling preload dominates this small screening
+case, so these figures demonstrate absence of an analytic-tangent regression,
+not a general speed advantage for corotational analysis.
 
-The retained large case (2,501 nodes, 2,500 elements, 7,503 total DOFs) reached
-a `775.8730 ms` median over three repetitions with `19 MiB` peak RSS.
+The retained large linearized case (2,501 nodes, 2,500 elements, 7,503 total
+DOFs) reached a `775.8730 ms` median over three repetitions with `19 MiB` peak
+RSS. The corotational large case completed all eight nominal steps with a
+`1,086.0335 ms` median and `24 MiB` peak RSS over three repetitions. Benchmark
+execution rejects any result whose requested path did not converge.
 
 ```text
 cd workers/rust
 cargo run --release -p kyuubiki-benchmark -- \
-  --matrix stability-screening --profile medium --repeat 5 \
+  --matrix stability-screening --profile medium --repeat 3 \
   --case frame-2d-p-delta-medium --format table
+cargo run --release -p kyuubiki-benchmark -- \
+  --matrix stability-screening --profile medium --repeat 3 \
+  --case frame-2d-corotational-medium --format table
 cargo run --release -p kyuubiki-benchmark -- \
   --matrix stability-screening --profile large --repeat 3 \
   --case frame-2d-p-delta-large --format table
+cargo run --release -p kyuubiki-benchmark -- \
+  --matrix stability-screening --profile large --repeat 3 \
+  --case frame-2d-corotational-large --format table
 ```

@@ -33,6 +33,9 @@ export type Frame2dPDeltaJobInput = {
   imperfection_mode_index?: number;
   maximum_load_factor?: number;
   load_steps?: number;
+  max_iterations?: number;
+  tolerance?: number;
+  max_step_cutbacks?: number;
   project_id?: string;
   model_version_id?: string;
 };

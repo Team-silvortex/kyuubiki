@@ -105,7 +105,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 41);
+        assert_eq!(spec.templates.len(), 42);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -315,9 +315,9 @@ mod tests {
             "jacobi",
         );
 
-        // Linear buckling and precritical P-Delta remain in the dedicated screening lane.
-        assert_eq!(cases.len(), spec.templates.len() - 3);
-        assert_eq!(report.cases.len(), spec.templates.len() - 3);
+        // Linear buckling and both precritical stability paths stay in their screening lane.
+        assert_eq!(cases.len(), spec.templates.len() - 4);
+        assert_eq!(report.cases.len(), spec.templates.len() - 4);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
         assert!(report
@@ -358,7 +358,7 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 3);
+        assert_eq!(report.cases.len(), 4);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report
             .cases
@@ -372,6 +372,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "frame_2d_p_delta"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "frame_2d_corotational"));
     }
 
     #[test]

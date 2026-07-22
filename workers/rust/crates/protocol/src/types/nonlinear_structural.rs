@@ -88,6 +88,12 @@ pub struct SolveFrame2dPDeltaRequest {
     pub maximum_load_factor: Option<f64>,
     #[serde(default)]
     pub load_steps: Option<usize>,
+    #[serde(default)]
+    pub max_iterations: Option<usize>,
+    #[serde(default)]
+    pub tolerance: Option<f64>,
+    #[serde(default)]
+    pub max_step_cutbacks: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,6 +131,12 @@ pub struct Frame2dPDeltaStepResult {
     pub iterations: usize,
     #[serde(default = "default_true")]
     pub converged: bool,
+    #[serde(default)]
+    pub achieved_load_factor: Option<f64>,
+    #[serde(default = "default_single_iteration")]
+    pub substeps: usize,
+    #[serde(default)]
+    pub cutbacks: usize,
     pub residual_norm: f64,
     pub imperfection_amplification: f64,
     pub max_incremental_displacement: f64,

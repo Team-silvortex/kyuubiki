@@ -346,7 +346,20 @@ pub(crate) fn run_case_with_preconditioner(
                             unreachable!("frame p-delta solve should return p-delta result")
                         };
                         if !result.converged {
-                            return Err("frame p-delta benchmark did not converge".into());
+                            let failed = result.steps.iter().find(|step| !step.converged);
+                            return Err(match failed {
+                                Some(step) => format!(
+                                    "frame p-delta benchmark did not converge at step {}: target={}, achieved={}, residual={}, iterations={}, cutbacks={}",
+                                    step.step,
+                                    step.load_factor,
+                                    step.achieved_load_factor.unwrap_or_default(),
+                                    step.residual_norm,
+                                    step.iterations,
+                                    step.cutbacks
+                                ),
+                                None => "frame p-delta benchmark ended before all requested steps"
+                                    .to_string(),
+                            });
                         }
                         node_count = result.input.buckling.frame.nodes.len();
                         element_count = result.input.buckling.frame.elements.len();
