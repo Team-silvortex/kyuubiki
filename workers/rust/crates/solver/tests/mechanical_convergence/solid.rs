@@ -101,6 +101,67 @@ fn solid_tetra_3d_perturbations_match_single_free_node_closed_form() {
     }
 }
 
+#[test]
+fn solid_tetra_3d_is_objective_under_rigid_rotation() {
+    let case = SolidTetraCase {
+        height: 1.25,
+        youngs_modulus: 110.0e9,
+        poisson_ratio: 0.27,
+        load_z: -1800.0,
+    };
+    let baseline = solve_solid_tetra_3d(&solid_tetra_request(case))
+        .expect("baseline solid tetra fixture should solve");
+
+    for angle in [std::f64::consts::FRAC_PI_6, -std::f64::consts::FRAC_PI_4] {
+        let rotated_request = rotate_request_about_y(solid_tetra_request(case), angle);
+        let rotated = solve_solid_tetra_3d(&rotated_request)
+            .expect("rigidly rotated solid tetra fixture should solve");
+        let sine = angle.sin();
+        let cosine = angle.cos();
+        let baseline_tip = &baseline.nodes[3];
+        let rotated_tip = &rotated.nodes[3];
+
+        assert_close(rotated_tip.ux, sine * baseline_tip.uz, "rotated tip ux");
+        assert_close(rotated_tip.uy, baseline_tip.uy, "rotated tip uy");
+        assert_close(rotated_tip.uz, cosine * baseline_tip.uz, "rotated tip uz");
+        assert_close(
+            rotated.max_displacement,
+            baseline.max_displacement,
+            "rotation-invariant max displacement",
+        );
+        assert_close(
+            rotated.total_volume,
+            baseline.total_volume,
+            "rotation-invariant volume",
+        );
+        assert_close(
+            rotated.max_von_mises_stress,
+            baseline.max_von_mises_stress,
+            "rotation-invariant von Mises stress",
+        );
+        assert_close(
+            rotated.max_strain_energy_density,
+            baseline.max_strain_energy_density,
+            "rotation-invariant energy density",
+        );
+        assert_close(
+            rotated.total_strain_energy,
+            baseline.total_strain_energy,
+            "rotation-invariant total strain energy",
+        );
+
+        let rotated_work = 0.5
+            * (rotated_request.nodes[3].load_x * rotated_tip.ux
+                + rotated_request.nodes[3].load_y * rotated_tip.uy
+                + rotated_request.nodes[3].load_z * rotated_tip.uz);
+        assert_close(
+            rotated.total_strain_energy,
+            rotated_work,
+            "rotated force-displacement work",
+        );
+    }
+}
+
 #[derive(Clone, Copy)]
 struct SolidTetraCase {
     height: f64,
@@ -163,6 +224,25 @@ fn solid_tetra_request(case: SolidTetraCase) -> SolveSolidTetra3dRequest {
             poisson_ratio: case.poisson_ratio,
         }],
     }
+}
+
+fn rotate_request_about_y(
+    mut request: SolveSolidTetra3dRequest,
+    angle: f64,
+) -> SolveSolidTetra3dRequest {
+    let sine = angle.sin();
+    let cosine = angle.cos();
+    for node in &mut request.nodes {
+        (node.x, node.z) = (
+            cosine * node.x + sine * node.z,
+            -sine * node.x + cosine * node.z,
+        );
+        (node.load_x, node.load_z) = (
+            cosine * node.load_x + sine * node.load_z,
+            -sine * node.load_x + cosine * node.load_z,
+        );
+    }
+    request
 }
 
 fn solid_node(id: &str, x: f64, y: f64, z: f64, fixed: bool, load_z: f64) -> SolidTetra3dNodeInput {

@@ -227,6 +227,7 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
                 id: "tf0".to_string(),
                 node_i: 0,
                 node_j: 1,
+                local_y_axis: Some([0.0, 1.0, 0.0]),
                 area: 0.02,
                 youngs_modulus: 210.0e9,
                 shear_modulus: 80.0e9,
@@ -241,6 +242,12 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
                 temperature_gradient_y: 30.0,
                 temperature_gradient_z: 25.0,
             }],
+            directional_springs: vec![ThermalFrame3dDirectionalSpringInput {
+                id: "support-0".to_string(),
+                node: 1,
+                direction: [1.0, 2.0, 0.0],
+                stiffness: 2.5e6,
+            }],
         })
         .expect("request params should serialize"),
     };
@@ -250,6 +257,26 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
 
     assert_eq!(decoded.method, RpcMethod::SolveThermalFrame3d);
     assert_eq!(decoded.id, "rpc-thermal-frame-3d");
+    let params: SolveThermalFrame3dRequest =
+        serde_json::from_value(decoded.params).expect("thermal frame params should decode");
+    assert_eq!(params.elements[0].local_y_axis, Some([0.0, 1.0, 0.0]));
+    assert_eq!(params.directional_springs.len(), 1);
+    assert_eq!(params.directional_springs[0].direction, [1.0, 2.0, 0.0]);
+
+    let mut legacy_params =
+        serde_json::to_value(&params).expect("thermal frame params should serialize");
+    legacy_params["elements"][0]
+        .as_object_mut()
+        .expect("element should serialize as an object")
+        .remove("local_y_axis");
+    legacy_params
+        .as_object_mut()
+        .expect("request should serialize as an object")
+        .remove("directional_springs");
+    let legacy: SolveThermalFrame3dRequest =
+        serde_json::from_value(legacy_params).expect("legacy params should decode");
+    assert_eq!(legacy.elements[0].local_y_axis, None);
+    assert!(legacy.directional_springs.is_empty());
 }
 
 #[test]

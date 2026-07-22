@@ -33,5 +33,13 @@ u = 0.5 sigma epsilon_mechanical
 
 The retained total strain energy is the sum of `u A L` over each member.
 
+## Coupled Objectivity Check
+
+The active qualification profile also solves a two-leg triangle with fixed base
+nodes, a free apex, non-uniform nodal temperatures, and an apex mechanical load.
+The geometry and load vector are rigidly rotated in the plane. Apex displacement
+must rotate with the model while member lengths, temperatures, thermal and
+mechanical strains, stress, axial force, and energy remain invariant.
+
 This evidence does not claim partial restraint, mixed thermal loading,
 temperature gradients, buckling, plasticity, contact, or dynamic response.

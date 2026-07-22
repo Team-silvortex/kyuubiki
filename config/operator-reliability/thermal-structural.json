@@ -165,7 +165,11 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs",
-            "thermal_frame_2d_tracks_temperature_area_and_modulus_scaling"
+            "thermal_frame_2d_tracks_temperature_area_and_modulus_scaling",
+            "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+            "thermal_frame_2d_preserves_coupled_response_under_rigid_rotation",
+            "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+            "thermal_frame_2d_quadratic_field_converges_at_second_order"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-frame-2d-closed-form-release-evidence.json",
@@ -177,14 +181,16 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_frame_2d_review.rs",
             "workers/rust/crates/solver/tests/thermal_frame_2d_closed_form.rs",
-            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs"
           ]
         }
       },
       "limits": [
         "linear_frame",
-        "uniform_temperature_delta",
-        "single_member_restrained_response"
+        "linear_temperature_response",
+        "piecewise_constant_element_temperature_gradient"
       ]
     },
     {
@@ -228,7 +234,15 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
-            "thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling"
+            "thermal_frame_3d_tracks_temperature_gradient_and_inertia_scaling",
+            "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+            "thermal_frame_3d_preserves_coupled_response_under_arbitrary_rotation",
+            "thermal_frame_3d_non_collinear_assembly_preserves_response_under_rotation",
+            "thermal_frame_3d_branched_multi_support_assembly_is_objective",
+            "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+            "thermal_frame_3d_directional_spring_matches_axial_closed_form",
+            "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+            "thermal_frame_3d_quadratic_fields_converge_at_second_order"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json",
@@ -240,14 +254,18 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_frame_3d_review.rs",
             "workers/rust/crates/solver/tests/thermal_frame_3d_closed_form.rs",
-            "workers/rust/crates/solver/tests/frame_input_reliability.rs"
+            "workers/rust/crates/solver/tests/frame_input_reliability.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+            "workers/rust/crates/protocol/src/tests/frame_beam_rpc.rs"
           ]
         }
       },
       "limits": [
         "linear_frame",
         "linear_temperature_response",
-        "single_member_restrained_response"
+        "piecewise_constant_element_temperature_gradients"
       ]
     },
     {
@@ -290,7 +308,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
-            "thermal_truss_2d_tracks_temperature_and_area_scaling"
+            "thermal_truss_2d_tracks_temperature_and_area_scaling",
+            "workers/rust/crates/solver/tests/thermal_truss_2d_objectivity.rs",
+            "thermal_truss_2d_preserves_coupled_response_under_rigid_rotation"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-truss-2d-closed-form-release-evidence.json",
@@ -302,7 +322,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_truss_2d_review.rs",
             "workers/rust/crates/solver/tests/thermal_truss_2d_closed_form.rs",
-            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_2d_objectivity.rs"
           ]
         }
       },
@@ -351,7 +372,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs",
-            "thermal_truss_3d_tracks_temperature_and_area_scaling"
+            "thermal_truss_3d_tracks_temperature_and_area_scaling",
+            "workers/rust/crates/solver/tests/thermal_truss_3d_objectivity.rs",
+            "thermal_truss_3d_preserves_coupled_response_under_rigid_rotation"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json",
@@ -363,7 +386,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_truss_3d_review.rs",
             "workers/rust/crates/solver/tests/thermal_truss_3d_closed_form.rs",
-            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs"
+            "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs",
+            "workers/rust/crates/solver/tests/thermal_truss_3d_objectivity.rs"
           ]
         }
       },

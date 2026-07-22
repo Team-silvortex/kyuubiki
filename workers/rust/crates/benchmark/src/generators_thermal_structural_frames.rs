@@ -125,6 +125,7 @@ pub(crate) fn generate_thermal_frame_3d_case(
             id: format!("tf3e{index}"),
             node_i: index,
             node_j: index + 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,
@@ -141,7 +142,11 @@ pub(crate) fn generate_thermal_frame_3d_case(
         })
         .collect();
 
-    SolveThermalFrame3dRequest { nodes, elements }
+    SolveThermalFrame3dRequest {
+        nodes,
+        elements,
+        directional_springs: Vec::new(),
+    }
 }
 
 fn frame_2d_node(

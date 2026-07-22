@@ -333,6 +333,7 @@ fn accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients() {
             id: "tf3-0".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,
@@ -347,6 +348,7 @@ fn accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients() {
             temperature_gradient_y: 30.0,
             temperature_gradient_z: 20.0,
         }],
+        directional_springs: Vec::new(),
     })
     .expect("thermal_frame_3d baseline should solve");
 

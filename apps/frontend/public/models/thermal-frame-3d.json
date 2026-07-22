@@ -57,6 +57,7 @@
       "id": "tf3-0",
       "node_i": 0,
       "node_j": 1,
+      "local_y_axis": [0.0, 1.0, 0.0],
       "area": 0.02,
       "youngs_modulus": 210000000000.0,
       "shear_modulus": 80000000000.0,
@@ -72,5 +73,6 @@
       "temperature_gradient_z": 20.0,
       "material_id": "mat-1"
     }
-  ]
+  ],
+  "directional_springs": []
 }

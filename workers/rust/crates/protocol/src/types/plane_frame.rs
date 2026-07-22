@@ -209,6 +209,8 @@ pub struct ThermalFrame3dElementInput {
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_y_axis: Option<[f64; 3]>,
     pub area: f64,
     pub youngs_modulus: f64,
     pub shear_modulus: f64,
@@ -227,9 +229,19 @@ pub struct ThermalFrame3dElementInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalSpringInput {
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub stiffness: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveThermalFrame3dRequest {
     pub nodes: Vec<ThermalFrame3dNodeInput>,
     pub elements: Vec<ThermalFrame3dElementInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub directional_springs: Vec<ThermalFrame3dDirectionalSpringInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -401,10 +413,23 @@ pub struct ThermalFrame3dElementResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalSpringResult {
+    pub index: usize,
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub displacement: f64,
+    pub reaction_force: f64,
+    pub stiffness: f64,
+    pub strain_energy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveThermalFrame3dResult {
     pub input: SolveThermalFrame3dRequest,
     pub nodes: Vec<ThermalFrame3dNodeResult>,
     pub elements: Vec<ThermalFrame3dElementResult>,
+    pub directional_springs: Vec<ThermalFrame3dDirectionalSpringResult>,
     pub max_displacement: f64,
     pub max_rotation: f64,
     pub max_moment: f64,

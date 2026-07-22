@@ -29,6 +29,7 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
             id: "beam".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area,
             youngs_modulus,
             shear_modulus: 80.0e9,
@@ -43,6 +44,7 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
             temperature_gradient_y: gradient_y,
             temperature_gradient_z: gradient_z,
         }],
+        directional_springs: Vec::new(),
     })
     .expect("review thermal 3d frame should solve");
 

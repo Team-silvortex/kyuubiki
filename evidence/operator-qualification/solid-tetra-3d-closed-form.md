@@ -42,9 +42,19 @@ The retained solver test checks the restrained base displacement, tip
 displacement, constitutive stress components, von Mises stress, energy
 density, and total strain energy against these formulas.
 
+## Perturbation And Objectivity Checks
+
+The mechanical convergence lane repeats the analytic comparison across load,
+Young's modulus, Poisson ratio, and tetrahedron-height perturbations. It also
+rigidly rotates the tetrahedron and applied load about the global `y` axis.
+The displacement vector must rotate with the fixture while volume, displacement
+magnitude, von Mises stress, strain-energy density, and total strain energy
+remain invariant. The rotated force-displacement work is checked independently.
+
 ## Scope
 
 This qualifies the current single constant-strain tetrahedron path for
 small-strain linear elastic screening. It does not claim full industrial
 solid mechanics coverage, multi-element convergence, contact, plasticity,
-or large deformation behavior.
+or large deformation behavior. The perturbation lane establishes parameter
+robustness and rigid-rotation objectivity, not mesh-refinement convergence.

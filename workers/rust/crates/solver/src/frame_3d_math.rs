@@ -58,21 +58,39 @@ pub(super) fn frame3d_rotation(
     dz: f64,
     length: f64,
 ) -> Result<[[f64; 3]; 3], String> {
+    frame3d_rotation_with_local_y(dx, dy, dz, length, None)
+}
+
+pub(super) fn frame3d_rotation_with_local_y(
+    dx: f64,
+    dy: f64,
+    dz: f64,
+    length: f64,
+    local_y_axis: Option<[f64; 3]>,
+) -> Result<[[f64; 3]; 3], String> {
     if length <= 1.0e-12 {
         return Err("3d frame element length must be positive".to_string());
     }
 
     let local_x = [dx / length, dy / length, dz / length];
-    let reference = if local_x[2].abs() < 0.9 {
-        [0.0, 0.0, 1.0]
+    let mut local_y = if let Some(axis) = local_y_axis {
+        if axis.iter().any(|component| !component.is_finite()) {
+            return Err("3d frame local_y_axis must be finite".to_string());
+        }
+        let projection = dot3(axis, local_x);
+        subtract3(axis, scale3(local_x, projection))
     } else {
-        [0.0, 1.0, 0.0]
+        let reference = if local_x[2].abs() < 0.9 {
+            [0.0, 0.0, 1.0]
+        } else {
+            [0.0, 1.0, 0.0]
+        };
+        cross3(reference, local_x)
     };
 
-    let mut local_y = cross3(reference, local_x);
     let local_y_norm = norm3(local_y);
     if local_y_norm <= 1.0e-12 {
-        return Err("3d frame element orientation is ill-defined".to_string());
+        return Err("3d frame local_y_axis must not be parallel to the element axis".to_string());
     }
     local_y = scale3(local_y, 1.0 / local_y_norm);
     let local_z = cross3(local_x, local_y);
@@ -241,6 +259,14 @@ fn cross3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
 
 fn norm3(vector: [f64; 3]) -> f64 {
     (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]).sqrt()
+}
+
+fn dot3(lhs: [f64; 3], rhs: [f64; 3]) -> f64 {
+    lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2]
+}
+
+fn subtract3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
+    [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
 }
 
 fn scale3(vector: [f64; 3], scalar: f64) -> [f64; 3] {

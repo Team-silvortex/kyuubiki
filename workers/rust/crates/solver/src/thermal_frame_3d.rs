@@ -1,5 +1,5 @@
 use crate::frame_3d_math::{
-    add_vector_12, frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation,
+    add_vector_12, frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y,
     frame3d_thermal_gradient_vector, frame3d_thermal_uniform_vector, frame3d_transform,
     multiply_matrix_vector_12x12, subtract_vector_12, transform_frame3d_stiffness, transpose_12x12,
 };
@@ -10,8 +10,8 @@ use crate::linear_algebra::{
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
-    SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dElementResult,
-    ThermalFrame3dNodeResult,
+    SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dDirectionalSpringResult,
+    ThermalFrame3dElementResult, ThermalFrame3dNodeResult,
 };
 
 pub fn solve_thermal_frame_3d(
@@ -39,6 +39,20 @@ pub fn solve_thermal_frame_3d_with_options(
         force_vector[index * 6 + 5] = node.moment_z;
     }
 
+    for spring in &request.directional_springs {
+        let direction = normalized_direction(spring.direction);
+        for row in 0..3 {
+            for column in 0..3 {
+                add_at(
+                    &mut global_stiffness,
+                    spring.node * 6 + row,
+                    spring.node * 6 + column,
+                    spring.stiffness * direction[row] * direction[column],
+                );
+            }
+        }
+    }
+
     for element in &request.elements {
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
@@ -46,7 +60,7 @@ pub fn solve_thermal_frame_3d_with_options(
         let dy = node_j.y - node_i.y;
         let dz = node_j.z - node_i.z;
         let length = (dx * dx + dy * dy + dz * dz).sqrt();
-        let rotation = frame3d_rotation(dx, dy, dz, length)?;
+        let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
         let local_stiffness = local_stiffness_for(element, length);
         let transform = frame3d_transform(&rotation);
         let global_element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
@@ -82,6 +96,15 @@ pub fn solve_thermal_frame_3d_with_options(
 
     let nodes = build_thermal_frame_3d_nodes(request, &displacements);
     let elements = build_thermal_frame_3d_elements(request, &displacements);
+    let directional_springs = build_directional_spring_results(request, &displacements);
+    let total_strain_energy = elements
+        .iter()
+        .map(|element| element.strain_energy)
+        .sum::<f64>()
+        + directional_springs
+            .iter()
+            .map(|spring| spring.strain_energy)
+            .sum::<f64>();
 
     Ok(SolveThermalFrame3dResult {
         input: request.clone(),
@@ -125,10 +148,52 @@ pub fn solve_thermal_frame_3d_with_options(
                 ]
             })
             .fold(0.0_f64, f64::max),
-        total_strain_energy: elements.iter().map(|element| element.strain_energy).sum(),
+        total_strain_energy,
         nodes,
         elements,
+        directional_springs,
     })
+}
+
+fn build_directional_spring_results(
+    request: &SolveThermalFrame3dRequest,
+    displacements: &[f64],
+) -> Vec<ThermalFrame3dDirectionalSpringResult> {
+    request
+        .directional_springs
+        .iter()
+        .enumerate()
+        .map(|(index, spring)| {
+            let direction = normalized_direction(spring.direction);
+            let offset = spring.node * 6;
+            let displacement = direction[0] * displacements[offset]
+                + direction[1] * displacements[offset + 1]
+                + direction[2] * displacements[offset + 2];
+            ThermalFrame3dDirectionalSpringResult {
+                index,
+                id: spring.id.clone(),
+                node: spring.node,
+                direction,
+                displacement,
+                reaction_force: -spring.stiffness * displacement,
+                stiffness: spring.stiffness,
+                strain_energy: 0.5 * spring.stiffness * displacement * displacement,
+            }
+        })
+        .collect()
+}
+
+fn normalized_direction(direction: [f64; 3]) -> [f64; 3] {
+    let norm = direction
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    [
+        direction[0] / norm,
+        direction[1] / norm,
+        direction[2] / norm,
+    ]
 }
 
 fn build_thermal_frame_3d_nodes(
@@ -182,7 +247,7 @@ fn build_thermal_frame_3d_elements(
             let dy = node_j.y - node_i.y;
             let dz = node_j.z - node_i.z;
             let length = (dx * dx + dy * dy + dz * dz).sqrt();
-            let rotation = frame3d_rotation(dx, dy, dz, length)
+            let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)
                 .expect("validated thermal 3d frame element should define a stable local axis");
             let local_stiffness = local_stiffness_for(element, length);
             let transform = frame3d_transform(&rotation);

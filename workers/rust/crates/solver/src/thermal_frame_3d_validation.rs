@@ -31,6 +31,32 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
     for element in &request.elements {
         validate_element(request, element)?;
     }
+    for spring in &request.directional_springs {
+        if spring.node >= request.nodes.len() {
+            return Err(
+                "thermal 3d frame directional spring references an out-of-range node".to_string(),
+            );
+        }
+        if !(spring.stiffness.is_finite() && spring.stiffness > 0.0) {
+            return Err(
+                "thermal 3d frame directional spring stiffness must be positive".to_string(),
+            );
+        }
+        if spring.direction.iter().any(|value| !value.is_finite()) {
+            return Err("thermal 3d frame directional spring direction must be finite".to_string());
+        }
+        let norm = spring
+            .direction
+            .iter()
+            .map(|value| value * value)
+            .sum::<f64>()
+            .sqrt();
+        if norm <= 1.0e-12 {
+            return Err(
+                "thermal 3d frame directional spring direction must be non-zero".to_string(),
+            );
+        }
+    }
     Ok(())
 }
 
@@ -69,6 +95,37 @@ fn validate_element(
     let length = (dx * dx + dy * dy + dz * dz).sqrt();
     if !(length.is_finite() && length > 1.0e-12) {
         return Err("3d frame element length must be positive".to_string());
+    }
+    validate_local_y_axis(
+        element.local_y_axis,
+        [dx / length, dy / length, dz / length],
+    )?;
+    Ok(())
+}
+
+fn validate_local_y_axis(local_y_axis: Option<[f64; 3]>, local_x: [f64; 3]) -> Result<(), String> {
+    let Some(axis) = local_y_axis else {
+        return Ok(());
+    };
+    if axis.iter().any(|component| !component.is_finite()) {
+        return Err("thermal 3d frame element local_y_axis must be finite".to_string());
+    }
+    let projection = axis[0] * local_x[0] + axis[1] * local_x[1] + axis[2] * local_x[2];
+    let transverse = [
+        axis[0] - projection * local_x[0],
+        axis[1] - projection * local_x[1],
+        axis[2] - projection * local_x[2],
+    ];
+    let norm = transverse
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    if norm <= 1.0e-12 {
+        return Err(
+            "thermal 3d frame element local_y_axis must not be parallel to the element axis"
+                .to_string(),
+        );
     }
     Ok(())
 }

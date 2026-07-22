@@ -14,14 +14,17 @@
       "validation_methods": [
         "analytic_single_free_node_solution",
         "constitutive_stress_cross_check",
-        "von_mises_energy_invariant"
+        "von_mises_energy_invariant",
+        "parameter_perturbation_cross_check",
+        "rigid_rotation_objectivity"
       ],
       "formal_invariants": [
         "restrained_base_displacements_are_zero",
         "tip_z_displacement_matches_reduced_stiffness_closed_form",
         "stress_components_match_isotropic_elasticity_matrix",
         "von_mises_matches_deviatoric_closed_form",
-        "strain_energy_matches_half_force_displacement_work"
+        "strain_energy_matches_half_force_displacement_work",
+        "rigid_rotation_preserves_scalar_response_invariants"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-solid.json",
@@ -29,7 +32,8 @@
         "evidence/operator-qualification/solid-tetra-3d-closed-form.md",
         "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
-        "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs"
+        "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",
+        "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs"
       ],
       "commands": [
         {
@@ -46,6 +50,11 @@
           "id": "solid-tetra-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_input_reliability -- --nocapture"
+        },
+        {
+          "id": "solid-tetra-3d-perturbation-objectivity",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test mechanical_convergence solid_tetra_3d -- --nocapture"
         }
       ]
     }

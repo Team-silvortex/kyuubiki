@@ -206,6 +206,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "coupled-objectivity-regression",
+          "kind": "convergence_regression",
+          "gate": "verify that a heated and mechanically loaded tripod preserves vector covariance and scalar response invariants under rigid rotation",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_truss_3d_objectivity.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-thermal-truss-3d-qualification-release-evidence before promotion",
@@ -229,6 +236,13 @@
           "kind": "derivation_note",
           "gate": "derive fully restrained uniform-temperature 2D strain split, stress, axial force, and energy formulas",
           "artifact_path": "evidence/operator-qualification/thermal-truss-2d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "coupled-objectivity-regression",
+          "kind": "convergence_regression",
+          "gate": "verify that a heated and mechanically loaded triangle preserves vector covariance and scalar response invariants under rigid rotation",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_truss_2d_objectivity.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -258,6 +272,20 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "coupled-objectivity-regression",
+          "kind": "convergence_regression",
+          "gate": "verify that a thermally graded and mechanically loaded 2D frame preserves vector covariance and local section response under rigid rotation",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "quadratic-field-mesh-convergence",
+          "kind": "convergence_regression",
+          "gate": "verify second-order axial and bending response convergence for a multi-element 2D frame under quadratic temperature and thermal-gradient fields",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-thermal-frame-2d-qualification-release-evidence before promotion",
@@ -284,6 +312,27 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "section-objectivity-regression",
+          "kind": "convergence_regression",
+          "gate": "verify that explicitly oriented single-member, non-collinear chain, and branched multi-support 3D frames preserve all nodal vectors and local section responses under arbitrary rigid rotation",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "quadratic-field-mesh-convergence",
+          "kind": "convergence_regression",
+          "gate": "verify second-order axial and dual-axis bending response convergence for a multi-element 3D frame under quadratic temperature and thermal-gradient fields",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "directional-spring-closed-form",
+          "kind": "regression_test",
+          "gate": "verify arbitrary-direction translational spring stiffness, displacement, reaction force, and combined member-plus-support energy against an axial closed form",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-thermal-frame-3d-qualification-release-evidence before promotion",
@@ -307,6 +356,13 @@
           "kind": "derivation_note",
           "gate": "derive unit solid tetra reduced stiffness, stress, von Mises, and energy formulas",
           "artifact_path": "evidence/operator-qualification/solid-tetra-3d-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "perturbation-objectivity-regression",
+          "kind": "convergence_regression",
+          "gate": "verify parameter perturbations against the closed form and preserve scalar response invariants under rigid rotation",
+          "artifact_path": "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

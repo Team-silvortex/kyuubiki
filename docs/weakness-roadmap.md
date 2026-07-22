@@ -56,6 +56,35 @@ Current moxi hardening focus:
 - surface explicit failure, assumption, and limitation notes in user-facing
   workflow and export paths
 
+Current progress:
+
+- `solve.solid_tetra_3d` now retains parameter-perturbation and rigid-rotation
+  objectivity checks in its active qualification profile; multi-element mesh
+  convergence remains an explicit next-depth boundary rather than an implied
+  capability
+- `solve.thermal_truss_2d` and `solve.thermal_truss_3d` now retain coupled
+  thermal-mechanical rigid-rotation checks with free response degrees of
+  freedom; arbitrary assemblies and nonlinear thermal mechanics remain outside
+  the qualified scope
+- `solve.thermal_frame_2d` now retains a thermally graded and mechanically
+  loaded rigid-rotation check; `solve.thermal_frame_3d` now has an optional
+  explicit `local_y_axis` contract plus arbitrary 3D rigid-rotation evidence,
+  while omitted orientation retains the legacy global-reference behavior
+- both thermal frame operators now retain manufactured quadratic-field mesh
+  convergence across 1, 2, 4, 8, and 16 elements; axial expansion and all
+  represented bending directions demonstrate second-order error reduction
+- `solve.thermal_frame_3d` now also retains full-response objectivity for a
+  non-collinear three-member spatial chain with independent member orientation,
+  thermal fields, and terminal mechanical loading
+- branched 3D thermal-frame evidence now covers two fully fixed supports, a
+  shared three-member junction, redundant thermal restraint, and load
+  redistribution under arbitrary rotation
+- `solve.thermal_frame_3d` now supports arbitrary-direction translational
+  springs with normalized directions, exact `k n n^T` assembly, reported
+  displacement/reaction/energy, axial closed-form evidence, and rotated branch
+  objectivity; exact rigid directional constraints and rotational springs
+  remain separate contract targets
+
 Qualification focus:
 
 - add convergence checks beyond the retained closed-form or patch fixtures

@@ -390,6 +390,7 @@
       ],
       "required_artifacts": [
         "restrained uniform-temperature derivation note",
+        "heated and mechanically loaded 3D rigid-rotation objectivity regression",
         "release-retained validation output"
       ],
       "graduation_gate": "restrained uniform-temperature strain split, stress, axial force, and energy evidence must be retained before qualification",
@@ -412,6 +413,7 @@
       ],
       "required_artifacts": [
         "restrained uniform-temperature derivation note",
+        "heated and mechanically loaded 2D rigid-rotation objectivity regression",
         "release-retained validation output"
       ],
       "graduation_gate": "restrained uniform-temperature 2D strain split, stress, axial force, and energy evidence must be retained before qualification",
@@ -434,6 +436,8 @@
       ],
       "required_artifacts": [
         "restrained uniform-temperature frame derivation note",
+        "thermally graded and mechanically loaded 2D rigid-rotation objectivity regression",
+        "quadratic-field multi-element second-order convergence regression",
         "release-retained validation output"
       ],
       "graduation_gate": "restrained uniform-temperature 2D frame strain split, axial force, stress, zero-gradient, and energy evidence must be retained before qualification",
@@ -456,6 +460,9 @@
       ],
       "required_artifacts": [
         "restrained thermal-gradient frame derivation note",
+        "explicit local-y-axis contract and arbitrary 3D rotation objectivity regression for single-member, non-collinear, and branched multi-support assemblies",
+        "quadratic-field multi-element dual-axis second-order convergence regression",
+        "directional translational spring displacement, reaction, and energy closed-form regression",
         "release-retained validation output"
       ],
       "graduation_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",
@@ -478,6 +485,7 @@
       ],
       "required_artifacts": [
         "unit tetra reduced-stiffness derivation note",
+        "parameter perturbation and rigid-rotation objectivity regression",
         "release-retained validation output"
       ],
       "graduation_gate": "unit solid tetra reduced stiffness, constitutive stress, von Mises, and energy evidence must be retained before qualification",

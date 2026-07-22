@@ -313,7 +313,8 @@ _PAYLOADS = {
     },
     "thermal_frame_3d": {
         "nodes": [{**node, "temperature_delta": 20.0} for node in _FRAME_3D["nodes"]],
-        "elements": [{**_FRAME_3D["elements"][0], "thermal_expansion": 0.000012, "section_depth_y": 0.2, "section_depth_z": 0.2, "temperature_gradient_y": 5.0, "temperature_gradient_z": 0.0}],
+        "elements": [{**_FRAME_3D["elements"][0], "local_y_axis": [0.0, 1.0, 0.0], "thermal_expansion": 0.000012, "section_depth_y": 0.2, "section_depth_z": 0.2, "temperature_gradient_y": 5.0, "temperature_gradient_z": 0.0}],
+        "directional_springs": [{"id": "support-0", "node": 1, "direction": [0.0, 1.0, 0.0], "stiffness": 1_000_000.0}],
     },
     "transient_heat_bar_1d": {
         "nodes": [

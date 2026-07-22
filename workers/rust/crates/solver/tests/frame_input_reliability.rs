@@ -123,6 +123,76 @@ fn thermal_frame_3d_rejects_invalid_element_topology_and_thermal_properties() {
         error.contains("temperature_gradient_z must be finite"),
         "unexpected gradient error: {error}"
     );
+
+    let mut request = thermal_frame_3d_request();
+    request.elements[0].local_y_axis = Some([f64::NAN, 1.0, 0.0]);
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("non-finite section orientation should be rejected");
+    assert!(
+        error.contains("local_y_axis must be finite"),
+        "unexpected orientation error: {error}"
+    );
+
+    let mut request = thermal_frame_3d_request();
+    request.elements[0].local_y_axis = Some([1.0, 0.0, 0.0]);
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("parallel section orientation should be rejected");
+    assert!(
+        error.contains("local_y_axis must not be parallel"),
+        "unexpected orientation error: {error}"
+    );
+
+    let mut request = thermal_frame_3d_request();
+    request
+        .directional_springs
+        .push(kyuubiki_protocol::ThermalFrame3dDirectionalSpringInput {
+            id: "invalid-support".to_string(),
+            node: 9,
+            direction: [1.0, 0.0, 0.0],
+            stiffness: 1.0e6,
+        });
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("out-of-range directional spring should be rejected");
+    assert!(error.contains("directional spring references an out-of-range node"));
+
+    let mut request = thermal_frame_3d_request();
+    request
+        .directional_springs
+        .push(kyuubiki_protocol::ThermalFrame3dDirectionalSpringInput {
+            id: "invalid-support".to_string(),
+            node: 1,
+            direction: [0.0; 3],
+            stiffness: 1.0e6,
+        });
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("zero directional spring direction should be rejected");
+    assert!(error.contains("direction must be non-zero"));
+
+    let mut request = thermal_frame_3d_request();
+    request
+        .directional_springs
+        .push(kyuubiki_protocol::ThermalFrame3dDirectionalSpringInput {
+            id: "invalid-support".to_string(),
+            node: 1,
+            direction: [1.0, f64::NAN, 0.0],
+            stiffness: 1.0e6,
+        });
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("non-finite directional spring direction should be rejected");
+    assert!(error.contains("direction must be finite"));
+
+    let mut request = thermal_frame_3d_request();
+    request
+        .directional_springs
+        .push(kyuubiki_protocol::ThermalFrame3dDirectionalSpringInput {
+            id: "invalid-support".to_string(),
+            node: 1,
+            direction: [1.0, 0.0, 0.0],
+            stiffness: 0.0,
+        });
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("zero directional spring stiffness should be rejected");
+    assert!(error.contains("stiffness must be positive"));
 }
 
 fn frame_2d_request() -> SolveFrame2dRequest {
@@ -216,6 +286,7 @@ fn thermal_frame_3d_request() -> SolveThermalFrame3dRequest {
             id: "beam".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,
@@ -230,6 +301,7 @@ fn thermal_frame_3d_request() -> SolveThermalFrame3dRequest {
             temperature_gradient_y: 30.0,
             temperature_gradient_z: 20.0,
         }],
+        directional_springs: Vec::new(),
     }
 }
 
