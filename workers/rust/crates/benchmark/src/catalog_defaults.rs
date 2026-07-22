@@ -40,6 +40,7 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template("thermal-frame-3d", BenchmarkFamily::ThermalFrame3d),
         template("modal-frame-2d", BenchmarkFamily::ModalFrame2d),
         template("buckling-beam-1d", BenchmarkFamily::BucklingBeam1d),
+        template("buckling-frame-2d", BenchmarkFamily::BucklingFrame2d),
         template("modal-frame-3d", BenchmarkFamily::ModalFrame3d),
         template("solid-tetra-3d", BenchmarkFamily::SolidTetra3d),
         template("truss-roof", BenchmarkFamily::Truss2d),
@@ -174,7 +175,11 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
             ],
             vec![],
         ),
-        matrix("stability-screening", &["buckling-beam-1d"], vec![]),
+        matrix(
+            "stability-screening",
+            &["buckling-beam-1d", "buckling-frame-2d"],
+            vec![],
+        ),
         matrix(
             "physics-coverage",
             &[

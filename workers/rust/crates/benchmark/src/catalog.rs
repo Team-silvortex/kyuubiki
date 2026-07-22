@@ -20,10 +20,11 @@ use crate::{
         generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
     },
     generators_structural::{
-        generate_beam_1d_case, generate_buckling_beam_1d_case, generate_contact_gap_1d_case,
-        generate_modal_frame_2d_chain_case, generate_modal_frame_3d_chain_case,
-        generate_nonlinear_spring_1d_case, generate_solid_tetra_3d_specimen_batch,
-        generate_spring_1d_case, generate_spring_2d_ladder_case, generate_spring_3d_cage_case,
+        generate_beam_1d_case, generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
+        generate_contact_gap_1d_case, generate_modal_frame_2d_chain_case,
+        generate_modal_frame_3d_chain_case, generate_nonlinear_spring_1d_case,
+        generate_solid_tetra_3d_specimen_batch, generate_spring_1d_case,
+        generate_spring_2d_ladder_case, generate_spring_3d_cage_case,
         generate_thermal_beam_1d_case,
     },
     generators_thermal_structural::{
@@ -93,6 +94,7 @@ pub(crate) enum BenchmarkFamily {
     ThermalFrame3d,
     ModalFrame2d,
     BucklingBeam1d,
+    BucklingFrame2d,
     ModalFrame3d,
     SolidTetra3d,
     Truss2d,
@@ -347,6 +349,14 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "buckling_beam_1d",
             workload: BenchmarkWorkload::BucklingBeam1d(generate_buckling_beam_1d_case(
+                profile.axial_elements,
+                profile.space_frame.width,
+            )),
+        },
+        BenchmarkFamily::BucklingFrame2d => BenchmarkCase {
+            id,
+            family: "buckling_frame_2d",
+            workload: BenchmarkWorkload::BucklingFrame2d(generate_buckling_frame_2d_case(
                 profile.axial_elements,
                 profile.space_frame.width,
             )),

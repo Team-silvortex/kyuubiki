@@ -1,7 +1,7 @@
 use kyuubiki_protocol::{
     SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest, SolveBarRequest,
-    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveContactGap1dRequest,
-    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
     SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
@@ -48,6 +48,7 @@ pub(crate) enum BenchmarkWorkload {
     ThermalFrame3d(SolveThermalFrame3dRequest),
     ModalFrame2d(SolveModalFrame2dRequest),
     BucklingBeam1d(SolveBucklingBeam1dRequest),
+    BucklingFrame2d(SolveBucklingFrame2dRequest),
     ModalFrame3d(SolveModalFrame3dRequest),
     SolidTetra3d(SolveSolidTetra3dRequest),
     Truss2d(SolveTruss2dRequest),

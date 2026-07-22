@@ -1,5 +1,5 @@
-use crate::buckling_math::{generalized_eigenpairs, reduce_dense};
-use crate::modal_math::ensure_dense_modal_size;
+use crate::buckling_sparse::hybrid_generalized_eigenpairs;
+use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system};
 use kyuubiki_protocol::{
     BucklingBeam1dModeResult, SolveBucklingBeam1dRequest, SolveBucklingBeam1dResult,
 };
@@ -10,9 +10,8 @@ pub fn solve_buckling_beam_1d(
 ) -> Result<SolveBucklingBeam1dResult, String> {
     validate(request)?;
     let dof_count = request.nodes.len() * 2;
-    ensure_dense_modal_size(dof_count, "buckling beam 1d")?;
-    let mut elastic = vec![vec![0.0; dof_count]; dof_count];
-    let mut geometric = vec![vec![0.0; dof_count]; dof_count];
+    let mut elastic = SparseMatrix::new(dof_count);
+    let mut geometric = SparseMatrix::new(dof_count);
 
     for element in &request.elements {
         let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
@@ -27,20 +26,30 @@ pub fn solve_buckling_beam_1d(
         ];
         for row in 0..4 {
             for column in 0..4 {
-                elastic[map[row]][map[column]] += local_elastic[row][column];
-                geometric[map[row]][map[column]] += local_geometric[row][column];
+                add_at(
+                    &mut elastic,
+                    map[row],
+                    map[column],
+                    local_elastic[row][column],
+                );
+                add_at(
+                    &mut geometric,
+                    map[row],
+                    map[column],
+                    local_geometric[row][column],
+                );
             }
         }
     }
 
     let constrained = constrained_dofs(request);
-    let free_dofs = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-    let reduced_elastic = reduce_dense(&elastic, &free_dofs);
-    let reduced_geometric = reduce_dense(&geometric, &free_dofs);
-    let mode_limit = request.mode_count.unwrap_or(3).max(1);
-    let modes = generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?
+    let zero_rhs = vec![0.0; dof_count];
+    let (reduced_elastic, _, free_dofs) = reduce_sparse_system(&elastic, &zero_rhs, &constrained);
+    let (reduced_geometric, _, geometric_free_dofs) =
+        reduce_sparse_system(&geometric, &zero_rhs, &constrained);
+    debug_assert_eq!(free_dofs, geometric_free_dofs);
+    let mode_limit = request.mode_count.unwrap_or(3).max(1).min(free_dofs.len());
+    let modes = hybrid_generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?
         .into_iter()
         .enumerate()
         .map(|(index, pair)| {

@@ -34,17 +34,24 @@ pub(crate) fn solve_spd_compressed(
     let started = Instant::now();
     let mut rz_old = dot(&r, &z);
     timings.dot_ms += elapsed_ms(started);
-    if !rz_old.is_finite() || rz_old.abs() < 1.0e-20 {
+    if !rz_old.is_finite() || rz_old <= 0.0 {
         let started = Instant::now();
         let residual_norm = dot(&r, &r).sqrt();
         timings.dot_ms += elapsed_ms(started);
-        return Ok(SpdSolveProfile {
-            solution: x,
-            iterations: 0,
-            matrix_non_zero_count: matrix.non_zero_count(),
-            residual_norm,
-            stages: timings.into_stages(),
-        });
+        if residual_norm <= tolerance {
+            return Ok(SpdSolveProfile {
+                solution: x,
+                iterations: 0,
+                matrix_non_zero_count: matrix.non_zero_count(),
+                residual_norm,
+                stages: timings.into_stages(),
+            });
+        }
+        return solve_spd_fallback(
+            fallback_source,
+            rhs,
+            "preconditioner is not positive definite",
+        );
     }
 
     let max_iter = (size.saturating_mul(8)).clamp(256, 40_000);
@@ -56,7 +63,7 @@ pub(crate) fn solve_spd_compressed(
         let started = Instant::now();
         let mut denom = dot(&p, &ap);
         timings.dot_ms += elapsed_ms(started);
-        if !denom.is_finite() || denom.abs() < 1.0e-20 {
+        if !denom.is_finite() || denom <= 0.0 {
             p.clone_from(&z);
             let started = Instant::now();
             matrix.multiply_vector_into(&p, &mut ap);
@@ -64,7 +71,7 @@ pub(crate) fn solve_spd_compressed(
             let started = Instant::now();
             denom = dot(&p, &ap);
             timings.dot_ms += elapsed_ms(started);
-            if !denom.is_finite() || denom.abs() < 1.0e-20 {
+            if !denom.is_finite() || denom <= 0.0 {
                 return solve_spd_fallback(fallback_source, rhs, "system is singular");
             }
         }
@@ -118,11 +125,7 @@ pub(crate) fn solve_spd_compressed(
         if !rz_new.is_finite() {
             return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
         }
-        let beta = if rz_old.abs() < 1.0e-20 {
-            0.0
-        } else {
-            rz_new / rz_old
-        };
+        let beta = if rz_old == 0.0 { 0.0 } else { rz_new / rz_old };
         let started = Instant::now();
         for index in 0..size {
             p[index] = z[index] + beta * p[index];
@@ -205,5 +208,33 @@ fn solve_spd_fallback(
         })
     } else {
         Err(reason.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::linear_algebra::{SparseMatrix, add_at};
+    use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
+
+    use super::solve_spd_compressed;
+
+    #[test]
+    fn solves_high_stiffness_scale_without_treating_preconditioned_residual_as_zero() {
+        let mut matrix = SparseMatrix::new(2);
+        add_at(&mut matrix, 0, 0, 2.0e24);
+        add_at(&mut matrix, 0, 1, -1.0e24);
+        add_at(&mut matrix, 1, 0, -1.0e24);
+        add_at(&mut matrix, 1, 1, 2.0e24);
+        let options = SpdSolveOptions {
+            preconditioner: SpdPreconditioner::IncompleteCholesky,
+            progress_interval: None,
+        };
+        let compressed = matrix.compress(options.preconditioner);
+
+        let profile = solve_spd_compressed(&compressed, &[1.0, 0.0], &matrix, &options)
+            .expect("high-scale SPD system should solve");
+        assert!(profile.iterations > 0);
+        assert!((profile.solution[0] - 2.0e-24 / 3.0).abs() < 1.0e-35);
+        assert!((profile.solution[1] - 1.0e-24 / 3.0).abs() < 1.0e-35);
     }
 }

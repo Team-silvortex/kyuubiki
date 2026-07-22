@@ -39,6 +39,29 @@ mod tests {
     }
 
     #[test]
+    fn failed_case_gate_retains_case_identity_and_error() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "core");
+        let selected = cases.iter().take(1).collect::<Vec<_>>();
+        let mut report = crate::runner::build_report(
+            &selected,
+            1,
+            BenchmarkProfile::Medium,
+            "core",
+            "jacobi",
+        );
+        report.cases[0].ok = false;
+        report.cases[0].error = Some("synthetic solver failure".to_string());
+
+        assert_eq!(
+            crate::failed_case_messages(&report),
+            vec![format!(
+                "{}: synthetic solver failure",
+                report.cases[0].id
+            )]
+        );
+    }
+
+    #[test]
     fn runs_benchmark_cases() {
         let cases = benchmark_cases(BenchmarkProfile::TenK, "core");
         let result = run_case(&cases[0], 2);
@@ -82,7 +105,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 39);
+        assert_eq!(spec.templates.len(), 40);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -276,7 +299,7 @@ mod tests {
         assert!(report
             .cases
             .iter()
-            .any(|case| case.family == "buckling_beam_1d"));
+            .any(|case| case.family == "thermal_frame_2d"));
     }
 
     #[test]
@@ -292,8 +315,9 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(cases.len(), spec.templates.len() - 1);
-        assert_eq!(report.cases.len(), spec.templates.len() - 1);
+        // Linear buckling remains in the dedicated screening lane until qualified.
+        assert_eq!(cases.len(), spec.templates.len() - 2);
+        assert_eq!(report.cases.len(), spec.templates.len() - 2);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
         assert!(report
@@ -312,10 +336,18 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "thermal_frame_3d"));
+        assert!(!report
+            .cases
+            .iter()
+            .any(|case| case.family == "buckling_beam_1d"));
+        assert!(!report
+            .cases
+            .iter()
+            .any(|case| case.family == "buckling_frame_2d"));
     }
 
     #[test]
-    fn stability_screening_matrix_runs_buckling_template() {
+    fn stability_screening_matrix_runs_buckling_templates() {
         let cases = benchmark_cases(BenchmarkProfile::Medium, "stability-screening");
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
@@ -326,9 +358,16 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 1);
-        assert!(report.cases[0].ok);
-        assert_eq!(report.cases[0].family, "buckling_beam_1d");
+        assert_eq!(report.cases.len(), 2);
+        assert!(report.cases.iter().all(|case| case.ok));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "buckling_beam_1d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "buckling_frame_2d"));
     }
 
     #[test]

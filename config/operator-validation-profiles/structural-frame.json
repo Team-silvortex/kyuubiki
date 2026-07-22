@@ -61,17 +61,22 @@
         "euler_column_closed_form",
         "mesh_convergence",
         "dimensional_scaling",
+        "sparse_large_system_cross_check",
+        "beam_frame_formulation_cross_check",
         "input_boundary_rejection"
       ],
       "formal_invariants": [
         "pinned_column_converges_to_pi_squared_ei_over_l_squared",
         "critical_factor_scales_with_ei_over_reference_force_l_squared",
+        "sparse_and_dense_paths_retain_the_euler_critical_factor",
+        "beam_and_preloaded_frame_first_modes_agree",
         "mode_shape_is_normalized",
         "invalid_topology_and_non_positive_properties_are_rejected"
       ],
       "evidence_paths": [
         "evidence/operator-screening/buckling-beam-1d-linear-eigenvalue.md",
         "workers/rust/crates/solver/tests/buckling_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_beam_frame_crosscheck.rs",
         "workers/rust/crates/solver/tests/buckling_beam_1d_input_reliability.rs",
         "workers/rust/crates/engine/tests/buckling_beam_workflow.rs"
       ],
@@ -80,6 +85,11 @@
           "id": "buckling-beam-closed-form",
           "kind": "analytic",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "buckling-beam-frame-cross-check",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_frame_crosscheck -- --nocapture"
         },
         {
           "id": "buckling-beam-input-reliability",
@@ -107,6 +117,8 @@
         "mesh_convergence",
         "global_orientation_invariance",
         "semidefinite_generalized_eigenproblem",
+        "sparse_large_system_cross_check",
+        "multi_member_portal_objectivity",
         "input_boundary_rejection"
       ],
       "formal_invariants": [
@@ -114,12 +126,17 @@
         "pinned_frame_column_converges_to_pi_squared_ei_over_l_squared",
         "critical_factor_is_invariant_to_global_column_orientation",
         "positive_modes_are_sorted_and_normalized",
+        "sparse_and_dense_paths_retain_the_euler_critical_factor",
+        "beam_and_preloaded_frame_first_modes_agree",
+        "portal_column_preloads_and_critical_factor_are_rigid_rotation_invariant",
         "tension_only_and_zero_reference_states_are_rejected"
       ],
       "evidence_paths": [
         "evidence/operator-screening/buckling-frame-2d-linear-eigenvalue.md",
         "workers/rust/crates/solver/tests/buckling_frame_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_beam_frame_crosscheck.rs",
         "workers/rust/crates/solver/tests/buckling_frame_2d_input_reliability.rs",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_portal.rs",
         "workers/rust/crates/engine/tests/buckling_frame_workflow.rs"
       ],
       "commands": [
@@ -129,9 +146,19 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_closed_form -- --nocapture"
         },
         {
+          "id": "buckling-frame-beam-cross-check",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_frame_crosscheck -- --nocapture"
+        },
+        {
           "id": "buckling-frame-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_input_reliability -- --nocapture"
+        },
+        {
+          "id": "buckling-frame-portal-objectivity",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_portal -- --nocapture"
         },
         {
           "id": "buckling-frame-workflow-route",

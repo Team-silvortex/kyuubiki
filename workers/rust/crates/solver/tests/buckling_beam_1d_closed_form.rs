@@ -81,6 +81,22 @@ fn multiple_modes_are_sorted_normalized_and_equilibrated() {
     }
 }
 
+#[test]
+fn sparse_path_preserves_the_euler_critical_factor() {
+    let length: f64 = 3.5;
+    let youngs_modulus = 205.0e9;
+    let inertia = 7.4e-6;
+    let reference_force = 100_000.0;
+    let request = column_request(400, length, youngs_modulus, inertia, reference_force);
+    let result = solve_buckling_beam_1d(&request).expect("sparse beam buckling path should solve");
+    let expected = std::f64::consts::PI.powi(2) * youngs_modulus * inertia / length.powi(2);
+    let critical = result.minimum_load_factor * reference_force;
+    let relative_error = (critical - expected).abs() / expected;
+
+    assert!(result.free_dofs.len() > 512);
+    assert!(relative_error < 1.0e-6, "relative error={relative_error}");
+}
+
 fn column_request(
     element_count: usize,
     length: f64,

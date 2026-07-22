@@ -328,6 +328,18 @@ pub(crate) fn run_case_with_preconditioner(
                         max_stress = result.modes[0].residual_norm;
                     })
                 }
+                BenchmarkWorkload::BucklingFrame2d(request) => {
+                    solve(EngineSolveRequest::BucklingFrame2d(request.clone())).map(|result| {
+                        let AnalysisResult::BucklingFrame2d(result) = result else {
+                            unreachable!("buckling frame solve should return buckling result")
+                        };
+                        node_count = result.input.frame.nodes.len();
+                        element_count = result.input.frame.elements.len();
+                        dof_count = result.free_dofs.len();
+                        max_displacement = result.minimum_load_factor;
+                        max_stress = result.modes[0].residual_norm;
+                    })
+                }
                 BenchmarkWorkload::ModalFrame3d(request) => {
                     solve(EngineSolveRequest::ModalFrame3d(request.clone())).map(|result| {
                         let AnalysisResult::ModalFrame3d(result) = result else {

@@ -72,6 +72,18 @@ fn semidefinite_geometric_stiffness_supports_sorted_multiple_modes() {
     }
 }
 
+#[test]
+fn sparse_path_preserves_the_euler_critical_factor() {
+    let length: f64 = 3.2;
+    let request = column_request(400, length, true, 1);
+    let result = solve_buckling_frame_2d(&request).expect("sparse buckling path should solve");
+    let expected = std::f64::consts::PI.powi(2) * YOUNGS_MODULUS * INERTIA / length.powi(2);
+    let critical = result.minimum_load_factor * REFERENCE_FORCE;
+
+    assert!(result.free_dofs.len() > 512);
+    assert_relative(critical, expected, 1.0e-6);
+}
+
 fn column_request(
     element_count: usize,
     length: f64,

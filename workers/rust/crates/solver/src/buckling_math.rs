@@ -40,12 +40,6 @@ pub(crate) fn generalized_eigenpairs(
     Ok(pairs)
 }
 
-pub(crate) fn reduce_dense(matrix: &[Vec<f64>], free: &[usize]) -> Vec<Vec<f64>> {
-    free.iter()
-        .map(|&row| free.iter().map(|&column| matrix[row][column]).collect())
-        .collect()
-}
-
 fn validate_matrices(stiffness: &[Vec<f64>], geometric: &[Vec<f64>]) -> Result<(), String> {
     let size = stiffness.len();
     if size == 0

@@ -31,7 +31,7 @@ use compare::{
 };
 use config::{BenchmarkConfig, OutputFormat};
 use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
-use models::select_cases;
+use models::{BenchmarkReport, select_cases};
 use runner::{build_report, build_report_with_progress};
 use shape_report::{build_shape_report, print_shape_table};
 
@@ -116,6 +116,16 @@ fn run() -> Result<(), String> {
         ),
     }
 
+    let case_failures = failed_case_messages(&report);
+    if !case_failures.is_empty() {
+        eprintln!();
+        eprintln!("benchmark case execution failed:");
+        for failure in case_failures {
+            eprintln!("  {failure}");
+        }
+        process::exit(1);
+    }
+
     if let Some(comparison) = &comparison {
         let failures = evaluate_regressions(&config, comparison);
         if !failures.is_empty() {
@@ -129,4 +139,19 @@ fn run() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn failed_case_messages(report: &BenchmarkReport) -> Vec<String> {
+    report
+        .cases
+        .iter()
+        .filter(|case| !case.ok)
+        .map(|case| {
+            format!(
+                "{}: {}",
+                case.id,
+                case.error.as_deref().unwrap_or("unknown execution failure")
+            )
+        })
+        .collect()
 }

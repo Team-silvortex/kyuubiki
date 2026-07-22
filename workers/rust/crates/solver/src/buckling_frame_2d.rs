@@ -1,7 +1,7 @@
-use crate::buckling_math::{generalized_eigenpairs, reduce_dense};
+use crate::buckling_sparse::hybrid_generalized_eigenpairs;
 use crate::frame_2d::solve_frame_2d;
 use crate::frame_2d_math::{frame_local_stiffness, frame_transform, transform_frame_stiffness};
-use crate::modal_math::ensure_dense_modal_size;
+use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system};
 use kyuubiki_protocol::{
     BucklingFrame2dElementPreloadResult, BucklingFrame2dModeResult, SolveBucklingFrame2dRequest,
     SolveBucklingFrame2dResult,
@@ -12,9 +12,8 @@ pub fn solve_buckling_frame_2d(
 ) -> Result<SolveBucklingFrame2dResult, String> {
     let static_result = solve_frame_2d(&request.frame)?;
     let dof_count = request.frame.nodes.len() * 3;
-    ensure_dense_modal_size(dof_count, "buckling frame 2d")?;
-    let mut elastic = vec![vec![0.0; dof_count]; dof_count];
-    let mut geometric = vec![vec![0.0; dof_count]; dof_count];
+    let mut elastic = SparseMatrix::new(dof_count);
+    let mut geometric = SparseMatrix::new(dof_count);
     let mut element_preloads = Vec::with_capacity(request.frame.elements.len());
 
     for (index, element) in request.frame.elements.iter().enumerate() {
@@ -39,8 +38,8 @@ pub fn solve_buckling_frame_2d(
         let local_geometric = geometric_stiffness(reference_compressive_force, length);
         let global_geometric = transform_frame_stiffness(&local_geometric, &transform);
         let map = frame_dof_map(element.node_i, element.node_j);
-        assemble(&mut elastic, &global_elastic, &map);
-        assemble(&mut geometric, &global_geometric, &map);
+        assemble_sparse(&mut elastic, &global_elastic, &map);
+        assemble_sparse(&mut geometric, &global_geometric, &map);
         element_preloads.push(BucklingFrame2dElementPreloadResult {
             index,
             id: element.id.clone(),
@@ -57,13 +56,15 @@ pub fn solve_buckling_frame_2d(
     }
 
     let constrained = constrained_dofs(request);
-    let free_dofs = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-    let reduced_elastic = reduce_dense(&elastic, &free_dofs);
-    let reduced_geometric = reduce_dense(&geometric, &free_dofs);
+    let zero_rhs = vec![0.0; dof_count];
+    let (reduced_elastic, _, free_dofs) = reduce_sparse_system(&elastic, &zero_rhs, &constrained);
+    let (reduced_geometric, _, geometric_free_dofs) =
+        reduce_sparse_system(&geometric, &zero_rhs, &constrained);
+    debug_assert_eq!(free_dofs, geometric_free_dofs);
     let mode_limit = request.mode_count.unwrap_or(3).max(1).min(free_dofs.len());
-    let modes = generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?
+    let eigenpairs =
+        hybrid_generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?;
+    let modes = eigenpairs
         .into_iter()
         .enumerate()
         .map(|(index, pair)| BucklingFrame2dModeResult {
@@ -103,10 +104,10 @@ fn geometric_stiffness(force: f64, length: f64) -> [[f64; 6]; 6] {
     stiffness
 }
 
-fn assemble(global: &mut [Vec<f64>], element: &[[f64; 6]; 6], map: &[usize; 6]) {
+fn assemble_sparse(global: &mut SparseMatrix, element: &[[f64; 6]; 6], map: &[usize; 6]) {
     for row in 0..6 {
         for column in 0..6 {
-            global[map[row]][map[column]] += element[row][column];
+            add_at(global, map[row], map[column], element[row][column]);
         }
     }
 }

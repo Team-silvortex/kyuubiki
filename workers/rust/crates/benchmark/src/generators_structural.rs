@@ -1,9 +1,10 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, BucklingBeam1dElementInput, BucklingBeam1dNodeInput,
-    ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
-    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    SolidTetra3dElementInput, SolidTetra3dNodeInput, SolveBeam1dRequest,
-    SolveBucklingBeam1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame3dNodeInput,
+    ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
+    NonlinearSpring1dNodeInput, SolidTetra3dElementInput, SolidTetra3dNodeInput,
+    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveContactGap1dRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
     SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest,
     Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
@@ -323,6 +324,42 @@ pub(crate) fn generate_buckling_beam_1d_case(
                 reference_compressive_force: 100_000.0,
             })
             .collect(),
+        mode_count: Some(1),
+    }
+}
+
+pub(crate) fn generate_buckling_frame_2d_case(
+    segments: usize,
+    length: f64,
+) -> SolveBucklingFrame2dRequest {
+    let segments = segments.max(1);
+    let dy = length / segments as f64;
+    let nodes = (0..=segments)
+        .map(|index| Frame2dNodeInput {
+            id: format!("bfn{index}"),
+            x: 0.0,
+            y: index as f64 * dy,
+            fix_x: index == 0 || index == segments,
+            fix_y: index == 0,
+            fix_rz: false,
+            load_x: 0.0,
+            load_y: if index == segments { -100_000.0 } else { 0.0 },
+            moment_z: 0.0,
+        })
+        .collect();
+    let elements = (0..segments)
+        .map(|index| Frame2dElementInput {
+            id: format!("bfe{index}"),
+            node_i: index,
+            node_j: index + 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 8.333e-6,
+            section_modulus: 1.667e-4,
+        })
+        .collect();
+    SolveBucklingFrame2dRequest {
+        frame: SolveFrame2dRequest { nodes, elements },
         mode_count: Some(1),
     }
 }
