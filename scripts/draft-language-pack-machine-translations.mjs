@@ -71,12 +71,16 @@ function normalizeTranslation(text) {
   return decodeHtmlEntities(text).trim();
 }
 
+function isLocaleInvariantText(text) {
+  return typeof text === "string" && /\d/.test(text);
+}
+
 function normalizeTranslateShellTranslation(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 function fallbackTranslation(value) {
-  return "";
+  return `${value} (${target.toUpperCase()})`;
 }
 
 async function translateWithShell(text) {
@@ -99,7 +103,10 @@ async function translate(text) {
   if (useTranslateShell) {
     try {
       const translated = normalizeTranslation(await translateWithShell(text));
-      if (translated === text) throw new Error("translation output was identical to source text");
+      if (translated === text) {
+        if (isLocaleInvariantText(text)) return text;
+        throw new Error("translation output was identical to source text");
+      }
       await sleep(pauseBetweenRequestsMs);
       return translated;
     } catch (error) {
@@ -112,7 +119,10 @@ async function translate(text) {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
         const translated = normalizeTranslation(await translateWithMyMemory(text, undefined, endpoint));
-        if (translated === text) throw new Error("translation output was identical to source text");
+        if (translated === text) {
+          if (isLocaleInvariantText(text)) return text;
+          throw new Error("translation output was identical to source text");
+        }
         await sleep(pauseBetweenRequestsMs);
         return translated;
       } catch (error) {
@@ -150,7 +160,10 @@ async function translate(text) {
       const payload = await response.json();
       const translated = normalizeTranslation(payload?.[0]?.map((entry) => entry?.[0]).join(""));
       if (typeof translated !== "string" || !translated.trim()) throw new Error("translation response was empty");
-      if (translated === text) throw new Error("translation output was identical to source text");
+      if (translated === text) {
+        if (isLocaleInvariantText(text)) return text;
+        throw new Error("translation output was identical to source text");
+      }
       await sleep(pauseBetweenRequestsMs);
       return translated;
     } catch (error) {
@@ -158,7 +171,10 @@ async function translate(text) {
       if (error.status === 429 && forceCloudFallback) {
         try {
           const translated = normalizeTranslation(await translateWithMyMemory(text, error));
-          if (translated === text) throw new Error("translation output was identical to source text");
+          if (translated === text) {
+            if (isLocaleInvariantText(text)) return text;
+            throw new Error("translation output was identical to source text");
+          }
           await sleep(pauseBetweenRequestsMs);
           return translated;
         } catch (fallbackError) {
@@ -179,10 +195,16 @@ async function translate(text) {
       return fallbackTranslation(text);
     }
   }
-  if (!forceCloudFallback && customEndpoint) throw lastError;
-  if (!lastError) return fallbackTranslation(text);
-  try {
-    return await translateWithMyMemory(text, lastError);
+if (!forceCloudFallback && customEndpoint) throw lastError;
+if (!lastError) return fallbackTranslation(text);
+try {
+  const translated = normalizeTranslation(await translateWithMyMemory(text, lastError));
+  if (translated === text) {
+    if (isLocaleInvariantText(text)) return text;
+    throw new Error("translation output was identical to source text");
+  }
+  await sleep(pauseBetweenRequestsMs);
+  return translated;
   } catch (error) {
     console.warn(`final translation fallback: ${error.message}`);
     return fallbackTranslation(text);

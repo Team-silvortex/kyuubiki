@@ -8,7 +8,7 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-21T04:48:26.934Z",
+  "updatedAt": "2026-07-22T02:31:21.839Z",
   "description": "Dutch UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
     {
@@ -77,7 +77,7 @@
     "adminModelVersionId": "Modelversie",
     "adminProjectId": "Project-ID",
     "adminResults": "Resultaten",
-    "agents": "Agents",
+    "agents": "Agenten",
     "applyLoads": "Belastingen toepassen",
     "applyRecordContext": "Recordcontext toepassen",
     "applySuggestionAction": "Diagnostische oplossing toegepast",
@@ -91,7 +91,7 @@
     "assistantConfigureDirectMeshHint": "Direct mesh vereist minstens één bereikbaar host:poort-eindpunt.",
     "assistantCurrentJob": "Taak",
     "assistantCurrentResult": "Resultaat",
-    "assistantCurrentRuntime": "Runtime",
+    "assistantCurrentRuntime": "Uitvoeringstijd",
     "assistantCurrentStudy": "Studie",
     "assistantEmpty": "De workbench is gezond. Er is nu geen ondersteunde actie nodig.",
     "assistantEnterImmersive": "Immersieve 3D-weergave openen",
@@ -120,8 +120,8 @@
     "assistantRunStudy": "Huidige studie uitvoeren",
     "assistantRunStudyHint": "Het model is klaar om te verzenden.",
     "assistantStatusReady": "Gereed",
-    "assistantSummary": "Context",
-    "audit": "Audit",
+    "assistantSummary": "Context (NL)",
+    "audit": "Controle",
     "auditAction": "Actie",
     "auditExportCsvLabel": "CSV exporteren",
     "auditExportLabel": "Bundel exporteren",
@@ -143,10 +143,10 @@
       "all": "Alle",
       "assistant": "Assistent",
       "hubAssistant": "Hub-assistent",
-      "script": "Script"
+      "script": "Script (NL)"
     },
     "auditSourceStatusTitle": "Bron × status",
-    "auditStatus": "Status",
+    "auditStatus": "Status (NL)",
     "auditStatusOptions": {
       "all": "Alle",
       "cancelled": "Geannuleerd",
@@ -168,7 +168,7 @@
       "h24": "Laatste 24 uur"
     },
     "axialSample": "1D-voorbeeld openen",
-    "backend": "Backend",
+    "backend": "Achterkant",
     "browserLimitsNote": "Browserextensies kunnen niet volledig vanaf de pagina worden uitgeschakeld.",
     "cancelJob": "Taak annuleren",
     "capabilities": "Mogelijkheden",

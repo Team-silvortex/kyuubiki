@@ -40,6 +40,9 @@ It is intentionally thin:
 - `./scripts/kyuubiki build-workbench-gui macos|linux|windows`
 - `./scripts/kyuubiki package-desktop macos|linux|windows`
 
+The native dev/build/package commands synchronize shared desktop assets
+automatically. Use `npm run sync:shared` only for an explicit local refresh or check.
+
 ## Validation
 
 - shared UI sync:

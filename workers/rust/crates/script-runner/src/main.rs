@@ -317,6 +317,7 @@ fn run() -> RunnerResult<u8> {
         "build-installer-gui" => run_desktop_build(&paths, DesktopApp::Installer, rest),
         "build-workbench-gui" => run_desktop_build(&paths, DesktopApp::Workbench, rest),
         "sync-desktop-shared" => desktop_shared_sync::run_sync_desktop_shared(&paths.root),
+        "check-desktop-shared" => desktop_shared_sync::run_check_desktop_shared(&paths.root, rest),
         "package-desktop" => run_package_desktop(&paths, rest),
         "desktop-status" => run_desktop_status(&paths, rest),
         "desktop-stage" => run_desktop_stage(&paths, rest),

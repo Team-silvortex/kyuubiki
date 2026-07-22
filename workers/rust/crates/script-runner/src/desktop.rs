@@ -23,6 +23,7 @@ enum DesktopTarget {
 }
 
 pub fn run_desktop_dev(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
+    prepare_desktop_assets(paths)?;
     run_desktop_tauri_command(
         paths,
         app,
@@ -39,11 +40,13 @@ pub fn run_desktop_build(
 ) -> RunnerResult<u8> {
     let platform = parse_desktop_platform(rest.first())?;
     let Some(platform) = platform else {
-        return run_host_desktop_build(paths, app);
+        prepare_desktop_assets(paths)?;
+        return run_host_desktop_build_unprepared(paths, app);
     };
 
     if platform == host_platform() {
-        run_host_desktop_build(paths, app)
+        prepare_desktop_assets(paths)?;
+        run_host_desktop_build_unprepared(paths, app)
     } else {
         println!(
             "{} native bundle build is host-bound; staging {} release manifests instead.",
@@ -74,14 +77,16 @@ pub fn run_package_desktop(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
             if stage != 0 {
                 return Ok(stage);
             }
-            for app in desktop_apps() {
-                let status =
-                    run_desktop_build(paths, app, vec![OsString::from(platform.as_str())])?;
-                if status != 0 {
-                    return Ok(status);
-                }
+            if platform == host_platform() {
+                run_desktop_build_host(paths)
+            } else {
+                println!(
+                    "{} desktop release staged; native bundles must be built on a {} host.",
+                    platform.as_str(),
+                    platform.as_str()
+                );
+                Ok(0)
             }
-            Ok(0)
         }
     }
 }
@@ -102,8 +107,9 @@ pub fn run_desktop_stage(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult
 }
 
 pub fn run_desktop_build_host(paths: &RepoPaths) -> RunnerResult<u8> {
+    prepare_desktop_assets(paths)?;
     for app in desktop_apps() {
-        let status = run_host_desktop_build(paths, app)?;
+        let status = run_host_desktop_build_unprepared(paths, app)?;
         if status != 0 {
             return Ok(status);
         }
@@ -193,7 +199,17 @@ pub fn desktop_target_cache_dir(root: &Path, platform: Platform) -> std::path::P
         .join(platform.as_str())
 }
 
-fn run_host_desktop_build(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
+fn prepare_desktop_assets(paths: &RepoPaths) -> RunnerResult<()> {
+    let status = crate::desktop_shared_sync::run_sync_desktop_shared(&paths.root)?;
+    if status != 0 {
+        return Err(format!(
+            "desktop shared asset preparation failed with status {status}"
+        ));
+    }
+    Ok(())
+}
+
+fn run_host_desktop_build_unprepared(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
     run_desktop_tauri_command(
         paths,
         app,

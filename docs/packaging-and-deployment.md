@@ -60,6 +60,11 @@ These are thin wrappers over the component-native toolchains:
 - agent: `cargo build -p kyuubiki-cli --release`
 - desktop shells: Tauri build wrappers
 
+The native desktop dev and build wrappers synchronize shared UI, brand, and
+surface-scoped language-pack assets before Tauri starts. `desktop-build-host`,
+`package-desktop`, and `desktop-release` prepare those assets once before building
+all three host shells.
+
 ## Packaging entry points
 
 Use these commands when building deployable layouts:

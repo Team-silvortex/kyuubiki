@@ -179,9 +179,15 @@ breaking the Tauri shells.
 
 ## Verification
 
-- `node apps/desktop-shared/scripts/sync-desktop-shared.mjs`
+- `make check-desktop-shared`
 - `npm --prefix apps/hub-gui run test:smoke`
 - `npm --prefix apps/installer-gui run test:smoke`
 - `npm --prefix apps/workbench-gui run test:smoke`
 - `npm --prefix apps/frontend run check:file-lines`
 - `git diff --check`
+
+Desktop language-pack mirrors are surface-scoped rather than global: Hub and
+Installer consume `hub`, while the Workbench shell consumes `workbench`. Pack
+fragments stay outside the startup path and are loaded only for the selected locale.
+Native desktop dev/build/package/release commands synchronize these resources before
+Tauri starts, and a three-shell host build performs that preparation only once.

@@ -51,6 +51,7 @@ function workbenchMockSource() {
   return `(() => {
   window.__mockErrors = [];
   window.__mockInvocations = [];
+  let currentLanguage = "en";
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -89,9 +90,10 @@ function workbenchMockSource() {
         window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
-            return { language: "en" };
+            return { language: currentLanguage };
           case "set_global_language_preference":
-            return { language: payload?.payload?.language || "en" };
+            currentLanguage = payload?.payload?.language || "en";
+            return { language: currentLanguage };
           case "workbench_environment":
             return {
               workbench_url: ${JSON.stringify(workbenchUrl)},
@@ -258,7 +260,10 @@ export async function assertWorkbenchShellRegression(page, viewport) {
   assert.equal(await page.locator("#deployment-mode").textContent(), "direct_mesh_gui");
   assert.match(await page.locator("#status-output").textContent(), /runtimes:\s*\d+/);
   assert.match(await page.locator("#viewer-caption").textContent(), /^data:text\/html/);
-  await assertLanguageChange(page, "zh");
+  await assertLanguageChange(page, "fr");
+  await page.waitForFunction(() => document.getElementById("shell-language-label")?.textContent === "Langue");
+  assert.equal(await page.locator('[data-console-tab="status"]').textContent(), "Statut");
+  assert.equal(await page.locator('[data-action="refresh"]').textContent(), "Rafraîchir");
 
   const panelRects = await rectsFor(page, [
     '[data-shell-pane="control"]:not(.hidden) .panel:nth-of-type(1)',

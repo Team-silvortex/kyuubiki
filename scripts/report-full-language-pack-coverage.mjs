@@ -72,13 +72,21 @@ function hasTranslation(value, source) {
     && value.every((entry) => typeof entry === "string" && entry.trim().length > 0);
 }
 
+function isLocaleInvariantText(text) {
+  return typeof text === "string" && /\d/.test(text);
+}
+
 function isSourceTranslation(value, source) {
+  if (typeof source === "string" && isLocaleInvariantText(source)) return false;
   if (!hasTranslation(value, source)) return false;
   if (typeof source === "string") return value === source;
   return Array.isArray(value) && value.length === source.length && value.every((entry, index) => entry === source[index]);
 }
 
 function hasMeaningfulTranslation(value, source) {
+  if (typeof source === "string" && /\d/.test(source)) {
+    return hasTranslation(value, source);
+  }
   return hasTranslation(value, source) && !isSourceTranslation(value, source);
 }
 

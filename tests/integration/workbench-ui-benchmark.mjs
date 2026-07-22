@@ -2,9 +2,11 @@ import { performance } from "node:perf_hooks";
 import {
   chromium,
   FRONTEND_URL,
-  runKyuubiki,
+  startWorkbenchIntegrationRuntime,
+  stopWorkbenchIntegrationRuntime,
   waitForFrontend,
 } from "./workbench-ui-smoke.shared.mjs";
+import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
 function round(value) {
   return Math.round(value * 1000) / 1000;
@@ -266,9 +268,9 @@ async function runWorkflowCase(browser) {
 }
 
 async function main() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchIntegrationBrowser(chromium);
   try {
-    runKyuubiki(["restart-local"]);
+    startWorkbenchIntegrationRuntime();
     await waitForFrontend();
 
     const cases = [];
@@ -317,7 +319,7 @@ async function main() {
   } finally {
     await browser.close();
     try {
-      runKyuubiki(["stop"]);
+      stopWorkbenchIntegrationRuntime();
     } catch {
       // best effort cleanup
     }

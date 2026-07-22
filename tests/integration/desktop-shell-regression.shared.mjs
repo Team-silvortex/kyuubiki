@@ -113,6 +113,7 @@ function hubMockSource() {
   return `(() => {
   window.__mockErrors = [];
   window.__mockInvocations = [];
+  let currentLanguage = "en";
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -192,9 +193,10 @@ function hubMockSource() {
         window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
-            return { language: "en" };
+            return { language: currentLanguage };
           case "set_global_language_preference":
-            return { language: payload?.payload?.language || "en" };
+            currentLanguage = payload?.payload?.language || "en";
+            return { language: currentLanguage };
           case "hub_environment":
             return {
               deployment_mode: "orchestrated_gui",
@@ -232,6 +234,7 @@ function installerMockSource() {
   return `(() => {
   window.__mockErrors = [];
   window.__mockInvocations = [];
+  let currentLanguage = "en";
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -264,9 +267,10 @@ function installerMockSource() {
         window.__mockInvocations.push({ command, payload });
         switch (command) {
           case "get_global_language_preference":
-            return { language: "en" };
+            return { language: currentLanguage };
           case "set_global_language_preference":
-            return { language: payload?.payload?.language || "en" };
+            currentLanguage = payload?.payload?.language || "en";
+            return { language: currentLanguage };
           case "doctor_report":
             return doctorReport;
           case "installation_integrity_report":

@@ -11,6 +11,7 @@ import {
 } from "./shared/tauri-bridge.js";
 import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
+import { loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
 
 const shellCopy = {
   en: {
@@ -139,6 +140,40 @@ const state = {
   language: "en",
 };
 
+const lazyShellCopy = {};
+
+function translatedString(overrides, key, fallback) {
+  return typeof overrides?.[key] === "string" ? overrides[key] : fallback;
+}
+
+function shellCopyFromLanguagePack(pack) {
+  const base = shellCopy.en;
+  const overrides = pack?.overrides || {};
+  const sections = overrides.sections || {};
+  return {
+    ...base,
+    language: translatedString(overrides, "language", base.language),
+    shellPages: {
+      control: translatedString(overrides, "controls", base.shellPages.control),
+      workbench: translatedString(sections, "study", base.shellPages.workbench),
+    },
+    runtime: translatedString(overrides, "runtime", base.runtime),
+    runtimeConsole: `${translatedString(overrides, "runtime", base.runtime)} · ${translatedString(overrides, "status", base.status)}`,
+    viewerControls: translatedString(overrides, "controls", base.viewerControls),
+    status: translatedString(overrides, "status", base.status),
+    refresh: translatedString(overrides, "refresh", base.refresh),
+    loadLocalUi: translatedString(overrides, "load", base.loadLocalUi),
+  };
+}
+
+async function ensureShellLanguage(language) {
+  if (shellCopy[language] || lazyShellCopy[language]) return;
+  const result = await loadDesktopLanguagePack("workbench", language);
+  if (result.status === "loaded" && result.pack) {
+    lazyShellCopy[language] = shellCopyFromLanguagePack(result.pack);
+  }
+}
+
 const elements = {
   shellRoot: document.getElementById("shell-root"),
   workbenchUrl: document.getElementById("workbench-url"),
@@ -159,7 +194,7 @@ const elements = {
 
 function shellText() {
   const normalized = normalizeDesktopLanguage(state.language);
-  if (shellCopy[normalized]) return shellCopy[normalized];
+  if (shellCopy[normalized] || lazyShellCopy[normalized]) return shellCopy[normalized] || lazyShellCopy[normalized];
   if (normalized.toLowerCase().startsWith("zh")) return shellCopy.zh;
   if (normalized.toLowerCase().startsWith("es")) return shellCopy.es;
   return shellCopy.en;
@@ -447,14 +482,16 @@ for (const button of elements.shellTargets) {
 elements.languageSelect?.addEventListener("change", async (event) => {
   const nextLanguage = normalizeDesktopLanguage(event.target.value);
   state.language = await saveDesktopLanguagePreference(nextLanguage);
+  await ensureShellLanguage(state.language);
   renderLanguage();
   postLanguageToWorkbench();
 });
 
 watchDesktopLanguagePreference({
   getCurrentLanguage: () => state.language,
-  onChange: (language) => {
+  onChange: async (language) => {
     state.language = language;
+    await ensureShellLanguage(state.language);
     renderLanguage();
     postLanguageToWorkbench();
   },
@@ -466,6 +503,7 @@ window.addEventListener("message", async (event) => {
   const nextLanguage = normalizeDesktopLanguage(event.data.language);
   if (nextLanguage === state.language) return;
   state.language = await saveDesktopLanguagePreference(nextLanguage);
+  await ensureShellLanguage(state.language);
   renderLanguage();
 });
 
@@ -519,6 +557,7 @@ window.addEventListener("keydown", async (event) => {
 async function boot() {
   const brand = await loadDesktopBrand();
   state.language = await loadDesktopLanguagePreference();
+  await ensureShellLanguage(state.language);
   if (brand) {
     if (brand.applicationName) {
       const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");

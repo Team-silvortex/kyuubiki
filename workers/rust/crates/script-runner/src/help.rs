@@ -25,7 +25,7 @@ operator-package-dynamic-smoke\n  \
   check-operator-qualification-release-records\n  \
 project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
-sync-desktop-shared\n  \
+sync-desktop-shared check-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
 desktop-release desktop-verify\n  \
 desktop-linux-remote\n  \

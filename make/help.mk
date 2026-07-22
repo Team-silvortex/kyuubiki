@@ -46,6 +46,7 @@ help:
 	@echo "  make operator-package-dynamic-smoke Build and dynamically load the template external operator package"
 	@echo "  make check-operator-package-dynamic-smoke Validate the retained dynamic-smoke JSON report"
 	@echo "  make sync-desktop-shared Refresh shared desktop UI helper files into each Tauri app"
+	@echo "  make check-desktop-shared Verify generated shared UI, app mirrors, brand assets, and language packs"
 	@echo "  make build-installation-docs Regenerate installation integrity HTML docs from the shared JSON contract"
 	@echo "  make build-update-catalog Regenerate the unified update catalog JSON and HTML docs"
 	@echo "  make build-workbench-language-pack-catalog Regenerate the built-in Workbench language-pack catalog from source JSON packs"

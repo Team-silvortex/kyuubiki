@@ -3,17 +3,19 @@ import {
   assertWorkbenchSampleUi,
   chromium,
   FRONTEND_URL,
-  runKyuubiki,
+  startWorkbenchIntegrationRuntime,
+  stopWorkbenchIntegrationRuntime,
   waitForFrontend,
 } from "./workbench-ui-smoke.shared.mjs";
+import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
 test(
   "Workbench can open representative thermal and thermo-mechanical samples and expose report/export actions",
   async () => {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchIntegrationBrowser(chromium);
 
     try {
-      runKyuubiki(["restart-local"]);
+      startWorkbenchIntegrationRuntime();
       await waitForFrontend();
 
       const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -32,7 +34,7 @@ test(
     } finally {
       await browser.close();
       try {
-        runKyuubiki(["stop"]);
+        stopWorkbenchIntegrationRuntime();
       } catch {
         // keep cleanup best-effort for local integration runs
       }

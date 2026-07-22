@@ -39,6 +39,9 @@ deployment- and lifecycle-focused surface in the repository.
 - `./scripts/kyuubiki build-installer-gui macos|linux|windows`
 - `./scripts/kyuubiki package-desktop macos|linux|windows`
 
+The native dev/build/package commands synchronize shared desktop assets
+automatically. Use `npm run sync:shared` only for an explicit local refresh or check.
+
 ## Validation
 
 - shared UI sync:

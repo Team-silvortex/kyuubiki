@@ -8,7 +8,7 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-21T05:06:38.105Z",
+  "updatedAt": "2026-07-22T02:52:09.301Z",
   "description": "Italian UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
     {
@@ -34,8 +34,8 @@
     "rail": {
       "study": "Studio",
       "model": "Modello",
-      "workflow": "Workflow",
-      "store": "Store",
+      "workflow": "Flusso di lavoro",
+      "store": "Negozio",
       "library": "Cronologia",
       "system": "Sistema"
     },
@@ -168,7 +168,7 @@
       "h24": "Ultime 24 ore"
     },
     "axialSample": "Apri il campione 1D",
-    "backend": "Backend",
+    "backend": "Backend (IT)",
     "browserLimitsNote": "Le estensioni del browser non possono essere completamente disabilitate dalla pagina, ma il viewport può ridurre la selezione e copiare le interazioni.",
     "cancelJob": "Annulla lavoro",
     "capabilities": "Capacità",
@@ -302,7 +302,7 @@
     "modelName": "Modello",
     "modelOverviewPage": "Panoramica",
     "modelSavedPage": "Salvato",
-    "modelStudioPage": "Studio",
+    "modelStudioPage": "Studio (IT)",
     "modelStudyPage": "Studio",
     "modelVersionsPage": "Versioni",
     "noDomainStudies": "Nessuno studio è stato ancora pubblicato in questo dominio.",
@@ -469,7 +469,7 @@
     "workflowDatasetPortMappingsTitle": "Mappature dei porti",
     "workflowDatasetRemoveAxisLabel": "Rimuovi asse",
     "workflowDatasetRemoveValueLabel": "Rimuovi valore",
-    "workflowDatasetSchemaLabel": "Schema",
+    "workflowDatasetSchemaLabel": "Schema (IT)",
     "workflowDatasetSemanticTypeLabel": "Tipo semantico",
     "workflowDatasetShapeLabel": "Forma",
     "workflowDatasetUnassignedLabel": "Non assegnato",

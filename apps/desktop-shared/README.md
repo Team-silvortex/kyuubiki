@@ -39,12 +39,26 @@ Current shared source files:
   Generated JavaScript runtime status model consumed by the shared renderer.
 - `ui/runtime-status-summary.js`
   Generated JavaScript runtime status renderer consumed by desktop shells.
-- `scripts/sync-desktop-shared.mjs`
-  Compiles shared TypeScript, then refreshes lightweight app-local wrappers plus
-  the canonical brand manifest into each desktop app. Run it with `--check` to
-  compile in a temporary directory and verify generated files, app-local
-  mirrors, language packs, installer styling, and stale mirror entries without
-  writing product assets.
+- `make sync-desktop-shared`
+  Compiles shared TypeScript, then refreshes lightweight app-local wrappers,
+  language packs, and the canonical brand manifest into each desktop app.
+- `make check-desktop-shared`
+  Uses the native Rust runner and a temporary compile directory to verify
+  generated files, app-local mirrors, language packs, installer styling, and
+  stale mirror entries without writing product assets.
+
+Language resources are mirrored by the surface each shell actually consumes:
+
+- Hub and Installer ship the `hub` surface.
+- Workbench ships the `workbench` surface.
+- Workbench locale fragments are fetched and merged only after that locale is selected.
+
+This keeps the Tauri `frontendDist` directories self-contained without copying both
+language surfaces into every desktop bundle.
+
+The native desktop dev, build, package, and release entrypoints run this sync
+automatically. A multi-shell host build prepares shared assets once before building
+all three shells; raw `npm run tauri:*` commands remain low-level escape hatches.
 
 Canonical brand data still lives under:
 

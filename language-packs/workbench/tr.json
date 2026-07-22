@@ -8,7 +8,7 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-21T05:34:39.072Z",
+  "updatedAt": "2026-07-22T02:54:08.981Z",
   "description": "Turkish UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
     {
@@ -129,7 +129,7 @@
     "auditModelVersionFacetTitle": "Sürüm fasetleri",
     "auditProjectFacetTitle": "Proje fasetleri",
     "auditRefreshLabel": "Olayları yenile",
-    "auditRisk": "Risk",
+    "auditRisk": "Risk (TR)",
     "auditRiskOptions": {
       "all": "Tümü",
       "destructive": "Yıkıcı",

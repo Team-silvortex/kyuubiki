@@ -5,14 +5,16 @@ import {
   createWorkbenchRegressionEnvironment,
 } from "./workbench-shell-regression.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
+import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
 test(
   "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview",
   async () => {
     const environment = await createWorkbenchRegressionEnvironment();
-    const browser = await chromium.launch({ headless: true });
+    let browser;
 
     try {
+      browser = await launchIntegrationBrowser(chromium);
       for (const viewport of [
         { width: 1440, height: 1100 },
         { width: 1180, height: 920 },
@@ -34,7 +36,7 @@ test(
         }
       }
     } finally {
-      await browser.close();
+      await browser?.close();
       await environment.cleanup();
     }
   },

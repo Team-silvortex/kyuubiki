@@ -38,12 +38,17 @@
         "id": "desktop-shared-asset-mirror-contract",
         "files": [
           "apps/desktop-shared/README.md",
-          "apps/desktop-shared/scripts/sync-desktop-shared.mjs",
+          "workers/rust/crates/script-runner/src/desktop.rs",
+          "workers/rust/crates/script-runner/src/desktop_shared_sync.rs",
+          "make/build.mk",
           "config/architecture/module-topology.json"
         ],
         "required_text": [
           "source-of-truth frontend assets",
-          "--check",
+          "prepare_desktop_assets",
+          "run_sync_desktop_shared",
+          "check-desktop-shared",
+          "desktop shared asset synchronization check passed",
           "desktop-shared-ui",
           "shared_asset_mirror_drift"
         ]
@@ -370,6 +375,7 @@
     },
     "validation": {
       "benchmark": [
+        "ui_startup",
         "runtime_solver",
         "sdk_headless",
         "installer_release"

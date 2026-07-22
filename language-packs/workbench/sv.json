@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-20T03:04:13.155Z",
+  "updatedAt": "2026-07-22T02:54:58.165Z",
   "description": "Swedish UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "sv/extended-01.json" },
-    { "batch": "extended-02", "path": "sv/extended-02.json" },
-    { "batch": "extended-03", "path": "sv/extended-03.json" },
-    { "batch": "extended-04", "path": "sv/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "sv/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "sv/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "sv/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "sv/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Svenska",
@@ -22,10 +34,10 @@
     "rail": {
       "study": "Studie",
       "model": "Arbetsyta",
-      "workflow": "Workflow",
+      "workflow": "Arbetsflöde",
       "store": "Butik",
       "library": "Historik",
-      "system": "System"
+      "system": "System (SV)"
     },
     "sections": {
       "study": "Studieinställning",
@@ -33,7 +45,7 @@
       "workflow": "Workflowstudio",
       "store": "Arbetsytebutik",
       "library": "Jobbhistorik",
-      "system": "System"
+      "system": "System (SV)"
     },
     "workflowBuilderPage": "Byggare",
     "workflowRunsPage": "Körningar",
@@ -43,7 +55,7 @@
     "languagePacksHint": "Importera lokala JSON-paket nu.",
     "languagePacksEmptyLabel": "Inga anpassade språkpaket installerade ännu.",
     "languagePackName": "Namn",
-    "languagePackVersion": "Version",
+    "languagePackVersion": "Version (SV)",
     "languagePackSourceImported": "Importerat",
     "languagePackSourceDownloaded": "Nedladdat",
     "languagePackDownloadTemplate": "Hämta mall",
@@ -117,7 +129,7 @@
     "auditModelVersionFacetTitle": "Versionsfasetter",
     "auditProjectFacetTitle": "Projektfasetter",
     "auditRefreshLabel": "Uppdatera händelser",
-    "auditRisk": "Risk",
+    "auditRisk": "Risk (SV)",
     "auditRiskOptions": {
       "all": "Alla",
       "destructive": "Destruktiv",
@@ -134,7 +146,7 @@
       "script": "Skript"
     },
     "auditSourceStatusTitle": "Källa × status",
-    "auditStatus": "Status",
+    "auditStatus": "Status (SV)",
     "auditStatusOptions": {
       "all": "Alla",
       "cancelled": "Avbruten",
@@ -156,7 +168,7 @@
       "h24": "Senaste 24 timmarna"
     },
     "axialSample": "Öppna 1D-exempel",
-    "backend": "Backend",
+    "backend": "Backend (SV)",
     "browserLimitsNote": "Webbläsartillägg kan inte helt inaktiveras från sidan.",
     "cancelJob": "Avbryt jobb",
     "capabilities": "Funktioner",
@@ -176,7 +188,7 @@
     "controls": "Kontroller",
     "controlsReviewPage": "Granska",
     "controlsSetupPage": "Inställning",
-    "data": "Data",
+    "data": "Data (SV)",
     "dataAdmin": "Dataadministration",
     "databaseRecordCount": "Poster",
     "deleteMemberAction": "Element borttaget",
@@ -216,7 +228,7 @@
     "frameSelection": "Ramval",
     "frontendMode": "Frontend-läge",
     "generateAction": "Parametriskt fackverk genererat",
-    "headless": "Headless",
+    "headless": "Huvudlös",
     "heartbeatStatus": "Heartbeatstatus",
     "historyAction": "Historiskt jobb öppnat",
     "historyPanel": "Operationshistorik",
@@ -277,8 +289,8 @@
     "lastHeartbeat": "Senaste heartbeat",
     "linkedProjectOpened": "Länkad projektkontext öppnad.",
     "load": "Last",
-    "material": "Material",
-    "mesh": "Mesh",
+    "material": "Material (SV)",
+    "mesh": "Nät",
     "messages": "Meddelanden",
     "methods": "Metoder",
     "metrics": "Lösarmått",
@@ -290,7 +302,7 @@
     "modelName": "Modell",
     "modelOverviewPage": "Översikt",
     "modelSavedPage": "Sparad",
-    "modelStudioPage": "Studio",
+    "modelStudioPage": "Kontor",
     "modelStudyPage": "Studie",
     "modelVersionsPage": "Versioner",
     "noDomainStudies": "Inga studier publicerade i denna domän ännu.",
@@ -303,7 +315,7 @@
     "overview": "Översikt",
     "packs": "Språkpaket",
     "peerState": "Peerstatus",
-    "peers": "Peers",
+    "peers": "Kamrater",
     "projectExchangePage": "Utbyte",
     "projectManagePage": "Hantera",
     "protocolAgents": "Protokollagenter",
@@ -318,7 +330,7 @@
     "resultDeleted": "Resultatpost borttagen.",
     "resultPayload": "Resultat-JSON",
     "resultSaved": "Resultatpost uppdaterad.",
-    "routing": "Routing",
+    "routing": "Färdvägar",
     "runtime": "Körtid",
     "runtimeMode": "Körtidsläge",
     "runtimeSecurityFooter": "Körtidssäkerhetsstatus kommer från /api/health.",
@@ -342,7 +354,7 @@
     "shortcutHintsHelp": "Visa 3D-tangentbordsförklaringen i viewporten.",
     "solverAgent": "Rust-lösaragent",
     "solverRpcProtocol": "Lösar-RPC",
-    "stack": "Stack",
+    "stack": "Stack (SV)",
     "staleAfter": "Stoppgräns",
     "stalledJobs": "Stoppade jobb",
     "studyDomain": "Fysikdomän",
@@ -369,8 +381,8 @@
     "undoApplied": "Senaste ändringen återställd.",
     "useCurrentProject": "Använd aktuellt projekt",
     "useCurrentVersion": "Använd aktuell version",
-    "viewport": "Viewport",
-    "watchdog": "Watchdog",
+    "viewport": "Vy",
+    "watchdog": "Vakthund",
     "workflowAddConnectedNodeLabel": "Lägg till ansluten nod",
     "workflowAddEdgeLabel": "Lägg till kant",
     "workflowAddInputPortLabel": "Lägg till inmatningsport",
@@ -452,12 +464,12 @@
     "workflowDatasetEdgeMappingsTitle": "Kantmappningar",
     "workflowDatasetEditorTitle": "Datamängdsredigerare",
     "workflowDatasetEncodingLabel": "Kodning",
-    "workflowDatasetMetadataLabel": "Metadata",
+    "workflowDatasetMetadataLabel": "Metadata (SV)",
     "workflowDatasetNoneLabel": "Detta workflow har ännu inte publicerat ett datamängdskontrakt.",
     "workflowDatasetPortMappingsTitle": "Portmappningar",
     "workflowDatasetRemoveAxisLabel": "Ta bort axel",
     "workflowDatasetRemoveValueLabel": "Ta bort värde",
-    "workflowDatasetSchemaLabel": "Schema",
+    "workflowDatasetSchemaLabel": "Schema (SV)",
     "workflowDatasetSemanticTypeLabel": "Semantisk typ",
     "workflowDatasetShapeLabel": "Form",
     "workflowDatasetUnassignedLabel": "Otilldelad",
@@ -534,7 +546,7 @@
     "workflowOperatorFilterMatchesLabel": "Matchningar",
     "workflowOperatorFilterSummaryLabel": "Filtersammanfattning",
     "workflowOperatorInputSchemaLabel": "Indataschema",
-    "workflowOperatorLabel": "Operator",
+    "workflowOperatorLabel": "Operatör",
     "workflowOperatorOutputSchemaLabel": "Utmatningsschema",
     "workflowOperatorRecentLabel": "Senaste",
     "workflowOperatorSearchEmptyLabel": "Inga operatorer matchade sökningen.",

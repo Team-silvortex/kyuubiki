@@ -6,14 +6,16 @@ import {
   createDesktopShellRegressionEnvironment,
 } from "./desktop-shell-regression.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
+import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
 test(
   "Hub and Installer desktop shells render regression-critical panels in a headless preview",
   async (t) => {
     const environment = await createDesktopShellRegressionEnvironment();
-    const browser = await chromium.launch({ headless: true });
+    let browser;
 
     try {
+      browser = await launchIntegrationBrowser(chromium);
       await t.test("Hub guides regression gate stays visible and stable", async () => {
         const page = await browser.newPage();
         try {
@@ -64,7 +66,7 @@ test(
         }
       });
     } finally {
-      await browser.close();
+      await browser?.close();
       await environment.cleanup();
     }
   },

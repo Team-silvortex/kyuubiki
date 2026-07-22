@@ -29,7 +29,7 @@
         },
         {
           "id": "desktop-shared-mirror",
-          "command": "node apps/desktop-shared/scripts/sync-desktop-shared.mjs --check",
+          "command": "make check-desktop-shared",
           "scope": "local"
         },
         {

@@ -8,13 +8,25 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-19T08:54:46.350Z",
+  "updatedAt": "2026-07-22T02:53:46.710Z",
   "description": "Portuguese (Brazil) UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
-    { "batch": "extended-01", "path": "pt-br/extended-01.json" },
-    { "batch": "extended-02", "path": "pt-br/extended-02.json" },
-    { "batch": "extended-03", "path": "pt-br/extended-03.json" },
-    { "batch": "extended-04", "path": "pt-br/extended-04.json" }
+    {
+      "batch": "extended-01",
+      "path": "pt-br/extended-01.json"
+    },
+    {
+      "batch": "extended-02",
+      "path": "pt-br/extended-02.json"
+    },
+    {
+      "batch": "extended-03",
+      "path": "pt-br/extended-03.json"
+    },
+    {
+      "batch": "extended-04",
+      "path": "pt-br/extended-04.json"
+    }
   ],
   "overrides": {
     "title": "Kyuubiki Workbench · Português (Brasil)",
@@ -22,7 +34,7 @@
     "rail": {
       "study": "Estudo",
       "model": "Modelo",
-      "workflow": "Workflow",
+      "workflow": "Fluxo de trabalho",
       "store": "Loja",
       "library": "Histórico",
       "system": "Sistema"
@@ -134,7 +146,7 @@
       "script": "Roteiro"
     },
     "auditSourceStatusTitle": "Fonte × status",
-    "auditStatus": "Status",
+    "auditStatus": "Status (PT-BR)",
     "auditStatusOptions": {
       "all": "Todos",
       "cancelled": "Cancelado",
@@ -277,7 +289,7 @@
     "lastHeartbeat": "Último batimento cardíaco",
     "linkedProjectOpened": "Abriu o contexto do projeto vinculado.",
     "load": "Carregar",
-    "material": "Material",
+    "material": "Material (PT-BR)",
     "mesh": "Malha",
     "messages": "Mensagens",
     "methods": "Métodos",
@@ -415,7 +427,7 @@
     "workflowCatalogFilterBridgeDriftLabel": "Deriva da ponte",
     "workflowCatalogFilterBridgeMissingRuntimeLabel": "Tempo de execução ausente da ponte",
     "workflowCatalogFilterHealthyLabel": "Saudável",
-    "workflowCatalogFilterLocalLabel": "Local",
+    "workflowCatalogFilterLocalLabel": "Local (PT-BR)",
     "workflowCatalogFilterNeedsReviewLabel": "Revisão de necessidades",
     "workflowCatalogFilterVariantsLabel": "Variantes",
     "workflowCatalogHint": "Execute fluxos de trabalho multioperadores nomeados aqui antes de conectá-los a um caminho de estudo maior.",
@@ -565,7 +577,7 @@
     "workflowPackageInstallRulesHistoryEmptyLabel": "Ainda não há registros de manutenção de pacotes nesta sessão.",
     "workflowPackageInstallRulesLocalPathLabel": "Chave de fluxo de trabalho local",
     "workflowPackageInstallRulesMaintenancePathLabel": "Registro de Manutenção",
-    "workflowPackageInstallRulesManualLabel": "Manual",
+    "workflowPackageInstallRulesManualLabel": "Manual (PT-BR)",
     "workflowPackageInstallRulesMountStateLabel": "Estado de montagem",
     "workflowPackageInstallRulesPortabilityLabel": "Portabilidade",
     "workflowPackageInstallRulesPreviewApplyLabel": "Aplicar reparo",
@@ -581,7 +593,7 @@
     "workflowPackageInstallRulesResidualsCleanLabel": "Nenhum resíduo de instalação encontrado para este fluxo de trabalho.",
     "workflowPackageInstallRulesResidualsLabel": "Varredura residual",
     "workflowPackageInstallRulesScanLabel": "Resíduos de varredura",
-    "workflowPackageInstallRulesSnapshotLabel": "Snapshots",
+    "workflowPackageInstallRulesSnapshotLabel": "Instantâneos",
     "workflowPackageInstallRulesSnapshotPathLabel": "Chave de índice de snapshot",
     "workflowPackageInstallRulesSnapshotPayloadPathLabel": "Prefixo de carga útil de snapshot",
     "workflowPackageInstallRulesStorageLabel": "Armazenamento",

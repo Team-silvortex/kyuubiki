@@ -1,6 +1,6 @@
 .PHONY: build-frontend build-orchestrator build-agent
 .PHONY: package-runtime package-desktop package
-.PHONY: operator-package-preflight operator-package-dynamic-smoke check-operator-package-dynamic-smoke sync-desktop-shared
+.PHONY: operator-package-preflight operator-package-dynamic-smoke check-operator-package-dynamic-smoke sync-desktop-shared check-desktop-shared
 .PHONY: build-installation-docs build-update-catalog build-workbench-language-pack-catalog
 
 build-frontend:
@@ -34,6 +34,9 @@ check-operator-package-dynamic-smoke:
 
 sync-desktop-shared:
 	@$(ENTRYPOINT) sync-desktop-shared
+
+check-desktop-shared:
+	@$(ENTRYPOINT) check-desktop-shared
 
 build-installation-docs:
 	@$(ENTRYPOINT) build-installation-integrity-docs

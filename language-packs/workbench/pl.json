@@ -8,7 +8,7 @@
   "versionLine": "moxi 2.x",
   "targetAppVersion": "2.2.8",
   "source": "downloaded",
-  "updatedAt": "2026-07-21T05:16:17.529Z",
+  "updatedAt": "2026-07-22T02:53:16.735Z",
   "description": "Polish UI translations for Workbench navigation, workflow, store, and system surfaces.",
   "fragments": [
     {
@@ -34,10 +34,10 @@
     "rail": {
       "study": "Badanie",
       "model": "Przestrzeń robocza",
-      "workflow": "Workflow",
+      "workflow": "Przepływ pracy",
       "store": "Sklep",
       "library": "Historia",
-      "system": "System"
+      "system": "System (PL)"
     },
     "sections": {
       "study": "Konfiguracja badania",
@@ -45,7 +45,7 @@
       "workflow": "Studio workflow",
       "store": "Sklep przestrzeni roboczej",
       "library": "Historia zadań",
-      "system": "System"
+      "system": "System (PL)"
     },
     "workflowBuilderPage": "Konstruktor",
     "workflowRunsPage": "Uruchomienia",
@@ -244,7 +244,7 @@
     "immersiveMemberOps": "Operacje elementów",
     "immersiveModeDisabled": "Widok immersyjny zamknięty.",
     "immersiveModeEnabled": "Widok immersyjny włączony.",
-    "immersiveModel": "Model",
+    "immersiveModel": "Model (PL)",
     "immersiveModels": "Zapisane",
     "immersiveNoNodeSelection": "Wybierz węzeł 3D, aby edytować współrzędne, podpory i obciążenia.",
     "immersiveNodeOps": "Operacje węzłów",
@@ -299,10 +299,10 @@
     "mirrorZ": "Odbij Z",
     "modelGeneratePage": "Generuj",
     "modelMaterialsPage": "Materiały",
-    "modelName": "Model",
+    "modelName": "Model (PL)",
     "modelOverviewPage": "Przegląd",
     "modelSavedPage": "Zapisane",
-    "modelStudioPage": "Studio",
+    "modelStudioPage": "Studio (PL)",
     "modelStudyPage": "Badanie",
     "modelVersionsPage": "Wersje",
     "noDomainStudies": "Nie opublikowano jeszcze badań w tej domenie.",
@@ -546,7 +546,7 @@
     "workflowOperatorFilterMatchesLabel": "Dopasowania",
     "workflowOperatorFilterSummaryLabel": "Podsumowanie filtra",
     "workflowOperatorInputSchemaLabel": "Schemat wejścia",
-    "workflowOperatorLabel": "Operator",
+    "workflowOperatorLabel": "Operator (PL)",
     "workflowOperatorOutputSchemaLabel": "Schemat wyjścia",
     "workflowOperatorRecentLabel": "Ostatnie",
     "workflowOperatorSearchEmptyLabel": "Żaden operator nie pasuje do wyszukiwania.",
