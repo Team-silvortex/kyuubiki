@@ -5,9 +5,9 @@ use crate::{
     SolveAcousticBar1dResult, SolveAdvectionDiffusionBar1dResult, SolveBarResult,
     SolveBeam1dResult, SolveBucklingBeam1dResult, SolveBucklingFrame2dResult,
     SolveContactGap1dResult, SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dResult,
-    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dResult, SolveFrame3dResult,
-    SolveHarmonicSpring1dResult, SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult,
-    SolveHeatPlaneTriangle2dResult, SolveMagnetostaticBar1dResult,
+    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dPDeltaResult, SolveFrame2dResult,
+    SolveFrame3dResult, SolveHarmonicSpring1dResult, SolveHeatBar1dResult,
+    SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult, SolveMagnetostaticBar1dResult,
     SolveMagnetostaticPlaneQuad2dResult, SolveMagnetostaticPlaneTriangle2dResult,
     SolveModalFrame2dResult, SolveModalFrame3dResult, SolveNonlinearSpring1dResult,
     SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult, SolveSolidTetra3dResult,
@@ -66,6 +66,7 @@ pub enum AnalysisResult {
     ThermalFrame3d(SolveThermalFrame3dResult),
     BucklingBeam1d(SolveBucklingBeam1dResult),
     BucklingFrame2d(SolveBucklingFrame2dResult),
+    Frame2dPDelta(SolveFrame2dPDeltaResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

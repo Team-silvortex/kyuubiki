@@ -16,7 +16,10 @@ mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_element;
 mod electrostatic_plane_2d_validation;
 mod frame_2d;
+mod frame_2d_corotational;
 mod frame_2d_math;
+mod frame_2d_p_delta;
+mod frame_2d_stability;
 mod frame_2d_validation;
 mod frame_3d;
 mod frame_3d_math;
@@ -94,6 +97,7 @@ pub use frame_2d::{
     solve_frame_2d, solve_frame_2d_with_options, solve_thermal_frame_2d,
     solve_thermal_frame_2d_with_options,
 };
+pub use frame_2d_p_delta::solve_frame_2d_p_delta;
 pub use frame_3d::{solve_frame_3d, solve_frame_3d_with_options};
 pub use harmonic_spring_1d::solve_harmonic_spring_1d;
 pub use heat_plane_2d::{

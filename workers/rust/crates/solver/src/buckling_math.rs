@@ -1,9 +1,45 @@
 use crate::modal_math::jacobi_eigenpairs;
+use kyuubiki_protocol::{
+    BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingModeDirectionAssessment,
+};
 
 pub(crate) struct GeneralizedEigenpair {
     pub eigenvalue: f64,
     pub vector: Vec<f64>,
     pub residual_norm: f64,
+}
+
+pub(crate) struct ModeDirectionDiagnostic {
+    pub relative_gap_to_next: Option<f64>,
+    pub assessment: BucklingModeDirectionAssessment,
+}
+
+pub(crate) fn mode_direction_diagnostics(factors: &[f64]) -> Vec<ModeDirectionDiagnostic> {
+    (0..factors.len())
+        .map(|index| {
+            let previous_gap = index
+                .checked_sub(1)
+                .map(|previous| relative_gap(factors[previous], factors[index]));
+            let relative_gap_to_next = factors
+                .get(index + 1)
+                .map(|next| relative_gap(factors[index], *next));
+            let clustered = previous_gap
+                .into_iter()
+                .chain(relative_gap_to_next)
+                .any(|gap| gap <= BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE);
+            let assessment = if clustered {
+                BucklingModeDirectionAssessment::Clustered
+            } else if relative_gap_to_next.is_some() {
+                BucklingModeDirectionAssessment::Isolated
+            } else {
+                BucklingModeDirectionAssessment::Unassessed
+            };
+            ModeDirectionDiagnostic {
+                relative_gap_to_next,
+                assessment,
+            }
+        })
+        .collect()
 }
 
 pub(crate) fn generalized_eigenpairs(
@@ -14,8 +50,9 @@ pub(crate) fn generalized_eigenpairs(
     validate_matrices(stiffness, geometric)?;
     let mode_count = mode_count.max(1);
     if mode_count == 1 {
-        let (eigenvalue, vector) = smallest_generalized_eigenpair(stiffness, geometric)?;
-        return Ok(vec![eigenpair(stiffness, geometric, eigenvalue, vector)]);
+        if let Ok((eigenvalue, vector)) = smallest_generalized_eigenpair(stiffness, geometric) {
+            return Ok(vec![eigenpair(stiffness, geometric, eigenvalue, vector)]);
+        }
     }
 
     let elastic_lower = cholesky(stiffness).map_err(|_| {
@@ -38,6 +75,10 @@ pub(crate) fn generalized_eigenpairs(
         return Err("buckling reference load pattern has no positive finite mode".to_string());
     }
     Ok(pairs)
+}
+
+fn relative_gap(left: f64, right: f64) -> f64 {
+    (right - left).abs() / left.abs().max(right.abs()).max(f64::MIN_POSITIVE)
 }
 
 fn validate_matrices(stiffness: &[Vec<f64>], geometric: &[Vec<f64>]) -> Result<(), String> {
@@ -217,4 +258,52 @@ fn generalized_residual(
         .map(|value| value * value)
         .sum::<f64>()
         .sqrt()
+}
+
+#[cfg(test)]
+mod tests {
+    use kyuubiki_protocol::BucklingModeDirectionAssessment;
+
+    use super::{generalized_eigenpairs, mode_direction_diagnostics};
+
+    #[test]
+    fn direction_diagnostics_distinguish_clusters_and_unassessed_tail() {
+        let diagnostics = mode_direction_diagnostics(&[1.0, 1.000_001, 4.0, 9.0]);
+        assert_eq!(
+            diagnostics[0].assessment,
+            BucklingModeDirectionAssessment::Clustered
+        );
+        assert_eq!(
+            diagnostics[1].assessment,
+            BucklingModeDirectionAssessment::Clustered
+        );
+        assert_eq!(
+            diagnostics[2].assessment,
+            BucklingModeDirectionAssessment::Isolated
+        );
+        assert_eq!(
+            diagnostics[3].assessment,
+            BucklingModeDirectionAssessment::Unassessed
+        );
+    }
+
+    #[test]
+    fn dense_single_mode_falls_back_for_a_slow_cluster() {
+        let stiffness = diagonal(&[1.0, 1.000_1, 20.0, 100.0]);
+        let geometric = diagonal(&[1.0; 4]);
+        let pairs = generalized_eigenpairs(&stiffness, &geometric, 1)
+            .expect("dense clustered spectrum should use the robust fallback");
+        assert_eq!(pairs.len(), 1);
+        assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-10);
+    }
+
+    fn diagonal(values: &[f64]) -> Vec<Vec<f64>> {
+        (0..values.len())
+            .map(|row| {
+                (0..values.len())
+                    .map(|column| if row == column { values[row] } else { 0.0 })
+                    .collect()
+            })
+            .collect()
+    }
 }

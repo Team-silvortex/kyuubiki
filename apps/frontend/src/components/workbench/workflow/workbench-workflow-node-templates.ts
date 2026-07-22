@@ -88,6 +88,14 @@ const PRESETS: WorkflowNodeTemplatePreset[] = [
     outputs: [{ id: "result", artifact_type: "result/buckling_frame_2d", description: "Frame preloads, critical factors, and mode shapes", dataset_value: "buckling_frame_result" }],
   },
   {
+    id: "solve.frame_2d_p_delta",
+    kind: "solve",
+    label: "Solve frame P-Delta",
+    operatorId: "solve.frame_2d_p_delta",
+    inputs: [{ id: "model", artifact_type: "study_model/frame_2d_p_delta", description: "Imperfect precritical 2D frame stability model", dataset_value: "frame_p_delta_model" }],
+    outputs: [{ id: "result", artifact_type: "result/frame_2d_p_delta", description: "Load-step displacements and imperfection amplification", dataset_value: "frame_p_delta_result" }],
+  },
+  {
     id: "solve.thermal_truss_3d",
     kind: "solve",
     label: "Solve thermal 3D truss",

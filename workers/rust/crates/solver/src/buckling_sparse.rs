@@ -36,11 +36,10 @@ pub(crate) fn sparse_generalized_eigenpairs(
 ) -> Result<Vec<GeneralizedEigenpair>, String> {
     validate(stiffness, geometric)?;
     let requested = mode_count.max(1).min(stiffness.size());
-    let subspace_size = if requested == 1 {
-        1
-    } else {
-        (requested * 2).max(requested + 2).min(stiffness.size())
-    };
+    // Oversampling is required even for one requested mode. A scalar power
+    // iteration stalls when the first two buckling factors are clustered,
+    // while a small block isolates that cluster from the rest of the spectrum.
+    let subspace_size = (requested * 2).max(requested + 2).min(stiffness.size());
     let elastic = stiffness.compress(SpdPreconditioner::Jacobi);
     let geometric = geometric.compress(SpdPreconditioner::Jacobi);
     let scaling = diagonal_scaling(stiffness)?;
@@ -374,5 +373,28 @@ mod tests {
         assert_eq!(pairs.len(), 2);
         assert!((pairs[0].eigenvalue - 2.0).abs() < 1.0e-8);
         assert!((pairs[1].eigenvalue - 10.0).abs() < 1.0e-8);
+    }
+
+    #[test]
+    fn single_mode_request_converges_across_a_clustered_sparse_spectrum() {
+        let size = 600;
+        let mut stiffness = SparseMatrix::new(size);
+        let mut geometric = SparseMatrix::new(size);
+        for index in 0..size {
+            let eigenvalue = match index {
+                0 => 1.0,
+                1 => 1.000_001,
+                2 => 20.0,
+                _ => 100.0 + index as f64,
+            };
+            add_at(&mut stiffness, index, index, 1.0);
+            add_at(&mut geometric, index, index, eigenvalue.recip());
+        }
+
+        let pairs = sparse_generalized_eigenpairs(&stiffness, &geometric, 1)
+            .expect("oversampled sparse iteration should resolve clustered first modes");
+        assert_eq!(pairs.len(), 1);
+        assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-8);
+        assert!(pairs[0].residual_norm < 1.0e-6);
     }
 }

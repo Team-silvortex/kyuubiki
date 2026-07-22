@@ -1,7 +1,8 @@
 use crate::{
-    BucklingBeam1dElementInput, BucklingBeam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
-    RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveFrame2dRequest,
+    BucklingBeam1dElementInput, BucklingBeam1dModeResult, BucklingBeam1dNodeInput,
+    BucklingModeDirectionAssessment, Frame2dElementInput, Frame2dNodeInput,
+    Frame2dStabilityKinematics, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
+    SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 
 #[test]
@@ -32,6 +33,78 @@ fn buckling_beam_rpc_round_trip_preserves_reference_load_pattern() {
     assert_eq!(decoded.method, RpcMethod::SolveBucklingBeam1d);
     assert_eq!(params.elements[0].reference_compressive_force, 100_000.0);
     assert_eq!(params.mode_count, Some(1));
+}
+
+#[test]
+fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
+    let buckling = SolveBucklingFrame2dRequest {
+        frame: SolveFrame2dRequest {
+            nodes: vec![frame_node("base", 0.0, true), frame_node("top", 2.0, false)],
+            elements: vec![Frame2dElementInput {
+                id: "column".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 8.0e-6,
+                section_modulus: 1.0e-4,
+            }],
+        },
+        mode_count: Some(1),
+    };
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "p-delta-column".to_string(),
+        method: RpcMethod::SolveFrame2dPDelta,
+        params: serde_json::to_value(SolveFrame2dPDeltaRequest {
+            buckling,
+            imperfection_amplitude: 0.002,
+            kinematics: Frame2dStabilityKinematics::Corotational,
+            imperfection_shape: Some(vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
+            imperfection_mode_index: None,
+            maximum_load_factor: Some(2.0),
+            load_steps: Some(8),
+        })
+        .expect("p-delta request should serialize"),
+    };
+    let decoded: RpcRequest = serde_json::from_str(
+        &serde_json::to_string(&request).expect("p-delta rpc should serialize"),
+    )
+    .expect("p-delta rpc should decode");
+    let params: SolveFrame2dPDeltaRequest =
+        serde_json::from_value(decoded.params.clone()).expect("p-delta params should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveFrame2dPDelta);
+    assert_eq!(params.imperfection_amplitude, 0.002);
+    assert_eq!(params.imperfection_shape.as_ref().unwrap()[3], 1.0);
+    assert_eq!(params.load_steps, Some(8));
+    assert_eq!(params.kinematics, Frame2dStabilityKinematics::Corotational);
+
+    let mut legacy = decoded.params;
+    legacy.as_object_mut().unwrap().remove("kinematics");
+    let legacy: SolveFrame2dPDeltaRequest =
+        serde_json::from_value(legacy).expect("legacy p-delta params should decode");
+    assert_eq!(
+        legacy.kinematics,
+        Frame2dStabilityKinematics::LinearizedPDelta
+    );
+}
+
+#[test]
+fn legacy_buckling_mode_results_default_direction_diagnostics() {
+    let mode: BucklingBeam1dModeResult = serde_json::from_value(serde_json::json!({
+        "index": 0,
+        "load_factor": 2.5,
+        "residual_norm": 1.0e-9,
+        "shape": [0.0, 1.0]
+    }))
+    .expect("legacy buckling result should remain readable");
+
+    assert_eq!(mode.relative_gap_to_next, None);
+    assert_eq!(
+        mode.direction_assessment,
+        BucklingModeDirectionAssessment::Unassessed
+    );
 }
 
 #[test]

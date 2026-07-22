@@ -93,9 +93,16 @@ Current progress:
 - `solve.buckling_beam_1d` now provides the first geometric-stability slice:
   linear eigenvalue beam-column buckling, critical reference-load factors,
   normalized modes, Euler-column convergence, and dimensional scaling checks
-- stability remains screening-only until static frame preload extraction,
-  independent cross-checks, imperfections, and nonlinear post-buckling paths
-  are available
+- `solve.buckling_frame_2d` now derives geometric stiffness from a static frame
+  preload, retains portal-frame objectivity and beam-formulation cross-checks,
+  and resolves sparse repeated modes with oversampled block iteration
+- `solve.frame_2d_p_delta` now carries a selected eigenmode imperfection through
+  an elastic precritical load path, accepts explicit measured-shape profiles,
+  supports linearized P-Delta and incremental corotational kinematics, and
+  retains secant-amplification plus multi-member objectivity evidence
+- stability remains screening-only until adaptive continuation, corotational
+  large-model qualification, residual stress, material nonlinearity,
+  post-buckling paths, and external multi-member correlation are available
 
 Qualification focus:
 

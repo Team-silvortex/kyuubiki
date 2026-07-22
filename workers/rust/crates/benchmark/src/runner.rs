@@ -340,6 +340,26 @@ pub(crate) fn run_case_with_preconditioner(
                         max_stress = result.modes[0].residual_norm;
                     })
                 }
+                BenchmarkWorkload::Frame2dPDelta(request) => {
+                    solve(EngineSolveRequest::Frame2dPDelta(request.clone())).and_then(|result| {
+                        let AnalysisResult::Frame2dPDelta(result) = result else {
+                            unreachable!("frame p-delta solve should return p-delta result")
+                        };
+                        if !result.converged {
+                            return Err("frame p-delta benchmark did not converge".into());
+                        }
+                        node_count = result.input.buckling.frame.nodes.len();
+                        element_count = result.input.buckling.frame.elements.len();
+                        dof_count = result.final_displacements.len();
+                        max_displacement = result.max_imperfection_amplification;
+                        max_stress = result
+                            .steps
+                            .iter()
+                            .map(|step| step.residual_norm)
+                            .fold(0.0_f64, f64::max);
+                        Ok(())
+                    })
+                }
                 BenchmarkWorkload::ModalFrame3d(request) => {
                     solve(EngineSolveRequest::ModalFrame3d(request.clone())).map(|result| {
                         let AnalysisResult::ModalFrame3d(result) = result else {

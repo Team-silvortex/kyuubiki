@@ -25,6 +25,18 @@ export type BucklingFrame2dJobInput = {
   [key: string]: unknown;
 };
 
+export type Frame2dPDeltaJobInput = {
+  buckling: BucklingFrame2dJobInput;
+  imperfection_amplitude: number;
+  kinematics?: "linearized_p_delta" | "corotational";
+  imperfection_shape?: number[];
+  imperfection_mode_index?: number;
+  maximum_load_factor?: number;
+  load_steps?: number;
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type AdvancedFemResult = Record<string, unknown>;
 
 export function createAcousticBar1dJob(
@@ -73,6 +85,16 @@ export function createBucklingFrame2dJob(
   input: BucklingFrame2dJobInput,
 ): Promise<JobEnvelope<AdvancedFemResult>> {
   return requestJson<JobEnvelope<AdvancedFemResult>>("/api/v1/fem/buckling-frame-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createFrame2dPDeltaJob(
+  input: Frame2dPDeltaJobInput,
+): Promise<JobEnvelope<AdvancedFemResult>> {
+  return requestJson<JobEnvelope<AdvancedFemResult>>("/api/v1/fem/frame-2d-p-delta/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

@@ -51,6 +51,7 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("modal_frame_2d", "/api/v1/fem/modal-frame-2d/jobs"),
     ("buckling_beam_1d", "/api/v1/fem/buckling-beam-1d/jobs"),
     ("buckling_frame_2d", "/api/v1/fem/buckling-frame-2d/jobs"),
+    ("frame_2d_p_delta", "/api/v1/fem/frame-2d-p-delta/jobs"),
     ("thermal_frame_2d", "/api/v1/fem/thermal-frame-2d/jobs"),
     ("plane_triangle_2d", "/api/v1/fem/plane-triangle-2d/jobs"),
     (

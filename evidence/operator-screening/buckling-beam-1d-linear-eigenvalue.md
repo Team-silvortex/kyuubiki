@@ -14,6 +14,12 @@ This is a screening capability. It does not include geometric imperfections,
 material plasticity, follower loads, contact, large rotations, or post-buckling
 equilibrium paths.
 
+Every returned mode reports `relative_gap_to_next` when the next requested mode
+is available and a `direction_assessment`. Gaps at or below `1e-4` are
+`clustered`, an assessed separated mode is `isolated`, and a final mode without
+a known upper neighbor is `unassessed`. A clustered factor can be reliable even
+though its individual vector direction is not unique.
+
 ## Retained Checks
 
 - A pinned-pinned uniform column converges monotonically to
@@ -24,11 +30,17 @@ equilibrium paths.
   normalized after constrained degrees of freedom are restored.
 - A 400-element Euler column forces the shared sparse generalized eigensolver
   and preserves the analytic critical factor.
+- Single-mode sparse iteration retains an oversampled block so clustered first
+  factors do not degrade into a slowly converging scalar power iteration.
+- Two independent 300-element columns with factors separated by only `1e-6`
+  force a 1,200-free-DOF single-mode solve; the returned mode selects the softer
+  column and retains its Euler factor.
 - The independent beam and statically preloaded frame formulations agree on
   the first critical factor and normalized bending-mode shape.
 - The `large` release benchmark solves a 2,500-element, 5,000-free-DOF column
-  in three consecutive runs. The observed median was 40.761 ms with 14 MiB
-  peak RSS, exceeding the former 4,096-DOF dense safety limit.
+  in three consecutive runs. After clustered-mode oversampling, the observed
+  median was 51.665 ms with 11 MiB peak RSS, exceeding the former 4,096-DOF
+  dense safety limit.
 - Invalid topology, non-finite coordinates, non-positive section properties,
   non-positive reference forces, and insufficient restraints are rejected.
 

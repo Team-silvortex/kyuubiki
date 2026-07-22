@@ -36,6 +36,7 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("modal_frame_2d", "solve_modal_frame_2d"),
     ("buckling_beam_1d", "solve_buckling_beam_1d"),
     ("buckling_frame_2d", "solve_buckling_frame_2d"),
+    ("frame_2d_p_delta", "solve_frame_2d_p_delta"),
     ("thermal_frame_2d", "solve_thermal_frame_2d"),
     ("plane_triangle_2d", "solve_plane_triangle_2d"),
     ("heat_plane_triangle_2d", "solve_heat_plane_triangle_2d"),
@@ -125,6 +126,10 @@ impl SolverRpcClient {
 
     pub fn solve_buckling_frame_2d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
         self.solve_study("buckling_frame_2d", payload)
+    }
+
+    pub fn solve_frame_2d_p_delta(&self, payload: Value) -> SdkResult<RpcCallOutcome> {
+        self.solve_study("frame_2d_p_delta", payload)
     }
 
     pub fn solve_modal_frame_3d(&self, payload: Value) -> SdkResult<RpcCallOutcome> {

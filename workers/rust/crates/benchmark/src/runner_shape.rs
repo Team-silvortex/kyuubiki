@@ -110,6 +110,11 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.frame.elements.len(),
             request.frame.nodes.len() * 3,
         ),
+        BenchmarkWorkload::Frame2dPDelta(request) => (
+            request.buckling.frame.nodes.len(),
+            request.buckling.frame.elements.len(),
+            request.buckling.frame.nodes.len() * 3,
+        ),
         BenchmarkWorkload::ModalFrame3d(request) => (
             request.nodes.len(),
             request.elements.len(),

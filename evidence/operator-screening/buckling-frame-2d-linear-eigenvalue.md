@@ -15,6 +15,12 @@ normalized global three-degree-of-freedom mode shapes.
 
 This is a screening capability, not a design-code or qualification solver.
 
+Every returned mode reports `relative_gap_to_next` when the next requested mode
+is available and a `direction_assessment`. Gaps at or below `1e-4` are
+`clustered`, an assessed separated mode is `isolated`, and a final mode without
+a known upper neighbor is `unassessed`. Clustered modes should be interpreted
+as a subspace rather than as unique physical directions.
+
 ## Retained Checks
 
 - A statically preloaded pinned column converges monotonically to
@@ -31,11 +37,15 @@ This is a screening capability, not a design-code or qualification solver.
   band Cholesky factor instead of materializing a dense generalized operator.
 - A 400-element Euler column forces the sparse path and retains the analytic
   critical factor within the closed-form screening tolerance.
+- Two independent 100-element columns force a 600-free-DOF sparse problem with
+  a repeated first eigenvalue. Block iteration retains both Euler factors and
+  distinct orthogonal mode vectors instead of collapsing the cluster.
 - The statically preloaded frame and independent prescribed-force beam
   formulations agree on the first critical factor and bending-mode shape.
 - The `large` release benchmark solves a 2,500-element, 7,500-free-DOF column
-  in three consecutive runs. The observed median was 488.686 ms with 16 MiB
-  peak RSS, exceeding the former 4,096-DOF dense safety limit.
+  in three consecutive runs. After clustered-mode oversampling, the observed
+  median was 432.423 ms with 17 MiB peak RSS, exceeding the former 4,096-DOF
+  dense safety limit.
 - Large ill-conditioned systems may converge at an explicit `2e-3` relative
   residual roundoff floor only when the critical factor also changes by no
   more than `1e-6`; the measured residual remains in the result.
@@ -47,7 +57,8 @@ This is a screening capability, not a design-code or qualification solver.
 
 ## Promotion Gaps
 
-- initial geometric imperfections and residual stress
+- nonlinear geometric imperfections beyond the retained precritical P-Delta
+  screening path, plus residual stress
 - material plasticity and section yielding interaction
 - follower-load and load-path sensitivity
 - nonlinear equilibrium continuation and post-buckling response

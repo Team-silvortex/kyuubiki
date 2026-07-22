@@ -365,6 +365,21 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.frame_2d_p_delta",
+            "mechanical",
+            "frame_2d_p_delta",
+            "Solve a precritical 2D frame P-Delta screening path with a mode-scaled initial geometric imperfection and explicit amplification diagnostics.",
+            &[
+                "screening",
+                "mechanical",
+                "stability",
+                "frame",
+                "p-delta",
+                "imperfection",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.modal_frame_3d",
             "mechanical",
             "modal_frame_3d",

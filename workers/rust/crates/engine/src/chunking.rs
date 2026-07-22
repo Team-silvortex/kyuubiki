@@ -240,6 +240,12 @@ pub fn chunk_result(
         (AnalysisResult::BucklingFrame2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.modes)?
         }
+        (AnalysisResult::Frame2dPDelta(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.final_displacements)?
+        }
+        (AnalysisResult::Frame2dPDelta(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.steps)?
+        }
     };
 
     let offset = request.offset.min(items.len());

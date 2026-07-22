@@ -61,6 +61,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveModalFrame2d,
                 RpcMethod::SolveBucklingBeam1d,
                 RpcMethod::SolveBucklingFrame2d,
+                RpcMethod::SolveFrame2dPDelta,
                 RpcMethod::SolveThermalFrame2d,
                 RpcMethod::SolveThermalFrame3d,
                 RpcMethod::CancelJob,
@@ -266,6 +267,11 @@ impl AgentDescriptor {
                     "buckling-frame-2d",
                     RpcMethod::SolveBucklingFrame2d,
                     &["buckling", "stability", "frame", "eigenvalue", "2d", "cpu"],
+                ),
+                capability(
+                    "frame-2d-p-delta",
+                    RpcMethod::SolveFrame2dPDelta,
+                    &["stability", "frame", "p-delta", "imperfection", "2d", "cpu"],
                 ),
                 CapabilityDescriptor {
                     id: "control".to_string(),

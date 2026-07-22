@@ -23,6 +23,9 @@ fn workflow_route_executes_statically_preloaded_frame_buckling() {
     .expect("workflow frame buckling route should solve");
 
     assert!(result["minimum_load_factor"].as_f64().unwrap() > 0.0);
+    assert_eq!(result["modes"][0]["direction_assessment"], "unassessed");
+    assert!(result["modes"][0]["relative_gap_to_next"].is_null());
+    assert_eq!(result["mode_cluster_relative_tolerance"], 1.0e-4);
     assert_eq!(result["modes"].as_array().unwrap().len(), 1);
     assert_eq!(result["element_preloads"].as_array().unwrap().len(), 2);
     assert_eq!(

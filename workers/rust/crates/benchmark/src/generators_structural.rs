@@ -4,11 +4,12 @@ use kyuubiki_protocol::{
     ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
     NonlinearSpring1dNodeInput, SolidTetra3dElementInput, SolidTetra3dNodeInput,
     SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveContactGap1dRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
-    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest,
-    Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
-    Spring3dElementInput, Spring3dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
+    SolveContactGap1dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
+    SolveSolidTetra3dRequest, SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveThermalBeam1dRequest, Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput,
+    Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput, ThermalBeam1dElementInput,
+    ThermalBeam1dNodeInput,
 };
 
 pub(crate) fn generate_spring_1d_case(elements: usize) -> SolveSpring1dRequest {
@@ -361,6 +362,21 @@ pub(crate) fn generate_buckling_frame_2d_case(
     SolveBucklingFrame2dRequest {
         frame: SolveFrame2dRequest { nodes, elements },
         mode_count: Some(1),
+    }
+}
+
+pub(crate) fn generate_frame_2d_p_delta_case(
+    segments: usize,
+    length: f64,
+) -> SolveFrame2dPDeltaRequest {
+    SolveFrame2dPDeltaRequest {
+        buckling: generate_buckling_frame_2d_case(segments, length),
+        imperfection_amplitude: length * 1.0e-3,
+        kinematics: Default::default(),
+        imperfection_shape: None,
+        imperfection_mode_index: Some(0),
+        maximum_load_factor: None,
+        load_steps: Some(8),
     }
 }
 

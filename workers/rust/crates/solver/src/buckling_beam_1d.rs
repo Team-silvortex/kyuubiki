@@ -1,7 +1,9 @@
+use crate::buckling_math::mode_direction_diagnostics;
 use crate::buckling_sparse::hybrid_generalized_eigenpairs;
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system};
 use kyuubiki_protocol::{
-    BucklingBeam1dModeResult, SolveBucklingBeam1dRequest, SolveBucklingBeam1dResult,
+    BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingBeam1dModeResult, SolveBucklingBeam1dRequest,
+    SolveBucklingBeam1dResult,
 };
 use std::collections::HashSet;
 
@@ -49,15 +51,26 @@ pub fn solve_buckling_beam_1d(
         reduce_sparse_system(&geometric, &zero_rhs, &constrained);
     debug_assert_eq!(free_dofs, geometric_free_dofs);
     let mode_limit = request.mode_count.unwrap_or(3).max(1).min(free_dofs.len());
-    let modes = hybrid_generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?
+    let eigenpairs =
+        hybrid_generalized_eigenpairs(&reduced_elastic, &reduced_geometric, mode_limit)?;
+    let diagnostics = mode_direction_diagnostics(
+        &eigenpairs
+            .iter()
+            .map(|pair| pair.eigenvalue)
+            .collect::<Vec<_>>(),
+    );
+    let modes = eigenpairs
         .into_iter()
+        .zip(diagnostics)
         .enumerate()
-        .map(|(index, pair)| {
+        .map(|(index, (pair, diagnostic))| {
             let shape = expand_and_normalize(&pair.vector, &free_dofs, dof_count);
             BucklingBeam1dModeResult {
                 index,
                 load_factor: pair.eigenvalue,
                 residual_norm: pair.residual_norm,
+                relative_gap_to_next: diagnostic.relative_gap_to_next,
+                direction_assessment: diagnostic.assessment,
                 shape,
             }
         })
@@ -70,6 +83,7 @@ pub fn solve_buckling_beam_1d(
         minimum_load_factor: modes[0].load_factor,
         modes,
         free_dofs,
+        mode_cluster_relative_tolerance: BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE,
     })
 }
 

@@ -115,6 +115,13 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     "mode_count" => 1
   }
 
+  @p_delta_request %{
+    "buckling" => @buckling_frame_request,
+    "imperfection_amplitude" => 0.002,
+    "imperfection_shape" => [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+    "load_steps" => 4
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
@@ -124,6 +131,7 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},
+    {"/api/v1/fem/frame-2d-p-delta/jobs", "max_imperfection_amplification", @p_delta_request},
     {"/api/v1/fem/modal-frame-3d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/solid-tetra-3d/jobs", "max_von_mises_stress", @solid_tetra_request},
     {"/api/v1/fem/transient-heat-bar-1d/jobs", "final_time", @transient_heat_request},

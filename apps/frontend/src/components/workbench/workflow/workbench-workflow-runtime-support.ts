@@ -40,6 +40,7 @@ const SUPPORTED_WORKFLOW_OPERATOR_IDS = new Set([
   "solve.modal_frame_2d",
   "solve.buckling_beam_1d",
   "solve.buckling_frame_2d",
+  "solve.frame_2d_p_delta",
   "solve.beam_1d",
   "solve.thermal_beam_1d",
   "solve.thermal_frame_2d",

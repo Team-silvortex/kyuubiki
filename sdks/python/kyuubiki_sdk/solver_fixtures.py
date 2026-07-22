@@ -313,6 +313,14 @@ _PAYLOADS = {
         "frame": _BUCKLING_FRAME_2D,
         "mode_count": 1,
     },
+    "frame_2d_p_delta": {
+        "buckling": {
+            "frame": _BUCKLING_FRAME_2D,
+            "mode_count": 1,
+        },
+        "imperfection_amplitude": 0.001,
+        "load_steps": 4,
+    },
     "frame_3d": _FRAME_3D,
     "modal_frame_3d": {
         "nodes": [{**node, "load_y": 0.0} for node in _FRAME_3D["nodes"]],

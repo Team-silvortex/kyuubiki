@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use super::plane_frame::{SolveBucklingFrame2dRequest, SolveBucklingFrame2dResult};
+
+pub const FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO: f64 = 0.95;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NonlinearSpring1dNodeInput {
     pub id: String,
@@ -68,6 +72,88 @@ pub struct SolveNonlinearSpring1dResult {
     pub residual_norm: f64,
     pub max_displacement: f64,
     pub max_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dPDeltaRequest {
+    pub buckling: SolveBucklingFrame2dRequest,
+    pub imperfection_amplitude: f64,
+    #[serde(default)]
+    pub kinematics: Frame2dStabilityKinematics,
+    #[serde(default)]
+    pub imperfection_shape: Option<Vec<f64>>,
+    #[serde(default)]
+    pub imperfection_mode_index: Option<usize>,
+    #[serde(default)]
+    pub maximum_load_factor: Option<f64>,
+    #[serde(default)]
+    pub load_steps: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dStabilityKinematics {
+    LinearizedPDelta,
+    Corotational,
+}
+
+impl Default for Frame2dStabilityKinematics {
+    fn default() -> Self {
+        Self::LinearizedPDelta
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dImperfectionSource {
+    BucklingMode,
+    ExplicitShape,
+}
+
+impl Default for Frame2dImperfectionSource {
+    fn default() -> Self {
+        Self::BucklingMode
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dPDeltaStepResult {
+    pub step: usize,
+    pub load_factor: f64,
+    pub critical_factor_ratio: f64,
+    #[serde(default = "default_single_iteration")]
+    pub iterations: usize,
+    #[serde(default = "default_true")]
+    pub converged: bool,
+    pub residual_norm: f64,
+    pub imperfection_amplification: f64,
+    pub max_incremental_displacement: f64,
+    pub displacements: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dPDeltaResult {
+    pub input: SolveFrame2dPDeltaRequest,
+    pub buckling_result: SolveBucklingFrame2dResult,
+    #[serde(default)]
+    pub imperfection_source: Frame2dImperfectionSource,
+    #[serde(default)]
+    pub kinematics: Frame2dStabilityKinematics,
+    pub initial_imperfection_shape: Vec<f64>,
+    pub critical_factor_limit_ratio: f64,
+    pub steps: Vec<Frame2dPDeltaStepResult>,
+    pub final_displacements: Vec<f64>,
+    pub max_imperfection_amplification: f64,
+    #[serde(default = "default_true")]
+    pub converged: bool,
+}
+
+fn default_single_iteration() -> usize {
+    1
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -41,6 +41,7 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template("modal-frame-2d", BenchmarkFamily::ModalFrame2d),
         template("buckling-beam-1d", BenchmarkFamily::BucklingBeam1d),
         template("buckling-frame-2d", BenchmarkFamily::BucklingFrame2d),
+        template("frame-2d-p-delta", BenchmarkFamily::Frame2dPDelta),
         template("modal-frame-3d", BenchmarkFamily::ModalFrame3d),
         template("solid-tetra-3d", BenchmarkFamily::SolidTetra3d),
         template("truss-roof", BenchmarkFamily::Truss2d),
@@ -177,7 +178,7 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
         ),
         matrix(
             "stability-screening",
-            &["buckling-beam-1d", "buckling-frame-2d"],
+            &["buckling-beam-1d", "buckling-frame-2d", "frame-2d-p-delta"],
             vec![],
         ),
         matrix(

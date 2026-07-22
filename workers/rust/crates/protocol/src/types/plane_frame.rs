@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+pub const BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE: f64 = 1.0e-4;
+
+fn default_buckling_mode_cluster_relative_tolerance() -> f64 {
+    BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaneNodeInput {
     pub id: String,
@@ -362,11 +368,24 @@ pub struct SolveBucklingBeam1dRequest {
     pub mode_count: Option<usize>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BucklingModeDirectionAssessment {
+    Isolated,
+    Clustered,
+    #[default]
+    Unassessed,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BucklingBeam1dModeResult {
     pub index: usize,
     pub load_factor: f64,
     pub residual_norm: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative_gap_to_next: Option<f64>,
+    #[serde(default)]
+    pub direction_assessment: BucklingModeDirectionAssessment,
     pub shape: Vec<f64>,
 }
 
@@ -376,6 +395,8 @@ pub struct SolveBucklingBeam1dResult {
     pub modes: Vec<BucklingBeam1dModeResult>,
     pub free_dofs: Vec<usize>,
     pub minimum_load_factor: f64,
+    #[serde(default = "default_buckling_mode_cluster_relative_tolerance")]
+    pub mode_cluster_relative_tolerance: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -399,6 +420,10 @@ pub struct BucklingFrame2dModeResult {
     pub index: usize,
     pub load_factor: f64,
     pub residual_norm: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative_gap_to_next: Option<f64>,
+    #[serde(default)]
+    pub direction_assessment: BucklingModeDirectionAssessment,
     pub shape: Vec<f64>,
 }
 
@@ -410,6 +435,8 @@ pub struct SolveBucklingFrame2dResult {
     pub modes: Vec<BucklingFrame2dModeResult>,
     pub free_dofs: Vec<usize>,
     pub minimum_load_factor: f64,
+    #[serde(default = "default_buckling_mode_cluster_relative_tolerance")]
+    pub mode_cluster_relative_tolerance: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

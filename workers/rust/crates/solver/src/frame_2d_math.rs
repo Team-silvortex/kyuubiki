@@ -47,6 +47,39 @@ pub(crate) fn frame_local_stiffness(
     ]
 }
 
+pub(crate) fn frame_local_geometric_stiffness(
+    compressive_force: f64,
+    length: f64,
+) -> [[f64; 6]; 6] {
+    let l2 = length * length;
+    let factor = compressive_force / (30.0 * length);
+    let mut stiffness = [[0.0; 6]; 6];
+    let bending = [
+        [36.0, 3.0 * length, -36.0, 3.0 * length],
+        [3.0 * length, 4.0 * l2, -3.0 * length, -l2],
+        [-36.0, -3.0 * length, 36.0, -3.0 * length],
+        [3.0 * length, -l2, -3.0 * length, 4.0 * l2],
+    ];
+    let bending_dofs = [1, 2, 4, 5];
+    for row in 0..4 {
+        for column in 0..4 {
+            stiffness[bending_dofs[row]][bending_dofs[column]] = bending[row][column] * factor;
+        }
+    }
+    stiffness
+}
+
+pub(crate) fn frame_dof_map(node_i: usize, node_j: usize) -> [usize; 6] {
+    [
+        node_i * 3,
+        node_i * 3 + 1,
+        node_i * 3 + 2,
+        node_j * 3,
+        node_j * 3 + 1,
+        node_j * 3 + 2,
+    ]
+}
+
 pub(super) fn frame_thermal_uniform_vector(
     area: f64,
     youngs_modulus: f64,

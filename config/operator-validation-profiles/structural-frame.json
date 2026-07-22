@@ -62,6 +62,7 @@
         "mesh_convergence",
         "dimensional_scaling",
         "sparse_large_system_cross_check",
+        "clustered_sparse_eigenmode_regression",
         "beam_frame_formulation_cross_check",
         "input_boundary_rejection"
       ],
@@ -69,6 +70,8 @@
         "pinned_column_converges_to_pi_squared_ei_over_l_squared",
         "critical_factor_scales_with_ei_over_reference_force_l_squared",
         "sparse_and_dense_paths_retain_the_euler_critical_factor",
+        "single_mode_sparse_iteration_resolves_nearly_repeated_factors",
+        "mode_direction_diagnostics_distinguish_clustered_and_unassessed_results",
         "beam_and_preloaded_frame_first_modes_agree",
         "mode_shape_is_normalized",
         "invalid_topology_and_non_positive_properties_are_rejected"
@@ -76,6 +79,7 @@
       "evidence_paths": [
         "evidence/operator-screening/buckling-beam-1d-linear-eigenvalue.md",
         "workers/rust/crates/solver/tests/buckling_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_beam_1d_clustered_mode.rs",
         "workers/rust/crates/solver/tests/buckling_beam_frame_crosscheck.rs",
         "workers/rust/crates/solver/tests/buckling_beam_1d_input_reliability.rs",
         "workers/rust/crates/engine/tests/buckling_beam_workflow.rs"
@@ -90,6 +94,11 @@
           "id": "buckling-beam-frame-cross-check",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_frame_crosscheck -- --nocapture"
+        },
+        {
+          "id": "buckling-beam-clustered-sparse-mode",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_clustered_mode -- --nocapture"
         },
         {
           "id": "buckling-beam-input-reliability",
@@ -118,6 +127,7 @@
         "global_orientation_invariance",
         "semidefinite_generalized_eigenproblem",
         "sparse_large_system_cross_check",
+        "clustered_sparse_eigenmode_regression",
         "multi_member_portal_objectivity",
         "input_boundary_rejection"
       ],
@@ -127,6 +137,8 @@
         "critical_factor_is_invariant_to_global_column_orientation",
         "positive_modes_are_sorted_and_normalized",
         "sparse_and_dense_paths_retain_the_euler_critical_factor",
+        "repeated_sparse_modes_remain_distinct_and_orthogonal",
+        "repeated_modes_are_reported_as_a_clustered_direction_subspace",
         "beam_and_preloaded_frame_first_modes_agree",
         "portal_column_preloads_and_critical_factor_are_rigid_rotation_invariant",
         "tension_only_and_zero_reference_states_are_rejected"
@@ -134,6 +146,7 @@
       "evidence_paths": [
         "evidence/operator-screening/buckling-frame-2d-linear-eigenvalue.md",
         "workers/rust/crates/solver/tests/buckling_frame_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_clustered_modes.rs",
         "workers/rust/crates/solver/tests/buckling_beam_frame_crosscheck.rs",
         "workers/rust/crates/solver/tests/buckling_frame_2d_input_reliability.rs",
         "workers/rust/crates/solver/tests/buckling_frame_2d_portal.rs",
@@ -151,6 +164,11 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_frame_crosscheck -- --nocapture"
         },
         {
+          "id": "buckling-frame-clustered-sparse-modes",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_clustered_modes -- --nocapture"
+        },
+        {
           "id": "buckling-frame-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_frame_2d_input_reliability -- --nocapture"
@@ -164,6 +182,65 @@
           "id": "buckling-frame-workflow-route",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test buckling_frame_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "frame-2d-p-delta-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-2d-p-delta",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.frame_2d_p_delta"
+      ],
+      "validation_methods": [
+        "modal_imperfection_synthesis",
+        "explicit_imperfection_field",
+        "precritical_secant_amplification",
+        "corotational_incremental_equilibrium",
+        "multi_member_rigid_rotation_objectivity",
+        "critical_limit_rejection",
+        "workflow_route_contract"
+      ],
+      "formal_invariants": [
+        "imperfection_amplification_matches_one_over_one_minus_load_ratio",
+        "explicit_imperfection_amplitude_is_preserved",
+        "corotational_steps_converge_under_incremental_newton_iteration",
+        "corotational_internal_force_is_objective_under_rigid_motion",
+        "corotational_analytic_tangent_matches_central_difference",
+        "corotational_response_recovers_linearized_response_at_low_load",
+        "rotated_geometry_loads_and_imperfections_preserve_the_response",
+        "amplification_increases_monotonically_toward_the_critical_factor",
+        "equilibrium_residual_remains_bounded",
+        "load_path_stays_below_the_explicit_critical_limit_ratio"
+      ],
+      "evidence_paths": [
+        "evidence/operator-screening/frame-2d-p-delta-precritical.md",
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
+        "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
+        "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "frame-2d-corotational-element-invariants",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_corotational::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-p-delta-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-2d-p-delta-explicit-imperfection",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
+        },
+        {
+          "id": "frame-2d-p-delta-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow -- --nocapture"
         }
       ]
     }

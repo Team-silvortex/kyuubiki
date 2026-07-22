@@ -119,6 +119,23 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_buckling_frame_2d(_params), do: {:error, :invalid_buckling_frame_model}
 
+  def normalize_frame_2d_p_delta(%{"buckling" => buckling} = params) when is_map(buckling) do
+    with {:ok, normalized_buckling} <- normalize_buckling_frame_2d(buckling) do
+      {:ok, Map.put(params, "buckling", normalized_buckling)}
+    end
+  end
+
+  def normalize_frame_2d_p_delta(%{buckling: buckling} = params) when is_map(buckling) do
+    with {:ok, normalized_buckling} <- normalize_buckling_frame_2d(buckling) do
+      {:ok,
+       params
+       |> Map.delete(:buckling)
+       |> Map.put("buckling", normalized_buckling)}
+    end
+  end
+
+  def normalize_frame_2d_p_delta(_params), do: {:error, :invalid_frame_2d_p_delta_model}
+
   def normalize_modal_frame_3d(params),
     do: normalize_graph_model(params, :invalid_modal_frame_3d_model)
 

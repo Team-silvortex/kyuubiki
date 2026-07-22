@@ -1,9 +1,10 @@
 use super::*;
 use kyuubiki_protocol::{
-    ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
-    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame3dNodeInput,
+    ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
+    NonlinearSpring1dNodeInput, SolveBucklingFrame2dRequest, SolveContactGap1dRequest,
+    SolveFrame2dPDeltaRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
@@ -86,6 +87,28 @@ fn handles_modal_frame_rpc_requests() {
     assert!(!result_3d.modes.is_empty());
     assert!(result_2d.min_frequency_hz > 0.0);
     assert!(result_3d.min_frequency_hz > 0.0);
+}
+
+#[test]
+fn handles_frame_2d_p_delta_rpc_requests() {
+    let response = execute(RpcMethod::SolveFrame2dPDelta, frame_2d_p_delta_request());
+
+    assert!(response.ok);
+    let result: kyuubiki_protocol::SolveFrame2dPDeltaResult =
+        serde_json::from_value(response.result.expect("p-delta solver result"))
+            .expect("p-delta result");
+    assert_eq!(result.steps.len(), 4);
+    assert!(result.converged);
+    assert_eq!(
+        result.kinematics,
+        kyuubiki_protocol::Frame2dStabilityKinematics::LinearizedPDelta
+    );
+    assert!(result.max_imperfection_amplification > 1.0);
+    assert_eq!(
+        result.imperfection_source,
+        kyuubiki_protocol::Frame2dImperfectionSource::BucklingMode
+    );
+    assert_eq!(result.critical_factor_limit_ratio, 0.95);
 }
 
 fn execute(method: RpcMethod, params: impl serde::Serialize) -> kyuubiki_protocol::RpcResponse {
@@ -242,6 +265,51 @@ fn frame_2d_node(id: &str, x: f64, fixed: bool) -> Frame2dNodeInput {
         fix_rz: fixed,
         load_x: 0.0,
         load_y: 0.0,
+        moment_z: 0.0,
+    }
+}
+
+fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
+    let nodes = vec![
+        stability_node("n0", 0.0, true, true, 0.0),
+        stability_node("n1", 1.0, false, false, 0.0),
+        stability_node("n2", 2.0, true, false, -100_000.0),
+    ];
+    let elements = (0..2)
+        .map(|index| Frame2dElementInput {
+            id: format!("e{index}"),
+            node_i: index,
+            node_j: index + 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 8.0e-6,
+            section_modulus: 1.6e-4,
+        })
+        .collect();
+    SolveFrame2dPDeltaRequest {
+        buckling: SolveBucklingFrame2dRequest {
+            frame: SolveFrame2dRequest { nodes, elements },
+            mode_count: Some(1),
+        },
+        imperfection_amplitude: 0.001,
+        kinematics: Default::default(),
+        imperfection_shape: None,
+        imperfection_mode_index: Some(0),
+        maximum_load_factor: None,
+        load_steps: Some(4),
+    }
+}
+
+fn stability_node(id: &str, y: f64, fix_x: bool, fix_y: bool, load_y: f64) -> Frame2dNodeInput {
+    Frame2dNodeInput {
+        id: id.to_string(),
+        x: 0.0,
+        y,
+        fix_x,
+        fix_y,
+        fix_rz: false,
+        load_x: 0.0,
+        load_y,
         moment_z: 0.0,
     }
 }

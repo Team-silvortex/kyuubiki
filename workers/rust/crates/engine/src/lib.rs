@@ -86,9 +86,9 @@ use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
     SolveBarRequest, SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
     SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
-    SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
     SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSolidTetra3dRequest,
@@ -104,7 +104,7 @@ use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
     solve_buckling_beam_1d, solve_buckling_frame_2d, solve_contact_gap_1d,
     solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
-    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_2d_p_delta, solve_frame_3d,
     solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
     solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
     solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
@@ -156,6 +156,7 @@ pub enum EngineSolveRequest {
     ModalFrame2d(SolveModalFrame2dRequest),
     BucklingBeam1d(SolveBucklingBeam1dRequest),
     BucklingFrame2d(SolveBucklingFrame2dRequest),
+    Frame2dPDelta(SolveFrame2dPDeltaRequest),
     ModalFrame3d(SolveModalFrame3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
     ThermalPlaneTriangle2d(SolveThermalPlaneTriangle2dRequest),
@@ -277,6 +278,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::BucklingFrame2d(request) => {
             solve_buckling_frame_2d(&request).map(AnalysisResult::BucklingFrame2d)
+        }
+        EngineSolveRequest::Frame2dPDelta(request) => {
+            solve_frame_2d_p_delta(&request).map(AnalysisResult::Frame2dPDelta)
         }
         EngineSolveRequest::ModalFrame3d(request) => {
             solve_modal_frame_3d(&request).map(AnalysisResult::ModalFrame3d)

@@ -21,6 +21,8 @@ fn workflow_route_executes_buckling_beam_solver() {
     .expect("workflow buckling route should solve");
 
     assert!(result["minimum_load_factor"].as_f64().unwrap() > 0.0);
+    assert_eq!(result["modes"][0]["direction_assessment"], "unassessed");
+    assert_eq!(result["mode_cluster_relative_tolerance"], 1.0e-4);
     assert_eq!(result["modes"].as_array().unwrap().len(), 1);
     assert_eq!(
         result["_solver_provenance"]["operator_id"],

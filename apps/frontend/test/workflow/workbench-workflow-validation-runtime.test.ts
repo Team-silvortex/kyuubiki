@@ -19,6 +19,7 @@ test("runtime support includes advanced and magnetostatic solver operators", () 
     "solve.modal_frame_2d",
     "solve.buckling_beam_1d",
     "solve.buckling_frame_2d",
+    "solve.frame_2d_p_delta",
     "solve.modal_frame_3d",
   ];
 
