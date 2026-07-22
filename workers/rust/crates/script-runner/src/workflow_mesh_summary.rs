@@ -22,6 +22,10 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
     let parsed = parse_log(&log_text);
     let log_mtime_unix_s = modified_unix_s(&options.log_path)?;
     let log_path_label = display_path(repo_root, &options.log_path);
+    let qualification_path = output_dir.join("agent-task-ir-qualification.json");
+    let qualification_label = qualification_path
+        .is_file()
+        .then(|| display_path(repo_root, &qualification_path));
     let status = if parsed.completed && parsed.total_fail == 0 {
         "passed"
     } else {
@@ -39,6 +43,9 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
         "total_duration_ms": parsed.total_duration_ms,
         "log_mtime_unix_s": log_mtime_unix_s,
         "tests": parsed.tests.iter().map(TestCase::to_json).collect::<Vec<_>>(),
+        "artifacts": {
+            "agent_solver_qualification": qualification_label
+        }
     });
     write_text(
         &output_dir.join("summary.json"),
@@ -46,7 +53,12 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
     )?;
     write_text(
         &output_dir.join("README.md"),
-        &render_readme(&parsed, status, &log_path_label),
+        &render_readme(
+            &parsed,
+            status,
+            &log_path_label,
+            qualification_label.as_deref(),
+        ),
     )?;
     println!("{}", display_path(repo_root, &output_dir));
     Ok(0)
@@ -223,7 +235,12 @@ fn parse_duration(line: &str, prefix: &str) -> Option<f64> {
     line.strip_prefix(prefix)?.parse().ok()
 }
 
-fn render_readme(parsed: &ParsedLog, status: &str, log_path: &str) -> String {
+fn render_readme(
+    parsed: &ParsedLog,
+    status: &str,
+    log_path: &str,
+    qualification_path: Option<&str>,
+) -> String {
     let mut lines = vec![
         "# Workflow Mesh Regression".to_string(),
         String::new(),
@@ -234,6 +251,12 @@ fn render_readme(parsed: &ParsedLog, status: &str, log_path: &str) -> String {
         format!("- Total fail: `{}`", parsed.total_fail),
         format!("- Total duration ms: `{:.3}`", parsed.total_duration_ms),
         format!("- Log: `{log_path}`"),
+        format!(
+            "- Agent solver qualification: {}",
+            qualification_path
+                .map(|path| format!("`{path}`"))
+                .unwrap_or_else(|| "`not generated`".to_string())
+        ),
         String::new(),
         "## Cases".to_string(),
         String::new(),

@@ -40,7 +40,13 @@ defmodule KyuubikiWeb.Application do
     else
       [
         {Plug.Cowboy,
-         scheme: :http, plug: KyuubikiWeb.Router, options: [ip: bind_ip(), port: port()]}
+         scheme: :http,
+         plug: KyuubikiWeb.Router,
+         options: [
+           ip: bind_ip(),
+           port: port(),
+           protocol_options: KyuubikiWeb.HttpTransportSecurity.protocol_options()
+         ]}
       ]
     end
   end

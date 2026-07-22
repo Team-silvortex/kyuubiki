@@ -15,5 +15,27 @@
   ],
   "hex": [
     "apps/web"
+  ],
+  "hex_advisory_mitigations": [
+    {
+      "id": "CVE-2026-43966",
+      "package": "cowlib",
+      "locked_version": "2.18.0",
+      "status": "mitigated",
+      "evidence": [
+        "apps/web/lib/kyuubiki_web/http_transport_security.ex",
+        "apps/web/test/kyuubiki_web/http_transport_security_test.exs"
+      ]
+    },
+    {
+      "id": "CVE-2026-43969",
+      "package": "cowlib",
+      "locked_version": "2.18.0",
+      "status": "not_reachable",
+      "evidence": [
+        "apps/web/lib/kyuubiki_web/http_transport_security.ex",
+        "apps/web/test/kyuubiki_web/http_transport_security_test.exs"
+      ]
+    }
   ]
 }

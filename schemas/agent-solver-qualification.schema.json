@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-solver-qualification.schema.json",
+  "title": "Kyuubiki Agent Solver Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "transport",
+    "rpc_version",
+    "operator_id",
+    "task_digest",
+    "stages",
+    "watchdog"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-solver-qualification/v1"
+    },
+    "generated_at_unix_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "const": "passed"
+    },
+    "transport": {
+      "const": "tcp_framed_json"
+    },
+    "rpc_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "operator_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial_execution",
+        "tamper_rejection",
+        "recovery_execution"
+      ],
+      "properties": {
+        "initial_execution": {
+          "$ref": "#/$defs/successfulExecution"
+        },
+        "tamper_rejection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason_code", "failure_receipt"],
+          "properties": {
+            "reason_code": {
+              "const": "operator_task_digest_mismatch"
+            },
+            "failure_receipt": {
+              "$ref": "#/$defs/failureReceipt"
+            }
+          }
+        },
+        "recovery_execution": {
+          "$ref": "#/$defs/successfulExecution"
+        }
+      }
+    },
+    "watchdog": {
+      "type": "object",
+      "required": [
+        "state",
+        "active_execution_count",
+        "recent_failure_count",
+        "recent_failures"
+      ],
+      "properties": {
+        "state": {
+          "enum": ["healthy", "watch"]
+        },
+        "active_execution_count": {
+          "const": 0
+        },
+        "recent_failure_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recent_failures": {
+          "type": "array",
+          "minItems": 1,
+          "contains": {
+            "type": "object",
+            "required": ["request_id", "reason_code"],
+            "properties": {
+              "request_id": {
+                "const": "qualification-tampered"
+              },
+              "reason_code": {
+                "const": "operator_task_digest_mismatch"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "successfulExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "validation_receipt", "provenance_receipt"],
+      "properties": {
+        "status": {
+          "const": "executed"
+        },
+        "validation_receipt": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "digest_verified",
+            "execution_program_verified"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "kyuubiki.agent-operator-task-validation/v1"
+            },
+            "digest_verified": {
+              "const": true
+            },
+            "execution_program_verified": {
+              "const": true
+            }
+          }
+        },
+        "provenance_receipt": {
+          "type": "object",
+          "required": ["schema_version", "task_digest", "lineage"],
+          "properties": {
+            "schema_version": {
+              "const": "kyuubiki.agent-operator-task-provenance/v1"
+            },
+            "task_digest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "lineage": {
+              "type": "object",
+              "required": ["digest_verified", "execution_program_verified"],
+              "properties": {
+                "digest_verified": {
+                  "const": true
+                },
+                "execution_program_verified": {
+                  "const": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "failureReceipt": {
+      "type": "object",
+      "required": ["schema_version", "failure_stage", "reason_code", "recovery"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.agent-operator-task-failure/v1"
+        },
+        "failure_stage": {
+          "const": "verify_digest"
+        },
+        "reason_code": {
+          "const": "operator_task_digest_mismatch"
+        },
+        "recovery": {
+          "type": "object",
+          "required": ["required_action", "safe_to_continue_other_tasks"],
+          "properties": {
+            "required_action": {
+              "const": "rebuild_task_ir_and_recompute_digest"
+            },
+            "safe_to_continue_other_tasks": {
+              "const": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

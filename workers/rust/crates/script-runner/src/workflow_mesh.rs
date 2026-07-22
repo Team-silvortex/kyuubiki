@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::time::Instant;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -45,6 +46,37 @@ pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
         }
     }
 
+    let native_test = "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs";
+    log_line(&mut log, &format!("==> running {native_test}"))?;
+    let started = Instant::now();
+    let status = run_logged_command_with_env(
+        &root.join("workers/rust"),
+        "cargo",
+        [
+            OsString::from("test"),
+            OsString::from("-p"),
+            OsString::from("kyuubiki-cli"),
+            OsString::from("--test"),
+            OsString::from("agent_task_ir_qualification"),
+            OsString::from("--"),
+            OsString::from("--nocapture"),
+        ],
+        "KYUUBIKI_AGENT_QUALIFICATION_OUTPUT",
+        &output_dir.join("agent-task-ir-qualification.json"),
+        &mut log,
+    )?;
+    let duration_ms = started.elapsed().as_secs_f64() * 1_000.0;
+    log_line(
+        &mut log,
+        "# Subtest: agent executes rejects tampering and recovers over TCP",
+    )?;
+    log_line(&mut log, &format!("# pass {}", u8::from(status == 0)))?;
+    log_line(&mut log, &format!("# fail {}", u8::from(status != 0)))?;
+    log_line(&mut log, &format!("# duration_ms {duration_ms:.3}"))?;
+    if status != 0 {
+        return Ok(status);
+    }
+
     log_line(&mut log, "workflow mesh regression completed")?;
     let summary = crate::workflow_mesh_summary::run_build_workflow_mesh_regression_summary(
         root,
@@ -72,6 +104,29 @@ pub(crate) fn run_workflow_mesh_regression(root: &Path) -> RunnerResult<u8> {
     Ok(0)
 }
 
+fn run_logged_command_with_env<I>(
+    cwd: &Path,
+    program: &str,
+    args: I,
+    env_name: &str,
+    env_value: &Path,
+    log: &mut std::fs::File,
+) -> RunnerResult<u8>
+where
+    I: IntoIterator<Item = OsString>,
+{
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(cwd)
+        .env(env_name, env_value)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|error| format!("failed to run {program}: {error}"))?;
+    write_command_output(log, &output.stdout, &output.stderr)?;
+    Ok(output.status.code().unwrap_or(1) as u8)
+}
+
 fn run_logged_command<I>(
     cwd: &Path,
     program: &str,
@@ -88,17 +143,22 @@ where
         .stderr(Stdio::piped())
         .output()
         .map_err(|error| format!("failed to run {program}: {error}"))?;
-    log.write_all(&output.stdout)
+    write_command_output(log, &output.stdout, &output.stderr)?;
+    Ok(output.status.code().unwrap_or(1) as u8)
+}
+
+fn write_command_output(log: &mut std::fs::File, stdout: &[u8], stderr: &[u8]) -> RunnerResult<()> {
+    log.write_all(stdout)
         .map_err(|error| format!("failed to write command stdout: {error}"))?;
-    log.write_all(&output.stderr)
+    log.write_all(stderr)
         .map_err(|error| format!("failed to write command stderr: {error}"))?;
     std::io::stdout()
-        .write_all(&output.stdout)
+        .write_all(stdout)
         .map_err(|error| format!("failed to write stdout: {error}"))?;
     std::io::stderr()
-        .write_all(&output.stderr)
+        .write_all(stderr)
         .map_err(|error| format!("failed to write stderr: {error}"))?;
-    Ok(output.status.code().unwrap_or(1) as u8)
+    Ok(())
 }
 
 fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {

@@ -7,6 +7,19 @@ use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
+const WORKFLOW_MESH_SCRIPT_SOURCES: &[&str] = &[
+    "scripts/kyuubiki",
+    "scripts/build-workflow-mesh-regression-index.mjs",
+    "scripts/build-workflow-mesh-regression-summary.mjs",
+    "scripts/build-nightly-artifact-overview.mjs",
+    "scripts/kyuubiki-runtime.mjs",
+    "scripts/kyuubiki-runtime-env.mjs",
+    "scripts/kyuubiki-runtime-process.mjs",
+    "scripts/kyuubiki-runtime-resolver.mjs",
+    "scripts/run-workflow-mesh-regression.sh",
+    "scripts/run-workflow-mesh-regression-remote.sh",
+];
+
 struct Options {
     local_log_path: PathBuf,
     local_output_dir: PathBuf,
@@ -73,6 +86,17 @@ pub(crate) fn run_workflow_mesh_remote(root: &Path, args: Vec<OsString>) -> Runn
                 options.remote_dir, options.remote_output_dir
             ),
             &options.local_output_dir.join("README.md"),
+            root,
+        )?,
+        copy_remote(
+            &options,
+            &format!(
+                "{}/{}/agent-task-ir-qualification.json",
+                options.remote_dir, options.remote_output_dir
+            ),
+            &options
+                .local_output_dir
+                .join("agent-task-ir-qualification.json"),
             root,
         )?,
         crate::workflow_mesh_index::run_build_workflow_mesh_regression_index(
@@ -184,14 +208,13 @@ fn sync_workflow_mesh_sources(root: &Path, options: &Options) -> RunnerResult<()
         rsync(
             root,
             &[],
-            &[
-                root.join("scripts/build-workflow-mesh-regression-index.mjs"),
-                root.join("scripts/build-workflow-mesh-regression-summary.mjs"),
-                root.join("scripts/build-nightly-artifact-overview.mjs"),
-                root.join("scripts/kyuubiki-runtime.mjs"),
-                root.join("scripts/run-workflow-mesh-regression.sh"),
-                root.join("scripts/run-workflow-mesh-regression-remote.sh"),
-            ],
+            &[root.join("make/")],
+            &format!("{}:{}/make/", options.remote_host, options.remote_dir),
+        )?,
+        rsync(
+            root,
+            &[],
+            &workflow_mesh_script_sources(root),
             &format!("{}:{}/scripts/", options.remote_host, options.remote_dir),
         )?,
         rsync(
@@ -224,6 +247,13 @@ fn sync_workflow_mesh_sources(root: &Path, options: &Options) -> RunnerResult<()
         }
     }
     Ok(())
+}
+
+fn workflow_mesh_script_sources(root: &Path) -> Vec<PathBuf> {
+    WORKFLOW_MESH_SCRIPT_SOURCES
+        .iter()
+        .map(|source| root.join(source))
+        .collect()
 }
 
 fn sync_workflow_mesh_tests(root: &Path, options: &Options) -> RunnerResult<()> {
@@ -261,6 +291,13 @@ remote_elixir_installs_dir=${{REMOTE_ELIXIR_INSTALLS_DIR:-$HOME/.elixir-install/
 remote_workspace_root={workspace}; \
 export PATH=\"$remote_elixir_installs_dir/otp/{}/bin:$PATH\"; \
 export PATH=\"$remote_elixir_installs_dir/elixir/{}/bin:$PATH\"; \
+remote_mix_home=\"$HOME/.kyuubiki/toolchains/mix/elixir-{}-otp-{}\"; \
+export MIX_HOME=\"$remote_mix_home\"; \
+export HEX_HOME=\"$remote_mix_home/hex\"; \
+mkdir -p \"$MIX_HOME\" \"$HEX_HOME\"; \
+if ! mix hex.info >/dev/null 2>&1; then \
+  mix local.hex --force >/dev/null; \
+fi; \
 remote_pg_root=\"$remote_workspace_root/{output_dir}/postgres\"; \
 remote_pg_data=\"$remote_pg_root/data\"; \
 remote_pg_socket=\"/tmp\"; \
@@ -272,18 +309,22 @@ fi; \
 trap '{pg_bin}/pg_ctl -D \"$remote_pg_data\" stop -m fast >/dev/null 2>&1 || true' EXIT; \
 {pg_bin}/createdb -h 127.0.0.1 -p {} -U {} {} >/dev/null 2>&1 || true; \
 export DATABASE_URL=\"ecto://{url_user}@127.0.0.1:{url_port}/{url_db}\"; \
+cd \"$remote_workspace_root/apps/web\"; \
+mix deps.get >/dev/null; \
+mix compile >/dev/null; \
 export OUTPUT_SLUG={}; \
 export OUTPUT_DIR=\"$remote_workspace_root/{output_dir}\"; \
 export LOG_PATH={}; \
-cd \"$remote_workspace_root\" && make test-integration-workflow-mesh 2>&1 | tee {}",
+cd \"$remote_workspace_root\" && make test-integration-workflow-mesh",
         shell_double_fragment(&options.remote_otp_version),
         shell_double_fragment(&options.remote_elixir_version),
+        shell_double_fragment(&options.remote_elixir_version),
+        shell_double_fragment(&options.remote_otp_version),
         shell_escape(&options.remote_pg_user),
         shell_escape(&options.remote_pg_port),
         shell_escape(&options.remote_pg_user),
         shell_escape(&options.remote_pg_db),
         shell_escape(&options.output_slug),
-        remote_log_shell_path(&options.remote_log_path),
         remote_log_shell_path(&options.remote_log_path),
     )
 }
@@ -341,7 +382,50 @@ fn print_usage() {
     println!(
         "Usage:\n  ./scripts/kyuubiki workflow-mesh-regression-remote\n\n\
 Syncs workflow mesh runtime/test inputs to the shared lab machine, runs the\n\
-distributed workflow mesh regression trio there, and pulls local artifacts.\n\n\
+distributed workflow mesh and Agent TaskIR qualification quartet there, and pulls local artifacts.\n\n\
 Environment:\n  KYUUBIKI_LAB_HOST\n  KYUUBIKI_LAB_WORKFLOW_MESH_DIR\n  OUTPUT_SLUG\n  LOCAL_OUTPUT_DIR\n  REMOTE_OUTPUT_DIR\n  LOCAL_LOG_PATH\n  REMOTE_LOG_PATH\n  REMOTE_OTP_VERSION\n  REMOTE_ELIXIR_VERSION\n  REMOTE_PG_BIN_DIR\n  REMOTE_PG_PORT\n  REMOTE_PG_USER\n  REMOTE_PG_DB\n  SYNC_TO_REMOTE\n"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn script_source_closure_contains_runtime_modules() {
+        for required in [
+            "scripts/kyuubiki",
+            "scripts/kyuubiki-runtime.mjs",
+            "scripts/kyuubiki-runtime-env.mjs",
+            "scripts/kyuubiki-runtime-process.mjs",
+            "scripts/kyuubiki-runtime-resolver.mjs",
+        ] {
+            assert!(WORKFLOW_MESH_SCRIPT_SOURCES.contains(&required));
+        }
+    }
+
+    #[test]
+    fn remote_command_isolates_mix_and_has_one_log_writer() {
+        let options = Options {
+            local_log_path: PathBuf::from("local/run.log"),
+            local_output_dir: PathBuf::from("local/output"),
+            output_slug: "qualification".into(),
+            remote_dir: "~/kyuubiki".into(),
+            remote_elixir_version: "1.20.1-otp-28".into(),
+            remote_host: "kyuubiki-lab".into(),
+            remote_log_path: "~/kyuubiki/tmp/qualification/run.log".into(),
+            remote_otp_version: "28.4".into(),
+            remote_output_dir: "tmp/qualification".into(),
+            remote_pg_bin_dir: "/usr/lib/postgresql/16/bin".into(),
+            remote_pg_db: "kyuubiki_test".into(),
+            remote_pg_port: "55432".into(),
+            remote_pg_user: "kyuubiki".into(),
+            sync_to_remote: true,
+        };
+        let command = remote_command(&options);
+        assert!(command.contains("export MIX_HOME=\"$remote_mix_home\""));
+        assert!(command.contains("mix deps.get"));
+        assert!(command.contains("mix compile"));
+        assert!(!command.contains("| tee"));
+    }
 }

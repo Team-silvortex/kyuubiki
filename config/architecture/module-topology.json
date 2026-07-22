@@ -102,6 +102,11 @@
           "id": "standard-compare",
           "command": "make benchmark-standard-compare",
           "scope": "benchmark"
+        },
+        {
+          "id": "agent-task-ir-recovery",
+          "command": "make test-integration-workflow-mesh-nightly",
+          "scope": "remote"
         }
       ],
       "mesh": [

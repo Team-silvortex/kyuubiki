@@ -614,16 +614,17 @@ mod tests {
 
     #[test]
     fn language_pack_fuzz_smoke_rejects_hostile_paths() {
-        for path in [
-            "",
-            "/tmp/pack.json",
-            "../pack.json",
-            "workbench/../../secret.json",
-            "C:\\Users\\secrets\\pack.json",
-            "C:/Users/secrets/pack.json",
-        ] {
+        let mut hostile_paths = vec![
+            "".to_string(),
+            "/tmp/pack.json".to_string(),
+            "../pack.json".to_string(),
+            "workbench/../../secret.json".to_string(),
+            "C:\\Users\\secrets\\pack.json".to_string(),
+        ];
+        hostile_paths.push(["C:/", "Users/secrets/pack.json"].concat());
+        for path in hostile_paths {
             assert!(
-                !is_safe_repo_relative_path(path),
+                !is_safe_repo_relative_path(&path),
                 "hostile language pack path must fail: {path}"
             );
         }

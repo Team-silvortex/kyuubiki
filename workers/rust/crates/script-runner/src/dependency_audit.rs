@@ -1,4 +1,5 @@
 use serde_json::Value;
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
@@ -17,6 +18,16 @@ struct AuditContract {
     npm: Vec<String>,
     cargo: Vec<String>,
     hex: Vec<String>,
+    hex_advisory_mitigations: Vec<HexAdvisoryMitigation>,
+}
+
+#[derive(Clone)]
+struct HexAdvisoryMitigation {
+    id: String,
+    package: String,
+    locked_version: String,
+    status: String,
+    evidence: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -77,13 +88,11 @@ fn audit_all(root: &Path, contract: &AuditContract) -> Vec<AuditResult> {
         AuditResult { summary, ..result }
     }));
     results.extend(contract.hex.iter().map(|cwd| {
-        let result = run(root, "mix", HEX_ARGS, cwd);
-        let summary = if result.status == 0 {
-            "0 advisory/retired package(s)"
-        } else {
-            "Hex advisories found"
-        }
-        .to_string();
+        let mut result = run(root, "mix", HEX_ARGS, cwd);
+        let output = format!("{}\n{}", result.stdout, result.stderr);
+        let (status, summary) =
+            classify_hex_audit(result.status, &output, &contract.hex_advisory_mitigations);
+        result.status = status;
         AuditResult { summary, ..result }
     }));
     results
@@ -147,11 +156,138 @@ fn load_contract(root: &Path) -> RunnerResult<AuditContract> {
     if field(&value, "schema") != SCHEMA {
         return Err(format!("{CONTRACT_PATH}: unexpected schema"));
     }
-    Ok(AuditContract {
+    let contract = AuditContract {
         npm: string_array(&value, "npm")?,
         cargo: string_array(&value, "cargo")?,
         hex: string_array(&value, "hex")?,
-    })
+        hex_advisory_mitigations: parse_hex_mitigations(&value)?,
+    };
+    validate_hex_mitigations(root, &contract.hex_advisory_mitigations)?;
+    Ok(contract)
+}
+
+fn parse_hex_mitigations(value: &Value) -> RunnerResult<Vec<HexAdvisoryMitigation>> {
+    value
+        .get("hex_advisory_mitigations")
+        .and_then(Value::as_array)
+        .ok_or_else(|| format!("{CONTRACT_PATH}: hex_advisory_mitigations must be an array"))?
+        .iter()
+        .map(|entry| {
+            Ok(HexAdvisoryMitigation {
+                id: required_field(entry, "id")?,
+                package: required_field(entry, "package")?,
+                locked_version: required_field(entry, "locked_version")?,
+                status: required_field(entry, "status")?,
+                evidence: string_array(entry, "evidence")?,
+            })
+        })
+        .collect()
+}
+
+fn validate_hex_mitigations(
+    root: &Path,
+    mitigations: &[HexAdvisoryMitigation],
+) -> RunnerResult<()> {
+    let mix_lock = fs::read_to_string(root.join("apps/web/mix.lock"))
+        .map_err(|error| format!("failed to read apps/web/mix.lock: {error}"))?;
+    let mut ids = BTreeSet::new();
+    for mitigation in mitigations {
+        if !ids.insert(mitigation.id.as_str()) {
+            return Err(format!(
+                "{CONTRACT_PATH}: duplicate advisory {}",
+                mitigation.id
+            ));
+        }
+        if !matches!(mitigation.status.as_str(), "mitigated" | "not_reachable") {
+            return Err(format!(
+                "{CONTRACT_PATH}: invalid mitigation status for {}",
+                mitigation.id
+            ));
+        }
+        let lock_prefix = format!(
+            "\"{}\": {{:hex, :{}, \"{}\"",
+            mitigation.package, mitigation.package, mitigation.locked_version
+        );
+        if !mix_lock.contains(&lock_prefix) {
+            return Err(format!(
+                "{CONTRACT_PATH}: {} does not match apps/web/mix.lock",
+                mitigation.id
+            ));
+        }
+        if mitigation.evidence.is_empty() {
+            return Err(format!(
+                "{CONTRACT_PATH}: {} has no evidence",
+                mitigation.id
+            ));
+        }
+        for evidence in &mitigation.evidence {
+            if Path::new(evidence).is_absolute() || evidence.contains("..") {
+                return Err(format!("{CONTRACT_PATH}: unsafe evidence path {evidence}"));
+            }
+            if !root.join(evidence).is_file() {
+                return Err(format!("{CONTRACT_PATH}: missing evidence {evidence}"));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn parse_hex_advisory_ids(output: &str) -> BTreeSet<String> {
+    let mut advisories = BTreeSet::new();
+    for (offset, _) in output.match_indices("CVE-") {
+        let id = output[offset..]
+            .chars()
+            .take_while(|character| {
+                character.is_ascii_digit()
+                    || *character == '-'
+                    || *character == 'C'
+                    || *character == 'V'
+                    || *character == 'E'
+            })
+            .collect::<String>();
+        if id.matches('-').count() == 2 {
+            advisories.insert(id);
+        }
+    }
+    advisories
+}
+
+fn classify_hex_audit(
+    command_status: i32,
+    output: &str,
+    mitigations: &[HexAdvisoryMitigation],
+) -> (i32, String) {
+    let advisories = parse_hex_advisory_ids(output);
+    let mitigated = mitigations
+        .iter()
+        .map(|mitigation| mitigation.id.as_str())
+        .collect::<BTreeSet<_>>();
+    let unknown = advisories
+        .iter()
+        .filter(|advisory| !mitigated.contains(advisory.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    if !unknown.is_empty() {
+        return (
+            1,
+            format!("unmitigated Hex advisories: {}", unknown.join(", ")),
+        );
+    }
+    if !advisories.is_empty() {
+        return (
+            0,
+            format!(
+                "{} explicitly mitigated Hex advisory/advisories: {}",
+                advisories.len(),
+                advisories.into_iter().collect::<Vec<_>>().join(", ")
+            ),
+        );
+    }
+    if command_status == 0 {
+        (0, "0 advisory/retired package(s)".to_string())
+    } else {
+        (command_status, "Hex audit command failed".to_string())
+    }
 }
 
 fn summarize_npm_audit(output: &str) -> String {
@@ -238,6 +374,15 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
     )?;
     expect_eq(&contract.hex, &["apps/web"], "hex audit dirs")?;
     expect_eq(
+        &contract
+            .hex_advisory_mitigations
+            .iter()
+            .map(|mitigation| mitigation.id.as_str())
+            .collect::<Vec<_>>(),
+        &["CVE-2026-43966", "CVE-2026-43969"],
+        "Hex mitigated advisories",
+    )?;
+    expect_eq(
         &lockfiles(&contract.npm, "package-lock.json"),
         &[
             "apps/frontend/package-lock.json",
@@ -277,6 +422,14 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
     }
     if summarize_npm_audit("not json") != "unable to parse npm audit JSON" {
         return Err("self-test expected bad npm JSON summary".to_string());
+    }
+    let parsed = parse_hex_advisory_ids(
+        "cowlib 2.18.0 - EEF-CVE-2026-43969\naka: CVE-2026-43969\ncowlib 2.18.0 - EEF-CVE-2026-43966",
+    );
+    if parsed.into_iter().collect::<Vec<_>>()
+        != ["CVE-2026-43966".to_string(), "CVE-2026-43969".to_string()]
+    {
+        return Err("self-test expected Hex advisory identifiers".to_string());
     }
     let formatted = format_npm_audit_failure(
         r#"{"vulnerabilities":{"next":{"name":"next","severity":"critical","isDirect":true,"via":[{"title":"Middleware bypass","url":"https://example.test/advisory"},"postcss"]}}}"#,
@@ -319,13 +472,35 @@ fn string_array(value: &Value, key: &str) -> RunnerResult<Vec<String>> {
         .collect()
 }
 
+fn required_field(value: &Value, key: &str) -> RunnerResult<String> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|field| !field.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| format!("{CONTRACT_PATH}: missing {key}"))
+}
+
 fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{format_npm_audit_failure, summarize_npm_audit};
+    use super::{
+        HexAdvisoryMitigation, classify_hex_audit, format_npm_audit_failure,
+        parse_hex_advisory_ids, summarize_npm_audit,
+    };
+
+    fn mitigation(id: &str) -> HexAdvisoryMitigation {
+        HexAdvisoryMitigation {
+            id: id.to_string(),
+            package: "cowlib".to_string(),
+            locked_version: "2.18.0".to_string(),
+            status: "mitigated".to_string(),
+            evidence: vec!["evidence".to_string()],
+        }
+    }
 
     #[test]
     fn npm_summary_handles_json_and_bad_json() {
@@ -348,5 +523,43 @@ mod tests {
             formatted,
             "- next (critical, direct): Middleware bypass https://example.test/advisory; postcss"
         );
+    }
+
+    #[test]
+    fn hex_advisory_parser_deduplicates_alias_lines() {
+        let parsed = parse_hex_advisory_ids(
+            "cowlib - EEF-CVE-2026-43969\naka: CVE-2026-43969, GHSA-test\ncowlib - EEF-CVE-2026-43966",
+        );
+        assert_eq!(
+            parsed.into_iter().collect::<Vec<_>>(),
+            ["CVE-2026-43966", "CVE-2026-43969"]
+        );
+    }
+
+    #[test]
+    fn hex_audit_only_accepts_explicit_mitigations() {
+        let mitigations = [mitigation("CVE-2026-43966")];
+        let (status, summary) = classify_hex_audit(
+            0,
+            "cowlib - EEF-CVE-2026-43966\naka: CVE-2026-43966",
+            &mitigations,
+        );
+        assert_eq!(status, 0);
+        assert!(summary.contains("explicitly mitigated"));
+
+        let (status, summary) = classify_hex_audit(
+            0,
+            "cowlib - EEF-CVE-2026-43966\nother - CVE-2099-00001",
+            &mitigations,
+        );
+        assert_eq!(status, 1);
+        assert_eq!(summary, "unmitigated Hex advisories: CVE-2099-00001");
+    }
+
+    #[test]
+    fn hex_audit_preserves_command_failure_without_advisories() {
+        let (status, summary) = classify_hex_audit(7, "network unavailable", &[]);
+        assert_eq!(status, 7);
+        assert_eq!(summary, "Hex audit command failed");
     }
 }

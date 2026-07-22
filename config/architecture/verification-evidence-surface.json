@@ -24,11 +24,15 @@
     "evidence_sources": [
       "workers/rust/crates/engine/src/workflow_solve_executor.rs",
       "workers/rust/crates/engine/src/tests/core.rs",
-      "workers/rust/crates/protocol/src/solver_execution_capability.rs"
+      "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+      "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+      "schemas/agent-solver-qualification.schema.json"
     ],
     "required_receipts": [
       "kyuubiki.engine-solver-provenance/v1",
-      "kyuubiki.solver-execution-capability/v1"
+      "kyuubiki.solver-execution-capability/v1",
+      "kyuubiki.agent-solver-qualification/v1",
+      "kyuubiki.agent-operator-task-failure/v1"
     ]
   },
   "workflow_composition": {

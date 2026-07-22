@@ -192,7 +192,7 @@ help:
 	@echo "  make test-integration-benchmark-profile-index Run benchmark profile index contract smoke tests"
 	@echo "  make test-integration-direct-mesh-docker Run the remote direct_mesh_gui Docker regression by default; use LOCAL_DOCKER=1 for local Docker"
 	@echo "  make test-integration-remote-ssh-fixture Run the explicit local Docker sshd fixture probe"
-	@echo "  make test-integration-workflow-mesh Run the distributed workflow mesh regression trio in sequence"
+	@echo "  make test-integration-workflow-mesh Run the distributed workflow mesh and Agent TaskIR qualification quartet"
 	@echo "  make test-integration-workflow-mesh-nightly Run the remote workflow mesh regression flow on kyuubiki-lab and pull logs back"
 	@echo "  make test-integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples"
 	@echo "  make test-integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples"
