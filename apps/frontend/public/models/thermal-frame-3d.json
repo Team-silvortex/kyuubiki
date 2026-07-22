@@ -74,5 +74,8 @@
       "material_id": "mat-1"
     }
   ],
-  "directional_springs": []
+  "directional_springs": [],
+  "directional_rotational_springs": [],
+  "directional_constraints": [],
+  "directional_rotational_constraints": []
 }

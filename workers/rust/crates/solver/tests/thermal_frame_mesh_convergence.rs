@@ -196,6 +196,9 @@ fn thermal_frame_3d_request(element_count: usize) -> SolveThermalFrame3dRequest 
         nodes,
         elements,
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 

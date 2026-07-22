@@ -333,6 +333,20 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "directional-rotational-spring-closed-form",
+          "kind": "regression_test",
+          "gate": "verify arbitrary-axis rotational spring stiffness, rotation, reaction moment, and combined member-plus-support energy against a torsion closed form",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "exact-directional-constraint-closed-form",
+          "kind": "regression_test",
+          "gate": "verify exact arbitrary-direction translational and rotational constraints, reaction recovery, and consistent energy against coupled frame closed forms without penalty stiffness",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_directional_constraint.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-thermal-frame-3d-qualification-release-evidence before promotion",

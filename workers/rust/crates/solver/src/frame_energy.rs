@@ -25,30 +25,22 @@ pub(crate) fn thermal_frame2d_strain_energy(
 }
 
 pub(crate) fn thermal_frame3d_strain_energy(
-    youngs_modulus: f64,
-    shear_modulus: f64,
-    area: f64,
-    torsion_constant: f64,
-    moment_of_inertia_y: f64,
-    moment_of_inertia_z: f64,
-    length: f64,
+    local_stiffness: &[[f64; 12]; 12],
+    equivalent_thermal_load: &[f64; 12],
     local_displacements: &[f64; 12],
-    mechanical_strain: f64,
-    thermal_curvature_y: f64,
-    thermal_curvature_z: f64,
+    initial_thermal_energy: f64,
 ) -> f64 {
-    let axial_energy = 0.5 * youngs_modulus * area * mechanical_strain.powi(2) * length;
-    let total_curvature_y = (local_displacements[10] - local_displacements[4]) / length;
-    let total_curvature_z = (local_displacements[11] - local_displacements[5]) / length;
-    let mechanical_curvature_y = total_curvature_y - thermal_curvature_y;
-    let mechanical_curvature_z = total_curvature_z - thermal_curvature_z;
-    let bending_energy = 0.5
-        * youngs_modulus
-        * (moment_of_inertia_z * mechanical_curvature_y.powi(2)
-            + moment_of_inertia_y * mechanical_curvature_z.powi(2))
-        * length;
-    let torsion_rate = (local_displacements[9] - local_displacements[3]) / length;
-    let torsion_energy = 0.5 * shear_modulus * torsion_constant * torsion_rate.powi(2) * length;
-
-    axial_energy + bending_energy + torsion_energy
+    let elastic_energy = 0.5
+        * (0..12)
+            .map(|row| {
+                local_displacements[row]
+                    * (0..12)
+                        .map(|column| local_stiffness[row][column] * local_displacements[column])
+                        .sum::<f64>()
+            })
+            .sum::<f64>();
+    let thermal_work = (0..12)
+        .map(|index| equivalent_thermal_load[index] * local_displacements[index])
+        .sum::<f64>();
+    elastic_energy - thermal_work + initial_thermal_energy
 }

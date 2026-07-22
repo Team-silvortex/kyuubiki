@@ -51,6 +51,7 @@ mod stokes_flow_plane_2d_results;
 mod stokes_flow_plane_2d_validation;
 mod thermal_bar_1d_fast;
 mod thermal_frame_3d;
+mod thermal_frame_3d_constraints;
 mod thermal_frame_3d_validation;
 mod thermal_plane_2d;
 mod thermal_plane_2d_profile;

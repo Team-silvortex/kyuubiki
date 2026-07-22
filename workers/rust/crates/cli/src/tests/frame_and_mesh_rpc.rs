@@ -272,6 +272,9 @@ fn handles_thermal_frame_3d_rpc_requests() {
                 temperature_gradient_z: 20.0,
             }],
             directional_springs: Vec::new(),
+            directional_rotational_springs: Vec::new(),
+            directional_constraints: Vec::new(),
+            directional_rotational_constraints: Vec::new(),
         })
         .expect("params"),
     };

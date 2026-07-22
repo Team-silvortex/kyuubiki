@@ -4,13 +4,13 @@ use crate::frame_3d_math::{
     multiply_matrix_vector_12x12, subtract_vector_12, transform_frame3d_stiffness, transpose_12x12,
 };
 use crate::frame_energy::thermal_frame3d_strain_energy;
-use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
-};
+use crate::linear_algebra::{SparseMatrix, add_at, solve_spd_system_profile_with_options};
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::thermal_frame_3d_constraints::ThermalFrame3dConstraintSystem;
 use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
-    SolveThermalFrame3dRequest, SolveThermalFrame3dResult, ThermalFrame3dDirectionalSpringResult,
+    SolveThermalFrame3dRequest, SolveThermalFrame3dResult,
+    ThermalFrame3dDirectionalRotationalSpringResult, ThermalFrame3dDirectionalSpringResult,
     ThermalFrame3dElementResult, ThermalFrame3dNodeResult,
 };
 
@@ -25,6 +25,7 @@ pub fn solve_thermal_frame_3d_with_options(
     options: SpdSolveOptions,
 ) -> Result<SolveThermalFrame3dResult, String> {
     validate_request(request)?;
+    let constraint_system = ThermalFrame3dConstraintSystem::build(request)?;
 
     let dof_count = request.nodes.len() * 6;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -40,17 +41,20 @@ pub fn solve_thermal_frame_3d_with_options(
     }
 
     for spring in &request.directional_springs {
-        let direction = normalized_direction(spring.direction);
-        for row in 0..3 {
-            for column in 0..3 {
-                add_at(
-                    &mut global_stiffness,
-                    spring.node * 6 + row,
-                    spring.node * 6 + column,
-                    spring.stiffness * direction[row] * direction[column],
-                );
-            }
-        }
+        assemble_directional_spring(
+            &mut global_stiffness,
+            spring.node * 6,
+            spring.direction,
+            spring.stiffness,
+        );
+    }
+    for spring in &request.directional_rotational_springs {
+        assemble_directional_spring(
+            &mut global_stiffness,
+            spring.node * 6 + 3,
+            spring.direction,
+            spring.stiffness,
+        );
     }
 
     for element in &request.elements {
@@ -82,26 +86,31 @@ pub fn solve_thermal_frame_3d_with_options(
         }
     }
 
-    let constrained = constrained_thermal_frame_3d_dofs(request);
-    let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
-    let reduced_displacements =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
-            .solution;
-
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
+    let (reduced_stiffness, reduced_force) =
+        constraint_system.project(&global_stiffness, &force_vector);
+    let reduced_displacements = if reduced_force.is_empty() {
+        Vec::new()
+    } else {
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?.solution
+    };
+    let displacements = constraint_system.restore(&reduced_displacements);
 
     let nodes = build_thermal_frame_3d_nodes(request, &displacements);
     let elements = build_thermal_frame_3d_elements(request, &displacements);
     let directional_springs = build_directional_spring_results(request, &displacements);
+    let directional_rotational_springs =
+        build_directional_rotational_spring_results(request, &displacements);
+    let (directional_constraints, directional_rotational_constraints) = constraint_system
+        .build_results(request, &global_stiffness, &force_vector, &displacements)?;
     let total_strain_energy = elements
         .iter()
         .map(|element| element.strain_energy)
         .sum::<f64>()
         + directional_springs
+            .iter()
+            .map(|spring| spring.strain_energy)
+            .sum::<f64>()
+        + directional_rotational_springs
             .iter()
             .map(|spring| spring.strain_energy)
             .sum::<f64>();
@@ -152,7 +161,29 @@ pub fn solve_thermal_frame_3d_with_options(
         nodes,
         elements,
         directional_springs,
+        directional_rotational_springs,
+        directional_constraints,
+        directional_rotational_constraints,
     })
+}
+
+fn assemble_directional_spring(
+    global_stiffness: &mut SparseMatrix,
+    dof_offset: usize,
+    raw_direction: [f64; 3],
+    stiffness: f64,
+) {
+    let direction = normalized_direction(raw_direction);
+    for row in 0..3 {
+        for column in 0..3 {
+            add_at(
+                global_stiffness,
+                dof_offset + row,
+                dof_offset + column,
+                stiffness * direction[row] * direction[column],
+            );
+        }
+    }
 }
 
 fn build_directional_spring_results(
@@ -178,6 +209,34 @@ fn build_directional_spring_results(
                 reaction_force: -spring.stiffness * displacement,
                 stiffness: spring.stiffness,
                 strain_energy: 0.5 * spring.stiffness * displacement * displacement,
+            }
+        })
+        .collect()
+}
+
+fn build_directional_rotational_spring_results(
+    request: &SolveThermalFrame3dRequest,
+    displacements: &[f64],
+) -> Vec<ThermalFrame3dDirectionalRotationalSpringResult> {
+    request
+        .directional_rotational_springs
+        .iter()
+        .enumerate()
+        .map(|(index, spring)| {
+            let direction = normalized_direction(spring.direction);
+            let offset = spring.node * 6 + 3;
+            let rotation = direction[0] * displacements[offset]
+                + direction[1] * displacements[offset + 1]
+                + direction[2] * displacements[offset + 2];
+            ThermalFrame3dDirectionalRotationalSpringResult {
+                index,
+                id: spring.id.clone(),
+                node: spring.node,
+                direction,
+                rotation,
+                reaction_moment: -spring.stiffness * rotation,
+                stiffness: spring.stiffness,
+                strain_energy: 0.5 * spring.stiffness * rotation * rotation,
             }
         })
         .collect()
@@ -269,18 +328,17 @@ fn build_thermal_frame_3d_elements(
             let thermal_curvature_z = element.thermal_expansion * element.temperature_gradient_z
                 / element.section_depth_z;
             let mechanical_strain = total_strain - thermal_strain;
+            let initial_thermal_energy = 0.5
+                * element.youngs_modulus
+                * length
+                * (element.area * thermal_strain.powi(2)
+                    + element.moment_of_inertia_z * thermal_curvature_y.powi(2)
+                    + element.moment_of_inertia_y * thermal_curvature_z.powi(2));
             let strain_energy = thermal_frame3d_strain_energy(
-                element.youngs_modulus,
-                element.shear_modulus,
-                element.area,
-                element.torsion_constant,
-                element.moment_of_inertia_y,
-                element.moment_of_inertia_z,
-                length,
+                &local_stiffness,
+                &equivalent_local,
                 &local_displacements,
-                mechanical_strain,
-                thermal_curvature_y,
-                thermal_curvature_z,
+                initial_thermal_energy,
             );
             let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
             let bending_stress_y =
@@ -320,26 +378,6 @@ fn build_thermal_frame_3d_elements(
                 max_combined_stress: axial_stress + max_bending_stress,
                 strain_energy,
             }
-        })
-        .collect()
-}
-
-fn constrained_thermal_frame_3d_dofs(request: &SolveThermalFrame3dRequest) -> Vec<usize> {
-    request
-        .nodes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, node)| {
-            [
-                node.fix_x.then_some(index * 6),
-                node.fix_y.then_some(index * 6 + 1),
-                node.fix_z.then_some(index * 6 + 2),
-                node.fix_rx.then_some(index * 6 + 3),
-                node.fix_ry.then_some(index * 6 + 4),
-                node.fix_rz.then_some(index * 6 + 5),
-            ]
-            .into_iter()
-            .flatten()
         })
         .collect()
 }

@@ -237,11 +237,39 @@ pub struct ThermalFrame3dDirectionalSpringInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalRotationalSpringInput {
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub stiffness: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalConstraintInput {
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalRotationalConstraintInput {
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveThermalFrame3dRequest {
     pub nodes: Vec<ThermalFrame3dNodeInput>,
     pub elements: Vec<ThermalFrame3dElementInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub directional_springs: Vec<ThermalFrame3dDirectionalSpringInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub directional_rotational_springs: Vec<ThermalFrame3dDirectionalRotationalSpringInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub directional_constraints: Vec<ThermalFrame3dDirectionalConstraintInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub directional_rotational_constraints: Vec<ThermalFrame3dDirectionalRotationalConstraintInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -425,11 +453,47 @@ pub struct ThermalFrame3dDirectionalSpringResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalRotationalSpringResult {
+    pub index: usize,
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub rotation: f64,
+    pub reaction_moment: f64,
+    pub stiffness: f64,
+    pub strain_energy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalConstraintResult {
+    pub index: usize,
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub displacement: f64,
+    pub reaction_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dDirectionalRotationalConstraintResult {
+    pub index: usize,
+    pub id: String,
+    pub node: usize,
+    pub direction: [f64; 3],
+    pub rotation: f64,
+    pub reaction_moment: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveThermalFrame3dResult {
     pub input: SolveThermalFrame3dRequest,
     pub nodes: Vec<ThermalFrame3dNodeResult>,
     pub elements: Vec<ThermalFrame3dElementResult>,
     pub directional_springs: Vec<ThermalFrame3dDirectionalSpringResult>,
+    pub directional_rotational_springs: Vec<ThermalFrame3dDirectionalRotationalSpringResult>,
+    pub directional_constraints: Vec<ThermalFrame3dDirectionalConstraintResult>,
+    pub directional_rotational_constraints:
+        Vec<ThermalFrame3dDirectionalRotationalConstraintResult>,
     pub max_displacement: f64,
     pub max_rotation: f64,
     pub max_moment: f64,

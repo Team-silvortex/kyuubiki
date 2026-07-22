@@ -463,6 +463,8 @@
         "explicit local-y-axis contract and arbitrary 3D rotation objectivity regression for single-member, non-collinear, and branched multi-support assemblies",
         "quadratic-field multi-element dual-axis second-order convergence regression",
         "directional translational spring displacement, reaction, and energy closed-form regression",
+        "directional rotational spring rotation, reaction moment, and torsion-energy closed-form regression",
+        "exact directional translation and rotation constraint nullspace-elimination regressions",
         "release-retained validation output"
       ],
       "graduation_gate": "restrained 3D frame strain split, thermal curvature, moment, combined stress, and energy evidence must be retained before qualification",

@@ -82,8 +82,14 @@ Current progress:
 - `solve.thermal_frame_3d` now supports arbitrary-direction translational
   springs with normalized directions, exact `k n n^T` assembly, reported
   displacement/reaction/energy, axial closed-form evidence, and rotated branch
-  objectivity; exact rigid directional constraints and rotational springs
-  remain separate contract targets
+  objectivity
+- arbitrary-axis rotational springs now follow the same projector contract on
+  rotational degrees of freedom, report rotation/reaction moment/energy, and
+  retain torsion closed-form plus rotated branch evidence
+- exact arbitrary-direction translation and rotation constraints now use
+  orthonormal nullspace elimination rather than penalty stiffness, recover
+  reactions from the full residual, reject dependent directions, and retain
+  coupled closed-form plus rotated branch evidence
 
 Qualification focus:
 

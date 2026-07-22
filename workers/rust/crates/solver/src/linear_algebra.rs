@@ -49,6 +49,10 @@ impl SparseMatrix {
         self.rows.iter().map(Vec::len).sum()
     }
 
+    pub(crate) fn row_entries(&self, row: usize) -> &[(usize, f64)] {
+        &self.rows[row]
+    }
+
     fn average_row_non_zero_hint(&self) -> usize {
         let size = self.size().max(1);
         self.non_zero_count().div_ceil(size).max(1)

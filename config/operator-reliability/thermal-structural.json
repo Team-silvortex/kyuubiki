@@ -241,6 +241,10 @@
             "thermal_frame_3d_branched_multi_support_assembly_is_objective",
             "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
             "thermal_frame_3d_directional_spring_matches_axial_closed_form",
+            "thermal_frame_3d_directional_rotational_spring_matches_torsion_closed_form",
+            "workers/rust/crates/solver/tests/thermal_frame_directional_constraint.rs",
+            "directional_translation_constraint_matches_coupled_closed_form",
+            "directional_rotation_constraint_matches_coupled_closed_form",
             "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
             "thermal_frame_3d_quadratic_fields_converge_at_second_order"
           ],
@@ -257,6 +261,7 @@
             "workers/rust/crates/solver/tests/frame_input_reliability.rs",
             "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
             "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+            "workers/rust/crates/solver/tests/thermal_frame_directional_constraint.rs",
             "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
             "workers/rust/crates/protocol/src/tests/frame_beam_rpc.rs"
           ]

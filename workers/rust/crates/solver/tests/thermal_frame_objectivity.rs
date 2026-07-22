@@ -1,7 +1,9 @@
 use kyuubiki_protocol::{
     SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, ThermalFrame2dElementInput,
-    ThermalFrame2dNodeInput, ThermalFrame3dDirectionalSpringInput, ThermalFrame3dElementInput,
-    ThermalFrame3dNodeInput,
+    ThermalFrame2dNodeInput, ThermalFrame3dDirectionalConstraintInput,
+    ThermalFrame3dDirectionalRotationalConstraintInput,
+    ThermalFrame3dDirectionalRotationalSpringInput, ThermalFrame3dDirectionalSpringInput,
+    ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
 };
 use kyuubiki_solver::{solve_thermal_frame_2d, solve_thermal_frame_3d};
 
@@ -151,6 +153,9 @@ fn thermal_frame_3d_request() -> SolveThermalFrame3dRequest {
             temperature_gradient_z: 15.0,
         }],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 
@@ -182,6 +187,9 @@ fn thermal_frame_3d_assembly_request() -> SolveThermalFrame3dRequest {
             thermal_frame_3d_element("member-c", 2, 3, [1.0, 0.1, -0.2], 24.0, 17.0),
         ],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 
@@ -225,6 +233,24 @@ fn thermal_frame_3d_branched_request() -> SolveThermalFrame3dRequest {
             direction: [0.4, -0.2, 1.0],
             stiffness: 2.8e6,
         }],
+        directional_rotational_springs: vec![ThermalFrame3dDirectionalRotationalSpringInput {
+            id: "tip-rotational-support".to_string(),
+            node: 3,
+            direction: [-0.3, 1.0, 0.5],
+            stiffness: 3.7e5,
+        }],
+        directional_constraints: vec![ThermalFrame3dDirectionalConstraintInput {
+            id: "tip-guide".to_string(),
+            node: 3,
+            direction: [0.7, 0.2, -0.4],
+        }],
+        directional_rotational_constraints: vec![
+            ThermalFrame3dDirectionalRotationalConstraintInput {
+                id: "tip-rotational-guide".to_string(),
+                node: 3,
+                direction: [0.1, -0.5, 0.8],
+            },
+        ],
     }
 }
 
@@ -327,6 +353,15 @@ fn rotate_frame_3d(
     }
     for spring in &mut request.directional_springs {
         spring.direction = rotate_vector_3d(spring.direction, axis, angle);
+    }
+    for spring in &mut request.directional_rotational_springs {
+        spring.direction = rotate_vector_3d(spring.direction, axis, angle);
+    }
+    for constraint in &mut request.directional_constraints {
+        constraint.direction = rotate_vector_3d(constraint.direction, axis, angle);
+    }
+    for constraint in &mut request.directional_rotational_constraints {
+        constraint.direction = rotate_vector_3d(constraint.direction, axis, angle);
     }
     request
 }
@@ -530,6 +565,18 @@ fn assert_frame_3d_covariance(
         baseline.directional_springs.len(),
         rotated.directional_springs.len()
     );
+    assert_eq!(
+        baseline.directional_rotational_springs.len(),
+        rotated.directional_rotational_springs.len()
+    );
+    assert_eq!(
+        baseline.directional_constraints.len(),
+        rotated.directional_constraints.len()
+    );
+    assert_eq!(
+        baseline.directional_rotational_constraints.len(),
+        rotated.directional_rotational_constraints.len()
+    );
     for (index, (baseline_node, rotated_node)) in
         baseline.nodes.iter().zip(&rotated.nodes).enumerate()
     {
@@ -600,6 +647,90 @@ fn assert_frame_3d_covariance(
                 &format!("rotated directional spring {index} {label}"),
             );
         }
+    }
+    for (index, (baseline_spring, rotated_spring)) in baseline
+        .directional_rotational_springs
+        .iter()
+        .zip(&rotated.directional_rotational_springs)
+        .enumerate()
+    {
+        assert_vector_close(
+            rotated_spring.direction,
+            rotate_vector_3d(baseline_spring.direction, axis, angle),
+            &format!("rotated directional rotational spring {index} direction"),
+        );
+        for (label, actual, expected) in [
+            (
+                "rotation",
+                rotated_spring.rotation,
+                baseline_spring.rotation,
+            ),
+            (
+                "reaction moment",
+                rotated_spring.reaction_moment,
+                baseline_spring.reaction_moment,
+            ),
+            (
+                "stiffness",
+                rotated_spring.stiffness,
+                baseline_spring.stiffness,
+            ),
+            (
+                "strain energy",
+                rotated_spring.strain_energy,
+                baseline_spring.strain_energy,
+            ),
+        ] {
+            assert_close(
+                actual,
+                expected,
+                &format!("rotated directional rotational spring {index} {label}"),
+            );
+        }
+    }
+    for (index, (baseline_constraint, rotated_constraint)) in baseline
+        .directional_constraints
+        .iter()
+        .zip(&rotated.directional_constraints)
+        .enumerate()
+    {
+        assert_vector_close(
+            rotated_constraint.direction,
+            rotate_vector_3d(baseline_constraint.direction, axis, angle),
+            &format!("rotated directional constraint {index} direction"),
+        );
+        assert_close(
+            rotated_constraint.displacement,
+            baseline_constraint.displacement,
+            "constraint displacement",
+        );
+        assert_close(
+            rotated_constraint.reaction_force,
+            baseline_constraint.reaction_force,
+            "constraint reaction",
+        );
+    }
+    for (index, (baseline_constraint, rotated_constraint)) in baseline
+        .directional_rotational_constraints
+        .iter()
+        .zip(&rotated.directional_rotational_constraints)
+        .enumerate()
+    {
+        assert_vector_close(
+            rotated_constraint.direction,
+            rotate_vector_3d(baseline_constraint.direction, axis, angle),
+            &format!("rotated rotational constraint {index} direction"),
+        );
+        assert_close(
+            rotated_constraint.rotation,
+            baseline_constraint.rotation,
+            "constraint rotation",
+        );
+        assert_close(
+            rotated_constraint.reaction_moment,
+            baseline_constraint.reaction_moment,
+            "constraint reaction moment",
+        );
     }
 }
 

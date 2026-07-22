@@ -32,30 +32,98 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
         validate_element(request, element)?;
     }
     for spring in &request.directional_springs {
-        if spring.node >= request.nodes.len() {
-            return Err(
-                "thermal 3d frame directional spring references an out-of-range node".to_string(),
-            );
-        }
-        if !(spring.stiffness.is_finite() && spring.stiffness > 0.0) {
-            return Err(
-                "thermal 3d frame directional spring stiffness must be positive".to_string(),
-            );
-        }
-        if spring.direction.iter().any(|value| !value.is_finite()) {
-            return Err("thermal 3d frame directional spring direction must be finite".to_string());
-        }
-        let norm = spring
-            .direction
-            .iter()
-            .map(|value| value * value)
-            .sum::<f64>()
-            .sqrt();
-        if norm <= 1.0e-12 {
-            return Err(
-                "thermal 3d frame directional spring direction must be non-zero".to_string(),
-            );
-        }
+        validate_directional_spring(
+            spring.node,
+            spring.direction,
+            spring.stiffness,
+            request.nodes.len(),
+            "directional spring",
+        )?;
+    }
+    for spring in &request.directional_rotational_springs {
+        validate_directional_spring(
+            spring.node,
+            spring.direction,
+            spring.stiffness,
+            request.nodes.len(),
+            "directional rotational spring",
+        )?;
+    }
+    for constraint in &request.directional_constraints {
+        validate_directional_constraint(
+            constraint.node,
+            constraint.direction,
+            request.nodes.len(),
+            "directional constraint",
+        )?;
+    }
+    for constraint in &request.directional_rotational_constraints {
+        validate_directional_constraint(
+            constraint.node,
+            constraint.direction,
+            request.nodes.len(),
+            "directional rotational constraint",
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_directional_constraint(
+    node: usize,
+    direction: [f64; 3],
+    node_count: usize,
+    kind: &str,
+) -> Result<(), String> {
+    if node >= node_count {
+        return Err(format!(
+            "thermal 3d frame {kind} references an out-of-range node"
+        ));
+    }
+    if direction.iter().any(|value| !value.is_finite()) {
+        return Err(format!("thermal 3d frame {kind} direction must be finite"));
+    }
+    let norm = direction
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    if norm <= 1.0e-12 {
+        return Err(format!(
+            "thermal 3d frame {kind} direction must be non-zero"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_directional_spring(
+    node: usize,
+    direction: [f64; 3],
+    stiffness: f64,
+    node_count: usize,
+    kind: &str,
+) -> Result<(), String> {
+    if node >= node_count {
+        return Err(format!(
+            "thermal 3d frame {kind} references an out-of-range node"
+        ));
+    }
+    if !(stiffness.is_finite() && stiffness > 0.0) {
+        return Err(format!(
+            "thermal 3d frame {kind} stiffness must be positive"
+        ));
+    }
+    if direction.iter().any(|value| !value.is_finite()) {
+        return Err(format!("thermal 3d frame {kind} direction must be finite"));
+    }
+    let norm = direction
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    if norm <= 1.0e-12 {
+        return Err(format!(
+            "thermal 3d frame {kind} direction must be non-zero"
+        ));
     }
     Ok(())
 }
@@ -149,7 +217,7 @@ fn validate_positive_frame_properties(element: &ThermalFrame3dElementInput) -> R
 }
 
 fn constrained_dof_count(request: &SolveThermalFrame3dRequest) -> usize {
-    request
+    let fixed = request
         .nodes
         .iter()
         .map(|node| {
@@ -160,5 +228,6 @@ fn constrained_dof_count(request: &SolveThermalFrame3dRequest) -> usize {
                 + node.fix_ry as usize
                 + node.fix_rz as usize
         })
-        .sum()
+        .sum::<usize>();
+    fixed + request.directional_constraints.len() + request.directional_rotational_constraints.len()
 }

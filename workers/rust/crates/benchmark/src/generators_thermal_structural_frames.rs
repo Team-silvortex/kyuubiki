@@ -146,6 +146,9 @@ pub(crate) fn generate_thermal_frame_3d_case(
         nodes,
         elements,
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 

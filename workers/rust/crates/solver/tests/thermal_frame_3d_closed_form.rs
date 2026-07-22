@@ -533,6 +533,9 @@ fn restrained_member(
             temperature_gradient_z: gradient_z,
         }],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 

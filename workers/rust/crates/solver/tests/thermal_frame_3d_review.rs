@@ -45,6 +45,9 @@ fn thermal_frame_3d_review_bundle_checks_restrained_temperature_and_gradient_res
             temperature_gradient_z: gradient_z,
         }],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     })
     .expect("review thermal 3d frame should solve");
 

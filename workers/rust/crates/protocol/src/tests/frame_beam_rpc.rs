@@ -248,6 +248,24 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
                 direction: [1.0, 2.0, 0.0],
                 stiffness: 2.5e6,
             }],
+            directional_rotational_springs: vec![ThermalFrame3dDirectionalRotationalSpringInput {
+                id: "rotational-support-0".to_string(),
+                node: 1,
+                direction: [0.0, 1.0, 1.0],
+                stiffness: 4.0e5,
+            }],
+            directional_constraints: vec![ThermalFrame3dDirectionalConstraintInput {
+                id: "guide-0".to_string(),
+                node: 1,
+                direction: [1.0, -1.0, 0.0],
+            }],
+            directional_rotational_constraints: vec![
+                ThermalFrame3dDirectionalRotationalConstraintInput {
+                    id: "rotational-guide-0".to_string(),
+                    node: 1,
+                    direction: [0.0, 1.0, -1.0],
+                },
+            ],
         })
         .expect("request params should serialize"),
     };
@@ -262,6 +280,19 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
     assert_eq!(params.elements[0].local_y_axis, Some([0.0, 1.0, 0.0]));
     assert_eq!(params.directional_springs.len(), 1);
     assert_eq!(params.directional_springs[0].direction, [1.0, 2.0, 0.0]);
+    assert_eq!(params.directional_rotational_springs.len(), 1);
+    assert_eq!(
+        params.directional_rotational_springs[0].direction,
+        [0.0, 1.0, 1.0]
+    );
+    assert_eq!(
+        params.directional_constraints[0].direction,
+        [1.0, -1.0, 0.0]
+    );
+    assert_eq!(
+        params.directional_rotational_constraints[0].direction,
+        [0.0, 1.0, -1.0]
+    );
 
     let mut legacy_params =
         serde_json::to_value(&params).expect("thermal frame params should serialize");
@@ -273,10 +304,25 @@ fn serializes_thermal_frame_3d_rpc_round_trip() {
         .as_object_mut()
         .expect("request should serialize as an object")
         .remove("directional_springs");
+    legacy_params
+        .as_object_mut()
+        .expect("request should serialize as an object")
+        .remove("directional_rotational_springs");
+    legacy_params
+        .as_object_mut()
+        .expect("request should serialize as an object")
+        .remove("directional_constraints");
+    legacy_params
+        .as_object_mut()
+        .expect("request should serialize as an object")
+        .remove("directional_rotational_constraints");
     let legacy: SolveThermalFrame3dRequest =
         serde_json::from_value(legacy_params).expect("legacy params should decode");
     assert_eq!(legacy.elements[0].local_y_axis, None);
     assert!(legacy.directional_springs.is_empty());
+    assert!(legacy.directional_rotational_springs.is_empty());
+    assert!(legacy.directional_constraints.is_empty());
+    assert!(legacy.directional_rotational_constraints.is_empty());
 }
 
 #[test]

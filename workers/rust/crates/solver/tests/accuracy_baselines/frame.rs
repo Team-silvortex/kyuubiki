@@ -349,6 +349,9 @@ fn accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients() {
             temperature_gradient_z: 20.0,
         }],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     })
     .expect("thermal_frame_3d baseline should solve");
 

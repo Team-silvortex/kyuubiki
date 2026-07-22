@@ -127,6 +127,8 @@
         "non_collinear_assembly_objectivity",
         "branched_multi_support_assembly_objectivity",
         "directional_elastic_support_closed_form",
+        "directional_rotational_support_closed_form",
+        "exact_directional_constraint_nullspace_elimination",
         "quadratic_field_mesh_convergence"
       ],
       "formal_invariants": [
@@ -140,6 +142,8 @@
         "rotated_non_collinear_assembly_preserves_all_node_and_element_responses",
         "rotated_branched_multi_support_assembly_preserves_all_responses",
         "directional_spring_displacement_reaction_and_energy_match_closed_form",
+        "directional_rotational_spring_rotation_reaction_and_energy_match_torsion_closed_form",
+        "exact_directional_translation_and_rotation_constraints_match_coupled_closed_forms",
         "quadratic_temperature_and_dual_gradient_response_converges_at_second_order"
       ],
       "evidence_paths": [
@@ -151,6 +155,7 @@
         "workers/rust/crates/solver/tests/frame_input_reliability.rs",
         "workers/rust/crates/solver/tests/thermal_frame_objectivity.rs",
         "workers/rust/crates/solver/tests/thermal_frame_directional_spring.rs",
+        "workers/rust/crates/solver/tests/thermal_frame_directional_constraint.rs",
         "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
         "workers/rust/crates/protocol/src/types/plane_frame.rs",
         "workers/rust/crates/protocol/src/tests/frame_beam_rpc.rs"
@@ -181,12 +186,17 @@
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-protocol serializes_thermal_frame_3d_rpc_round_trip -- --nocapture"
         },
-        {
-          "id": "thermal-frame-3d-directional-spring",
-          "kind": "cross_check",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_directional_spring -- --nocapture"
-        },
-        {
+      {
+        "id": "thermal-frame-3d-directional-spring",
+        "kind": "cross_check",
+        "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_directional_spring -- --nocapture"
+      },
+      {
+        "id": "thermal-frame-3d-directional-constraint",
+        "kind": "cross_check",
+        "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_directional_constraint -- --nocapture"
+      },
+      {
           "id": "thermal-frame-3d-mesh-convergence",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_frame_mesh_convergence thermal_frame_3d -- --nocapture"

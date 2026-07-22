@@ -193,6 +193,67 @@ fn thermal_frame_3d_rejects_invalid_element_topology_and_thermal_properties() {
     let error = solve_thermal_frame_3d(&request)
         .expect_err("zero directional spring stiffness should be rejected");
     assert!(error.contains("stiffness must be positive"));
+
+    for (node, direction, stiffness, expected) in [
+        (9, [1.0, 0.0, 0.0], 1.0e5, "out-of-range node"),
+        (1, [0.0; 3], 1.0e5, "direction must be non-zero"),
+        (
+            1,
+            [1.0, f64::INFINITY, 0.0],
+            1.0e5,
+            "direction must be finite",
+        ),
+        (1, [1.0, 0.0, 0.0], -1.0, "stiffness must be positive"),
+    ] {
+        let mut request = thermal_frame_3d_request();
+        request.directional_rotational_springs.push(
+            kyuubiki_protocol::ThermalFrame3dDirectionalRotationalSpringInput {
+                id: "invalid-rotational-support".to_string(),
+                node,
+                direction,
+                stiffness,
+            },
+        );
+        let error = solve_thermal_frame_3d(&request)
+            .expect_err("invalid directional rotational spring should be rejected");
+        assert!(
+            error.contains(expected),
+            "unexpected rotational spring error: {error}"
+        );
+    }
+
+    for (node, direction, expected) in [
+        (9, [1.0, 0.0, 0.0], "out-of-range node"),
+        (1, [0.0; 3], "direction must be non-zero"),
+        (1, [f64::NAN, 1.0, 0.0], "direction must be finite"),
+    ] {
+        let mut request = thermal_frame_3d_request();
+        request.directional_constraints.push(
+            kyuubiki_protocol::ThermalFrame3dDirectionalConstraintInput {
+                id: "invalid-guide".to_string(),
+                node,
+                direction,
+            },
+        );
+        let error = solve_thermal_frame_3d(&request)
+            .expect_err("invalid directional constraint should be rejected");
+        assert!(
+            error.contains(expected),
+            "unexpected constraint error: {error}"
+        );
+    }
+
+    let mut request = thermal_frame_3d_request();
+    request.directional_rotational_constraints.push(
+        kyuubiki_protocol::ThermalFrame3dDirectionalRotationalConstraintInput {
+            id: "duplicate-fixed-axis".to_string(),
+            node: 0,
+            direction: [1.0, 0.0, 0.0],
+        },
+    );
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("linearly dependent directional constraint should be rejected");
+    assert!(error.contains("linearly dependent directions"));
 }
 
 fn frame_2d_request() -> SolveFrame2dRequest {
@@ -302,6 +363,9 @@ fn thermal_frame_3d_request() -> SolveThermalFrame3dRequest {
             temperature_gradient_z: 20.0,
         }],
         directional_springs: Vec::new(),
+        directional_rotational_springs: Vec::new(),
+        directional_constraints: Vec::new(),
+        directional_rotational_constraints: Vec::new(),
     }
 }
 
