@@ -377,12 +377,31 @@ now hierarchical: child intervals retain only changing endpoint responses and
 halve their parent's projective angle. Probe origin, refinement level, and
 parent angle remain visible through the engine route. A ten-element Williams
 toggle-frame path now correlates the first external snap-through limit event
-against the published analytic load within 5%. The next stability milestone is
-external bifurcation and switched-branch correlation. The first internal
-complex-topology isolation reference also proves single/multi-mode spectral
-consistency and fixed-load host-response invariance after adding an unloaded
-free branch; the 128-mode and 256-inertia caps are observability limits, not
-arc-length solver size limits.
+against the published analytic load within 5%. A separate 8/16-element pinned
+Euler column correlates a sampled bifurcation candidate and two signed,
+continued branches against `pi^2 EI / L^2`; the finer switched seed moves
+toward the analytic load. An exact repeated pair now recovers the analytic
+double eigenvalue and uses orthogonal gauge columns to keep local, same, and
+opposite pairwise branches distinct without freezing caller-weighted nonlinear
+rotation. A midpoint-coupled pair now externally correlates the symmetric and
+antisymmetric eigenvalue split and continues the first connected symmetric
+branches. Its antisymmetric invariant path now also resolves the ordered first
+and second inertia transitions and continues the secondary opposite-direction
+branches against the raised Rayleigh load. A 0.5% right-column stiffness
+perturbation now removes those symmetry invariant subspaces: an independent
+two-coordinate Rayleigh reduction verifies both mixed eigenloads and
+eigenvectors, and the lower and upper mixed single-mode branches continue with
+bounded errors. The same case exposed and closed a false-positive boundary:
+pairwise branch probes are now solved only inside a degenerate critical
+eigenspace. Separated modes return an explicit local rejection instead of four
+nominal combinations collapsing onto one physical branch. The next stability
+milestone is therefore a multi-parameter codimension-two connected unfolding,
+where a genuinely repeated mixed subspace can physically support pairwise
+families, plus external asymmetric post-critical trajectory correlation. The
+first internal complex-topology isolation reference also proves
+single/multi-mode spectral consistency and fixed-load host-response invariance
+after adding an unloaded free branch; the 128-mode and 256-inertia caps are
+observability limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

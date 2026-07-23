@@ -1,16 +1,15 @@
-use crate::frame_2d_corotational::{correct_corotational_equilibrium, normalized_residual};
-use crate::frame_2d_corotational_element::{assemble_internal, assemble_tangent_and_internal};
+use crate::frame_2d_branch_constraints::{
+    BranchState, ModalConstraint, modal_projection, solve_modal_constraints,
+};
+use crate::frame_2d_corotational::correct_corotational_equilibrium;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
-use crate::linear_algebra::{reduce_sparse_system, sparse_to_dense};
-use crate::linear_dense::solve_linear_system;
 use crate::symmetric_critical_mode::SymmetricCriticalMode;
 use kyuubiki_protocol::{
     Frame2dBranchDirection, Frame2dBranchModeComponent, Frame2dBranchProbeOrigin,
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
 };
 
-const MAX_LINE_SEARCH_STEPS: usize = 12;
-const MIN_STEP_SCALE: f64 = 1.0 / 4096.0;
+const DEGENERATE_EIGENVALUE_TOLERANCE: f64 = 1.0e-8;
 
 pub(crate) struct BranchSwitchContext<'a> {
     pub(crate) positions: &'a [(f64, f64)],
@@ -19,14 +18,6 @@ pub(crate) struct BranchSwitchContext<'a> {
     pub(crate) free_dofs: &'a [usize],
     pub(crate) max_iterations: usize,
     pub(crate) tolerance: f64,
-}
-
-struct BranchState {
-    displacement: Vec<f64>,
-    load_factor: f64,
-    iterations: usize,
-    residual_norm: f64,
-    constraint_error: f64,
 }
 
 pub(crate) fn mark_probe_origin(
@@ -46,28 +37,48 @@ pub(crate) fn probe_branch_switches(
     critical_displacement: &[f64],
     primary_displacement: &[f64],
     critical_load_factor: f64,
-    critical_mode: &[f64],
+    critical_modes: &[SymmetricCriticalMode],
     mode_index: usize,
-    mode_eigenvalue: f64,
     amplitude: f64,
     selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
+    let Some(selected_mode) = critical_modes.get(mode_index) else {
+        return Vec::new();
+    };
     let components = vec![Frame2dBranchModeComponent {
         mode_index,
-        normalized_eigenvalue: Some(mode_eigenvalue),
+        normalized_eigenvalue: Some(selected_mode.normalized_eigenvalue),
         weight: 1.0,
     }];
-    let component_modes = [critical_mode];
+    let component_modes = [selected_mode.shape.as_slice()];
+    let constraint_cluster = critical_modes
+        .iter()
+        .enumerate()
+        .filter(|mode| {
+            (mode.1.normalized_eigenvalue - selected_mode.normalized_eigenvalue).abs()
+                <= DEGENERATE_EIGENVALUE_TOLERANCE
+        })
+        .collect::<Vec<_>>();
+    let constraint_modes = constraint_cluster
+        .iter()
+        .map(|(_, mode)| mode.shape.as_slice())
+        .collect::<Vec<_>>();
+    let constraint_weights = constraint_cluster
+        .iter()
+        .map(|(index, _)| usize::from(*index == mode_index) as f64)
+        .collect::<Vec<_>>();
     probe_direction_family(
         context,
         critical_displacement,
         primary_displacement,
         critical_load_factor,
-        critical_mode,
+        &selected_mode.shape,
         mode_index,
-        Some(mode_eigenvalue),
+        Some(selected_mode.normalized_eigenvalue),
         &components,
         &component_modes,
+        &constraint_modes,
+        &constraint_weights,
         amplitude,
         selection,
     )
@@ -113,6 +124,34 @@ pub(crate) fn probe_pairwise_branch_switches(
                     critical_modes[left_index].shape.as_slice(),
                     critical_modes[right_index].shape.as_slice(),
                 ];
+                let constraint_weights = [left_weight, right_weight];
+                let degenerate = (critical_modes[left_index].normalized_eigenvalue
+                    - critical_modes[right_index].normalized_eigenvalue)
+                    .abs()
+                    <= DEGENERATE_EIGENVALUE_TOLERANCE;
+                if !degenerate {
+                    probes.extend(mark_probe_origin(
+                        directions(selection)
+                            .into_iter()
+                            .map(|direction| {
+                                failed_result(
+                                    direction,
+                                    left_index,
+                                    None,
+                                    components.clone(),
+                                    amplitude,
+                                    0,
+                                    None,
+                                    "pairwise branch probing requires a degenerate critical eigenspace"
+                                        .into(),
+                                )
+                            })
+                            .collect(),
+                        Frame2dBranchProbeOrigin::PairwiseCombination,
+                        None,
+                    ));
+                    continue;
+                }
                 probes.extend(mark_probe_origin(
                     probe_direction_family(
                         context,
@@ -124,6 +163,8 @@ pub(crate) fn probe_pairwise_branch_switches(
                         None,
                         &components,
                         &component_modes,
+                        &component_modes,
+                        &constraint_weights,
                         amplitude,
                         selection,
                     ),
@@ -187,6 +228,8 @@ pub(crate) fn probe_weighted_branch_switches(
         .iter()
         .map(|(index, _)| critical_modes[*index].shape.as_slice())
         .collect::<Vec<_>>();
+    let constraint_modes = [shape.as_slice()];
+    let constraint_weights = [1.0];
     mark_probe_origin(
         probe_direction_family(
             context,
@@ -198,6 +241,8 @@ pub(crate) fn probe_weighted_branch_switches(
             None,
             &components,
             &component_modes,
+            &constraint_modes,
+            &constraint_weights,
             amplitude,
             selection,
         ),
@@ -217,6 +262,8 @@ fn probe_direction_family(
     mode_eigenvalue: Option<f64>,
     mode_components: &[Frame2dBranchModeComponent],
     component_modes: &[&[f64]],
+    constraint_modes: &[&[f64]],
+    constraint_weights: &[f64],
     amplitude: f64,
     selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
@@ -233,6 +280,8 @@ fn probe_direction_family(
                 mode_eigenvalue,
                 mode_components,
                 component_modes,
+                constraint_modes,
+                constraint_weights,
                 amplitude,
                 direction,
             )
@@ -377,6 +426,8 @@ fn solve_direction(
     mode_eigenvalue: Option<f64>,
     mode_components: &[Frame2dBranchModeComponent],
     component_modes: &[&[f64]],
+    constraint_modes: &[&[f64]],
+    constraint_weights: &[f64],
     amplitude: f64,
     direction: Frame2dBranchDirection,
 ) -> Frame2dBranchSwitchProbeResult {
@@ -385,6 +436,14 @@ fn solve_direction(
         Frame2dBranchDirection::Negative => -1.0,
     };
     let target_projection = sign * amplitude;
+    let constraints = constraint_modes
+        .iter()
+        .zip(constraint_weights)
+        .map(|(mode, weight)| ModalConstraint {
+            mode,
+            target: target_projection * weight,
+        })
+        .collect::<Vec<_>>();
     let mut state = BranchState {
         displacement: critical_displacement
             .iter()
@@ -397,13 +456,7 @@ fn solve_direction(
         constraint_error: f64::INFINITY,
     };
 
-    let outcome = solve_modal_constraint(
-        context,
-        critical_displacement,
-        critical_mode,
-        target_projection,
-        &mut state,
-    );
+    let outcome = solve_modal_constraints(context, critical_displacement, &constraints, &mut state);
     match outcome {
         Ok(true) => successful_result(
             context,
@@ -440,157 +493,6 @@ fn solve_direction(
             error,
         ),
     }
-}
-
-fn solve_modal_constraint(
-    context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    critical_mode: &[f64],
-    target_projection: f64,
-    state: &mut BranchState,
-) -> Result<bool, String> {
-    let reduced_mode = context
-        .free_dofs
-        .iter()
-        .map(|&dof| critical_mode[dof])
-        .collect::<Vec<_>>();
-    let reduced_reference = context
-        .free_dofs
-        .iter()
-        .map(|&dof| context.system.reference_force[dof])
-        .collect::<Vec<_>>();
-    let constraint_scale = target_projection.abs().max(1.0e-12);
-
-    for iteration in 1..=context.max_iterations {
-        state.iterations = iteration;
-        let (tangent, internal) = assemble_tangent_and_internal(
-            context.positions,
-            context.elements,
-            &state.displacement,
-        )?;
-        let residual = residual(
-            &context.system.reference_force,
-            &internal,
-            state.load_factor,
-        );
-        let (reduced_tangent, reduced_residual, free) =
-            reduce_sparse_system(&tangent, &residual, &context.system.constrained_dofs);
-        debug_assert_eq!(free, context.free_dofs);
-        state.residual_norm = normalized_residual(
-            &reduced_residual,
-            &context.system.reference_force,
-            state.load_factor,
-        );
-        let projection =
-            modal_projection(&state.displacement, critical_displacement, critical_mode);
-        let constraint = target_projection - projection;
-        state.constraint_error = constraint.abs() / constraint_scale;
-        if state.residual_norm <= context.tolerance && state.constraint_error <= context.tolerance {
-            return Ok(true);
-        }
-
-        let correction = solve_augmented_correction(
-            sparse_to_dense(&reduced_tangent),
-            &reduced_reference,
-            &reduced_mode,
-            reduced_residual,
-            constraint,
-        )?;
-        if !apply_backtracked_correction(
-            context,
-            critical_displacement,
-            critical_mode,
-            target_projection,
-            &correction,
-            state,
-        )? {
-            return Err("branch-switch line search failed to reduce the coupled residual".into());
-        }
-    }
-    Ok(false)
-}
-
-fn solve_augmented_correction(
-    tangent: Vec<Vec<f64>>,
-    reference_force: &[f64],
-    mode: &[f64],
-    residual: Vec<f64>,
-    constraint: f64,
-) -> Result<Vec<f64>, String> {
-    let size = residual.len();
-    let mut augmented = vec![vec![0.0; size + 1]; size + 1];
-    for row in 0..size {
-        augmented[row][..size].copy_from_slice(&tangent[row]);
-        augmented[row][size] = -reference_force[row];
-        augmented[size][row] = mode[row];
-    }
-    let mut right_hand_side = residual;
-    right_hand_side.push(constraint);
-    solve_linear_system(augmented, right_hand_side)
-        .map_err(|error| format!("branch-switch augmented tangent solve failed: {error}"))
-}
-
-fn apply_backtracked_correction(
-    context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    critical_mode: &[f64],
-    target_projection: f64,
-    correction: &[f64],
-    state: &mut BranchState,
-) -> Result<bool, String> {
-    let current_objective = state.residual_norm.max(state.constraint_error);
-    let displacement_correction = &correction[..context.free_dofs.len()];
-    let load_correction = correction[context.free_dofs.len()];
-    let mut scale = 1.0;
-    for _ in 0..MAX_LINE_SEARCH_STEPS {
-        let mut trial_displacement = state.displacement.clone();
-        for (index, &dof) in context.free_dofs.iter().enumerate() {
-            trial_displacement[dof] =
-                state.displacement[dof] + scale * displacement_correction[index];
-        }
-        let trial_load_factor = state.load_factor + scale * load_correction;
-        if !trial_load_factor.is_finite() {
-            scale *= 0.5;
-            continue;
-        }
-        let Ok(internal) =
-            assemble_internal(context.positions, context.elements, &trial_displacement)
-        else {
-            scale *= 0.5;
-            continue;
-        };
-        let trial_residual = residual(
-            &context.system.reference_force,
-            &internal,
-            trial_load_factor,
-        );
-        let reduced_residual = context
-            .free_dofs
-            .iter()
-            .map(|&dof| trial_residual[dof])
-            .collect::<Vec<_>>();
-        let residual_norm = normalized_residual(
-            &reduced_residual,
-            &context.system.reference_force,
-            trial_load_factor,
-        );
-        let projection =
-            modal_projection(&trial_displacement, critical_displacement, critical_mode);
-        let constraint_error =
-            (target_projection - projection).abs() / target_projection.abs().max(1.0e-12);
-        if residual_norm.max(constraint_error) < current_objective {
-            state.displacement = trial_displacement;
-            state.load_factor = trial_load_factor;
-            state.residual_norm = residual_norm;
-            state.constraint_error = constraint_error;
-            return Ok(true);
-        }
-        scale *= 0.5;
-        if scale < MIN_STEP_SCALE {
-            break;
-        }
-    }
-    Ok(false)
 }
 
 fn successful_result(
@@ -761,15 +663,6 @@ fn normalize_weights(weights: &[f64]) -> Option<Vec<f64>> {
         .then(|| scaled.into_iter().map(|weight| weight / norm).collect())
 }
 
-fn modal_projection(displacement: &[f64], critical: &[f64], mode: &[f64]) -> f64 {
-    displacement
-        .iter()
-        .zip(critical)
-        .zip(mode)
-        .map(|((value, critical), mode)| (value - critical) * mode)
-        .sum()
-}
-
 fn displacement_distance(displacement: &[f64], critical: &[f64]) -> f64 {
     displacement
         .iter()
@@ -777,14 +670,6 @@ fn displacement_distance(displacement: &[f64], critical: &[f64]) -> f64 {
         .map(|(value, critical)| (value - critical).powi(2))
         .sum::<f64>()
         .sqrt()
-}
-
-fn residual(external: &[f64], internal: &[f64], load_factor: f64) -> Vec<f64> {
-    external
-        .iter()
-        .zip(internal)
-        .map(|(external, internal)| load_factor * external - internal)
-        .collect()
 }
 
 #[cfg(test)]

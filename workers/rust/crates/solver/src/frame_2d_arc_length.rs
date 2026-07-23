@@ -216,15 +216,14 @@ pub(crate) fn solve_arc_length_steps(
                 let mut probes = critical_modes
                     .iter()
                     .enumerate()
-                    .flat_map(|(mode_index, mode)| {
+                    .flat_map(|(mode_index, _)| {
                         probe_branch_switches(
                             &context,
                             displacement,
                             &state.displacement,
                             load_factor,
-                            &mode.shape,
+                            &critical_modes,
                             mode_index,
-                            mode.normalized_eigenvalue,
                             amplitude,
                             request.branch_switch,
                         )

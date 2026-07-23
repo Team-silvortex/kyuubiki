@@ -99,6 +99,53 @@ branches. Neither control mode is a material-plasticity model.
   negative load increments afterward. The model and analytic limit are
   traceable to [Williams (1964)](https://doi.org/10.1093/qjmam/17.4.451) and
   an [independent nonlinear-frame study](https://dspace.library.uvic.ca/bitstreams/91d6532a-9a66-4ce2-a33c-cbba9829049b/download).
+- A pinned Euler column adds an external pitchfork reference at
+  `pi^2 EI / L^2 = 986.9604`. Eight- and sixteen-element linear factors are
+  `986.9928` and `986.9625`; their nonlinear switched-seed means move from
+  approximately `1009.91` to `1000.14`, toward the analytic load. The fine
+  transition is labeled `bifurcation_candidate`, has a normalized critical
+  eigenvalue below `1e-8`, and produces distinct positive and negative modal
+  seeds. Both signed branches complete eight continuation steps with force and
+  arc-length errors below `1e-7` and opposite midpoint displacements.
+- Two identical, independently supported Euler columns then create an exact
+  analytic double eigenvalue. Their first two factors agree with
+  `pi^2 EI / L^2` within 0.2% and with each other within `1e-10`. A degenerate
+  subspace gauge now augments `m` modal projection equations with `m - 1`
+  orthogonal correction columns, preventing an unselected zero mode from
+  collapsing every corrected seed onto the same branch. All four individual
+  and four pairwise signed probes become distinct and continue for four steps.
+  In the physical coordinates of the two columns, the positive probes cover
+  left-localized, right-localized, same-direction, and opposite-direction
+  families with worst absolute alignment above 0.9. Caller-weighted and
+  automatic directions deliberately retain their single combined constraint,
+  so nonlinear component ratios remain free to rotate.
+- A connected-topology reference joins the two column midpoints with a weak
+  axial coupler of stiffness `k = 20`. The symmetric mode leaves the coupler
+  unstretched and remains within 0.2% of `pi^2 EI / L^2`; the antisymmetric
+  mode stretches it and remains within 0.5% of the weak-coupling Rayleigh
+  reference `pi^2 EI / L^2 + 4 k L / pi^2`. Midpoint signs independently
+  identify the lower mode as symmetric and the raised mode as antisymmetric.
+  The first connected nonlinear transition emits two distinct symmetric
+  branches; both complete four continuation steps with force and arc-length
+  errors below `1e-7` and terminal symmetric alignment above 0.99.
+  Reversing the second-column imperfection retains the antisymmetric invariant
+  path and exposes two ordered bifurcation candidates as the tangent inertia
+  count rises from one to two negative directions. The secondary signed seeds
+  lie within 3% of the antisymmetric Rayleigh reference, remain above 0.99
+  aligned with the physical opposite-direction mode, and each complete four
+  continuation steps below both `1e-7` error gates.
+- Raising only the right-column inertia by 0.5% removes the symmetry invariant
+  subspaces. Both connected eigenloads remain within 0.5% of an independent
+  two-degree-of-freedom Rayleigh reduction, and each numerical eigenvector has
+  above 0.98 absolute midpoint alignment with its externally derived mixed
+  direction while both columns retain material participation. The lower and
+  upper mixed single-mode transitions emit distinct signed branches and
+  complete four continuation steps below both `1e-7` error gates. At the upper
+  transition, the two retained tangent eigenvalues are separated: explicit
+  pairwise requests remain visible but are rejected before equilibrium
+  correction with a degenerate-eigenspace diagnostic. This prevents four
+  combinations from collapsing onto one physical branch and being falsely
+  reported as distinct.
 - Subdividing each arch side into 2, 4, and 8 frame elements resolves an earlier
   member-flexural instability branch hidden by the rigid-link-like two-element
   fixture. Linear critical factors converge to within 0.1% between the two
@@ -325,11 +372,10 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- external complex-topology bifurcation and switched-branch reference events
 - angular refinement convergence against an independent branch reference
-- external coupled-topology correlation for interacting pairwise modes
+- multi-parameter codimension-two connected branch unfolding reference
+- external post-critical trajectory correlation for an asymmetric connected frame
 - material yielding, residual stress, and section interaction
-- post-critical branch switching beyond the externally correlated limit point
 
 ## Performance Reproduction
 
