@@ -26,6 +26,7 @@ fn workflow_route_preserves_switched_branch_continuation() {
     request.branch_switch = Frame2dBranchSwitchSelection::Both;
     request.branch_switch_amplitude = Some(5.0e-3);
     request.branch_continuation_steps = Some(4);
+    request.branch_continuation_min_radius_ratio = Some(0.25);
 
     let value = run_solve_operator(
         "solve.frame_2d_p_delta",
@@ -39,6 +40,10 @@ fn workflow_route_preserves_switched_branch_continuation() {
     let result: SolveFrame2dPDeltaResult =
         serde_json::from_value(value).expect("workflow result should preserve the typed contract");
     assert_eq!(result.input.branch_continuation_steps, Some(4));
+    assert_eq!(
+        result.input.branch_continuation_min_radius_ratio,
+        Some(0.25)
+    );
     let candidate = result
         .steps
         .iter()
@@ -58,6 +63,101 @@ fn workflow_route_preserves_switched_branch_continuation() {
                 && step.tangent_negative_pivots == Some(1)
         }));
     }
+}
+
+#[test]
+fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
+    let mut request = twin_arch_request();
+    let probe = run_solve_operator(
+        "solve.frame_2d_p_delta",
+        serde_json::to_value(&request).unwrap(),
+    )
+    .expect("workflow twin-arch stability probe should solve");
+    let critical_factor = probe["buckling_result"]["minimum_load_factor"]
+        .as_f64()
+        .unwrap();
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(critical_factor * 100.0);
+    request.load_steps = Some(128);
+    request.max_iterations = Some(64);
+    request.max_step_cutbacks = Some(12);
+    request.branch_switch = Frame2dBranchSwitchSelection::Both;
+    request.branch_switch_amplitude = Some(5.0e-3);
+    request.branch_switch_mode_count = Some(2);
+    request.branch_switch_pairwise_combinations = true;
+    request.branch_continuation_steps = Some(2);
+
+    let value = run_solve_operator(
+        "solve.frame_2d_p_delta",
+        serde_json::to_value(&request).unwrap(),
+    )
+    .expect("workflow repeated branch families should solve");
+    let result: SolveFrame2dPDeltaResult =
+        serde_json::from_value(value).expect("workflow result should preserve repeated modes");
+    assert_eq!(result.input.branch_switch_mode_count, Some(2));
+    assert!(result.input.branch_switch_pairwise_combinations);
+    let candidate = result
+        .steps
+        .iter()
+        .find(|step| {
+            step.tangent_critical_modes.len() == 2
+                && step.branch_switch_probes.len() == 8
+                && step
+                    .branch_switch_probes
+                    .iter()
+                    .all(|probe| probe.distinct_branch)
+        })
+        .expect("workflow should retain individual and pairwise branch families");
+    assert_eq!(
+        candidate
+            .branch_switch_probes
+            .iter()
+            .take(4)
+            .map(|probe| probe.mode_index)
+            .collect::<Vec<_>>(),
+        vec![0, 0, 1, 1]
+    );
+    assert!(candidate.branch_switch_probes[4..].iter().all(
+        |probe| probe.mode_eigenvalue.is_none()
+            && probe.mode_components.len() == 2
+            && probe.mode_component_projections.len() == 2
+    ));
+    assert!(
+        candidate
+            .branch_switch_probes
+            .iter()
+            .all(|probe| probe.continuation_converged == Some(true)
+                && probe.continuation_steps.len() == 2)
+    );
+}
+
+fn twin_arch_request() -> SolveFrame2dPDeltaRequest {
+    let mut request = shallow_arch_request(4);
+    let source_nodes = request.buckling.frame.nodes.clone();
+    let source_elements = request.buckling.frame.elements.clone();
+    let source_shape = request.imperfection_shape.clone().unwrap();
+    let mut nodes = Vec::new();
+    let mut elements = Vec::new();
+    let mut shape = Vec::new();
+    for (copy, center) in [-1.25, 1.25].into_iter().enumerate() {
+        let node_offset = nodes.len();
+        nodes.extend(source_nodes.iter().cloned().map(|mut node| {
+            node.id = format!("arch-{copy}-{}", node.id);
+            node.x += center;
+            node
+        }));
+        elements.extend(source_elements.iter().cloned().map(|mut element| {
+            element.id = format!("arch-{copy}-{}", element.id);
+            element.node_i += node_offset;
+            element.node_j += node_offset;
+            element
+        }));
+        shape.extend_from_slice(&source_shape);
+    }
+    request.buckling.frame = SolveFrame2dRequest { nodes, elements };
+    request.imperfection_shape = Some(shape);
+    request
 }
 
 fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
@@ -117,6 +217,10 @@ fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
         tangent_transition_refinement_steps: None,
         branch_switch: Frame2dBranchSwitchSelection::Disabled,
         branch_switch_amplitude: None,
+        branch_switch_mode_count: None,
+        branch_switch_pairwise_combinations: false,
         branch_continuation_steps: None,
+        branch_continuation_radius: None,
+        branch_continuation_min_radius_ratio: None,
     }
 }

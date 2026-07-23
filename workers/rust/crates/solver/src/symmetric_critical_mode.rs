@@ -4,26 +4,40 @@ const MAX_DENSE_CRITICAL_MODE_DOFS: usize = 128;
 const JACOBI_TOLERANCE: f64 = 1.0e-10;
 const MAX_JACOBI_SWEEPS: usize = 40;
 
+#[derive(Clone)]
 pub(crate) struct SymmetricCriticalMode {
     pub(crate) normalized_eigenvalue: f64,
     pub(crate) normalized_residual: f64,
     pub(crate) shape: Vec<f64>,
 }
 
+#[cfg(test)]
 pub(crate) fn extract_symmetric_critical_mode(
     matrix: &SparseMatrix,
     free_dofs: &[usize],
     full_dof_count: usize,
 ) -> Option<SymmetricCriticalMode> {
+    extract_symmetric_critical_modes(matrix, free_dofs, full_dof_count, 1)
+        .into_iter()
+        .next()
+}
+
+pub(crate) fn extract_symmetric_critical_modes(
+    matrix: &SparseMatrix,
+    free_dofs: &[usize],
+    full_dof_count: usize,
+    mode_count: usize,
+) -> Vec<SymmetricCriticalMode> {
     if matrix.size() == 0
         || matrix.size() > MAX_DENSE_CRITICAL_MODE_DOFS
         || free_dofs.len() != matrix.size()
+        || mode_count == 0
     {
-        return None;
+        return Vec::new();
     }
     let mut normalized = sparse_to_dense(matrix);
     if normalized.iter().flatten().any(|value| !value.is_finite()) {
-        return None;
+        return Vec::new();
     }
     let scale = normalized
         .iter()
@@ -31,29 +45,37 @@ pub(crate) fn extract_symmetric_critical_mode(
         .map(|value| value.abs())
         .fold(0.0_f64, f64::max);
     if scale == 0.0 {
-        return None;
+        return Vec::new();
     }
     for value in normalized.iter_mut().flatten() {
         *value /= scale;
     }
-    let (eigenvalue, mut reduced) = smallest_absolute_eigenpair(normalized.clone())?;
-    normalize_and_canonicalize(&mut reduced)?;
-    let residual = eigen_residual(&normalized, eigenvalue, &reduced);
-    if !(eigenvalue.is_finite() && residual.is_finite()) {
-        return None;
-    }
-    let mut shape = vec![0.0; full_dof_count];
-    for (&dof, value) in free_dofs.iter().zip(reduced) {
-        shape[dof] = value;
-    }
-    Some(SymmetricCriticalMode {
-        normalized_eigenvalue: eigenvalue,
-        normalized_residual: residual,
-        shape,
-    })
+    let Some(eigenpairs) = absolute_eigenpairs(normalized.clone()) else {
+        return Vec::new();
+    };
+    eigenpairs
+        .into_iter()
+        .take(mode_count)
+        .filter_map(|(eigenvalue, mut reduced)| {
+            normalize_and_canonicalize(&mut reduced)?;
+            let residual = eigen_residual(&normalized, eigenvalue, &reduced);
+            if !(eigenvalue.is_finite() && residual.is_finite()) {
+                return None;
+            }
+            let mut shape = vec![0.0; full_dof_count];
+            for (&dof, value) in free_dofs.iter().zip(reduced) {
+                shape[dof] = value;
+            }
+            Some(SymmetricCriticalMode {
+                normalized_eigenvalue: eigenvalue,
+                normalized_residual: residual,
+                shape,
+            })
+        })
+        .collect()
 }
 
-fn smallest_absolute_eigenpair(mut matrix: Vec<Vec<f64>>) -> Option<(f64, Vec<f64>)> {
+fn absolute_eigenpairs(mut matrix: Vec<Vec<f64>>) -> Option<Vec<(f64, Vec<f64>)>> {
     let size = matrix.len();
     let mut vectors = vec![vec![0.0; size]; size];
     for (index, row) in vectors.iter_mut().enumerate() {
@@ -89,14 +111,16 @@ fn smallest_absolute_eigenpair(mut matrix: Vec<Vec<f64>>) -> Option<(f64, Vec<f6
             break;
         }
     }
-    (0..size)
+    let mut eigenpairs = (0..size)
         .map(|index| {
             (
                 matrix[index][index],
                 (0..size).map(|row| vectors[row][index]).collect::<Vec<_>>(),
             )
         })
-        .min_by(|left, right| left.0.abs().total_cmp(&right.0.abs()))
+        .collect::<Vec<_>>();
+    eigenpairs.sort_by(|left, right| left.0.abs().total_cmp(&right.0.abs()));
+    Some(eigenpairs)
 }
 
 fn rotate(
@@ -196,6 +220,26 @@ mod tests {
         let mode = extract_symmetric_critical_mode(&matrix, &[0, 1], 2).unwrap();
         assert!((mode.normalized_eigenvalue - 0.9).abs() < 1.0e-12);
         assert!(mode.normalized_residual < 1.0e-12);
+    }
+
+    #[test]
+    fn extracts_an_ordered_orthogonal_critical_subspace() {
+        let mut matrix = SparseMatrix::new(3);
+        add_at(&mut matrix, 0, 0, -0.02);
+        add_at(&mut matrix, 1, 1, 0.01);
+        add_at(&mut matrix, 2, 2, 4.0);
+        let modes = extract_symmetric_critical_modes(&matrix, &[0, 1, 2], 3, 2);
+        assert_eq!(modes.len(), 2);
+        assert!((modes[0].normalized_eigenvalue - 0.0025).abs() < 1.0e-12);
+        assert!((modes[1].normalized_eigenvalue + 0.005).abs() < 1.0e-12);
+        assert!(modes.iter().all(|mode| mode.normalized_residual < 1.0e-12));
+        let dot = modes[0]
+            .shape
+            .iter()
+            .zip(&modes[1].shape)
+            .map(|(left, right)| left * right)
+            .sum::<f64>();
+        assert!(dot.abs() < 1.0e-12);
     }
 
     #[test]

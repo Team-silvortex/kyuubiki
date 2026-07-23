@@ -75,7 +75,11 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             tangent_transition_refinement_steps: Some(12),
             branch_switch: Frame2dBranchSwitchSelection::Both,
             branch_switch_amplitude: Some(0.015),
+            branch_switch_mode_count: Some(2),
+            branch_switch_pairwise_combinations: true,
             branch_continuation_steps: Some(4),
+            branch_continuation_radius: Some(0.02),
+            branch_continuation_min_radius_ratio: Some(0.125),
         })
         .expect("p-delta request should serialize"),
     };
@@ -99,7 +103,11 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(params.tangent_transition_refinement_steps, Some(12));
     assert_eq!(params.branch_switch, Frame2dBranchSwitchSelection::Both);
     assert_eq!(params.branch_switch_amplitude, Some(0.015));
+    assert_eq!(params.branch_switch_mode_count, Some(2));
+    assert!(params.branch_switch_pairwise_combinations);
     assert_eq!(params.branch_continuation_steps, Some(4));
+    assert_eq!(params.branch_continuation_radius, Some(0.02));
+    assert_eq!(params.branch_continuation_min_radius_ratio, Some(0.125));
     assert_eq!(params.kinematics, Frame2dStabilityKinematics::Corotational);
     assert_eq!(params.path_control, Frame2dStabilityPathControl::ArcLength);
 
@@ -116,7 +124,11 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     legacy_object.remove("tangent_transition_refinement_steps");
     legacy_object.remove("branch_switch");
     legacy_object.remove("branch_switch_amplitude");
+    legacy_object.remove("branch_switch_mode_count");
+    legacy_object.remove("branch_switch_pairwise_combinations");
     legacy_object.remove("branch_continuation_steps");
+    legacy_object.remove("branch_continuation_radius");
+    legacy_object.remove("branch_continuation_min_radius_ratio");
     let legacy: SolveFrame2dPDeltaRequest =
         serde_json::from_value(legacy).expect("legacy p-delta params should decode");
     assert_eq!(
@@ -136,7 +148,11 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(legacy.tangent_transition_refinement_steps, None);
     assert_eq!(legacy.branch_switch, Frame2dBranchSwitchSelection::Disabled);
     assert_eq!(legacy.branch_switch_amplitude, None);
+    assert_eq!(legacy.branch_switch_mode_count, None);
+    assert!(!legacy.branch_switch_pairwise_combinations);
     assert_eq!(legacy.branch_continuation_steps, None);
+    assert_eq!(legacy.branch_continuation_radius, None);
+    assert_eq!(legacy.branch_continuation_min_radius_ratio, None);
 }
 
 #[test]

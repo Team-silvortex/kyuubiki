@@ -16,6 +16,7 @@ pub(crate) struct BranchContinuationContext<'a> {
     pub(crate) max_cutbacks: usize,
     pub(crate) target_iterations: usize,
     pub(crate) initial_radius: f64,
+    pub(crate) min_radius_ratio: Option<f64>,
     pub(crate) load_scale: f64,
 }
 
@@ -83,6 +84,7 @@ fn continue_one_branch(
     step_count: usize,
 ) -> Result<Vec<Frame2dBranchContinuationStepResult>, String> {
     let nominal_radius = context.initial_radius;
+    let minimum_radius = minimum_branch_radius(nominal_radius, context.min_radius_ratio);
     let mut current_radius = nominal_radius;
     let mut steps = Vec::with_capacity(step_count);
     for step in 1..=step_count {
@@ -110,13 +112,16 @@ fn continue_one_branch(
                 attempt.failure_reason = Some(Frame2dPDeltaFailureReason::CutbackLimitExhausted);
                 break attempt;
             }
-            let reduced_radius = current_radius * 0.5;
-            if reduced_radius <= f64::EPSILON * nominal_radius.max(1.0) {
-                attempt.failure_detail =
-                    cutback_detail(attempt.failure_reason, attempt.failure_detail.as_deref());
+            let Some(reduced_radius) = next_cutback_radius(current_radius, minimum_radius) else {
+                attempt.failure_detail = Some(radius_floor_detail(
+                    attempt.failure_reason,
+                    attempt.failure_detail.as_deref(),
+                    current_radius,
+                    minimum_radius,
+                ));
                 attempt.failure_reason = Some(Frame2dPDeltaFailureReason::IncrementTooSmall);
                 break attempt;
-            }
+            };
             current_radius = reduced_radius;
             cutbacks += 1;
         };
@@ -136,7 +141,7 @@ fn continue_one_branch(
         let adaptation = (context.target_iterations as f64 / iterations as f64)
             .sqrt()
             .clamp(0.5, 2.0);
-        current_radius = (current_radius * adaptation).min(nominal_radius);
+        current_radius = (current_radius * adaptation).clamp(minimum_radius, nominal_radius);
     }
     annotate_branch_path_events(&mut steps);
     Ok(steps)
@@ -183,5 +188,54 @@ fn cutback_detail(
         (Some(reason), None) => Some(format!("last attempt: {reason:?}")),
         (None, Some(detail)) => Some(detail.to_string()),
         (None, None) => None,
+    }
+}
+
+fn next_cutback_radius(current_radius: f64, minimum_radius: f64) -> Option<f64> {
+    let reduced_radius = current_radius * 0.5;
+    (reduced_radius >= minimum_radius).then_some(reduced_radius)
+}
+
+fn minimum_branch_radius(nominal_radius: f64, ratio: Option<f64>) -> f64 {
+    ratio
+        .map(|ratio| nominal_radius * ratio)
+        .unwrap_or(f64::EPSILON * nominal_radius.max(1.0))
+        .min(nominal_radius)
+}
+
+fn radius_floor_detail(
+    reason: Option<Frame2dPDeltaFailureReason>,
+    detail: Option<&str>,
+    current_radius: f64,
+    minimum_radius: f64,
+) -> String {
+    let floor = format!(
+        "branch radius floor reached: current={current_radius:.6e}, minimum={minimum_radius:.6e}"
+    );
+    match cutback_detail(reason, detail) {
+        Some(last_attempt) => format!("{floor}; {last_attempt}"),
+        None => floor,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{minimum_branch_radius, next_cutback_radius};
+
+    #[test]
+    fn cutback_reaches_but_never_crosses_the_radius_floor() {
+        assert_eq!(next_cutback_radius(0.2, 0.05), Some(0.1));
+        assert_eq!(next_cutback_radius(0.1, 0.05), Some(0.05));
+        assert_eq!(next_cutback_radius(0.05, 0.05), None);
+    }
+
+    #[test]
+    fn machine_floor_never_exceeds_a_tiny_nominal_radius() {
+        let nominal_radius = f64::MIN_POSITIVE;
+        assert_eq!(minimum_branch_radius(nominal_radius, None), nominal_radius);
+        assert_eq!(
+            minimum_branch_radius(nominal_radius, Some(0.25)),
+            nominal_radius * 0.25
+        );
     }
 }

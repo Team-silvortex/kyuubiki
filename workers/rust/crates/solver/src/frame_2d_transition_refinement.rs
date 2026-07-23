@@ -2,7 +2,7 @@ use crate::frame_2d_corotational::correct_corotational_equilibrium;
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::linear_algebra::reduce_sparse_system;
-use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_mode};
+use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_modes};
 use crate::symmetric_inertia::assess_symmetric_inertia;
 use kyuubiki_protocol::{Frame2dElementInput, Frame2dPDeltaStepResult};
 
@@ -14,6 +14,7 @@ pub(crate) struct TransitionRefinementContext<'a> {
     pub(crate) max_iterations: usize,
     pub(crate) tolerance: f64,
     pub(crate) refinement_steps: usize,
+    pub(crate) mode_count: usize,
 }
 
 pub(crate) struct TangentTransitionRefinement {
@@ -21,7 +22,7 @@ pub(crate) struct TangentTransitionRefinement {
     pub(crate) load_factor_max: f64,
     pub(crate) refinements: usize,
     pub(crate) critical_load_factor: Option<f64>,
-    pub(crate) critical_mode: Option<SymmetricCriticalMode>,
+    pub(crate) critical_modes: Vec<SymmetricCriticalMode>,
     pub(crate) critical_displacement: Option<Vec<f64>>,
 }
 
@@ -97,16 +98,16 @@ pub(crate) fn refine_tangent_transition(
         }
         refinements += 1;
     }
-    let lower_mode = endpoint_mode(context, &lower)?;
-    let upper_mode = endpoint_mode(context, &upper)?;
-    let (critical_load_factor, critical_mode, critical_displacement) =
-        closest_mode(&lower, lower_mode, &upper, upper_mode);
+    let lower_modes = endpoint_modes(context, &lower)?;
+    let upper_modes = endpoint_modes(context, &upper)?;
+    let (critical_load_factor, critical_modes, critical_displacement) =
+        closest_modes(&lower, lower_modes, &upper, upper_modes);
     Ok(Some(TangentTransitionRefinement {
         load_factor_min: lower.load_factor.min(upper.load_factor),
         load_factor_max: lower.load_factor.max(upper.load_factor),
         refinements,
         critical_load_factor,
-        critical_mode,
+        critical_modes,
         critical_displacement,
     }))
 }
@@ -148,10 +149,10 @@ fn negative_pivots(
     Ok(assess_symmetric_inertia(&reduced).negative_pivots)
 }
 
-fn endpoint_mode(
+fn endpoint_modes(
     context: &TransitionRefinementContext<'_>,
     endpoint: &Endpoint,
-) -> Result<Option<SymmetricCriticalMode>, String> {
+) -> Result<Vec<SymmetricCriticalMode>, String> {
     let (tangent, _) =
         assemble_tangent_and_internal(context.positions, context.elements, &endpoint.displacement)?;
     let (reduced, _, free) = reduce_sparse_system(
@@ -160,44 +161,46 @@ fn endpoint_mode(
         &context.system.constrained_dofs,
     );
     debug_assert_eq!(free, context.free_dofs);
-    Ok(extract_symmetric_critical_mode(
+    Ok(extract_symmetric_critical_modes(
         &reduced,
         context.free_dofs,
         endpoint.displacement.len(),
+        context.mode_count,
     ))
 }
 
-fn closest_mode(
+fn closest_modes(
     lower_endpoint: &Endpoint,
-    lower: Option<SymmetricCriticalMode>,
+    lower: Vec<SymmetricCriticalMode>,
     upper_endpoint: &Endpoint,
-    upper: Option<SymmetricCriticalMode>,
-) -> (Option<f64>, Option<SymmetricCriticalMode>, Option<Vec<f64>>) {
-    match (lower, upper) {
-        (Some(lower), Some(upper))
-            if lower.normalized_eigenvalue.abs() <= upper.normalized_eigenvalue.abs() =>
+    upper: Vec<SymmetricCriticalMode>,
+) -> (Option<f64>, Vec<SymmetricCriticalMode>, Option<Vec<f64>>) {
+    match (lower.first(), upper.first()) {
+        (Some(lower_first), Some(upper_first))
+            if lower_first.normalized_eigenvalue.abs()
+                <= upper_first.normalized_eigenvalue.abs() =>
         {
             (
                 Some(lower_endpoint.load_factor),
-                Some(lower),
+                lower,
                 Some(lower_endpoint.displacement.clone()),
             )
         }
-        (Some(_), Some(upper)) => (
+        (Some(_), Some(_)) => (
             Some(upper_endpoint.load_factor),
-            Some(upper),
+            upper,
             Some(upper_endpoint.displacement.clone()),
         ),
-        (Some(lower), None) => (
+        (Some(_), None) => (
             Some(lower_endpoint.load_factor),
-            Some(lower),
+            lower,
             Some(lower_endpoint.displacement.clone()),
         ),
-        (None, Some(upper)) => (
+        (None, Some(_)) => (
             Some(upper_endpoint.load_factor),
-            Some(upper),
+            upper,
             Some(upper_endpoint.displacement.clone()),
         ),
-        (None, None) => (None, None, None),
+        (None, None) => (None, Vec::new(), None),
     }
 }

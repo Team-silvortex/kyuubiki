@@ -109,7 +109,15 @@ pub struct SolveFrame2dPDeltaRequest {
     #[serde(default)]
     pub branch_switch_amplitude: Option<f64>,
     #[serde(default)]
+    pub branch_switch_mode_count: Option<usize>,
+    #[serde(default)]
+    pub branch_switch_pairwise_combinations: bool,
+    #[serde(default)]
     pub branch_continuation_steps: Option<usize>,
+    #[serde(default)]
+    pub branch_continuation_radius: Option<f64>,
+    #[serde(default)]
+    pub branch_continuation_min_radius_ratio: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -196,6 +204,21 @@ pub enum Frame2dBranchDirection {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dCriticalModeResult {
+    pub mode_index: usize,
+    pub normalized_eigenvalue: f64,
+    pub normalized_residual: f64,
+    pub shape: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dBranchModeComponent {
+    pub mode_index: usize,
+    pub normalized_eigenvalue: Option<f64>,
+    pub weight: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBranchContinuationStepResult {
     pub step: usize,
     pub load_factor: f64,
@@ -220,6 +243,14 @@ pub struct Frame2dBranchContinuationStepResult {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBranchSwitchProbeResult {
+    #[serde(default)]
+    pub mode_index: usize,
+    #[serde(default)]
+    pub mode_eigenvalue: Option<f64>,
+    #[serde(default)]
+    pub mode_components: Vec<Frame2dBranchModeComponent>,
+    #[serde(default)]
+    pub mode_component_projections: Vec<f64>,
     pub direction: Frame2dBranchDirection,
     pub seed_amplitude: f64,
     pub iterations: usize,
@@ -289,6 +320,8 @@ pub struct Frame2dPDeltaStepResult {
     pub tangent_critical_mode_residual: Option<f64>,
     #[serde(default)]
     pub tangent_critical_mode: Option<Vec<f64>>,
+    #[serde(default)]
+    pub tangent_critical_modes: Vec<Frame2dCriticalModeResult>,
     #[serde(default)]
     pub tangent_transition_load_factor_min: Option<f64>,
     #[serde(default)]

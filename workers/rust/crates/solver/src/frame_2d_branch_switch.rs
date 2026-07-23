@@ -3,9 +3,10 @@ use crate::frame_2d_corotational_element::{assemble_internal, assemble_tangent_a
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::linear_algebra::{reduce_sparse_system, sparse_to_dense};
 use crate::linear_dense::solve_linear_system;
+use crate::symmetric_critical_mode::SymmetricCriticalMode;
 use kyuubiki_protocol::{
-    Frame2dBranchDirection, Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection,
-    Frame2dElementInput,
+    Frame2dBranchDirection, Frame2dBranchModeComponent, Frame2dBranchSwitchProbeResult,
+    Frame2dBranchSwitchSelection, Frame2dElementInput,
 };
 
 const MAX_LINE_SEARCH_STEPS: usize = 12;
@@ -34,6 +35,102 @@ pub(crate) fn probe_branch_switches(
     primary_displacement: &[f64],
     critical_load_factor: f64,
     critical_mode: &[f64],
+    mode_index: usize,
+    mode_eigenvalue: f64,
+    amplitude: f64,
+    selection: Frame2dBranchSwitchSelection,
+) -> Vec<Frame2dBranchSwitchProbeResult> {
+    let components = vec![Frame2dBranchModeComponent {
+        mode_index,
+        normalized_eigenvalue: Some(mode_eigenvalue),
+        weight: 1.0,
+    }];
+    let component_modes = [critical_mode];
+    probe_direction_family(
+        context,
+        critical_displacement,
+        primary_displacement,
+        critical_load_factor,
+        critical_mode,
+        mode_index,
+        Some(mode_eigenvalue),
+        &components,
+        &component_modes,
+        amplitude,
+        selection,
+    )
+}
+
+pub(crate) fn probe_pairwise_branch_switches(
+    context: &BranchSwitchContext<'_>,
+    critical_displacement: &[f64],
+    primary_displacement: &[f64],
+    critical_load_factor: f64,
+    critical_modes: &[SymmetricCriticalMode],
+    amplitude: f64,
+    selection: Frame2dBranchSwitchSelection,
+) -> Vec<Frame2dBranchSwitchProbeResult> {
+    let mut probes = Vec::new();
+    for left_index in 0..critical_modes.len() {
+        for right_index in left_index + 1..critical_modes.len() {
+            for relative_sign in [1.0, -1.0] {
+                let Some((shape, left_weight, right_weight)) = combine_modes(
+                    &critical_modes[left_index].shape,
+                    &critical_modes[right_index].shape,
+                    relative_sign,
+                ) else {
+                    continue;
+                };
+                let components = vec![
+                    Frame2dBranchModeComponent {
+                        mode_index: left_index,
+                        normalized_eigenvalue: Some(
+                            critical_modes[left_index].normalized_eigenvalue,
+                        ),
+                        weight: left_weight,
+                    },
+                    Frame2dBranchModeComponent {
+                        mode_index: right_index,
+                        normalized_eigenvalue: Some(
+                            critical_modes[right_index].normalized_eigenvalue,
+                        ),
+                        weight: right_weight,
+                    },
+                ];
+                let component_modes = [
+                    critical_modes[left_index].shape.as_slice(),
+                    critical_modes[right_index].shape.as_slice(),
+                ];
+                probes.extend(probe_direction_family(
+                    context,
+                    critical_displacement,
+                    primary_displacement,
+                    critical_load_factor,
+                    &shape,
+                    left_index,
+                    None,
+                    &components,
+                    &component_modes,
+                    amplitude,
+                    selection,
+                ));
+            }
+        }
+    }
+    probes
+}
+
+#[allow(clippy::too_many_arguments)]
+fn probe_direction_family(
+    context: &BranchSwitchContext<'_>,
+    critical_displacement: &[f64],
+    primary_displacement: &[f64],
+    critical_load_factor: f64,
+    critical_mode: &[f64],
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: &[Frame2dBranchModeComponent],
+    component_modes: &[&[f64]],
     amplitude: f64,
     selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
@@ -46,6 +143,10 @@ pub(crate) fn probe_branch_switches(
                 primary_displacement,
                 critical_load_factor,
                 critical_mode,
+                mode_index,
+                mode_eigenvalue,
+                mode_components,
+                component_modes,
                 amplitude,
                 direction,
             )
@@ -55,13 +156,69 @@ pub(crate) fn probe_branch_switches(
 
 pub(crate) fn unavailable_branch_switches(
     selection: Frame2dBranchSwitchSelection,
+    mode_index: usize,
     amplitude: f64,
     detail: &str,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
     directions(selection)
         .into_iter()
-        .map(|direction| failed_result(direction, amplitude, 0, None, detail.to_string()))
+        .map(|direction| {
+            failed_result(
+                direction,
+                mode_index,
+                None,
+                vec![Frame2dBranchModeComponent {
+                    mode_index,
+                    normalized_eigenvalue: None,
+                    weight: 1.0,
+                }],
+                amplitude,
+                0,
+                None,
+                detail.to_string(),
+            )
+        })
         .collect()
+}
+
+pub(crate) fn unavailable_pairwise_branch_switches(
+    selection: Frame2dBranchSwitchSelection,
+    mode_count: usize,
+    amplitude: f64,
+    detail: &str,
+) -> Vec<Frame2dBranchSwitchProbeResult> {
+    let mut probes = Vec::new();
+    for left_index in 0..mode_count {
+        for right_index in left_index + 1..mode_count {
+            for relative_sign in [1.0, -1.0] {
+                let components = vec![
+                    Frame2dBranchModeComponent {
+                        mode_index: left_index,
+                        normalized_eigenvalue: None,
+                        weight: std::f64::consts::FRAC_1_SQRT_2,
+                    },
+                    Frame2dBranchModeComponent {
+                        mode_index: right_index,
+                        normalized_eigenvalue: None,
+                        weight: relative_sign * std::f64::consts::FRAC_1_SQRT_2,
+                    },
+                ];
+                probes.extend(directions(selection).into_iter().map(|direction| {
+                    failed_result(
+                        direction,
+                        left_index,
+                        None,
+                        components.clone(),
+                        amplitude,
+                        0,
+                        None,
+                        detail.to_string(),
+                    )
+                }));
+            }
+        }
+    }
+    probes
 }
 
 fn directions(selection: Frame2dBranchSwitchSelection) -> Vec<Frame2dBranchDirection> {
@@ -82,6 +239,10 @@ fn solve_direction(
     primary_displacement: &[f64],
     critical_load_factor: f64,
     critical_mode: &[f64],
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: &[Frame2dBranchModeComponent],
+    component_modes: &[&[f64]],
     amplitude: f64,
     direction: Frame2dBranchDirection,
 ) -> Frame2dBranchSwitchProbeResult {
@@ -113,6 +274,10 @@ fn solve_direction(
         Ok(true) => successful_result(
             context,
             direction,
+            mode_index,
+            mode_eigenvalue,
+            mode_components.to_vec(),
+            component_modes,
             amplitude,
             target_projection,
             critical_displacement,
@@ -122,12 +287,24 @@ fn solve_direction(
         ),
         Ok(false) => failed_result(
             direction,
+            mode_index,
+            mode_eigenvalue,
+            mode_components.to_vec(),
             amplitude,
             state.iterations,
             Some(state),
             "modal-constraint Newton iteration did not converge".into(),
         ),
-        Err(error) => failed_result(direction, amplitude, state.iterations, Some(state), error),
+        Err(error) => failed_result(
+            direction,
+            mode_index,
+            mode_eigenvalue,
+            mode_components.to_vec(),
+            amplitude,
+            state.iterations,
+            Some(state),
+            error,
+        ),
     }
 }
 
@@ -285,6 +462,10 @@ fn apply_backtracked_correction(
 fn successful_result(
     context: &BranchSwitchContext<'_>,
     direction: Frame2dBranchDirection,
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: Vec<Frame2dBranchModeComponent>,
+    component_modes: &[&[f64]],
     amplitude: f64,
     target_projection: f64,
     critical_displacement: &[f64],
@@ -293,6 +474,10 @@ fn successful_result(
     state: BranchState,
 ) -> Frame2dBranchSwitchProbeResult {
     let projection = modal_projection(&state.displacement, critical_displacement, critical_mode);
+    let mode_component_projections = component_modes
+        .iter()
+        .map(|mode| modal_projection(&state.displacement, critical_displacement, mode))
+        .collect();
     let distance = displacement_distance(&state.displacement, critical_displacement);
     let projection_matches =
         projection * target_projection > 0.0 && projection.abs() >= amplitude * 0.9;
@@ -327,6 +512,10 @@ fn successful_result(
     let distinct_branch =
         projection_matches && primary_distance.is_some_and(|distance| distance >= amplitude * 0.5);
     Frame2dBranchSwitchProbeResult {
+        mode_index,
+        mode_eigenvalue,
+        mode_components,
+        mode_component_projections,
         direction,
         seed_amplitude: amplitude,
         iterations: state.iterations,
@@ -349,12 +538,19 @@ fn successful_result(
 
 fn failed_result(
     direction: Frame2dBranchDirection,
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: Vec<Frame2dBranchModeComponent>,
     amplitude: f64,
     iterations: usize,
     state: Option<BranchState>,
     detail: String,
 ) -> Frame2dBranchSwitchProbeResult {
     Frame2dBranchSwitchProbeResult {
+        mode_index,
+        mode_eigenvalue,
+        mode_components,
+        mode_component_projections: Vec::new(),
         direction,
         seed_amplitude: amplitude,
         iterations,
@@ -383,6 +579,25 @@ fn failed_result(
 
 fn finite_value(value: f64) -> Option<f64> {
     value.is_finite().then_some(value)
+}
+
+fn combine_modes(left: &[f64], right: &[f64], relative_sign: f64) -> Option<(Vec<f64>, f64, f64)> {
+    if left.len() != right.len() {
+        return None;
+    }
+    let mut shape = left
+        .iter()
+        .zip(right)
+        .map(|(left, right)| left + relative_sign * right)
+        .collect::<Vec<_>>();
+    let norm = shape.iter().map(|value| value * value).sum::<f64>().sqrt();
+    if !(norm.is_finite() && norm > f64::EPSILON) {
+        return None;
+    }
+    for value in &mut shape {
+        *value /= norm;
+    }
+    Some((shape, 1.0 / norm, relative_sign / norm))
 }
 
 fn modal_projection(displacement: &[f64], critical: &[f64], mode: &[f64]) -> f64 {
@@ -418,8 +633,15 @@ mod tests {
     #[test]
     fn unavailable_bidirectional_probe_is_explicit() {
         let probes =
-            unavailable_branch_switches(Frame2dBranchSwitchSelection::Both, 0.01, "unavailable");
+            unavailable_branch_switches(Frame2dBranchSwitchSelection::Both, 2, 0.01, "unavailable");
         assert_eq!(probes.len(), 2);
+        assert!(probes.iter().all(|probe| probe.mode_index == 2));
+        assert!(probes.iter().all(|probe| {
+            probe.mode_components.len() == 1
+                && probe.mode_components[0].mode_index == 2
+                && probe.mode_components[0].normalized_eigenvalue.is_none()
+                && probe.mode_components[0].weight == 1.0
+        }));
         assert_eq!(probes[0].direction, Frame2dBranchDirection::Positive);
         assert_eq!(probes[1].direction, Frame2dBranchDirection::Negative);
         assert!(
@@ -427,5 +649,39 @@ mod tests {
                 .iter()
                 .all(|probe| !probe.equilibrium_converged && probe.failure_detail.is_some())
         );
+    }
+
+    #[test]
+    fn pairwise_mode_directions_are_unit_normalized_and_attributed() {
+        let left = vec![1.0, 0.0];
+        let right = vec![0.0, 1.0];
+        let (sum, left_weight, right_weight) = combine_modes(&left, &right, 1.0).unwrap();
+        assert!(
+            sum.iter()
+                .all(|value| { (value - std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON })
+        );
+        assert!((left_weight - std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON);
+        assert!((right_weight - std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON);
+
+        let (difference, _, right_weight) = combine_modes(&left, &right, -1.0).unwrap();
+        assert!((difference[0] - std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON);
+        assert!((difference[1] + std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON);
+        assert!((right_weight + std::f64::consts::FRAC_1_SQRT_2).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn unavailable_pairwise_families_remain_visible() {
+        let probes = unavailable_pairwise_branch_switches(
+            Frame2dBranchSwitchSelection::Both,
+            2,
+            0.01,
+            "unavailable",
+        );
+        assert_eq!(probes.len(), 4);
+        assert!(probes.iter().all(|probe| {
+            probe.mode_eigenvalue.is_none()
+                && probe.mode_components.len() == 2
+                && !probe.equilibrium_converged
+        }));
     }
 }

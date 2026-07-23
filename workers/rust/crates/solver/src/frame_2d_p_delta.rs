@@ -181,6 +181,7 @@ fn solve_linearized_steps(
             tangent_critical_eigenvalue: None,
             tangent_critical_mode_residual: None,
             tangent_critical_mode: None,
+            tangent_critical_modes: Vec::new(),
             tangent_transition_load_factor_min: None,
             tangent_transition_load_factor_max: None,
             tangent_transition_load_factor_width: None,
@@ -270,8 +271,65 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
     {
         return Err("frame 2d branch switching requires branch_switch_amplitude".into());
     }
+    if request
+        .branch_switch_mode_count
+        .is_some_and(|count| !(1..=4).contains(&count))
+    {
+        return Err("frame 2d branch_switch_mode_count must be between 1 and 4".into());
+    }
+    if request.branch_switch_mode_count.is_some()
+        && request.branch_switch == Frame2dBranchSwitchSelection::Disabled
+    {
+        return Err("frame 2d branch_switch_mode_count requires branch switching".into());
+    }
+    if request.branch_switch_pairwise_combinations
+        && request.branch_switch == Frame2dBranchSwitchSelection::Disabled
+    {
+        return Err(
+            "frame 2d branch_switch_pairwise_combinations requires branch switching".into(),
+        );
+    }
+    if request.branch_switch_pairwise_combinations
+        && request.branch_switch_mode_count.unwrap_or(1) < 2
+    {
+        return Err(
+            "frame 2d branch_switch_pairwise_combinations requires at least two branch-switch modes"
+                .into(),
+        );
+    }
     if matches!(request.branch_continuation_steps, Some(65..)) {
         return Err("frame 2d branch_continuation_steps must not exceed 64".into());
+    }
+    if let Some(radius) = request.branch_continuation_radius
+        && !(radius.is_finite() && radius > 0.0)
+    {
+        return Err("frame 2d branch_continuation_radius must be positive and finite".into());
+    }
+    if request.branch_continuation_radius.is_some()
+        && !request
+            .branch_continuation_steps
+            .is_some_and(|steps| steps > 0)
+    {
+        return Err(
+            "frame 2d branch_continuation_radius requires branch continuation steps".into(),
+        );
+    }
+    if let Some(ratio) = request.branch_continuation_min_radius_ratio
+        && !(ratio.is_finite() && ratio > 0.0 && ratio <= 1.0)
+    {
+        return Err(
+            "frame 2d branch_continuation_min_radius_ratio must be finite and in (0, 1]".into(),
+        );
+    }
+    if request.branch_continuation_min_radius_ratio.is_some()
+        && !request
+            .branch_continuation_steps
+            .is_some_and(|steps| steps > 0)
+    {
+        return Err(
+            "frame 2d branch_continuation_min_radius_ratio requires branch continuation steps"
+                .into(),
+        );
     }
     if request
         .branch_continuation_steps

@@ -100,6 +100,7 @@ pub(crate) fn solve_corotational_steps(
             tangent_critical_eigenvalue: None,
             tangent_critical_mode_residual: None,
             tangent_critical_mode: None,
+            tangent_critical_modes: Vec::new(),
             tangent_transition_load_factor_min: None,
             tangent_transition_load_factor_max: None,
             tangent_transition_load_factor_width: None,

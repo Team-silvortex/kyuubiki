@@ -1,6 +1,7 @@
 use crate::frame_2d_branch_continuation::{BranchContinuationContext, continue_branch_probes};
 use crate::frame_2d_branch_switch::{
-    BranchSwitchContext, probe_branch_switches, unavailable_branch_switches,
+    BranchSwitchContext, probe_branch_switches, probe_pairwise_branch_switches,
+    unavailable_branch_switches, unavailable_pairwise_branch_switches,
 };
 use crate::frame_2d_corotational::{
     imperfection_amplification, max_translation, normalized_residual, solve_tangent,
@@ -11,11 +12,12 @@ use crate::frame_2d_transition_refinement::{
     TransitionRefinementContext, refine_tangent_transition,
 };
 use crate::linear_algebra::reduce_sparse_system;
-use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_mode};
+use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_modes};
 use crate::symmetric_inertia::assess_symmetric_inertia;
 use kyuubiki_protocol::{
-    Frame2dBranchSwitchSelection, Frame2dElementInput, Frame2dPDeltaFailureReason,
-    Frame2dPDeltaStepResult, Frame2dTangentStability, SolveFrame2dPDeltaRequest,
+    Frame2dBranchSwitchSelection, Frame2dCriticalModeResult, Frame2dElementInput,
+    Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult, Frame2dTangentStability,
+    SolveFrame2dPDeltaRequest,
 };
 
 const DEFAULT_MAX_ITERATIONS: usize = 32;
@@ -90,6 +92,7 @@ pub(crate) fn solve_arc_length_steps(
     let transition_refinement_steps = request
         .tangent_transition_refinement_steps
         .unwrap_or(DEFAULT_TRANSITION_REFINEMENT_STEPS);
+    let branch_mode_count = request.branch_switch_mode_count.unwrap_or(1);
     let mut state = ArcLengthState {
         displacement: initial_displacement,
         load_factor: 0.0,
@@ -153,6 +156,7 @@ pub(crate) fn solve_arc_length_steps(
                         max_iterations,
                         tolerance,
                         refinement_steps: transition_refinement_steps,
+                        mode_count: branch_mode_count,
                     },
                     lower,
                     state.load_factor,
@@ -170,18 +174,20 @@ pub(crate) fn solve_arc_length_steps(
         let mut critical_displacement = refinement
             .as_ref()
             .and_then(|refinement| refinement.critical_displacement.clone());
-        let mut critical_mode = refinement
+        let mut critical_modes = refinement
             .as_mut()
-            .and_then(|refinement| refinement.critical_mode.take());
-        if transition_changed && critical_mode.is_none() {
-            critical_mode = extract_critical_mode(
+            .map(|refinement| std::mem::take(&mut refinement.critical_modes))
+            .unwrap_or_default();
+        if transition_changed && critical_modes.is_empty() {
+            critical_modes = extract_critical_modes(
                 &positions,
                 &frame.elements,
                 system,
                 &free,
                 &state.displacement,
+                branch_mode_count,
             )?;
-            if critical_mode.is_some() {
+            if !critical_modes.is_empty() {
                 critical_load_factor = Some(state.load_factor);
                 critical_displacement = Some(state.displacement.clone());
             }
@@ -190,32 +196,70 @@ pub(crate) fn solve_arc_length_steps(
             request.branch_switch_amplitude,
             critical_load_factor,
             critical_displacement.as_deref(),
-            critical_mode.as_ref(),
         ) {
             _ if request.branch_switch == Frame2dBranchSwitchSelection::Disabled => Vec::new(),
-            (Some(amplitude), Some(load_factor), Some(displacement), Some(mode)) => {
-                probe_branch_switches(
-                    &BranchSwitchContext {
-                        positions: &positions,
-                        elements: &frame.elements,
-                        system,
-                        free_dofs: &free,
-                        max_iterations,
-                        tolerance,
-                    },
-                    displacement,
-                    &state.displacement,
-                    load_factor,
-                    &mode.shape,
-                    amplitude,
-                    request.branch_switch,
-                )
+            (Some(amplitude), Some(load_factor), Some(displacement))
+                if !critical_modes.is_empty() =>
+            {
+                let context = BranchSwitchContext {
+                    positions: &positions,
+                    elements: &frame.elements,
+                    system,
+                    free_dofs: &free,
+                    max_iterations,
+                    tolerance,
+                };
+                let mut probes = critical_modes
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(mode_index, mode)| {
+                        probe_branch_switches(
+                            &context,
+                            displacement,
+                            &state.displacement,
+                            load_factor,
+                            &mode.shape,
+                            mode_index,
+                            mode.normalized_eigenvalue,
+                            amplitude,
+                            request.branch_switch,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                if request.branch_switch_pairwise_combinations {
+                    probes.extend(probe_pairwise_branch_switches(
+                        &context,
+                        displacement,
+                        &state.displacement,
+                        load_factor,
+                        &critical_modes,
+                        amplitude,
+                        request.branch_switch,
+                    ));
+                }
+                probes
             }
-            (Some(amplitude), _, _, _) if transition_changed => unavailable_branch_switches(
-                request.branch_switch,
-                amplitude,
-                "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
-            ),
+            (Some(amplitude), _, _) if transition_changed => {
+                let mut probes = (0..branch_mode_count)
+                    .flat_map(|mode_index| {
+                        unavailable_branch_switches(
+                            request.branch_switch,
+                            mode_index,
+                            amplitude,
+                            "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                if request.branch_switch_pairwise_combinations {
+                    probes.extend(unavailable_pairwise_branch_switches(
+                        request.branch_switch,
+                        branch_mode_count,
+                        amplitude,
+                        "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
+                    ));
+                }
+                probes
+            }
             _ => Vec::new(),
         };
         if let (Some(continuation_steps), Some(load_factor), Some(displacement)) = (
@@ -233,7 +277,8 @@ pub(crate) fn solve_arc_length_steps(
                     tolerance,
                     max_cutbacks,
                     target_iterations,
-                    initial_radius: current_radius,
+                    initial_radius: request.branch_continuation_radius.unwrap_or(current_radius),
+                    min_radius_ratio: request.branch_continuation_min_radius_ratio,
                     load_scale,
                 },
                 displacement,
@@ -273,13 +318,25 @@ pub(crate) fn solve_arc_length_steps(
             tangent_negative_pivots: attempt.tangent_negative_pivots,
             tangent_near_zero_pivots: attempt.tangent_near_zero_pivots,
             tangent_negative_pivot_delta: None,
-            tangent_critical_eigenvalue: critical_mode
+            tangent_critical_eigenvalue: critical_modes
+                .first()
                 .as_ref()
                 .map(|mode| mode.normalized_eigenvalue),
-            tangent_critical_mode_residual: critical_mode
+            tangent_critical_mode_residual: critical_modes
+                .first()
                 .as_ref()
                 .map(|mode| mode.normalized_residual),
-            tangent_critical_mode: critical_mode.as_ref().map(|mode| mode.shape.clone()),
+            tangent_critical_mode: critical_modes.first().map(|mode| mode.shape.clone()),
+            tangent_critical_modes: critical_modes
+                .iter()
+                .enumerate()
+                .map(|(mode_index, mode)| Frame2dCriticalModeResult {
+                    mode_index,
+                    normalized_eigenvalue: mode.normalized_eigenvalue,
+                    normalized_residual: mode.normalized_residual,
+                    shape: mode.shape.clone(),
+                })
+                .collect(),
             tangent_transition_load_factor_min: refinement
                 .as_ref()
                 .map(|refinement| refinement.load_factor_min),
@@ -313,21 +370,23 @@ pub(crate) fn solve_arc_length_steps(
     Ok(steps)
 }
 
-fn extract_critical_mode(
+fn extract_critical_modes(
     positions: &[(f64, f64)],
     elements: &[Frame2dElementInput],
     system: &Frame2dStabilitySystem,
     free: &[usize],
     displacement: &[f64],
-) -> Result<Option<SymmetricCriticalMode>, String> {
+    mode_count: usize,
+) -> Result<Vec<SymmetricCriticalMode>, String> {
     let (tangent, _) = assemble_tangent_and_internal(positions, elements, displacement)?;
     let (reduced, _, current_free) =
         reduce_sparse_system(&tangent, &system.reference_force, &system.constrained_dofs);
     debug_assert_eq!(current_free, free);
-    Ok(extract_symmetric_critical_mode(
+    Ok(extract_symmetric_critical_modes(
         &reduced,
         free,
         displacement.len(),
+        mode_count,
     ))
 }
 

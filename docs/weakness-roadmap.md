@@ -352,10 +352,22 @@ critical-mode constraints now recover independently equilibrated branch seeds
 without mutating the primary path. Both retained seed directions now support
 isolated 64-point arc-length continuation with independent radius adaptation,
 cutbacks, failure diagnostics, switched-path event fields, rigid-rotation
-objectivity, and typed engine JSON transport. The next stability milestone is a
-complex branch that physically traverses retained events plus interacting
-multi-mode selection; the 128-mode and 256-inertia caps are observability
-limits, not arc-length solver size limits.
+objectivity, and typed engine JSON transport. An explicit positive finite branch
+radius now carries both retained directions through a physical load minimum and
+onto the subsequent rising segment without contaminating the primary path. The
+optional dimensionless minimum-radius ratio now bounds both adaptive shrinkage
+and failed-step cutbacks relative to that visible nominal branch radius. The
+same machinery now retains objective positive and negative paths on a branched
+arch topology and contains a later non-distinct seed as a local failure. The
+transition observer and engine route now also retain one to four ordered modes;
+an exact repeated two-mode twin-arch subspace produces four mode-attributed
+branch families. An explicit pairwise-combination option additionally probes
+the normalized sum and difference of every retained mode pair, records the
+component weights and solved projections, and continues all four added
+twin-arch directions. The next stability milestone is adaptive three-or-more
+mode subspace search and independent external complex-topology correlation; the
+128-mode and
+256-inertia caps are observability limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

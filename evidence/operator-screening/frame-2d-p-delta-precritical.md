@@ -42,11 +42,11 @@ increments do not create events.
 
 Load control remains an elastic precritical screening path and retains its
 `0.95 lambda_cr` guard. Arc-length control may cross that screening guard, but
-is still experimental. Retained evidence now includes one shallow-arch limit
-point, a descending equilibrium branch, and opt-in critical-mode-constrained
-branch probes with short switched-branch continuation. These remain screening
-paths rather than externally qualified post-buckling branches. Neither control
-mode is a material-plasticity model.
+is still experimental. Retained evidence now includes shallow-arch limit
+points, descending and rising equilibrium segments, and opt-in
+critical-mode-constrained branch probes with switched-branch continuation.
+These remain screening paths rather than externally qualified post-buckling
+branches. Neither control mode is a material-plasticity model.
 
 ## Retained Checks
 
@@ -123,6 +123,16 @@ mode is a material-plasticity model.
   complete global DOF layout, is unit-normalized with constrained entries fixed
   to zero, and has a deterministic sign. Segmented-arch candidate eigenvalues
   are negative and their matrix-scale-normalized residuals stay below `5e-8`.
+- `branch_switch_mode_count` requests one to four absolute-eigenvalue-ordered
+  tangent modes at each assessed transition. The modes are extracted in one
+  Jacobi decomposition, unit-normalized, sign-canonicalized, and returned with
+  index, normalized eigenvalue, residual, and full constrained-DOF shape.
+  Explicit counts outside `[1, 4]` or counts without branch switching are
+  rejected before assembly.
+- The legacy singular `tangent_critical_eigenvalue`,
+  `tangent_critical_mode_residual`, and `tangent_critical_mode` fields remain an
+  exact view of ordered mode zero. New callers can consume
+  `tangent_critical_modes` without breaking old result readers.
 - Critical-mode extraction uses cyclic Jacobi sweeps only at inertia changes,
   rather than an eigen solve at every continuation point. Models from 129 to 256
   reduced DOFs retain inertia classification and candidate events but leave the
@@ -159,6 +169,16 @@ mode is a material-plasticity model.
   branch starts with the generalized direction from the refined critical state
   to its equilibrated seed, then owns independent radius adaptation, cutbacks,
   convergence status, and failure detail.
+- `branch_continuation_radius` optionally replaces the inherited primary-path
+  radius for switched paths. It must be positive and finite and is rejected
+  unless at least one continuation step is requested; each accepted step still
+  reports the radius actually used after any adaptive cutback.
+- `branch_continuation_min_radius_ratio` optionally sets a dimensionless lower
+  bound relative to the visible nominal switched-branch radius. Values must be
+  finite and in `(0, 1]` and require requested continuation. Successful
+  adaptation clamps at the bound; failed-step cutbacks may reach it exactly but
+  never cross it, and an attempted further reduction reports
+  `increment_too_small` with both current and minimum radii.
 - The retained four-element-per-side arch continues both positive and negative
   seeds for the full 64-point request limit. Every switched point satisfies
   force and arc-length errors below `1e-7`; load factors decrease monotonically
@@ -166,6 +186,12 @@ mode is a material-plasticity model.
   direction without false events, and the two terminal states remain separated.
   The entire primary load and displacement history still matches the probe-only
   run to `1e-11` relative tolerance.
+- Repeating that fixture with an explicit `0.02` switched-branch radius carries
+  both directions through a physical `limit_point_minimum` at step 44 and load
+  factor approximately `-1.473`, then onto a rising segment ending near `0.852`.
+  All 128 switched points remain converged with force and arc-length errors
+  below `1e-7`; a `0.25` minimum-radius ratio keeps every reported radius in the
+  problem-scale interval `[0.005, 0.02]`.
 - Switched steps expose the same limit-point and tangent-inertia transition
   vocabulary as the primary path. A retained synthetic reversal confirms that
   a coincident inertia change remains a limit point rather than a false
@@ -175,11 +201,45 @@ mode is a material-plasticity model.
   vector rotation, eight-step load histories, complete displacement vectors,
   event fields, and tangent negative-pivot counts. Branch matching is based on
   the transformed seed rather than the arbitrary sign of the normalized mode.
+- A complex-topology fixture adds an unloaded cantilever branch at the crown of
+  the eight-member arch. Its first inertia transition retains two distinct
+  equilibrium seeds and completes 16 switched steps in each direction with
+  both error gates below `1e-7`. An arbitrary rigid rotation preserves the
+  critical factor, 30-DOF seed and step vectors, load histories, events, and
+  inertia counts.
+- The branched fixture also encounters a later transition whose positive seed
+  is not distinct. That branch reports a local continuation failure with no
+  fabricated steps, while the opposite branch and complete primary path remain
+  available and converged.
+- A retained pair of identical, independently supported eight-member arches
+  creates an exact two-dimensional repeated critical subspace. Both normalized
+  eigenvalues are approximately `4.50e-11`, both residuals stay below `1e-8`,
+  and the two returned shapes are orthogonal. Mode indices zero and one each
+  generate positive and negative probes, yielding four distinct branch families
+  that each complete their requested switched continuation.
+- `branch_switch_pairwise_combinations` is an explicit opt-in layered on a
+  requested mode count of at least two. It retains the individual probes and
+  adds normalized `mode_i + mode_j` and `mode_i - mode_j` directions for every
+  pair; disabled/default requests keep the prior cost and probe count.
+- Each combined probe exposes `mode_components` with source mode index,
+  eigenvalue, and normalized weight. The singular `mode_index` remains the
+  first-component compatibility alias while `mode_eigenvalue` is null rather
+  than inventing one eigenvalue for a mixed direction.
+- The twin-arch fixture therefore produces eight distinct probes: four
+  individual and four pairwise. Every pairwise seed and its requested
+  continuation converge. The returned component projections match the signed
+  `0.005 / sqrt(2)` targets within `1e-8`, proving that the corrected
+  equilibrium follows the selected sum or difference rather than only carrying
+  a combination label.
 - The engine JSON route executes a four-step positive and negative switched
   continuation, round-trips it through `SolveFrame2dPDeltaResult`, and preserves
   solver provenance, convergence, error gates, events, inertia, and nested
   displacement histories. This capability is therefore available to headless
   callers rather than only direct solver users.
+- A second engine route executes the repeated two-mode twin-arch fixture and
+  preserves both mode records, the ordered individual attribution
+  `[0, 0, 1, 1]`, four pairwise component tables and projections, and all nested
+  continuation state.
 - A branch assembly or continuation failure is contained in that probe through
   `continuation_converged` and `continuation_failure_detail`. It does not turn a
   valid primary path or the opposite branch into a top-level solver error.
@@ -196,12 +256,9 @@ mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- complex-topology and interacting multi-mode continuation references
-- problem-scale minimum and maximum radius policies beyond the nominal cap
-- complex switched branches that physically traverse retained limit-point and
-  tangent-transition reference events
-- interacting multi-mode branch selection beyond a single retained critical
-  direction
+- external complex-topology switched-branch reference events
+- adaptive three-or-more-mode subspace sampling beyond pairwise directions
+- external coupled-topology correlation for interacting pairwise modes
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation
 
