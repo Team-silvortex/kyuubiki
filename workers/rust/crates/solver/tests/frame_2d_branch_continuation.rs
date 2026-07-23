@@ -1,6 +1,6 @@
 use kyuubiki_protocol::{
-    Frame2dBranchDirection, Frame2dBranchSwitchSelection, Frame2dElementInput,
-    Frame2dEquilibriumPathEvent, Frame2dNodeInput, Frame2dStabilityKinematics,
+    Frame2dBranchDirection, Frame2dBranchProbeOrigin, Frame2dBranchSwitchSelection,
+    Frame2dElementInput, Frame2dEquilibriumPathEvent, Frame2dNodeInput, Frame2dStabilityKinematics,
     Frame2dStabilityPathControl, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
     SolveFrame2dRequest,
 };
@@ -327,6 +327,7 @@ fn twin_arch_repeated_modes_drive_individual_and_pairwise_branch_families() {
     assert_eq!(candidate.tangent_critical_mode.as_ref(), Some(&first.shape));
 
     for (index, probe) in candidate.branch_switch_probes[..4].iter().enumerate() {
+        assert_eq!(probe.origin, Frame2dBranchProbeOrigin::CriticalMode);
         assert_eq!(probe.mode_index, index / 2);
         assert_eq!(
             probe.direction,
@@ -351,6 +352,7 @@ fn twin_arch_repeated_modes_drive_individual_and_pairwise_branch_families() {
         );
     }
     for (index, probe) in candidate.branch_switch_probes[4..].iter().enumerate() {
+        assert_eq!(probe.origin, Frame2dBranchProbeOrigin::PairwiseCombination);
         assert_eq!(probe.mode_index, 0);
         assert_eq!(probe.mode_eigenvalue, None);
         assert_eq!(probe.mode_components.len(), 2);
@@ -428,6 +430,7 @@ fn triple_arch_repeated_modes_drive_an_arbitrary_weighted_branch_family() {
         })
         .expect("repeated transition should expose a three-mode weighted branch family");
     for probe in &candidate.branch_switch_probes[6..] {
+        assert_eq!(probe.origin, Frame2dBranchProbeOrigin::CallerWeighted);
         assert_eq!(probe.mode_index, 0);
         assert_eq!(probe.mode_eigenvalue, None);
         assert_eq!(probe.mode_components.len(), 3);
@@ -483,6 +486,11 @@ fn triple_arch_repeated_modes_drive_the_bounded_automatic_subspace_fan() {
         .expect("three-mode transition should expose four signed direction families");
     let fan = &candidate.branch_switch_probes[6..];
     for family in fan.chunks_exact(2) {
+        assert_eq!(
+            family[0].origin,
+            Frame2dBranchProbeOrigin::AutomaticSubspace
+        );
+        assert_eq!(family[0].subspace_refinement_level, Some(0));
         assert_eq!(family[0].direction, Frame2dBranchDirection::Positive);
         assert_eq!(family[1].direction, Frame2dBranchDirection::Negative);
         assert_eq!(family[0].mode_components.len(), 3);
@@ -510,6 +518,52 @@ fn triple_arch_repeated_modes_drive_the_bounded_automatic_subspace_fan() {
                 .sum::<f64>()
                 .abs()
                 < 1.0 - 1.0e-12
+        })
+    }));
+}
+
+#[test]
+fn triple_arch_adaptive_fan_refines_response_boundaries_with_a_hard_budget() {
+    let mut request = configured_switched_request(repeated_arch_request(3), 1);
+    request.branch_switch_mode_count = Some(3);
+    request.branch_switch_subspace_sample_count = Some(4);
+    request.branch_switch_subspace_refinement_levels = Some(2);
+    let result = solve_frame_2d_p_delta(&request).expect("adaptive fan should remain contained");
+    let adaptive = result
+        .steps
+        .iter()
+        .flat_map(|step| &step.branch_switch_probes)
+        .filter(|probe| probe.origin == Frame2dBranchProbeOrigin::AdaptiveSubspace)
+        .collect::<Vec<_>>();
+    for level in 1..=2 {
+        assert!(
+            adaptive
+                .iter()
+                .any(|probe| probe.subspace_refinement_level == Some(level))
+        );
+    }
+    assert!(adaptive.iter().all(|probe| {
+        (2..=3).contains(&probe.mode_components.len())
+            && probe
+                .subspace_parent_angle_radians
+                .is_some_and(|angle| angle > 0.0)
+            && probe.continuation_steps.len() <= 1
+    }));
+    let maximum_angle = |level| {
+        adaptive
+            .iter()
+            .filter(|probe| probe.subspace_refinement_level == Some(level))
+            .filter_map(|probe| probe.subspace_parent_angle_radians)
+            .fold(0.0, f64::max)
+    };
+    assert!(maximum_angle(2) < maximum_angle(1));
+    assert!(result.steps.iter().all(|step| {
+        (1..=2).all(|level| {
+            step.branch_switch_probes
+                .iter()
+                .filter(|probe| probe.subspace_refinement_level == Some(level))
+                .count()
+                <= 8
         })
     }));
 }
@@ -706,6 +760,7 @@ fn shallow_arch_request(segments_per_side: usize, angle: f64) -> SolveFrame2dPDe
         branch_switch_pairwise_combinations: false,
         branch_switch_mode_weights: None,
         branch_switch_subspace_sample_count: None,
+        branch_switch_subspace_refinement_levels: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

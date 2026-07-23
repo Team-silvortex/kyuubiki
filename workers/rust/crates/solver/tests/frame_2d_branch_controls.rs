@@ -75,6 +75,19 @@ fn branch_controls_are_bounded_and_dependency_checked() {
     assert_error(&request, "must be between 1 and 16");
 
     request.branch_switch_subspace_sample_count = None;
+    request.branch_switch_subspace_refinement_levels = Some(1);
+    assert_error(&request, "requires branch_switch_subspace_sample_count");
+
+    request.branch_switch_mode_count = Some(3);
+    request.branch_switch_subspace_sample_count = Some(4);
+    request.branch_switch_subspace_refinement_levels = Some(0);
+    assert_error(&request, "must be between 1 and 2");
+
+    request.branch_switch_subspace_refinement_levels = Some(3);
+    assert_error(&request, "must be between 1 and 2");
+
+    request.branch_switch_subspace_refinement_levels = None;
+    request.branch_switch_subspace_sample_count = None;
     request.branch_switch = Frame2dBranchSwitchSelection::Disabled;
     request.branch_switch_amplitude = None;
     request.branch_switch_mode_count = None;
@@ -175,6 +188,7 @@ fn shallow_arch_request() -> SolveFrame2dPDeltaRequest {
         branch_switch_pairwise_combinations: false,
         branch_switch_mode_weights: None,
         branch_switch_subspace_sample_count: None,
+        branch_switch_subspace_refinement_levels: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

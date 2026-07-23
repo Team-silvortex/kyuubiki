@@ -370,10 +370,19 @@ growth; an exact three-mode repeated subspace retains both signed equilibria,
 actual component projections, and continuation. A bounded automatic fan now
 adds four deterministic projective directions for three modes and up to sixteen
 for four modes, prioritizes full-dimensional combinations, and retains solved
-component attribution through the engine route. The next stability milestone
-is response-driven adaptive refinement between sampled directions and
-independent external complex-topology correlation; the 128-mode and 256-inertia
-caps are observability limits, not arc-length solver size limits.
+component attribution through the engine route. One or two optional adaptive
+layers now refine nearest changing-response boundaries with normalized,
+projectively unique midpoints and a per-layer base-sample budget. Refinement is
+now hierarchical: child intervals retain only changing endpoint responses and
+halve their parent's projective angle. Probe origin, refinement level, and
+parent angle remain visible through the engine route. A ten-element Williams
+toggle-frame path now correlates the first external snap-through limit event
+against the published analytic load within 5%. The next stability milestone is
+external bifurcation and switched-branch correlation. The first internal
+complex-topology isolation reference also proves single/multi-mode spectral
+consistency and fixed-load host-response invariance after adding an unloaded
+free branch; the 128-mode and 256-inertia caps are observability limits, not
+arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

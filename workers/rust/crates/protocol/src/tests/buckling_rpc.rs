@@ -1,6 +1,7 @@
 use crate::{
     BucklingBeam1dElementInput, BucklingBeam1dModeResult, BucklingBeam1dNodeInput,
-    BucklingModeDirectionAssessment, Frame2dBranchSwitchSelection, Frame2dElementInput,
+    BucklingModeDirectionAssessment, Frame2dBranchDirection, Frame2dBranchProbeOrigin,
+    Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
     Frame2dNodeInput, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
     Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
     SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
@@ -79,6 +80,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             branch_switch_pairwise_combinations: true,
             branch_switch_mode_weights: Some(vec![1.0, -2.0]),
             branch_switch_subspace_sample_count: Some(4),
+            branch_switch_subspace_refinement_levels: Some(2),
             branch_continuation_steps: Some(4),
             branch_continuation_radius: Some(0.02),
             branch_continuation_min_radius_ratio: Some(0.125),
@@ -109,6 +111,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert!(params.branch_switch_pairwise_combinations);
     assert_eq!(params.branch_switch_mode_weights, Some(vec![1.0, -2.0]));
     assert_eq!(params.branch_switch_subspace_sample_count, Some(4));
+    assert_eq!(params.branch_switch_subspace_refinement_levels, Some(2));
     assert_eq!(params.branch_continuation_steps, Some(4));
     assert_eq!(params.branch_continuation_radius, Some(0.02));
     assert_eq!(params.branch_continuation_min_radius_ratio, Some(0.125));
@@ -132,6 +135,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     legacy_object.remove("branch_switch_pairwise_combinations");
     legacy_object.remove("branch_switch_mode_weights");
     legacy_object.remove("branch_switch_subspace_sample_count");
+    legacy_object.remove("branch_switch_subspace_refinement_levels");
     legacy_object.remove("branch_continuation_steps");
     legacy_object.remove("branch_continuation_radius");
     legacy_object.remove("branch_continuation_min_radius_ratio");
@@ -158,6 +162,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert!(!legacy.branch_switch_pairwise_combinations);
     assert!(legacy.branch_switch_mode_weights.is_none());
     assert!(legacy.branch_switch_subspace_sample_count.is_none());
+    assert!(legacy.branch_switch_subspace_refinement_levels.is_none());
     assert_eq!(legacy.branch_continuation_steps, None);
     assert_eq!(legacy.branch_continuation_radius, None);
     assert_eq!(legacy.branch_continuation_min_radius_ratio, None);
@@ -178,6 +183,32 @@ fn legacy_buckling_mode_results_default_direction_diagnostics() {
         mode.direction_assessment,
         BucklingModeDirectionAssessment::Unassessed
     );
+}
+
+#[test]
+fn legacy_branch_probes_default_to_the_critical_mode_origin() {
+    let probe: Frame2dBranchSwitchProbeResult = serde_json::from_value(serde_json::json!({
+        "direction": "positive",
+        "seed_amplitude": 0.01,
+        "iterations": 3,
+        "equilibrium_converged": true,
+        "primary_equilibrium_converged": true,
+        "distinct_branch": true,
+        "load_factor": 1.0,
+        "residual_norm": 1.0e-9,
+        "modal_constraint_error": 1.0e-10,
+        "mode_projection": 0.01,
+        "displacement_distance": 0.01,
+        "primary_displacement_distance": 0.02,
+        "displacements": [0.0, 0.01],
+        "failure_detail": null
+    }))
+    .expect("legacy branch probe should remain readable");
+
+    assert_eq!(probe.direction, Frame2dBranchDirection::Positive);
+    assert_eq!(probe.origin, Frame2dBranchProbeOrigin::CriticalMode);
+    assert_eq!(probe.subspace_refinement_level, None);
+    assert_eq!(probe.subspace_parent_angle_radians, None);
 }
 
 #[test]

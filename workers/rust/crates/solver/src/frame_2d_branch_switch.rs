@@ -5,8 +5,8 @@ use crate::linear_algebra::{reduce_sparse_system, sparse_to_dense};
 use crate::linear_dense::solve_linear_system;
 use crate::symmetric_critical_mode::SymmetricCriticalMode;
 use kyuubiki_protocol::{
-    Frame2dBranchDirection, Frame2dBranchModeComponent, Frame2dBranchSwitchProbeResult,
-    Frame2dBranchSwitchSelection, Frame2dElementInput,
+    Frame2dBranchDirection, Frame2dBranchModeComponent, Frame2dBranchProbeOrigin,
+    Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
 };
 
 const MAX_LINE_SEARCH_STEPS: usize = 12;
@@ -27,6 +27,18 @@ struct BranchState {
     iterations: usize,
     residual_norm: f64,
     constraint_error: f64,
+}
+
+pub(crate) fn mark_probe_origin(
+    mut probes: Vec<Frame2dBranchSwitchProbeResult>,
+    origin: Frame2dBranchProbeOrigin,
+    refinement_level: Option<usize>,
+) -> Vec<Frame2dBranchSwitchProbeResult> {
+    for probe in &mut probes {
+        probe.origin = origin;
+        probe.subspace_refinement_level = refinement_level;
+    }
+    probes
 }
 
 pub(crate) fn probe_branch_switches(
@@ -101,18 +113,22 @@ pub(crate) fn probe_pairwise_branch_switches(
                     critical_modes[left_index].shape.as_slice(),
                     critical_modes[right_index].shape.as_slice(),
                 ];
-                probes.extend(probe_direction_family(
-                    context,
-                    critical_displacement,
-                    primary_displacement,
-                    critical_load_factor,
-                    &shape,
-                    left_index,
+                probes.extend(mark_probe_origin(
+                    probe_direction_family(
+                        context,
+                        critical_displacement,
+                        primary_displacement,
+                        critical_load_factor,
+                        &shape,
+                        left_index,
+                        None,
+                        &components,
+                        &component_modes,
+                        amplitude,
+                        selection,
+                    ),
+                    Frame2dBranchProbeOrigin::PairwiseCombination,
                     None,
-                    &components,
-                    &component_modes,
-                    amplitude,
-                    selection,
                 ));
             }
         }
@@ -171,18 +187,22 @@ pub(crate) fn probe_weighted_branch_switches(
         .iter()
         .map(|(index, _)| critical_modes[*index].shape.as_slice())
         .collect::<Vec<_>>();
-    probe_direction_family(
-        context,
-        critical_displacement,
-        primary_displacement,
-        critical_load_factor,
-        &shape,
-        mode_index,
+    mark_probe_origin(
+        probe_direction_family(
+            context,
+            critical_displacement,
+            primary_displacement,
+            critical_load_factor,
+            &shape,
+            mode_index,
+            None,
+            &components,
+            &component_modes,
+            amplitude,
+            selection,
+        ),
+        Frame2dBranchProbeOrigin::CallerWeighted,
         None,
-        &components,
-        &component_modes,
-        amplitude,
-        selection,
     )
 }
 
@@ -269,18 +289,25 @@ pub(crate) fn unavailable_pairwise_branch_switches(
                         weight: relative_sign * std::f64::consts::FRAC_1_SQRT_2,
                     },
                 ];
-                probes.extend(directions(selection).into_iter().map(|direction| {
-                    failed_result(
-                        direction,
-                        left_index,
-                        None,
-                        components.clone(),
-                        amplitude,
-                        0,
-                        None,
-                        detail.to_string(),
-                    )
-                }));
+                probes.extend(mark_probe_origin(
+                    directions(selection)
+                        .into_iter()
+                        .map(|direction| {
+                            failed_result(
+                                direction,
+                                left_index,
+                                None,
+                                components.clone(),
+                                amplitude,
+                                0,
+                                None,
+                                detail.to_string(),
+                            )
+                        })
+                        .collect(),
+                    Frame2dBranchProbeOrigin::PairwiseCombination,
+                    None,
+                ));
             }
         }
     }
@@ -307,21 +334,25 @@ pub(crate) fn unavailable_weighted_branch_switches(
         })
         .collect::<Vec<_>>();
     let mode_index = components[0].mode_index;
-    directions(selection)
-        .into_iter()
-        .map(|direction| {
-            failed_result(
-                direction,
-                mode_index,
-                None,
-                components.clone(),
-                amplitude,
-                0,
-                None,
-                detail.to_string(),
-            )
-        })
-        .collect()
+    mark_probe_origin(
+        directions(selection)
+            .into_iter()
+            .map(|direction| {
+                failed_result(
+                    direction,
+                    mode_index,
+                    None,
+                    components.clone(),
+                    amplitude,
+                    0,
+                    None,
+                    detail.to_string(),
+                )
+            })
+            .collect(),
+        Frame2dBranchProbeOrigin::CallerWeighted,
+        None,
+    )
 }
 
 fn directions(selection: Frame2dBranchSwitchSelection) -> Vec<Frame2dBranchDirection> {
@@ -615,6 +646,9 @@ fn successful_result(
     let distinct_branch =
         projection_matches && primary_distance.is_some_and(|distance| distance >= amplitude * 0.5);
     Frame2dBranchSwitchProbeResult {
+        origin: Frame2dBranchProbeOrigin::CriticalMode,
+        subspace_refinement_level: None,
+        subspace_parent_angle_radians: None,
         mode_index,
         mode_eigenvalue,
         mode_components,
@@ -650,6 +684,9 @@ fn failed_result(
     detail: String,
 ) -> Frame2dBranchSwitchProbeResult {
     Frame2dBranchSwitchProbeResult {
+        origin: Frame2dBranchProbeOrigin::CriticalMode,
+        subspace_refinement_level: None,
+        subspace_parent_angle_radians: None,
         mode_index,
         mode_eigenvalue,
         mode_components,

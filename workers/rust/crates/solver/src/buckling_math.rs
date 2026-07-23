@@ -48,12 +48,19 @@ pub(crate) fn generalized_eigenpairs(
     mode_count: usize,
 ) -> Result<Vec<GeneralizedEigenpair>, String> {
     validate_matrices(stiffness, geometric)?;
-    let mode_count = mode_count.max(1);
-    if mode_count == 1 {
-        if let Ok((eigenvalue, vector)) = smallest_generalized_eigenpair(stiffness, geometric) {
-            return Ok(vec![eigenpair(stiffness, geometric, eigenvalue, vector)]);
-        }
+    let active = geometrically_active_indices(geometric);
+    if !active.is_empty() && active.len() < stiffness.len() {
+        return condensed_generalized_eigenpairs(stiffness, geometric, &active, mode_count);
     }
+    uncondensed_generalized_eigenpairs(stiffness, geometric, mode_count)
+}
+
+fn uncondensed_generalized_eigenpairs(
+    stiffness: &[Vec<f64>],
+    geometric: &[Vec<f64>],
+    mode_count: usize,
+) -> Result<Vec<GeneralizedEigenpair>, String> {
+    let mode_count = mode_count.max(1);
 
     let elastic_lower = cholesky(stiffness).map_err(|_| {
         "buckling elastic stiffness is not positive definite after constraints".to_string()
@@ -77,6 +84,79 @@ pub(crate) fn generalized_eigenpairs(
     Ok(pairs)
 }
 
+fn geometrically_active_indices(geometric: &[Vec<f64>]) -> Vec<usize> {
+    geometric
+        .iter()
+        .enumerate()
+        .filter_map(|(index, row)| row.iter().any(|value| *value != 0.0).then_some(index))
+        .collect()
+}
+
+fn condensed_generalized_eigenpairs(
+    stiffness: &[Vec<f64>],
+    geometric: &[Vec<f64>],
+    active: &[usize],
+    mode_count: usize,
+) -> Result<Vec<GeneralizedEigenpair>, String> {
+    let inactive = (0..stiffness.len())
+        .filter(|index| !active.contains(index))
+        .collect::<Vec<_>>();
+    let inactive_stiffness = submatrix(stiffness, &inactive, &inactive);
+    let inactive_lower = cholesky(&inactive_stiffness)
+        .map_err(|_| "buckling inactive elastic subspace is not positive definite".to_string())?;
+    let inactive_active = submatrix(stiffness, &inactive, active);
+    let mut recovery = vec![vec![0.0; active.len()]; inactive.len()];
+    for column in 0..active.len() {
+        let rhs = inactive_active
+            .iter()
+            .map(|row| row[column])
+            .collect::<Vec<_>>();
+        let solved = solve_upper_transpose(&inactive_lower, &solve_lower(&inactive_lower, &rhs));
+        for (row, value) in solved.into_iter().enumerate() {
+            recovery[row][column] = value;
+        }
+    }
+
+    let mut condensed_stiffness = submatrix(stiffness, active, active);
+    for (row, &physical_row) in active.iter().enumerate() {
+        for column in 0..active.len() {
+            let correction = inactive
+                .iter()
+                .enumerate()
+                .map(|(index, &physical_column)| {
+                    stiffness[physical_row][physical_column] * recovery[index][column]
+                })
+                .sum::<f64>();
+            condensed_stiffness[row][column] -= correction;
+        }
+    }
+    let condensed_geometric = submatrix(geometric, active, active);
+    let pairs = uncondensed_generalized_eigenpairs(
+        &condensed_stiffness,
+        &condensed_geometric,
+        mode_count.min(active.len()),
+    )?;
+    Ok(pairs
+        .into_iter()
+        .map(|pair| {
+            let mut vector = vec![0.0; stiffness.len()];
+            for (index, &physical) in active.iter().enumerate() {
+                vector[physical] = pair.vector[index];
+            }
+            for (index, &physical) in inactive.iter().enumerate() {
+                vector[physical] = -dot(&recovery[index], &pair.vector);
+            }
+            eigenpair(stiffness, geometric, pair.eigenvalue, vector)
+        })
+        .collect())
+}
+
+fn submatrix(matrix: &[Vec<f64>], rows: &[usize], columns: &[usize]) -> Vec<Vec<f64>> {
+    rows.iter()
+        .map(|&row| columns.iter().map(|&column| matrix[row][column]).collect())
+        .collect()
+}
+
 fn relative_gap(left: f64, right: f64) -> f64 {
     (right - left).abs() / left.abs().max(right.abs()).max(f64::MIN_POSITIVE)
 }
@@ -93,50 +173,6 @@ fn validate_matrices(stiffness: &[Vec<f64>], geometric: &[Vec<f64>]) -> Result<(
         );
     }
     Ok(())
-}
-
-fn smallest_generalized_eigenpair(
-    stiffness: &[Vec<f64>],
-    geometric: &[Vec<f64>],
-) -> Result<(f64, Vec<f64>), String> {
-    let lower = cholesky(stiffness).map_err(|_| {
-        "buckling elastic stiffness is not positive definite after constraints".to_string()
-    })?;
-    let size = stiffness.len();
-    let mut shape = (0..size)
-        .map(|index| {
-            let phase = std::f64::consts::PI * (index + 1) as f64 / (size + 1) as f64;
-            phase.sin() + 0.173 * (2.0 * phase).cos()
-        })
-        .collect::<Vec<_>>();
-    normalize(&mut shape)?;
-    let mut previous_factor = f64::NAN;
-
-    for _ in 0..256 {
-        let geometric_product = matrix_vector(geometric, &shape);
-        let forward = solve_lower(&lower, &geometric_product);
-        let mut next = solve_upper_transpose(&lower, &forward);
-        normalize(&mut next)?;
-        let elastic_product = matrix_vector(stiffness, &next);
-        let next_geometric_product = matrix_vector(geometric, &next);
-        let denominator = dot(&next, &next_geometric_product);
-        if !(denominator.is_finite() && denominator > 1.0e-18) {
-            return Err("buckling reference load pattern has no positive modal work".to_string());
-        }
-        let load_factor = dot(&next, &elastic_product) / denominator;
-        let scale = l2_norm(&elastic_product)
-            .max(load_factor.abs() * l2_norm(&next_geometric_product))
-            .max(1.0);
-        let relative_residual =
-            generalized_residual(stiffness, geometric, &next, load_factor) / scale;
-        let factor_change = (load_factor - previous_factor).abs() / load_factor.abs().max(1.0);
-        shape = next;
-        if relative_residual <= 1.0e-6 && factor_change <= 1.0e-8 {
-            return Ok((load_factor, shape));
-        }
-        previous_factor = load_factor;
-    }
-    Err("buckling inverse iteration did not converge within 256 iterations".to_string())
 }
 
 fn eigenpair(
@@ -212,18 +248,6 @@ fn solve_upper_transpose(lower: &[Vec<f64>], rhs: &[f64]) -> Vec<f64> {
     result
 }
 
-fn matrix_vector(matrix: &[Vec<f64>], vector: &[f64]) -> Vec<f64> {
-    matrix
-        .iter()
-        .map(|row| {
-            row.iter()
-                .zip(vector)
-                .map(|(value, item)| value * item)
-                .sum()
-        })
-        .collect()
-}
-
 fn normalize(vector: &mut [f64]) -> Result<(), String> {
     let norm = l2_norm(vector);
     if !(norm.is_finite() && norm > f64::EPSILON) {
@@ -288,13 +312,24 @@ mod tests {
     }
 
     #[test]
-    fn dense_single_mode_falls_back_for_a_slow_cluster() {
+    fn dense_single_mode_uses_the_complete_symmetric_spectrum() {
         let stiffness = diagonal(&[1.0, 1.000_1, 20.0, 100.0]);
         let geometric = diagonal(&[1.0; 4]);
         let pairs = generalized_eigenpairs(&stiffness, &geometric, 1)
-            .expect("dense clustered spectrum should use the robust fallback");
+            .expect("dense clustered spectrum should use the complete decomposition");
         assert_eq!(pairs.len(), 1);
         assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-10);
+    }
+
+    #[test]
+    fn geometric_inactive_dof_condensation_recovers_the_full_mode() {
+        let stiffness = vec![vec![2.0, -1.0], vec![-1.0, 1.0]];
+        let geometric = vec![vec![1.0, 0.0], vec![0.0, 0.0]];
+        let pairs = generalized_eigenpairs(&stiffness, &geometric, 1)
+            .expect("semidefinite generalized problem should condense");
+        assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-12);
+        assert!((pairs[0].vector[0] - pairs[0].vector[1]).abs() < 1.0e-12);
+        assert!(pairs[0].residual_norm < 1.0e-12);
     }
 
     fn diagonal(values: &[f64]) -> Vec<Vec<f64>> {

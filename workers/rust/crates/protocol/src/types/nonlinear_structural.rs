@@ -117,6 +117,8 @@ pub struct SolveFrame2dPDeltaRequest {
     #[serde(default)]
     pub branch_switch_subspace_sample_count: Option<usize>,
     #[serde(default)]
+    pub branch_switch_subspace_refinement_levels: Option<usize>,
+    #[serde(default)]
     pub branch_continuation_steps: Option<usize>,
     #[serde(default)]
     pub branch_continuation_radius: Option<f64>,
@@ -207,6 +209,22 @@ pub enum Frame2dBranchDirection {
     Negative,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dBranchProbeOrigin {
+    CriticalMode,
+    PairwiseCombination,
+    CallerWeighted,
+    AutomaticSubspace,
+    AdaptiveSubspace,
+}
+
+impl Default for Frame2dBranchProbeOrigin {
+    fn default() -> Self {
+        Self::CriticalMode
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dCriticalModeResult {
     pub mode_index: usize,
@@ -247,6 +265,12 @@ pub struct Frame2dBranchContinuationStepResult {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBranchSwitchProbeResult {
+    #[serde(default)]
+    pub origin: Frame2dBranchProbeOrigin,
+    #[serde(default)]
+    pub subspace_refinement_level: Option<usize>,
+    #[serde(default)]
+    pub subspace_parent_angle_radians: Option<f64>,
     #[serde(default)]
     pub mode_index: usize,
     #[serde(default)]

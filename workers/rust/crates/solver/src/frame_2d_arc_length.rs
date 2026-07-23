@@ -261,6 +261,9 @@ pub(crate) fn solve_arc_length_steps(
                         load_factor,
                         &critical_modes,
                         sample_count,
+                        request
+                            .branch_switch_subspace_refinement_levels
+                            .unwrap_or(0),
                         amplitude,
                         request.branch_switch,
                     ));

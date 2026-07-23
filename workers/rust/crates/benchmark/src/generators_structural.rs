@@ -391,6 +391,7 @@ pub(crate) fn generate_frame_2d_p_delta_case(
         branch_switch_pairwise_combinations: false,
         branch_switch_mode_weights: None,
         branch_switch_subspace_sample_count: None,
+        branch_switch_subspace_refinement_levels: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

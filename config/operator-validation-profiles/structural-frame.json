@@ -203,6 +203,7 @@
         "adaptive_arc_length_radius_cutback",
         "target_iteration_arc_length_adaptation",
         "shallow_arch_limit_point_reference",
+        "williams_toggle_frame_external_limit_reference",
         "segmented_shallow_arch_mesh_sequence",
         "equilibrium_path_event_detection",
         "symmetric_tangent_inertia",
@@ -210,11 +211,14 @@
         "transition_critical_mode_extraction",
         "ordered_critical_mode_subspace_extraction",
         "equilibrium_corrected_transition_bisection",
+        "geometric_inactive_dof_static_condensation",
+        "spectator_branch_topology_isolation_reference",
         "critical_mode_constrained_branch_probe",
         "repeated_mode_branch_family_selection",
         "pairwise_critical_mode_combination_probing",
         "caller_weighted_critical_mode_subspace_probing",
         "bounded_automatic_critical_mode_subspace_fan",
+        "response_driven_critical_subspace_refinement",
         "switched_branch_arc_length_continuation",
         "explicit_switched_branch_radius_control",
         "dimensionless_switched_branch_radius_floor",
@@ -250,6 +254,8 @@
         "oversized_arc_radius_recovers_through_visible_cutbacks",
         "shallow_arch_limit_factor_matches_pin_jointed_reference",
         "shallow_arch_path_crosses_the_limit_point_and_descends",
+        "williams_toggle_peak_matches_the_published_analytic_limit_within_five_percent",
+        "williams_toggle_peak_emits_a_limit_point_maximum_before_a_descending_segment",
         "arc_radius_continuously_tracks_the_target_iteration_count",
         "segmented_arch_linear_critical_factor_converges",
         "resolved_member_instability_precedes_rigid_link_snap_through",
@@ -266,10 +272,16 @@
         "candidate_critical_modes_are_unit_normalized_and_constraint_compatible",
         "candidate_critical_mode_residuals_remain_bounded",
         "requested_critical_modes_are_absolute_eigenvalue_ordered_and_orthogonal",
+        "single_and_multi_mode_requests_retain_the_same_first_buckling_factor",
+        "geometrically_inactive_dofs_are_condensed_and_recovered_without_spectral_pollution",
+        "an_unloaded_free_branch_preserves_host_buckling_and_fixed_load_equilibria",
         "branch_switch_mode_count_is_explicit_and_bounded_from_one_to_four",
         "pairwise_mode_combinations_are_explicitly_opt_in_and_require_two_modes",
         "weighted_mode_vectors_are_finite_bounded_and_match_the_requested_mode_count",
         "automatic_subspace_samples_are_dimension_bounded_normalized_and_projectively_unique",
+        "subspace_refinement_requires_a_base_fan_and_is_bounded_to_two_layers",
+        "adaptive_directions_target_changing_response_boundaries_and_remain_projectively_unique",
+        "adaptive_child_boundaries_strictly_contract_the_reported_parent_angle",
         "critical_mode_extraction_is_transition_only_and_size_bounded",
         "transition_midpoints_are_corrected_back_to_equilibrium",
         "twelve_refinements_contract_candidate_brackets_by_more_than_four_thousand",
@@ -297,11 +309,14 @@
         "pairwise_equilibria_report_component_projections_matching_requested_weights",
         "three_mode_weighted_equilibria_preserve_normalized_attribution_and_combined_projection",
         "three_mode_automatic_fan_produces_four_distinct_signed_branch_families",
+        "three_mode_adaptive_fan_retains_origin_level_and_hard_probe_budget",
         "legacy_single_mode_fields_alias_the_first_ordered_critical_mode",
         "workflow_json_preserves_nested_switched_branch_diagnostics",
         "workflow_json_preserves_repeated_mode_pairwise_branch_families",
         "workflow_json_preserves_caller_weighted_branch_families",
         "workflow_json_preserves_bounded_automatic_subspace_families",
+        "workflow_json_preserves_adaptive_subspace_origin_and_level",
+        "workflow_json_preserves_adaptive_subspace_parent_angle",
         "branch_continuation_failures_do_not_invalidate_the_primary_path"
       ],
       "evidence_paths": [
@@ -311,6 +326,7 @@
         "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
+        "workers/rust/crates/solver/src/buckling_math.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_switch.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_subspace.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_continuation.rs",
@@ -318,8 +334,10 @@
         "workers/rust/crates/solver/src/symmetric_inertia.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
+        "workers/rust/crates/solver/tests/frame_2d_williams_toggle_reference.rs",
         "workers/rust/crates/solver/tests/frame_2d_branch_continuation.rs",
         "workers/rust/crates/solver/tests/frame_2d_branch_controls.rs",
+        "workers/rust/crates/solver/tests/frame_2d_branch_reference.rs",
         "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs",
         "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs"
       ],
@@ -355,6 +373,11 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
         },
         {
+          "id": "frame-2d-williams-toggle-external-reference",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_williams_toggle_reference -- --nocapture"
+        },
+        {
           "id": "frame-2d-branch-control-boundaries",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_controls -- --nocapture"
@@ -363,6 +386,11 @@
           "id": "frame-2d-switched-branch-continuation",
           "kind": "invariant",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_continuation -- --nocapture"
+        },
+        {
+          "id": "frame-2d-complex-topology-reference",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_reference -- --nocapture"
         },
         {
           "id": "frame-2d-p-delta-workflow",

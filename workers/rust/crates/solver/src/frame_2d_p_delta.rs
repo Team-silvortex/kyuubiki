@@ -1,6 +1,8 @@
 use crate::buckling_frame_2d::solve_buckling_frame_2d;
 use crate::frame_2d_arc_length::solve_arc_length_steps;
-use crate::frame_2d_branch_subspace::available_subspace_sample_count;
+use crate::frame_2d_branch_subspace::{
+    MAX_SUBSPACE_REFINEMENT_LEVELS, available_subspace_sample_count,
+};
 use crate::frame_2d_corotational::solve_corotational_steps;
 use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
@@ -338,6 +340,19 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
         if !(1..=available).contains(&sample_count) {
             return Err(format!(
                 "frame 2d branch_switch_subspace_sample_count must be between 1 and {available} for the requested mode count"
+            ));
+        }
+    }
+    if let Some(levels) = request.branch_switch_subspace_refinement_levels {
+        if request.branch_switch_subspace_sample_count.is_none() {
+            return Err(
+                "frame 2d branch_switch_subspace_refinement_levels requires branch_switch_subspace_sample_count"
+                    .into(),
+            );
+        }
+        if !(1..=MAX_SUBSPACE_REFINEMENT_LEVELS).contains(&levels) {
+            return Err(format!(
+                "frame 2d branch_switch_subspace_refinement_levels must be between 1 and {MAX_SUBSPACE_REFINEMENT_LEVELS}"
             ));
         }
     }

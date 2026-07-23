@@ -91,6 +91,14 @@ branches. Neither control mode is a material-plasticity model.
   the descending branch through zero load, and inverts its crown. The retained
   peak matches an independently evaluated pin-jointed shallow-arch reference
   within 2%, while every accepted point satisfies both `1e-7` error gates.
+- The classic Williams toggle frame adds an external snap-through event
+  reference using the published `12.943 in` half span, `0.386 in` rise,
+  `0.753 x 0.243 in` section, and `10.3e6 psi` modulus. A ten-element
+  corotational path reaches `35.0024 lb`, within 5% of the published analytic
+  `34.0392 lb` limit, marks that sample as `limit_point_maximum`, and retains
+  negative load increments afterward. The model and analytic limit are
+  traceable to [Williams (1964)](https://doi.org/10.1093/qjmam/17.4.451) and
+  an [independent nonlinear-frame study](https://dspace.library.uvic.ca/bitstreams/91d6532a-9a66-4ce2-a33c-cbba9829049b/download).
 - Subdividing each arch side into 2, 4, and 8 frame elements resolves an earlier
   member-flexural instability branch hidden by the rigid-link-like two-element
   fixture. Linear critical factors converge to within 0.1% between the two
@@ -207,6 +215,17 @@ branches. Neither control mode is a material-plasticity model.
   both error gates below `1e-7`. An arbitrary rigid rotation preserves the
   critical factor, 30-DOF seed and step vectors, load histories, events, and
   inertia counts.
+- A separate topology-isolation reference compares the host arch against that
+  same unloaded free branch under directly comparable controls. Dense
+  generalized buckling now statically condenses degrees of freedom with no
+  geometric work, restores their modal motion afterward, and recomputes the
+  full residual. One-mode and six-mode requests retain the same first factor;
+  the host and branched spectra agree within `1e-9`.
+- Sixteen fixed load-factor corotational equilibria then preserve the host's
+  common 27-degree-of-freedom displacement field within a `2e-10` vector norm,
+  while load factors agree within `2e-12`. Arc-length step indices are
+  intentionally not compared because adding a freely moving degree of freedom
+  changes the continuation norm and therefore reparameterizes the same path.
 - The branched fixture also encounters a later transition whose positive seed
   is not distinct. That branch reports a local continuation failure with no
   fabricated steps, while the opposite branch and complete primary path remain
@@ -254,6 +273,29 @@ branches. Neither control mode is a material-plasticity model.
   Every automatic equilibrium is distinct, every requested two-step
   continuation completes, and each weighted component projection recomposes
   the constrained direction within `1e-10`.
+- `branch_switch_subspace_refinement_levels` optionally adds one or two
+  response-driven refinement layers. Each layer compares the signed
+  equilibrium, primary-correction, and distinct-branch classifications of
+  retained direction families, then samples normalized projective midpoints
+  across the nearest changing-response boundaries. Midpoints are sign
+  canonicalized and deduplicated against all earlier directions.
+- Refinement is hierarchical rather than a fresh global rescan: each solved
+  midpoint retains only the parent subintervals whose endpoint response
+  classifications still differ. Every adaptive probe reports that parent's
+  projective width in `subspace_parent_angle_radians`; retained two-layer
+  three-arch evidence requires the second-layer maximum width to be strictly
+  smaller than the first-layer maximum, while the geometric unit check proves
+  exact angle halving for a single retained boundary.
+- Refinement requires the bounded base fan and adds at most its requested
+  sample count per layer. At the maximum four-mode setting this limits the
+  complete search to 48 direction families, or 96 probes when both signs are
+  selected. A three-arch transition exercises a real changing-response
+  boundary and retains its one-layer adaptive probes without invalidating the
+  primary path.
+- Every probe reports an explicit `origin` (`critical_mode`,
+  `pairwise_combination`, `caller_weighted`, `automatic_subspace`, or
+  `adaptive_subspace`). Automatic and adaptive probes additionally report
+  `subspace_refinement_level`, with the deterministic base fan at level zero.
 - The engine JSON route executes a four-step positive and negative switched
   continuation, round-trips it through `SolveFrame2dPDeltaResult`, and preserves
   solver provenance, convergence, error gates, events, inertia, and nested
@@ -263,9 +305,10 @@ branches. Neither control mode is a material-plasticity model.
   preserves both mode records, the ordered individual attribution
   `[0, 0, 1, 1]`, four pairwise families, one caller-weighted family, all
   component tables and projections, and all nested continuation state.
-- A third engine route executes the full three-mode automatic fan and preserves
-  its bounded sample count, fourteen ordered probes, normalized component
-  tables, and solved component projections for headless callers.
+- A third engine route executes the full three-mode automatic fan with two
+  adaptive layers and preserves its bounded controls, origin, refinement
+  level, parent angle, normalized component tables, and solved component
+  projections for headless callers.
 - A branch assembly or continuation failure is contained in that probe through
   `continuation_converged` and `continuation_failure_detail`. It does not turn a
   valid primary path or the opposite branch into a top-level solver error.
@@ -282,11 +325,11 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- external complex-topology switched-branch reference events
-- response-driven adaptive refinement between retained subspace samples
+- external complex-topology bifurcation and switched-branch reference events
+- angular refinement convergence against an independent branch reference
 - external coupled-topology correlation for interacting pairwise modes
 - material yielding, residual stress, and section interaction
-- post-critical branch switching and external reference correlation
+- post-critical branch switching beyond the externally correlated limit point
 
 ## Performance Reproduction
 

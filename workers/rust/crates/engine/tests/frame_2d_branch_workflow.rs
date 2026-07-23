@@ -1,6 +1,6 @@
 use kyuubiki_engine::run_solve_operator;
 use kyuubiki_protocol::{
-    Frame2dBranchSwitchSelection, Frame2dElementInput, Frame2dNodeInput,
+    Frame2dBranchProbeOrigin, Frame2dBranchSwitchSelection, Frame2dElementInput, Frame2dNodeInput,
     Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
     SolveFrame2dPDeltaRequest, SolveFrame2dPDeltaResult, SolveFrame2dRequest,
 };
@@ -163,6 +163,7 @@ fn workflow_route_preserves_automatic_three_mode_subspace_fan() {
     request.branch_switch_amplitude = Some(5.0e-3);
     request.branch_switch_mode_count = Some(3);
     request.branch_switch_subspace_sample_count = Some(4);
+    request.branch_switch_subspace_refinement_levels = Some(2);
 
     let value = run_solve_operator(
         "solve.frame_2d_p_delta",
@@ -172,6 +173,22 @@ fn workflow_route_preserves_automatic_three_mode_subspace_fan() {
     let result: SolveFrame2dPDeltaResult =
         serde_json::from_value(value).expect("workflow result should preserve the subspace fan");
     assert_eq!(result.input.branch_switch_subspace_sample_count, Some(4));
+    assert_eq!(
+        result.input.branch_switch_subspace_refinement_levels,
+        Some(2)
+    );
+    let adaptive = result
+        .steps
+        .iter()
+        .flat_map(|step| &step.branch_switch_probes)
+        .filter(|probe| probe.origin == Frame2dBranchProbeOrigin::AdaptiveSubspace)
+        .collect::<Vec<_>>();
+    for level in 1..=2 {
+        assert!(adaptive.iter().any(|probe| {
+            probe.subspace_refinement_level == Some(level)
+                && probe.subspace_parent_angle_radians.is_some()
+        }));
+    }
     let candidate = result
         .steps
         .iter()
@@ -186,7 +203,10 @@ fn workflow_route_preserves_automatic_three_mode_subspace_fan() {
         })
         .expect("workflow should retain the automatic three-mode fan");
     assert!(candidate.branch_switch_probes[6..].iter().all(|probe| {
-        probe.mode_eigenvalue.is_none()
+        probe.origin == Frame2dBranchProbeOrigin::AutomaticSubspace
+            && probe.subspace_refinement_level == Some(0)
+            && probe.subspace_parent_angle_radians.is_none()
+            && probe.mode_eigenvalue.is_none()
             && probe.mode_components.len() == 3
             && probe.mode_component_projections.len() == 3
     }));
@@ -282,6 +302,7 @@ fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
         branch_switch_pairwise_combinations: false,
         branch_switch_mode_weights: None,
         branch_switch_subspace_sample_count: None,
+        branch_switch_subspace_refinement_levels: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
