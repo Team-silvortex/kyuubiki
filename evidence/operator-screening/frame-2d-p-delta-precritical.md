@@ -44,9 +44,9 @@ Load control remains an elastic precritical screening path and retains its
 `0.95 lambda_cr` guard. Arc-length control may cross that screening guard, but
 is still experimental. Retained evidence now includes one shallow-arch limit
 point, a descending equilibrium branch, and opt-in critical-mode-constrained
-branch probes. A probe is an independently equilibrated branch seed, not yet a
-continued or externally qualified post-buckling branch. Neither control mode is
-a material-plasticity model.
+branch probes with short switched-branch continuation. These remain screening
+paths rather than externally qualified post-buckling branches. Neither control
+mode is a material-plasticity model.
 
 ## Retained Checks
 
@@ -154,6 +154,35 @@ a material-plasticity model.
   factor together. Backtracking must reduce the larger of the equilibrium and
   modal-constraint errors; failure remains a structured probe result and never
   replaces or truncates the primary arc-length history.
+- `branch_continuation_steps` optionally continues each distinct seed with the
+  same spherical arc-length single-step kernel, up to 64 requested points. Each
+  branch starts with the generalized direction from the refined critical state
+  to its equilibrated seed, then owns independent radius adaptation, cutbacks,
+  convergence status, and failure detail.
+- The retained four-element-per-side arch continues both positive and negative
+  seeds for the full 64-point request limit. Every switched point satisfies
+  force and arc-length errors below `1e-7`; load factors decrease monotonically
+  from approximately `4.21` to `2.85`, both paths retain one negative tangent
+  direction without false events, and the two terminal states remain separated.
+  The entire primary load and displacement history still matches the probe-only
+  run to `1e-11` relative tolerance.
+- Switched steps expose the same limit-point and tangent-inertia transition
+  vocabulary as the primary path. A retained synthetic reversal confirms that
+  a coincident inertia change remains a limit point rather than a false
+  bifurcation candidate; the 64-point physical branches confirm the negative
+  case by emitting no event on monotonic, constant-inertia paths.
+- A rigidly rotated segmented arch preserves switched-branch seed vectors after
+  vector rotation, eight-step load histories, complete displacement vectors,
+  event fields, and tangent negative-pivot counts. Branch matching is based on
+  the transformed seed rather than the arbitrary sign of the normalized mode.
+- The engine JSON route executes a four-step positive and negative switched
+  continuation, round-trips it through `SolveFrame2dPDeltaResult`, and preserves
+  solver provenance, convergence, error gates, events, inertia, and nested
+  displacement histories. This capability is therefore available to headless
+  callers rather than only direct solver users.
+- A branch assembly or continuation failure is contained in that probe through
+  `continuation_converged` and `continuation_failure_detail`. It does not turn a
+  valid primary path or the opposite branch into a top-level solver error.
 - Explicit fields with the wrong DOF count, non-finite entries, or no
   translational imperfection are rejected rather than falling back to a mode.
 - Amplification increases monotonically and reduced equilibrium residuals stay
@@ -169,8 +198,8 @@ a material-plasticity model.
 
 - complex-topology and interacting multi-mode continuation references
 - problem-scale minimum and maximum radius policies beyond the nominal cap
-- continuation from retained branch-probe states, including branch orientation,
-  adaptive radius, and switched-path event checks
+- complex switched branches that physically traverse retained limit-point and
+  tangent-transition reference events
 - interacting multi-mode branch selection beyond a single retained critical
   direction
 - material yielding, residual stress, and section interaction

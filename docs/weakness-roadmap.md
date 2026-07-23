@@ -349,9 +349,13 @@ Transitions up to 128 reduced DOFs now retain a normalized critical mode for
 branch construction. Candidate intervals can now be narrowed by configurable,
 equilibrium-corrected inertia bisection. Opt-in positive and negative
 critical-mode constraints now recover independently equilibrated branch seeds
-without mutating the primary path. The next stability milestone is continuation
-from those seeds and interacting multi-mode selection; the 128-mode and
-256-inertia caps are observability limits, not arc-length solver size limits.
+without mutating the primary path. Both retained seed directions now support
+isolated 64-point arc-length continuation with independent radius adaptation,
+cutbacks, failure diagnostics, switched-path event fields, rigid-rotation
+objectivity, and typed engine JSON transport. The next stability milestone is a
+complex branch that physically traverses retained events plus interacting
+multi-mode selection; the 128-mode and 256-inertia caps are observability
+limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

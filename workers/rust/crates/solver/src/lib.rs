@@ -17,6 +17,7 @@ mod electrostatic_plane_2d_element;
 mod electrostatic_plane_2d_validation;
 mod frame_2d;
 mod frame_2d_arc_length;
+mod frame_2d_branch_continuation;
 mod frame_2d_branch_switch;
 mod frame_2d_corotational;
 mod frame_2d_corotational_element;

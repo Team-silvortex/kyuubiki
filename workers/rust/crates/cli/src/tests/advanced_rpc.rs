@@ -307,6 +307,7 @@ fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
         tangent_transition_refinement_steps: None,
         branch_switch: Default::default(),
         branch_switch_amplitude: None,
+        branch_continuation_steps: None,
     }
 }
 

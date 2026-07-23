@@ -341,6 +341,9 @@ fn successful_result(
         primary_displacement_distance: primary_distance,
         displacements: Some(state.displacement),
         failure_detail: classification_detail,
+        continuation_steps: Vec::new(),
+        continuation_converged: None,
+        continuation_failure_detail: None,
     }
 }
 
@@ -372,6 +375,9 @@ fn failed_result(
         primary_displacement_distance: None,
         displacements: None,
         failure_detail: Some(detail),
+        continuation_steps: Vec::new(),
+        continuation_converged: None,
+        continuation_failure_detail: None,
     }
 }
 

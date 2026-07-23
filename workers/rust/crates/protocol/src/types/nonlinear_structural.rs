@@ -108,6 +108,8 @@ pub struct SolveFrame2dPDeltaRequest {
     pub branch_switch: Frame2dBranchSwitchSelection,
     #[serde(default)]
     pub branch_switch_amplitude: Option<f64>,
+    #[serde(default)]
+    pub branch_continuation_steps: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,6 +196,29 @@ pub enum Frame2dBranchDirection {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dBranchContinuationStepResult {
+    pub step: usize,
+    pub load_factor: f64,
+    pub load_factor_increment: f64,
+    pub iterations: usize,
+    pub converged: bool,
+    pub cutbacks: usize,
+    pub failure_reason: Option<Frame2dPDeltaFailureReason>,
+    pub failure_detail: Option<String>,
+    pub residual_norm: f64,
+    pub arc_length_constraint_error: f64,
+    pub arc_length_radius: f64,
+    pub tangent_stability: Option<Frame2dTangentStability>,
+    pub tangent_negative_pivots: Option<usize>,
+    pub tangent_near_zero_pivots: Option<usize>,
+    #[serde(default)]
+    pub tangent_negative_pivot_delta: Option<i32>,
+    #[serde(default)]
+    pub path_event: Option<Frame2dEquilibriumPathEvent>,
+    pub displacements: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBranchSwitchProbeResult {
     pub direction: Frame2dBranchDirection,
     pub seed_amplitude: f64,
@@ -209,6 +234,12 @@ pub struct Frame2dBranchSwitchProbeResult {
     pub primary_displacement_distance: Option<f64>,
     pub displacements: Option<Vec<f64>>,
     pub failure_detail: Option<String>,
+    #[serde(default)]
+    pub continuation_steps: Vec<Frame2dBranchContinuationStepResult>,
+    #[serde(default)]
+    pub continuation_converged: Option<bool>,
+    #[serde(default)]
+    pub continuation_failure_detail: Option<String>,
 }
 
 impl Default for Frame2dImperfectionSource {

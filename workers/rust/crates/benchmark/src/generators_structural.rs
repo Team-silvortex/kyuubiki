@@ -387,6 +387,7 @@ pub(crate) fn generate_frame_2d_p_delta_case(
         tangent_transition_refinement_steps: None,
         branch_switch: Default::default(),
         branch_switch_amplitude: None,
+        branch_continuation_steps: None,
     }
 }
 

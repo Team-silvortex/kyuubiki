@@ -270,6 +270,16 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
     {
         return Err("frame 2d branch switching requires branch_switch_amplitude".into());
     }
+    if matches!(request.branch_continuation_steps, Some(65..)) {
+        return Err("frame 2d branch_continuation_steps must not exceed 64".into());
+    }
+    if request
+        .branch_continuation_steps
+        .is_some_and(|steps| steps > 0)
+        && request.branch_switch == Frame2dBranchSwitchSelection::Disabled
+    {
+        return Err("frame 2d branch continuation requires branch switching".into());
+    }
     if let Some(shape) = &request.imperfection_shape {
         let expected = request.buckling.frame.nodes.len() * 3;
         if shape.len() != expected {

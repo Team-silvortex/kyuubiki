@@ -210,6 +210,9 @@
         "transition_critical_mode_extraction",
         "equilibrium_corrected_transition_bisection",
         "critical_mode_constrained_branch_probe",
+        "switched_branch_arc_length_continuation",
+        "switched_branch_path_event_classification",
+        "switched_branch_rigid_rotation_objectivity",
         "adaptive_load_step_cutback",
         "structured_nonconvergence_diagnostics",
         "multi_member_rigid_rotation_objectivity",
@@ -263,7 +266,15 @@
         "positive_and_negative_mode_constraints_each_recover_an_equilibrium_state",
         "branch_probe_force_residuals_and_modal_constraint_errors_remain_bounded",
         "branch_candidates_are_cross_checked_against_a_same_load_primary_equilibrium",
-        "branch_probes_do_not_mutate_the_primary_continuation_path"
+        "branch_probes_do_not_mutate_the_primary_continuation_path",
+        "positive_and_negative_switched_branches_each_continue_for_sixty_four_steps",
+        "switched_branch_steps_satisfy_equilibrium_and_arc_length_constraints",
+        "switched_branches_own_independent_radius_adaptation_and_cutbacks",
+        "monotonic_switched_branches_do_not_emit_false_path_events",
+        "switched_branch_limit_points_are_classified_without_false_bifurcation",
+        "switched_branch_vectors_and_load_histories_are_rigid_rotation_objective",
+        "workflow_json_preserves_nested_switched_branch_diagnostics",
+        "branch_continuation_failures_do_not_invalidate_the_primary_path"
       ],
       "evidence_paths": [
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
@@ -273,11 +284,14 @@
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_switch.rs",
+        "workers/rust/crates/solver/src/frame_2d_branch_continuation.rs",
         "workers/rust/crates/solver/src/symmetric_critical_mode.rs",
         "workers/rust/crates/solver/src/symmetric_inertia.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
-        "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs"
+        "workers/rust/crates/solver/tests/frame_2d_branch_continuation.rs",
+        "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs",
+        "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs"
       ],
       "commands": [
         {
@@ -311,9 +325,19 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
         },
         {
+          "id": "frame-2d-switched-branch-continuation",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_continuation -- --nocapture"
+        },
+        {
           "id": "frame-2d-p-delta-workflow",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow -- --nocapture"
+        },
+        {
+          "id": "frame-2d-switched-branch-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_branch_workflow -- --nocapture"
         }
       ]
     }

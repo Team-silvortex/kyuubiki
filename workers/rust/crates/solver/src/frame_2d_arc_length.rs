@@ -1,3 +1,4 @@
+use crate::frame_2d_branch_continuation::{BranchContinuationContext, continue_branch_probes};
 use crate::frame_2d_branch_switch::{
     BranchSwitchContext, probe_branch_switches, unavailable_branch_switches,
 };
@@ -23,24 +24,24 @@ const DEFAULT_TARGET_ITERATIONS: usize = 6;
 const DEFAULT_TRANSITION_REFINEMENT_STEPS: usize = 12;
 const MIN_CONSTRAINT_DENOMINATOR: f64 = 1.0e-14;
 
-struct ArcLengthState {
-    displacement: Vec<f64>,
-    load_factor: f64,
-    displacement_increment: Vec<f64>,
-    load_increment: f64,
+pub(crate) struct ArcLengthState {
+    pub(crate) displacement: Vec<f64>,
+    pub(crate) load_factor: f64,
+    pub(crate) displacement_increment: Vec<f64>,
+    pub(crate) load_increment: f64,
 }
 
-struct ArcLengthAttempt {
-    state: ArcLengthState,
-    iterations: usize,
-    residual_norm: f64,
-    constraint_error: f64,
-    converged: bool,
-    failure_reason: Option<Frame2dPDeltaFailureReason>,
-    failure_detail: Option<String>,
-    tangent_stability: Option<Frame2dTangentStability>,
-    tangent_negative_pivots: Option<usize>,
-    tangent_near_zero_pivots: Option<usize>,
+pub(crate) struct ArcLengthAttempt {
+    pub(crate) state: ArcLengthState,
+    pub(crate) iterations: usize,
+    pub(crate) residual_norm: f64,
+    pub(crate) constraint_error: f64,
+    pub(crate) converged: bool,
+    pub(crate) failure_reason: Option<Frame2dPDeltaFailureReason>,
+    pub(crate) failure_detail: Option<String>,
+    pub(crate) tangent_stability: Option<Frame2dTangentStability>,
+    pub(crate) tangent_negative_pivots: Option<usize>,
+    pub(crate) tangent_near_zero_pivots: Option<usize>,
 }
 
 pub(crate) fn solve_arc_length_steps(
@@ -185,7 +186,7 @@ pub(crate) fn solve_arc_length_steps(
                 critical_displacement = Some(state.displacement.clone());
             }
         }
-        let branch_switch_probes = match (
+        let mut branch_switch_probes = match (
             request.branch_switch_amplitude,
             critical_load_factor,
             critical_displacement.as_deref(),
@@ -217,6 +218,30 @@ pub(crate) fn solve_arc_length_steps(
             ),
             _ => Vec::new(),
         };
+        if let (Some(continuation_steps), Some(load_factor), Some(displacement)) = (
+            request.branch_continuation_steps,
+            critical_load_factor,
+            critical_displacement.as_deref(),
+        ) {
+            continue_branch_probes(
+                &BranchContinuationContext {
+                    positions: &positions,
+                    elements: &frame.elements,
+                    system,
+                    free_dofs: &free,
+                    max_iterations,
+                    tolerance,
+                    max_cutbacks,
+                    target_iterations,
+                    initial_radius: current_radius,
+                    load_scale,
+                },
+                displacement,
+                load_factor,
+                continuation_steps,
+                &mut branch_switch_probes,
+            );
+        }
         previous_negative_pivots = attempt.tangent_negative_pivots;
         steps.push(Frame2dPDeltaStepResult {
             step,
@@ -319,7 +344,7 @@ fn cutback_detail(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn solve_arc_length_step(
+pub(crate) fn solve_arc_length_step(
     positions: &[(f64, f64)],
     elements: &[Frame2dElementInput],
     system: &Frame2dStabilitySystem,

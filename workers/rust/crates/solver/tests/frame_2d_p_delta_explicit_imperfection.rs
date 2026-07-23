@@ -694,6 +694,7 @@ fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
         tangent_transition_refinement_steps: None,
         branch_switch: Default::default(),
         branch_switch_amplitude: None,
+        branch_continuation_steps: None,
     }
 }
 
@@ -756,6 +757,7 @@ fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
         tangent_transition_refinement_steps: None,
         branch_switch: Default::default(),
         branch_switch_amplitude: None,
+        branch_continuation_steps: None,
     }
 }
 

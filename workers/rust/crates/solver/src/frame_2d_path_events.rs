@@ -1,8 +1,64 @@
-use kyuubiki_protocol::{Frame2dEquilibriumPathEvent, Frame2dPDeltaStepResult};
+use kyuubiki_protocol::{
+    Frame2dBranchContinuationStepResult, Frame2dEquilibriumPathEvent, Frame2dPDeltaStepResult,
+};
 
 pub(crate) fn annotate_path_events(steps: &mut [Frame2dPDeltaStepResult]) {
     annotate_limit_points(steps);
     annotate_tangent_transitions(steps);
+}
+
+pub(crate) fn annotate_branch_path_events(steps: &mut [Frame2dBranchContinuationStepResult]) {
+    for index in 1..steps.len() {
+        if !(steps[index - 1].converged && steps[index].converged) {
+            continue;
+        }
+        let previous = steps[index - 1].load_factor_increment;
+        let current = steps[index].load_factor_increment;
+        let scale = steps[index - 1]
+            .load_factor
+            .abs()
+            .max(steps[index].load_factor.abs())
+            .max(1.0);
+        let threshold = 1.0e-12 * scale;
+        if previous > threshold && current < -threshold {
+            steps[index - 1].path_event = Some(Frame2dEquilibriumPathEvent::LimitPointMaximum);
+        } else if previous < -threshold && current > threshold {
+            steps[index - 1].path_event = Some(Frame2dEquilibriumPathEvent::LimitPointMinimum);
+        }
+    }
+    for index in 1..steps.len() {
+        if !(steps[index - 1].converged && steps[index].converged) {
+            continue;
+        }
+        let (Some(previous), Some(current)) = (
+            steps[index - 1].tangent_negative_pivots,
+            steps[index].tangent_negative_pivots,
+        ) else {
+            continue;
+        };
+        let delta = current as i32 - previous as i32;
+        steps[index].tangent_negative_pivot_delta = Some(delta);
+        if delta != 0 && !branch_near_limit_point(steps, index) {
+            steps[index].path_event = Some(Frame2dEquilibriumPathEvent::BifurcationCandidate);
+        }
+    }
+}
+
+fn branch_near_limit_point(
+    steps: &[Frame2dBranchContinuationStepResult],
+    transition_end: usize,
+) -> bool {
+    let start = transition_end.saturating_sub(2);
+    let end = (transition_end + 1).min(steps.len().saturating_sub(1));
+    steps[start..=end].iter().any(|step| {
+        matches!(
+            step.path_event,
+            Some(
+                Frame2dEquilibriumPathEvent::LimitPointMaximum
+                    | Frame2dEquilibriumPathEvent::LimitPointMinimum
+            )
+        )
+    })
 }
 
 fn annotate_limit_points(steps: &mut [Frame2dPDeltaStepResult]) {
@@ -91,6 +147,18 @@ mod tests {
         assert_eq!(steps[1].path_event, None);
     }
 
+    #[test]
+    fn switched_branch_marks_limit_points_without_false_bifurcation() {
+        let mut steps = vec![branch_step(1, 0.1, 0), branch_step(2, -0.1, 1)];
+        annotate_branch_path_events(&mut steps);
+        assert_eq!(
+            steps[0].path_event,
+            Some(Frame2dEquilibriumPathEvent::LimitPointMaximum)
+        );
+        assert_eq!(steps[1].tangent_negative_pivot_delta, Some(1));
+        assert_eq!(steps[1].path_event, None);
+    }
+
     fn step(step: usize, load_increment: f64, negative_pivots: usize) -> Frame2dPDeltaStepResult {
         Frame2dPDeltaStepResult {
             step,
@@ -123,6 +191,32 @@ mod tests {
             residual_norm: 0.0,
             imperfection_amplification: 1.0,
             max_incremental_displacement: 0.0,
+            displacements: Vec::new(),
+        }
+    }
+
+    fn branch_step(
+        step: usize,
+        load_increment: f64,
+        negative_pivots: usize,
+    ) -> Frame2dBranchContinuationStepResult {
+        Frame2dBranchContinuationStepResult {
+            step,
+            load_factor: step as f64 * load_increment,
+            load_factor_increment: load_increment,
+            iterations: 1,
+            converged: true,
+            cutbacks: 0,
+            failure_reason: None,
+            failure_detail: None,
+            residual_norm: 0.0,
+            arc_length_constraint_error: 0.0,
+            arc_length_radius: 0.1,
+            tangent_stability: Some(Frame2dTangentStability::PositiveDefinite),
+            tangent_negative_pivots: Some(negative_pivots),
+            tangent_near_zero_pivots: Some(0),
+            tangent_negative_pivot_delta: None,
+            path_event: None,
             displacements: Vec::new(),
         }
     }
