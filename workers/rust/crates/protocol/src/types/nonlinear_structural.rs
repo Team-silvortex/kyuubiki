@@ -113,6 +113,10 @@ pub struct SolveFrame2dPDeltaRequest {
     #[serde(default)]
     pub branch_switch_pairwise_combinations: bool,
     #[serde(default)]
+    pub branch_switch_mode_weights: Option<Vec<f64>>,
+    #[serde(default)]
+    pub branch_switch_subspace_sample_count: Option<usize>,
+    #[serde(default)]
     pub branch_continuation_steps: Option<usize>,
     #[serde(default)]
     pub branch_continuation_radius: Option<f64>,

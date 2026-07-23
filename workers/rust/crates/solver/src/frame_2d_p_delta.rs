@@ -1,5 +1,6 @@
 use crate::buckling_frame_2d::solve_buckling_frame_2d;
 use crate::frame_2d_arc_length::solve_arc_length_steps;
+use crate::frame_2d_branch_subspace::available_subspace_sample_count;
 use crate::frame_2d_corotational::solve_corotational_steps;
 use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
@@ -296,6 +297,49 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
             "frame 2d branch_switch_pairwise_combinations requires at least two branch-switch modes"
                 .into(),
         );
+    }
+    if let Some(weights) = &request.branch_switch_mode_weights {
+        if request.branch_switch == Frame2dBranchSwitchSelection::Disabled {
+            return Err("frame 2d branch_switch_mode_weights requires branch switching".into());
+        }
+        let Some(mode_count) = request.branch_switch_mode_count else {
+            return Err(
+                "frame 2d branch_switch_mode_weights requires branch_switch_mode_count".into(),
+            );
+        };
+        if weights.len() != mode_count {
+            return Err(format!(
+                "frame 2d branch_switch_mode_weights must contain exactly {mode_count} weights"
+            ));
+        }
+        if weights.iter().any(|weight| !weight.is_finite()) {
+            return Err("frame 2d branch_switch_mode_weights must be finite".into());
+        }
+        if weights.iter().filter(|weight| **weight != 0.0).count() < 2 {
+            return Err(
+                "frame 2d branch_switch_mode_weights requires at least two nonzero weights".into(),
+            );
+        }
+    }
+    if let Some(sample_count) = request.branch_switch_subspace_sample_count {
+        if request.branch_switch == Frame2dBranchSwitchSelection::Disabled {
+            return Err(
+                "frame 2d branch_switch_subspace_sample_count requires branch switching".into(),
+            );
+        }
+        let available =
+            available_subspace_sample_count(request.branch_switch_mode_count.unwrap_or(0));
+        if available == 0 {
+            return Err(
+                "frame 2d branch_switch_subspace_sample_count requires three or four branch-switch modes"
+                    .into(),
+            );
+        }
+        if !(1..=available).contains(&sample_count) {
+            return Err(format!(
+                "frame 2d branch_switch_subspace_sample_count must be between 1 and {available} for the requested mode count"
+            ));
+        }
     }
     if matches!(request.branch_continuation_steps, Some(65..)) {
         return Err("frame 2d branch_continuation_steps must not exceed 64".into());

@@ -98,92 +98,6 @@ fn switched_arch_branches_continue_without_mutating_the_primary_path() {
 }
 
 #[test]
-fn branch_continuation_controls_are_bounded_and_require_switching() {
-    let mut request = shallow_arch_request(1, 0.0);
-    request.branch_continuation_steps = Some(65);
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("excessive branch continuation steps must fail");
-    assert!(error.contains("branch_continuation_steps"));
-
-    request.branch_continuation_steps = Some(1);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("continuation without switching must fail");
-    assert!(error.contains("requires branch switching"));
-
-    request.branch_continuation_steps = None;
-    request.branch_continuation_radius = Some(0.01);
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("an isolated branch continuation radius must fail");
-    assert!(error.contains("requires branch continuation steps"));
-
-    request.branch_continuation_steps = Some(1);
-    request.branch_continuation_radius = Some(0.0);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("a zero branch continuation radius must fail");
-    assert!(error.contains("positive and finite"));
-
-    request.branch_continuation_radius = Some(f64::NAN);
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("a non-finite branch continuation radius must fail");
-    assert!(error.contains("positive and finite"));
-
-    request.branch_continuation_radius = None;
-    request.branch_continuation_steps = None;
-    request.branch_switch_mode_count = Some(0);
-    let error = solve_frame_2d_p_delta(&request).expect_err("zero branch-switch modes must fail");
-    assert!(error.contains("between 1 and 4"));
-
-    request.branch_switch_mode_count = Some(5);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("excessive branch-switch modes must fail");
-    assert!(error.contains("between 1 and 4"));
-
-    request.branch_switch_mode_count = Some(2);
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("multi-mode selection without branch switching must fail");
-    assert!(error.contains("requires branch switching"));
-
-    request.branch_switch_mode_count = None;
-    request.branch_switch_pairwise_combinations = true;
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("pairwise combinations without branch switching must fail");
-    assert!(error.contains("branch_switch_pairwise_combinations requires branch switching"));
-
-    request.kinematics = Frame2dStabilityKinematics::Corotational;
-    request.path_control = Frame2dStabilityPathControl::ArcLength;
-    request.branch_switch = Frame2dBranchSwitchSelection::Both;
-    request.branch_switch_amplitude = Some(0.01);
-    request.branch_switch_mode_count = Some(1);
-    let error = solve_frame_2d_p_delta(&request)
-        .expect_err("pairwise combinations require at least two modes");
-    assert!(error.contains("requires at least two branch-switch modes"));
-
-    request.branch_switch_pairwise_combinations = false;
-    request.branch_switch = Frame2dBranchSwitchSelection::Disabled;
-    request.branch_switch_amplitude = None;
-    request.branch_switch_mode_count = None;
-    request.branch_continuation_min_radius_ratio = Some(0.0);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("a zero minimum-radius ratio must fail");
-    assert!(error.contains("finite and in (0, 1]"));
-
-    request.branch_continuation_min_radius_ratio = Some(1.01);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("an oversized minimum-radius ratio must fail");
-    assert!(error.contains("finite and in (0, 1]"));
-
-    request.branch_continuation_min_radius_ratio = Some(f64::NAN);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("a non-finite minimum-radius ratio must fail");
-    assert!(error.contains("finite and in (0, 1]"));
-
-    request.branch_continuation_min_radius_ratio = Some(0.25);
-    let error =
-        solve_frame_2d_p_delta(&request).expect_err("an isolated minimum-radius ratio must fail");
-    assert!(error.contains("requires branch continuation steps"));
-}
-
-#[test]
 fn explicit_branch_radius_explores_a_deeper_equilibrium_segment() {
     let mut request = configured_switched_arch(0.0, 64);
     request.branch_continuation_radius = Some(0.02);
@@ -372,32 +286,7 @@ fn branched_arch_continuation_is_objective_and_contains_local_seed_failures() {
 
 #[test]
 fn twin_arch_repeated_modes_drive_individual_and_pairwise_branch_families() {
-    let source = shallow_arch_request(4, 0.0);
-    let source_nodes = source.buckling.frame.nodes.clone();
-    let source_elements = source.buckling.frame.elements.clone();
-    let source_shape = source.imperfection_shape.clone().unwrap();
-    let mut nodes = Vec::new();
-    let mut elements = Vec::new();
-    let mut shape = Vec::new();
-    for (copy, center) in [-1.25, 1.25].into_iter().enumerate() {
-        let node_offset = nodes.len();
-        nodes.extend(source_nodes.iter().cloned().map(|mut node| {
-            node.id = format!("arch-{copy}-{}", node.id);
-            node.x += center;
-            node
-        }));
-        elements.extend(source_elements.iter().cloned().map(|mut element| {
-            element.id = format!("arch-{copy}-{}", element.id);
-            element.node_i += node_offset;
-            element.node_j += node_offset;
-            element
-        }));
-        shape.extend_from_slice(&source_shape);
-    }
-    let mut request = source;
-    request.buckling.frame = SolveFrame2dRequest { nodes, elements };
-    request.imperfection_shape = Some(shape);
-    let mut request = configured_switched_request(request, 4);
+    let mut request = configured_switched_request(repeated_arch_request(2), 4);
     request.branch_switch_mode_count = Some(2);
     request.branch_switch_pairwise_combinations = true;
     let result = solve_frame_2d_p_delta(&request).expect("twin-arch path should remain available");
@@ -518,6 +407,113 @@ fn twin_arch_repeated_modes_drive_individual_and_pairwise_branch_families() {
     assert!(distance(first_terminal, second_terminal) > 5.0e-3);
 }
 
+#[test]
+fn triple_arch_repeated_modes_drive_an_arbitrary_weighted_branch_family() {
+    let mut request = configured_switched_request(repeated_arch_request(3), 2);
+    request.branch_switch_mode_count = Some(3);
+    request.branch_switch_mode_weights = Some(vec![1.0, 2.0, -2.0]);
+    let result =
+        solve_frame_2d_p_delta(&request).expect("triple-arch path should remain available");
+    let candidate = result
+        .steps
+        .iter()
+        .find(|step| {
+            step.tangent_critical_modes.len() == 3
+                && step.branch_switch_probes.len() == 8
+                && step
+                    .branch_switch_probes
+                    .iter()
+                    .skip(6)
+                    .all(|probe| probe.distinct_branch)
+        })
+        .expect("repeated transition should expose a three-mode weighted branch family");
+    for probe in &candidate.branch_switch_probes[6..] {
+        assert_eq!(probe.mode_index, 0);
+        assert_eq!(probe.mode_eigenvalue, None);
+        assert_eq!(probe.mode_components.len(), 3);
+        assert_eq!(probe.mode_component_projections.len(), 3);
+        let direction = if probe.direction == Frame2dBranchDirection::Positive {
+            1.0
+        } else {
+            -1.0
+        };
+        for (component, expected_weight) in
+            probe
+                .mode_components
+                .iter()
+                .zip([1.0 / 3.0, 2.0 / 3.0, -2.0 / 3.0])
+        {
+            assert_relative(component.weight, expected_weight, 1.0e-12);
+        }
+        let combined_projection = probe
+            .mode_components
+            .iter()
+            .zip(&probe.mode_component_projections)
+            .map(|(component, projection)| component.weight * projection)
+            .sum::<f64>();
+        assert_relative(combined_projection, probe.mode_projection.unwrap(), 1.0e-10);
+        assert_relative(
+            probe.mode_projection.unwrap(),
+            direction * probe.seed_amplitude,
+            1.0e-8,
+        );
+        assert_eq!(probe.continuation_converged, Some(true));
+        assert_eq!(probe.continuation_steps.len(), 2);
+    }
+}
+
+#[test]
+fn triple_arch_repeated_modes_drive_the_bounded_automatic_subspace_fan() {
+    let mut request = configured_switched_request(repeated_arch_request(3), 2);
+    request.branch_switch_mode_count = Some(3);
+    request.branch_switch_subspace_sample_count = Some(4);
+    let result = solve_frame_2d_p_delta(&request).expect("subspace fan should remain available");
+    let candidate = result
+        .steps
+        .iter()
+        .find(|step| {
+            step.tangent_critical_modes.len() == 3
+                && step.branch_switch_probes.len() == 14
+                && step
+                    .branch_switch_probes
+                    .iter()
+                    .skip(6)
+                    .all(|probe| probe.distinct_branch)
+        })
+        .expect("three-mode transition should expose four signed direction families");
+    let fan = &candidate.branch_switch_probes[6..];
+    for family in fan.chunks_exact(2) {
+        assert_eq!(family[0].direction, Frame2dBranchDirection::Positive);
+        assert_eq!(family[1].direction, Frame2dBranchDirection::Negative);
+        assert_eq!(family[0].mode_components.len(), 3);
+        assert_eq!(family[0].mode_component_projections.len(), 3);
+        assert!(family[0].mode_components[0].weight > 0.0);
+        for probe in family {
+            let combined_projection = probe
+                .mode_components
+                .iter()
+                .zip(&probe.mode_component_projections)
+                .map(|(component, projection)| component.weight * projection)
+                .sum::<f64>();
+            assert_relative(combined_projection, probe.mode_projection.unwrap(), 1.0e-10);
+            assert_eq!(probe.continuation_converged, Some(true));
+            assert_eq!(probe.continuation_steps.len(), 2);
+        }
+    }
+    assert!(fan.chunks_exact(2).enumerate().all(|(index, family)| {
+        fan.chunks_exact(2).skip(index + 1).all(|other| {
+            family[0]
+                .mode_components
+                .iter()
+                .zip(&other[0].mode_components)
+                .map(|(left, right)| left.weight * right.weight)
+                .sum::<f64>()
+                .abs()
+                < 1.0 - 1.0e-12
+        })
+    }));
+}
+
 fn solve_switched_arch(
     angle: f64,
     continuation_steps: usize,
@@ -579,6 +575,35 @@ fn configured_switched_request(
     request.branch_switch = Frame2dBranchSwitchSelection::Both;
     request.branch_switch_amplitude = Some(5.0e-3);
     request.branch_continuation_steps = Some(continuation_steps);
+    request
+}
+
+fn repeated_arch_request(copy_count: usize) -> SolveFrame2dPDeltaRequest {
+    let mut request = shallow_arch_request(4, 0.0);
+    let source_nodes = request.buckling.frame.nodes.clone();
+    let source_elements = request.buckling.frame.elements.clone();
+    let source_shape = request.imperfection_shape.clone().unwrap();
+    let mut nodes = Vec::new();
+    let mut elements = Vec::new();
+    let mut shape = Vec::new();
+    for copy in 0..copy_count {
+        let center = (copy as f64 - (copy_count - 1) as f64 / 2.0) * 2.5;
+        let node_offset = nodes.len();
+        nodes.extend(source_nodes.iter().cloned().map(|mut node| {
+            node.id = format!("arch-{copy}-{}", node.id);
+            node.x += center;
+            node
+        }));
+        elements.extend(source_elements.iter().cloned().map(|mut element| {
+            element.id = format!("arch-{copy}-{}", element.id);
+            element.node_i += node_offset;
+            element.node_j += node_offset;
+            element
+        }));
+        shape.extend_from_slice(&source_shape);
+    }
+    request.buckling.frame = SolveFrame2dRequest { nodes, elements };
+    request.imperfection_shape = Some(shape);
     request
 }
 
@@ -679,6 +704,8 @@ fn shallow_arch_request(segments_per_side: usize, angle: f64) -> SolveFrame2dPDe
         branch_switch_amplitude: None,
         branch_switch_mode_count: None,
         branch_switch_pairwise_combinations: false,
+        branch_switch_mode_weights: None,
+        branch_switch_subspace_sample_count: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

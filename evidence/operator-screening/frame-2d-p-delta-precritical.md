@@ -231,6 +231,29 @@ branches. Neither control mode is a material-plasticity model.
   `0.005 / sqrt(2)` targets within `1e-8`, proving that the corrected
   equilibrium follows the selected sum or difference rather than only carrying
   a combination label.
+- `branch_switch_mode_weights` adds one caller-defined direction across all
+  requested modes without enabling an automatic combinatorial search. The
+  vector must contain exactly one finite weight per requested mode and combine
+  at least two nonzero components. A scale-safe normalization accepts very
+  large finite magnitudes without overflowing.
+- Three identical independent arches create an exact three-dimensional
+  critical subspace. The explicit `[1, 2, -2]` direction is normalized to
+  `[1/3, 2/3, -2/3]`; both signed equilibria are distinct and complete their
+  requested continuation. Their solved component projections remain visible,
+  while the weighted sum reproduces the constrained combined projection within
+  `1e-10`. Individual component projections are intentionally not frozen
+  during nonlinear equilibrium correction.
+- `branch_switch_subspace_sample_count` adds a deterministic automatic fan for
+  three or four retained modes. It enumerates projectively unique ternary
+  directions, requires at least three active components, canonicalizes the
+  first nonzero sign, prioritizes full-dimensional directions, and normalizes
+  every vector. The request boundary limits three modes to four samples and
+  four modes to sixteen, so automatic coverage cannot grow combinatorially.
+- The three-arch fixture retains all four automatic three-mode directions and
+  both signs of each direction: six individual probes plus eight fan probes.
+  Every automatic equilibrium is distinct, every requested two-step
+  continuation completes, and each weighted component projection recomposes
+  the constrained direction within `1e-10`.
 - The engine JSON route executes a four-step positive and negative switched
   continuation, round-trips it through `SolveFrame2dPDeltaResult`, and preserves
   solver provenance, convergence, error gates, events, inertia, and nested
@@ -238,8 +261,11 @@ branches. Neither control mode is a material-plasticity model.
   callers rather than only direct solver users.
 - A second engine route executes the repeated two-mode twin-arch fixture and
   preserves both mode records, the ordered individual attribution
-  `[0, 0, 1, 1]`, four pairwise component tables and projections, and all nested
-  continuation state.
+  `[0, 0, 1, 1]`, four pairwise families, one caller-weighted family, all
+  component tables and projections, and all nested continuation state.
+- A third engine route executes the full three-mode automatic fan and preserves
+  its bounded sample count, fourteen ordered probes, normalized component
+  tables, and solved component projections for headless callers.
 - A branch assembly or continuation failure is contained in that probe through
   `continuation_converged` and `continuation_failure_detail`. It does not turn a
   valid primary path or the opposite branch into a top-level solver error.
@@ -257,7 +283,7 @@ branches. Neither control mode is a material-plasticity model.
 ## Promotion Gaps
 
 - external complex-topology switched-branch reference events
-- adaptive three-or-more-mode subspace sampling beyond pairwise directions
+- response-driven adaptive refinement between retained subspace samples
 - external coupled-topology correlation for interacting pairwise modes
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation

@@ -1,7 +1,11 @@
 use crate::frame_2d_branch_continuation::{BranchContinuationContext, continue_branch_probes};
+use crate::frame_2d_branch_subspace::{
+    probe_subspace_branch_switches, unavailable_subspace_branch_switches,
+};
 use crate::frame_2d_branch_switch::{
     BranchSwitchContext, probe_branch_switches, probe_pairwise_branch_switches,
-    unavailable_branch_switches, unavailable_pairwise_branch_switches,
+    probe_weighted_branch_switches, unavailable_branch_switches,
+    unavailable_pairwise_branch_switches, unavailable_weighted_branch_switches,
 };
 use crate::frame_2d_corotational::{
     imperfection_amplification, max_translation, normalized_residual, solve_tangent,
@@ -237,6 +241,30 @@ pub(crate) fn solve_arc_length_steps(
                         request.branch_switch,
                     ));
                 }
+                if let Some(weights) = &request.branch_switch_mode_weights {
+                    probes.extend(probe_weighted_branch_switches(
+                        &context,
+                        displacement,
+                        &state.displacement,
+                        load_factor,
+                        &critical_modes,
+                        weights,
+                        amplitude,
+                        request.branch_switch,
+                    ));
+                }
+                if let Some(sample_count) = request.branch_switch_subspace_sample_count {
+                    probes.extend(probe_subspace_branch_switches(
+                        &context,
+                        displacement,
+                        &state.displacement,
+                        load_factor,
+                        &critical_modes,
+                        sample_count,
+                        amplitude,
+                        request.branch_switch,
+                    ));
+                }
                 probes
             }
             (Some(amplitude), _, _) if transition_changed => {
@@ -254,6 +282,23 @@ pub(crate) fn solve_arc_length_steps(
                     probes.extend(unavailable_pairwise_branch_switches(
                         request.branch_switch,
                         branch_mode_count,
+                        amplitude,
+                        "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
+                    ));
+                }
+                if let Some(weights) = &request.branch_switch_mode_weights {
+                    probes.extend(unavailable_weighted_branch_switches(
+                        request.branch_switch,
+                        weights,
+                        amplitude,
+                        "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
+                    ));
+                }
+                if let Some(sample_count) = request.branch_switch_subspace_sample_count {
+                    probes.extend(unavailable_subspace_branch_switches(
+                        request.branch_switch,
+                        branch_mode_count,
+                        sample_count,
                         amplitude,
                         "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
                     ));

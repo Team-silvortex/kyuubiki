@@ -213,6 +213,8 @@
         "critical_mode_constrained_branch_probe",
         "repeated_mode_branch_family_selection",
         "pairwise_critical_mode_combination_probing",
+        "caller_weighted_critical_mode_subspace_probing",
+        "bounded_automatic_critical_mode_subspace_fan",
         "switched_branch_arc_length_continuation",
         "explicit_switched_branch_radius_control",
         "dimensionless_switched_branch_radius_floor",
@@ -266,6 +268,8 @@
         "requested_critical_modes_are_absolute_eigenvalue_ordered_and_orthogonal",
         "branch_switch_mode_count_is_explicit_and_bounded_from_one_to_four",
         "pairwise_mode_combinations_are_explicitly_opt_in_and_require_two_modes",
+        "weighted_mode_vectors_are_finite_bounded_and_match_the_requested_mode_count",
+        "automatic_subspace_samples_are_dimension_bounded_normalized_and_projectively_unique",
         "critical_mode_extraction_is_transition_only_and_size_bounded",
         "transition_midpoints_are_corrected_back_to_equilibrium",
         "twelve_refinements_contract_candidate_brackets_by_more_than_four_thousand",
@@ -291,9 +295,13 @@
         "repeated_two_mode_subspace_produces_four_individual_and_four_pairwise_branch_probes",
         "pairwise_sum_and_difference_directions_are_unit_normalized",
         "pairwise_equilibria_report_component_projections_matching_requested_weights",
+        "three_mode_weighted_equilibria_preserve_normalized_attribution_and_combined_projection",
+        "three_mode_automatic_fan_produces_four_distinct_signed_branch_families",
         "legacy_single_mode_fields_alias_the_first_ordered_critical_mode",
         "workflow_json_preserves_nested_switched_branch_diagnostics",
         "workflow_json_preserves_repeated_mode_pairwise_branch_families",
+        "workflow_json_preserves_caller_weighted_branch_families",
+        "workflow_json_preserves_bounded_automatic_subspace_families",
         "branch_continuation_failures_do_not_invalidate_the_primary_path"
       ],
       "evidence_paths": [
@@ -304,12 +312,14 @@
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_switch.rs",
+        "workers/rust/crates/solver/src/frame_2d_branch_subspace.rs",
         "workers/rust/crates/solver/src/frame_2d_branch_continuation.rs",
         "workers/rust/crates/solver/src/symmetric_critical_mode.rs",
         "workers/rust/crates/solver/src/symmetric_inertia.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
         "workers/rust/crates/solver/tests/frame_2d_branch_continuation.rs",
+        "workers/rust/crates/solver/tests/frame_2d_branch_controls.rs",
         "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs",
         "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs"
       ],
@@ -343,6 +353,11 @@
           "id": "frame-2d-p-delta-explicit-imperfection",
           "kind": "invariant",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
+        },
+        {
+          "id": "frame-2d-branch-control-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_controls -- --nocapture"
         },
         {
           "id": "frame-2d-switched-branch-continuation",

@@ -364,10 +364,16 @@ an exact repeated two-mode twin-arch subspace produces four mode-attributed
 branch families. An explicit pairwise-combination option additionally probes
 the normalized sum and difference of every retained mode pair, records the
 component weights and solved projections, and continues all four added
-twin-arch directions. The next stability milestone is adaptive three-or-more
-mode subspace search and independent external complex-topology correlation; the
-128-mode and
-256-inertia caps are observability limits, not arc-length solver size limits.
+twin-arch directions. A separate caller-weighted vector now selects an
+arbitrary direction over two to four retained modes without combinatorial
+growth; an exact three-mode repeated subspace retains both signed equilibria,
+actual component projections, and continuation. A bounded automatic fan now
+adds four deterministic projective directions for three modes and up to sixteen
+for four modes, prioritizes full-dimensional combinations, and retains solved
+component attribution through the engine route. The next stability milestone
+is response-driven adaptive refinement between sampled directions and
+independent external complex-topology correlation; the 128-mode and 256-inertia
+caps are observability limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

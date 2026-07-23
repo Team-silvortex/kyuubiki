@@ -66,8 +66,8 @@ fn workflow_route_preserves_switched_branch_continuation() {
 }
 
 #[test]
-fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
-    let mut request = twin_arch_request();
+fn workflow_route_preserves_repeated_mode_combination_branch_families() {
+    let mut request = repeated_arch_request(2);
     let probe = run_solve_operator(
         "solve.frame_2d_p_delta",
         serde_json::to_value(&request).unwrap(),
@@ -86,6 +86,7 @@ fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
     request.branch_switch_amplitude = Some(5.0e-3);
     request.branch_switch_mode_count = Some(2);
     request.branch_switch_pairwise_combinations = true;
+    request.branch_switch_mode_weights = Some(vec![1.0, 1.0]);
     request.branch_continuation_steps = Some(2);
 
     let value = run_solve_operator(
@@ -97,12 +98,16 @@ fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
         serde_json::from_value(value).expect("workflow result should preserve repeated modes");
     assert_eq!(result.input.branch_switch_mode_count, Some(2));
     assert!(result.input.branch_switch_pairwise_combinations);
+    assert_eq!(
+        result.input.branch_switch_mode_weights,
+        Some(vec![1.0, 1.0])
+    );
     let candidate = result
         .steps
         .iter()
         .find(|step| {
             step.tangent_critical_modes.len() == 2
-                && step.branch_switch_probes.len() == 8
+                && step.branch_switch_probes.len() == 10
                 && step
                     .branch_switch_probes
                     .iter()
@@ -123,6 +128,11 @@ fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
             && probe.mode_components.len() == 2
             && probe.mode_component_projections.len() == 2
     ));
+    let weighted = &candidate.branch_switch_probes[8..];
+    assert!(weighted.iter().all(|probe| {
+        (probe.mode_components[0].weight - std::f64::consts::FRAC_1_SQRT_2).abs() < 1.0e-12
+            && (probe.mode_components[1].weight - std::f64::consts::FRAC_1_SQRT_2).abs() < 1.0e-12
+    }));
     assert!(
         candidate
             .branch_switch_probes
@@ -132,7 +142,57 @@ fn workflow_route_preserves_repeated_mode_pairwise_branch_families() {
     );
 }
 
-fn twin_arch_request() -> SolveFrame2dPDeltaRequest {
+#[test]
+fn workflow_route_preserves_automatic_three_mode_subspace_fan() {
+    let mut request = repeated_arch_request(3);
+    let probe = run_solve_operator(
+        "solve.frame_2d_p_delta",
+        serde_json::to_value(&request).unwrap(),
+    )
+    .expect("workflow triple-arch stability probe should solve");
+    let critical_factor = probe["buckling_result"]["minimum_load_factor"]
+        .as_f64()
+        .unwrap();
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(critical_factor * 100.0);
+    request.load_steps = Some(128);
+    request.max_iterations = Some(64);
+    request.max_step_cutbacks = Some(12);
+    request.branch_switch = Frame2dBranchSwitchSelection::Both;
+    request.branch_switch_amplitude = Some(5.0e-3);
+    request.branch_switch_mode_count = Some(3);
+    request.branch_switch_subspace_sample_count = Some(4);
+
+    let value = run_solve_operator(
+        "solve.frame_2d_p_delta",
+        serde_json::to_value(&request).unwrap(),
+    )
+    .expect("workflow automatic subspace fan should solve");
+    let result: SolveFrame2dPDeltaResult =
+        serde_json::from_value(value).expect("workflow result should preserve the subspace fan");
+    assert_eq!(result.input.branch_switch_subspace_sample_count, Some(4));
+    let candidate = result
+        .steps
+        .iter()
+        .find(|step| {
+            step.tangent_critical_modes.len() == 3
+                && step.branch_switch_probes.len() == 14
+                && step
+                    .branch_switch_probes
+                    .iter()
+                    .skip(6)
+                    .all(|probe| probe.distinct_branch)
+        })
+        .expect("workflow should retain the automatic three-mode fan");
+    assert!(candidate.branch_switch_probes[6..].iter().all(|probe| {
+        probe.mode_eigenvalue.is_none()
+            && probe.mode_components.len() == 3
+            && probe.mode_component_projections.len() == 3
+    }));
+}
+
+fn repeated_arch_request(copy_count: usize) -> SolveFrame2dPDeltaRequest {
     let mut request = shallow_arch_request(4);
     let source_nodes = request.buckling.frame.nodes.clone();
     let source_elements = request.buckling.frame.elements.clone();
@@ -140,7 +200,8 @@ fn twin_arch_request() -> SolveFrame2dPDeltaRequest {
     let mut nodes = Vec::new();
     let mut elements = Vec::new();
     let mut shape = Vec::new();
-    for (copy, center) in [-1.25, 1.25].into_iter().enumerate() {
+    for copy in 0..copy_count {
+        let center = (copy as f64 - (copy_count - 1) as f64 / 2.0) * 2.5;
         let node_offset = nodes.len();
         nodes.extend(source_nodes.iter().cloned().map(|mut node| {
             node.id = format!("arch-{copy}-{}", node.id);
@@ -219,6 +280,8 @@ fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
         branch_switch_amplitude: None,
         branch_switch_mode_count: None,
         branch_switch_pairwise_combinations: false,
+        branch_switch_mode_weights: None,
+        branch_switch_subspace_sample_count: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

@@ -106,6 +106,8 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         branch_switch_amplitude: None,
         branch_switch_mode_count: None,
         branch_switch_pairwise_combinations: false,
+        branch_switch_mode_weights: None,
+        branch_switch_subspace_sample_count: None,
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,

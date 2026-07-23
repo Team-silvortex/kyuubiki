@@ -77,6 +77,8 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             branch_switch_amplitude: Some(0.015),
             branch_switch_mode_count: Some(2),
             branch_switch_pairwise_combinations: true,
+            branch_switch_mode_weights: Some(vec![1.0, -2.0]),
+            branch_switch_subspace_sample_count: Some(4),
             branch_continuation_steps: Some(4),
             branch_continuation_radius: Some(0.02),
             branch_continuation_min_radius_ratio: Some(0.125),
@@ -105,6 +107,8 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(params.branch_switch_amplitude, Some(0.015));
     assert_eq!(params.branch_switch_mode_count, Some(2));
     assert!(params.branch_switch_pairwise_combinations);
+    assert_eq!(params.branch_switch_mode_weights, Some(vec![1.0, -2.0]));
+    assert_eq!(params.branch_switch_subspace_sample_count, Some(4));
     assert_eq!(params.branch_continuation_steps, Some(4));
     assert_eq!(params.branch_continuation_radius, Some(0.02));
     assert_eq!(params.branch_continuation_min_radius_ratio, Some(0.125));
@@ -126,6 +130,8 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     legacy_object.remove("branch_switch_amplitude");
     legacy_object.remove("branch_switch_mode_count");
     legacy_object.remove("branch_switch_pairwise_combinations");
+    legacy_object.remove("branch_switch_mode_weights");
+    legacy_object.remove("branch_switch_subspace_sample_count");
     legacy_object.remove("branch_continuation_steps");
     legacy_object.remove("branch_continuation_radius");
     legacy_object.remove("branch_continuation_min_radius_ratio");
@@ -150,6 +156,8 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(legacy.branch_switch_amplitude, None);
     assert_eq!(legacy.branch_switch_mode_count, None);
     assert!(!legacy.branch_switch_pairwise_combinations);
+    assert!(legacy.branch_switch_mode_weights.is_none());
+    assert!(legacy.branch_switch_subspace_sample_count.is_none());
     assert_eq!(legacy.branch_continuation_steps, None);
     assert_eq!(legacy.branch_continuation_radius, None);
     assert_eq!(legacy.branch_continuation_min_radius_ratio, None);
