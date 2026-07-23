@@ -204,3 +204,73 @@ fn workflow_route_executes_arc_length_continuation() {
             .is_some_and(f64::is_finite)
     );
 }
+
+#[test]
+fn workflow_route_executes_a_state_seeded_parameter_path() {
+    let result = run_solve_operator(
+        "solve.frame_2d_p_delta_path",
+        json!({
+            "points": [
+                parameter_path_point(0.000008),
+                parameter_path_point(0.0000082),
+                parameter_path_point(0.0000079)
+            ],
+            "max_subdivisions": 3,
+            "minimum_step_fraction": 0.03125,
+            "minimum_branch_shape_overlap": 0.75
+        }),
+    )
+    .expect("workflow parameter path route should solve");
+
+    assert_eq!(result["completed_point_count"], 3);
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["attempts"].as_array().unwrap().len(), 3);
+    assert!(
+        result["attempts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .all(|(index, attempt)| {
+                attempt["converged"] == true
+                    && attempt["result"]["continuation_state"]["displacements"]
+                        .as_array()
+                        .is_some_and(|values| values.len() == 9)
+                    && (index == 0
+                        || attempt["branch_shape_overlap"]
+                            .as_f64()
+                            .is_some_and(|overlap| overlap >= 0.75))
+            })
+    );
+    assert_eq!(
+        result["_solver_provenance"]["operator_id"],
+        "solve.frame_2d_p_delta_path"
+    );
+}
+
+fn parameter_path_point(moment_of_inertia: f64) -> serde_json::Value {
+    json!({
+        "buckling": {
+            "frame": {
+                "nodes": [
+                    {"id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                    {"id": "n1", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                    {"id": "n2", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -100000.0, "moment_z": 0.0}
+                ],
+                "elements": [
+                    {"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": moment_of_inertia, "section_modulus": 0.0001},
+                    {"id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": moment_of_inertia, "section_modulus": 0.0001}
+                ]
+            },
+            "mode_count": 1
+        },
+        "imperfection_amplitude": 0.002,
+        "imperfection_shape": [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "imperfection_mode_index": 0,
+        "kinematics": "corotational",
+        "path_control": "arc_length",
+        "load_steps": 4,
+        "max_iterations": 32,
+        "tolerance": 1.0e-8
+    })
+}

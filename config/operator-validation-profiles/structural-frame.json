@@ -191,7 +191,8 @@
       "qualification_candidate_id": "frame-2d-p-delta",
       "trust_goal": "screening_validation",
       "operators": [
-        "solve.frame_2d_p_delta"
+        "solve.frame_2d_p_delta",
+        "solve.frame_2d_p_delta_path"
       ],
       "validation_methods": [
         "modal_imperfection_synthesis",
@@ -215,6 +216,12 @@
         "connected_triplet_five_point_nonlinear_parameter_path",
         "state_seeded_arc_length_parameter_continuation",
         "repeated_point_mode_order_exchange_traversal",
+        "generalized_parameter_equilibrium_projection",
+        "branch_shape_guided_state_transport",
+        "parameter_path_branch_identity_gate",
+        "state_seeded_two_parameter_surface",
+        "adaptive_parameter_midpoint_recovery",
+        "visible_failed_parameter_attempts",
         "nondegenerate_pairwise_branch_rejection",
         "segmented_shallow_arch_mesh_sequence",
         "equilibrium_path_event_detection",
@@ -302,6 +309,16 @@
         "imported_continuation_states_are_corrected_to_current_model_equilibrium",
         "state_seeded_parameter_continuation_crosses_the_repeated_point_without_losing_physical_mode_identity",
         "continuation_state_vectors_are_dimension_finite_and_constraint_checked",
+        "fixed_load_state_correction_falls_back_to_joint_displacement_and_load_projection",
+        "explicit_target_branch_shapes_are_authoritative_over_turning_state_tangents",
+        "branch_shape_overlap_ignores_inactive_shape_degrees_of_freedom",
+        "branch_shape_guided_state_transport_preserves_amplitude_and_inactive_components",
+        "a_three_by_three_non_singular_parameter_surface_retains_external_mixed_mode_alignment_above_point_seven_five",
+        "surface_points_satisfy_equilibrium_and_arc_length_errors_below_one_e_minus_seven",
+        "failed_parameter_jumps_are_retried_from_the_last_accepted_state",
+        "adaptive_parameter_insertions_are_bounded_by_depth_and_minimum_fraction",
+        "failed_and_inserted_parameter_attempts_remain_observable",
+        "parameter_path_points_require_matching_topology_constraints_and_imperfection_dimensions",
         "separated_critical_modes_do_not_fabricate_pairwise_branches",
         "arc_radius_continuously_tracks_the_target_iteration_count",
         "segmented_arch_linear_critical_factor_converges",
@@ -373,6 +390,8 @@
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
         "workers/rust/crates/solver/src/frame_2d_corotational.rs",
         "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/frame_2d_continuation_state.rs",
+        "workers/rust/crates/solver/src/frame_2d_parameter_path.rs",
         "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
@@ -422,6 +441,11 @@
           "id": "frame-2d-subspace-angular-refinement",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_branch_subspace::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-adaptive-parameter-path",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_parameter_path::tests -- --nocapture"
         },
         {
           "id": "frame-2d-p-delta-closed-form",

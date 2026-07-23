@@ -330,6 +330,137 @@ fn connected_triplet_state_seed_crosses_the_repeated_parameter_point() {
     );
 }
 
+#[test]
+fn connected_triplet_state_seed_traverses_a_two_parameter_surface() {
+    let parameters = [
+        (-0.005, -0.5),
+        (0.0, -0.5),
+        (0.005, -0.5),
+        (0.005, 0.1),
+        (0.0, 0.1),
+        (-0.005, 0.1),
+        (-0.005, 0.5),
+        (0.0, 0.5),
+        (0.005, 0.5),
+    ];
+    let (source_inertias, source_couplers) = triplet_parameters(parameters[0]);
+    let source_reference = reduced_triplet_eigenpairs(&source_inertias, &source_couplers)[2].1;
+    let mut source =
+        coupled_column_network_request(&source_inertias, &source_reference, &source_couplers);
+    source.branch_continuation_steps = Some(3);
+    let source_result =
+        solve_frame_2d_p_delta(&source).expect("surface source branch should solve");
+    let source_probe = source_result
+        .steps
+        .iter()
+        .flat_map(|step| &step.branch_switch_probes)
+        .filter(|probe| probe.continuation_converged == Some(true))
+        .max_by(|left, right| {
+            triplet_alignment(left.displacements.as_ref().unwrap(), source_reference).total_cmp(
+                &triplet_alignment(right.displacements.as_ref().unwrap(), source_reference),
+            )
+        })
+        .expect("surface source should expose a continued mixed branch");
+    let radius = source_probe
+        .continuation_steps
+        .last()
+        .unwrap()
+        .arc_length_radius;
+
+    let mut references = Vec::with_capacity(parameters.len());
+    let mut requests = Vec::with_capacity(parameters.len());
+    let mut previous_reference = source_reference;
+    for parameter in parameters {
+        let (inertias, couplers) = triplet_parameters(parameter);
+        let reference = reduced_triplet_eigenpairs(&inertias, &couplers)[1..]
+            .iter()
+            .copied()
+            .max_by(|left, right| {
+                direction_dot(previous_reference, left.1)
+                    .abs()
+                    .total_cmp(&direction_dot(previous_reference, right.1).abs())
+            })
+            .unwrap()
+            .1;
+        let mut point = coupled_column_network_request(&inertias, &reference, &couplers);
+        configure_parameter_path_point(&mut point, radius * 0.25);
+        point.load_steps = Some(1);
+        references.push(reference);
+        requests.push(point);
+        previous_reference = reference;
+    }
+    requests[0].continuation_state = Some(state_from_probe(source_probe));
+    let result = solve_frame_2d_p_delta_path(&SolveFrame2dPDeltaPathRequest {
+        points: requests,
+        max_subdivisions: Some(4),
+        minimum_step_fraction: Some(1.0 / 64.0),
+        minimum_state_overlap: Some(0.75),
+        minimum_branch_shape_overlap: Some(0.75),
+    })
+    .expect("two-parameter state-seeded surface should execute");
+
+    assert!(
+        result.converged,
+        "completed={}, attempts={:?}",
+        result.completed_point_count,
+        result
+            .attempts
+            .iter()
+            .map(|attempt| (
+                attempt.requested_point_index,
+                attempt.target_fraction,
+                attempt.subdivision_level,
+                attempt.converged,
+                attempt.state_overlap,
+                attempt.branch_shape_overlap,
+                attempt.failure_detail.as_deref(),
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(result.completed_point_count, parameters.len());
+    for (index, reference) in references.into_iter().enumerate() {
+        let attempt = result
+            .attempts
+            .iter()
+            .rev()
+            .find(|attempt| {
+                attempt.requested_point_index == index
+                    && attempt.target_fraction == 1.0
+                    && attempt.converged
+            })
+            .expect("each requested surface point should be accepted");
+        let solved = attempt.result.as_ref().unwrap();
+        assert!(solved.steps.iter().all(|step| {
+            step.converged
+                && step.residual_norm < 1.0e-7
+                && step.arc_length_constraint_error.unwrap() < 1.0e-7
+        }));
+        let alignment = triplet_alignment(&solved.final_displacements, reference);
+        assert!(
+            alignment > 0.75,
+            "surface point {index} lost mixed-branch identity: alignment={alignment}, reference={reference:?}, actual={:?}",
+            triplet_midpoint_direction(&solved.final_displacements)
+        );
+    }
+}
+
+fn triplet_parameters(
+    (inertia_skew, coupling_skew): (f64, f64),
+) -> ([f64; 3], [(usize, usize, f64); 3]) {
+    (
+        [
+            COLUMN_INERTIA,
+            COLUMN_INERTIA,
+            COLUMN_INERTIA * (1.0 + inertia_skew),
+        ],
+        [
+            (0, 1, COUPLING_STIFFNESS),
+            (1, 2, COUPLING_STIFFNESS),
+            (0, 2, COUPLING_STIFFNESS * (1.0 + coupling_skew)),
+        ],
+    )
+}
+
 fn state_from_probe(
     probe: &kyuubiki_protocol::Frame2dBranchSwitchProbeResult,
 ) -> Frame2dPDeltaContinuationState {
@@ -354,13 +485,18 @@ fn configure_state_seeded_run(
     state: Frame2dPDeltaContinuationState,
     radius: f64,
 ) {
+    configure_parameter_path_point(request, radius);
+    request.continuation_state = Some(state);
+}
+
+fn configure_parameter_path_point(request: &mut SolveFrame2dPDeltaRequest, radius: f64) {
     request.load_steps = Some(2);
     request.arc_length_radius = Some(radius);
     request.branch_switch = Frame2dBranchSwitchSelection::Disabled;
     request.branch_switch_amplitude = None;
     request.branch_switch_mode_count = None;
     request.branch_continuation_steps = None;
-    request.continuation_state = Some(state);
+    request.continuation_state = None;
 }
 
 fn reduced_triplet_eigenvalues(

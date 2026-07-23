@@ -184,6 +184,14 @@ branches. Neither control mode is a material-plasticity model.
   arc-length error gates, retain above 0.9 alignment at the repeated point, and
   retain above 0.85 alignment with the overlap-selected physical mode after the
   exchange.
+- A separate 3-by-3 serpentine surface perturbs third-column inertia and one
+  coupling edge across two independent coordinates while avoiding the exact
+  repeated point, whose direction is a subspace rather than a unique vector.
+  Explicit target shapes transport each predictor on active shape DOFs before
+  equilibrium correction; the solved result is then checked rather than
+  forced. All nine requested points retain above 0.75 alignment with the
+  neighboring-overlap-tracked external reduced-matrix mode, and every accepted
+  step remains below both `1e-7` equilibrium and arc-length error gates.
 - Subdividing each arch side into 2, 4, and 8 frame elements resolves an earlier
   member-flexural instability branch hidden by the rigid-link-like two-element
   fixture. Linear critical factors converge to within 0.1% between the two
@@ -266,11 +274,33 @@ branches. Neither control mode is a material-plasticity model.
   feed it back through the optional request field of the same name. Imported
   states require corotational arc-length control, exact full-DOF vector sizes,
   finite values, and zero constrained components. The solver first corrects the
-  imported displacement to equilibrium in the current model and reports
+  imported displacement to equilibrium in the current model. If fixed-load
+  correction cannot retain equilibrium after a parameter change, a generalized
+  hyperplane corrector solves displacement and load factor together. The
+  combined correction is reported through
   `continuation_state_correction_norm`, while preserving the prior generalized
   increment for branch orientation. The engine JSON route round-trips and
   executes this state, so headless callers do not need an in-process solver
   shortcut.
+- `solve.frame_2d_p_delta_path` accepts two to 64 compatible corotational
+  arc-length requests and owns state transfer between them. Node identities,
+  constraints, element connectivity, and imperfection dimensions must match;
+  coordinates, loads, section properties, and explicit imperfection values are
+  interpolated for adaptive midpoint models.
+- `minimum_state_overlap` optionally guards the transported continuation
+  tangent. `minimum_branch_shape_overlap` adds the stronger explicit-shape
+  contract: it measures only active imperfection-shape DOFs, reorients the
+  predictor while preserving its amplitude and inactive components, and
+  remains authoritative when both gates are configured. Both measured overlaps
+  stay visible on every attempt.
+- A failed target attempt remains in the result with its failure detail. The
+  path retries a midpoint from the last accepted continuation state, then
+  retries the original target from the newly accepted state. Subdivision depth
+  is bounded to eight and `minimum_step_fraction` is finite and constrained to
+  `(0, 0.5]`. A deterministic convergence-basin regression forces three direct
+  failures and verifies visible accepted fractions `0.25`, `0.5`, `0.75`, and
+  `1.0`; a real three-point finite-element path also round-trips through the
+  engine route with solver provenance.
 - `branch_continuation_radius` optionally replaces the inherited primary-path
   radius for switched paths. It must be positive and finite and is rejected
   unless at least one continuation step is requested; each accepted step still
@@ -422,7 +452,6 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- adaptive parameter-step control and independent qualification of state-seeded multi-parameter surfaces
 - external post-critical trajectory correlation for an asymmetric connected frame
 - material yielding, residual stress, and section interaction
 

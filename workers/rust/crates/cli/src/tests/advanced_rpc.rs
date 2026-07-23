@@ -1,10 +1,11 @@
 use super::*;
 use kyuubiki_protocol::{
-    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame3dNodeInput,
-    ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
-    NonlinearSpring1dNodeInput, SolveBucklingFrame2dRequest, SolveContactGap1dRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
-    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame2dStabilityKinematics,
+    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
+    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolveBucklingFrame2dRequest,
+    SolveContactGap1dRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
@@ -109,6 +110,36 @@ fn handles_frame_2d_p_delta_rpc_requests() {
         kyuubiki_protocol::Frame2dImperfectionSource::BucklingMode
     );
     assert_eq!(result.critical_factor_limit_ratio, 0.95);
+}
+
+#[test]
+fn handles_frame_2d_p_delta_parameter_path_rpc_requests() {
+    let mut first = frame_2d_p_delta_request();
+    first.kinematics = Frame2dStabilityKinematics::Corotational;
+    first.path_control = kyuubiki_protocol::Frame2dStabilityPathControl::ArcLength;
+    first.load_steps = Some(2);
+    let mut second = first.clone();
+    for element in &mut second.buckling.frame.elements {
+        element.moment_of_inertia *= 1.01;
+    }
+    let response = execute(
+        RpcMethod::SolveFrame2dPDeltaPath,
+        SolveFrame2dPDeltaPathRequest {
+            points: vec![first, second],
+            max_subdivisions: Some(2),
+            minimum_step_fraction: Some(0.125),
+            minimum_state_overlap: None,
+            minimum_branch_shape_overlap: None,
+        },
+    );
+
+    assert!(response.ok, "error={:?}", response.error);
+    let result: kyuubiki_protocol::SolveFrame2dPDeltaPathResult =
+        serde_json::from_value(response.result.expect("p-delta path result"))
+            .expect("p-delta path result should decode");
+    assert!(result.converged);
+    assert_eq!(result.completed_point_count, 2);
+    assert!(result.attempts.iter().all(|attempt| attempt.converged));
 }
 
 fn execute(method: RpcMethod, params: impl serde::Serialize) -> kyuubiki_protocol::RpcResponse {

@@ -5,13 +5,13 @@ use crate::{
     SolveAcousticBar1dResult, SolveAdvectionDiffusionBar1dResult, SolveBarResult,
     SolveBeam1dResult, SolveBucklingBeam1dResult, SolveBucklingFrame2dResult,
     SolveContactGap1dResult, SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dResult,
-    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dPDeltaResult, SolveFrame2dResult,
-    SolveFrame3dResult, SolveHarmonicSpring1dResult, SolveHeatBar1dResult,
-    SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult, SolveMagnetostaticBar1dResult,
-    SolveMagnetostaticPlaneQuad2dResult, SolveMagnetostaticPlaneTriangle2dResult,
-    SolveModalFrame2dResult, SolveModalFrame3dResult, SolveNonlinearSpring1dResult,
-    SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult, SolveSolidTetra3dResult,
-    SolveSpring1dResult, SolveSpring2dResult, SolveSpring3dResult,
+    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dPDeltaPathResult,
+    SolveFrame2dPDeltaResult, SolveFrame2dResult, SolveFrame3dResult, SolveHarmonicSpring1dResult,
+    SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult,
+    SolveMagnetostaticBar1dResult, SolveMagnetostaticPlaneQuad2dResult,
+    SolveMagnetostaticPlaneTriangle2dResult, SolveModalFrame2dResult, SolveModalFrame3dResult,
+    SolveNonlinearSpring1dResult, SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult,
+    SolveSolidTetra3dResult, SolveSpring1dResult, SolveSpring2dResult, SolveSpring3dResult,
     SolveStokesFlowPlaneQuad2dResult, SolveStokesFlowPlaneTriangle2dResult,
     SolveThermalBar1dResult, SolveThermalBeam1dResult, SolveThermalFrame2dResult,
     SolveThermalFrame3dResult, SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dResult,
@@ -69,6 +69,7 @@ pub enum AnalysisResult {
     BucklingBeam1d(SolveBucklingBeam1dResult),
     BucklingFrame2d(SolveBucklingFrame2dResult),
     Frame2dPDelta(SolveFrame2dPDeltaResult),
+    Frame2dPDeltaPath(SolveFrame2dPDeltaPathResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

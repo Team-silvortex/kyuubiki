@@ -2,9 +2,11 @@ use kyuubiki_protocol::{
     Frame2dBranchProbeOrigin, Frame2dBranchSwitchSelection, Frame2dElementInput,
     Frame2dEquilibriumPathEvent, Frame2dNodeInput, Frame2dPDeltaContinuationState,
     Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
-use kyuubiki_solver::{solve_buckling_frame_2d, solve_frame_2d_p_delta};
+use kyuubiki_solver::{
+    solve_buckling_frame_2d, solve_frame_2d_p_delta, solve_frame_2d_p_delta_path,
+};
 
 const LENGTH: f64 = 1.0;
 const COLUMN_SPACING: f64 = 2.0;

@@ -381,6 +381,21 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.frame_2d_p_delta_path",
+            "mechanical",
+            "frame_2d_p_delta_path",
+            "Continue a corotational 2D frame stability state across compatible parameter points with visible adaptive midpoint recovery.",
+            &[
+                "screening",
+                "mechanical",
+                "stability",
+                "parameter-path",
+                "adaptive",
+                "arc-length",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.modal_frame_3d",
             "mechanical",
             "modal_frame_3d",

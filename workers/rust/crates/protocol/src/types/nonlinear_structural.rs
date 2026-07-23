@@ -136,6 +136,45 @@ pub struct Frame2dPDeltaContinuationState {
     pub load_factor_increment: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dPDeltaPathRequest {
+    pub points: Vec<SolveFrame2dPDeltaRequest>,
+    #[serde(default)]
+    pub max_subdivisions: Option<usize>,
+    #[serde(default)]
+    pub minimum_step_fraction: Option<f64>,
+    #[serde(default)]
+    pub minimum_state_overlap: Option<f64>,
+    #[serde(default)]
+    pub minimum_branch_shape_overlap: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dPDeltaPathAttemptResult {
+    pub requested_point_index: usize,
+    pub target_fraction: f64,
+    pub subdivision_level: usize,
+    pub inserted: bool,
+    pub converged: bool,
+    #[serde(default)]
+    pub state_overlap: Option<f64>,
+    #[serde(default)]
+    pub branch_shape_overlap: Option<f64>,
+    #[serde(default)]
+    pub failure_detail: Option<String>,
+    #[serde(default)]
+    pub result: Option<SolveFrame2dPDeltaResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dPDeltaPathResult {
+    pub input: SolveFrame2dPDeltaPathRequest,
+    pub attempts: Vec<Frame2dPDeltaPathAttemptResult>,
+    pub completed_point_count: usize,
+    pub adaptive_insertion_count: usize,
+    pub converged: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Frame2dStabilityKinematics {

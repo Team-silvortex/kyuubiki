@@ -246,6 +246,18 @@ pub fn chunk_result(
         (AnalysisResult::Frame2dPDelta(result), ResultChunkKind::Elements) => {
             encode_slice(&result.steps)?
         }
+        (AnalysisResult::Frame2dPDeltaPath(result), ResultChunkKind::Nodes) => {
+            let latest = result
+                .attempts
+                .iter()
+                .rev()
+                .find_map(|attempt| attempt.result.as_ref())
+                .ok_or_else(|| "frame 2d p-delta path has no solved state".to_string())?;
+            encode_slice(&latest.final_displacements)?
+        }
+        (AnalysisResult::Frame2dPDeltaPath(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.attempts)?
+        }
     };
 
     let offset = request.offset.min(items.len());

@@ -7,9 +7,9 @@ use crate::frame_2d_branch_switch::{
     probe_weighted_branch_switches, unavailable_branch_switches,
     unavailable_pairwise_branch_switches, unavailable_weighted_branch_switches,
 };
+use crate::frame_2d_continuation_state::{export_continuation_state, prepare_continuation_state};
 use crate::frame_2d_corotational::{
-    correct_corotational_equilibrium, imperfection_amplification, max_translation,
-    normalized_residual, solve_tangent,
+    imperfection_amplification, max_translation, normalized_residual, solve_tangent,
 };
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
@@ -104,14 +104,22 @@ pub(crate) fn solve_arc_length_steps(
         .tangent_transition_refinement_steps
         .unwrap_or(DEFAULT_TRANSITION_REFINEMENT_STEPS);
     let branch_mode_count = request.branch_switch_mode_count.unwrap_or(1);
-    let (mut state, continuation_state_correction_norm) = prepare_continuation_state(
+    let prepared = prepare_continuation_state(
         request,
         &positions,
         system,
         &free,
+        load_scale,
         max_iterations,
         tolerance,
     )?;
+    let continuation_state_correction_norm = prepared.correction_norm;
+    let mut state = ArcLengthState {
+        displacement: prepared.displacement,
+        load_factor: prepared.load_factor,
+        displacement_increment: prepared.displacement_increment,
+        load_increment: prepared.load_increment,
+    };
     let mut steps = Vec::with_capacity(load_steps);
     let nominal_radius = radius;
     let mut current_radius = radius;
@@ -423,119 +431,18 @@ pub(crate) fn solve_arc_length_steps(
             .clamp(0.5, 2.0);
         current_radius = (current_radius * adaptation).min(nominal_radius);
     }
-    let continuation_state = export_continuation_state(&state, &free);
+    let continuation_state = export_continuation_state(
+        &state.displacement,
+        state.load_factor,
+        &state.displacement_increment,
+        state.load_increment,
+        &free,
+    );
     Ok(ArcLengthSolveResult {
         steps,
         continuation_state,
         continuation_state_correction_norm,
     })
-}
-
-fn prepare_continuation_state(
-    request: &SolveFrame2dPDeltaRequest,
-    positions: &[(f64, f64)],
-    system: &Frame2dStabilitySystem,
-    free: &[usize],
-    max_iterations: usize,
-    tolerance: f64,
-) -> Result<(ArcLengthState, Option<f64>), String> {
-    let Some(input) = &request.continuation_state else {
-        return Ok((
-            ArcLengthState {
-                displacement: vec![0.0; positions.len() * 3],
-                load_factor: 0.0,
-                displacement_increment: vec![0.0; free.len()],
-                load_increment: 0.0,
-            },
-            None,
-        ));
-    };
-    validate_continuation_state(input, positions.len() * 3, &system.constrained_dofs)?;
-    let corrected = correct_corotational_equilibrium(
-        positions,
-        &request.buckling.frame.elements,
-        system,
-        &input.displacements,
-        input.load_factor,
-        max_iterations,
-        tolerance,
-    )?
-    .ok_or_else(|| {
-        "frame 2d p-delta continuation state could not be corrected to equilibrium".to_string()
-    })?;
-    let correction_norm = corrected
-        .iter()
-        .zip(&input.displacements)
-        .map(|(corrected, requested)| (corrected - requested).powi(2))
-        .sum::<f64>()
-        .sqrt();
-    let displacement_increment = free
-        .iter()
-        .map(|&dof| input.displacement_increment[dof])
-        .collect();
-    Ok((
-        ArcLengthState {
-            displacement: corrected,
-            load_factor: input.load_factor,
-            displacement_increment,
-            load_increment: input.load_factor_increment,
-        },
-        Some(correction_norm),
-    ))
-}
-
-fn validate_continuation_state(
-    state: &Frame2dPDeltaContinuationState,
-    dof_count: usize,
-    constrained_dofs: &[usize],
-) -> Result<(), String> {
-    if state.displacements.len() != dof_count {
-        return Err(format!(
-            "frame 2d p-delta continuation displacements must contain exactly {dof_count} values"
-        ));
-    }
-    if state.displacement_increment.len() != dof_count {
-        return Err(format!(
-            "frame 2d p-delta continuation displacement_increment must contain exactly {dof_count} values"
-        ));
-    }
-    if !state.load_factor.is_finite() || !state.load_factor_increment.is_finite() {
-        return Err("frame 2d p-delta continuation load factors must be finite".into());
-    }
-    if state
-        .displacements
-        .iter()
-        .chain(&state.displacement_increment)
-        .any(|value| !value.is_finite())
-    {
-        return Err("frame 2d p-delta continuation vectors must be finite".into());
-    }
-    if constrained_dofs.iter().any(|&dof| {
-        state.displacements[dof].abs() > 1.0e-12
-            || state.displacement_increment[dof].abs() > 1.0e-12
-    }) {
-        return Err(
-            "frame 2d p-delta continuation state must be zero on constrained degrees of freedom"
-                .into(),
-        );
-    }
-    Ok(())
-}
-
-fn export_continuation_state(
-    state: &ArcLengthState,
-    free: &[usize],
-) -> Frame2dPDeltaContinuationState {
-    let mut displacement_increment = vec![0.0; state.displacement.len()];
-    for (&dof, &increment) in free.iter().zip(&state.displacement_increment) {
-        displacement_increment[dof] = increment;
-    }
-    Frame2dPDeltaContinuationState {
-        displacements: state.displacement.clone(),
-        load_factor: state.load_factor,
-        displacement_increment,
-        load_factor_increment: state.load_increment,
-    }
 }
 
 fn extract_critical_modes(

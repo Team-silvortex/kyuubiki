@@ -418,10 +418,21 @@ under changed model parameters, preserve generalized branch orientation, and
 return the next reusable state through the engine JSON route. A retained
 three-stage regression seeds a selected nonlinear mixed branch on one side,
 crosses the exact repeated point, and exits after eigenvalue ordering exchanges
-without losing its physical mode identity. The next stability milestone is
-adaptive parameter-step control and independent qualification of a broader
-state-seeded multi-parameter surface, plus external asymmetric post-critical
-trajectory correlation. The first internal
+without losing its physical mode identity. This state-seeding capability is
+now backed by a typed parameter-path operator. It carries the last accepted
+state across compatible models, retains failed attempts, and recursively
+inserts interpolated midpoint models under bounded depth and minimum-fraction
+controls. The operator is available through Engine and CLI RPC, and a forced
+convergence-basin regression proves that failed large jumps recover through
+visible quarter-point insertions. Fixed-load state correction now falls back
+to a joint displacement/load hyperplane corrector. Optional state-tangent and
+target-shape overlaps remain visible; an explicit target shape transports the
+predictor only on active shape DOFs and is authoritative over a turning
+tangent. A non-singular 3-by-3 serpentine surface now retains external mixed
+mode alignment above 0.75 and both numerical error gates below `1e-7`; the
+exact repeated point remains covered separately as a subspace crossing. The
+next stability milestone is external asymmetric post-critical trajectory
+correlation. The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance
 after adding an unloaded free branch; the 128-mode and 256-inertia caps are

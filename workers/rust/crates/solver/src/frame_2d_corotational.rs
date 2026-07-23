@@ -311,6 +311,93 @@ pub(crate) fn correct_corotational_equilibrium(
     Ok(attempt.converged.then_some(attempt.displacement))
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn correct_parameter_continuation_equilibrium(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    system: &Frame2dStabilitySystem,
+    initial_displacement: &[f64],
+    initial_load_factor: f64,
+    displacement_increment: &[f64],
+    load_increment: f64,
+    load_scale: f64,
+    max_iterations: usize,
+    tolerance: f64,
+) -> Result<Option<(Vec<f64>, f64)>, String> {
+    let orientation_norm = displacement_increment
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        + (load_scale * load_increment).powi(2);
+    if !orientation_norm.is_finite() || orientation_norm <= f64::EPSILON {
+        return Ok(None);
+    }
+    let mut displacement = initial_displacement.to_vec();
+    let mut load_factor = initial_load_factor;
+    for _ in 0..max_iterations {
+        let (tangent, internal) =
+            assemble_tangent_and_internal(positions, elements, &displacement)?;
+        let residual = residual(&system.reference_force, &internal, load_factor);
+        let (reduced_tangent, reduced_residual, free) =
+            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
+        let residual_norm =
+            normalized_residual(&reduced_residual, &system.reference_force, load_factor);
+        let displacement_offset = free
+            .iter()
+            .map(|&dof| displacement[dof] - initial_displacement[dof])
+            .collect::<Vec<_>>();
+        let constraint = displacement_offset
+            .iter()
+            .zip(displacement_increment)
+            .map(|(offset, increment)| offset * increment)
+            .sum::<f64>()
+            + load_scale.powi(2) * (load_factor - initial_load_factor) * load_increment;
+        if residual_norm <= tolerance && constraint.abs() / orientation_norm <= tolerance {
+            return Ok(Some((displacement, load_factor)));
+        }
+        let residual_direction = match solve_tangent(&reduced_tangent, &reduced_residual) {
+            Ok(direction) => direction,
+            Err(_) => return Ok(None),
+        };
+        let reduced_reference = free
+            .iter()
+            .map(|&dof| system.reference_force[dof])
+            .collect::<Vec<_>>();
+        let load_direction = match solve_tangent(&reduced_tangent, &reduced_reference) {
+            Ok(direction) => direction,
+            Err(_) => return Ok(None),
+        };
+        let denominator = displacement_increment
+            .iter()
+            .zip(&load_direction)
+            .map(|(increment, direction)| increment * direction)
+            .sum::<f64>()
+            + load_scale.powi(2) * load_increment;
+        if !denominator.is_finite()
+            || denominator.abs() <= f64::EPSILON * orientation_norm.sqrt().max(1.0)
+        {
+            return Ok(None);
+        }
+        let projected_residual = displacement_increment
+            .iter()
+            .zip(&residual_direction)
+            .map(|(increment, direction)| increment * direction)
+            .sum::<f64>();
+        let load_correction = -(constraint + projected_residual) / denominator;
+        if !load_correction.is_finite() {
+            return Ok(None);
+        }
+        for ((&dof, residual), load) in free.iter().zip(residual_direction).zip(load_direction) {
+            displacement[dof] += residual + load * load_correction;
+        }
+        load_factor += load_correction;
+        if !load_factor.is_finite() {
+            return Ok(None);
+        }
+    }
+    Ok(None)
+}
+
 fn apply_backtracked_increment(
     positions: &[(f64, f64)],
     elements: &[Frame2dElementInput],
