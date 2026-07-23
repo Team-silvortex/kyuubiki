@@ -148,6 +148,23 @@ pub enum Frame2dPDeltaFailureReason {
     ArcLengthConstraintSingular,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dEquilibriumPathEvent {
+    LimitPointMaximum,
+    LimitPointMinimum,
+    BifurcationCandidate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dTangentStability {
+    PositiveDefinite,
+    Indefinite,
+    NearSingular,
+    UnassessedSizeLimit,
+}
+
 impl Default for Frame2dImperfectionSource {
     fn default() -> Self {
         Self::BucklingMode
@@ -177,6 +194,24 @@ pub struct Frame2dPDeltaStepResult {
     pub arc_length_constraint_error: Option<f64>,
     #[serde(default)]
     pub arc_length_radius: Option<f64>,
+    #[serde(default)]
+    pub load_factor_increment: Option<f64>,
+    #[serde(default)]
+    pub path_event: Option<Frame2dEquilibriumPathEvent>,
+    #[serde(default)]
+    pub tangent_stability: Option<Frame2dTangentStability>,
+    #[serde(default)]
+    pub tangent_negative_pivots: Option<usize>,
+    #[serde(default)]
+    pub tangent_near_zero_pivots: Option<usize>,
+    #[serde(default)]
+    pub tangent_negative_pivot_delta: Option<i32>,
+    #[serde(default)]
+    pub tangent_critical_eigenvalue: Option<f64>,
+    #[serde(default)]
+    pub tangent_critical_mode_residual: Option<f64>,
+    #[serde(default)]
+    pub tangent_critical_mode: Option<Vec<f64>>,
     pub residual_norm: f64,
     pub imperfection_amplification: f64,
     pub max_incremental_displacement: f64,

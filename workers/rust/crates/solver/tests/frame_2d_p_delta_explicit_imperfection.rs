@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
-    Frame2dElementInput, Frame2dImperfectionSource, Frame2dNodeInput, Frame2dPDeltaFailureReason,
-    Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    Frame2dElementInput, Frame2dEquilibriumPathEvent, Frame2dImperfectionSource, Frame2dNodeInput,
+    Frame2dPDeltaFailureReason, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
+    Frame2dTangentStability, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest,
 };
 use kyuubiki_solver::solve_frame_2d_p_delta;
 
@@ -265,6 +266,7 @@ fn arc_length_path_crosses_the_screening_limit_and_is_objective() {
         step.arc_length_constraint_error
             .is_some_and(|error| error < 1.0e-7)
     }));
+    assert!(result.steps.iter().all(|step| step.path_event.is_none()));
 
     let mut rotated_request = portal_request(0.731);
     rotated_request.kinematics = Frame2dStabilityKinematics::Corotational;
@@ -381,6 +383,23 @@ fn arc_length_matches_shallow_arch_limit_point_and_descending_branch() {
     let pin_jointed_peak = pin_jointed_shallow_arch_peak_factor();
     assert!(peak_index > 0 && peak_index + 1 < factors.len());
     assert_relative(peak_factor, pin_jointed_peak, 2.0e-2);
+    assert_eq!(
+        result.steps[peak_index].path_event,
+        Some(Frame2dEquilibriumPathEvent::LimitPointMaximum)
+    );
+    assert_eq!(
+        result.steps[0].tangent_stability,
+        Some(Frame2dTangentStability::PositiveDefinite)
+    );
+    assert!(result.steps[peak_index + 1..].iter().any(|step| {
+        step.tangent_stability == Some(Frame2dTangentStability::Indefinite)
+            && step.tangent_negative_pivots.is_some_and(|count| count > 0)
+    }));
+    assert_eq!(result.steps[0].tangent_negative_pivot_delta, None);
+    assert!(result.steps.iter().skip(1).all(|step| {
+        step.tangent_negative_pivot_delta.is_some()
+            && step.path_event != Some(Frame2dEquilibriumPathEvent::BifurcationCandidate)
+    }));
     assert!(factors[peak_index + 1..].iter().any(|factor| *factor < 0.0));
     assert!(crown_displacements.last().unwrap() < &-0.1);
     assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
@@ -394,6 +413,7 @@ fn arc_length_matches_shallow_arch_limit_point_and_descending_branch() {
 fn segmented_shallow_arch_resolves_the_member_instability_branch() {
     let mut critical_factors = Vec::new();
     let mut peak_factors = Vec::new();
+    let mut bifurcation_candidate_factors = Vec::new();
     for segments_per_side in [2, 4, 8] {
         let probe = solve_frame_2d_p_delta(&shallow_arch_request(segments_per_side))
             .expect("segmented shallow arch probe should solve");
@@ -422,6 +442,65 @@ fn segmented_shallow_arch_resolves_the_member_instability_branch() {
         critical_factors.push(probe.buckling_result.minimum_load_factor);
         peak_factors.push(peak_factor);
         assert!(peak_index > 0 && peak_index + 1 < factors.len());
+        assert_eq!(
+            result.steps[peak_index].path_event,
+            Some(Frame2dEquilibriumPathEvent::LimitPointMaximum)
+        );
+        assert_eq!(
+            result.steps[0].tangent_stability,
+            Some(Frame2dTangentStability::PositiveDefinite)
+        );
+        assert!(result.steps[peak_index + 1..].iter().any(|step| {
+            step.tangent_stability == Some(Frame2dTangentStability::Indefinite)
+                && step.tangent_negative_pivots.is_some_and(|count| count > 0)
+        }));
+        assert_eq!(result.steps[0].tangent_negative_pivot_delta, None);
+        let bifurcation_candidates = result
+            .steps
+            .iter()
+            .filter(|step| {
+                step.path_event == Some(Frame2dEquilibriumPathEvent::BifurcationCandidate)
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            bifurcation_candidates.len(),
+            1,
+            "segments={segments_per_side}, candidates={bifurcation_candidates:?}"
+        );
+        let candidate = bifurcation_candidates[0];
+        assert_eq!(candidate.step, 2);
+        assert_eq!(candidate.tangent_negative_pivot_delta, Some(1));
+        assert!(candidate.load_factor > critical_factors.last().copied().unwrap());
+        assert!(candidate.load_factor < peak_factor);
+        assert!(
+            candidate
+                .tangent_critical_eigenvalue
+                .is_some_and(|value| value < 0.0)
+        );
+        assert!(
+            candidate
+                .tangent_critical_mode_residual
+                .is_some_and(|residual| residual < 5.0e-8)
+        );
+        let mode = candidate.tangent_critical_mode.as_ref().unwrap();
+        assert_eq!(mode.len(), request.buckling.frame.nodes.len() * 3);
+        assert_relative(
+            mode.iter().map(|value| value * value).sum::<f64>().sqrt(),
+            1.0,
+            1.0e-10,
+        );
+        for (node, shape) in request
+            .buckling
+            .frame
+            .nodes
+            .iter()
+            .zip(mode.chunks_exact(3))
+        {
+            assert!(!node.fix_x || shape[0] == 0.0);
+            assert!(!node.fix_y || shape[1] == 0.0);
+            assert!(!node.fix_rz || shape[2] == 0.0);
+        }
+        bifurcation_candidate_factors.push(candidate.load_factor);
         assert!(factors[peak_index + 1..].iter().any(|factor| *factor < 0.0));
         assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
         assert!(result.steps.iter().all(|step| {
@@ -432,6 +511,11 @@ fn segmented_shallow_arch_resolves_the_member_instability_branch() {
     assert_relative(critical_factors[2], critical_factors[1], 1.0e-3);
     assert!(peak_factors.windows(2).all(|pair| pair[1] < pair[0]));
     assert_relative(peak_factors[2], peak_factors[1], 1.0e-1);
+    assert_relative(
+        bifurcation_candidate_factors[2],
+        bifurcation_candidate_factors[1],
+        1.0e-2,
+    );
     assert!(peak_factors[0] < pin_jointed_shallow_arch_peak_factor() * 0.15);
 }
 

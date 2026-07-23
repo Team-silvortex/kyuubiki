@@ -1,6 +1,7 @@
 use crate::buckling_frame_2d::solve_buckling_frame_2d;
 use crate::frame_2d_arc_length::solve_arc_length_steps;
 use crate::frame_2d_corotational::solve_corotational_steps;
+use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
@@ -72,7 +73,7 @@ pub fn solve_frame_2d_p_delta(
         .load_steps
         .unwrap_or(DEFAULT_LOAD_STEPS)
         .clamp(1, 128);
-    let steps = match (request.kinematics, request.path_control) {
+    let mut steps = match (request.kinematics, request.path_control) {
         (
             Frame2dStabilityKinematics::LinearizedPDelta,
             Frame2dStabilityPathControl::LoadControl,
@@ -109,6 +110,7 @@ pub fn solve_frame_2d_p_delta(
         }
     };
 
+    annotate_path_events(&mut steps);
     let final_displacements = steps
         .last()
         .map(|step| step.displacements.clone())
@@ -170,6 +172,15 @@ fn solve_linearized_steps(
             failure_detail: None,
             arc_length_constraint_error: None,
             arc_length_radius: None,
+            load_factor_increment: Some(maximum_load_factor / load_steps as f64),
+            path_event: None,
+            tangent_stability: None,
+            tangent_negative_pivots: None,
+            tangent_near_zero_pivots: None,
+            tangent_negative_pivot_delta: None,
+            tangent_critical_eigenvalue: None,
+            tangent_critical_mode_residual: None,
+            tangent_critical_mode: None,
             residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,

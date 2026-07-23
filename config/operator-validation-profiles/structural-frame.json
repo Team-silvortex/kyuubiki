@@ -204,6 +204,10 @@
         "target_iteration_arc_length_adaptation",
         "shallow_arch_limit_point_reference",
         "segmented_shallow_arch_mesh_sequence",
+        "equilibrium_path_event_detection",
+        "symmetric_tangent_inertia",
+        "sampled_bifurcation_candidate_classification",
+        "transition_critical_mode_extraction",
         "adaptive_load_step_cutback",
         "structured_nonconvergence_diagnostics",
         "multi_member_rigid_rotation_objectivity",
@@ -236,13 +240,28 @@
         "arc_radius_continuously_tracks_the_target_iteration_count",
         "segmented_arch_linear_critical_factor_converges",
         "resolved_member_instability_precedes_rigid_link_snap_through",
-        "segmented_arch_paths_retain_the_descending_branch"
+        "segmented_arch_paths_retain_the_descending_branch",
+        "load_factor_increments_are_explicit_per_step",
+        "shallow_arch_peaks_emit_limit_point_maximum_events",
+        "monotonic_paths_do_not_emit_false_limit_events",
+        "positive_definite_paths_report_zero_negative_pivots",
+        "descending_arch_branches_report_negative_tangent_pivots",
+        "oversized_tangent_diagnostics_report_unassessed_instead_of_guessing",
+        "inertia_changes_without_load_reversal_emit_bifurcation_candidates",
+        "limit_point_inertia_changes_are_not_mislabeled_as_bifurcations",
+        "segmented_member_instability_emits_a_mesh_convergent_candidate_bracket",
+        "candidate_critical_modes_are_unit_normalized_and_constraint_compatible",
+        "candidate_critical_mode_residuals_remain_bounded",
+        "critical_mode_extraction_is_transition_only_and_size_bounded"
       ],
       "evidence_paths": [
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
         "workers/rust/crates/solver/src/frame_2d_corotational.rs",
         "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
         "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_path_events.rs",
+        "workers/rust/crates/solver/src/symmetric_critical_mode.rs",
+        "workers/rust/crates/solver/src/symmetric_inertia.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
         "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs"
@@ -252,6 +271,21 @@
           "id": "frame-2d-corotational-element-invariants",
           "kind": "invariant",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_corotational_element::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-tangent-inertia",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib symmetric_inertia::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-path-event-classification",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_path_events::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-critical-mode-extraction",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib symmetric_critical_mode::tests -- --nocapture"
         },
         {
           "id": "frame-2d-p-delta-closed-form",

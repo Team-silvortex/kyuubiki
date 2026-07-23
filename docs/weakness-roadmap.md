@@ -104,7 +104,8 @@ Current progress:
   path-constraint error, adaptively cuts back oversized radii, continuously
   targets a visible Newton iteration count, and retains a shallow-arch
   limit-point, descending-branch, and segmented member-instability mesh sequence
-  while preserving load control as the legacy default
+  with explicit load increments and limit-point events while preserving load
+  control as the legacy default
 - stability remains screening-only until complex-frame continuation, automatic
   problem-scale radius bounds, residual stress, material nonlinearity,
   bifurcation branch switching, and independent external correlation exist
@@ -340,6 +341,14 @@ The recommended order is:
 
 Workbench polish matters, but it should not outrun the runtime and numerical
 trust foundations.
+
+Current nonlinear-structure progress includes sampled limit-point events and
+bounded symmetric-tangent inertia diagnostics. Nonzero inertia changes outside
+a limit-point neighborhood now produce explicit bifurcation-candidate brackets.
+Transitions up to 128 reduced DOFs now retain a normalized critical mode for
+branch construction. The next stability milestone is candidate-bracket
+refinement and explicit branch switching; the 128-mode and 256-inertia caps are
+observability limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

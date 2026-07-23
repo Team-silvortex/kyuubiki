@@ -4,9 +4,11 @@ use crate::frame_2d_corotational::{
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::linear_algebra::reduce_sparse_system;
+use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_mode};
+use crate::symmetric_inertia::assess_symmetric_inertia;
 use kyuubiki_protocol::{
     Frame2dElementInput, Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult,
-    SolveFrame2dPDeltaRequest,
+    Frame2dTangentStability, SolveFrame2dPDeltaRequest,
 };
 
 const DEFAULT_MAX_ITERATIONS: usize = 32;
@@ -29,6 +31,9 @@ struct ArcLengthAttempt {
     converged: bool,
     failure_reason: Option<Frame2dPDeltaFailureReason>,
     failure_detail: Option<String>,
+    tangent_stability: Option<Frame2dTangentStability>,
+    tangent_negative_pivots: Option<usize>,
+    tangent_near_zero_pivots: Option<usize>,
 }
 
 pub(crate) fn solve_arc_length_steps(
@@ -83,6 +88,7 @@ pub(crate) fn solve_arc_length_steps(
     let mut steps = Vec::with_capacity(load_steps);
     let nominal_radius = radius;
     let mut current_radius = radius;
+    let mut previous_negative_pivots = None;
 
     for step in 1..=load_steps {
         let mut cutbacks = 0;
@@ -122,6 +128,21 @@ pub(crate) fn solve_arc_length_steps(
             cutbacks += 1;
         };
         state = attempt.state;
+        let critical_mode = if attempt.converged
+            && previous_negative_pivots.is_some()
+            && previous_negative_pivots != attempt.tangent_negative_pivots
+        {
+            extract_critical_mode(
+                &positions,
+                &frame.elements,
+                system,
+                &free,
+                &state.displacement,
+            )?
+        } else {
+            None
+        };
+        previous_negative_pivots = attempt.tangent_negative_pivots;
         steps.push(Frame2dPDeltaStepResult {
             step,
             load_factor: state.load_factor,
@@ -142,6 +163,23 @@ pub(crate) fn solve_arc_length_steps(
             }),
             arc_length_constraint_error: Some(attempt.constraint_error),
             arc_length_radius: Some(current_radius),
+            load_factor_increment: Some(if attempt.converged {
+                state.load_increment
+            } else {
+                0.0
+            }),
+            path_event: None,
+            tangent_stability: attempt.tangent_stability,
+            tangent_negative_pivots: attempt.tangent_negative_pivots,
+            tangent_near_zero_pivots: attempt.tangent_near_zero_pivots,
+            tangent_negative_pivot_delta: None,
+            tangent_critical_eigenvalue: critical_mode
+                .as_ref()
+                .map(|mode| mode.normalized_eigenvalue),
+            tangent_critical_mode_residual: critical_mode
+                .as_ref()
+                .map(|mode| mode.normalized_residual),
+            tangent_critical_mode: critical_mode.map(|mode| mode.shape),
             residual_norm: attempt.residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
@@ -159,6 +197,24 @@ pub(crate) fn solve_arc_length_steps(
         current_radius = (current_radius * adaptation).min(nominal_radius);
     }
     Ok(steps)
+}
+
+fn extract_critical_mode(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    system: &Frame2dStabilitySystem,
+    free: &[usize],
+    displacement: &[f64],
+) -> Result<Option<SymmetricCriticalMode>, String> {
+    let (tangent, _) = assemble_tangent_and_internal(positions, elements, displacement)?;
+    let (reduced, _, current_free) =
+        reduce_sparse_system(&tangent, &system.reference_force, &system.constrained_dofs);
+    debug_assert_eq!(current_free, free);
+    Ok(extract_symmetric_critical_mode(
+        &reduced,
+        free,
+        displacement.len(),
+    ))
 }
 
 fn cutback_detail(
@@ -227,6 +283,7 @@ fn solve_arc_length_step(
             - radius.powi(2);
         constraint_error = constraint.abs() / radius.powi(2);
         if residual_norm <= tolerance && constraint_error <= tolerance {
+            let inertia = assess_symmetric_inertia(&reduced_tangent);
             return Ok(ArcLengthAttempt {
                 state: ArcLengthState {
                     displacement,
@@ -240,6 +297,9 @@ fn solve_arc_length_step(
                 converged: true,
                 failure_reason: None,
                 failure_detail: None,
+                tangent_stability: Some(inertia.stability),
+                tangent_negative_pivots: inertia.negative_pivots,
+                tangent_near_zero_pivots: inertia.near_zero_pivots,
             });
         }
 
@@ -342,6 +402,9 @@ fn failed_attempt(
         converged: false,
         failure_reason: Some(reason),
         failure_detail: detail,
+        tangent_stability: None,
+        tangent_negative_pivots: None,
+        tangent_near_zero_pivots: None,
     }
 }
 

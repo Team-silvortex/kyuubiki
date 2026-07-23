@@ -161,6 +161,15 @@ fn legacy_p_delta_steps_default_adaptive_failure_diagnostics() {
     assert_eq!(step.failure_detail, None);
     assert_eq!(step.arc_length_constraint_error, None);
     assert_eq!(step.arc_length_radius, None);
+    assert_eq!(step.load_factor_increment, None);
+    assert_eq!(step.path_event, None);
+    assert_eq!(step.tangent_stability, None);
+    assert_eq!(step.tangent_negative_pivots, None);
+    assert_eq!(step.tangent_near_zero_pivots, None);
+    assert_eq!(step.tangent_negative_pivot_delta, None);
+    assert_eq!(step.tangent_critical_eigenvalue, None);
+    assert_eq!(step.tangent_critical_mode_residual, None);
+    assert_eq!(step.tangent_critical_mode, None);
 }
 
 #[test]

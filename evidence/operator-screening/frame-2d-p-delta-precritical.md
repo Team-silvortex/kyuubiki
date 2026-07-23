@@ -35,6 +35,11 @@ target-to-actual Newton iteration ratio, bounded to `[0.5, 2.0]` and capped by
 the nominal radius. The visible `arc_length_target_iterations` defaults to 6.
 Exhaustion preserves the final inner cause in structured failure detail.
 
+Every step reports its signed load-factor increment. A sign reversal between
+accepted increments marks the preceding equilibrium point as
+`limit_point_maximum` or `limit_point_minimum`; failed and numerically zero
+increments do not create events.
+
 Load control remains an elastic precritical screening path and retains its
 `0.95 lambda_cr` guard. Arc-length control may cross that screening guard, but
 is still experimental. Retained evidence now includes one shallow-arch limit
@@ -91,6 +96,37 @@ model.
   finest meshes; nonlinear peaks decrease monotonically and differ by less than
   10% between those meshes. Every mesh retains a descending branch through zero
   load while satisfying both `1e-7` gates.
+- Both the two-member and segmented shallow arches mark their sampled peak as
+  `limit_point_maximum`. The monotonic portal path emits no path event, and the
+  engine JSON route preserves signed increments and null events.
+- Every converged arc-length point up to 256 reduced DOFs reports symmetric
+  tangent inertia. Stable starting points are `positive_definite` with zero
+  negative pivots, while shallow-arch descending branches expose at least one
+  negative direction as `indefinite`. Zero or numerically degenerate pivots are
+  distinguished as `near_singular`.
+- The dense inertia observer is deliberately capped at 256 reduced DOFs. Larger
+  paths continue solving but report `unassessed_size_limit` with null counts,
+  rather than presenting a guessed stability classification.
+- Consecutive assessed points expose `tangent_negative_pivot_delta`. A nonzero
+  change without a nearby load-increment reversal emits
+  `bifurcation_candidate`; changes sampled in a limit-point neighborhood retain
+  the limit-point event and are not double-labeled. The candidate is a bracket
+  for later branch-switch confirmation, not a proof of a bifurcation.
+- The 2/4/8-element-per-side shallow-arch sequence emits one pre-peak candidate
+  at load factors `5.5965`, `5.4051`, and `5.3595`, respectively, each with one
+  newly negative tangent direction. The two finest candidate factors differ by
+  less than 1%, while the rigid-link-like two-member fixture retains only its
+  load-reversal limit point.
+- Every assessed inertia transition up to 128 reduced DOFs additionally extracts
+  the smallest-absolute symmetric tangent eigenpair. The returned shape uses the
+  complete global DOF layout, is unit-normalized with constrained entries fixed
+  to zero, and has a deterministic sign. Segmented-arch candidate eigenvalues
+  are negative and their matrix-scale-normalized residuals stay below `5e-8`.
+- Critical-mode extraction uses cyclic Jacobi sweeps only at inertia changes,
+  rather than an eigen solve at every continuation point. Models from 129 to 256
+  reduced DOFs retain inertia classification and candidate events but leave the
+  critical-mode fields null; larger models leave both dense diagnostics
+  unassessed while continuation remains available.
 - Explicit fields with the wrong DOF count, non-finite entries, or no
   translational imperfection are rejected rather than falling back to a mode.
 - Amplification increases monotonically and reduced equilibrium residuals stay
@@ -106,7 +142,8 @@ model.
 
 - complex-topology and interacting multi-mode continuation references
 - problem-scale minimum and maximum radius policies beyond the nominal cap
-- bifurcation detection and explicit branch switching
+- candidate-bracket refinement and explicit branch switching along the retained
+  critical mode
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation
 

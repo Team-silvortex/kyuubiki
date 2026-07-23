@@ -22,6 +22,8 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+// Keep public result construction stable; boxing only the largest variant would break callers.
+#[allow(clippy::large_enum_variant)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     AcousticBar1d(SolveAcousticBar1dResult),

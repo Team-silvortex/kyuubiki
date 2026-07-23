@@ -151,4 +151,28 @@ fn workflow_route_executes_arc_length_continuation() {
             .iter()
             .all(|step| step["arc_length_radius"].as_f64().is_some())
     );
+    assert!(result["steps"].as_array().unwrap().iter().all(|step| {
+        step["load_factor_increment"]
+            .as_f64()
+            .is_some_and(|value| value > 0.0)
+            && step["path_event"].is_null()
+    }));
+    assert!(result["steps"].as_array().unwrap().iter().all(|step| {
+        step["tangent_stability"].as_str().is_some()
+            && step["tangent_negative_pivots"].as_u64().is_some()
+            && step["tangent_near_zero_pivots"].as_u64().is_some()
+    }));
+    let steps = result["steps"].as_array().unwrap();
+    assert!(steps[0]["tangent_negative_pivot_delta"].is_null());
+    assert!(
+        steps
+            .iter()
+            .skip(1)
+            .all(|step| { step["tangent_negative_pivot_delta"].as_i64() == Some(0) })
+    );
+    assert!(steps.iter().all(|step| {
+        step["tangent_critical_eigenvalue"].is_null()
+            && step["tangent_critical_mode_residual"].is_null()
+            && step["tangent_critical_mode"].is_null()
+    }));
 }
