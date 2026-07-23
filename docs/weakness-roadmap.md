@@ -99,10 +99,15 @@ Current progress:
 - `solve.frame_2d_p_delta` now carries a selected eigenmode imperfection through
   an elastic precritical load path, accepts explicit measured-shape profiles,
   supports linearized P-Delta and incremental corotational kinematics, and
-  retains secant-amplification plus multi-member objectivity evidence
-- stability remains screening-only until arc-length branch continuation,
-  residual stress, material nonlinearity, post-buckling paths, and external
-  correlation are available
+  retains secant-amplification plus multi-member objectivity evidence; its
+  experimental spherical arc-length control exposes both force residual and
+  path-constraint error, adaptively cuts back oversized radii, continuously
+  targets a visible Newton iteration count, and retains a shallow-arch
+  limit-point, descending-branch, and segmented member-instability mesh sequence
+  while preserving load control as the legacy default
+- stability remains screening-only until complex-frame continuation, automatic
+  problem-scale radius bounds, residual stress, material nonlinearity,
+  bifurcation branch switching, and independent external correlation exist
 
 Qualification focus:
 

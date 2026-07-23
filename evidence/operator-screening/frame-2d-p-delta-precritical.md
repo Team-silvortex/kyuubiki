@@ -1,4 +1,4 @@
-# Frame 2D P-Delta Precritical Screening
+# Frame 2D P-Delta Stability Screening
 
 ## Scope
 
@@ -19,8 +19,28 @@ the last accepted state, up to the configured `max_step_cutbacks` limit. The
 defaults are a `1e-7` relative force tolerance and 12 cutbacks; explicit user
 values are applied without hidden model-size scaling.
 
-Both modes are elastic precritical screening paths. Neither is a
-material-plasticity model, arc-length continuation, or post-buckling solver.
+Corotational kinematics also accepts experimental `arc_length` path control.
+Its spherical predictor-corrector solves displacement and load-factor
+increments together, preserves the previous generalized path direction, and
+reports the normalized arc-length constraint error on every step. The default
+radius is derived from the requested reference path span, step count, initial
+load direction, and explicit or automatically derived load scale. User-supplied
+`arc_length_radius` and `arc_length_load_scale` values remain visible in the
+request and must be positive and finite.
+
+Failed arc steps halve the radius and retry from the last accepted state up to
+`max_step_cutbacks`. Each result reports the accepted radius and cutback count;
+successful steps scale the next radius with the square root of the configured
+target-to-actual Newton iteration ratio, bounded to `[0.5, 2.0]` and capped by
+the nominal radius. The visible `arc_length_target_iterations` defaults to 6.
+Exhaustion preserves the final inner cause in structured failure detail.
+
+Load control remains an elastic precritical screening path and retains its
+`0.95 lambda_cr` guard. Arc-length control may cross that screening guard, but
+is still experimental. Retained evidence now includes one shallow-arch limit
+point and descending equilibrium branch, not general post-buckling or
+bifurcation-branch qualification. Neither control mode is a material-plasticity
+model.
 
 ## Retained Checks
 
@@ -45,20 +65,48 @@ material-plasticity model, arc-length continuation, or post-buckling solver.
   request fields. Invalid or excessive values are rejected before assembly;
   every result step reports iterations, substeps, cutbacks, convergence, and
   achieved load factor.
+- Failed steps additionally report a stable machine-readable failure reason and
+  optional detail. Cutback exhaustion retains the final inner Newton cause;
+  converged steps clear both fields, and legacy results default them to null.
+- A 96-step corotational arc-length path crosses the load-control screening
+  limit, remains converged, and reports both normalized equilibrium residual and
+  spherical constraint error below `1e-7` at every accepted point. A rigidly
+  rotated copy preserves each load factor and displacement norm.
+- Legacy requests default to `load_control`; linearized kinematics cannot select
+  arc length, and invalid radius or load-scale values fail before assembly.
+- The workflow executor preserves arc-length control and its per-step constraint
+  diagnostics through JSON execution.
+- An intentionally oversized one-step radius fails transparently when cutback
+  is disabled, then converges with a smaller reported radius when enabled.
+- A low explicit target iteration count continuously reduces subsequent
+  accepted radii; invalid targets and targets above `max_iterations` are
+  rejected before assembly. The engine workflow preserves the target value.
+- A two-member shallow arch reaches an interior load-factor maximum, follows
+  the descending branch through zero load, and inverts its crown. The retained
+  peak matches an independently evaluated pin-jointed shallow-arch reference
+  within 2%, while every accepted point satisfies both `1e-7` error gates.
+- Subdividing each arch side into 2, 4, and 8 frame elements resolves an earlier
+  member-flexural instability branch hidden by the rigid-link-like two-element
+  fixture. Linear critical factors converge to within 0.1% between the two
+  finest meshes; nonlinear peaks decrease monotonically and differ by less than
+  10% between those meshes. Every mesh retains a descending branch through zero
+  load while satisfying both `1e-7` gates.
 - Explicit fields with the wrong DOF count, non-finite entries, or no
   translational imperfection are rejected rather than falling back to a mode.
 - Amplification increases monotonically and reduced equilibrium residuals stay
   below the retained numerical tolerance.
 - The default path ends at `0.8 lambda_cr` when no maximum factor is supplied.
-- User paths at or above `0.95 lambda_cr` are rejected before tangent solution;
-  the `0.95` limit is returned as read-only result metadata.
+- User load-controlled paths at or above `0.95 lambda_cr` are rejected before
+  tangent solution; the `0.95` limit is returned as read-only result metadata.
 - The workflow executor and agent RPC retain imperfection amplitude, mode index,
   explicit shape, source kind, load-step count, full displacement history, and
   solver provenance.
 
 ## Promotion Gaps
 
-- arc-length equilibrium continuation through limit points
+- complex-topology and interacting multi-mode continuation references
+- problem-scale minimum and maximum radius policies beyond the nominal cap
+- bifurcation detection and explicit branch switching
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation
 

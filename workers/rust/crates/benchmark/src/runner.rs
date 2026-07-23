@@ -349,13 +349,15 @@ pub(crate) fn run_case_with_preconditioner(
                             let failed = result.steps.iter().find(|step| !step.converged);
                             return Err(match failed {
                                 Some(step) => format!(
-                                    "frame p-delta benchmark did not converge at step {}: target={}, achieved={}, residual={}, iterations={}, cutbacks={}",
+                                    "frame p-delta benchmark did not converge at step {}: target={}, achieved={}, residual={}, iterations={}, cutbacks={}, reason={:?}, detail={}",
                                     step.step,
                                     step.load_factor,
                                     step.achieved_load_factor.unwrap_or_default(),
                                     step.residual_norm,
                                     step.iterations,
-                                    step.cutbacks
+                                    step.cutbacks,
+                                    step.failure_reason,
+                                    step.failure_detail.as_deref().unwrap_or("none")
                                 ),
                                 None => "frame p-delta benchmark ended before all requested steps"
                                     .to_string(),

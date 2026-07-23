@@ -293,6 +293,7 @@ fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
         },
         imperfection_amplitude: 0.001,
         kinematics: Default::default(),
+        path_control: Default::default(),
         imperfection_shape: None,
         imperfection_mode_index: Some(0),
         maximum_load_factor: None,
@@ -300,6 +301,9 @@ fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
         max_iterations: None,
         tolerance: None,
         max_step_cutbacks: None,
+        arc_length_radius: None,
+        arc_length_load_scale: None,
+        arc_length_target_iterations: None,
     }
 }
 

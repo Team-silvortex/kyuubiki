@@ -90,6 +90,7 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         },
         imperfection_amplitude: 0.0032,
         kinematics: Default::default(),
+        path_control: Default::default(),
         imperfection_shape: None,
         imperfection_mode_index: Some(0),
         maximum_load_factor,
@@ -97,6 +98,9 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         max_iterations: None,
         tolerance: None,
         max_step_cutbacks: None,
+        arc_length_radius: None,
+        arc_length_load_scale: None,
+        arc_length_target_iterations: None,
     }
 }
 

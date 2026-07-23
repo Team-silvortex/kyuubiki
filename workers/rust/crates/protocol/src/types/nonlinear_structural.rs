@@ -81,6 +81,8 @@ pub struct SolveFrame2dPDeltaRequest {
     #[serde(default)]
     pub kinematics: Frame2dStabilityKinematics,
     #[serde(default)]
+    pub path_control: Frame2dStabilityPathControl,
+    #[serde(default)]
     pub imperfection_shape: Option<Vec<f64>>,
     #[serde(default)]
     pub imperfection_mode_index: Option<usize>,
@@ -94,6 +96,12 @@ pub struct SolveFrame2dPDeltaRequest {
     pub tolerance: Option<f64>,
     #[serde(default)]
     pub max_step_cutbacks: Option<usize>,
+    #[serde(default)]
+    pub arc_length_radius: Option<f64>,
+    #[serde(default)]
+    pub arc_length_load_scale: Option<f64>,
+    #[serde(default)]
+    pub arc_length_target_iterations: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,9 +119,33 @@ impl Default for Frame2dStabilityKinematics {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum Frame2dStabilityPathControl {
+    LoadControl,
+    ArcLength,
+}
+
+impl Default for Frame2dStabilityPathControl {
+    fn default() -> Self {
+        Self::LoadControl
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Frame2dImperfectionSource {
     BucklingMode,
     ExplicitShape,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dPDeltaFailureReason {
+    MaximumIterations,
+    TangentSolveFailed,
+    LineSearchFailed,
+    CutbackLimitExhausted,
+    IncrementTooSmall,
+    ArcLengthConstraintSingular,
 }
 
 impl Default for Frame2dImperfectionSource {
@@ -137,6 +169,14 @@ pub struct Frame2dPDeltaStepResult {
     pub substeps: usize,
     #[serde(default)]
     pub cutbacks: usize,
+    #[serde(default)]
+    pub failure_reason: Option<Frame2dPDeltaFailureReason>,
+    #[serde(default)]
+    pub failure_detail: Option<String>,
+    #[serde(default)]
+    pub arc_length_constraint_error: Option<f64>,
+    #[serde(default)]
+    pub arc_length_radius: Option<f64>,
     pub residual_norm: f64,
     pub imperfection_amplification: f64,
     pub max_incremental_displacement: f64,
@@ -151,6 +191,8 @@ pub struct SolveFrame2dPDeltaResult {
     pub imperfection_source: Frame2dImperfectionSource,
     #[serde(default)]
     pub kinematics: Frame2dStabilityKinematics,
+    #[serde(default)]
+    pub path_control: Frame2dStabilityPathControl,
     pub initial_imperfection_shape: Vec<f64>,
     pub critical_factor_limit_ratio: f64,
     pub steps: Vec<Frame2dPDeltaStepResult>,

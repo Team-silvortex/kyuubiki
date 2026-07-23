@@ -1,4 +1,5 @@
 use crate::buckling_frame_2d::solve_buckling_frame_2d;
+use crate::frame_2d_arc_length::solve_arc_length_steps;
 use crate::frame_2d_corotational::solve_corotational_steps;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
 use crate::linear_algebra::{
@@ -8,8 +9,8 @@ use crate::linear_banded::SymmetricBandCholesky;
 use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO, Frame2dImperfectionSource,
-    Frame2dPDeltaStepResult, Frame2dStabilityKinematics, SolveFrame2dPDeltaRequest,
-    SolveFrame2dPDeltaResult,
+    Frame2dPDeltaStepResult, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
+    SolveFrame2dPDeltaRequest, SolveFrame2dPDeltaResult,
 };
 
 const DEFAULT_LOAD_STEPS: usize = 10;
@@ -37,7 +38,9 @@ pub fn solve_frame_2d_p_delta(
     if !(maximum_load_factor.is_finite() && maximum_load_factor > 0.0) {
         return Err("frame 2d p-delta maximum_load_factor must be positive and finite".into());
     }
-    if maximum_ratio >= FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO {
+    if request.path_control == Frame2dStabilityPathControl::LoadControl
+        && maximum_ratio >= FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO
+    {
         return Err(format!(
             "frame 2d p-delta maximum load factor must remain below {:.3} of the first critical factor",
             FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO
@@ -69,8 +72,11 @@ pub fn solve_frame_2d_p_delta(
         .load_steps
         .unwrap_or(DEFAULT_LOAD_STEPS)
         .clamp(1, 128);
-    let steps = match request.kinematics {
-        Frame2dStabilityKinematics::LinearizedPDelta => solve_linearized_steps(
+    let steps = match (request.kinematics, request.path_control) {
+        (
+            Frame2dStabilityKinematics::LinearizedPDelta,
+            Frame2dStabilityPathControl::LoadControl,
+        ) => solve_linearized_steps(
             &system,
             &initial_imperfection_shape,
             &geometric_imperfection,
@@ -78,14 +84,29 @@ pub fn solve_frame_2d_p_delta(
             critical_factor,
             load_steps,
         )?,
-        Frame2dStabilityKinematics::Corotational => solve_corotational_steps(
-            request,
-            &system,
-            &initial_imperfection_shape,
-            maximum_load_factor,
-            critical_factor,
-            load_steps,
-        )?,
+        (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::LoadControl) => {
+            solve_corotational_steps(
+                request,
+                &system,
+                &initial_imperfection_shape,
+                maximum_load_factor,
+                critical_factor,
+                load_steps,
+            )?
+        }
+        (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::ArcLength) => {
+            solve_arc_length_steps(
+                request,
+                &system,
+                &initial_imperfection_shape,
+                maximum_load_factor,
+                critical_factor,
+                load_steps,
+            )?
+        }
+        (Frame2dStabilityKinematics::LinearizedPDelta, Frame2dStabilityPathControl::ArcLength) => {
+            unreachable!("arc-length validation requires corotational kinematics")
+        }
     };
 
     let final_displacements = steps
@@ -102,6 +123,7 @@ pub fn solve_frame_2d_p_delta(
         buckling_result,
         imperfection_source,
         kinematics: request.kinematics,
+        path_control: request.path_control,
         initial_imperfection_shape,
         critical_factor_limit_ratio: FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO,
         steps,
@@ -144,6 +166,10 @@ fn solve_linearized_steps(
             achieved_load_factor: Some(load_factor),
             substeps: 1,
             cutbacks: 0,
+            failure_reason: None,
+            failure_detail: None,
+            arc_length_constraint_error: None,
+            arc_length_radius: None,
             residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
@@ -181,6 +207,32 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
     }
     if matches!(request.max_step_cutbacks, Some(17..)) {
         return Err("frame 2d p-delta max_step_cutbacks must not exceed 16".into());
+    }
+    if request.path_control == Frame2dStabilityPathControl::ArcLength
+        && request.kinematics != Frame2dStabilityKinematics::Corotational
+    {
+        return Err("frame 2d arc-length control requires corotational kinematics".into());
+    }
+    if let Some(radius) = request.arc_length_radius
+        && !(radius.is_finite() && radius > 0.0)
+    {
+        return Err("frame 2d arc_length_radius must be positive and finite".into());
+    }
+    if let Some(scale) = request.arc_length_load_scale
+        && !(scale.is_finite() && scale > 0.0)
+    {
+        return Err("frame 2d arc_length_load_scale must be positive and finite".into());
+    }
+    if let Some(target) = request.arc_length_target_iterations
+        && !(2..=64).contains(&target)
+    {
+        return Err("frame 2d arc_length_target_iterations must be between 2 and 64".into());
+    }
+    if let (Some(target), Some(maximum)) =
+        (request.arc_length_target_iterations, request.max_iterations)
+        && target > maximum
+    {
+        return Err("frame 2d arc_length_target_iterations must not exceed max_iterations".into());
     }
     if let Some(shape) = &request.imperfection_shape {
         let expected = request.buckling.frame.nodes.len() * 3;

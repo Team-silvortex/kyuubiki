@@ -271,7 +271,15 @@ impl AgentDescriptor {
                 capability(
                     "frame-2d-p-delta",
                     RpcMethod::SolveFrame2dPDelta,
-                    &["stability", "frame", "p-delta", "imperfection", "2d", "cpu"],
+                    &[
+                        "stability",
+                        "frame",
+                        "p-delta",
+                        "arc-length",
+                        "imperfection",
+                        "2d",
+                        "cpu",
+                    ],
                 ),
                 CapabilityDescriptor {
                     id: "control".to_string(),

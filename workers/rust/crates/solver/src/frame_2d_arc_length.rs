@@ -1,0 +1,383 @@
+use crate::frame_2d_corotational::{
+    imperfection_amplification, max_translation, normalized_residual, solve_tangent,
+};
+use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
+use crate::frame_2d_stability::Frame2dStabilitySystem;
+use crate::linear_algebra::reduce_sparse_system;
+use kyuubiki_protocol::{
+    Frame2dElementInput, Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult,
+    SolveFrame2dPDeltaRequest,
+};
+
+const DEFAULT_MAX_ITERATIONS: usize = 32;
+const DEFAULT_RESIDUAL_TOLERANCE: f64 = 1.0e-7;
+const DEFAULT_TARGET_ITERATIONS: usize = 6;
+const MIN_CONSTRAINT_DENOMINATOR: f64 = 1.0e-14;
+
+struct ArcLengthState {
+    displacement: Vec<f64>,
+    load_factor: f64,
+    displacement_increment: Vec<f64>,
+    load_increment: f64,
+}
+
+struct ArcLengthAttempt {
+    state: ArcLengthState,
+    iterations: usize,
+    residual_norm: f64,
+    constraint_error: f64,
+    converged: bool,
+    failure_reason: Option<Frame2dPDeltaFailureReason>,
+    failure_detail: Option<String>,
+}
+
+pub(crate) fn solve_arc_length_steps(
+    request: &SolveFrame2dPDeltaRequest,
+    system: &Frame2dStabilitySystem,
+    initial_imperfection: &[f64],
+    reference_path_factor: f64,
+    critical_factor: f64,
+    load_steps: usize,
+) -> Result<Vec<Frame2dPDeltaStepResult>, String> {
+    let frame = &request.buckling.frame;
+    let positions = frame
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| {
+            (
+                node.x + initial_imperfection[index * 3],
+                node.y + initial_imperfection[index * 3 + 1],
+            )
+        })
+        .collect::<Vec<_>>();
+    let initial_displacement = vec![0.0; frame.nodes.len() * 3];
+    let (initial_tangent, _) =
+        assemble_tangent_and_internal(&positions, &frame.elements, &initial_displacement)?;
+    let (reduced_tangent, reduced_reference, free) = reduce_sparse_system(
+        &initial_tangent,
+        &system.reference_force,
+        &system.constrained_dofs,
+    );
+    let load_direction = solve_tangent(&reduced_tangent, &reduced_reference)?;
+    let direction_norm = dot(&load_direction, &load_direction).sqrt();
+    let load_scale = request
+        .arc_length_load_scale
+        .unwrap_or(direction_norm.max(1.0e-12));
+    let nominal_load_increment = reference_path_factor / load_steps as f64;
+    let radius = request.arc_length_radius.unwrap_or_else(|| {
+        nominal_load_increment * (direction_norm.powi(2) + load_scale.powi(2)).sqrt()
+    });
+    let max_iterations = request.max_iterations.unwrap_or(DEFAULT_MAX_ITERATIONS);
+    let tolerance = request.tolerance.unwrap_or(DEFAULT_RESIDUAL_TOLERANCE);
+    let max_cutbacks = request.max_step_cutbacks.unwrap_or(12);
+    let target_iterations = request
+        .arc_length_target_iterations
+        .unwrap_or(DEFAULT_TARGET_ITERATIONS.min(max_iterations));
+    let mut state = ArcLengthState {
+        displacement: initial_displacement,
+        load_factor: 0.0,
+        displacement_increment: vec![0.0; free.len()],
+        load_increment: 0.0,
+    };
+    let mut steps = Vec::with_capacity(load_steps);
+    let nominal_radius = radius;
+    let mut current_radius = radius;
+
+    for step in 1..=load_steps {
+        let mut cutbacks = 0;
+        let mut total_iterations = 0;
+        let attempt = loop {
+            let mut attempt = solve_arc_length_step(
+                &positions,
+                &frame.elements,
+                system,
+                &free,
+                &state,
+                current_radius,
+                load_scale,
+                max_iterations,
+                tolerance,
+            )?;
+            total_iterations += attempt.iterations;
+            if attempt.converged {
+                break attempt;
+            }
+            if cutbacks >= max_cutbacks {
+                let detail =
+                    cutback_detail(attempt.failure_reason, attempt.failure_detail.as_deref());
+                attempt.failure_reason = Some(Frame2dPDeltaFailureReason::CutbackLimitExhausted);
+                attempt.failure_detail = detail;
+                break attempt;
+            }
+            let reduced_radius = current_radius * 0.5;
+            if reduced_radius <= f64::EPSILON * nominal_radius.max(1.0) {
+                let detail =
+                    cutback_detail(attempt.failure_reason, attempt.failure_detail.as_deref());
+                attempt.failure_reason = Some(Frame2dPDeltaFailureReason::IncrementTooSmall);
+                attempt.failure_detail = detail;
+                break attempt;
+            }
+            current_radius = reduced_radius;
+            cutbacks += 1;
+        };
+        state = attempt.state;
+        steps.push(Frame2dPDeltaStepResult {
+            step,
+            load_factor: state.load_factor,
+            critical_factor_ratio: state.load_factor / critical_factor,
+            iterations: total_iterations,
+            converged: attempt.converged,
+            achieved_load_factor: Some(state.load_factor),
+            substeps: usize::from(attempt.converged),
+            cutbacks,
+            failure_reason: attempt.failure_reason,
+            failure_detail: attempt.failure_detail.or_else(|| {
+                (!attempt.converged).then(|| {
+                    format!(
+                        "arc-length constraint relative error={:.6e}",
+                        attempt.constraint_error
+                    )
+                })
+            }),
+            arc_length_constraint_error: Some(attempt.constraint_error),
+            arc_length_radius: Some(current_radius),
+            residual_norm: attempt.residual_norm,
+            imperfection_amplification: imperfection_amplification(
+                initial_imperfection,
+                &state.displacement,
+            ),
+            max_incremental_displacement: max_translation(&state.displacement),
+            displacements: state.displacement.clone(),
+        });
+        if !attempt.converged {
+            break;
+        }
+        let adaptation = (target_iterations as f64 / attempt.iterations as f64)
+            .sqrt()
+            .clamp(0.5, 2.0);
+        current_radius = (current_radius * adaptation).min(nominal_radius);
+    }
+    Ok(steps)
+}
+
+fn cutback_detail(
+    reason: Option<Frame2dPDeltaFailureReason>,
+    detail: Option<&str>,
+) -> Option<String> {
+    match (reason, detail) {
+        (Some(reason), Some(detail)) => Some(format!("last attempt: {reason:?}: {detail}")),
+        (Some(reason), None) => Some(format!("last attempt: {reason:?}")),
+        (None, Some(detail)) => Some(detail.to_string()),
+        (None, None) => None,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn solve_arc_length_step(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    system: &Frame2dStabilitySystem,
+    free: &[usize],
+    previous: &ArcLengthState,
+    radius: f64,
+    load_scale: f64,
+    max_iterations: usize,
+    tolerance: f64,
+) -> Result<ArcLengthAttempt, String> {
+    let (base_tangent, _) =
+        assemble_tangent_and_internal(positions, elements, &previous.displacement)?;
+    let (reduced_tangent, reduced_reference, current_free) = reduce_sparse_system(
+        &base_tangent,
+        &system.reference_force,
+        &system.constrained_dofs,
+    );
+    debug_assert_eq!(current_free, free);
+    let load_direction = solve_tangent(&reduced_tangent, &reduced_reference)?;
+    let denominator = (dot(&load_direction, &load_direction) + load_scale.powi(2)).sqrt();
+    let mut load_increment = radius / denominator;
+    if branch_orientation(previous, &load_direction, load_scale) < 0.0 {
+        load_increment = -load_increment;
+    }
+    let mut displacement_increment = load_direction
+        .iter()
+        .map(|value| value * load_increment)
+        .collect::<Vec<_>>();
+    let mut displacement = previous.displacement.clone();
+    add_reduced_increment(&mut displacement, free, &displacement_increment);
+    let mut load_factor = previous.load_factor + load_increment;
+    let mut residual_norm = f64::INFINITY;
+    let mut constraint_error = f64::INFINITY;
+
+    for iteration in 1..=max_iterations {
+        let (tangent, internal) =
+            assemble_tangent_and_internal(positions, elements, &displacement)?;
+        let residual = system
+            .reference_force
+            .iter()
+            .zip(&internal)
+            .map(|(external, internal)| load_factor * external - internal)
+            .collect::<Vec<_>>();
+        let (reduced_tangent, reduced_residual, _) =
+            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
+        residual_norm =
+            normalized_residual(&reduced_residual, &system.reference_force, load_factor);
+        let constraint = dot(&displacement_increment, &displacement_increment)
+            + (load_scale * load_increment).powi(2)
+            - radius.powi(2);
+        constraint_error = constraint.abs() / radius.powi(2);
+        if residual_norm <= tolerance && constraint_error <= tolerance {
+            return Ok(ArcLengthAttempt {
+                state: ArcLengthState {
+                    displacement,
+                    load_factor,
+                    displacement_increment,
+                    load_increment,
+                },
+                iterations: iteration,
+                residual_norm,
+                constraint_error,
+                converged: true,
+                failure_reason: None,
+                failure_detail: None,
+            });
+        }
+
+        let residual_direction = match solve_tangent(&reduced_tangent, &reduced_residual) {
+            Ok(direction) => direction,
+            Err(error) => {
+                return Ok(failed_attempt(
+                    previous,
+                    iteration,
+                    residual_norm,
+                    constraint_error,
+                    Frame2dPDeltaFailureReason::TangentSolveFailed,
+                    Some(error),
+                ));
+            }
+        };
+        let load_direction = match solve_tangent(&reduced_tangent, &reduced_reference) {
+            Ok(direction) => direction,
+            Err(error) => {
+                return Ok(failed_attempt(
+                    previous,
+                    iteration,
+                    residual_norm,
+                    constraint_error,
+                    Frame2dPDeltaFailureReason::TangentSolveFailed,
+                    Some(error),
+                ));
+            }
+        };
+        let correction_denominator = 2.0
+            * (dot(&displacement_increment, &load_direction) + load_scale.powi(2) * load_increment);
+        let denominator_scale = radius * (load_direction.len() as f64).sqrt().max(1.0);
+        if !correction_denominator.is_finite()
+            || correction_denominator.abs()
+                <= MIN_CONSTRAINT_DENOMINATOR * denominator_scale.max(1.0)
+        {
+            return Ok(failed_attempt(
+                previous,
+                iteration,
+                residual_norm,
+                constraint_error,
+                Frame2dPDeltaFailureReason::ArcLengthConstraintSingular,
+                Some("arc-length correction denominator is singular".into()),
+            ));
+        }
+        let load_correction = -(constraint
+            + 2.0 * dot(&displacement_increment, &residual_direction))
+            / correction_denominator;
+        if !load_correction.is_finite() {
+            return Ok(failed_attempt(
+                previous,
+                iteration,
+                residual_norm,
+                constraint_error,
+                Frame2dPDeltaFailureReason::ArcLengthConstraintSingular,
+                Some("arc-length load correction is not finite".into()),
+            ));
+        }
+        let correction = residual_direction
+            .iter()
+            .zip(&load_direction)
+            .map(|(residual, load)| residual + load * load_correction)
+            .collect::<Vec<_>>();
+        add_reduced_increment(&mut displacement, free, &correction);
+        for (increment, correction) in displacement_increment.iter_mut().zip(correction) {
+            *increment += correction;
+        }
+        load_increment += load_correction;
+        load_factor += load_correction;
+    }
+
+    Ok(failed_attempt(
+        previous,
+        max_iterations,
+        residual_norm,
+        constraint_error,
+        Frame2dPDeltaFailureReason::MaximumIterations,
+        None,
+    ))
+}
+
+fn failed_attempt(
+    previous: &ArcLengthState,
+    iterations: usize,
+    residual_norm: f64,
+    constraint_error: f64,
+    reason: Frame2dPDeltaFailureReason,
+    detail: Option<String>,
+) -> ArcLengthAttempt {
+    ArcLengthAttempt {
+        state: ArcLengthState {
+            displacement: previous.displacement.clone(),
+            load_factor: previous.load_factor,
+            displacement_increment: previous.displacement_increment.clone(),
+            load_increment: previous.load_increment,
+        },
+        iterations,
+        residual_norm,
+        constraint_error,
+        converged: false,
+        failure_reason: Some(reason),
+        failure_detail: detail,
+    }
+}
+
+fn branch_orientation(previous: &ArcLengthState, load_direction: &[f64], load_scale: f64) -> f64 {
+    if previous.load_increment == 0.0 {
+        return 1.0;
+    }
+    dot(&previous.displacement_increment, load_direction)
+        + load_scale.powi(2) * previous.load_increment
+}
+
+fn add_reduced_increment(displacement: &mut [f64], free: &[usize], increment: &[f64]) {
+    for (&dof, value) in free.iter().zip(increment) {
+        displacement[dof] += value;
+    }
+}
+
+fn dot(left: &[f64], right: &[f64]) -> f64 {
+    left.iter()
+        .zip(right)
+        .map(|(left, right)| left * right)
+        .sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn branch_orientation_preserves_the_previous_generalized_direction() {
+        let previous = ArcLengthState {
+            displacement: vec![0.0],
+            load_factor: 1.0,
+            displacement_increment: vec![-0.5, 0.25],
+            load_increment: -0.1,
+        };
+        assert!(branch_orientation(&previous, &[1.0, 0.0], 1.0) < 0.0);
+    }
+}

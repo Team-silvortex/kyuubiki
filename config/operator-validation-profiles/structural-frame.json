@@ -198,7 +198,14 @@
         "explicit_imperfection_field",
         "precritical_secant_amplification",
         "corotational_incremental_equilibrium",
+        "spherical_arc_length_continuation",
+        "arc_length_constraint_observability",
+        "adaptive_arc_length_radius_cutback",
+        "target_iteration_arc_length_adaptation",
+        "shallow_arch_limit_point_reference",
+        "segmented_shallow_arch_mesh_sequence",
         "adaptive_load_step_cutback",
+        "structured_nonconvergence_diagnostics",
         "multi_member_rigid_rotation_objectivity",
         "critical_limit_rejection",
         "workflow_route_contract"
@@ -213,15 +220,29 @@
         "corotational_response_recovers_linearized_response_at_low_load",
         "failed_nominal_step_reports_the_last_achieved_load_factor",
         "adaptive_cutback_recovers_the_same_difficult_load_target",
+        "failed_steps_report_machine_readable_reason_and_detail",
+        "converged_steps_clear_failure_diagnostics",
         "rotated_geometry_loads_and_imperfections_preserve_the_response",
         "amplification_increases_monotonically_toward_the_critical_factor",
         "equilibrium_residual_remains_bounded",
         "invalid_newton_and_cutback_controls_are_rejected",
-        "load_path_stays_below_the_explicit_critical_limit_ratio"
+        "load_path_stays_below_the_explicit_critical_limit_ratio",
+        "arc_length_path_can_cross_the_load_control_screening_limit",
+        "arc_length_steps_satisfy_equilibrium_and_path_constraints",
+        "arc_length_path_is_objective_under_rigid_rotation",
+        "oversized_arc_radius_recovers_through_visible_cutbacks",
+        "shallow_arch_limit_factor_matches_pin_jointed_reference",
+        "shallow_arch_path_crosses_the_limit_point_and_descends",
+        "arc_radius_continuously_tracks_the_target_iteration_count",
+        "segmented_arch_linear_critical_factor_converges",
+        "resolved_member_instability_precedes_rigid_link_snap_through",
+        "segmented_arch_paths_retain_the_descending_branch"
       ],
       "evidence_paths": [
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
         "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
         "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs"
@@ -230,7 +251,7 @@
         {
           "id": "frame-2d-corotational-element-invariants",
           "kind": "invariant",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_corotational::tests -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_corotational_element::tests -- --nocapture"
         },
         {
           "id": "frame-2d-p-delta-closed-form",

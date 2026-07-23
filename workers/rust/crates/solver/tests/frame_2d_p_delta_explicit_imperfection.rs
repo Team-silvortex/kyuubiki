@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
-    Frame2dElementInput, Frame2dImperfectionSource, Frame2dNodeInput, Frame2dStabilityKinematics,
-    SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    Frame2dElementInput, Frame2dImperfectionSource, Frame2dNodeInput, Frame2dPDeltaFailureReason,
+    Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
+    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 use kyuubiki_solver::solve_frame_2d_p_delta;
 
@@ -90,6 +91,36 @@ fn rejects_malformed_explicit_imperfection_fields() {
             .expect_err("excessive cutbacks must fail")
             .contains("max_step_cutbacks")
     );
+
+    let mut incompatible_control = portal_request(0.0);
+    incompatible_control.path_control = Frame2dStabilityPathControl::ArcLength;
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("linearized arc-length control must fail");
+    assert!(error.contains("requires corotational"));
+
+    incompatible_control.kinematics = Frame2dStabilityKinematics::Corotational;
+    incompatible_control.arc_length_radius = Some(0.0);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("zero arc-length radius must fail");
+    assert!(error.contains("arc_length_radius"));
+
+    incompatible_control.arc_length_radius = None;
+    incompatible_control.arc_length_load_scale = Some(f64::NAN);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("non-finite arc-length scale must fail");
+    assert!(error.contains("arc_length_load_scale"));
+
+    incompatible_control.arc_length_load_scale = None;
+    incompatible_control.arc_length_target_iterations = Some(1);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("too-small arc-length iteration target must fail");
+    assert!(error.contains("arc_length_target_iterations"));
+
+    incompatible_control.arc_length_target_iterations = Some(8);
+    incompatible_control.max_iterations = Some(4);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("arc-length target above Newton limit must fail");
+    assert!(error.contains("must not exceed max_iterations"));
 }
 
 #[test]
@@ -172,6 +203,17 @@ fn adaptive_cutback_recovers_a_difficult_corotational_step() {
         solve_frame_2d_p_delta(&request).expect("failed equilibrium should remain inspectable");
     assert!(!without_cutback.converged);
     assert_eq!(without_cutback.steps[0].achieved_load_factor, Some(0.0));
+    assert_eq!(
+        without_cutback.steps[0].failure_reason,
+        Some(Frame2dPDeltaFailureReason::CutbackLimitExhausted)
+    );
+    assert!(
+        without_cutback.steps[0]
+            .failure_detail
+            .as_deref()
+            .unwrap()
+            .contains("MaximumIterations")
+    );
 
     request.max_step_cutbacks = Some(8);
     let adaptive = solve_frame_2d_p_delta(&request).expect("adaptive equilibrium should solve");
@@ -180,11 +222,233 @@ fn adaptive_cutback_recovers_a_difficult_corotational_step() {
     assert!(step.converged);
     assert!(step.cutbacks > 0);
     assert!(step.substeps > 1);
+    assert_eq!(step.failure_reason, None);
+    assert_eq!(step.failure_detail, None);
     assert_relative(
         step.achieved_load_factor.unwrap(),
         step.load_factor,
         1.0e-12,
     );
+}
+
+#[test]
+fn arc_length_path_crosses_the_screening_limit_and_is_objective() {
+    let critical_factor = solve_frame_2d_p_delta(&portal_request(0.0))
+        .expect("portal probe should solve")
+        .buckling_result
+        .minimum_load_factor;
+    let mut request = portal_request(0.0);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(critical_factor * 6.0);
+    request.load_steps = Some(96);
+    request.max_iterations = Some(64);
+
+    let result =
+        solve_frame_2d_p_delta(&request).expect("arc-length path should remain inspectable");
+    assert!(result.converged, "arc-length steps: {:?}", result.steps);
+    assert_eq!(result.path_control, Frame2dStabilityPathControl::ArcLength);
+    assert!(
+        result
+            .steps
+            .iter()
+            .any(|step| step.critical_factor_ratio > 0.95),
+        "path ratios: {:?}",
+        result
+            .steps
+            .iter()
+            .map(|step| step.critical_factor_ratio)
+            .collect::<Vec<_>>()
+    );
+    assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
+    assert!(result.steps.iter().all(|step| {
+        step.arc_length_constraint_error
+            .is_some_and(|error| error < 1.0e-7)
+    }));
+
+    let mut rotated_request = portal_request(0.731);
+    rotated_request.kinematics = Frame2dStabilityKinematics::Corotational;
+    rotated_request.path_control = Frame2dStabilityPathControl::ArcLength;
+    rotated_request.maximum_load_factor = request.maximum_load_factor;
+    rotated_request.load_steps = request.load_steps;
+    rotated_request.max_iterations = request.max_iterations;
+    let rotated =
+        solve_frame_2d_p_delta(&rotated_request).expect("rotated arc-length path should solve");
+    assert!(rotated.converged);
+    for (baseline, rotated) in result.steps.iter().zip(&rotated.steps) {
+        assert_relative(rotated.load_factor, baseline.load_factor, 2.0e-8);
+        assert_relative(
+            max_translation(&rotated.displacements),
+            max_translation(&baseline.displacements),
+            2.0e-8,
+        );
+    }
+}
+
+#[test]
+fn arc_length_cutback_recovers_an_oversized_radius() {
+    let critical_factor = solve_frame_2d_p_delta(&portal_request(0.0))
+        .expect("portal probe should solve")
+        .buckling_result
+        .minimum_load_factor;
+    let mut request = portal_request(0.0);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(critical_factor * 6.0);
+    request.load_steps = Some(1);
+    request.max_iterations = Some(4);
+    request.tolerance = Some(1.0e-8);
+    request.max_step_cutbacks = Some(0);
+
+    let failed = solve_frame_2d_p_delta(&request).expect("failed arc step should be inspectable");
+    assert!(!failed.converged);
+    assert_eq!(
+        failed.steps[0].failure_reason,
+        Some(Frame2dPDeltaFailureReason::CutbackLimitExhausted)
+    );
+    let nominal_radius = failed.steps[0].arc_length_radius.unwrap();
+
+    request.max_step_cutbacks = Some(8);
+    let recovered = solve_frame_2d_p_delta(&request).expect("arc cutback should recover");
+    let step = &recovered.steps[0];
+    assert!(recovered.converged, "recovered step: {step:?}");
+    assert!(step.cutbacks > 0);
+    assert!(step.arc_length_radius.unwrap() < nominal_radius);
+    assert_eq!(step.failure_reason, None);
+    assert_eq!(step.failure_detail, None);
+}
+
+#[test]
+fn arc_length_radius_tracks_the_target_iteration_count() {
+    let critical_factor = solve_frame_2d_p_delta(&portal_request(0.0))
+        .expect("portal probe should solve")
+        .buckling_result
+        .minimum_load_factor;
+    let mut request = portal_request(0.0);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(critical_factor * 2.0);
+    request.load_steps = Some(12);
+    request.max_iterations = Some(32);
+    request.arc_length_target_iterations = Some(2);
+
+    let result = solve_frame_2d_p_delta(&request).expect("adaptive radius path should solve");
+    assert!(
+        result.converged,
+        "adaptive radius steps: {:?}",
+        result.steps
+    );
+    let radii = result
+        .steps
+        .iter()
+        .map(|step| step.arc_length_radius.unwrap())
+        .collect::<Vec<_>>();
+    assert!(radii.iter().skip(1).any(|radius| *radius < radii[0]));
+    assert!(radii.windows(2).all(|pair| pair[1] <= pair[0] * 2.0));
+}
+
+#[test]
+fn arc_length_matches_shallow_arch_limit_point_and_descending_branch() {
+    let probe =
+        solve_frame_2d_p_delta(&shallow_arch_request(1)).expect("shallow arch probe should solve");
+    let mut request = shallow_arch_request(1);
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(probe.buckling_result.minimum_load_factor * 100.0);
+    request.load_steps = Some(128);
+    request.max_iterations = Some(64);
+    request.max_step_cutbacks = Some(12);
+
+    let result = solve_frame_2d_p_delta(&request).expect("shallow arch path should be inspectable");
+    let factors = result
+        .steps
+        .iter()
+        .map(|step| step.load_factor)
+        .collect::<Vec<_>>();
+    let crown_displacements = result
+        .steps
+        .iter()
+        .map(|step| step.displacements[4])
+        .collect::<Vec<_>>();
+    assert!(result.converged, "shallow arch steps: {:?}", result.steps);
+    assert!(factors.iter().all(|factor| factor.is_finite()));
+    let (peak_index, peak_factor) = factors
+        .iter()
+        .copied()
+        .enumerate()
+        .max_by(|left, right| left.1.total_cmp(&right.1))
+        .unwrap();
+    let pin_jointed_peak = pin_jointed_shallow_arch_peak_factor();
+    assert!(peak_index > 0 && peak_index + 1 < factors.len());
+    assert_relative(peak_factor, pin_jointed_peak, 2.0e-2);
+    assert!(factors[peak_index + 1..].iter().any(|factor| *factor < 0.0));
+    assert!(crown_displacements.last().unwrap() < &-0.1);
+    assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
+    assert!(result.steps.iter().all(|step| {
+        step.arc_length_constraint_error
+            .is_some_and(|error| error < 1.0e-7)
+    }));
+}
+
+#[test]
+fn segmented_shallow_arch_resolves_the_member_instability_branch() {
+    let mut critical_factors = Vec::new();
+    let mut peak_factors = Vec::new();
+    for segments_per_side in [2, 4, 8] {
+        let probe = solve_frame_2d_p_delta(&shallow_arch_request(segments_per_side))
+            .expect("segmented shallow arch probe should solve");
+        let mut request = shallow_arch_request(segments_per_side);
+        request.kinematics = Frame2dStabilityKinematics::Corotational;
+        request.path_control = Frame2dStabilityPathControl::ArcLength;
+        request.maximum_load_factor = Some(probe.buckling_result.minimum_load_factor * 100.0);
+        request.load_steps = Some(128);
+        request.max_iterations = Some(64);
+        request.max_step_cutbacks = Some(12);
+
+        let result =
+            solve_frame_2d_p_delta(&request).expect("segmented shallow arch should be inspectable");
+        assert!(result.converged, "segmented steps: {:?}", result.steps);
+        let factors = result
+            .steps
+            .iter()
+            .map(|step| step.load_factor)
+            .collect::<Vec<_>>();
+        let (peak_index, peak_factor) = factors
+            .iter()
+            .copied()
+            .enumerate()
+            .max_by(|left, right| left.1.total_cmp(&right.1))
+            .unwrap();
+        critical_factors.push(probe.buckling_result.minimum_load_factor);
+        peak_factors.push(peak_factor);
+        assert!(peak_index > 0 && peak_index + 1 < factors.len());
+        assert!(factors[peak_index + 1..].iter().any(|factor| *factor < 0.0));
+        assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
+        assert!(result.steps.iter().all(|step| {
+            step.arc_length_constraint_error
+                .is_some_and(|error| error < 1.0e-7)
+        }));
+    }
+    assert_relative(critical_factors[2], critical_factors[1], 1.0e-3);
+    assert!(peak_factors.windows(2).all(|pair| pair[1] < pair[0]));
+    assert_relative(peak_factors[2], peak_factors[1], 1.0e-1);
+    assert!(peak_factors[0] < pin_jointed_shallow_arch_peak_factor() * 0.15);
+}
+
+fn pin_jointed_shallow_arch_peak_factor() -> f64 {
+    let half_span: f64 = 1.0;
+    let height: f64 = 0.099;
+    let axial_rigidity: f64 = 210.0e9 * 1.0e-3;
+    let reference_load: f64 = 1_000.0;
+    let initial_length = half_span.hypot(height);
+    (0..=20_000)
+        .map(|index| height * index as f64 / 20_000.0)
+        .map(|current_height| {
+            let current_length = half_span.hypot(current_height);
+            let compression = axial_rigidity * (initial_length - current_length) / initial_length;
+            2.0 * compression * current_height / (current_length * reference_load)
+        })
+        .fold(0.0, f64::max)
 }
 
 fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
@@ -228,6 +492,7 @@ fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
         },
         imperfection_amplitude: IMPERFECTION_AMPLITUDE,
         kinematics: Default::default(),
+        path_control: Default::default(),
         imperfection_shape: Some(imperfection_shape),
         imperfection_mode_index: None,
         maximum_load_factor: None,
@@ -235,6 +500,68 @@ fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
         max_iterations: None,
         tolerance: None,
         max_step_cutbacks: None,
+        arc_length_radius: None,
+        arc_length_load_scale: None,
+        arc_length_target_iterations: None,
+    }
+}
+
+fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
+    let segments_per_side = segments_per_side.max(1);
+    let crown = segments_per_side;
+    let final_node = segments_per_side * 2;
+    let mut imperfection_shape = Vec::with_capacity((final_node + 1) * 3);
+    let nodes = (0..=final_node)
+        .map(|index| {
+            let branch_position = if index <= crown {
+                index as f64 / segments_per_side as f64
+            } else {
+                (final_node - index) as f64 / segments_per_side as f64
+            };
+            let x = -1.0 + index as f64 / segments_per_side as f64;
+            imperfection_shape.extend([0.0, -branch_position, 0.0]);
+            Frame2dNodeInput {
+                id: format!("arch-node-{index}"),
+                x,
+                y: 0.1 * branch_position,
+                fix_x: index == 0 || index == final_node,
+                fix_y: index == 0 || index == final_node,
+                fix_rz: false,
+                load_x: 0.0,
+                load_y: if index == crown { -1_000.0 } else { 0.0 },
+                moment_z: 0.0,
+            }
+        })
+        .collect();
+    let elements = (0..final_node)
+        .map(|index| Frame2dElementInput {
+            id: format!("arch-member-{index}"),
+            node_i: index,
+            node_j: index + 1,
+            area: 1.0e-3,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 1.0e-8,
+            section_modulus: 1.0e-6,
+        })
+        .collect();
+    SolveFrame2dPDeltaRequest {
+        buckling: SolveBucklingFrame2dRequest {
+            frame: SolveFrame2dRequest { nodes, elements },
+            mode_count: Some(1),
+        },
+        imperfection_amplitude: 1.0e-3,
+        kinematics: Frame2dStabilityKinematics::LinearizedPDelta,
+        path_control: Frame2dStabilityPathControl::LoadControl,
+        imperfection_shape: Some(imperfection_shape),
+        imperfection_mode_index: None,
+        maximum_load_factor: None,
+        load_steps: Some(8),
+        max_iterations: None,
+        tolerance: Some(1.0e-8),
+        max_step_cutbacks: None,
+        arc_length_radius: None,
+        arc_length_load_scale: None,
+        arc_length_target_iterations: None,
     }
 }
 
