@@ -431,8 +431,23 @@ predictor only on active shape DOFs and is authoritative over a turning
 tangent. A non-singular 3-by-3 serpentine surface now retains external mixed
 mode alignment above 0.75 and both numerical error gates below `1e-7`; the
 exact repeated point remains covered separately as a subspace crossing. The
-next stability milestone is external asymmetric post-critical trajectory
-correlation. The first internal
+lower asymmetric connected branch now also carries a 64-point trajectory from
+`1.36e-4 L` to `1.75e-2 L` against an independent complete-elliptic-integral
+two-column reduction. Its maximum load error is 2.326%, its minimum mixed-mode
+alignment is 0.999989, and every FE point retains both `1e-7` gates. The next
+equivalent-topology gate now replaces the direct coupler with two series
+members and a free intermediate node, adds an unloaded spectator branch, and
+retains a 64-point external trajectory to `1.72e-2 L` with the same 2.33% load
+and 0.999989 direction bounds. This covers series/spectator isolation. A
+four-column degree-three star now closes the interacting-topology gap: unequal
+inertias and three unequal live couplers retain all-column participation over
+64 externally seeded points to `1.83e-2 L`, with 2.321% maximum load error,
+`4.46e-5` maximum external residual, and 0.999977 neighboring direction
+overlap. This work also added a continuation-state identity guard so a
+fixed-load Newton correction cannot silently replace a nontrivial imported
+branch with the trivial equilibrium. The remaining stability depth is now
+material-nonlinear correlation, residual stress, and section interaction.
+The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance
 after adding an unloaded free branch; the 128-mode and 256-inertia caps are

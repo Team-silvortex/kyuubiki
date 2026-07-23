@@ -45,6 +45,16 @@ pub(crate) fn prepare_continuation_state(
         max_iterations,
         tolerance,
     )?;
+    let fixed_load_correction = fixed_load_correction.filter(|corrected| {
+        fixed_correction_retains_identity(
+            &input.displacements,
+            corrected,
+            &displacement_increment,
+            free,
+        ) || request.imperfection_shape.as_deref().is_some_and(|shape| {
+            fixed_correction_retains_target_shape(&input.displacements, corrected, shape)
+        })
+    });
     let (displacement, load_factor) = match fixed_load_correction {
         Some(displacement) => (displacement, input.load_factor),
         None => correct_parameter_continuation_equilibrium(
@@ -77,6 +87,92 @@ pub(crate) fn prepare_continuation_state(
         load_increment: input.load_factor_increment,
         correction_norm: Some(correction_norm.sqrt()),
     })
+}
+
+fn fixed_correction_retains_identity(
+    imported: &[f64],
+    corrected: &[f64],
+    reduced_increment: &[f64],
+    free: &[usize],
+) -> bool {
+    let imported_norm = free
+        .iter()
+        .map(|&dof| imported[dof] * imported[dof])
+        .sum::<f64>()
+        .sqrt();
+    if imported_norm <= 1.0e-14 {
+        return true;
+    }
+    let corrected_norm = free
+        .iter()
+        .map(|&dof| corrected[dof] * corrected[dof])
+        .sum::<f64>()
+        .sqrt();
+    let increment_norm = reduced_increment
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
+    let imported_projection = free
+        .iter()
+        .zip(reduced_increment)
+        .map(|(&dof, increment)| imported[dof] * increment)
+        .sum::<f64>();
+    let corrected_projection = free
+        .iter()
+        .zip(reduced_increment)
+        .map(|(&dof, increment)| corrected[dof] * increment)
+        .sum::<f64>();
+    let projection_scale = imported_norm * increment_norm;
+    if projection_scale > 1.0e-14 && imported_projection.abs() > projection_scale * 1.0e-6 {
+        return corrected_projection * imported_projection > 0.0
+            && corrected_projection.abs() >= imported_projection.abs() * 0.25;
+    }
+    if corrected_norm < imported_norm * 0.25 {
+        return false;
+    }
+    let overlap = free
+        .iter()
+        .map(|&dof| imported[dof] * corrected[dof])
+        .sum::<f64>()
+        .abs()
+        / (imported_norm * corrected_norm);
+    overlap >= 0.5
+}
+
+fn fixed_correction_retains_target_shape(
+    imported: &[f64],
+    corrected: &[f64],
+    target_shape: &[f64],
+) -> bool {
+    if imported.len() != corrected.len() || imported.len() != target_shape.len() {
+        return false;
+    }
+    let shape_scale = target_shape
+        .iter()
+        .map(|value| value.abs())
+        .fold(0.0_f64, f64::max);
+    if shape_scale <= f64::EPSILON {
+        return false;
+    }
+    let support_tolerance = shape_scale * 1.0e-12;
+    let (imported_norm, corrected_norm) = imported
+        .iter()
+        .zip(corrected)
+        .zip(target_shape)
+        .filter(|((_, _), shape)| shape.abs() > support_tolerance)
+        .fold(
+            (0.0, 0.0),
+            |(imported_norm, corrected_norm), ((imported, corrected), _)| {
+                (
+                    imported_norm + imported * imported,
+                    corrected_norm + corrected * corrected,
+                )
+            },
+        );
+    let imported_norm = imported_norm.sqrt();
+    let corrected_norm = corrected_norm.sqrt();
+    imported_norm > 1.0e-14 && corrected_norm >= imported_norm * 1.0e-3
 }
 
 fn validate_continuation_state(
@@ -133,5 +229,68 @@ pub(crate) fn export_continuation_state(
         load_factor,
         displacement_increment,
         load_factor_increment: load_increment,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{fixed_correction_retains_identity, fixed_correction_retains_target_shape};
+
+    #[test]
+    fn fixed_correction_rejects_collapsed_and_reversed_branch_roots() {
+        let free = [0, 1, 2];
+        let imported = [1.0, 0.5, 0.0];
+        let increment = [0.2, 0.1, 0.0];
+        assert!(fixed_correction_retains_identity(
+            &imported,
+            &[0.8, 0.4, 0.0],
+            &increment,
+            &free
+        ));
+        assert!(!fixed_correction_retains_identity(
+            &imported,
+            &[0.0, 0.0, 2.0],
+            &increment,
+            &free
+        ));
+        assert!(!fixed_correction_retains_identity(
+            &imported,
+            &[-0.8, -0.4, 0.0],
+            &increment,
+            &free
+        ));
+    }
+
+    #[test]
+    fn near_orthogonal_tangents_fall_back_to_displacement_overlap() {
+        let free = [0, 1];
+        assert!(fixed_correction_retains_identity(
+            &[1.0, 0.0],
+            &[0.8, 0.1],
+            &[0.0, 1.0],
+            &free
+        ));
+        assert!(!fixed_correction_retains_identity(
+            &[1.0, 0.0],
+            &[0.0, 1.0],
+            &[0.0, 1.0],
+            &free
+        ));
+    }
+
+    #[test]
+    fn explicit_target_shape_support_rejects_only_catastrophic_amplitude_collapse() {
+        let imported = [0.0, 0.0, 1.0, 0.0];
+        let target = [0.0, 0.0, 1.0, 0.0];
+        assert!(fixed_correction_retains_target_shape(
+            &imported,
+            &[0.0, 7.0, 0.8, -3.0],
+            &target
+        ));
+        assert!(!fixed_correction_retains_target_shape(
+            &imported,
+            &[0.0, 7.0, 0.0001, -3.0],
+            &target
+        ));
     }
 }

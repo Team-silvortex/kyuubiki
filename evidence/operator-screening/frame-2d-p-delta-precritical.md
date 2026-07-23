@@ -146,6 +146,42 @@ branches. Neither control mode is a material-plasticity model.
   correction with a degenerate-eigenspace diagnostic. This prevents four
   combinations from collapsing onto one physical branch and being falsely
   reported as distinct.
+- The lower asymmetric mixed branch now retains a 64-point finite-amplitude
+  trajectory against an independent two-degree-of-freedom elastica reduction.
+  Each column load is evaluated from the complete elliptic integral computed
+  by arithmetic-geometric mean, while the midpoint coupler uses the external
+  Rayleigh reduction. The reference implementation first recovers
+  `K(0) = pi/2`, the retained `K(0.5)` value, and the linear asymmetric
+  eigenpair as amplitude tends to zero. The FE trajectory grows from
+  `1.3578e-4 L` to `1.7494e-2 L`; all 64 points satisfy both `1e-7` numerical
+  gates, remain within 3% of the external loads (observed maximum 2.326%), and
+  retain direction alignment above 0.999 (observed minimum 0.999989). This is
+  an independent elastic screening correlation, not experimental material or
+  section qualification.
+- The same external trajectory is retained after replacing the direct
+  midpoint coupler with two analytically equivalent series frame elements and
+  a free intermediate node, then attaching an unloaded free spectator branch
+  to that node. The two half-span elements each have twice the direct axial
+  stiffness, so their series stiffness remains `k`; inactive center and
+  spectator DOFs are handled by static condensation rather than artificial
+  supports. The first buckling factor remains within 0.5% of the reduced
+  reference, its mixed direction remains above 0.98 aligned, and the spectator
+  preload is excluded from geometric stiffness. Its 64-point switched path
+  reaches `1.7211e-2 L`, retains a maximum external load error of 2.3261%, a
+  minimum direction alignment of 0.999989, and both `1e-7` numerical gates.
+  This qualifies this equivalent series/spectator topology only, not arbitrary
+  interacting branches.
+- A genuinely interacting four-column star now supplies a degree-three graph
+  topology: all four columns carry axial load, their inertias differ, and three
+  unequal midpoint couplers meet at the center column. An independent 4-by-4
+  Jacobi solve provides the lowest linear graph mode. Complete-elastica column
+  restoring forces and graph coupler forces then produce a nonlinear Rayleigh
+  load and orthogonal residual at every FE point. An external state at
+  `1e-3 L` seeds the FE path; 64 accepted points extend from `1.2621e-3 L` to
+  `1.8343e-2 L`, retain maximum load error 2.321%, maximum normalized external
+  residual `4.46e-5`, minimum neighboring direction overlap 0.999977, and at
+  least 0.089 normalized participation from every column. Every point also
+  satisfies both `1e-7` FE gates.
 - Three identical columns with equal-stiffness midpoint links on every pair
   form a connected complete graph. The uniform mode remains within 0.2% of
   `pi^2 EI / L^2`, while the next two factors agree with each other within
@@ -282,6 +318,16 @@ branches. Neither control mode is a material-plasticity model.
   increment for branch orientation. The engine JSON route round-trips and
   executes this state, so headless callers do not need an in-process solver
   shortcut.
+- Fixed-load state correction now rejects a numerically balanced root when it
+  collapses or reverses the imported branch projection. Without an explicit
+  target shape, the corrected state must preserve projection sign and at least
+  one quarter of its tangent-projected amplitude; near-orthogonal tangents use
+  displacement overlap and amplitude instead. An explicit target shape remains
+  authoritative and rejects only catastrophic active-support collapse below
+  one thousandth of the imported amplitude. Rejected roots fall through to the
+  joint displacement/load hyperplane corrector. The four-column star regression
+  proves this prevents an external nontrivial state from silently collapsing
+  onto the trivial equilibrium without over-constraining parameter paths.
 - `solve.frame_2d_p_delta_path` accepts two to 64 compatible corotational
   arc-length requests and owns state transfer between them. Node identities,
   constraints, element connectivity, and imperfection dimensions must match;
@@ -452,7 +498,6 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- external post-critical trajectory correlation for an asymmetric connected frame
 - material yielding, residual stress, and section interaction
 
 ## Performance Reproduction

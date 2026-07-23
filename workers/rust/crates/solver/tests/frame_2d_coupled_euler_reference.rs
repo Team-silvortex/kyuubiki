@@ -18,6 +18,10 @@ const COUPLING_STIFFNESS: f64 = 20.0;
 const ELEMENT_COUNT: usize = 8;
 const NODES_PER_COLUMN: usize = ELEMENT_COUNT + 1;
 
+#[path = "frame_2d_coupled_euler_reference/asymmetric_trajectory.rs"]
+mod asymmetric_trajectory;
+#[path = "frame_2d_coupled_euler_reference/branched_trajectory.rs"]
+mod branched_trajectory;
 #[path = "frame_2d_coupled_euler_reference/triplet.rs"]
 mod triplet;
 
