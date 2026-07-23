@@ -100,6 +100,12 @@ pub(crate) fn solve_corotational_steps(
             tangent_critical_eigenvalue: None,
             tangent_critical_mode_residual: None,
             tangent_critical_mode: None,
+            tangent_transition_load_factor_min: None,
+            tangent_transition_load_factor_max: None,
+            tangent_transition_load_factor_width: None,
+            tangent_transition_refinements: None,
+            tangent_critical_load_factor: None,
+            branch_switch_probes: Vec::new(),
             residual_norm: adaptive.residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
@@ -281,6 +287,27 @@ fn solve_equilibrium(
         failure_reason,
         failure_detail,
     })
+}
+
+pub(crate) fn correct_corotational_equilibrium(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    system: &Frame2dStabilitySystem,
+    initial_displacement: &[f64],
+    load_factor: f64,
+    max_iterations: usize,
+    tolerance: f64,
+) -> Result<Option<Vec<f64>>, String> {
+    let attempt = solve_equilibrium(
+        positions,
+        elements,
+        system,
+        initial_displacement,
+        load_factor,
+        max_iterations,
+        tolerance,
+    )?;
+    Ok(attempt.converged.then_some(attempt.displacement))
 }
 
 fn apply_backtracked_increment(

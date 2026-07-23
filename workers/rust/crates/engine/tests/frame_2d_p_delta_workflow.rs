@@ -174,5 +174,13 @@ fn workflow_route_executes_arc_length_continuation() {
         step["tangent_critical_eigenvalue"].is_null()
             && step["tangent_critical_mode_residual"].is_null()
             && step["tangent_critical_mode"].is_null()
+            && step["tangent_transition_load_factor_min"].is_null()
+            && step["tangent_transition_load_factor_max"].is_null()
+            && step["tangent_transition_load_factor_width"].is_null()
+            && step["tangent_transition_refinements"].is_null()
+            && step["tangent_critical_load_factor"].is_null()
+            && step["branch_switch_probes"]
+                .as_array()
+                .is_some_and(Vec::is_empty)
     }));
 }

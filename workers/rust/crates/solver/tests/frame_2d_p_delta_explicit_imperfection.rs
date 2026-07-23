@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
-    Frame2dElementInput, Frame2dEquilibriumPathEvent, Frame2dImperfectionSource, Frame2dNodeInput,
+    Frame2dBranchDirection, Frame2dBranchSwitchSelection, Frame2dElementInput,
+    Frame2dEquilibriumPathEvent, Frame2dImperfectionSource, Frame2dNodeInput,
     Frame2dPDeltaFailureReason, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
     Frame2dTangentStability, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
     SolveFrame2dRequest,
@@ -122,6 +123,24 @@ fn rejects_malformed_explicit_imperfection_fields() {
     let error = solve_frame_2d_p_delta(&incompatible_control)
         .expect_err("arc-length target above Newton limit must fail");
     assert!(error.contains("must not exceed max_iterations"));
+
+    incompatible_control.arc_length_target_iterations = None;
+    incompatible_control.max_iterations = None;
+    incompatible_control.tangent_transition_refinement_steps = Some(21);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("excessive transition refinement must fail");
+    assert!(error.contains("tangent_transition_refinement_steps"));
+
+    incompatible_control.tangent_transition_refinement_steps = None;
+    incompatible_control.branch_switch = Frame2dBranchSwitchSelection::Both;
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("branch switching without amplitude must fail");
+    assert!(error.contains("branch_switch_amplitude"));
+
+    incompatible_control.branch_switch_amplitude = Some(0.0);
+    let error = solve_frame_2d_p_delta(&incompatible_control)
+        .expect_err("zero branch-switch amplitude must fail");
+    assert!(error.contains("branch_switch_amplitude"));
 }
 
 #[test]
@@ -475,7 +494,7 @@ fn segmented_shallow_arch_resolves_the_member_instability_branch() {
         assert!(
             candidate
                 .tangent_critical_eigenvalue
-                .is_some_and(|value| value < 0.0)
+                .is_some_and(|value| value.abs() < 1.0e-8)
         );
         assert!(
             candidate
@@ -500,7 +519,19 @@ fn segmented_shallow_arch_resolves_the_member_instability_branch() {
             assert!(!node.fix_y || shape[1] == 0.0);
             assert!(!node.fix_rz || shape[2] == 0.0);
         }
-        bifurcation_candidate_factors.push(candidate.load_factor);
+        let bracket_min = candidate.tangent_transition_load_factor_min.unwrap();
+        let bracket_max = candidate.tangent_transition_load_factor_max.unwrap();
+        let bracket_width = candidate.tangent_transition_load_factor_width.unwrap();
+        let critical_load = candidate.tangent_critical_load_factor.unwrap();
+        assert_eq!(candidate.tangent_transition_refinements, Some(12));
+        assert!(bracket_min < bracket_max);
+        assert_relative(bracket_max - bracket_min, bracket_width, 1.0e-12);
+        assert!(bracket_min <= critical_load && critical_load <= bracket_max);
+        assert!(critical_load < peak_factor);
+        let coarse_width =
+            (candidate.load_factor - result.steps[candidate.step - 2].load_factor).abs();
+        assert!(bracket_width < coarse_width / 4_000.0);
+        bifurcation_candidate_factors.push(critical_load);
         assert!(factors[peak_index + 1..].iter().any(|factor| *factor < 0.0));
         assert!(result.steps.iter().all(|step| step.residual_norm < 1.0e-7));
         assert!(result.steps.iter().all(|step| {
@@ -511,12 +542,85 @@ fn segmented_shallow_arch_resolves_the_member_instability_branch() {
     assert_relative(critical_factors[2], critical_factors[1], 1.0e-3);
     assert!(peak_factors.windows(2).all(|pair| pair[1] < pair[0]));
     assert_relative(peak_factors[2], peak_factors[1], 1.0e-1);
+    assert!(
+        bifurcation_candidate_factors
+            .windows(2)
+            .all(|pair| pair[1] < pair[0])
+    );
     assert_relative(
         bifurcation_candidate_factors[2],
         bifurcation_candidate_factors[1],
-        1.0e-2,
+        5.0e-2,
     );
     assert!(peak_factors[0] < pin_jointed_shallow_arch_peak_factor() * 0.15);
+}
+
+#[test]
+fn modal_constraint_probes_both_member_instability_branches() {
+    let mut request = shallow_arch_request(4);
+    let probe =
+        solve_frame_2d_p_delta(&request).expect("segmented shallow arch probe should solve");
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.maximum_load_factor = Some(probe.buckling_result.minimum_load_factor * 100.0);
+    request.load_steps = Some(128);
+    request.max_iterations = Some(64);
+    request.max_step_cutbacks = Some(12);
+    request.branch_switch = Frame2dBranchSwitchSelection::Both;
+    request.branch_switch_amplitude = Some(5.0e-3);
+
+    let result =
+        solve_frame_2d_p_delta(&request).expect("branch-switch probes should be inspectable");
+    let candidate = result
+        .steps
+        .iter()
+        .find(|step| !step.branch_switch_probes.is_empty())
+        .expect("tangent transition should produce branch probes");
+    assert_eq!(candidate.branch_switch_probes.len(), 2);
+    assert_eq!(
+        candidate.branch_switch_probes[0].direction,
+        Frame2dBranchDirection::Positive
+    );
+    assert_eq!(
+        candidate.branch_switch_probes[1].direction,
+        Frame2dBranchDirection::Negative
+    );
+    for branch in &candidate.branch_switch_probes {
+        assert!(
+            branch.equilibrium_converged,
+            "branch probe should converge: {branch:?}"
+        );
+        assert!(
+            branch.primary_equilibrium_converged,
+            "branch probe: {branch:?}"
+        );
+        assert!(branch.distinct_branch, "branch probe: {branch:?}");
+        assert!(branch.load_factor.is_some_and(f64::is_finite));
+        assert!(
+            branch
+                .residual_norm
+                .is_some_and(|residual| residual < 1.0e-7)
+        );
+        assert!(
+            branch
+                .modal_constraint_error
+                .is_some_and(|error| error < 1.0e-7)
+        );
+        assert!(
+            branch
+                .mode_projection
+                .is_some_and(|projection| projection.abs() >= 4.5e-3)
+        );
+        assert!(
+            branch
+                .primary_displacement_distance
+                .is_some_and(|distance| distance >= 2.5e-3)
+        );
+        assert_eq!(
+            branch.displacements.as_ref().map(Vec::len),
+            Some(request.buckling.frame.nodes.len() * 3)
+        );
+    }
 }
 
 fn pin_jointed_shallow_arch_peak_factor() -> f64 {
@@ -587,6 +691,9 @@ fn portal_request(angle: f64) -> SolveFrame2dPDeltaRequest {
         arc_length_radius: None,
         arc_length_load_scale: None,
         arc_length_target_iterations: None,
+        tangent_transition_refinement_steps: None,
+        branch_switch: Default::default(),
+        branch_switch_amplitude: None,
     }
 }
 
@@ -646,6 +753,9 @@ fn shallow_arch_request(segments_per_side: usize) -> SolveFrame2dPDeltaRequest {
         arc_length_radius: None,
         arc_length_load_scale: None,
         arc_length_target_iterations: None,
+        tangent_transition_refinement_steps: None,
+        branch_switch: Default::default(),
+        branch_switch_amplitude: None,
     }
 }
 

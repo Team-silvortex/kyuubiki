@@ -1,19 +1,26 @@
+use crate::frame_2d_branch_switch::{
+    BranchSwitchContext, probe_branch_switches, unavailable_branch_switches,
+};
 use crate::frame_2d_corotational::{
     imperfection_amplification, max_translation, normalized_residual, solve_tangent,
 };
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
+use crate::frame_2d_transition_refinement::{
+    TransitionRefinementContext, refine_tangent_transition,
+};
 use crate::linear_algebra::reduce_sparse_system;
 use crate::symmetric_critical_mode::{SymmetricCriticalMode, extract_symmetric_critical_mode};
 use crate::symmetric_inertia::assess_symmetric_inertia;
 use kyuubiki_protocol::{
-    Frame2dElementInput, Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult,
-    Frame2dTangentStability, SolveFrame2dPDeltaRequest,
+    Frame2dBranchSwitchSelection, Frame2dElementInput, Frame2dPDeltaFailureReason,
+    Frame2dPDeltaStepResult, Frame2dTangentStability, SolveFrame2dPDeltaRequest,
 };
 
 const DEFAULT_MAX_ITERATIONS: usize = 32;
 const DEFAULT_RESIDUAL_TOLERANCE: f64 = 1.0e-7;
 const DEFAULT_TARGET_ITERATIONS: usize = 6;
+const DEFAULT_TRANSITION_REFINEMENT_STEPS: usize = 12;
 const MIN_CONSTRAINT_DENOMINATOR: f64 = 1.0e-14;
 
 struct ArcLengthState {
@@ -79,6 +86,9 @@ pub(crate) fn solve_arc_length_steps(
     let target_iterations = request
         .arc_length_target_iterations
         .unwrap_or(DEFAULT_TARGET_ITERATIONS.min(max_iterations));
+    let transition_refinement_steps = request
+        .tangent_transition_refinement_steps
+        .unwrap_or(DEFAULT_TRANSITION_REFINEMENT_STEPS);
     let mut state = ArcLengthState {
         displacement: initial_displacement,
         load_factor: 0.0,
@@ -128,19 +138,84 @@ pub(crate) fn solve_arc_length_steps(
             cutbacks += 1;
         };
         state = attempt.state;
-        let critical_mode = if attempt.converged
+        let transition_changed = attempt.converged
             && previous_negative_pivots.is_some()
-            && previous_negative_pivots != attempt.tangent_negative_pivots
-        {
-            extract_critical_mode(
+            && previous_negative_pivots != attempt.tangent_negative_pivots;
+        let mut refinement = if transition_changed {
+            match (steps.last(), attempt.tangent_negative_pivots) {
+                (Some(lower), Some(upper_negative_pivots)) => refine_tangent_transition(
+                    &TransitionRefinementContext {
+                        positions: &positions,
+                        elements: &frame.elements,
+                        system,
+                        free_dofs: &free,
+                        max_iterations,
+                        tolerance,
+                        refinement_steps: transition_refinement_steps,
+                    },
+                    lower,
+                    state.load_factor,
+                    &state.displacement,
+                    upper_negative_pivots,
+                )?,
+                _ => None,
+            }
+        } else {
+            None
+        };
+        let mut critical_load_factor = refinement
+            .as_ref()
+            .and_then(|refinement| refinement.critical_load_factor);
+        let mut critical_displacement = refinement
+            .as_ref()
+            .and_then(|refinement| refinement.critical_displacement.clone());
+        let mut critical_mode = refinement
+            .as_mut()
+            .and_then(|refinement| refinement.critical_mode.take());
+        if transition_changed && critical_mode.is_none() {
+            critical_mode = extract_critical_mode(
                 &positions,
                 &frame.elements,
                 system,
                 &free,
                 &state.displacement,
-            )?
-        } else {
-            None
+            )?;
+            if critical_mode.is_some() {
+                critical_load_factor = Some(state.load_factor);
+                critical_displacement = Some(state.displacement.clone());
+            }
+        }
+        let branch_switch_probes = match (
+            request.branch_switch_amplitude,
+            critical_load_factor,
+            critical_displacement.as_deref(),
+            critical_mode.as_ref(),
+        ) {
+            _ if request.branch_switch == Frame2dBranchSwitchSelection::Disabled => Vec::new(),
+            (Some(amplitude), Some(load_factor), Some(displacement), Some(mode)) => {
+                probe_branch_switches(
+                    &BranchSwitchContext {
+                        positions: &positions,
+                        elements: &frame.elements,
+                        system,
+                        free_dofs: &free,
+                        max_iterations,
+                        tolerance,
+                    },
+                    displacement,
+                    &state.displacement,
+                    load_factor,
+                    &mode.shape,
+                    amplitude,
+                    request.branch_switch,
+                )
+            }
+            (Some(amplitude), _, _, _) if transition_changed => unavailable_branch_switches(
+                request.branch_switch,
+                amplitude,
+                "critical mode unavailable for branch switching; dense extraction is limited to 128 reduced degrees of freedom",
+            ),
+            _ => Vec::new(),
         };
         previous_negative_pivots = attempt.tangent_negative_pivots;
         steps.push(Frame2dPDeltaStepResult {
@@ -179,7 +254,21 @@ pub(crate) fn solve_arc_length_steps(
             tangent_critical_mode_residual: critical_mode
                 .as_ref()
                 .map(|mode| mode.normalized_residual),
-            tangent_critical_mode: critical_mode.map(|mode| mode.shape),
+            tangent_critical_mode: critical_mode.as_ref().map(|mode| mode.shape.clone()),
+            tangent_transition_load_factor_min: refinement
+                .as_ref()
+                .map(|refinement| refinement.load_factor_min),
+            tangent_transition_load_factor_max: refinement
+                .as_ref()
+                .map(|refinement| refinement.load_factor_max),
+            tangent_transition_load_factor_width: refinement
+                .as_ref()
+                .map(|refinement| refinement.load_factor_max - refinement.load_factor_min),
+            tangent_transition_refinements: refinement
+                .as_ref()
+                .map(|refinement| refinement.refinements),
+            tangent_critical_load_factor: critical_load_factor,
+            branch_switch_probes,
             residual_norm: attempt.residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,

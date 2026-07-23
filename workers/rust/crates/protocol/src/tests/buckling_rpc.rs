@@ -1,9 +1,9 @@
 use crate::{
     BucklingBeam1dElementInput, BucklingBeam1dModeResult, BucklingBeam1dNodeInput,
-    BucklingModeDirectionAssessment, Frame2dElementInput, Frame2dNodeInput,
-    Frame2dPDeltaStepResult, Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION,
-    RpcMethod, RpcRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    BucklingModeDirectionAssessment, Frame2dBranchSwitchSelection, Frame2dElementInput,
+    Frame2dNodeInput, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
+    Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
+    SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 
 #[test]
@@ -72,6 +72,9 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             arc_length_radius: Some(0.01),
             arc_length_load_scale: Some(0.25),
             arc_length_target_iterations: Some(7),
+            tangent_transition_refinement_steps: Some(12),
+            branch_switch: Frame2dBranchSwitchSelection::Both,
+            branch_switch_amplitude: Some(0.015),
         })
         .expect("p-delta request should serialize"),
     };
@@ -92,6 +95,9 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(params.arc_length_radius, Some(0.01));
     assert_eq!(params.arc_length_load_scale, Some(0.25));
     assert_eq!(params.arc_length_target_iterations, Some(7));
+    assert_eq!(params.tangent_transition_refinement_steps, Some(12));
+    assert_eq!(params.branch_switch, Frame2dBranchSwitchSelection::Both);
+    assert_eq!(params.branch_switch_amplitude, Some(0.015));
     assert_eq!(params.kinematics, Frame2dStabilityKinematics::Corotational);
     assert_eq!(params.path_control, Frame2dStabilityPathControl::ArcLength);
 
@@ -105,6 +111,9 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     legacy_object.remove("arc_length_radius");
     legacy_object.remove("arc_length_load_scale");
     legacy_object.remove("arc_length_target_iterations");
+    legacy_object.remove("tangent_transition_refinement_steps");
+    legacy_object.remove("branch_switch");
+    legacy_object.remove("branch_switch_amplitude");
     let legacy: SolveFrame2dPDeltaRequest =
         serde_json::from_value(legacy).expect("legacy p-delta params should decode");
     assert_eq!(
@@ -121,6 +130,9 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(legacy.arc_length_radius, None);
     assert_eq!(legacy.arc_length_load_scale, None);
     assert_eq!(legacy.arc_length_target_iterations, None);
+    assert_eq!(legacy.tangent_transition_refinement_steps, None);
+    assert_eq!(legacy.branch_switch, Frame2dBranchSwitchSelection::Disabled);
+    assert_eq!(legacy.branch_switch_amplitude, None);
 }
 
 #[test]
@@ -170,6 +182,12 @@ fn legacy_p_delta_steps_default_adaptive_failure_diagnostics() {
     assert_eq!(step.tangent_critical_eigenvalue, None);
     assert_eq!(step.tangent_critical_mode_residual, None);
     assert_eq!(step.tangent_critical_mode, None);
+    assert_eq!(step.tangent_transition_load_factor_min, None);
+    assert_eq!(step.tangent_transition_load_factor_max, None);
+    assert_eq!(step.tangent_transition_load_factor_width, None);
+    assert_eq!(step.tangent_transition_refinements, None);
+    assert_eq!(step.tangent_critical_load_factor, None);
+    assert!(step.branch_switch_probes.is_empty());
 }
 
 #[test]

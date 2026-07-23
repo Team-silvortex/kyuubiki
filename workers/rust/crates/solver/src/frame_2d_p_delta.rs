@@ -9,9 +9,9 @@ use crate::linear_algebra::{
 use crate::linear_banded::SymmetricBandCholesky;
 use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
-    FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO, Frame2dImperfectionSource,
-    Frame2dPDeltaStepResult, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
-    SolveFrame2dPDeltaRequest, SolveFrame2dPDeltaResult,
+    FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO, Frame2dBranchSwitchSelection,
+    Frame2dImperfectionSource, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
+    Frame2dStabilityPathControl, SolveFrame2dPDeltaRequest, SolveFrame2dPDeltaResult,
 };
 
 const DEFAULT_LOAD_STEPS: usize = 10;
@@ -181,6 +181,12 @@ fn solve_linearized_steps(
             tangent_critical_eigenvalue: None,
             tangent_critical_mode_residual: None,
             tangent_critical_mode: None,
+            tangent_transition_load_factor_min: None,
+            tangent_transition_load_factor_max: None,
+            tangent_transition_load_factor_width: None,
+            tangent_transition_refinements: None,
+            tangent_critical_load_factor: None,
+            branch_switch_probes: Vec::new(),
             residual_norm,
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
@@ -244,6 +250,25 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
         && target > maximum
     {
         return Err("frame 2d arc_length_target_iterations must not exceed max_iterations".into());
+    }
+    if matches!(request.tangent_transition_refinement_steps, Some(21..)) {
+        return Err("frame 2d tangent_transition_refinement_steps must not exceed 20".into());
+    }
+    if request.branch_switch != Frame2dBranchSwitchSelection::Disabled
+        && (request.kinematics != Frame2dStabilityKinematics::Corotational
+            || request.path_control != Frame2dStabilityPathControl::ArcLength)
+    {
+        return Err("frame 2d branch switching requires corotational arc-length control".into());
+    }
+    if let Some(amplitude) = request.branch_switch_amplitude
+        && !(amplitude.is_finite() && amplitude > 0.0)
+    {
+        return Err("frame 2d branch_switch_amplitude must be positive and finite".into());
+    }
+    if request.branch_switch != Frame2dBranchSwitchSelection::Disabled
+        && request.branch_switch_amplitude.is_none()
+    {
+        return Err("frame 2d branch switching requires branch_switch_amplitude".into());
     }
     if let Some(shape) = &request.imperfection_shape {
         let expected = request.buckling.frame.nodes.len() * 3;

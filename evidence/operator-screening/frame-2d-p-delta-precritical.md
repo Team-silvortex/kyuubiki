@@ -43,9 +43,10 @@ increments do not create events.
 Load control remains an elastic precritical screening path and retains its
 `0.95 lambda_cr` guard. Arc-length control may cross that screening guard, but
 is still experimental. Retained evidence now includes one shallow-arch limit
-point and descending equilibrium branch, not general post-buckling or
-bifurcation-branch qualification. Neither control mode is a material-plasticity
-model.
+point, a descending equilibrium branch, and opt-in critical-mode-constrained
+branch probes. A probe is an independently equilibrated branch seed, not yet a
+continued or externally qualified post-buckling branch. Neither control mode is
+a material-plasticity model.
 
 ## Retained Checks
 
@@ -127,6 +128,32 @@ model.
   reduced DOFs retain inertia classification and candidate events but leave the
   critical-mode fields null; larger models leave both dense diagnostics
   unassessed while continuation remains available.
+- Candidate intervals are refined through configurable equilibrium-corrected
+  load bisection (`tangent_transition_refinement_steps`, default 12, maximum
+  20). Every midpoint is returned to nonlinear equilibrium before its inertia
+  selects the retained half; failed correction or a third inertia state leaves
+  the original coarse candidate intact instead of fabricating a bracket.
+- Twelve refinements contract each segmented-arch interval by more than 4,000.
+  The selected critical loads are approximately `4.8576`, `4.2114`, and
+  `4.0549` for 2/4/8 elements per side. They decrease monotonically, the two
+  finest differ by less than 5%, and each selected normalized eigenvalue has
+  absolute magnitude below `1e-8`.
+- Optional `branch_switch` selection accepts `positive`, `negative`, or `both`
+  only with corotational arc-length control and a positive finite
+  `branch_switch_amplitude`. The default is `disabled`, so existing paths do
+  not pay for dense branch diagnostics or change their accepted states.
+- At the refined four-element-per-side member-instability transition, positive
+  and negative `0.005` critical-mode constraints each converge to a distinct
+  equilibrium state. Each candidate is cross-checked against a separately
+  corrected primary-path equilibrium at the same solved load; only a finite
+  separation of at least half the requested amplitude is labeled
+  `distinct_branch`. Both report force residual and normalized modal-constraint
+  error below `1e-7`, along with solved load factor, iterations, projection,
+  displacement distances, and the full displacement vector.
+- Branch probes solve the bordered tangent system for displacement and load
+  factor together. Backtracking must reduce the larger of the equilibrium and
+  modal-constraint errors; failure remains a structured probe result and never
+  replaces or truncates the primary arc-length history.
 - Explicit fields with the wrong DOF count, non-finite entries, or no
   translational imperfection are rejected rather than falling back to a mode.
 - Amplification increases monotonically and reduced equilibrium residuals stay
@@ -142,8 +169,10 @@ model.
 
 - complex-topology and interacting multi-mode continuation references
 - problem-scale minimum and maximum radius policies beyond the nominal cap
-- candidate-bracket refinement and explicit branch switching along the retained
-  critical mode
+- continuation from retained branch-probe states, including branch orientation,
+  adaptive radius, and switched-path event checks
+- interacting multi-mode branch selection beyond a single retained critical
+  direction
 - material yielding, residual stress, and section interaction
 - post-critical branch switching and external reference correlation
 

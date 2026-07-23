@@ -102,6 +102,12 @@ pub struct SolveFrame2dPDeltaRequest {
     pub arc_length_load_scale: Option<f64>,
     #[serde(default)]
     pub arc_length_target_iterations: Option<usize>,
+    #[serde(default)]
+    pub tangent_transition_refinement_steps: Option<usize>,
+    #[serde(default)]
+    pub branch_switch: Frame2dBranchSwitchSelection,
+    #[serde(default)]
+    pub branch_switch_amplitude: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +171,46 @@ pub enum Frame2dTangentStability {
     UnassessedSizeLimit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dBranchSwitchSelection {
+    Disabled,
+    Positive,
+    Negative,
+    Both,
+}
+
+impl Default for Frame2dBranchSwitchSelection {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frame2dBranchDirection {
+    Positive,
+    Negative,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dBranchSwitchProbeResult {
+    pub direction: Frame2dBranchDirection,
+    pub seed_amplitude: f64,
+    pub iterations: usize,
+    pub equilibrium_converged: bool,
+    pub primary_equilibrium_converged: bool,
+    pub distinct_branch: bool,
+    pub load_factor: Option<f64>,
+    pub residual_norm: Option<f64>,
+    pub modal_constraint_error: Option<f64>,
+    pub mode_projection: Option<f64>,
+    pub displacement_distance: Option<f64>,
+    pub primary_displacement_distance: Option<f64>,
+    pub displacements: Option<Vec<f64>>,
+    pub failure_detail: Option<String>,
+}
+
 impl Default for Frame2dImperfectionSource {
     fn default() -> Self {
         Self::BucklingMode
@@ -212,6 +258,18 @@ pub struct Frame2dPDeltaStepResult {
     pub tangent_critical_mode_residual: Option<f64>,
     #[serde(default)]
     pub tangent_critical_mode: Option<Vec<f64>>,
+    #[serde(default)]
+    pub tangent_transition_load_factor_min: Option<f64>,
+    #[serde(default)]
+    pub tangent_transition_load_factor_max: Option<f64>,
+    #[serde(default)]
+    pub tangent_transition_load_factor_width: Option<f64>,
+    #[serde(default)]
+    pub tangent_transition_refinements: Option<usize>,
+    #[serde(default)]
+    pub tangent_critical_load_factor: Option<f64>,
+    #[serde(default)]
+    pub branch_switch_probes: Vec<Frame2dBranchSwitchProbeResult>,
     pub residual_norm: f64,
     pub imperfection_amplification: f64,
     pub max_incremental_displacement: f64,

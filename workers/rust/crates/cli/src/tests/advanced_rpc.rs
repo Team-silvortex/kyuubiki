@@ -304,6 +304,9 @@ fn frame_2d_p_delta_request() -> SolveFrame2dPDeltaRequest {
         arc_length_radius: None,
         arc_length_load_scale: None,
         arc_length_target_iterations: None,
+        tangent_transition_refinement_steps: None,
+        branch_switch: Default::default(),
+        branch_switch_amplitude: None,
     }
 }
 

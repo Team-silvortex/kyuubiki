@@ -106,9 +106,9 @@ Current progress:
   limit-point, descending-branch, and segmented member-instability mesh sequence
   with explicit load increments and limit-point events while preserving load
   control as the legacy default
-- stability remains screening-only until complex-frame continuation, automatic
-  problem-scale radius bounds, residual stress, material nonlinearity,
-  bifurcation branch switching, and independent external correlation exist
+- stability remains screening-only until complex-frame switched-branch
+  continuation, automatic problem-scale radius bounds, residual stress,
+  material nonlinearity, and independent external correlation exist
 
 Qualification focus:
 
@@ -346,9 +346,12 @@ Current nonlinear-structure progress includes sampled limit-point events and
 bounded symmetric-tangent inertia diagnostics. Nonzero inertia changes outside
 a limit-point neighborhood now produce explicit bifurcation-candidate brackets.
 Transitions up to 128 reduced DOFs now retain a normalized critical mode for
-branch construction. The next stability milestone is candidate-bracket
-refinement and explicit branch switching; the 128-mode and 256-inertia caps are
-observability limits, not arc-length solver size limits.
+branch construction. Candidate intervals can now be narrowed by configurable,
+equilibrium-corrected inertia bisection. Opt-in positive and negative
+critical-mode constraints now recover independently equilibrated branch seeds
+without mutating the primary path. The next stability milestone is continuation
+from those seeds and interacting multi-mode selection; the 128-mode and
+256-inertia caps are observability limits, not arc-length solver size limits.
 
 ## 2.0 Boundary Rule
 

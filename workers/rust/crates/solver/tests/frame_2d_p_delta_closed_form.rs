@@ -101,6 +101,9 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         arc_length_radius: None,
         arc_length_load_scale: None,
         arc_length_target_iterations: None,
+        tangent_transition_refinement_steps: None,
+        branch_switch: Default::default(),
+        branch_switch_amplitude: None,
     }
 }
 
