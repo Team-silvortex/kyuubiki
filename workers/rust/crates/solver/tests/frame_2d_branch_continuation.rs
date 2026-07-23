@@ -18,7 +18,6 @@ fn switched_arch_branches_continue_without_mutating_the_primary_path() {
     request.max_step_cutbacks = Some(12);
     request.branch_switch = Frame2dBranchSwitchSelection::Both;
     request.branch_switch_amplitude = Some(5.0e-3);
-
     let probe_only =
         solve_frame_2d_p_delta(&request).expect("branch probes should remain inspectable");
     assert!(probe_only.steps.iter().all(|step| {
@@ -764,6 +763,7 @@ fn shallow_arch_request(segments_per_side: usize, angle: f64) -> SolveFrame2dPDe
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }
 

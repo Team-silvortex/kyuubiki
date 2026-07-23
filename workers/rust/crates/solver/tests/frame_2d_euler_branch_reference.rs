@@ -270,6 +270,7 @@ fn euler_network_request(element_count: usize, column_count: usize) -> SolveFram
         branch_continuation_steps: Some(8),
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }
 

@@ -197,6 +197,7 @@ fn shallow_arch_request() -> SolveFrame2dPDeltaRequest {
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }
 

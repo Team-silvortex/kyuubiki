@@ -435,4 +435,51 @@ mod tests {
             (2.0 * second[0].parent_angle_radians - first.parent_angle_radians).abs() < 1.0e-12
         );
     }
+
+    #[test]
+    fn projective_refinement_converges_to_an_independent_angular_boundary() {
+        let left = vec![1.0, 0.0, 0.0];
+        let right = vec![0.0, 1.0, 0.0];
+        let reference_angle = 0.37 * std::f64::consts::FRAC_PI_2;
+        let mut boundaries = vec![ResponseBoundary {
+            left_weights: left.clone(),
+            left_signature: analytic_signature(&left, reference_angle),
+            right_weights: right.clone(),
+            right_signature: analytic_signature(&right, reference_angle),
+        }];
+        let mut existing = vec![left, right];
+        let initial_width = boundary_angle(&boundaries[0]);
+
+        for level in 1..=8 {
+            let refinements = refinement_directions(&boundaries, &existing, 1);
+            assert_eq!(refinements.len(), 1);
+            let refinement = &refinements[0];
+            let midpoint_signature = analytic_signature(&refinement.weights, reference_angle);
+            let next = refined_boundaries(refinement, midpoint_signature);
+            assert_eq!(next.len(), 1);
+            let boundary = &next[0];
+            let expected_width = initial_width / 2.0_f64.powi(level);
+            assert!((boundary_angle(boundary) - expected_width).abs() < 1.0e-12);
+
+            let left_angle = projective_angle_from_first_axis(&boundary.left_weights);
+            let right_angle = projective_angle_from_first_axis(&boundary.right_weights);
+            assert!(
+                left_angle.min(right_angle) <= reference_angle
+                    && reference_angle <= left_angle.max(right_angle)
+            );
+            existing.push(refinement.weights.clone());
+            boundaries = next;
+        }
+
+        assert!(boundary_angle(&boundaries[0]) < 0.007);
+    }
+
+    fn analytic_signature(weights: &[f64], boundary_angle: f64) -> ResponseSignature {
+        let below_boundary = projective_angle_from_first_axis(weights) < boundary_angle;
+        vec![(below_boundary, below_boundary, below_boundary)]
+    }
+
+    fn projective_angle_from_first_axis(weights: &[f64]) -> f64 {
+        weights[1].abs().atan2(weights[0].abs())
+    }
 }

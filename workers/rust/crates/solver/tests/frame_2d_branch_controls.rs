@@ -1,7 +1,7 @@
 use kyuubiki_protocol::{
     Frame2dBranchSwitchSelection, Frame2dElementInput, Frame2dNodeInput,
-    Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    Frame2dPDeltaContinuationState, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
+    SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 use kyuubiki_solver::solve_frame_2d_p_delta;
 
@@ -104,6 +104,35 @@ fn branch_controls_are_bounded_and_dependency_checked() {
     assert_error(&request, "requires branch continuation steps");
 }
 
+#[test]
+fn continuation_state_is_mode_dimension_and_constraint_checked() {
+    let mut request = shallow_arch_request();
+    request.continuation_state = Some(zero_continuation_state(9));
+    assert_error(&request, "requires corotational arc-length control");
+
+    request.kinematics = Frame2dStabilityKinematics::Corotational;
+    request.path_control = Frame2dStabilityPathControl::ArcLength;
+    request.continuation_state = Some(zero_continuation_state(8));
+    assert_error(&request, "displacements must contain exactly 9 values");
+
+    request.continuation_state = Some(zero_continuation_state(9));
+    request.continuation_state.as_mut().unwrap().load_factor = f64::NAN;
+    assert_error(&request, "load factors must be finite");
+
+    request.continuation_state = Some(zero_continuation_state(9));
+    request.continuation_state.as_mut().unwrap().displacements[0] = 1.0e-3;
+    assert_error(&request, "zero on constrained degrees of freedom");
+}
+
+fn zero_continuation_state(dof_count: usize) -> Frame2dPDeltaContinuationState {
+    Frame2dPDeltaContinuationState {
+        displacements: vec![0.0; dof_count],
+        load_factor: 0.0,
+        displacement_increment: vec![0.0; dof_count],
+        load_factor_increment: 0.0,
+    }
+}
+
 fn enable_branch_switching(request: &mut SolveFrame2dPDeltaRequest) {
     request.kinematics = Frame2dStabilityKinematics::Corotational;
     request.path_control = Frame2dStabilityPathControl::ArcLength;
@@ -192,5 +221,6 @@ fn shallow_arch_request() -> SolveFrame2dPDeltaRequest {
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }

@@ -124,6 +124,16 @@ pub struct SolveFrame2dPDeltaRequest {
     pub branch_continuation_radius: Option<f64>,
     #[serde(default)]
     pub branch_continuation_min_radius_ratio: Option<f64>,
+    #[serde(default)]
+    pub continuation_state: Option<Frame2dPDeltaContinuationState>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dPDeltaContinuationState {
+    pub displacements: Vec<f64>,
+    pub load_factor: f64,
+    pub displacement_increment: Vec<f64>,
+    pub load_factor_increment: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -385,6 +395,10 @@ pub struct SolveFrame2dPDeltaResult {
     pub max_imperfection_amplification: f64,
     #[serde(default = "default_true")]
     pub converged: bool,
+    #[serde(default)]
+    pub continuation_state: Option<Frame2dPDeltaContinuationState>,
+    #[serde(default)]
+    pub continuation_state_correction_norm: Option<f64>,
 }
 
 fn default_single_iteration() -> usize {

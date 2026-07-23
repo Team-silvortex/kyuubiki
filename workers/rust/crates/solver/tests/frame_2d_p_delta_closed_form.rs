@@ -112,6 +112,7 @@ fn request(maximum_load_factor: Option<f64>, load_steps: usize) -> SolveFrame2dP
         branch_continuation_steps: None,
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }
 

@@ -106,34 +106,32 @@ fn workflow_route_executes_corotational_equilibrium() {
 
 #[test]
 fn workflow_route_executes_arc_length_continuation() {
-    let result = run_solve_operator(
-        "solve.frame_2d_p_delta",
-        json!({
-            "buckling": {
-                "frame": {
-                    "nodes": [
-                        {"id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
-                        {"id": "n1", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
-                        {"id": "n2", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -100000.0, "moment_z": 0.0}
-                    ],
-                    "elements": [
-                        {"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001},
-                        {"id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001}
-                    ]
-                },
-                "mode_count": 1
+    let mut payload = json!({
+        "buckling": {
+            "frame": {
+                "nodes": [
+                    {"id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                    {"id": "n1", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                    {"id": "n2", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -100000.0, "moment_z": 0.0}
+                ],
+                "elements": [
+                    {"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001},
+                    {"id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 210000000000.0, "moment_of_inertia": 0.000008, "section_modulus": 0.0001}
+                ]
             },
-            "imperfection_amplitude": 0.002,
-            "imperfection_mode_index": 0,
-            "kinematics": "corotational",
-            "path_control": "arc_length",
-            "load_steps": 4,
-            "max_iterations": 32,
-            "arc_length_target_iterations": 4,
-            "tolerance": 1.0e-8
-        }),
-    )
-    .expect("workflow arc-length route should solve");
+            "mode_count": 1
+        },
+        "imperfection_amplitude": 0.002,
+        "imperfection_mode_index": 0,
+        "kinematics": "corotational",
+        "path_control": "arc_length",
+        "load_steps": 4,
+        "max_iterations": 32,
+        "arc_length_target_iterations": 4,
+        "tolerance": 1.0e-8
+    });
+    let result = run_solve_operator("solve.frame_2d_p_delta", payload.clone())
+        .expect("workflow arc-length route should solve");
 
     assert_eq!(result["path_control"], "arc_length");
     assert_eq!(result["input"]["arc_length_target_iterations"], 4);
@@ -183,4 +181,26 @@ fn workflow_route_executes_arc_length_continuation() {
                 .as_array()
                 .is_some_and(Vec::is_empty)
     }));
+
+    let exported_state = result["continuation_state"].clone();
+    assert_eq!(exported_state["displacements"].as_array().unwrap().len(), 9);
+    assert_eq!(
+        exported_state["displacement_increment"]
+            .as_array()
+            .unwrap()
+            .len(),
+        9
+    );
+    payload["load_steps"] = json!(2);
+    payload["continuation_state"] = exported_state.clone();
+    let continued = run_solve_operator("solve.frame_2d_p_delta", payload)
+        .expect("workflow route should accept its exported continuation state");
+    assert_eq!(continued["input"]["continuation_state"], exported_state);
+    assert_eq!(continued["steps"].as_array().unwrap().len(), 2);
+    assert_eq!(continued["converged"], true);
+    assert!(
+        continued["continuation_state_correction_norm"]
+            .as_f64()
+            .is_some_and(f64::is_finite)
+    );
 }

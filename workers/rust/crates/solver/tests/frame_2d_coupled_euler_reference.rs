@@ -1,8 +1,8 @@
 use kyuubiki_protocol::{
     Frame2dBranchProbeOrigin, Frame2dBranchSwitchSelection, Frame2dElementInput,
-    Frame2dEquilibriumPathEvent, Frame2dNodeInput, Frame2dStabilityKinematics,
-    Frame2dStabilityPathControl, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest,
+    Frame2dEquilibriumPathEvent, Frame2dNodeInput, Frame2dPDeltaContinuationState,
+    Frame2dStabilityKinematics, Frame2dStabilityPathControl, SolveBucklingFrame2dRequest,
+    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 use kyuubiki_solver::{solve_buckling_frame_2d, solve_frame_2d_p_delta};
 
@@ -15,6 +15,9 @@ const ASYMMETRIC_COLUMN_INERTIA: f64 = 1.005e-4;
 const COUPLING_STIFFNESS: f64 = 20.0;
 const ELEMENT_COUNT: usize = 8;
 const NODES_PER_COLUMN: usize = ELEMENT_COUNT + 1;
+
+#[path = "frame_2d_coupled_euler_reference/triplet.rs"]
+mod triplet;
 
 #[test]
 fn connected_columns_recover_the_external_symmetric_and_split_mode_references() {
@@ -275,10 +278,25 @@ fn coupled_euler_request(
     right_inertia: f64,
     imperfection_weights: [f64; 2],
 ) -> SolveFrame2dPDeltaRequest {
-    let mut nodes = Vec::with_capacity(NODES_PER_COLUMN * 2);
-    let mut elements = Vec::with_capacity(ELEMENT_COUNT * 2 + 1);
-    let mut imperfection_shape = Vec::with_capacity(NODES_PER_COLUMN * 2 * 3);
-    for (column, imperfection_weight) in imperfection_weights.into_iter().enumerate() {
+    coupled_column_network_request(
+        &[COLUMN_INERTIA, right_inertia],
+        &imperfection_weights,
+        &[(0, 1, COUPLING_STIFFNESS)],
+    )
+}
+
+fn coupled_column_network_request(
+    inertias: &[f64],
+    imperfection_weights: &[f64],
+    couplers: &[(usize, usize, f64)],
+) -> SolveFrame2dPDeltaRequest {
+    assert_eq!(inertias.len(), imperfection_weights.len());
+    let mut nodes = Vec::with_capacity(NODES_PER_COLUMN * inertias.len());
+    let mut elements = Vec::with_capacity(ELEMENT_COUNT * inertias.len() + couplers.len());
+    let mut imperfection_shape = Vec::with_capacity(NODES_PER_COLUMN * inertias.len() * 3);
+    for (column, (&moment_of_inertia, &imperfection_weight)) in
+        inertias.iter().zip(imperfection_weights).enumerate()
+    {
         let node_offset = nodes.len();
         nodes.extend((0..=ELEMENT_COUNT).map(|index| {
             let ratio = index as f64 / ELEMENT_COUNT as f64;
@@ -299,11 +317,6 @@ fn coupled_euler_request(
                 moment_z: 0.0,
             }
         }));
-        let moment_of_inertia = if column == 0 {
-            COLUMN_INERTIA
-        } else {
-            right_inertia
-        };
         elements.extend((0..ELEMENT_COUNT).map(|index| Frame2dElementInput {
             id: format!("coupled-column-{column}-member-{index}"),
             node_i: node_offset + index,
@@ -314,15 +327,19 @@ fn coupled_euler_request(
             section_modulus: 1.0,
         }));
     }
-    elements.push(Frame2dElementInput {
-        id: "midpoint-coupler".into(),
-        node_i: midpoint_node(0),
-        node_j: midpoint_node(1),
-        area: COUPLING_STIFFNESS * COLUMN_SPACING / YOUNGS_MODULUS,
-        youngs_modulus: YOUNGS_MODULUS,
-        moment_of_inertia: 1.0e-12,
-        section_modulus: 1.0,
-    });
+    elements.extend(
+        couplers
+            .iter()
+            .map(|&(left, right, stiffness)| Frame2dElementInput {
+                id: format!("midpoint-coupler-{left}-{right}"),
+                node_i: midpoint_node(left),
+                node_j: midpoint_node(right),
+                area: stiffness * (right.abs_diff(left) as f64 * COLUMN_SPACING) / YOUNGS_MODULUS,
+                youngs_modulus: YOUNGS_MODULUS,
+                moment_of_inertia: 1.0e-12,
+                section_modulus: 1.0,
+            }),
+    );
     let euler = std::f64::consts::PI.powi(2) * YOUNGS_MODULUS * COLUMN_INERTIA / LENGTH.powi(2);
 
     SolveFrame2dPDeltaRequest {
@@ -354,6 +371,7 @@ fn coupled_euler_request(
         branch_continuation_steps: Some(4),
         branch_continuation_radius: None,
         branch_continuation_min_radius_ratio: None,
+        continuation_state: None,
     }
 }
 

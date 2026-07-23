@@ -375,7 +375,10 @@ layers now refine nearest changing-response boundaries with normalized,
 projectively unique midpoints and a per-layer base-sample budget. Refinement is
 now hierarchical: child intervals retain only changing endpoint responses and
 halve their parent's projective angle. Probe origin, refinement level, and
-parent angle remain visible through the engine route. A ten-element Williams
+parent angle remain visible through the engine route. An independent analytic
+boundary at 37% of a 90-degree projective arc now proves eight levels of exact
+angle halving while the bracket keeps containing the reference, separating the
+refinement convergence claim from any one FE fixture. A ten-element Williams
 toggle-frame path now correlates the first external snap-through limit event
 against the published analytic load within 5%. A separate 8/16-element pinned
 Euler column correlates a sampled bifurcation candidate and two signed,
@@ -394,11 +397,32 @@ eigenvectors, and the lower and upper mixed single-mode branches continue with
 bounded errors. The same case exposed and closed a false-positive boundary:
 pairwise branch probes are now solved only inside a degenerate critical
 eigenspace. Separated modes return an explicit local rejection instead of four
-nominal combinations collapsing onto one physical branch. The next stability
-milestone is therefore a multi-parameter codimension-two connected unfolding,
-where a genuinely repeated mixed subspace can physically support pairwise
-families, plus external asymmetric post-critical trajectory correlation. The
-first internal complex-topology isolation reference also proves
+nominal combinations collapsing onto one physical branch. A three-column
+complete midpoint-coupling graph now supplies the complementary positive case:
+its uniform mode retains the Euler factor, its two graph-Laplacian modes share
+the external `pi^2 EI / L^2 + 6 k L / pi^2` factor, and all eight individual
+and pairwise probes in that connected mixed repeated subspace are distinct and
+continue with bounded errors. A five-point parameter grid now perturbs the
+third-column inertia and one coupling edge independently; all three factors
+and the repeated-root split track a closed-form reduced 3-by-3 spectrum. This
+completes the linear two-parameter spectral unfolding. Two combined-parameter
+points on opposite sides first established external mixed-eigenvector
+attribution, signed nonlinear branches, and bounded continuation. A five-point
+semicircular path now tracks that identity around the repeated origin by
+maximum neighboring mode overlap; every FE critical direction and branch seed
+retains the corresponding attribution and bounded continuation. The test was
+split into a dedicated triplet submodule before this expansion. Primary
+arc-length paths now export a full reusable state contract, validate all DOFs
+and constrained components on import, correct the displacement to equilibrium
+under changed model parameters, preserve generalized branch orientation, and
+return the next reusable state through the engine JSON route. A retained
+three-stage regression seeds a selected nonlinear mixed branch on one side,
+crosses the exact repeated point, and exits after eigenvalue ordering exchanges
+without losing its physical mode identity. The next stability milestone is
+adaptive parameter-step control and independent qualification of a broader
+state-seeded multi-parameter surface, plus external asymmetric post-critical
+trajectory correlation. The first internal
+complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance
 after adding an unloaded free branch; the 128-mode and 256-inertia caps are
 observability limits, not arc-length solver size limits.

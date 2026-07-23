@@ -76,6 +76,8 @@ pub fn solve_frame_2d_p_delta(
         .load_steps
         .unwrap_or(DEFAULT_LOAD_STEPS)
         .clamp(1, 128);
+    let mut continuation_state = None;
+    let mut continuation_state_correction_norm = None;
     let mut steps = match (request.kinematics, request.path_control) {
         (
             Frame2dStabilityKinematics::LinearizedPDelta,
@@ -99,14 +101,17 @@ pub fn solve_frame_2d_p_delta(
             )?
         }
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::ArcLength) => {
-            solve_arc_length_steps(
+            let result = solve_arc_length_steps(
                 request,
                 &system,
                 &initial_imperfection_shape,
                 maximum_load_factor,
                 critical_factor,
                 load_steps,
-            )?
+            )?;
+            continuation_state = Some(result.continuation_state);
+            continuation_state_correction_norm = result.continuation_state_correction_norm;
+            result.steps
         }
         (Frame2dStabilityKinematics::LinearizedPDelta, Frame2dStabilityPathControl::ArcLength) => {
             unreachable!("arc-length validation requires corotational kinematics")
@@ -135,6 +140,8 @@ pub fn solve_frame_2d_p_delta(
         final_displacements,
         max_imperfection_amplification,
         converged,
+        continuation_state,
+        continuation_state_correction_norm,
     })
 }
 
@@ -233,6 +240,14 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
         && request.kinematics != Frame2dStabilityKinematics::Corotational
     {
         return Err("frame 2d arc-length control requires corotational kinematics".into());
+    }
+    if request.continuation_state.is_some()
+        && (request.kinematics != Frame2dStabilityKinematics::Corotational
+            || request.path_control != Frame2dStabilityPathControl::ArcLength)
+    {
+        return Err(
+            "frame 2d p-delta continuation state requires corotational arc-length control".into(),
+        );
     }
     if let Some(radius) = request.arc_length_radius
         && !(radius.is_finite() && radius > 0.0)

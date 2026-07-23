@@ -2,9 +2,10 @@ use crate::{
     BucklingBeam1dElementInput, BucklingBeam1dModeResult, BucklingBeam1dNodeInput,
     BucklingModeDirectionAssessment, Frame2dBranchDirection, Frame2dBranchProbeOrigin,
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
-    Frame2dNodeInput, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
-    Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
-    SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    Frame2dNodeInput, Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult,
+    Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest,
+    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest,
 };
 
 #[test]
@@ -84,6 +85,12 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
             branch_continuation_steps: Some(4),
             branch_continuation_radius: Some(0.02),
             branch_continuation_min_radius_ratio: Some(0.125),
+            continuation_state: Some(Frame2dPDeltaContinuationState {
+                displacements: vec![0.0, 0.0, 0.0, 0.001, -0.002, 0.003],
+                load_factor: 1.5,
+                displacement_increment: vec![0.0, 0.0, 0.0, 0.0001, -0.0002, 0.0003],
+                load_factor_increment: -0.05,
+            }),
         })
         .expect("p-delta request should serialize"),
     };
@@ -117,6 +124,10 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(params.branch_continuation_min_radius_ratio, Some(0.125));
     assert_eq!(params.kinematics, Frame2dStabilityKinematics::Corotational);
     assert_eq!(params.path_control, Frame2dStabilityPathControl::ArcLength);
+    let continuation = params.continuation_state.as_ref().unwrap();
+    assert_eq!(continuation.load_factor, 1.5);
+    assert_eq!(continuation.displacements[4], -0.002);
+    assert_eq!(continuation.load_factor_increment, -0.05);
 
     let mut legacy = decoded.params;
     let legacy_object = legacy.as_object_mut().unwrap();
@@ -139,6 +150,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     legacy_object.remove("branch_continuation_steps");
     legacy_object.remove("branch_continuation_radius");
     legacy_object.remove("branch_continuation_min_radius_ratio");
+    legacy_object.remove("continuation_state");
     let legacy: SolveFrame2dPDeltaRequest =
         serde_json::from_value(legacy).expect("legacy p-delta params should decode");
     assert_eq!(
@@ -162,6 +174,7 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert!(!legacy.branch_switch_pairwise_combinations);
     assert!(legacy.branch_switch_mode_weights.is_none());
     assert!(legacy.branch_switch_subspace_sample_count.is_none());
+    assert!(legacy.continuation_state.is_none());
     assert!(legacy.branch_switch_subspace_refinement_levels.is_none());
     assert_eq!(legacy.branch_continuation_steps, None);
     assert_eq!(legacy.branch_continuation_radius, None);

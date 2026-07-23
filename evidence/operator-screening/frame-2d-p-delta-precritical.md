@@ -146,6 +146,44 @@ branches. Neither control mode is a material-plasticity model.
   correction with a degenerate-eigenspace diagnostic. This prevents four
   combinations from collapsing onto one physical branch and being falsely
   reported as distinct.
+- Three identical columns with equal-stiffness midpoint links on every pair
+  form a connected complete graph. The uniform mode remains within 0.2% of
+  `pi^2 EI / L^2`, while the next two factors agree with each other within
+  `1e-9` and remain within 0.5% of the graph-Laplacian Rayleigh reference
+  `pi^2 EI / L^2 + 6 k L / pi^2`. Both repeated eigenvectors retain at least
+  two participating columns and near-zero column-amplitude sum. An
+  antisymmetric invariant path reaches the repeated nonlinear transition,
+  where two normalized critical modes produce four individual and four
+  pairwise signed probes. All eight are distinct and each completes two
+  continuation steps with force and arc-length errors below `1e-7`. This is a
+  genuinely connected, mixed, degenerate subspace; it does not rely on
+  disconnected copies.
+- A five-point two-parameter grid independently perturbs the third-column
+  inertia and one complete-graph edge stiffness around that repeated point.
+  At every grid point, the first three finite-element factors remain within
+  0.5% of the closed-form eigenvalues of the corresponding reduced symmetric
+  3-by-3 Rayleigh matrix. The repeated factor remains unresolved only at the
+  symmetric origin and develops a relative split above `1e-4` under either
+  parameter perturbation; the measured split itself agrees with the reduced
+  spectrum within 0.5%. This validates the linear spectral unfolding, not yet
+  the complete nonlinear two-parameter branch surface. A five-point
+  semicircular parameter path around the repeated origin additionally drives
+  each nonlinear solve with the overlap-tracked external mixed eigenvector. At
+  every point, the selected tangent critical direction retains above 0.9
+  alignment with that reduced reference; both signed equilibrium seeds retain
+  above 0.98 alignment with the selected tangent mode and complete two
+  continuation steps below both `1e-7` error gates. Neighboring external and
+  finite-element directions each retain above 0.75 absolute overlap.
+- The same triplet now exports a complete arc-length continuation state from a
+  selected nonlinear branch: full displacement and displacement-increment
+  vectors plus load factor and load-factor increment. That state is corrected
+  to equilibrium after each parameter change rather than trusted as-is. A
+  retained regression starts on the negative inertia-skew side, passes through
+  the exact repeated origin, and exits on the positive side after mode ordering
+  exchanges. Both state-seeded solves converge below the `1e-7` equilibrium and
+  arc-length error gates, retain above 0.9 alignment at the repeated point, and
+  retain above 0.85 alignment with the overlap-selected physical mode after the
+  exchange.
 - Subdividing each arch side into 2, 4, and 8 frame elements resolves an earlier
   member-flexural instability branch hidden by the rigid-link-like two-element
   fixture. Linear critical factors converge to within 0.1% between the two
@@ -224,6 +262,15 @@ branches. Neither control mode is a material-plasticity model.
   branch starts with the generalized direction from the refined critical state
   to its equilibrated seed, then owns independent radius adaptation, cutbacks,
   convergence status, and failure detail.
+- Every primary arc-length result now exports `continuation_state`; callers may
+  feed it back through the optional request field of the same name. Imported
+  states require corotational arc-length control, exact full-DOF vector sizes,
+  finite values, and zero constrained components. The solver first corrects the
+  imported displacement to equilibrium in the current model and reports
+  `continuation_state_correction_norm`, while preserving the prior generalized
+  increment for branch orientation. The engine JSON route round-trips and
+  executes this state, so headless callers do not need an in-process solver
+  shortcut.
 - `branch_continuation_radius` optionally replaces the inherited primary-path
   radius for switched paths. It must be positive and finite and is rejected
   unless at least one continuation step is requested; each accepted step still
@@ -331,8 +378,11 @@ branches. Neither control mode is a material-plasticity model.
   classifications still differ. Every adaptive probe reports that parent's
   projective width in `subspace_parent_angle_radians`; retained two-layer
   three-arch evidence requires the second-layer maximum width to be strictly
-  smaller than the first-layer maximum, while the geometric unit check proves
-  exact angle halving for a single retained boundary.
+  smaller than the first-layer maximum. An independent analytic projective
+  boundary at 37% of a 90-degree arc is retained inside the changing-response
+  bracket for eight refinement levels; its width halves exactly at every level
+  and falls below 0.007 radians. This checks angular convergence separately
+  from any one finite-element branch response.
 - Refinement requires the bounded base fan and adds at most its requested
   sample count per layer. At the maximum four-mode setting this limits the
   complete search to 48 direction families, or 96 probes when both signs are
@@ -372,8 +422,7 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- angular refinement convergence against an independent branch reference
-- multi-parameter codimension-two connected branch unfolding reference
+- adaptive parameter-step control and independent qualification of state-seeded multi-parameter surfaces
 - external post-critical trajectory correlation for an asymmetric connected frame
 - material yielding, residual stress, and section interaction
 
