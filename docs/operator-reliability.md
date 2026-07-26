@@ -851,12 +851,25 @@ in compression and verifies the independent penalty response without healing.
 Protocol, Agent RPC, engine workflow, Rust headless discovery, and self-hosted
 Web submission tests retain the same public request. This is a standalone
 constitutive operator. `solve.cohesive_interface_2d` now reuses that retained
-history law in a four-node zero-thickness line interface. Closed-form checks
-cover local opening and shear, directional softening tangents, rigid coordinate
-rotation, cyclic history, and exact nodal-force self-balance. The retained
+history law in a four-node zero-thickness line interface. Two-point Gauss
+integration retains independent directional histories and emits the complete
+`8 x 8` material tangent. Closed-form checks cover local opening and shear,
+directional softening tangents, rigid coordinate rotation, rigid translation,
+the antisymmetric endpoint-jump mode, tangent finite differences, cyclic
+history, and exact nodal-force self-balance. The retained
 scope is a prescribed single-element response with uncoupled directional
-damage, not yet a global multi-element equilibrium solve, mixed-mode
-interaction law, frictional delamination model, or frame-fiber assembly.
+damage. `solve.cohesive_interface_mesh_2d` now assembles those kernels into a
+constrained multi-element equilibrium model. Its incremental Newton path
+resolves a material catalog, assembles shared-node forces and tangents, reports
+nodal reactions, and commits Gauss-point history only after convergence.
+Single- and two-element closed forms retain the uniform-opening displacement
+and reaction distribution; a deliberately underconstrained rigid mode retains
+singular-tangent diagnostics and zero-state rollback. Protocol, Agent RPC,
+engine workflow, result chunking, Rust headless discovery, and self-hosted Web
+submission share the same public model. This remains a dense, 512-node,
+cohesive-only screening solve under proportional load control, not a host-solid
+co-assembly, snap-back continuation, coupled mixed-mode interaction law,
+frictional delamination model, or experimental calibration claim.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

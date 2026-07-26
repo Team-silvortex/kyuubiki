@@ -107,6 +107,9 @@
       ],
       "validation_methods": [
         "zero_thickness_interface_closed_form",
+        "two_point_gauss_integration",
+        "consistent_tangent_finite_difference",
+        "antisymmetric_jump_zero_energy_regression",
         "rigid_rotation_invariance",
         "nodal_internal_force_balance",
         "directional_history_regression",
@@ -116,6 +119,9 @@
         "upper_and_lower_node_pairs_initially_coincide",
         "local_separation_is_the_projected_average_displacement_jump",
         "local_traction_is_invariant_under_rigid_coordinate_rotation",
+        "antisymmetric_endpoint_jump_produces_nonzero_internal_force",
+        "rigid_translation_produces_zero_jump_and_internal_force",
+        "element_tangent_matches_the_derivative_of_nodal_internal_force",
         "element_nodal_internal_forces_sum_to_zero",
         "normal_and_shear_damage_are_monotonic_and_bounded"
       ],
@@ -143,6 +149,55 @@
           "id": "cohesive-interface-2d-workflow",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_2d_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "cohesive-interface-mesh-2d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "cohesive-interface-mesh-2d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.cohesive_interface_mesh_2d"
+      ],
+      "validation_methods": [
+        "single_element_closed_form",
+        "shared_node_multi_element_assembly",
+        "incremental_newton_equilibrium",
+        "singular_tangent_rollback",
+        "rpc_and_workflow_contract"
+      ],
+      "formal_invariants": [
+        "trial_histories_are_not_committed_before_equilibrium",
+        "failed_steps_restore_the_last_converged_displacement_and_history",
+        "shared_node_internal_forces_are_assembled_once_per_incident_element",
+        "fixed_dof_reactions_balance_external_load",
+        "uniform_elastic_opening_matches_traction_over_initial_stiffness"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-nonlinear.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-screening/cohesive-interface-mesh-2d.md",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
+        "workers/rust/crates/protocol/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/engine/tests/cohesive_interface_mesh_2d_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "cohesive-interface-mesh-2d-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-2d-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_2d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-2d-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_mesh_2d_workflow -- --nocapture"
         }
       ]
     }

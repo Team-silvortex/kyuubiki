@@ -143,6 +143,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/cohesive-interface-2d/jobs",
     },
     DirectFemRoute {
+        action: "solve_cohesive_interface_mesh_2d",
+        route: "/api/v1/fem/cohesive-interface-mesh-2d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_spring_2d",
         route: "/api/v1/fem/spring-2d/jobs",
     },
@@ -318,6 +322,10 @@ mod tests {
             direct_fem_submit_route("solve_cohesive_interface_2d"),
             Some("/api/v1/fem/cohesive-interface-2d/jobs")
         );
+        assert_eq!(
+            direct_fem_submit_route("solve_cohesive_interface_mesh_2d"),
+            Some("/api/v1/fem/cohesive-interface-mesh-2d/jobs")
+        );
         assert_eq!(direct_fem_submit_route("solve_unknown"), None);
     }
 
@@ -333,7 +341,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 46);
+        assert_eq!(routes.len(), 47);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 

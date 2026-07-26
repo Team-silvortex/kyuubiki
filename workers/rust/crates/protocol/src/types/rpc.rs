@@ -134,6 +134,8 @@ pub enum RpcMethod {
     SolveCohesiveInterface1d,
     #[serde(rename = "solve_cohesive_interface_2d")]
     SolveCohesiveInterface2d,
+    #[serde(rename = "solve_cohesive_interface_mesh_2d")]
+    SolveCohesiveInterfaceMesh2d,
     #[serde(rename = "solve_spring_2d")]
     SolveSpring2d,
     #[serde(rename = "solve_spring_3d")]

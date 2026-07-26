@@ -475,5 +475,21 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
                 "2d",
             ],
         ),
+        built_in_solver_descriptor(
+            "solve.cohesive_interface_mesh_2d",
+            "mechanical",
+            "cohesive_interface_mesh_2d",
+            "Solve a constrained multi-element 2D cohesive interface mesh with incremental Newton equilibrium and committed damage history.",
+            &[
+                "screening",
+                "mechanical",
+                "interface",
+                "cohesive-zone",
+                "mesh",
+                "newton",
+                "damage",
+                "2d",
+            ],
+        ),
     ]
 }

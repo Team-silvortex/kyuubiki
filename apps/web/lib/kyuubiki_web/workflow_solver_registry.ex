@@ -149,7 +149,11 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
     {"solve.cohesive_interface_2d", :solve_cohesive_interface_2d, "mechanical",
      "cohesive_interface_2d",
      "Evaluate a four-node zero-thickness interface with local jumps, directional damage, and balanced nodal forces.",
-     ["screening", "mechanical", "interface", "cohesive-zone", "zero-thickness", "damage", "2d"]}
+     ["screening", "mechanical", "interface", "cohesive-zone", "zero-thickness", "damage", "2d"]},
+    {"solve.cohesive_interface_mesh_2d", :solve_cohesive_interface_mesh_2d, "mechanical",
+     "cohesive_interface_mesh_2d",
+     "Solve a constrained cohesive interface mesh with incremental Newton equilibrium and committed damage history.",
+     ["screening", "mechanical", "interface", "cohesive-zone", "mesh", "newton", "damage", "2d"]}
   ]
 
   @solvers Enum.map(@solver_specs, fn {id, method, domain, family, summary, capability_tags} ->

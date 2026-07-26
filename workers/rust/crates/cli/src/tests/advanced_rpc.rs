@@ -1,14 +1,17 @@
 use super::*;
 use kyuubiki_protocol::{
     CohesiveInterface2dDisplacementStepInput, CohesiveInterface2dElementInput,
-    CohesiveInterface2dMaterialInput, CohesiveInterface2dNodeInput, ContactGap1dContactInput,
-    Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
-    Frame2dStabilityKinematics, Frame3dNodeInput, ModalFrame2dElementInput,
-    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
-    SolveContactGap1dRequest, SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
-    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    CohesiveInterface2dMaterialInput, CohesiveInterface2dNodeInput,
+    CohesiveInterfaceMesh2dElementInput, CohesiveInterfaceMesh2dMaterialInput,
+    CohesiveInterfaceMesh2dNodeInput, ContactGap1dContactInput, Frame2dElementInput,
+    Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput, Frame2dStabilityKinematics,
+    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
+    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolveBucklingFrame2dRequest,
+    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
+    SolveCohesiveInterfaceMesh2dRequest, SolveContactGap1dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
@@ -100,8 +103,27 @@ fn handles_cohesive_interface_2d_rpc_requests() {
         serde_json::from_value(final_response.result.expect("solver result"))
             .expect("cohesive interface 2d result");
     assert_eq!(result.steps.len(), 1);
+    assert_eq!(result.steps[0].integration_points.len(), 2);
+    assert_eq!(result.steps[0].element_tangent.len(), 8);
     assert!(result.max_normal_damage > 0.0);
     assert!(result.max_shear_damage > 0.0);
+}
+
+#[test]
+fn handles_cohesive_interface_mesh_2d_rpc_requests() {
+    let final_response = execute(
+        RpcMethod::SolveCohesiveInterfaceMesh2d,
+        cohesive_interface_mesh_2d_request(),
+    );
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterfaceMesh2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("cohesive interface mesh 2d result");
+    assert!(result.converged);
+    assert_eq!(result.nodes.len(), 4);
+    assert_eq!(result.elements.len(), 1);
+    assert!((result.nodes[2].displacement[1] - 0.005).abs() < 1.0e-10);
 }
 
 #[test]
@@ -306,6 +328,43 @@ fn cohesive_interface_2d_request() -> SolveCohesiveInterface2dRequest {
         displacement_history: vec![CohesiveInterface2dDisplacementStepInput {
             nodal_displacements: vec![[0.0, 0.0], [0.0, 0.0], [0.03, 0.03], [0.03, 0.03]],
         }],
+    }
+}
+
+fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
+    SolveCohesiveInterfaceMesh2dRequest {
+        id: "mesh.rpc".to_string(),
+        nodes: [
+            ("lower-0", 0.0, true, 0.0),
+            ("lower-1", 1.0, true, 0.0),
+            ("upper-0", 0.0, false, 2.5),
+            ("upper-1", 1.0, false, 2.5),
+        ]
+        .into_iter()
+        .map(|(id, x, lower, load)| CohesiveInterfaceMesh2dNodeInput {
+            id: id.to_string(),
+            x,
+            y: 0.0,
+            fixed: [true, lower],
+            load: [0.0, load],
+        })
+        .collect(),
+        materials: vec![CohesiveInterfaceMesh2dMaterialInput {
+            id: "adhesive".to_string(),
+            properties: cohesive_interface_2d_request().material,
+        }],
+        elements: vec![CohesiveInterfaceMesh2dElementInput {
+            id: "interface-0".to_string(),
+            lower_i: 0,
+            lower_j: 1,
+            upper_i: 2,
+            upper_j: 3,
+            thickness: 1.0,
+            material_id: "adhesive".to_string(),
+        }],
+        load_steps: Some(2),
+        max_iterations: Some(12),
+        tolerance: Some(1.0e-11),
     }
 }
 

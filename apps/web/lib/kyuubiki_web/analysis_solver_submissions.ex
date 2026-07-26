@@ -199,6 +199,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_cohesive_interface_2d"
       )
 
+  def submit_cohesive_interface_mesh_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_cohesive_interface_mesh_2d/1,
+        "solve_cohesive_interface_mesh_2d"
+      )
+
   def submit_spring_2d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_spring_2d/1, "solve_spring_2d")
 

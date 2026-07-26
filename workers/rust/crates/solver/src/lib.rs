@@ -13,6 +13,7 @@ mod buckling_sparse;
 mod chain_tridiagonal;
 mod cohesive_interface_1d;
 mod cohesive_interface_2d;
+mod cohesive_interface_mesh_2d;
 mod cohesive_law;
 mod dynamic_spring_1d_validation;
 mod electrostatic_plane_2d;
@@ -113,6 +114,7 @@ pub use buckling_beam_1d::solve_buckling_beam_1d;
 pub use buckling_frame_2d::solve_buckling_frame_2d;
 pub use cohesive_interface_1d::solve_cohesive_interface_1d;
 pub use cohesive_interface_2d::solve_cohesive_interface_2d;
+pub use cohesive_interface_mesh_2d::solve_cohesive_interface_mesh_2d;
 pub use electrostatic_plane_2d::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
 };

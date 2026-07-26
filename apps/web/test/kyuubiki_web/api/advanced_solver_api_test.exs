@@ -180,6 +180,39 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     ]
   }
 
+  @cohesive_interface_mesh_2d_request %{
+    "id" => "mesh.web",
+    "nodes" => [
+      %{"id" => "lower-i", "x" => 0.0, "y" => 0.0, "fixed" => [true, true], "load" => [0.0, 0.0]},
+      %{"id" => "lower-j", "x" => 1.0, "y" => 0.0, "fixed" => [true, true], "load" => [0.0, 0.0]},
+      %{
+        "id" => "upper-i",
+        "x" => 0.0,
+        "y" => 0.0,
+        "fixed" => [true, false],
+        "load" => [0.0, 2.5]
+      },
+      %{"id" => "upper-j", "x" => 1.0, "y" => 0.0, "fixed" => [true, false], "load" => [0.0, 2.5]}
+    ],
+    "materials" => [
+      %{"id" => "adhesive", "properties" => @cohesive_interface_2d_request["material"]}
+    ],
+    "elements" => [
+      %{
+        "id" => "interface-0",
+        "lower_i" => 0,
+        "lower_j" => 1,
+        "upper_i" => 2,
+        "upper_j" => 3,
+        "thickness" => 1.0,
+        "material_id" => "adhesive"
+      }
+    ],
+    "load_steps" => 2,
+    "max_iterations" => 12,
+    "tolerance" => 1.0e-11
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
@@ -189,6 +222,8 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     {"/api/v1/fem/cohesive-interface-1d/jobs", "max_damage", @cohesive_interface_request},
     {"/api/v1/fem/cohesive-interface-2d/jobs", "max_normal_damage",
      @cohesive_interface_2d_request},
+    {"/api/v1/fem/cohesive-interface-mesh-2d/jobs", "converged",
+     @cohesive_interface_mesh_2d_request},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},

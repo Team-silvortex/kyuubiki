@@ -161,6 +161,29 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_cohesive_interface_2d(_params),
     do: {:error, :invalid_cohesive_interface_2d_model}
 
+  def normalize_cohesive_interface_mesh_2d(
+        %{"nodes" => nodes, "materials" => materials, "elements" => elements} = params
+      )
+      when is_list(nodes) and is_list(materials) and is_list(elements),
+      do: {:ok, params}
+
+  def normalize_cohesive_interface_mesh_2d(
+        %{nodes: nodes, materials: materials, elements: elements} = params
+      )
+      when is_list(nodes) and is_list(materials) and is_list(elements),
+      do:
+        {:ok,
+         params
+         |> Map.delete(:nodes)
+         |> Map.delete(:materials)
+         |> Map.delete(:elements)
+         |> Map.put("nodes", nodes)
+         |> Map.put("materials", materials)
+         |> Map.put("elements", elements)}
+
+  def normalize_cohesive_interface_mesh_2d(_params),
+    do: {:error, :invalid_cohesive_interface_mesh_2d_model}
+
   def normalize_spring_2d(params), do: normalize_graph_model(params, :invalid_spring_2d_model)
   def normalize_spring_3d(params), do: normalize_graph_model(params, :invalid_spring_3d_model)
   def normalize_frame_2d(params), do: normalize_graph_model(params, :invalid_frame_model)

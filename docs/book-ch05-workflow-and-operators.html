@@ -126,7 +126,15 @@
           four-node <code>solve.cohesive_interface_2d</code> element kernel now
           projects upper/lower displacement jumps into local opening and shear,
           rotates tractions back to global coordinates, and emits exactly
-          self-balanced nodal forces. Global nonlinear interface-mesh assembly,
+          self-balanced nodal forces. Two-point Gauss integration retains
+          independent history at each point and emits a complete
+          <code>8 x 8</code> consistent material tangent. The separate
+          <code>solve.cohesive_interface_mesh_2d</code> operator now resolves a
+          material catalog and assembles multiple kernels into an incremental
+          Newton equilibrium system. Trial Gauss-point histories are committed
+          only after convergence; failures retain the previous state and expose
+          a reason. The current bounded dense solve covers cohesive-only
+          component screening. Host-solid co-assembly, post-peak continuation,
           coupled mixed-mode delamination, friction, and three-dimensional
           composite constitutive behavior remain future capabilities.
         </p>

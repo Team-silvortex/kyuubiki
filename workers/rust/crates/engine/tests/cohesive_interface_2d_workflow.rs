@@ -28,6 +28,20 @@ fn workflow_runs_zero_thickness_cohesive_interface_2d() {
             .len(),
         4
     );
+    assert_eq!(
+        result["steps"][0]["integration_points"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        result["steps"][0]["element_tangent"]
+            .as_array()
+            .unwrap()
+            .len(),
+        8
+    );
 }
 
 fn graph() -> WorkflowGraph {

@@ -87,6 +87,20 @@ pub struct SolveCohesiveInterface2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterface2dIntegrationPointResult {
+    pub natural_coordinate: f64,
+    pub local_separation: [f64; 2],
+    pub local_traction: [f64; 2],
+    pub local_tangent: [f64; 2],
+    pub shear_damage: f64,
+    pub normal_damage: f64,
+    pub max_shear_separation: f64,
+    pub max_normal_opening: f64,
+    pub shear_regime: CohesiveTractionRegime,
+    pub normal_regime: CohesiveTractionRegime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CohesiveInterface2dStepResult {
     pub step: usize,
     pub local_separation: [f64; 2],
@@ -94,6 +108,8 @@ pub struct CohesiveInterface2dStepResult {
     pub local_tangent: [f64; 2],
     pub global_traction: [f64; 2],
     pub element_nodal_internal_forces: [[f64; 2]; 4],
+    pub element_tangent: [[f64; 8]; 8],
+    pub integration_points: Vec<CohesiveInterface2dIntegrationPointResult>,
     pub shear_damage: f64,
     pub normal_damage: f64,
     pub max_shear_separation: f64,
@@ -119,4 +135,86 @@ pub struct SolveCohesiveInterface2dResult {
     pub max_normal_damage: f64,
     pub shear_failed: bool,
     pub normal_failed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fixed: [bool; 2],
+    pub load: [f64; 2],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dMaterialInput {
+    pub id: String,
+    pub properties: CohesiveInterface2dMaterialInput,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dElementInput {
+    pub id: String,
+    pub lower_i: usize,
+    pub lower_j: usize,
+    pub upper_i: usize,
+    pub upper_j: usize,
+    pub thickness: f64,
+    pub material_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveCohesiveInterfaceMesh2dRequest {
+    pub id: String,
+    pub nodes: Vec<CohesiveInterfaceMesh2dNodeInput>,
+    pub materials: Vec<CohesiveInterfaceMesh2dMaterialInput>,
+    pub elements: Vec<CohesiveInterfaceMesh2dElementInput>,
+    #[serde(default)]
+    pub load_steps: Option<usize>,
+    #[serde(default)]
+    pub max_iterations: Option<usize>,
+    #[serde(default)]
+    pub tolerance: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dNodeResult {
+    pub id: String,
+    pub displacement: [f64; 2],
+    pub reaction: [f64; 2],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dElementResult {
+    pub id: String,
+    pub material_id: String,
+    pub local_separation: [f64; 2],
+    pub local_traction: [f64; 2],
+    pub max_shear_damage: f64,
+    pub max_normal_damage: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dLoadStepResult {
+    pub step: usize,
+    pub load_factor: f64,
+    pub iterations: usize,
+    pub residual_norm: f64,
+    pub converged: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveCohesiveInterfaceMesh2dResult {
+    pub input: SolveCohesiveInterfaceMesh2dRequest,
+    pub nodes: Vec<CohesiveInterfaceMesh2dNodeResult>,
+    pub elements: Vec<CohesiveInterfaceMesh2dElementResult>,
+    pub steps: Vec<CohesiveInterfaceMesh2dLoadStepResult>,
+    pub converged: bool,
+    pub completed_load_factor: f64,
+    pub residual_norm: f64,
+    pub max_displacement: f64,
+    pub max_shear_damage: f64,
+    pub max_normal_damage: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure_reason: Option<String>,
 }

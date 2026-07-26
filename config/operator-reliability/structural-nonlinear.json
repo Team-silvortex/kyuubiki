@@ -125,18 +125,23 @@
           "assumptions": [
             "four_node_zero_thickness_line_interface",
             "coincident_initial_upper_and_lower_surfaces",
+            "two_point_gauss_integration",
             "uncoupled_mode_i_and_mode_ii_bilinear_damage"
           ],
           "boundary_checks": [
             "initial_pair_coincidence",
             "four_distinct_element_nodes",
             "non_degenerate_interface_length",
+            "antisymmetric_jump_mode_stiffness",
+            "rigid_translation_invariance",
             "complete_finite_displacement_history"
           ],
           "diagnostics": [
             "local_displacement_jump",
             "local_and_global_traction",
             "directional_consistent_tangents",
+            "eight_by_eight_element_tangent",
+            "two_independent_gauss_point_histories",
             "directional_damage_and_regime",
             "balanced_element_nodal_internal_forces"
           ],
@@ -148,7 +153,53 @@
       "limits": [
         "single_element_prescribed_displacement_history",
         "uncoupled_normal_and_shear_damage",
-        "not_yet_assembled_into_global_nonlinear_equilibrium"
+        "global_mesh_equilibrium_is_exposed_by_a_separate_operator"
+      ]
+    },
+    {
+      "operator_id": "solve.cohesive_interface_mesh_2d",
+      "benchmark_template": "cohesive-interface-mesh-equilibrium",
+      "domain": "structural",
+      "coverage_level": "screening",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
+          "workers/rust/crates/engine/tests/cohesive_interface_mesh_2d_workflow.rs"
+        ],
+        "reliability_suite": "cohesive_interface_mesh_2d_closed_form",
+        "review": {
+          "assumptions": [
+            "cohesive_interface_elements_only",
+            "load_control_with_fixed_zero_displacement_constraints",
+            "dense_reduced_newton_system_for_component_screening",
+            "trial_state_is_committed_only_after_equilibrium"
+          ],
+          "boundary_checks": [
+            "unique_node_material_and_element_ids",
+            "valid_material_references",
+            "bounded_node_step_and_iteration_counts",
+            "singular_tangent_detection",
+            "failed_step_state_rollback"
+          ],
+          "diagnostics": [
+            "load_step_iterations_and_residual",
+            "completed_load_factor_and_failure_reason",
+            "nodal_displacements_and_reactions",
+            "element_local_separation_and_traction",
+            "element_directional_damage"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs"
+          ]
+        }
+      },
+      "limits": [
+        "no_host_bulk_or_structural_elements_in_the_same_global_system",
+        "no_arc_length_or_displacement_control_for_post_peak_snapback",
+        "dense_solver_is_bounded_to_512_nodes",
+        "uncoupled_normal_and_shear_damage"
       ]
     }
   ]

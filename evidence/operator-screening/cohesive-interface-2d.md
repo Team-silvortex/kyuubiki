@@ -17,17 +17,23 @@ delta_s = jump dot tangent
 delta_n = jump dot normal
 ```
 
-Independent scalar cohesive histories evaluate shear and normal traction.
-Normal compression uses a separate closure penalty and does not heal opening
-damage. The global traction is the local traction rotated back to global
-coordinates. With interface area `A = length * thickness`, each lower node
-receives `-A traction / 2` and each upper node receives `+A traction / 2`.
+Two Gauss points interpolate the upper/lower jump with linear shape functions,
+and each point retains independent scalar shear and normal histories. Normal
+compression uses a separate closure penalty and does not heal opening damage.
+Tractions rotate back to global coordinates and integrate into four nodal
+forces. The same quadrature assembles the symmetric `8 x 8` material tangent
+in the fixed lower-i/lower-j/upper-i/upper-j translational DOF order.
 
 ## Retained checks
 
 - pure opening and shear match their bilinear closed forms
 - the active directional tangents match the softening slopes
 - rotating the interface preserves local response and rotates global traction
+- antisymmetric endpoint jumps retain non-zero stiffness instead of becoming a
+  center-integration zero-energy mode
+- rigid translation produces zero jump, traction, and nodal internal force
+- every column of the assembled tangent matches a nodal-force central
+  difference on a mixed elastic/softening integration state
 - all four element nodal internal forces sum to zero
 - unloading freezes independent normal and shear histories
 - non-coincident pairs, repeated indices, degenerate length, incomplete
@@ -37,9 +43,10 @@ receives `-A traction / 2` and each upper node receives `+A traction / 2`.
 
 ## Scope boundary
 
-This is a real element-response and nodal-force kernel suitable for later
-assembly. It currently evaluates one prescribed displacement history; it is
-not yet assembled into a multi-element global nonlinear equilibrium solve.
+This is a real element-response and nodal-force kernel. It evaluates one
+prescribed displacement history; the separate
+`solve.cohesive_interface_mesh_2d` operator now assembles the same trial/commit
+kernel into a bounded multi-element global nonlinear equilibrium solve.
 Normal and shear damage are uncoupled, so this is not a Benzeggagh-Kenane,
 power-law, frictional post-failure, or experimentally calibrated mixed-mode
 delamination claim.

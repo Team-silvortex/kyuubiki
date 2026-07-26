@@ -85,11 +85,11 @@ pub use workflow_topology::{WorkflowTopologyProfile, analyze_workflow_topology};
 use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
     SolveBarRequest, SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest, SolveContactGap1dRequest,
-    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
-    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
+    SolveCohesiveInterfaceMesh2dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
@@ -105,11 +105,12 @@ use kyuubiki_protocol::{
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
     solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
-    solve_cohesive_interface_2d, solve_contact_gap_1d, solve_electrostatic_bar_1d,
-    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
-    solve_frame_2d_material_p_delta, solve_frame_2d_p_delta, solve_frame_2d_p_delta_path,
-    solve_frame_3d, solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
-    solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
+    solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d, solve_contact_gap_1d,
+    solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_2d_material_p_delta,
+    solve_frame_2d_p_delta, solve_frame_2d_p_delta_path, solve_frame_3d, solve_harmonic_spring_1d,
+    solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
+    solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
     solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
     solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_solid_tetra_3d,
     solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d,
@@ -147,6 +148,7 @@ pub enum EngineSolveRequest {
     ContactGap1d(SolveContactGap1dRequest),
     CohesiveInterface1d(SolveCohesiveInterface1dRequest),
     CohesiveInterface2d(SolveCohesiveInterface2dRequest),
+    CohesiveInterfaceMesh2d(SolveCohesiveInterfaceMesh2dRequest),
     Spring2d(SolveSpring2dRequest),
     Spring3d(SolveSpring3dRequest),
     Beam1d(SolveBeam1dRequest),
@@ -251,6 +253,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::CohesiveInterface2d(request) => {
             solve_cohesive_interface_2d(&request).map(AnalysisResult::CohesiveInterface2d)
+        }
+        EngineSolveRequest::CohesiveInterfaceMesh2d(request) => {
+            solve_cohesive_interface_mesh_2d(&request).map(AnalysisResult::CohesiveInterfaceMesh2d)
         }
         EngineSolveRequest::Spring2d(request) => {
             solve_spring_2d(&request).map(AnalysisResult::Spring2d)
