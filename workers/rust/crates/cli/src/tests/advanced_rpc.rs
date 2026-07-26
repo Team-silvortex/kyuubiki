@@ -1,12 +1,14 @@
 use super::*;
 use kyuubiki_protocol::{
-    ContactGap1dContactInput, Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput,
-    Frame2dNodeInput, Frame2dStabilityKinematics, Frame3dNodeInput, ModalFrame2dElementInput,
+    CohesiveInterface2dDisplacementStepInput, CohesiveInterface2dElementInput,
+    CohesiveInterface2dMaterialInput, CohesiveInterface2dNodeInput, ContactGap1dContactInput,
+    Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
+    Frame2dStabilityKinematics, Frame3dNodeInput, ModalFrame2dElementInput,
     ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest, SolveContactGap1dRequest,
-    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
+    SolveContactGap1dRequest, SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest,
+    SolveFrame2dPDeltaRequest, SolveFrame2dRequest, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
@@ -84,6 +86,22 @@ fn handles_cohesive_interface_1d_rpc_requests() {
     assert_eq!(result.steps.len(), 4);
     assert!(result.max_damage > 0.0);
     assert!(!result.fully_failed);
+}
+
+#[test]
+fn handles_cohesive_interface_2d_rpc_requests() {
+    let final_response = execute(
+        RpcMethod::SolveCohesiveInterface2d,
+        cohesive_interface_2d_request(),
+    );
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterface2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("cohesive interface 2d result");
+    assert_eq!(result.steps.len(), 1);
+    assert!(result.max_normal_damage > 0.0);
+    assert!(result.max_shear_damage > 0.0);
 }
 
 #[test]
@@ -254,6 +272,40 @@ fn cohesive_interface_request() -> SolveCohesiveInterface1dRequest {
         peak_traction: 10.0,
         failure_separation: 0.05,
         separation_history: vec![0.0, 0.01, 0.03, 0.015],
+    }
+}
+
+fn cohesive_interface_2d_request() -> SolveCohesiveInterface2dRequest {
+    SolveCohesiveInterface2dRequest {
+        nodes: [[0.0, 0.0], [1.0, 0.0], [0.0, 0.0], [1.0, 0.0]]
+            .into_iter()
+            .enumerate()
+            .map(|(index, point)| CohesiveInterface2dNodeInput {
+                id: format!("ci{index}"),
+                x: point[0],
+                y: point[1],
+            })
+            .collect(),
+        element: CohesiveInterface2dElementInput {
+            id: "interface-0".to_string(),
+            lower_i: 0,
+            lower_j: 1,
+            upper_i: 2,
+            upper_j: 3,
+            thickness: 1.0,
+        },
+        material: CohesiveInterface2dMaterialInput {
+            normal_initial_stiffness: 1_000.0,
+            normal_compression_stiffness: 2_000.0,
+            normal_peak_traction: 10.0,
+            normal_failure_separation: 0.05,
+            shear_initial_stiffness: 500.0,
+            shear_peak_traction: 5.0,
+            shear_failure_separation: 0.05,
+        },
+        displacement_history: vec![CohesiveInterface2dDisplacementStepInput {
+            nodal_displacements: vec![[0.0, 0.0], [0.0, 0.0], [0.03, 0.03], [0.03, 0.03]],
+        }],
     }
 }
 

@@ -45,7 +45,8 @@ does not heal tensile damage.
 ## Scope boundary
 
 This is a real history-dependent constitutive interface operator, not a visual
-placeholder. It is not yet a finite-element interface formulation: there is no
-independent 2D/3D displacement jump interpolation, mixed-mode coupling,
-frictional post-failure contact, or assembly into the frame fiber section.
+placeholder. A separate `solve.cohesive_interface_2d` now reuses the same
+history kernel in a four-node zero-thickness element response. Neither operator
+yet provides multi-element global nonlinear assembly, coupled mixed-mode
+damage, frictional post-failure contact, or frame-fiber interface assembly.
 Those remain separate gates before claiming laminate delamination simulation.

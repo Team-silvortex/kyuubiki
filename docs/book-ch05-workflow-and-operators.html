@@ -122,9 +122,12 @@
           uniaxial fibers. A separate
           <code>solve.cohesive_interface_1d</code> operator now evaluates
           bilinear opening, damaged unloading/reloading, complete tensile
-          failure, and compressive closure as a composable history contract.
-          Independent displacement-jump interpolation, 2D/3D interface
-          assembly, mixed-mode delamination, friction, and three-dimensional
+          failure, and compressive closure as a composable history contract. A
+          four-node <code>solve.cohesive_interface_2d</code> element kernel now
+          projects upper/lower displacement jumps into local opening and shear,
+          rotates tractions back to global coordinates, and emits exactly
+          self-balanced nodal forces. Global nonlinear interface-mesh assembly,
+          coupled mixed-mode delamination, friction, and three-dimensional
           composite constitutive behavior remain future capabilities.
         </p>
       </section>

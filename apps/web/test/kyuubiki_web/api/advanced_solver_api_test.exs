@@ -144,6 +144,42 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     "separation_history" => [0.0, 0.01, 0.03, 0.015]
   }
 
+  @cohesive_interface_2d_request %{
+    "nodes" => [
+      %{"id" => "lower-i", "x" => 0.0, "y" => 0.0},
+      %{"id" => "lower-j", "x" => 1.0, "y" => 0.0},
+      %{"id" => "upper-i", "x" => 0.0, "y" => 0.0},
+      %{"id" => "upper-j", "x" => 1.0, "y" => 0.0}
+    ],
+    "element" => %{
+      "id" => "interface-0",
+      "lower_i" => 0,
+      "lower_j" => 1,
+      "upper_i" => 2,
+      "upper_j" => 3,
+      "thickness" => 1.0
+    },
+    "material" => %{
+      "normal_initial_stiffness" => 1000.0,
+      "normal_compression_stiffness" => 2000.0,
+      "normal_peak_traction" => 10.0,
+      "normal_failure_separation" => 0.05,
+      "shear_initial_stiffness" => 500.0,
+      "shear_peak_traction" => 5.0,
+      "shear_failure_separation" => 0.05
+    },
+    "displacement_history" => [
+      %{
+        "nodal_displacements" => [
+          [0.0, 0.0],
+          [0.0, 0.0],
+          [0.03, 0.03],
+          [0.03, 0.03]
+        ]
+      }
+    ]
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
@@ -151,6 +187,8 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     {"/api/v1/fem/nonlinear-spring-1d/jobs", "converged", %{}},
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
     {"/api/v1/fem/cohesive-interface-1d/jobs", "max_damage", @cohesive_interface_request},
+    {"/api/v1/fem/cohesive-interface-2d/jobs", "max_normal_damage",
+     @cohesive_interface_2d_request},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},

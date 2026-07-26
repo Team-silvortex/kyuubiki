@@ -107,6 +107,49 @@
         "mode_i_scalar_separation_only",
         "not_yet_assembled_into_2d_or_3d_interface_elements"
       ]
+    },
+    {
+      "operator_id": "solve.cohesive_interface_2d",
+      "benchmark_template": "cohesive-interface-element-history",
+      "domain": "structural",
+      "coverage_level": "screening",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/cohesive_interface_2d_closed_form.rs",
+          "workers/rust/crates/engine/tests/cohesive_interface_2d_workflow.rs"
+        ],
+        "reliability_suite": "cohesive_interface_2d_closed_form",
+        "review": {
+          "assumptions": [
+            "four_node_zero_thickness_line_interface",
+            "coincident_initial_upper_and_lower_surfaces",
+            "uncoupled_mode_i_and_mode_ii_bilinear_damage"
+          ],
+          "boundary_checks": [
+            "initial_pair_coincidence",
+            "four_distinct_element_nodes",
+            "non_degenerate_interface_length",
+            "complete_finite_displacement_history"
+          ],
+          "diagnostics": [
+            "local_displacement_jump",
+            "local_and_global_traction",
+            "directional_consistent_tangents",
+            "directional_damage_and_regime",
+            "balanced_element_nodal_internal_forces"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/cohesive_interface_2d_closed_form.rs"
+          ]
+        }
+      },
+      "limits": [
+        "single_element_prescribed_displacement_history",
+        "uncoupled_normal_and_shear_damage",
+        "not_yet_assembled_into_global_nonlinear_equilibrium"
+      ]
     }
   ]
 }

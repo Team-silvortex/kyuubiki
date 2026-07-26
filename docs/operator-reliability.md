@@ -850,8 +850,13 @@ unloading and reloading. A separate boundary closes the fully failed interface
 in compression and verifies the independent penalty response without healing.
 Protocol, Agent RPC, engine workflow, Rust headless discovery, and self-hosted
 Web submission tests retain the same public request. This is a standalone
-constitutive operator, not yet a 2D/3D interface element, mixed-mode law,
-frictional delamination model, or frame-fiber interface assembly.
+constitutive operator. `solve.cohesive_interface_2d` now reuses that retained
+history law in a four-node zero-thickness line interface. Closed-form checks
+cover local opening and shear, directional softening tangents, rigid coordinate
+rotation, cyclic history, and exact nodal-force self-balance. The retained
+scope is a prescribed single-element response with uncoupled directional
+damage, not yet a global multi-element equilibrium solve, mixed-mode
+interaction law, frictional delamination model, or frame-fiber assembly.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

@@ -460,5 +460,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
                 "1d",
             ],
         ),
+        built_in_solver_descriptor(
+            "solve.cohesive_interface_2d",
+            "mechanical",
+            "cohesive_interface_2d",
+            "Evaluate a four-node zero-thickness 2D interface with local displacement jumps, directional damage, and balanced nodal forces.",
+            &[
+                "screening",
+                "mechanical",
+                "interface",
+                "cohesive-zone",
+                "zero-thickness",
+                "damage",
+                "2d",
+            ],
+        ),
     ]
 }

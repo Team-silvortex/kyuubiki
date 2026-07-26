@@ -1,8 +1,10 @@
 use crate::{
-    ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
-    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    RPC_VERSION, RpcMethod, RpcRequest, SolidTetra3dElementInput, SolidTetra3dNodeInput,
-    SolveCohesiveInterface1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
+    CohesiveInterface2dDisplacementStepInput, CohesiveInterface2dElementInput,
+    CohesiveInterface2dMaterialInput, CohesiveInterface2dNodeInput, ContactGap1dContactInput,
+    Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
+    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, RPC_VERSION, RpcMethod, RpcRequest,
+    SolidTetra3dElementInput, SolidTetra3dNodeInput, SolveCohesiveInterface1dRequest,
+    SolveCohesiveInterface2dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
     SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
     StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
@@ -34,10 +36,15 @@ fn serializes_nonlinear_and_contact_rpc_round_trips() {
         RpcMethod::SolveCohesiveInterface1d,
         cohesive_interface_request(),
     );
+    let cohesive_2d = round_trip(
+        RpcMethod::SolveCohesiveInterface2d,
+        cohesive_interface_2d_request(),
+    );
 
     assert_eq!(nonlinear.method, RpcMethod::SolveNonlinearSpring1d);
     assert_eq!(contact.method, RpcMethod::SolveContactGap1d);
     assert_eq!(cohesive.method, RpcMethod::SolveCohesiveInterface1d);
+    assert_eq!(cohesive_2d.method, RpcMethod::SolveCohesiveInterface2d);
 }
 
 #[test]
@@ -102,6 +109,44 @@ fn cohesive_interface_request() -> SolveCohesiveInterface1dRequest {
         failure_separation: 0.05,
         separation_history: vec![0.0, 0.01, 0.03, 0.015],
     }
+}
+
+fn cohesive_interface_2d_request() -> SolveCohesiveInterface2dRequest {
+    SolveCohesiveInterface2dRequest {
+        nodes: cohesive_nodes(),
+        element: CohesiveInterface2dElementInput {
+            id: "interface-0".to_string(),
+            lower_i: 0,
+            lower_j: 1,
+            upper_i: 2,
+            upper_j: 3,
+            thickness: 1.0,
+        },
+        material: CohesiveInterface2dMaterialInput {
+            normal_initial_stiffness: 1_000.0,
+            normal_compression_stiffness: 2_000.0,
+            normal_peak_traction: 10.0,
+            normal_failure_separation: 0.05,
+            shear_initial_stiffness: 500.0,
+            shear_peak_traction: 5.0,
+            shear_failure_separation: 0.05,
+        },
+        displacement_history: vec![CohesiveInterface2dDisplacementStepInput {
+            nodal_displacements: vec![[0.0, 0.0], [0.0, 0.0], [0.03, 0.03], [0.03, 0.03]],
+        }],
+    }
+}
+
+fn cohesive_nodes() -> Vec<CohesiveInterface2dNodeInput> {
+    [[0.0, 0.0], [1.0, 0.0], [0.0, 0.0], [1.0, 0.0]]
+        .into_iter()
+        .enumerate()
+        .map(|(index, point)| CohesiveInterface2dNodeInput {
+            id: format!("ci{index}"),
+            x: point[0],
+            y: point[1],
+        })
+        .collect()
 }
 
 fn spring_nodes() -> Vec<NonlinearSpring1dNodeInput> {

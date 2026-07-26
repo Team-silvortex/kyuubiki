@@ -96,6 +96,55 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_workflow -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "cohesive-interface-2d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "cohesive-interface-2d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.cohesive_interface_2d"
+      ],
+      "validation_methods": [
+        "zero_thickness_interface_closed_form",
+        "rigid_rotation_invariance",
+        "nodal_internal_force_balance",
+        "directional_history_regression",
+        "rpc_and_workflow_contract"
+      ],
+      "formal_invariants": [
+        "upper_and_lower_node_pairs_initially_coincide",
+        "local_separation_is_the_projected_average_displacement_jump",
+        "local_traction_is_invariant_under_rigid_coordinate_rotation",
+        "element_nodal_internal_forces_sum_to_zero",
+        "normal_and_shear_damage_are_monotonic_and_bounded"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-nonlinear.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-screening/cohesive-interface-2d.md",
+        "workers/rust/crates/solver/tests/cohesive_interface_2d_closed_form.rs",
+        "workers/rust/crates/protocol/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/engine/tests/cohesive_interface_2d_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "cohesive-interface-2d-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-2d-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_2d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-2d-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_2d_workflow -- --nocapture"
+        }
+      ]
     }
   ]
 }

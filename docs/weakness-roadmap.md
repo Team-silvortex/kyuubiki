@@ -510,11 +510,14 @@ damage tangent by central difference, frozen unloading, rollback-safe trials,
 protocol visibility, and a two-phase section in which only soft-phase points
 damage. A separate `solve.cohesive_interface_1d` operator now contributes a
 history-dependent bilinear traction-separation contract with damaged unloading,
-complete tensile failure, and compressive closure. It is deliberately not
-assembled into the common-strain frame fibers: the next interface gates are
-independent displacement-jump interpolation, 2D/3D element assembly,
-mixed-mode/friction coupling, experimental references, repeated cross-host
-performance qualification, and larger localization-sensitive meshes. The
+complete tensile failure, and compressive closure. A four-node zero-thickness
+`solve.cohesive_interface_2d` kernel now adds independent displacement-jump
+interpolation, rotated local/global tractions, directional tangents, and
+self-balanced nodal forces. It is deliberately not assembled into the
+common-strain frame fibers or a global interface mesh: the next interface gates
+are nonlinear multi-element assembly, coupled mixed-mode/friction laws,
+experimental references, repeated cross-host performance qualification, and
+larger localization-sensitive meshes. The
 retained five-state independent
 20,000-station cyclic reference promotes from order 2 to 12 and holds the
 maximum generalized-force error to 0.218395%; the retained regression gate is

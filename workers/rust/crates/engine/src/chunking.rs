@@ -141,6 +141,12 @@ pub fn chunk_result(
                 "cohesive interface history is not a node-or-element chunked result".to_string(),
             );
         }
+        (AnalysisResult::CohesiveInterface2d(_), _) => {
+            return Err(
+                "cohesive interface element history is not a node-or-element chunked result"
+                    .to_string(),
+            );
+        }
         (AnalysisResult::Spring2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Spring2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
