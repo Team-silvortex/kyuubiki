@@ -23,11 +23,65 @@ fn workflow_runs_incremental_cohesive_interface_mesh_2d() {
     assert_eq!(result["nodes"].as_array().unwrap().len(), 4);
     assert_eq!(result["elements"].as_array().unwrap().len(), 1);
     assert_eq!(result["steps"].as_array().unwrap().len(), 2);
+    assert!(
+        result["steps"][1]["max_resultant_traction"]
+            .as_f64()
+            .unwrap()
+            > 0.0
+    );
+    assert!(result["steps"][1]["reaction_norm"].as_f64().unwrap() > 0.0);
     assert!((result["nodes"][2]["displacement"][1].as_f64().unwrap() - 0.005).abs() < 1.0e-10);
     assert_eq!(
         result["_solver_provenance"]["operator_id"],
         "solve.cohesive_interface_mesh_2d"
     );
+}
+
+#[test]
+fn workflow_runs_explicit_cohesive_unload_history() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: graph(),
+        input_artifacts: BTreeMap::from([("mesh_input".to_string(), history_model())]),
+    })
+    .expect("explicit cohesive history workflow should succeed");
+
+    let result = run
+        .artifacts
+        .get("mesh_output.result")
+        .expect("workflow output should contain explicit history result");
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["steps"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        result["steps"][0]["max_normal_damage"],
+        result["steps"][1]["max_normal_damage"]
+    );
+    assert!(
+        result["steps"][1]["max_resultant_traction"]
+            .as_f64()
+            .unwrap()
+            < result["steps"][0]["max_resultant_traction"]
+                .as_f64()
+                .unwrap()
+    );
+    assert!((result["nodes"][2]["displacement"][1].as_f64().unwrap() - 0.015).abs() < 1.0e-10);
+}
+
+#[test]
+fn workflow_runs_connector_and_cohesive_coassembly() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: graph(),
+        input_artifacts: BTreeMap::from([("mesh_input".to_string(), connector_model())]),
+    })
+    .expect("connector and cohesive workflow should succeed");
+
+    let result = run
+        .artifacts
+        .get("mesh_output.result")
+        .expect("workflow output should contain coassembly result");
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["connector_springs"].as_array().unwrap().len(), 2);
+    assert!((result["nodes"][4]["displacement"][1].as_f64().unwrap() - 0.01).abs() < 1.0e-10);
+    assert!((result["max_connector_force"].as_f64().unwrap() - 2.5).abs() < 1.0e-10);
 }
 
 #[test]
@@ -207,4 +261,62 @@ fn model() -> serde_json::Value {
         "max_iterations": 12,
         "tolerance": 1.0e-11
     })
+}
+
+fn history_model() -> serde_json::Value {
+    let mut value = model();
+    for node in value["nodes"].as_array_mut().expect("fixture nodes") {
+        node["fixed"] = serde_json::json!([true, true]);
+        node["load"] = serde_json::json!([0.0, 0.0]);
+    }
+    value
+        .as_object_mut()
+        .expect("fixture object")
+        .remove("load_steps");
+    value["control_history"] = serde_json::json!([
+        {
+            "load_factor": 0.0,
+            "prescribed_displacements": [
+                [0.0, 0.0], [0.0, 0.0], [0.0, 0.03], [0.0, 0.03]
+            ]
+        },
+        {
+            "load_factor": 0.0,
+            "prescribed_displacements": [
+                [0.0, 0.0], [0.0, 0.0], [0.0, 0.015], [0.0, 0.015]
+            ]
+        }
+    ]);
+    value
+}
+
+fn connector_model() -> serde_json::Value {
+    let mut value = model();
+    for node in &mut value["nodes"].as_array_mut().expect("fixture nodes")[2..] {
+        node["load"] = serde_json::json!([0.0, 0.0]);
+    }
+    value["nodes"]
+        .as_array_mut()
+        .expect("fixture nodes")
+        .extend([
+            serde_json::json!({
+                "id": "driver-i",
+                "x": 0.0,
+                "y": 0.0,
+                "fixed": [true, false],
+                "load": [0.0, 2.5]
+            }),
+            serde_json::json!({
+                "id": "driver-j",
+                "x": 1.0,
+                "y": 0.0,
+                "fixed": [true, false],
+                "load": [0.0, 2.5]
+            }),
+        ]);
+    value["connector_springs"] = serde_json::json!([
+        {"id": "host-0", "node_i": 2, "node_j": 4, "stiffness": [0.0, 500.0]},
+        {"id": "host-1", "node_i": 3, "node_j": 5, "stiffness": [0.0, 500.0]}
+    ]);
+    value
 }

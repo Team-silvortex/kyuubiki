@@ -863,13 +863,30 @@ constrained multi-element equilibrium model. Its incremental Newton path
 resolves a material catalog, assembles shared-node forces and tangents, reports
 nodal reactions, and commits Gauss-point history only after convergence.
 Single- and two-element closed forms retain the uniform-opening displacement
-and reaction distribution; a deliberately underconstrained rigid mode retains
-singular-tangent diagnostics and zero-state rollback. Protocol, Agent RPC,
+and reaction distribution. Optional non-zero constrained displacements advance
+proportionally with the load factor, allowing retained monotonic paths to cross
+peak traction, follow the softening closed form, and reach complete failure
+without a false residual reaction. An alternative explicit control history
+accepts an independent load factor and constrained-node displacement vector at
+every step. Retained cyclic loading freezes damage on unload and resumes it
+beyond the previous peak; a shear-then-opening path proves that directional
+histories remain independent. Each step reports displacement, prescribed
+displacement, reaction, traction, residual, and directional damage summaries.
+Optional two-node linear component connector springs now share the same global
+translational DOFs and Newton assembly. A retained series-system closed form
+checks that connector force balances the cohesive nodal force, cohesive opening
+plus connector extension equals driver displacement, and reported connector
+strain energy is exact. Connector displacement, force, energy, and per-step
+maximum force remain visible in the result. A deliberately underconstrained
+rigid mode retains singular-tangent diagnostics and zero-state rollback.
+Protocol, Agent RPC,
 engine workflow, result chunking, Rust headless discovery, and self-hosted Web
-submission share the same public model. This remains a dense, 512-node,
-cohesive-only screening solve under proportional load control, not a host-solid
-co-assembly, snap-back continuation, coupled mixed-mode interaction law,
-frictional delamination model, or experimental calibration claim.
+submission share the same public model. This remains a dense, 512-node screening
+solve under proportional load or displacement control, or explicit prescribed
+control history. Connector springs are a first heterogeneous component contract,
+not solid, shell, beam, or frame co-assembly, arc-length/adaptive continuation,
+coupled mixed-mode interaction, frictional delamination, or experimental
+calibration.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

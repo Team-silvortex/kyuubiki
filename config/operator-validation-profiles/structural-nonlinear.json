@@ -164,6 +164,9 @@
         "single_element_closed_form",
         "shared_node_multi_element_assembly",
         "incremental_newton_equilibrium",
+        "prescribed_displacement_softening_and_failure",
+        "explicit_cyclic_and_nonproportional_control_history",
+        "connector_and_cohesive_series_closed_form",
         "singular_tangent_rollback",
         "rpc_and_workflow_contract"
       ],
@@ -172,6 +175,11 @@
         "failed_steps_restore_the_last_converged_displacement_and_history",
         "shared_node_internal_forces_are_assembled_once_per_incident_element",
         "fixed_dof_reactions_balance_external_load",
+        "proportional_prescribed_opening_can_cross_peak_and_reach_zero_traction",
+        "explicit_unloading_freezes_damage_until_a_new_directional_peak",
+        "normal_and_shear_control_histories_remain_independent",
+        "connector_force_balances_the_incident_cohesive_nodal_force",
+        "cohesive_opening_plus_connector_extension_equals_driver_displacement",
         "uniform_elastic_opening_matches_traction_over_initial_stiffness"
       ],
       "evidence_paths": [
@@ -192,7 +200,7 @@
         {
           "id": "cohesive-interface-mesh-2d-rpc",
           "kind": "contract",
-          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_2d_rpc_requests -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_2d -- --nocapture"
         },
         {
           "id": "cohesive-interface-mesh-2d-workflow",

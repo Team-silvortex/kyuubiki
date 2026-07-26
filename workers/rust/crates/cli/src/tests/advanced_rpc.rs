@@ -2,6 +2,7 @@ use super::*;
 use kyuubiki_protocol::{
     CohesiveInterface2dDisplacementStepInput, CohesiveInterface2dElementInput,
     CohesiveInterface2dMaterialInput, CohesiveInterface2dNodeInput,
+    CohesiveInterfaceMesh2dConnectorSpringInput, CohesiveInterfaceMesh2dControlStepInput,
     CohesiveInterfaceMesh2dElementInput, CohesiveInterfaceMesh2dMaterialInput,
     CohesiveInterfaceMesh2dNodeInput, ContactGap1dContactInput, Frame2dElementInput,
     Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput, Frame2dStabilityKinematics,
@@ -124,6 +125,98 @@ fn handles_cohesive_interface_mesh_2d_rpc_requests() {
     assert_eq!(result.nodes.len(), 4);
     assert_eq!(result.elements.len(), 1);
     assert!((result.nodes[2].displacement[1] - 0.005).abs() < 1.0e-10);
+}
+
+#[test]
+fn handles_cohesive_interface_mesh_2d_prescribed_softening_rpc() {
+    let mut request = cohesive_interface_mesh_2d_request();
+    for node in &mut request.nodes {
+        node.fixed = [true, true];
+        node.load = [0.0, 0.0];
+        node.prescribed_displacement = None;
+    }
+    request.load_steps = None;
+    request.control_history = Some(
+        [0.03, 0.015]
+            .into_iter()
+            .map(|opening| CohesiveInterfaceMesh2dControlStepInput {
+                load_factor: 0.0,
+                prescribed_displacements: vec![
+                    [0.0, 0.0],
+                    [0.0, 0.0],
+                    [0.0, opening],
+                    [0.0, opening],
+                ],
+            })
+            .collect(),
+    );
+
+    let final_response = execute(RpcMethod::SolveCohesiveInterfaceMesh2d, request);
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterfaceMesh2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("prescribed cohesive mesh result");
+    assert!(result.converged);
+    assert_eq!(result.steps.len(), 2);
+    assert!(result.max_normal_damage > 0.0);
+    assert!(result.elements[0].local_traction[1] < 10.0);
+    assert_eq!(
+        result.steps[0].max_normal_damage,
+        result.steps[1].max_normal_damage
+    );
+    assert!((result.nodes[2].displacement[1] - 0.015).abs() < 1.0e-10);
+}
+
+#[test]
+fn handles_cohesive_interface_mesh_2d_connector_coassembly_rpc() {
+    let mut request = cohesive_interface_mesh_2d_request();
+    for node in &mut request.nodes[2..] {
+        node.load = [0.0, 0.0];
+    }
+    request.nodes.extend([
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-0".to_string(),
+            x: 0.0,
+            y: 0.0,
+            fixed: [true, false],
+            prescribed_displacement: None,
+            load: [0.0, 2.5],
+        },
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-1".to_string(),
+            x: 1.0,
+            y: 0.0,
+            fixed: [true, false],
+            prescribed_displacement: None,
+            load: [0.0, 2.5],
+        },
+    ]);
+    request.connector_springs = vec![
+        CohesiveInterfaceMesh2dConnectorSpringInput {
+            id: "host-0".to_string(),
+            node_i: 2,
+            node_j: 4,
+            stiffness: [0.0, 500.0],
+        },
+        CohesiveInterfaceMesh2dConnectorSpringInput {
+            id: "host-1".to_string(),
+            node_i: 3,
+            node_j: 5,
+            stiffness: [0.0, 500.0],
+        },
+    ];
+
+    let final_response = execute(RpcMethod::SolveCohesiveInterfaceMesh2d, request);
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterfaceMesh2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("connector coassembly result");
+    assert!(result.converged);
+    assert_eq!(result.connector_springs.len(), 2);
+    assert!((result.nodes[4].displacement[1] - 0.01).abs() < 1.0e-10);
+    assert!((result.max_connector_force - 2.5).abs() < 1.0e-10);
 }
 
 #[test]
@@ -346,6 +439,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             x,
             y: 0.0,
             fixed: [true, lower],
+            prescribed_displacement: None,
             load: [0.0, load],
         })
         .collect(),
@@ -362,7 +456,9 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             thickness: 1.0,
             material_id: "adhesive".to_string(),
         }],
+        connector_springs: vec![],
         load_steps: Some(2),
+        control_history: None,
         max_iterations: Some(12),
         tolerance: Some(1.0e-11),
     }

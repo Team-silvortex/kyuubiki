@@ -143,6 +143,8 @@ pub struct CohesiveInterfaceMesh2dNodeInput {
     pub x: f64,
     pub y: f64,
     pub fixed: [bool; 2],
+    #[serde(default)]
+    pub prescribed_displacement: Option<[f64; 2]>,
     pub load: [f64; 2],
 }
 
@@ -164,13 +166,41 @@ pub struct CohesiveInterfaceMesh2dElementInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dConnectorSpringInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub stiffness: [f64; 2],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dConnectorSpringResult {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub relative_displacement: [f64; 2],
+    pub force: [f64; 2],
+    pub strain_energy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterfaceMesh2dControlStepInput {
+    pub load_factor: f64,
+    pub prescribed_displacements: Vec<[f64; 2]>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveCohesiveInterfaceMesh2dRequest {
     pub id: String,
     pub nodes: Vec<CohesiveInterfaceMesh2dNodeInput>,
     pub materials: Vec<CohesiveInterfaceMesh2dMaterialInput>,
     pub elements: Vec<CohesiveInterfaceMesh2dElementInput>,
     #[serde(default)]
+    pub connector_springs: Vec<CohesiveInterfaceMesh2dConnectorSpringInput>,
+    #[serde(default)]
     pub load_steps: Option<usize>,
+    #[serde(default)]
+    pub control_history: Option<Vec<CohesiveInterfaceMesh2dControlStepInput>>,
     #[serde(default)]
     pub max_iterations: Option<usize>,
     #[serde(default)]
@@ -201,6 +231,13 @@ pub struct CohesiveInterfaceMesh2dLoadStepResult {
     pub iterations: usize,
     pub residual_norm: f64,
     pub converged: bool,
+    pub max_displacement: f64,
+    pub prescribed_displacement_norm: f64,
+    pub reaction_norm: f64,
+    pub max_resultant_traction: f64,
+    pub max_shear_damage: f64,
+    pub max_normal_damage: f64,
+    pub max_connector_force: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -208,6 +245,7 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub input: SolveCohesiveInterfaceMesh2dRequest,
     pub nodes: Vec<CohesiveInterfaceMesh2dNodeResult>,
     pub elements: Vec<CohesiveInterfaceMesh2dElementResult>,
+    pub connector_springs: Vec<CohesiveInterfaceMesh2dConnectorSpringResult>,
     pub steps: Vec<CohesiveInterfaceMesh2dLoadStepResult>,
     pub converged: bool,
     pub completed_load_factor: f64,
@@ -215,6 +253,7 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub max_displacement: f64,
     pub max_shear_damage: f64,
     pub max_normal_damage: f64,
+    pub max_connector_force: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_reason: Option<String>,
 }

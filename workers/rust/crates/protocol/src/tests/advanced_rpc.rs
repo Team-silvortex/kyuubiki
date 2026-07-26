@@ -174,6 +174,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             x,
             y: 0.0,
             fixed: [true, lower],
+            prescribed_displacement: None,
             load: [0.0, load],
         })
         .collect(),
@@ -190,7 +191,9 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             thickness: 1.0,
             material_id: "adhesive".to_string(),
         }],
+        connector_springs: vec![],
         load_steps: Some(2),
+        control_history: None,
         max_iterations: Some(12),
         tolerance: Some(1.0e-11),
     }

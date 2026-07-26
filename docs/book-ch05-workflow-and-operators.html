@@ -131,12 +131,22 @@
           <code>8 x 8</code> consistent material tangent. The separate
           <code>solve.cohesive_interface_mesh_2d</code> operator now resolves a
           material catalog and assembles multiple kernels into an incremental
-          Newton equilibrium system. Trial Gauss-point histories are committed
-          only after convergence; failures retain the previous state and expose
-          a reason. The current bounded dense solve covers cohesive-only
-          component screening. Host-solid co-assembly, post-peak continuation,
-          coupled mixed-mode delamination, friction, and three-dimensional
-          composite constitutive behavior remain future capabilities.
+          Newton equilibrium system. Loads and optional non-zero constrained
+          displacements advance proportionally, so retained monotonic paths can
+          cross peak traction and reach complete separation. Explicit control
+          histories additionally support cyclic and non-proportional constrained
+          paths with per-step traction, reaction, displacement, residual, and
+          directional-damage summaries. Trial Gauss-point
+          histories are committed only after convergence; failures retain the
+          previous state and expose a reason. Optional two-node linear component
+          connector springs now share the global DOF assembly with cohesive
+          elements. A retained series closed form verifies common equilibrium,
+          displacement decomposition, connector force, and strain energy through
+          solver, Agent RPC, and workflow paths. This is the first heterogeneous
+          element contract, not solid, shell, beam, or frame co-assembly.
+          Post-peak continuation, coupled mixed-mode delamination, friction,
+          three-dimensional composite constitutive behavior, and arc-length
+          continuation remain future capabilities.
         </p>
       </section>
 

@@ -518,10 +518,18 @@ tangent. Retained rigid-motion, antisymmetric-jump, and central-difference
 checks now guard its direct assemblability. A separate
 `solve.cohesive_interface_mesh_2d` path now performs constrained multi-element
 assembly, incremental Newton equilibrium, shared-node force accumulation, and
-rollback-safe Gauss-point history commit. Its retained one- and two-element
-closed forms and singular-rigid-mode fixture move the interface line beyond a
-single prescribed history. The next interface gates are host-solid
-co-assembly, sparse global assembly, displacement/arc-length continuation,
+rollback-safe Gauss-point history commit. Proportional non-zero displacement
+constraints now carry retained softening and complete-failure paths through
+peak traction. Explicit per-step controls now add cyclic unload/reload and
+non-proportional normal/shear paths with visible step summaries. Its retained
+one- and two-element closed forms and singular-rigid-mode fixture move the
+interface line beyond a single prescribed history. Optional linear component
+connector springs now share the same global DOF assembly. A retained
+connector-and-cohesive series reference verifies common force equilibrium,
+displacement decomposition, and connector energy through solver, Agent RPC,
+and workflow paths. The next interface gates are real solid, shell, beam, or
+frame host-element co-assembly, sparse global assembly, arc-length and
+adaptive-step continuation,
 coupled mixed-mode/friction laws, experimental references, repeated cross-host
 performance qualification, and larger localization-sensitive meshes. The
 retained five-state independent

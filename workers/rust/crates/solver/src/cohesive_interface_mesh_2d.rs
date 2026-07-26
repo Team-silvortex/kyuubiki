@@ -10,6 +10,7 @@ use crate::cohesive_interface_1d::validate_id;
 use crate::cohesive_interface_2d::{
     CohesiveInterface2dEvaluation, CohesiveInterface2dKernel, CohesiveInterface2dState,
 };
+use crate::cohesive_interface_mesh_2d_connector::ConnectorSpring;
 use crate::linear_dense::{solve_linear_system, zero_matrix};
 
 const DEFAULT_LOAD_STEPS: usize = 10;
@@ -27,21 +28,30 @@ pub fn solve_cohesive_interface_mesh_2d(
     let model = ValidatedModel::new(request)?;
     let mut displacements = vec![0.0; model.dof_count];
     let mut states = vec![CohesiveInterface2dState::default(); model.elements.len()];
-    let mut steps = Vec::with_capacity(model.load_steps);
+    let mut steps = Vec::with_capacity(model.controls.len());
     let mut completed_load_factor = 0.0;
     let mut residual_norm = 0.0;
     let mut failure_reason = None;
 
-    for step_index in 0..model.load_steps {
-        let load_factor = (step_index + 1) as f64 / model.load_steps as f64;
-        let outcome = solve_load_step(&model, step_index, load_factor, &displacements, &states);
+    for (step_index, control) in model.controls.iter().enumerate() {
+        let outcome = solve_load_step(&model, step_index, control, &displacements, &states);
         residual_norm = outcome.residual_norm;
+        let summary_assembly =
+            assemble(&model, step_index, &outcome.displacements, &outcome.states);
+        let summary = step_summary(&model, control, &outcome.displacements, &summary_assembly);
         steps.push(CohesiveInterfaceMesh2dLoadStepResult {
             step: step_index,
-            load_factor,
+            load_factor: control.load_factor,
             iterations: outcome.iterations,
             residual_norm,
             converged: outcome.converged,
+            max_displacement: summary.max_displacement,
+            prescribed_displacement_norm: load_norm(&control.prescribed_displacements),
+            reaction_norm: summary.reaction_norm,
+            max_resultant_traction: summary.max_resultant_traction,
+            max_shear_damage: summary.max_shear_damage,
+            max_normal_damage: summary.max_normal_damage,
+            max_connector_force: summary.max_connector_force,
         });
         if !outcome.converged {
             failure_reason = outcome.failure_reason;
@@ -49,7 +59,7 @@ pub fn solve_cohesive_interface_mesh_2d(
         }
         displacements = outcome.displacements;
         states = outcome.states;
-        completed_load_factor = load_factor;
+        completed_load_factor = control.load_factor;
     }
 
     let final_assembly = assemble(&model, steps.len(), &displacements, &states);
@@ -60,43 +70,77 @@ pub fn solve_cohesive_interface_mesh_2d(
     );
     let nodes = node_results(request, &displacements, &reactions);
     let elements = element_results(&model, &final_assembly.evaluations);
-    let max_displacement = nodes
+    let connector_springs = model
+        .connector_springs
+        .iter()
+        .map(|spring| spring.result(&displacements))
+        .collect::<Vec<_>>();
+    let final_max_displacement = nodes
         .iter()
         .map(|node| node.displacement[0].hypot(node.displacement[1]))
         .fold(0.0_f64, f64::max);
-    let max_shear_damage = elements
+    let final_max_shear_damage = elements
         .iter()
         .map(|element| element.max_shear_damage)
         .fold(0.0_f64, f64::max);
-    let max_normal_damage = elements
+    let final_max_normal_damage = elements
         .iter()
         .map(|element| element.max_normal_damage)
         .fold(0.0_f64, f64::max);
+    let final_max_connector_force = connector_springs
+        .iter()
+        .map(|spring| spring.force[0].hypot(spring.force[1]))
+        .fold(0.0_f64, f64::max);
+    let converged = failure_reason.is_none() && steps.len() == model.controls.len();
+    let max_displacement = steps
+        .iter()
+        .map(|step| step.max_displacement)
+        .fold(final_max_displacement, f64::max);
+    let max_shear_damage = steps
+        .iter()
+        .map(|step| step.max_shear_damage)
+        .fold(final_max_shear_damage, f64::max);
+    let max_normal_damage = steps
+        .iter()
+        .map(|step| step.max_normal_damage)
+        .fold(final_max_normal_damage, f64::max);
+    let max_connector_force = steps
+        .iter()
+        .map(|step| step.max_connector_force)
+        .fold(final_max_connector_force, f64::max);
 
     Ok(SolveCohesiveInterfaceMesh2dResult {
         input: request.clone(),
         nodes,
         elements,
+        connector_springs,
         steps,
-        converged: failure_reason.is_none() && completed_load_factor >= 1.0,
+        converged,
         completed_load_factor,
         residual_norm,
         max_displacement,
         max_shear_damage,
         max_normal_damage,
+        max_connector_force,
         failure_reason,
     })
 }
 
 struct ValidatedModel<'a> {
     elements: Vec<ModelElement<'a>>,
+    connector_springs: Vec<ConnectorSpring<'a>>,
     free_dofs: Vec<usize>,
     fixed_dofs: Vec<usize>,
     external_loads: Vec<f64>,
+    controls: Vec<ControlStep>,
     dof_count: usize,
-    load_steps: usize,
     max_iterations: usize,
     tolerance: f64,
+}
+
+struct ControlStep {
+    load_factor: f64,
+    prescribed_displacements: Vec<f64>,
 }
 
 struct ModelElement<'a> {
@@ -137,16 +181,21 @@ impl<'a> ValidatedModel<'a> {
             .iter()
             .map(|element| build_element(request, element, &material_indices))
             .collect::<Result<Vec<_>, _>>()?;
+        let connector_springs =
+            ConnectorSpring::build_all(&request.connector_springs, request.nodes.len())?;
 
         let dof_count = 2 * request.nodes.len();
         let mut free_dofs = Vec::new();
         let mut fixed_dofs = Vec::new();
         let mut external_loads = vec![0.0; dof_count];
+        let mut prescribed_displacements = vec![0.0; dof_count];
         for (node_index, node) in request.nodes.iter().enumerate() {
             validate_id(&node.id)?;
+            let prescribed = node.prescribed_displacement.unwrap_or([0.0; 2]);
             if !node.x.is_finite()
                 || !node.y.is_finite()
                 || node.load.iter().any(|value| !value.is_finite())
+                || prescribed.iter().any(|value| !value.is_finite())
             {
                 return Err("cohesive interface mesh 2d node data must be finite".to_string());
             }
@@ -155,29 +204,36 @@ impl<'a> ValidatedModel<'a> {
                 external_loads[dof] = node.load[axis];
                 if node.fixed[axis] {
                     fixed_dofs.push(dof);
+                    prescribed_displacements[dof] = prescribed[axis];
                 } else {
+                    if prescribed[axis] != 0.0 {
+                        return Err(format!(
+                            "node '{}' has a prescribed displacement on free axis {axis}",
+                            node.id
+                        ));
+                    }
                     free_dofs.push(dof);
                 }
             }
         }
-        if free_dofs.is_empty() {
-            return Err("cohesive interface mesh 2d requires at least one free dof".to_string());
-        }
         if fixed_dofs.is_empty() {
             return Err("cohesive interface mesh 2d requires constrained dofs".to_string());
         }
-        if free_residual_norm(&external_loads, &free_dofs) <= 0.0 {
+        let controls = build_controls(request, dof_count, &free_dofs, &prescribed_displacements)?;
+        let free_load_norm = free_residual_norm(&external_loads, &free_dofs);
+        let has_driving_step = controls.iter().any(|control| {
+            control.load_factor.abs() * free_load_norm > 0.0
+                || load_norm(&control.prescribed_displacements) > 0.0
+        });
+        if !has_driving_step {
             return Err(
-                "cohesive interface mesh 2d requires a non-zero load on a free dof".to_string(),
+                "cohesive interface mesh 2d requires a free-dof load or prescribed displacement"
+                    .to_string(),
             );
         }
 
-        let load_steps = request.load_steps.unwrap_or(DEFAULT_LOAD_STEPS);
         let max_iterations = request.max_iterations.unwrap_or(DEFAULT_MAX_ITERATIONS);
         let tolerance = request.tolerance.unwrap_or(DEFAULT_TOLERANCE);
-        if load_steps == 0 || load_steps > MAX_LOAD_STEPS {
-            return Err(format!("load_steps must be in 1..={MAX_LOAD_STEPS}"));
-        }
         if max_iterations == 0 || max_iterations > MAX_ITERATIONS {
             return Err(format!("max_iterations must be in 1..={MAX_ITERATIONS}"));
         }
@@ -187,15 +243,93 @@ impl<'a> ValidatedModel<'a> {
 
         Ok(Self {
             elements,
+            connector_springs,
             free_dofs,
             fixed_dofs,
             external_loads,
+            controls,
             dof_count,
-            load_steps,
             max_iterations,
             tolerance,
         })
     }
+}
+
+fn build_controls(
+    request: &SolveCohesiveInterfaceMesh2dRequest,
+    dof_count: usize,
+    free_dofs: &[usize],
+    target_displacements: &[f64],
+) -> Result<Vec<ControlStep>, String> {
+    if let Some(history) = &request.control_history {
+        if request.load_steps.is_some() {
+            return Err("control_history and load_steps are mutually exclusive".to_string());
+        }
+        if target_displacements.iter().any(|value| *value != 0.0) {
+            return Err(
+                "control_history and node prescribed_displacement targets are mutually exclusive"
+                    .to_string(),
+            );
+        }
+        if history.is_empty() || history.len() > MAX_LOAD_STEPS {
+            return Err(format!(
+                "control_history must contain 1..={MAX_LOAD_STEPS} steps"
+            ));
+        }
+        let free = free_dofs.iter().copied().collect::<HashSet<_>>();
+        return history
+            .iter()
+            .enumerate()
+            .map(|(step, input)| {
+                if !input.load_factor.is_finite() {
+                    return Err(format!("control_history step {step} load_factor is not finite"));
+                }
+                if input.prescribed_displacements.len() * 2 != dof_count
+                    || input
+                        .prescribed_displacements
+                        .iter()
+                        .flatten()
+                        .any(|value| !value.is_finite())
+                {
+                    return Err(format!(
+                        "control_history step {step} displacement vector must match finite node data"
+                    ));
+                }
+                let values = input
+                    .prescribed_displacements
+                    .iter()
+                    .flatten()
+                    .copied()
+                    .collect::<Vec<_>>();
+                if free.iter().any(|&dof| values[dof] != 0.0) {
+                    return Err(format!(
+                        "control_history step {step} prescribes a free dof"
+                    ));
+                }
+                Ok(ControlStep {
+                    load_factor: input.load_factor,
+                    prescribed_displacements: values,
+                })
+            })
+            .collect();
+    }
+
+    let load_steps = request.load_steps.unwrap_or(DEFAULT_LOAD_STEPS);
+    if load_steps == 0 || load_steps > MAX_LOAD_STEPS {
+        return Err(format!("load_steps must be in 1..={MAX_LOAD_STEPS}"));
+    }
+    Ok((0..load_steps)
+        .map(|step| {
+            let factor = (step + 1) as f64 / load_steps as f64;
+            ControlStep {
+                load_factor: factor,
+                prescribed_displacements: target_displacements
+                    .iter()
+                    .map(|value| factor * value)
+                    .collect(),
+            }
+        })
+        .collect())
 }
 
 fn validate_unique_ids(request: &SolveCohesiveInterfaceMesh2dRequest) -> Result<(), String> {
@@ -296,11 +430,14 @@ struct LoadStepOutcome {
 fn solve_load_step(
     model: &ValidatedModel<'_>,
     step: usize,
-    load_factor: f64,
+    control: &ControlStep,
     committed_displacements: &[f64],
     committed_states: &[CohesiveInterface2dState],
 ) -> LoadStepOutcome {
     let mut trial_displacements = committed_displacements.to_vec();
+    for &dof in &model.fixed_dofs {
+        trial_displacements[dof] = control.prescribed_displacements[dof];
+    }
     let load_scale = load_norm(&model.external_loads).max(1.0);
     let mut last_norm = f64::INFINITY;
 
@@ -310,7 +447,7 @@ fn solve_load_step(
             .external_loads
             .iter()
             .zip(&assembly.internal_forces)
-            .map(|(external, internal)| load_factor * external - internal)
+            .map(|(external, internal)| control.load_factor * external - internal)
             .collect::<Vec<_>>();
         last_norm = free_residual_norm(&residual, &model.free_dofs);
         if last_norm <= model.tolerance * load_scale {
@@ -410,6 +547,59 @@ struct Assembly {
     evaluations: Vec<CohesiveInterface2dEvaluation>,
 }
 
+struct StepSummary {
+    max_displacement: f64,
+    reaction_norm: f64,
+    max_resultant_traction: f64,
+    max_shear_damage: f64,
+    max_normal_damage: f64,
+    max_connector_force: f64,
+}
+
+fn step_summary(
+    model: &ValidatedModel<'_>,
+    control: &ControlStep,
+    displacements: &[f64],
+    assembly: &Assembly,
+) -> StepSummary {
+    let reactions = reactions(model, control.load_factor, &assembly.internal_forces);
+    let max_resultant_traction = assembly
+        .evaluations
+        .iter()
+        .flat_map(|evaluation| &evaluation.step.integration_points)
+        .map(|point| point.local_traction[0].hypot(point.local_traction[1]))
+        .fold(0.0_f64, f64::max);
+    let max_shear_damage = assembly
+        .evaluations
+        .iter()
+        .map(|evaluation| evaluation.step.shear_damage)
+        .fold(0.0_f64, f64::max);
+    let max_normal_damage = assembly
+        .evaluations
+        .iter()
+        .map(|evaluation| evaluation.step.normal_damage)
+        .fold(0.0_f64, f64::max);
+    let max_connector_force = model
+        .connector_springs
+        .iter()
+        .map(|spring| {
+            let result = spring.result(displacements);
+            result.force[0].hypot(result.force[1])
+        })
+        .fold(0.0_f64, f64::max);
+    StepSummary {
+        max_displacement: displacements
+            .chunks_exact(2)
+            .map(|value| value[0].hypot(value[1]))
+            .fold(0.0_f64, f64::max),
+        reaction_norm: load_norm(&reactions),
+        max_resultant_traction,
+        max_shear_damage,
+        max_normal_damage,
+        max_connector_force,
+    }
+}
+
 fn assemble(
     model: &ValidatedModel<'_>,
     step: usize,
@@ -439,6 +629,9 @@ fn assemble(
             }
         }
         evaluations.push(evaluation);
+    }
+    for spring in &model.connector_springs {
+        spring.assemble(displacements, &mut internal_forces, &mut tangent);
     }
     Assembly {
         internal_forces,

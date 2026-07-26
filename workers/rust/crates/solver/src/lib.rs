@@ -14,6 +14,7 @@ mod chain_tridiagonal;
 mod cohesive_interface_1d;
 mod cohesive_interface_2d;
 mod cohesive_interface_mesh_2d;
+mod cohesive_interface_mesh_2d_connector;
 mod cohesive_law;
 mod dynamic_spring_1d_validation;
 mod electrostatic_plane_2d;
