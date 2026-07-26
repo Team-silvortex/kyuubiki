@@ -3,11 +3,12 @@ use kyuubiki_protocol::{
     ContactGap1dContactInput, Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput,
     Frame2dNodeInput, Frame2dStabilityKinematics, Frame3dNodeInput, ModalFrame2dElementInput,
     ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
-    SolveBucklingFrame2dRequest, SolveContactGap1dRequest, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
-    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
-    SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
-    StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
+    SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest, SolveContactGap1dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
+    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
+    SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
+    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
 
 #[test]
@@ -67,6 +68,22 @@ fn handles_contact_gap_1d_rpc_requests() {
     assert_eq!(result.contacts.len(), 1);
     assert_eq!(result.active_contact_count, 1);
     assert!(result.max_contact_force > 0.0);
+}
+
+#[test]
+fn handles_cohesive_interface_1d_rpc_requests() {
+    let final_response = execute(
+        RpcMethod::SolveCohesiveInterface1d,
+        cohesive_interface_request(),
+    );
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterface1dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("cohesive interface result");
+    assert_eq!(result.steps.len(), 4);
+    assert!(result.max_damage > 0.0);
+    assert!(!result.fully_failed);
 }
 
 #[test]
@@ -132,6 +149,8 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
             initial_axial_stress: 0.0,
             section_library: None,
             section_fibers: Vec::new(),
+            fiber_materials: Vec::new(),
+            residual_stress_template: None,
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -224,6 +243,17 @@ fn contact_request() -> SolveContactGap1dRequest {
         load_steps: Some(8),
         max_iterations: Some(32),
         tolerance: Some(1.0e-10),
+    }
+}
+
+fn cohesive_interface_request() -> SolveCohesiveInterface1dRequest {
+    SolveCohesiveInterface1dRequest {
+        id: "interface-0".to_string(),
+        initial_stiffness: 1_000.0,
+        compression_stiffness: 2_000.0,
+        peak_traction: 10.0,
+        failure_separation: 0.05,
+        separation_history: vec![0.0, 0.01, 0.03, 0.015],
     }
 }
 

@@ -446,6 +446,8 @@ pub struct Frame2dSectionFiberInput {
     pub area: f64,
     #[serde(default)]
     pub initial_axial_stress: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -454,6 +456,8 @@ pub struct Frame2dSectionLayerInput {
     pub y_max: f64,
     pub width: f64,
     pub fiber_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -507,6 +511,29 @@ pub enum Frame2dSectionLibraryInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dFiberDamageInput {
+    pub onset_equivalent_plastic_strain: f64,
+    pub failure_equivalent_plastic_strain: f64,
+    pub maximum_damage: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dFiberMaterialInput {
+    pub id: String,
+    pub youngs_modulus: f64,
+    pub yield_strength: f64,
+    pub hardening_ratio: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage: Option<Frame2dFiberDamageInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Frame2dResidualStressTemplateInput {
+    SelfEquilibratedQuadratic { peak_stress: f64 },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBilinearKinematicMaterialInput {
     pub element_id: String,
     pub yield_strength: f64,
@@ -517,6 +544,10 @@ pub struct Frame2dBilinearKinematicMaterialInput {
     pub section_library: Option<Frame2dSectionLibraryInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section_fibers: Vec<Frame2dSectionFiberInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fiber_materials: Vec<Frame2dFiberMaterialInput>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub residual_stress_template: Option<Frame2dResidualStressTemplateInput>,
     #[serde(default = "default_frame_2d_section_integration_points")]
     pub longitudinal_integration_points: usize,
     #[serde(default)]
@@ -564,6 +595,16 @@ pub struct Frame2dMaterialStateResult {
     pub yielded_fiber_point_count: usize,
     #[serde(default)]
     pub max_fiber_equivalent_plastic_strain: f64,
+    #[serde(default)]
+    pub max_fiber_damage: f64,
+    #[serde(default)]
+    pub damaged_fiber_point_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_fiber_initial_axial_stress: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_fiber_initial_axial_stress: Option<f64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fiber_material_ids: Vec<String>,
     #[serde(default)]
     pub active_longitudinal_integration_points: usize,
     #[serde(default)]
@@ -651,4 +692,46 @@ pub struct SolveContactGap1dResult {
     pub max_force: f64,
     pub max_contact_force: f64,
     pub active_contact_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveCohesiveInterface1dRequest {
+    pub id: String,
+    pub initial_stiffness: f64,
+    pub compression_stiffness: f64,
+    pub peak_traction: f64,
+    pub failure_separation: f64,
+    pub separation_history: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CohesiveInterface1dRegime {
+    Compression,
+    ElasticOpening,
+    Softening,
+    UnloadingReloading,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CohesiveInterface1dStepResult {
+    pub step: usize,
+    pub separation: f64,
+    pub traction: f64,
+    pub tangent_stiffness: f64,
+    pub damage: f64,
+    pub max_opening: f64,
+    pub regime: CohesiveInterface1dRegime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveCohesiveInterface1dResult {
+    pub input: SolveCohesiveInterface1dRequest,
+    pub onset_separation: f64,
+    pub fracture_energy: f64,
+    pub steps: Vec<CohesiveInterface1dStepResult>,
+    pub max_traction: f64,
+    pub max_damage: f64,
+    pub fully_failed: bool,
 }

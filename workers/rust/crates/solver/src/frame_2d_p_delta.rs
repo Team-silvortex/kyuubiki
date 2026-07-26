@@ -201,7 +201,7 @@ fn apply_initial_material_buckling_baseline(
     if !materials
         .iter()
         .flatten()
-        .any(CompiledFrame2dMaterial::has_initial_stress)
+        .any(CompiledFrame2dMaterial::requires_consistent_buckling_baseline)
     {
         return Ok(());
     }

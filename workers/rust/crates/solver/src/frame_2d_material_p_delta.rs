@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::frame_2d_corotational_element::element_deformation;
+use crate::frame_2d_fiber_damage::{
+    CompiledFrame2dFiberDamage, apply_fiber_damage, compile_fiber_damage,
+};
 use crate::frame_2d_fiber_section::{committed_effective_axial_tangent, section_response};
 use crate::frame_2d_p_delta::solve_frame_2d_p_delta_with_materials;
 use crate::frame_2d_section_library::resolve_section_fibers;
@@ -11,10 +14,20 @@ use kyuubiki_protocol::{
 };
 
 #[derive(Debug, Clone, Copy)]
+pub(crate) struct CompiledFrame2dPointMaterial {
+    pub(crate) youngs_modulus: f64,
+    pub(crate) yield_strength: f64,
+    pub(crate) hardening_ratio: f64,
+    pub(crate) damage: Option<CompiledFrame2dFiberDamage>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct CompiledFrame2dFiber {
     pub(crate) y: f64,
     pub(crate) area: f64,
     pub(crate) initial_axial_stress: f64,
+    pub(crate) material: CompiledFrame2dPointMaterial,
+    pub(crate) uses_material_override: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -23,6 +36,7 @@ pub(crate) struct CompiledFrame2dMaterial {
     pub(crate) hardening_ratio: f64,
     pub(crate) initial_axial_stress: f64,
     pub(crate) section_fibers: Vec<CompiledFrame2dFiber>,
+    pub(crate) fiber_material_ids: Vec<String>,
     pub(crate) longitudinal_integration_points: usize,
     pub(crate) adaptive_longitudinal_integration: bool,
     pub(crate) longitudinal_integration_tolerance: f64,
@@ -33,6 +47,7 @@ pub(crate) struct Frame2dMaterialPointHistory {
     pub(crate) plastic_strain: f64,
     pub(crate) backstress: f64,
     pub(crate) equivalent_plastic_strain: f64,
+    pub(crate) damage: f64,
     pub(crate) tangent_modulus: f64,
 }
 
@@ -60,6 +75,14 @@ impl CompiledFrame2dMaterial {
                 .any(|fiber| fiber.initial_axial_stress != 0.0)
     }
 
+    pub(crate) fn requires_consistent_buckling_baseline(&self) -> bool {
+        self.has_initial_stress()
+            || self
+                .section_fibers
+                .iter()
+                .any(|fiber| fiber.uses_material_override)
+    }
+
     pub(crate) fn response(
         &self,
         youngs_modulus: f64,
@@ -67,6 +90,39 @@ impl CompiledFrame2dMaterial {
         committed: &Frame2dMaterialPointHistory,
         initial_axial_stress: f64,
     ) -> BilinearResponse {
+        CompiledFrame2dPointMaterial {
+            youngs_modulus,
+            yield_strength: self.yield_strength,
+            hardening_ratio: self.hardening_ratio,
+            damage: None,
+        }
+        .response(strain, committed, initial_axial_stress)
+    }
+}
+
+impl CompiledFrame2dPointMaterial {
+    pub(crate) fn response(
+        &self,
+        strain: f64,
+        committed: &Frame2dMaterialPointHistory,
+        initial_axial_stress: f64,
+    ) -> BilinearResponse {
+        let effective = self.undamaged_response(strain, committed, initial_axial_stress);
+        apply_fiber_damage(
+            self.damage.as_ref(),
+            effective,
+            committed,
+            self.hardening_ratio,
+        )
+    }
+
+    fn undamaged_response(
+        &self,
+        strain: f64,
+        committed: &Frame2dMaterialPointHistory,
+        initial_axial_stress: f64,
+    ) -> BilinearResponse {
+        let youngs_modulus = self.youngs_modulus;
         let trial_stress =
             initial_axial_stress + youngs_modulus * (strain - committed.plastic_strain);
         let relative_trial = trial_stress - committed.backstress;
@@ -95,6 +151,7 @@ impl CompiledFrame2dMaterial {
                 plastic_strain,
                 backstress,
                 equivalent_plastic_strain: committed.equivalent_plastic_strain + plastic_increment,
+                damage: committed.damage,
                 tangent_modulus,
             },
         }
@@ -185,6 +242,14 @@ fn material_state_results(
         .map(|(element_index, element, material)| {
             let history = histories.get(element_index).cloned().unwrap_or_default();
             let deformation = element_deformation(positions, element, displacement)?;
+            let initial_fiber_stress_range = material
+                .section_fibers
+                .iter()
+                .map(|fiber| fiber.initial_axial_stress)
+                .fold(None, |range, stress| match range {
+                    None => Some((stress, stress)),
+                    Some((minimum, maximum)) => Some((minimum.min(stress), maximum.max(stress))),
+                });
             let section = section_response(
                 Some(material),
                 element.youngs_modulus,
@@ -220,6 +285,13 @@ fn material_state_results(
                 evaluated_fiber_point_count: section.evaluated_fiber_point_count,
                 yielded_fiber_point_count: section.yielded_fiber_point_count,
                 max_fiber_equivalent_plastic_strain: section.max_equivalent_plastic_strain,
+                max_fiber_damage: section.max_fiber_damage,
+                damaged_fiber_point_count: section.damaged_fiber_point_count,
+                min_fiber_initial_axial_stress: initial_fiber_stress_range
+                    .map(|(minimum, _)| minimum),
+                max_fiber_initial_axial_stress: initial_fiber_stress_range
+                    .map(|(_, maximum)| maximum),
+                fiber_material_ids: material.fiber_material_ids.clone(),
                 active_longitudinal_integration_points: section
                     .active_longitudinal_integration_points,
                 longitudinal_integration_error: section.longitudinal_integration_error,
@@ -329,7 +401,19 @@ fn compile_materials(
             ));
         }
         let section_fibers = resolve_section_fibers(material)?;
-        validate_material(material, &elements[element_index], &section_fibers)?;
+        let fiber_materials = compile_fiber_materials(material)?;
+        validate_material(
+            material,
+            &elements[element_index],
+            &section_fibers,
+            &fiber_materials,
+        )?;
+        let default_fiber_material = CompiledFrame2dPointMaterial {
+            youngs_modulus: elements[element_index].youngs_modulus,
+            yield_strength: material.yield_strength,
+            hardening_ratio: material.hardening_ratio,
+            damage: None,
+        };
         compiled[element_index] = Some(CompiledFrame2dMaterial {
             yield_strength: material.yield_strength,
             hardening_ratio: material.hardening_ratio,
@@ -340,7 +424,19 @@ fn compile_materials(
                     y: fiber.y,
                     area: fiber.area,
                     initial_axial_stress: fiber.initial_axial_stress,
+                    material: fiber
+                        .material_id
+                        .as_ref()
+                        .and_then(|id| fiber_materials.get(id))
+                        .copied()
+                        .unwrap_or(default_fiber_material),
+                    uses_material_override: fiber.material_id.is_some(),
                 })
+                .collect(),
+            fiber_material_ids: material
+                .fiber_materials
+                .iter()
+                .map(|definition| definition.id.clone())
                 .collect(),
             longitudinal_integration_points: material.longitudinal_integration_points,
             adaptive_longitudinal_integration: material.adaptive_longitudinal_integration,
@@ -350,10 +446,73 @@ fn compile_materials(
     Ok(compiled)
 }
 
+fn compile_fiber_materials(
+    material: &Frame2dBilinearKinematicMaterialInput,
+) -> Result<HashMap<String, CompiledFrame2dPointMaterial>, String> {
+    if material.fiber_materials.len() > 16 {
+        return Err(format!(
+            "frame 2d material '{}' fiber_materials must contain at most 16 definitions",
+            material.element_id
+        ));
+    }
+    let mut compiled = HashMap::new();
+    for (index, definition) in material.fiber_materials.iter().enumerate() {
+        if definition.id.trim().is_empty() || definition.id.len() > 64 {
+            return Err(format!(
+                "frame 2d material '{}' fiber_materials[{index}].id must contain 1 to 64 non-whitespace bytes",
+                material.element_id
+            ));
+        }
+        if !(definition.youngs_modulus.is_finite() && definition.youngs_modulus > 0.0) {
+            return Err(format!(
+                "frame 2d material '{}' fiber material '{}' youngs_modulus must be positive and finite",
+                material.element_id, definition.id
+            ));
+        }
+        if !(definition.yield_strength.is_finite() && definition.yield_strength > 0.0) {
+            return Err(format!(
+                "frame 2d material '{}' fiber material '{}' yield_strength must be positive and finite",
+                material.element_id, definition.id
+            ));
+        }
+        if !(definition.hardening_ratio.is_finite()
+            && (0.0..1.0).contains(&definition.hardening_ratio))
+        {
+            return Err(format!(
+                "frame 2d material '{}' fiber material '{}' hardening_ratio must be at least zero and less than one",
+                material.element_id, definition.id
+            ));
+        }
+        if compiled
+            .insert(
+                definition.id.clone(),
+                CompiledFrame2dPointMaterial {
+                    youngs_modulus: definition.youngs_modulus,
+                    yield_strength: definition.yield_strength,
+                    hardening_ratio: definition.hardening_ratio,
+                    damage: compile_fiber_damage(
+                        &material.element_id,
+                        &definition.id,
+                        definition.damage.as_ref(),
+                    )?,
+                },
+            )
+            .is_some()
+        {
+            return Err(format!(
+                "frame 2d material '{}' fiber material ID '{}' is duplicated",
+                material.element_id, definition.id
+            ));
+        }
+    }
+    Ok(compiled)
+}
+
 fn validate_material(
     material: &Frame2dBilinearKinematicMaterialInput,
     element: &Frame2dElementInput,
     section_fibers: &[kyuubiki_protocol::Frame2dSectionFiberInput],
+    fiber_materials: &HashMap<String, CompiledFrame2dPointMaterial>,
 ) -> Result<(), String> {
     if !(material.yield_strength.is_finite() && material.yield_strength > 0.0) {
         return Err(format!(
@@ -379,7 +538,7 @@ fn validate_material(
             material.element_id
         ));
     }
-    validate_section_fibers(material, element, section_fibers)?;
+    validate_section_fibers(material, element, section_fibers, fiber_materials)?;
     Ok(())
 }
 
@@ -387,8 +546,15 @@ fn validate_section_fibers(
     material: &Frame2dBilinearKinematicMaterialInput,
     element: &Frame2dElementInput,
     section_fibers: &[kyuubiki_protocol::Frame2dSectionFiberInput],
+    fiber_materials: &HashMap<String, CompiledFrame2dPointMaterial>,
 ) -> Result<(), String> {
     if section_fibers.is_empty() {
+        if !fiber_materials.is_empty() {
+            return Err(format!(
+                "frame 2d material '{}' fiber_materials require section_fibers",
+                material.element_id
+            ));
+        }
         if material.longitudinal_integration_points != 2
             || material.adaptive_longitudinal_integration
         {
@@ -430,6 +596,7 @@ fn validate_section_fibers(
     let mut first_moment = 0.0;
     let mut inertia = 0.0;
     let mut max_y = 0.0_f64;
+    let mut referenced_materials = HashSet::new();
     for (index, fiber) in section_fibers.iter().enumerate() {
         if !(fiber.y.is_finite() && fiber.area.is_finite() && fiber.area > 0.0) {
             return Err(format!(
@@ -437,8 +604,21 @@ fn validate_section_fibers(
                 material.element_id
             ));
         }
+        let fiber_yield_strength = match &fiber.material_id {
+            Some(material_id) => {
+                let definition = fiber_materials.get(material_id).ok_or_else(|| {
+                    format!(
+                        "frame 2d material '{}' section_fibers[{index}] references unknown fiber material '{material_id}'",
+                        material.element_id
+                    )
+                })?;
+                referenced_materials.insert(material_id.clone());
+                definition.yield_strength
+            }
+            None => material.yield_strength,
+        };
         if !fiber.initial_axial_stress.is_finite()
-            || fiber.initial_axial_stress.abs() > material.yield_strength
+            || fiber.initial_axial_stress.abs() > fiber_yield_strength
         {
             return Err(format!(
                 "frame 2d material '{}' section_fibers[{index}] initial_axial_stress must be finite and remain within yield_strength",
@@ -449,6 +629,15 @@ fn validate_section_fibers(
         first_moment += fiber.area * fiber.y;
         inertia += fiber.area * fiber.y * fiber.y;
         max_y = max_y.max(fiber.y.abs());
+    }
+    if let Some(unused) = fiber_materials
+        .keys()
+        .find(|id| !referenced_materials.contains(*id))
+    {
+        return Err(format!(
+            "frame 2d material '{}' fiber material '{unused}' is not referenced by any section fiber",
+            material.element_id
+        ));
     }
     let area_tolerance = element.area.abs().max(f64::MIN_POSITIVE) * 1.0e-8;
     if (area - element.area).abs() > area_tolerance {
@@ -485,6 +674,7 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -511,6 +701,7 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -541,6 +732,7 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 50.0,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,

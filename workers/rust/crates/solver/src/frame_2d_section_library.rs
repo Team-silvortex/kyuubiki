@@ -2,6 +2,7 @@ use kyuubiki_protocol::{
     Frame2dBilinearKinematicMaterialInput, Frame2dSectionFiberInput, Frame2dSectionLibraryInput,
 };
 
+use crate::frame_2d_residual_stress::apply_residual_stress_template;
 use crate::frame_2d_section_polygon::polygon_fibers;
 
 struct FiberRegion {
@@ -9,84 +10,91 @@ struct FiberRegion {
     y_max: f64,
     width: f64,
     fiber_count: usize,
+    material_id: Option<String>,
 }
 
 pub(crate) fn resolve_section_fibers(
     material: &Frame2dBilinearKinematicMaterialInput,
 ) -> Result<Vec<Frame2dSectionFiberInput>, String> {
-    let Some(section) = &material.section_library else {
-        return Ok(material.section_fibers.clone());
-    };
-    if !material.section_fibers.is_empty() {
-        return Err(format!(
-            "frame 2d material '{}' cannot combine section_library with explicit section_fibers",
-            material.element_id
-        ));
-    }
-    match section {
-        Frame2dSectionLibraryInput::Rectangle {
-            width,
-            depth,
-            fiber_count,
-        } => rectangle_fibers(&material.element_id, *width, *depth, *fiber_count),
-        Frame2dSectionLibraryInput::ISection {
-            depth,
-            flange_width,
-            flange_thickness,
-            web_thickness,
-            fibers_per_flange,
-            web_fiber_count,
-        } => i_section_fibers(
-            &material.element_id,
-            *depth,
-            *flange_width,
-            *flange_thickness,
-            *web_thickness,
-            *fibers_per_flange,
-            *web_fiber_count,
-        ),
-        Frame2dSectionLibraryInput::Circular {
-            radius,
-            fiber_count,
-        } => circular_fibers(&material.element_id, *radius, *fiber_count),
-        Frame2dSectionLibraryInput::HollowBox {
-            width,
-            depth,
-            wall_thickness,
-            fibers_per_flange,
-            web_fiber_count,
-        } => hollow_box_fibers(
-            &material.element_id,
-            *width,
-            *depth,
-            *wall_thickness,
-            *fibers_per_flange,
-            *web_fiber_count,
-        ),
-        Frame2dSectionLibraryInput::TSection {
-            depth,
-            flange_width,
-            flange_thickness,
-            web_thickness,
-            flange_fiber_count,
-            web_fiber_count,
-        } => t_section_fibers(
-            &material.element_id,
-            *depth,
-            *flange_width,
-            *flange_thickness,
-            *web_thickness,
-            *flange_fiber_count,
-            *web_fiber_count,
-        ),
-        Frame2dSectionLibraryInput::Layered { layers } => {
-            layered_fibers(&material.element_id, layers)
+    let mut fibers = match &material.section_library {
+        None => Ok(material.section_fibers.clone()),
+        Some(_) if !material.section_fibers.is_empty() => {
+            return Err(format!(
+                "frame 2d material '{}' cannot combine section_library with explicit section_fibers",
+                material.element_id
+            ));
         }
-        Frame2dSectionLibraryInput::Polygon {
-            vertices,
-            fiber_count,
-        } => polygon_fibers(&material.element_id, vertices, *fiber_count),
-    }
+        Some(section) => match section {
+            Frame2dSectionLibraryInput::Rectangle {
+                width,
+                depth,
+                fiber_count,
+            } => rectangle_fibers(&material.element_id, *width, *depth, *fiber_count),
+            Frame2dSectionLibraryInput::ISection {
+                depth,
+                flange_width,
+                flange_thickness,
+                web_thickness,
+                fibers_per_flange,
+                web_fiber_count,
+            } => i_section_fibers(
+                &material.element_id,
+                *depth,
+                *flange_width,
+                *flange_thickness,
+                *web_thickness,
+                *fibers_per_flange,
+                *web_fiber_count,
+            ),
+            Frame2dSectionLibraryInput::Circular {
+                radius,
+                fiber_count,
+            } => circular_fibers(&material.element_id, *radius, *fiber_count),
+            Frame2dSectionLibraryInput::HollowBox {
+                width,
+                depth,
+                wall_thickness,
+                fibers_per_flange,
+                web_fiber_count,
+            } => hollow_box_fibers(
+                &material.element_id,
+                *width,
+                *depth,
+                *wall_thickness,
+                *fibers_per_flange,
+                *web_fiber_count,
+            ),
+            Frame2dSectionLibraryInput::TSection {
+                depth,
+                flange_width,
+                flange_thickness,
+                web_thickness,
+                flange_fiber_count,
+                web_fiber_count,
+            } => t_section_fibers(
+                &material.element_id,
+                *depth,
+                *flange_width,
+                *flange_thickness,
+                *web_thickness,
+                *flange_fiber_count,
+                *web_fiber_count,
+            ),
+            Frame2dSectionLibraryInput::Layered { layers } => {
+                layered_fibers(&material.element_id, layers)
+            }
+            Frame2dSectionLibraryInput::Polygon {
+                vertices,
+                fiber_count,
+            } => polygon_fibers(&material.element_id, vertices, *fiber_count),
+        },
+    }?;
+    apply_residual_stress_template(
+        &material.element_id,
+        material.residual_stress_template.as_ref(),
+        &mut fibers,
+    )?;
+    Ok(fibers)
 }
 
 fn rectangle_fibers(
@@ -104,6 +112,7 @@ fn rectangle_fibers(
             y_max: 0.5 * depth,
             width,
             fiber_count,
+            material_id: None,
         }],
         width * depth,
         width * depth.powi(3) / 12.0,
@@ -145,18 +154,21 @@ fn i_section_fibers(
             y_max: -0.5 * web_depth,
             width: flange_width,
             fiber_count: fibers_per_flange,
+            material_id: None,
         },
         FiberRegion {
             y_min: -0.5 * web_depth,
             y_max: 0.5 * web_depth,
             width: web_thickness,
             fiber_count: web_fiber_count,
+            material_id: None,
         },
         FiberRegion {
             y_min: 0.5 * web_depth,
             y_max: 0.5 * depth,
             width: flange_width,
             fiber_count: fibers_per_flange,
+            material_id: None,
         },
     ];
     let area = 2.0 * flange_width * flange_thickness + web_thickness * web_depth;
@@ -184,6 +196,7 @@ fn circular_fibers(
             y: first_moment / area,
             area,
             initial_axial_stress: 0.0,
+            material_id: None,
         });
     }
     corrected_fibers(
@@ -221,18 +234,21 @@ fn hollow_box_fibers(
             y_max: -0.5 * inner_depth,
             width,
             fiber_count: fibers_per_flange,
+            material_id: None,
         },
         FiberRegion {
             y_min: -0.5 * inner_depth,
             y_max: 0.5 * inner_depth,
             width: 2.0 * wall_thickness,
             fiber_count: web_fiber_count,
+            material_id: None,
         },
         FiberRegion {
             y_min: 0.5 * inner_depth,
             y_max: 0.5 * depth,
             width,
             fiber_count: fibers_per_flange,
+            material_id: None,
         },
     ];
     corrected_region_fibers(
@@ -287,12 +303,14 @@ fn t_section_fibers(
                 y_max: 0.5 * depth - flange_thickness,
                 width: web_thickness,
                 fiber_count: web_fiber_count,
+                material_id: None,
             },
             FiberRegion {
                 y_min: 0.5 * depth - flange_thickness,
                 y_max: 0.5 * depth,
                 width: flange_width,
                 fiber_count: flange_fiber_count,
+                material_id: None,
             },
         ],
         area,
@@ -327,6 +345,7 @@ fn layered_fibers(
             y_max: layer.y_max,
             width: layer.width,
             fiber_count: layer.fiber_count,
+            material_id: layer.material_id.clone(),
         });
     }
     require_total_fiber_count(element_id, total_fibers)?;
@@ -375,6 +394,7 @@ fn corrected_region_fibers(
                 y: region.y_min + (index as f64 + 0.5) * thickness,
                 area: region.width * thickness,
                 initial_axial_stress: 0.0,
+                material_id: region.material_id.clone(),
             });
         }
     }
@@ -576,6 +596,40 @@ mod tests {
     }
 
     #[test]
+    fn layered_library_preserves_fiber_material_assignments() {
+        let layers = vec![
+            Frame2dSectionLayerInput {
+                y_min: 0.0,
+                y_max: 0.2,
+                width: 0.1,
+                fiber_count: 4,
+                material_id: Some("upper".into()),
+            },
+            Frame2dSectionLayerInput {
+                y_min: -0.2,
+                y_max: 0.0,
+                width: 0.1,
+                fiber_count: 4,
+                material_id: Some("lower".into()),
+            },
+        ];
+        let fibers =
+            resolve_section_fibers(&material(Frame2dSectionLibraryInput::Layered { layers }))
+                .expect("composite layered fibers");
+
+        assert!(
+            fibers[..4]
+                .iter()
+                .all(|fiber| fiber.material_id.as_deref() == Some("lower"))
+        );
+        assert!(
+            fibers[4..]
+                .iter()
+                .all(|fiber| fiber.material_id.as_deref() == Some("upper"))
+        );
+    }
+
+    #[test]
     fn section_library_rejects_invalid_geometry_and_fiber_budgets() {
         let invalid_geometry = material(Frame2dSectionLibraryInput::ISection {
             depth: 0.6,
@@ -626,6 +680,8 @@ mod tests {
             initial_axial_stress: 0.0,
             section_library: Some(section_library),
             section_fibers: Vec::new(),
+            fiber_materials: Vec::new(),
+            residual_stress_template: None,
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -654,6 +710,7 @@ mod tests {
             y_max,
             width,
             fiber_count,
+            material_id: None,
         }
     }
 

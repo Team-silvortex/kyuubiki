@@ -3,11 +3,11 @@ use crate::{
     BucklingModeDirectionAssessment, Frame2dBranchDirection, Frame2dBranchProbeOrigin,
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
     Frame2dMaterialStateResult, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
-    Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dSectionFiberInput,
-    Frame2dSectionLayerInput, Frame2dSectionLibraryInput, Frame2dSectionVertexInput,
-    Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest,
-    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dResidualStressTemplateInput,
+    Frame2dSectionFiberInput, Frame2dSectionLayerInput, Frame2dSectionLibraryInput,
+    Frame2dSectionVertexInput, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
+    RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 
 #[test]
@@ -214,6 +214,8 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 initial_axial_stress: 25.0e6,
                 section_library: None,
                 section_fibers: Vec::new(),
+                fiber_materials: Vec::new(),
+                residual_stress_template: None,
                 longitudinal_integration_points: 2,
                 adaptive_longitudinal_integration: false,
                 longitudinal_integration_tolerance: 1.0e-3,
@@ -255,6 +257,8 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
     assert_eq!(legacy_material.initial_axial_stress, 0.0);
     assert_eq!(legacy_material.section_library, None);
     assert!(legacy_material.section_fibers.is_empty());
+    assert!(legacy_material.fiber_materials.is_empty());
+    assert_eq!(legacy_material.residual_stress_template, None);
     assert_eq!(legacy_material.longitudinal_integration_points, 2);
     assert!(!legacy_material.adaptive_longitudinal_integration);
     assert_eq!(legacy_material.longitudinal_integration_tolerance, 1.0e-3);
@@ -270,13 +274,17 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 y: -0.1,
                 area: 0.005,
                 initial_axial_stress: -25.0e6,
+                material_id: None,
             },
             Frame2dSectionFiberInput {
                 y: 0.1,
                 area: 0.005,
                 initial_axial_stress: 25.0e6,
+                material_id: None,
             },
         ],
+        fiber_materials: Vec::new(),
+        residual_stress_template: None,
         longitudinal_integration_points: 4,
         adaptive_longitudinal_integration: true,
         longitudinal_integration_tolerance: 5.0e-4,
@@ -307,6 +315,10 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 "web_thickness": 0.02,
                 "fibers_per_flange": 4,
                 "web_fiber_count": 8
+            },
+            "residual_stress_template": {
+                "kind": "self_equilibrated_quadratic",
+                "peak_stress": 50.0e6
             }
         }))
         .expect("section-library material should decode");
@@ -322,9 +334,21 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
         })
     );
     assert!(library_material.section_fibers.is_empty());
+    assert_eq!(
+        library_material.residual_stress_template,
+        Some(
+            Frame2dResidualStressTemplateInput::SelfEquilibratedQuadratic {
+                peak_stress: 50.0e6
+            }
+        )
+    );
     let library_json =
         serde_json::to_value(&library_material).expect("section-library material should encode");
     assert_eq!(library_json["section_library"]["kind"], "i_section");
+    assert_eq!(
+        library_json["residual_stress_template"]["kind"],
+        "self_equilibrated_quadratic"
+    );
 
     for (section, kind) in [
         (
@@ -363,12 +387,14 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                         y_max: 0.0,
                         width: 0.04,
                         fiber_count: 4,
+                        material_id: None,
                     },
                     Frame2dSectionLayerInput {
                         y_min: 0.0,
                         y_max: 0.2,
                         width: 0.08,
                         fiber_count: 4,
+                        material_id: None,
                     },
                 ],
             },
@@ -393,6 +419,54 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
             serde_json::from_value(encoded).expect("section variant should decode");
         assert_eq!(decoded, section);
     }
+
+    let composite: Frame2dMonotonicBilinearMaterialInput =
+        serde_json::from_value(serde_json::json!({
+            "element_id": "column",
+            "yield_strength": 250.0e6,
+            "hardening_ratio": 0.02,
+            "section_library": {
+                "kind": "layered",
+                "layers": [
+                    {"y_min": -0.2, "y_max": 0.0, "width": 0.1, "fiber_count": 4, "material_id": "soft"},
+                    {"y_min": 0.0, "y_max": 0.2, "width": 0.1, "fiber_count": 4, "material_id": "stiff"}
+                ]
+            },
+            "fiber_materials": [
+                {
+                    "id": "soft",
+                    "youngs_modulus": 70.0e9,
+                    "yield_strength": 100.0e6,
+                    "hardening_ratio": 0.02,
+                    "damage": {
+                        "onset_equivalent_plastic_strain": 0.001,
+                        "failure_equivalent_plastic_strain": 0.02,
+                        "maximum_damage": 0.4
+                    }
+                },
+                {"id": "stiff", "youngs_modulus": 200.0e9, "yield_strength": 500.0e6, "hardening_ratio": 0.02}
+            ]
+        }))
+        .expect("composite section material should decode");
+    assert_eq!(composite.fiber_materials.len(), 2);
+    assert_eq!(
+        composite.fiber_materials[0]
+            .damage
+            .as_ref()
+            .unwrap()
+            .maximum_damage,
+        0.4
+    );
+    let encoded = serde_json::to_value(&composite).expect("composite material should encode");
+    assert_eq!(
+        encoded["section_library"]["layers"][0]["material_id"],
+        "soft"
+    );
+    assert_eq!(encoded["fiber_materials"][1]["id"], "stiff");
+    assert_eq!(
+        encoded["fiber_materials"][0]["damage"]["maximum_damage"],
+        0.4
+    );
 }
 
 #[test]
@@ -414,6 +488,9 @@ fn legacy_material_state_defaults_new_signed_history_fields() {
     assert_eq!(state.section_axial_force, None);
     assert_eq!(state.fiber_point_count, 0);
     assert_eq!(state.evaluated_fiber_point_count, 0);
+    assert_eq!(state.max_fiber_damage, 0.0);
+    assert_eq!(state.damaged_fiber_point_count, 0);
+    assert!(state.fiber_material_ids.is_empty());
     assert_eq!(state.active_longitudinal_integration_points, 0);
     assert_eq!(state.longitudinal_integration_error, None);
 }

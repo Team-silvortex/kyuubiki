@@ -58,10 +58,11 @@ from the last committed substep and only a converged accepted substep commits
 plastic strain, backstress, and accumulated plastic strain. This is a bounded
 fiber-section implementation with protocolized rectangle, I-section, circular,
 hollow-box, asymmetric T-section, layered, and simple single-ring polygon
-constructors, not yet a multi-ring, holed, composite-material, or qualified
+constructors, not yet a multi-ring, holed, interface/damage, or qualified
 localization model. The `layered` description accepts bounded, nonoverlapping
-horizontal regions for custom piecewise-width profiles. Library descriptions
-compile to the same explicit fiber execution IR; they cannot be combined with
+horizontal regions for custom piecewise-width and explicitly assigned
+fiber-material profiles. Library descriptions compile to the same explicit
+fiber execution IR; they cannot be combined with
 caller-supplied fibers. Fiber sections may opt
 into bounded p-adaptive longitudinal
 integration: fixed-identity 2-, 3-, 4-, 8-, and 12-point candidates are all
@@ -165,6 +166,40 @@ preload remains the generalized eigenproblem denominator.
   retained concave L-section round-trips through protocol JSON and executes
   through both the material solver and Engine workflow route. Holes, multiple
   rings, and composite fiber materials remain outside this claim.
+- Fiber sections may declare up to 16 uniquely identified
+  `fiber_materials`; explicit fibers and `layered` regions reference those
+  definitions by `material_id`. The compiler resolves each reference once into
+  numeric Young's modulus, yield strength, and kinematic-hardening ratio, so
+  Newton integration performs no string lookup. Unknown, duplicate, invalid,
+  and unused definitions are rejected, and initial stress is checked against
+  the referenced phase yield surface. A uniformly distributed 70/200 GPa
+  two-phase section recovers its 135 GPa transformed axial reference, while a
+  higher path yields the 100 MPa soft phase before the 500 MPa stiff phase.
+  Composite overrides also activate the zero-state consistent tangent for the
+  buckling baseline. Result states expose the participating material IDs.
+  This is a perfectly bonded uniaxial fiber model, not interface,
+  Poisson-coupled, temperature-dependent, or three-dimensional composite
+  qualification.
+- A fiber-material phase may define a bounded linear damage evolution in
+  equivalent plastic strain with an onset, saturation strain, and maximum
+  damage no greater than `0.99`. Bilinear return mapping remains in effective
+  stress space; nominal stress and the active consistent tangent include the
+  damage degradation and derivative. A central difference retains the active
+  tangent, unloading freezes damage, and rejected trials leave committed
+  history unchanged. In the two-phase full-solver path only soft-phase points
+  damage, maximum damage remains below its configured `0.2` ceiling, tangent
+  stiffness falls, and displacement increases relative to the undamaged
+  reference. Results expose maximum fiber damage and damaged point count.
+  This qualifies phase-local constitutive damage, not interface slip,
+  delamination, or cohesive separation.
+- Section fibers and library-generated fibers may request a bounded
+  `self_equilibrated_quadratic` residual-stress template. The compiler projects
+  the dimensionless quadratic field against the discrete constant and linear
+  section modes before scaling, so retained asymmetric-layout tests have zero
+  axial and bending resultants to numerical precision. The full material
+  P-Delta path reaches the requested `50 MPa` peak, exposes the generated
+  minimum/maximum initial fiber stresses, and rejects mixed explicit/template
+  sources or generated stresses outside a referenced phase yield surface.
 - A unit-width rectangular section under constant curvature is compared with
   the analytic elastic-core plus yielded-flange moment integral. Equal-depth
   4, 8, 16, and 32-fiber midpoint discretizations reduce the absolute error
@@ -664,9 +699,8 @@ preload remains the generalized eigenproblem denominator.
 - cross-host cyclic moving-front and performance qualification for adaptive
   longitudinal integration; the retained 12-point ceiling reaches 0.218395%
 - cyclic axial-bending qualification against independent experimental data
-- composite-material section construction, reusable residual-stress templates,
-  polygon sections with holes or multiple rings, and larger
-  localization-sensitive mesh evidence
+- polygon sections with holes or multiple rings, composite interface slip,
+  delamination/cohesive models, and larger localization-sensitive mesh evidence
 
 ## Performance Reproduction
 

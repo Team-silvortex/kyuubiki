@@ -43,6 +43,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveHarmonicSpring1d,
                 RpcMethod::SolveNonlinearSpring1d,
                 RpcMethod::SolveContactGap1d,
+                RpcMethod::SolveCohesiveInterface1d,
                 RpcMethod::SolveSpring2d,
                 RpcMethod::SolveSpring3d,
                 RpcMethod::SolveBeam1d,
@@ -172,6 +173,18 @@ impl AgentDescriptor {
                     "harmonic-spring-1d",
                     RpcMethod::SolveHarmonicSpring1d,
                     &["spring", "harmonic", "frequency-response", "line", "cpu"],
+                ),
+                capability(
+                    "cohesive-interface-1d",
+                    RpcMethod::SolveCohesiveInterface1d,
+                    &[
+                        "interface",
+                        "cohesive-zone",
+                        "damage",
+                        "delamination",
+                        "line",
+                        "cpu",
+                    ],
                 ),
                 capability(
                     "spring-2d",

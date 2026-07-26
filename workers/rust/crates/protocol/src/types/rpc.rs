@@ -130,6 +130,8 @@ pub enum RpcMethod {
     SolveNonlinearSpring1d,
     #[serde(rename = "solve_contact_gap_1d")]
     SolveContactGap1d,
+    #[serde(rename = "solve_cohesive_interface_1d")]
+    SolveCohesiveInterface1d,
     #[serde(rename = "solve_spring_2d")]
     SolveSpring2d,
     #[serde(rename = "solve_spring_3d")]

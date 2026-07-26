@@ -445,5 +445,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             "Solve a 1D gap-contact model with active-set contact state, penetration checks, and reaction output.",
             &["verified", "mechanical", "contact", "gap", "1d"],
         ),
+        built_in_solver_descriptor(
+            "solve.cohesive_interface_1d",
+            "mechanical",
+            "cohesive_interface_1d",
+            "Evaluate a history-dependent bilinear cohesive interface with damage, unloading, failure, and compressive closure.",
+            &[
+                "screening",
+                "mechanical",
+                "interface",
+                "cohesive-zone",
+                "damage",
+                "delamination",
+                "1d",
+            ],
+        ),
     ]
 }

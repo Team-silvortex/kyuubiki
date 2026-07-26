@@ -343,7 +343,7 @@ fn numerical_tangent(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame_2d_material_p_delta::CompiledFrame2dFiber;
+    use crate::frame_2d_material_p_delta::{CompiledFrame2dFiber, CompiledFrame2dPointMaterial};
 
     #[test]
     fn rigid_rotation_produces_no_internal_force() {
@@ -418,6 +418,7 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -461,6 +462,7 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -517,6 +519,7 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: -40.0e6,
             section_fibers: Vec::new(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -565,8 +568,16 @@ mod tests {
                     y,
                     area: 0.0025,
                     initial_axial_stress: 0.0,
+                    material: CompiledFrame2dPointMaterial {
+                        youngs_modulus: element.youngs_modulus,
+                        yield_strength: 100.0e6,
+                        hardening_ratio: 0.03,
+                        damage: None,
+                    },
+                    uses_material_override: false,
                 })
                 .collect(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: true,
             longitudinal_integration_tolerance: 1.0e-10,

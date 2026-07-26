@@ -180,18 +180,21 @@ fn circular_box_and_t_section_libraries_execute_through_the_material_solver() {
             y_max: -0.1,
             width: 0.05,
             fiber_count: 4,
+            material_id: None,
         },
         Frame2dSectionLayerInput {
             y_min: -0.1,
             y_max: 0.15,
             width: 0.02,
             fiber_count: 5,
+            material_id: None,
         },
         Frame2dSectionLayerInput {
             y_min: 0.15,
             y_max: 0.3,
             width: 0.1,
             fiber_count: 3,
+            material_id: None,
         },
     ];
     let layered_area = layers
@@ -491,8 +494,11 @@ fn request(
                     y,
                     area: AREA / 4.0,
                     initial_axial_stress,
+                    material_id: None,
                 })
                 .collect(),
+            fiber_materials: Vec::new(),
+            residual_stress_template: None,
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,

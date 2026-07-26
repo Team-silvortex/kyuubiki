@@ -85,10 +85,10 @@ pub use workflow_topology::{WorkflowTopologyProfile, analyze_workflow_topology};
 use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
     SolveBarRequest, SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveContactGap1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
-    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveCohesiveInterface1dRequest, SolveContactGap1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
@@ -103,8 +103,8 @@ use kyuubiki_protocol::{
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
-    solve_buckling_beam_1d, solve_buckling_frame_2d, solve_contact_gap_1d,
-    solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
+    solve_contact_gap_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
     solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_2d_material_p_delta,
     solve_frame_2d_p_delta, solve_frame_2d_p_delta_path, solve_frame_3d, solve_harmonic_spring_1d,
     solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
@@ -144,6 +144,7 @@ pub enum EngineSolveRequest {
     HarmonicSpring1d(SolveHarmonicSpring1dRequest),
     NonlinearSpring1d(SolveNonlinearSpring1dRequest),
     ContactGap1d(SolveContactGap1dRequest),
+    CohesiveInterface1d(SolveCohesiveInterface1dRequest),
     Spring2d(SolveSpring2dRequest),
     Spring3d(SolveSpring3dRequest),
     Beam1d(SolveBeam1dRequest),
@@ -242,6 +243,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::ContactGap1d(request) => {
             solve_contact_gap_1d(&request).map(AnalysisResult::ContactGap1d)
+        }
+        EngineSolveRequest::CohesiveInterface1d(request) => {
+            solve_cohesive_interface_1d(&request).map(AnalysisResult::CohesiveInterface1d)
         }
         EngineSolveRequest::Spring2d(request) => {
             solve_spring_2d(&request).map(AnalysisResult::Spring2d)

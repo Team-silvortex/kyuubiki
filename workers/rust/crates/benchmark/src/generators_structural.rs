@@ -447,8 +447,11 @@ pub(crate) fn generate_frame_2d_material_p_delta_case(
                         y: (index as f64 - (fiber_count as f64 - 1.0) / 2.0) * spacing,
                         area: fiber_area,
                         initial_axial_stress: 0.0,
+                        material_id: None,
                     })
                     .collect(),
+                fiber_materials: Vec::new(),
+                residual_stress_template: None,
                 longitudinal_integration_points: 2,
                 adaptive_longitudinal_integration: adaptive,
                 longitudinal_integration_tolerance: 1.0e-3,

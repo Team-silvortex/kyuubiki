@@ -136,6 +136,11 @@ pub fn chunk_result(
         (AnalysisResult::ContactGap1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::CohesiveInterface1d(_), _) => {
+            return Err(
+                "cohesive interface history is not a node-or-element chunked result".to_string(),
+            );
+        }
         (AnalysisResult::Spring2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Spring2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?

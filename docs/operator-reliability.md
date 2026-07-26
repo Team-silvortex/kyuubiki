@@ -842,6 +842,17 @@ fields. This is a monotone
 one-dimensional hardening qualification, not a hysteresis, softening,
 snap-through, or dynamics claim.
 
+`solve.cohesive_interface_1d` now has a retained component-level screening
+profile for a scalar Mode-I bilinear traction-separation history. The analytic
+regression checks onset, peak, linear softening, complete tensile failure, and
+the active tangent; cyclic points verify monotonic damage with damaged-secant
+unloading and reloading. A separate boundary closes the fully failed interface
+in compression and verifies the independent penalty response without healing.
+Protocol, Agent RPC, engine workflow, Rust headless discovery, and self-hosted
+Web submission tests retain the same public request. This is a standalone
+constitutive operator, not yet a 2D/3D interface element, mixed-mode law,
+frictional delamination model, or frame-fiber interface assembly.
+
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
 root moment, bending stress, and strain-energy formulas for an x-aligned 3D

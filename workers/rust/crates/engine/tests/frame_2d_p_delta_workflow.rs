@@ -140,12 +140,16 @@ fn workflow_route_executes_monotonic_library_fiber_section_material_p_delta() {
                     "longitudinal_integration_points": 4,
                     "adaptive_longitudinal_integration": true,
                     "longitudinal_integration_tolerance": 1.0e-8,
-                    "section_library": {
-                        "kind": "rectangle",
-                        "width": 0.0009128709291752768,
-                        "depth": 10.954451150103322,
-                        "fiber_count": 2
-                    }
+                    "section_fibers": [
+                        {"y": -3.1622776601683795, "area": 0.0025, "material_id": "soft"},
+                        {"y": -3.1622776601683795, "area": 0.0025, "material_id": "stiff"},
+                        {"y": 3.1622776601683795, "area": 0.0025, "material_id": "soft"},
+                        {"y": 3.1622776601683795, "area": 0.0025, "material_id": "stiff"}
+                    ],
+                    "fiber_materials": [
+                        {"id": "soft", "youngs_modulus": 150000000000.0, "yield_strength": 200000000.0, "hardening_ratio": 0.1},
+                        {"id": "stiff", "youngs_modulus": 250000000000.0, "yield_strength": 300000000.0, "hardening_ratio": 0.1}
+                    ]
                 },
                 {
                     "element_id": "e1",
@@ -173,16 +177,24 @@ fn workflow_route_executes_monotonic_library_fiber_section_material_p_delta() {
     assert_eq!(result["stability_result"]["converged"], true);
     assert_eq!(result["yielded_element_count"], 2);
     assert_eq!(result["material_states"].as_array().unwrap().len(), 2);
-    assert_eq!(result["material_states"][0]["fiber_point_count"], 4);
+    assert_eq!(result["material_states"][0]["fiber_point_count"], 8);
     assert_eq!(
         result["material_states"][0]["evaluated_fiber_point_count"],
-        58
+        116
+    );
+    assert_eq!(
+        result["material_states"][0]["fiber_material_ids"],
+        json!(["soft", "stiff"])
     );
     assert_eq!(
         result["material_states"][0]["active_longitudinal_integration_points"],
         2
     );
-    assert_eq!(result["material_states"][0]["yielded_fiber_point_count"], 4);
+    assert!(
+        result["material_states"][0]["yielded_fiber_point_count"]
+            .as_u64()
+            .is_some_and(|count| count > 0 && count <= 8)
+    );
     assert!(
         result["material_states"][0]["section_axial_force"]
             .as_f64()

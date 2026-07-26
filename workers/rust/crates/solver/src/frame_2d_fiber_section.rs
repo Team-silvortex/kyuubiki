@@ -17,9 +17,11 @@ pub(crate) struct Frame2dSectionResponse {
     pub(crate) average_plastic_strain: f64,
     pub(crate) average_backstress: f64,
     pub(crate) max_equivalent_plastic_strain: f64,
+    pub(crate) max_fiber_damage: f64,
     pub(crate) fiber_point_count: usize,
     pub(crate) evaluated_fiber_point_count: usize,
     pub(crate) yielded_fiber_point_count: usize,
+    pub(crate) damaged_fiber_point_count: usize,
     pub(crate) active_longitudinal_integration_points: usize,
     pub(crate) longitudinal_integration_error: Option<f64>,
 }
@@ -79,7 +81,7 @@ pub(crate) fn committed_effective_axial_tangent(
     committed: &Frame2dMaterialHistory,
 ) -> f64 {
     if material.section_fibers.is_empty() {
-        return positive_tangent_or_elastic(committed.point.tangent_modulus, youngs_modulus);
+        return nonzero_tangent_or_elastic(committed.point.tangent_modulus, youngs_modulus);
     }
     let fiber_count = material.section_fibers.len();
     let active_points = if material.adaptive_longitudinal_integration {
@@ -115,9 +117,9 @@ pub(crate) fn committed_effective_axial_tangent(
                         + fiber_index;
                     weight
                         * fiber.area
-                        * positive_tangent_or_elastic(
+                        * nonzero_tangent_or_elastic(
                             committed.fiber_points[point_index].tangent_modulus,
-                            youngs_modulus,
+                            fiber.material.youngs_modulus,
                         )
                 })
         })
@@ -125,8 +127,8 @@ pub(crate) fn committed_effective_axial_tangent(
         / area
 }
 
-fn positive_tangent_or_elastic(tangent_modulus: f64, youngs_modulus: f64) -> f64 {
-    if tangent_modulus.is_finite() && tangent_modulus > 0.0 {
+fn nonzero_tangent_or_elastic(tangent_modulus: f64, youngs_modulus: f64) -> f64 {
+    if tangent_modulus.is_finite() && tangent_modulus != 0.0 {
         tangent_modulus
     } else {
         youngs_modulus
@@ -159,9 +161,11 @@ fn elastic_response(
         average_plastic_strain: 0.0,
         average_backstress: 0.0,
         max_equivalent_plastic_strain: 0.0,
+        max_fiber_damage: 0.0,
         fiber_point_count: 0,
         evaluated_fiber_point_count: 0,
         yielded_fiber_point_count: 0,
+        damaged_fiber_point_count: 0,
         active_longitudinal_integration_points: 0,
         longitudinal_integration_error: None,
     }
@@ -207,9 +211,11 @@ fn axial_material_response(
         average_plastic_strain: response.history.plastic_strain,
         average_backstress: response.history.backstress,
         max_equivalent_plastic_strain: response.history.equivalent_plastic_strain,
+        max_fiber_damage: response.history.damage,
         fiber_point_count: 0,
         evaluated_fiber_point_count: 0,
         yielded_fiber_point_count: 0,
+        damaged_fiber_point_count: 0,
         active_longitudinal_integration_points: 0,
         longitudinal_integration_error: None,
     }
@@ -254,7 +260,7 @@ fn fiber_material_response(
 #[allow(clippy::too_many_arguments)]
 fn fiber_material_response_for_stations(
     material: &CompiledFrame2dMaterial,
-    youngs_modulus: f64,
+    _youngs_modulus: f64,
     area: f64,
     length: f64,
     extension: f64,
@@ -272,7 +278,9 @@ fn fiber_material_response_for_stations(
     let mut average_plastic_strain = 0.0;
     let mut average_backstress = 0.0;
     let mut max_equivalent_plastic_strain = 0.0_f64;
+    let mut max_fiber_damage = 0.0_f64;
     let mut yielded_fiber_point_count = 0;
+    let mut damaged_fiber_point_count = 0;
 
     for (station_index, &(xi, weight)) in stations.iter().enumerate() {
         let curvature_i = (-4.0 + 6.0 * xi) / length;
@@ -284,12 +292,10 @@ fn fiber_material_response_for_stations(
                 .copied()
                 .unwrap_or_default();
             let strain = extension / length + fiber.y * (curvature_i * phi_i + curvature_j * phi_j);
-            let response = material.response(
-                youngs_modulus,
-                strain,
-                &committed_point,
-                fiber.initial_axial_stress,
-            );
+            let response =
+                fiber
+                    .material
+                    .response(strain, &committed_point, fiber.initial_axial_stress);
             let strain_gradient = [1.0 / length, fiber.y * curvature_i, fiber.y * curvature_j];
             let integration = length * weight * fiber.area;
             for row in 0..3 {
@@ -307,8 +313,10 @@ fn fiber_material_response_for_stations(
             average_backstress += average_weight * response.history.backstress;
             max_equivalent_plastic_strain =
                 max_equivalent_plastic_strain.max(response.history.equivalent_plastic_strain);
+            max_fiber_damage = max_fiber_damage.max(response.history.damage);
             yielded_fiber_point_count +=
                 usize::from(response.history.equivalent_plastic_strain > 0.0);
+            damaged_fiber_point_count += usize::from(response.history.damage > 0.0);
             history.push(response.history);
         }
     }
@@ -329,9 +337,11 @@ fn fiber_material_response_for_stations(
         average_plastic_strain,
         average_backstress,
         max_equivalent_plastic_strain,
+        max_fiber_damage,
         fiber_point_count: point_count,
         evaluated_fiber_point_count: point_count,
         yielded_fiber_point_count,
+        damaged_fiber_point_count,
         active_longitudinal_integration_points: stations.len(),
         longitudinal_integration_error: None,
     }
@@ -449,7 +459,7 @@ fn generalized_force_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame_2d_material_p_delta::CompiledFrame2dFiber;
+    use crate::frame_2d_material_p_delta::{CompiledFrame2dFiber, CompiledFrame2dPointMaterial};
 
     #[test]
     fn elastic_fibers_recover_the_discrete_section_stiffness() {
@@ -668,8 +678,16 @@ mod tests {
                     y,
                     area: 0.25,
                     initial_axial_stress,
+                    material: CompiledFrame2dPointMaterial {
+                        youngs_modulus: 1_000.0,
+                        yield_strength: 100.0,
+                        hardening_ratio: 0.1,
+                        damage: None,
+                    },
+                    uses_material_override: false,
                 })
                 .collect(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,
@@ -691,8 +709,16 @@ mod tests {
                     y: -half_depth + (index as f64 + 0.5) * fiber_depth,
                     area: fiber_depth,
                     initial_axial_stress: 0.0,
+                    material: CompiledFrame2dPointMaterial {
+                        youngs_modulus: 1_000.0,
+                        yield_strength,
+                        hardening_ratio: 0.0,
+                        damage: None,
+                    },
+                    uses_material_override: false,
                 })
                 .collect(),
+            fiber_material_ids: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
             longitudinal_integration_tolerance: 1.0e-3,

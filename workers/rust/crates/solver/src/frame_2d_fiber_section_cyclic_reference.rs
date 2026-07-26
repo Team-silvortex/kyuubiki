@@ -1,7 +1,7 @@
 use super::{longitudinal_quadrature::ADAPTIVE_POINT_COUNT, section_response};
 use crate::frame_2d_material_p_delta::{
-    CompiledFrame2dFiber, CompiledFrame2dMaterial, Frame2dMaterialHistory,
-    Frame2dMaterialPointHistory,
+    CompiledFrame2dFiber, CompiledFrame2dMaterial, CompiledFrame2dPointMaterial,
+    Frame2dMaterialHistory, Frame2dMaterialPointHistory,
 };
 
 const YOUNGS_MODULUS: f64 = 1_000.0;
@@ -97,8 +97,16 @@ fn rectangular_material() -> CompiledFrame2dMaterial {
                 y: -1.0 + (index as f64 + 0.5) * fiber_depth,
                 area: fiber_depth,
                 initial_axial_stress: 0.0,
+                material: CompiledFrame2dPointMaterial {
+                    youngs_modulus: YOUNGS_MODULUS,
+                    yield_strength: YIELD_STRENGTH,
+                    hardening_ratio: HARDENING_RATIO,
+                    damage: None,
+                },
+                uses_material_override: false,
             })
             .collect(),
+        fiber_material_ids: Vec::new(),
         longitudinal_integration_points: 4,
         adaptive_longitudinal_integration: true,
         longitudinal_integration_tolerance: 1.0e-3,
@@ -160,6 +168,7 @@ fn independent_bilinear_response(
             plastic_strain,
             backstress,
             equivalent_plastic_strain: committed.equivalent_plastic_strain + plastic_increment,
+            damage: committed.damage,
             tangent_modulus: YOUNGS_MODULUS * HARDENING_RATIO,
         },
     )

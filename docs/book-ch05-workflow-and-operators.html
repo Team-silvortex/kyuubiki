@@ -62,8 +62,8 @@
         <p class="docs-copy">
           Layers may touch or remain separated, but cannot overlap. Area,
           centroid, and second moment must agree with the parent frame element.
-          This is a piecewise-width profile contract, not a composite-material
-          claim.
+          Geometry alone does not infer a composite; material assignments use
+          the explicit ID catalog shown below.
         </p>
         <pre><code>{
   "kind": "polygon",
@@ -79,6 +79,53 @@
           profiles and either vertex orientation. Self-intersection, holes,
           multiple rings, and composite fiber materials are not silently
           inferred.
+        </p>
+        <pre><code>{
+  "section_library": {
+    "kind": "layered",
+    "layers": [
+      {"y_min": -0.20, "y_max": 0.00, "width": 0.10, "fiber_count": 4, "material_id": "soft"},
+      {"y_min": 0.00, "y_max": 0.20, "width": 0.10, "fiber_count": 4, "material_id": "stiff"}
+    ]
+  },
+  "fiber_materials": [
+    {
+      "id": "soft",
+      "youngs_modulus": 7.0e10,
+      "yield_strength": 1.0e8,
+      "hardening_ratio": 0.02,
+      "damage": {
+        "onset_equivalent_plastic_strain": 0.001,
+        "failure_equivalent_plastic_strain": 0.02,
+        "maximum_damage": 0.4
+      }
+    },
+    {"id": "stiff", "youngs_modulus": 2.0e11, "yield_strength": 5.0e8, "hardening_ratio": 0.02}
+  ],
+  "residual_stress_template": {
+    "kind": "self_equilibrated_quadratic",
+    "peak_stress": 5.0e7
+  }
+}</code></pre>
+        <p class="docs-copy">
+          Material IDs are resolved before execution and returned in result
+          diagnostics. The optional quadratic residual-stress template is
+          projected against constant and linear section modes, so its discrete
+          axial force and bending moment vanish before the requested peak
+          magnitude is applied. Explicit fiber stresses and templates are
+          mutually exclusive, and every generated stress must remain inside
+          its phase yield surface. Individual phases may also opt into bounded
+          equivalent-plastic-strain damage. The nominal stress and consistent
+          tangent degrade while damage remains monotonic and frozen during
+          elastic unloading; results expose maximum damage and damaged fiber
+          point count. The frame-fiber scope still assumes perfectly bonded
+          uniaxial fibers. A separate
+          <code>solve.cohesive_interface_1d</code> operator now evaluates
+          bilinear opening, damaged unloading/reloading, complete tensile
+          failure, and compressive closure as a composable history contract.
+          Independent displacement-jump interpolation, 2D/3D interface
+          assembly, mixed-mode delamination, friction, and three-dimensional
+          composite constitutive behavior remain future capabilities.
         </p>
       </section>
 

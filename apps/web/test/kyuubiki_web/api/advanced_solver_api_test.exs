@@ -135,12 +135,22 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     ]
   }
 
+  @cohesive_interface_request %{
+    "id" => "interface-0",
+    "initial_stiffness" => 1000.0,
+    "compression_stiffness" => 2000.0,
+    "peak_traction" => 10.0,
+    "failure_separation" => 0.05,
+    "separation_history" => [0.0, 0.01, 0.03, 0.015]
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
     {"/api/v1/fem/stokes-flow-plane-triangle-2d/jobs", "max_velocity", %{}},
     {"/api/v1/fem/nonlinear-spring-1d/jobs", "converged", %{}},
     {"/api/v1/fem/contact-gap-1d/jobs", "active_contact_count", %{"contacts" => []}},
+    {"/api/v1/fem/cohesive-interface-1d/jobs", "max_damage", @cohesive_interface_request},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},
@@ -223,6 +233,7 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     assert normalized["materials"] |> hd() |> Map.fetch!("section_fibers") == section_fibers
     assert normalized["materials"] |> hd() |> Map.fetch!("longitudinal_integration_points") == 4
     assert normalized["materials"] |> hd() |> Map.fetch!("adaptive_longitudinal_integration")
+
     assert normalized["materials"] |> hd() |> Map.fetch!("longitudinal_integration_tolerance") ==
              0.0005
   end

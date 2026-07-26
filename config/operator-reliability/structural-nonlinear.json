@@ -64,6 +64,49 @@
         "single_hardening_spring_fixture",
         "cardano_root_qualification_scope"
       ]
+    },
+    {
+      "operator_id": "solve.cohesive_interface_1d",
+      "benchmark_template": "cohesive-interface-history",
+      "domain": "structural",
+      "coverage_level": "screening",
+      "evidence": {
+        "benchmark_matrix": "physics-coverage",
+        "headless_workflow": true,
+        "tests": [
+          "workers/rust/crates/solver/tests/cohesive_interface_1d_closed_form.rs",
+          "workers/rust/crates/engine/tests/cohesive_interface_workflow.rs"
+        ],
+        "reliability_suite": "cohesive_interface_1d_closed_form",
+        "review": {
+          "assumptions": [
+            "bilinear_mode_i_traction_separation",
+            "scalar_history_damage",
+            "independent_compressive_penalty_closure"
+          ],
+          "boundary_checks": [
+            "damage_onset_separation",
+            "complete_tensile_failure",
+            "compression_after_failure",
+            "invalid_and_non_finite_input_rejection"
+          ],
+          "diagnostics": [
+            "traction",
+            "consistent_tangent_stiffness",
+            "damage",
+            "maximum_opening",
+            "constitutive_regime"
+          ],
+          "tests": [
+            "workers/rust/crates/solver/tests/cohesive_interface_1d_closed_form.rs"
+          ]
+        }
+      },
+      "limits": [
+        "standalone_constitutive_history_operator",
+        "mode_i_scalar_separation_only",
+        "not_yet_assembled_into_2d_or_3d_interface_elements"
+      ]
     }
   ]
 }

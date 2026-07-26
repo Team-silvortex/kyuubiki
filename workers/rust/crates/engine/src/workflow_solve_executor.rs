@@ -34,6 +34,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.harmonic_spring_1d",
     "solve.nonlinear_spring_1d",
     "solve.contact_gap_1d",
+    "solve.cohesive_interface_1d",
     "solve.spring_2d",
     "solve.spring_3d",
     "solve.truss_2d",
@@ -340,6 +341,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::ContactGap1d(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::ContactGap1d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.cohesive_interface_1d" => encode_solve_result(
+            solve(EngineSolveRequest::CohesiveInterface1d(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::CohesiveInterface1d(result) => Some(result),
                 _ => None,
             },
             operator_id,

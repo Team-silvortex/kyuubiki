@@ -11,6 +11,7 @@ mod buckling_frame_2d;
 mod buckling_math;
 mod buckling_sparse;
 mod chain_tridiagonal;
+mod cohesive_interface_1d;
 mod dynamic_spring_1d_validation;
 mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_element;
@@ -24,12 +25,14 @@ mod frame_2d_branch_switch;
 mod frame_2d_continuation_state;
 mod frame_2d_corotational;
 mod frame_2d_corotational_element;
+mod frame_2d_fiber_damage;
 mod frame_2d_fiber_section;
 mod frame_2d_material_p_delta;
 mod frame_2d_math;
 mod frame_2d_p_delta;
 mod frame_2d_parameter_path;
 mod frame_2d_path_events;
+mod frame_2d_residual_stress;
 mod frame_2d_section_library;
 mod frame_2d_section_polygon;
 mod frame_2d_stability;
@@ -106,6 +109,7 @@ pub use beam_1d::{
 };
 pub use buckling_beam_1d::solve_buckling_beam_1d;
 pub use buckling_frame_2d::solve_buckling_frame_2d;
+pub use cohesive_interface_1d::solve_cohesive_interface_1d;
 pub use electrostatic_plane_2d::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
 };

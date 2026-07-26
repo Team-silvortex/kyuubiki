@@ -31,6 +31,7 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/harmonic-spring-1d/jobs", :submit_harmonic_spring_1d},
     {"/api/v1/fem/nonlinear-spring-1d/jobs", :submit_nonlinear_spring_1d},
     {"/api/v1/fem/contact-gap-1d/jobs", :submit_contact_gap_1d},
+    {"/api/v1/fem/cohesive-interface-1d/jobs", :submit_cohesive_interface_1d},
     {"/api/v1/fem/spring-2d/jobs", :submit_spring_2d},
     {"/api/v1/fem/spring-3d/jobs", :submit_spring_3d},
     {"/api/v1/fem/truss-2d/jobs", :submit_truss_2d},

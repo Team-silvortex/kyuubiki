@@ -48,6 +48,54 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_1d_closed_form -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "cohesive-interface-1d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "cohesive-interface-1d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.cohesive_interface_1d"
+      ],
+      "validation_methods": [
+        "bilinear_traction_separation_closed_form",
+        "history_unload_reload_regression",
+        "compression_after_failure_boundary",
+        "rpc_and_workflow_contract"
+      ],
+      "formal_invariants": [
+        "damage_is_monotonic_and_bounded_between_zero_and_one",
+        "monotonic_opening_matches_the_bilinear_envelope",
+        "unloading_and_reloading_preserve_historical_damage",
+        "complete_opening_failure_has_zero_tensile_traction",
+        "compressive_closure_remains_active_after_tensile_failure"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/structural-nonlinear.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-screening/cohesive-interface-1d.md",
+        "workers/rust/crates/solver/tests/cohesive_interface_1d_closed_form.rs",
+        "workers/rust/crates/protocol/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/engine/tests/cohesive_interface_workflow.rs"
+      ],
+      "commands": [
+        {
+          "id": "cohesive-interface-1d-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-1d-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_1d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-1d-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_workflow -- --nocapture"
+        }
+      ]
     }
   ]
 }

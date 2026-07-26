@@ -2,10 +2,10 @@ use crate::{
     ContactGap1dContactInput, Frame2dNodeInput, Frame3dNodeInput, ModalFrame2dElementInput,
     ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
     RPC_VERSION, RpcMethod, RpcRequest, SolidTetra3dElementInput, SolidTetra3dNodeInput,
-    SolveContactGap1dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
-    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
+    SolveCohesiveInterface1dRequest, SolveContactGap1dRequest, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
+    StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
 
 #[test]
@@ -30,9 +30,14 @@ fn serializes_stokes_flow_triangle_2d_rpc_round_trip() {
 fn serializes_nonlinear_and_contact_rpc_round_trips() {
     let nonlinear = round_trip(RpcMethod::SolveNonlinearSpring1d, nonlinear_request());
     let contact = round_trip(RpcMethod::SolveContactGap1d, contact_request());
+    let cohesive = round_trip(
+        RpcMethod::SolveCohesiveInterface1d,
+        cohesive_interface_request(),
+    );
 
     assert_eq!(nonlinear.method, RpcMethod::SolveNonlinearSpring1d);
     assert_eq!(contact.method, RpcMethod::SolveContactGap1d);
+    assert_eq!(cohesive.method, RpcMethod::SolveCohesiveInterface1d);
 }
 
 #[test]
@@ -85,6 +90,17 @@ fn contact_request() -> SolveContactGap1dRequest {
         load_steps: Some(4),
         max_iterations: Some(16),
         tolerance: Some(1.0e-10),
+    }
+}
+
+fn cohesive_interface_request() -> SolveCohesiveInterface1dRequest {
+    SolveCohesiveInterface1dRequest {
+        id: "interface-0".to_string(),
+        initial_stiffness: 1_000.0,
+        compression_stiffness: 2_000.0,
+        peak_traction: 10.0,
+        failure_separation: 0.05,
+        separation_history: vec![0.0, 0.01, 0.03, 0.015],
     }
 }
 

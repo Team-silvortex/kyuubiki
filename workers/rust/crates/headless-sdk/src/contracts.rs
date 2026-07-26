@@ -389,6 +389,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         output_keys: &["job_id", "status", "progress", "job"],
     },
     HeadlessActionContract {
+        id: "solve_cohesive_interface_1d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
         id: "solve_spring_2d",
         engine: HeadlessEngine::Service,
         category: "solve",

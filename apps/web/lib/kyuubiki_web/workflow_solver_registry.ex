@@ -141,7 +141,11 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
      ["verified", "mechanical", "nonlinear", "spring", "1d"]},
     {"solve.contact_gap_1d", :solve_contact_gap_1d, "mechanical", "contact_gap_1d",
      "Solve a 1D gap-contact model with active-set contact state, penetration checks, and reaction output.",
-     ["verified", "mechanical", "contact", "gap", "1d"]}
+     ["verified", "mechanical", "contact", "gap", "1d"]},
+    {"solve.cohesive_interface_1d", :solve_cohesive_interface_1d, "mechanical",
+     "cohesive_interface_1d",
+     "Evaluate a bilinear cohesive interface history with damage, unloading, failure, and compressive closure.",
+     ["screening", "mechanical", "interface", "cohesive-zone", "damage", "delamination", "1d"]}
   ]
 
   @solvers Enum.map(@solver_specs, fn {id, method, domain, family, summary, capability_tags} ->

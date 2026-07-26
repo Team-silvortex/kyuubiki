@@ -56,6 +56,7 @@ pub(crate) fn polygon_fibers(
                 y: y - centroid_y,
                 area: width * layer_depth,
                 initial_axial_stress: 0.0,
+                material_id: None,
             });
         }
     }

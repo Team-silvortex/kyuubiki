@@ -88,6 +88,49 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_contact_gap_1d(_params), do: {:error, :invalid_contact_gap_model}
 
+  def normalize_cohesive_interface_1d(
+        %{
+          "id" => id,
+          "initial_stiffness" => initial_stiffness,
+          "compression_stiffness" => compression_stiffness,
+          "peak_traction" => peak_traction,
+          "failure_separation" => failure_separation,
+          "separation_history" => separation_history
+        } = params
+      )
+      when is_binary(id) and is_list(separation_history),
+      do:
+        {:ok,
+         Map.merge(params, %{
+           "initial_stiffness" => initial_stiffness,
+           "compression_stiffness" => compression_stiffness,
+           "peak_traction" => peak_traction,
+           "failure_separation" => failure_separation
+         })}
+
+  def normalize_cohesive_interface_1d(%{
+        id: id,
+        initial_stiffness: initial_stiffness,
+        compression_stiffness: compression_stiffness,
+        peak_traction: peak_traction,
+        failure_separation: failure_separation,
+        separation_history: separation_history
+      })
+      when is_binary(id) and is_list(separation_history),
+      do:
+        {:ok,
+         %{
+           "id" => id,
+           "initial_stiffness" => initial_stiffness,
+           "compression_stiffness" => compression_stiffness,
+           "peak_traction" => peak_traction,
+           "failure_separation" => failure_separation,
+           "separation_history" => separation_history
+         }}
+
+  def normalize_cohesive_interface_1d(_params),
+    do: {:error, :invalid_cohesive_interface_model}
+
   def normalize_spring_2d(params), do: normalize_graph_model(params, :invalid_spring_2d_model)
   def normalize_spring_3d(params), do: normalize_graph_model(params, :invalid_spring_3d_model)
   def normalize_frame_2d(params), do: normalize_graph_model(params, :invalid_frame_model)

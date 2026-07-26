@@ -493,9 +493,29 @@ continuous section properties. A native `polygon` form now validates and
 discretizes finite simple three-to-64-vertex rings, including concave profiles,
 while preserving exact continuous area, centroid, and bending inertia in the
 same fiber IR; self-intersection and degenerate geometry are rejected. The next
-gates are composite-material constructors, reusable residual-stress templates,
-experimental references, repeated cross-host performance qualification, and
-larger localization-sensitive meshes. The retained five-state independent
+step now adds a bounded fiber-material catalog: explicit fibers and layered
+regions resolve material IDs into numeric per-fiber elastic/plastic properties,
+the zero-state composite tangent replaces the parent elastic buckling baseline,
+and retained two-phase references cover transformed elastic stiffness plus
+selective soft-phase yielding. This remains a perfectly bonded uniaxial model.
+A reusable `self_equilibrated_quadratic` residual-stress template now projects
+its generated field against the discrete constant and linear section modes,
+then normalizes it to a caller-visible peak. The full solver retains zero
+section axial force and bending moment, reports the initial fiber stress range,
+rejects mixed explicit/template sources, and checks each generated stress
+against its referenced phase yield surface. A first bounded phase-local damage
+law now uses equivalent plastic strain to degrade nominal
+fiber stress and its consistent tangent. Retained tests cover the active
+damage tangent by central difference, frozen unloading, rollback-safe trials,
+protocol visibility, and a two-phase section in which only soft-phase points
+damage. A separate `solve.cohesive_interface_1d` operator now contributes a
+history-dependent bilinear traction-separation contract with damaged unloading,
+complete tensile failure, and compressive closure. It is deliberately not
+assembled into the common-strain frame fibers: the next interface gates are
+independent displacement-jump interpolation, 2D/3D element assembly,
+mixed-mode/friction coupling, experimental references, repeated cross-host
+performance qualification, and larger localization-sensitive meshes. The
+retained five-state independent
 20,000-station cyclic reference promotes from order 2 to 12 and holds the
 maximum generalized-force error to 0.218395%; the retained regression gate is
 now 1%. A paired
