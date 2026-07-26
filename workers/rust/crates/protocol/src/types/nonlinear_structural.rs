@@ -440,6 +440,43 @@ pub struct SolveFrame2dPDeltaResult {
     pub continuation_state_correction_norm: Option<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dMonotonicBilinearMaterialInput {
+    pub element_id: String,
+    pub yield_strength: f64,
+    pub hardening_ratio: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dMaterialPDeltaRequest {
+    pub stability: SolveFrame2dPDeltaRequest,
+    pub materials: Vec<Frame2dMonotonicBilinearMaterialInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dMaterialStateResult {
+    pub element_index: usize,
+    pub element_id: String,
+    pub axial_strain: f64,
+    pub axial_stress: f64,
+    #[serde(default)]
+    pub plastic_strain: f64,
+    #[serde(default)]
+    pub backstress: f64,
+    pub equivalent_plastic_strain: f64,
+    pub tangent_modulus: f64,
+    pub yielded: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dMaterialPDeltaResult {
+    pub input: SolveFrame2dMaterialPDeltaRequest,
+    pub stability_result: SolveFrame2dPDeltaResult,
+    pub material_states: Vec<Frame2dMaterialStateResult>,
+    pub yielded_element_count: usize,
+    pub max_equivalent_plastic_strain: f64,
+}
+
 fn default_single_iteration() -> usize {
     1
 }

@@ -1,3 +1,4 @@
+use crate::frame_2d_material_p_delta::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
 use crate::frame_2d_math::frame_dof_map;
 use crate::linear_algebra::{SparseMatrix, add_at};
 use kyuubiki_protocol::Frame2dElementInput;
@@ -7,13 +8,30 @@ pub(crate) fn assemble_tangent_and_internal(
     elements: &[Frame2dElementInput],
     displacement: &[f64],
 ) -> Result<(SparseMatrix, Vec<f64>), String> {
+    assemble_tangent_and_internal_with_materials(positions, elements, displacement, &[], &[])
+}
+
+pub(crate) fn assemble_tangent_and_internal_with_materials(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    displacement: &[f64],
+    materials: &[Option<CompiledFrame2dMaterial>],
+    material_histories: &[Frame2dMaterialHistory],
+) -> Result<(SparseMatrix, Vec<f64>), String> {
     let mut tangent = SparseMatrix::new(displacement.len());
     let mut internal = vec![0.0; displacement.len()];
-    for element in elements {
+    for (element_index, element) in elements.iter().enumerate() {
         let map = frame_dof_map(element.node_i, element.node_j);
         let element_displacement = gather(displacement, &map);
-        let element_internal = element_internal_force(positions, element, &element_displacement)?;
-        let element_tangent = analytic_tangent(positions, element, &element_displacement)?;
+        let material = materials.get(element_index).and_then(Option::as_ref);
+        let history = material_histories
+            .get(element_index)
+            .copied()
+            .unwrap_or_default();
+        let element_internal =
+            element_internal_force(positions, element, &element_displacement, material, history)?;
+        let element_tangent =
+            analytic_tangent(positions, element, &element_displacement, material, history)?;
         for row in 0..6 {
             internal[map[row]] += element_internal[row];
             for column in 0..6 {
@@ -34,10 +52,29 @@ pub(crate) fn assemble_internal(
     elements: &[Frame2dElementInput],
     displacement: &[f64],
 ) -> Result<Vec<f64>, String> {
+    assemble_internal_with_materials(positions, elements, displacement, &[], &[])
+}
+
+pub(crate) fn assemble_internal_with_materials(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    displacement: &[f64],
+    materials: &[Option<CompiledFrame2dMaterial>],
+    material_histories: &[Frame2dMaterialHistory],
+) -> Result<Vec<f64>, String> {
     let mut internal = vec![0.0; displacement.len()];
-    for element in elements {
+    for (element_index, element) in elements.iter().enumerate() {
         let map = frame_dof_map(element.node_i, element.node_j);
-        let force = element_internal_force(positions, element, &gather(displacement, &map))?;
+        let force = element_internal_force(
+            positions,
+            element,
+            &gather(displacement, &map),
+            materials.get(element_index).and_then(Option::as_ref),
+            material_histories
+                .get(element_index)
+                .copied()
+                .unwrap_or_default(),
+        )?;
         for row in 0..6 {
             internal[map[row]] += force[row];
         }
@@ -49,6 +86,8 @@ fn element_internal_force(
     positions: &[(f64, f64)],
     element: &Frame2dElementInput,
     displacement: &[f64; 6],
+    material: Option<&CompiledFrame2dMaterial>,
+    committed: Frame2dMaterialHistory,
 ) -> Result<[f64; 6], String> {
     let (xi, yi) = positions[element.node_i];
     let (xj, yj) = positions[element.node_j];
@@ -65,7 +104,15 @@ fn element_internal_force(
     let phi_i = displacement[2] - angle_change;
     let phi_j = displacement[5] - angle_change;
     let extension = stable_length_change(dx0, dy0, delta_x, delta_y, length0, length);
-    let axial_force = element.youngs_modulus * element.area * extension / length0;
+    let axial_strain = extension / length0;
+    let axial_stress = material
+        .map(|material| {
+            material
+                .response(element.youngs_modulus, axial_strain, committed)
+                .stress
+        })
+        .unwrap_or(element.youngs_modulus * axial_strain);
+    let axial_force = element.area * axial_stress;
     let bending = element.youngs_modulus * element.moment_of_inertia / length0;
     let moment_i = bending * (4.0 * phi_i + 2.0 * phi_j);
     let moment_j = bending * (2.0 * phi_i + 4.0 * phi_j);
@@ -86,6 +133,8 @@ fn analytic_tangent(
     positions: &[(f64, f64)],
     element: &Frame2dElementInput,
     displacement: &[f64; 6],
+    material: Option<&CompiledFrame2dMaterial>,
+    committed: Frame2dMaterialHistory,
 ) -> Result<[[f64; 6]; 6], String> {
     let (xi, yi) = positions[element.node_i];
     let (xj, yj) = positions[element.node_j];
@@ -104,10 +153,20 @@ fn analytic_tangent(
     let angle_change = relative_angle(dx0, dy0, dx, dy);
     let phi_i = displacement[2] - angle_change;
     let phi_j = displacement[5] - angle_change;
-    let axial_stiffness = element.youngs_modulus * element.area / length0;
+    let axial_strain = stable_length_change(dx0, dy0, delta_x, delta_y, length0, length) / length0;
+    let axial_response =
+        material.map(|material| material.response(element.youngs_modulus, axial_strain, committed));
+    let axial_stiffness = axial_response
+        .map(|response| response.tangent_modulus)
+        .unwrap_or(element.youngs_modulus)
+        * element.area
+        / length0;
     let bending = element.youngs_modulus * element.moment_of_inertia / length0;
-    let axial_force =
-        axial_stiffness * stable_length_change(dx0, dy0, delta_x, delta_y, length0, length);
+    let axial_force = axial_response
+        .map(|response| response.stress * element.area)
+        .unwrap_or_else(|| {
+            axial_stiffness * stable_length_change(dx0, dy0, delta_x, delta_y, length0, length)
+        });
     let moment_i = bending * (4.0 * phi_i + 2.0 * phi_j);
     let moment_j = bending * (2.0 * phi_i + 4.0 * phi_j);
 
@@ -204,6 +263,25 @@ fn stable_length_change(
         / (length + length0)
 }
 
+pub(crate) fn element_axial_strain(
+    positions: &[(f64, f64)],
+    element: &Frame2dElementInput,
+    displacement: &[f64],
+) -> Result<f64, String> {
+    let map = frame_dof_map(element.node_i, element.node_j);
+    let displacement = gather(displacement, &map);
+    let (xi, yi) = positions[element.node_i];
+    let (xj, yj) = positions[element.node_j];
+    let dx0 = xj - xi;
+    let dy0 = yj - yi;
+    let length0 = dx0.hypot(dy0);
+    let delta_x = displacement[3] - displacement[0];
+    let delta_y = displacement[4] - displacement[1];
+    let length = (dx0 + delta_x).hypot(dy0 + delta_y);
+    validate_geometry(length0, length)?;
+    Ok(stable_length_change(dx0, dy0, delta_x, delta_y, length0, length) / length0)
+}
+
 fn gather(values: &[f64], map: &[usize; 6]) -> [f64; 6] {
     [
         values[map[0]],
@@ -224,6 +302,8 @@ fn numerical_tangent(
     positions: &[(f64, f64)],
     element: &Frame2dElementInput,
     displacement: &[f64; 6],
+    material: Option<&CompiledFrame2dMaterial>,
+    committed: Frame2dMaterialHistory,
 ) -> Result<[[f64; 6]; 6], String> {
     let (xi, yi) = positions[element.node_i];
     let (xj, yj) = positions[element.node_j];
@@ -239,8 +319,8 @@ fn numerical_tangent(
         let mut minus = *displacement;
         plus[column] += epsilon;
         minus[column] -= epsilon;
-        let force_plus = element_internal_force(positions, element, &plus)?;
-        let force_minus = element_internal_force(positions, element, &minus)?;
+        let force_plus = element_internal_force(positions, element, &plus, material, committed)?;
+        let force_minus = element_internal_force(positions, element, &minus, material, committed)?;
         for row in 0..6 {
             tangent[row][column] = (force_plus[row] - force_minus[row]) / (2.0 * epsilon);
         }
@@ -275,7 +355,14 @@ mod tests {
             angle,
         ];
 
-        let internal = element_internal_force(&positions, &element, &displacement).unwrap();
+        let internal = element_internal_force(
+            &positions,
+            &element,
+            &displacement,
+            None,
+            Frame2dMaterialHistory::default(),
+        )
+        .unwrap();
         assert!(internal.iter().all(|value| value.abs() < 1.0e-5));
     }
 
@@ -292,9 +379,98 @@ mod tests {
             section_modulus: 1.0e-4,
         };
         let displacement = [0.03, -0.01, 0.04, -0.02, 0.05, -0.03];
-        let analytic = analytic_tangent(&positions, &element, &displacement).unwrap();
-        let numerical = numerical_tangent(&positions, &element, &displacement).unwrap();
+        let history = Frame2dMaterialHistory::default();
+        let analytic =
+            analytic_tangent(&positions, &element, &displacement, None, history).unwrap();
+        let numerical =
+            numerical_tangent(&positions, &element, &displacement, None, history).unwrap();
 
+        assert_tangent_close(&analytic, &numerical);
+    }
+
+    #[test]
+    fn yielded_material_tangent_matches_central_difference() {
+        let positions = [(0.0, 0.0), (2.0, 0.0)];
+        let element = Frame2dElementInput {
+            id: "yielded-tangent-check".into(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 1.0e-5,
+            section_modulus: 1.0e-4,
+        };
+        let material = CompiledFrame2dMaterial {
+            yield_strength: 100.0e6,
+            hardening_ratio: 0.03,
+        };
+        let displacement = [0.0, 0.0, 0.05, 0.01, 0.1, -0.03];
+        let history = Frame2dMaterialHistory::default();
+        let analytic = analytic_tangent(
+            &positions,
+            &element,
+            &displacement,
+            Some(&material),
+            history,
+        )
+        .unwrap();
+        let numerical = numerical_tangent(
+            &positions,
+            &element,
+            &displacement,
+            Some(&material),
+            history,
+        )
+        .unwrap();
+
+        assert_tangent_close(&analytic, &numerical);
+    }
+
+    #[test]
+    fn reversed_material_tangent_matches_central_difference_from_committed_history() {
+        let positions = [(0.0, 0.0), (2.0, 0.0)];
+        let element = Frame2dElementInput {
+            id: "reversed-tangent-check".into(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.01,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 1.0e-5,
+            section_modulus: 1.0e-4,
+        };
+        let material = CompiledFrame2dMaterial {
+            yield_strength: 100.0e6,
+            hardening_ratio: 0.03,
+        };
+        let committed = material
+            .response(
+                element.youngs_modulus,
+                0.001,
+                Frame2dMaterialHistory::default(),
+            )
+            .history;
+        let displacement = [0.0, 0.0, 0.02, -0.01, 0.05, -0.01];
+        let analytic = analytic_tangent(
+            &positions,
+            &element,
+            &displacement,
+            Some(&material),
+            committed,
+        )
+        .unwrap();
+        let numerical = numerical_tangent(
+            &positions,
+            &element,
+            &displacement,
+            Some(&material),
+            committed,
+        )
+        .unwrap();
+
+        assert_tangent_close(&analytic, &numerical);
+    }
+
+    fn assert_tangent_close(analytic: &[[f64; 6]; 6], numerical: &[[f64; 6]; 6]) {
         for row in 0..6 {
             for column in 0..6 {
                 let scale = numerical[row][column].abs().max(1.0);

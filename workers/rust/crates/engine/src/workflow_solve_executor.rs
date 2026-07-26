@@ -44,6 +44,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.buckling_frame_2d",
     "solve.frame_2d_p_delta",
     "solve.frame_2d_p_delta_path",
+    "solve.frame_2d_material_p_delta",
     "solve.modal_frame_3d",
     "solve.beam_1d",
     "solve.thermal_beam_1d",
@@ -419,6 +420,14 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             solve(EngineSolveRequest::Frame2dPDeltaPath(decode(payload)?))?,
             |result| match result {
                 AnalysisResult::Frame2dPDeltaPath(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.frame_2d_material_p_delta" => encode_solve_result(
+            solve(EngineSolveRequest::Frame2dMaterialPDelta(decode(payload)?))?,
+            |result| match result {
+                AnalysisResult::Frame2dMaterialPDelta(result) => Some(result),
                 _ => None,
             },
             operator_id,

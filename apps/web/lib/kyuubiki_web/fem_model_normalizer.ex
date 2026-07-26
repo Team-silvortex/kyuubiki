@@ -136,6 +136,26 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_frame_2d_p_delta(_params), do: {:error, :invalid_frame_2d_p_delta_model}
 
+  def normalize_frame_2d_material_p_delta(%{
+        "stability" => stability,
+        "materials" => materials
+      })
+      when is_map(stability) and is_list(materials) do
+    with {:ok, normalized_stability} <- normalize_frame_2d_p_delta(stability) do
+      {:ok, %{"stability" => normalized_stability, "materials" => materials}}
+    end
+  end
+
+  def normalize_frame_2d_material_p_delta(%{stability: stability, materials: materials})
+      when is_map(stability) and is_list(materials) do
+    with {:ok, normalized_stability} <- normalize_frame_2d_p_delta(stability) do
+      {:ok, %{stability: normalized_stability, materials: materials}}
+    end
+  end
+
+  def normalize_frame_2d_material_p_delta(_params),
+    do: {:error, :invalid_frame_2d_material_p_delta_model}
+
   def normalize_modal_frame_3d(params),
     do: normalize_graph_model(params, :invalid_modal_frame_3d_model)
 

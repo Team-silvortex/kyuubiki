@@ -170,6 +170,8 @@ pub enum RpcMethod {
     SolveFrame2dPDelta,
     #[serde(rename = "solve_frame_2d_p_delta_path")]
     SolveFrame2dPDeltaPath,
+    #[serde(rename = "solve_frame_2d_material_p_delta")]
+    SolveFrame2dMaterialPDelta,
     #[serde(rename = "solve_thermal_frame_2d")]
     SolveThermalFrame2d,
     #[serde(rename = "solve_thermal_frame_3d")]

@@ -1,4 +1,10 @@
-use crate::frame_2d_corotational_element::{assemble_internal, assemble_tangent_and_internal};
+use crate::frame_2d_corotational_element::{
+    assemble_internal_with_materials, assemble_tangent_and_internal,
+    assemble_tangent_and_internal_with_materials,
+};
+use crate::frame_2d_material_p_delta::{
+    CompiledFrame2dMaterial, Frame2dMaterialHistory, update_material_histories,
+};
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, sparse_to_dense};
 use crate::linear_banded::SymmetricBandCholesky;
@@ -15,6 +21,7 @@ const MAX_DENSE_FALLBACK_DOFS: usize = 1_024;
 
 struct EquilibriumAttempt {
     displacement: Vec<f64>,
+    material_histories: Vec<Frame2dMaterialHistory>,
     iterations: usize,
     residual_norm: f64,
     converged: bool,
@@ -24,6 +31,7 @@ struct EquilibriumAttempt {
 
 struct AdaptiveStep {
     displacement: Vec<f64>,
+    material_histories: Vec<Frame2dMaterialHistory>,
     iterations: usize,
     residual_norm: f64,
     converged: bool,
@@ -34,14 +42,20 @@ struct AdaptiveStep {
     failure_detail: Option<String>,
 }
 
-pub(crate) fn solve_corotational_steps(
+pub(crate) struct CorotationalSolveResult {
+    pub(crate) steps: Vec<Frame2dPDeltaStepResult>,
+    pub(crate) material_histories: Vec<Frame2dMaterialHistory>,
+}
+
+pub(crate) fn solve_corotational_steps_with_materials(
     request: &SolveFrame2dPDeltaRequest,
     system: &Frame2dStabilitySystem,
     initial_imperfection: &[f64],
     maximum_load_factor: f64,
     critical_factor: f64,
     load_steps: usize,
-) -> Result<Vec<Frame2dPDeltaStepResult>, String> {
+    materials: &[Option<CompiledFrame2dMaterial>],
+) -> Result<CorotationalSolveResult, String> {
     let frame = &request.buckling.frame;
     let initial_positions = frame
         .nodes
@@ -55,6 +69,7 @@ pub(crate) fn solve_corotational_steps(
         })
         .collect::<Vec<_>>();
     let mut displacement = vec![0.0; frame.nodes.len() * 3];
+    let mut material_histories = vec![Frame2dMaterialHistory::default(); frame.elements.len()];
     let mut steps = Vec::with_capacity(load_steps);
     let max_iterations = request.max_iterations.unwrap_or(DEFAULT_MAX_ITERATIONS);
     let tolerance = request.tolerance.unwrap_or(DEFAULT_RESIDUAL_TOLERANCE);
@@ -75,8 +90,11 @@ pub(crate) fn solve_corotational_steps(
             max_iterations,
             tolerance,
             max_cutbacks,
+            materials,
+            &material_histories,
         )?;
         displacement = adaptive.displacement;
+        material_histories = adaptive.material_histories;
 
         steps.push(Frame2dPDeltaStepResult {
             step,
@@ -120,7 +138,10 @@ pub(crate) fn solve_corotational_steps(
         }
         previous_load_factor = load_factor;
     }
-    Ok(steps)
+    Ok(CorotationalSolveResult {
+        steps,
+        material_histories,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -134,8 +155,11 @@ fn solve_adaptive_step(
     max_iterations: usize,
     tolerance: f64,
     max_cutbacks: usize,
+    materials: &[Option<CompiledFrame2dMaterial>],
+    initial_material_histories: &[Frame2dMaterialHistory],
 ) -> Result<AdaptiveStep, String> {
     let mut displacement = initial_displacement.to_vec();
+    let mut material_histories = initial_material_histories.to_vec();
     let mut achieved_load_factor = initial_load_factor;
     let mut pending = vec![target_load_factor];
     let mut total_iterations = 0;
@@ -152,11 +176,14 @@ fn solve_adaptive_step(
             attempted_load_factor,
             max_iterations,
             tolerance,
+            materials,
+            &material_histories,
         )?;
         total_iterations += attempt.iterations;
         residual_norm = attempt.residual_norm;
         if attempt.converged {
             displacement = attempt.displacement;
+            material_histories = attempt.material_histories;
             achieved_load_factor = attempted_load_factor;
             substeps += 1;
             continue;
@@ -166,6 +193,7 @@ fn solve_adaptive_step(
         if cutbacks >= max_cutbacks {
             return Ok(AdaptiveStep {
                 displacement,
+                material_histories,
                 iterations: total_iterations,
                 residual_norm,
                 converged: false,
@@ -183,6 +211,7 @@ fn solve_adaptive_step(
         if midpoint <= achieved_load_factor + f64::EPSILON * target_load_factor.abs().max(1.0) {
             return Ok(AdaptiveStep {
                 displacement,
+                material_histories,
                 iterations: total_iterations,
                 residual_norm,
                 converged: false,
@@ -203,6 +232,7 @@ fn solve_adaptive_step(
 
     Ok(AdaptiveStep {
         displacement,
+        material_histories,
         iterations: total_iterations,
         residual_norm,
         converged: true,
@@ -235,6 +265,8 @@ fn solve_equilibrium(
     load_factor: f64,
     max_iterations: usize,
     tolerance: f64,
+    materials: &[Option<CompiledFrame2dMaterial>],
+    committed_material_histories: &[Frame2dMaterialHistory],
 ) -> Result<EquilibriumAttempt, String> {
     let mut displacement = initial_displacement.to_vec();
     let mut residual_norm = f64::INFINITY;
@@ -244,8 +276,13 @@ fn solve_equilibrium(
     let mut failure_detail = None;
     for iteration in 1..=max_iterations {
         iterations = iteration;
-        let (tangent, internal) =
-            assemble_tangent_and_internal(positions, elements, &displacement)?;
+        let (tangent, internal) = assemble_tangent_and_internal_with_materials(
+            positions,
+            elements,
+            &displacement,
+            materials,
+            committed_material_histories,
+        )?;
         let residual = residual(&system.reference_force, &internal, load_factor);
         let (reduced_tangent, reduced_residual, free) =
             reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
@@ -272,6 +309,8 @@ fn solve_equilibrium(
             load_factor,
             residual_norm,
             &mut displacement,
+            materials,
+            committed_material_histories,
         )? {
             failure_reason = Some(Frame2dPDeltaFailureReason::LineSearchFailed);
             break;
@@ -280,8 +319,20 @@ fn solve_equilibrium(
     if !converged && failure_reason.is_none() {
         failure_reason = Some(Frame2dPDeltaFailureReason::MaximumIterations);
     }
+    let material_histories = if converged {
+        update_material_histories(
+            positions,
+            elements,
+            &displacement,
+            materials,
+            committed_material_histories,
+        )?
+    } else {
+        committed_material_histories.to_vec()
+    };
     Ok(EquilibriumAttempt {
         displacement,
+        material_histories,
         iterations,
         residual_norm,
         converged,
@@ -307,6 +358,8 @@ pub(crate) fn correct_corotational_equilibrium(
         load_factor,
         max_iterations,
         tolerance,
+        &[],
+        &[],
     )?;
     Ok(attempt.converged.then_some(attempt.displacement))
 }
@@ -398,6 +451,7 @@ pub(crate) fn correct_parameter_continuation_equilibrium(
     Ok(None)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_backtracked_increment(
     positions: &[(f64, f64)],
     elements: &[Frame2dElementInput],
@@ -407,6 +461,8 @@ fn apply_backtracked_increment(
     load_factor: f64,
     current_norm: f64,
     displacement: &mut Vec<f64>,
+    materials: &[Option<CompiledFrame2dMaterial>],
+    committed_material_histories: &[Frame2dMaterialHistory],
 ) -> Result<bool, String> {
     let mut scale = 1.0;
     for _ in 0..10 {
@@ -414,7 +470,13 @@ fn apply_backtracked_increment(
         for (index, &dof) in free.iter().enumerate() {
             trial[dof] += scale * delta[index];
         }
-        let Ok(internal) = assemble_internal(positions, elements, &trial) else {
+        let Ok(internal) = assemble_internal_with_materials(
+            positions,
+            elements,
+            &trial,
+            materials,
+            committed_material_histories,
+        ) else {
             scale *= 0.5;
             continue;
         };

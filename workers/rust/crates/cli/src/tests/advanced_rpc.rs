@@ -1,13 +1,13 @@
 use super::*;
 use kyuubiki_protocol::{
-    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame2dStabilityKinematics,
-    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
-    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolveBucklingFrame2dRequest,
-    SolveContactGap1dRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
-    SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
-    SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
-    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput,
+    Frame2dNodeInput, Frame2dStabilityKinematics, Frame3dNodeInput, ModalFrame2dElementInput,
+    ModalFrame3dElementInput, NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput,
+    SolveBucklingFrame2dRequest, SolveContactGap1dRequest, SolveFrame2dMaterialPDeltaRequest,
+    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
+    StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
 };
 
 #[test]
@@ -110,6 +110,40 @@ fn handles_frame_2d_p_delta_rpc_requests() {
         kyuubiki_protocol::Frame2dImperfectionSource::BucklingMode
     );
     assert_eq!(result.critical_factor_limit_ratio, 0.95);
+}
+
+#[test]
+fn handles_frame_2d_material_p_delta_rpc_requests() {
+    let mut stability = frame_2d_p_delta_request();
+    stability.kinematics = Frame2dStabilityKinematics::Corotational;
+    stability.maximum_load_factor = Some(1.0);
+    stability.imperfection_amplitude = 1.0e-8;
+    stability.max_iterations = Some(64);
+    let materials = stability
+        .buckling
+        .frame
+        .elements
+        .iter()
+        .map(|element| Frame2dMonotonicBilinearMaterialInput {
+            element_id: element.id.clone(),
+            yield_strength: 5.0e6,
+            hardening_ratio: 0.1,
+        })
+        .collect();
+    let response = execute(
+        RpcMethod::SolveFrame2dMaterialPDelta,
+        SolveFrame2dMaterialPDeltaRequest {
+            stability,
+            materials,
+        },
+    );
+
+    assert!(response.ok, "error={:?}", response.error);
+    let result: kyuubiki_protocol::SolveFrame2dMaterialPDeltaResult =
+        serde_json::from_value(response.result.expect("material p-delta solver result"))
+            .expect("material p-delta result");
+    assert!(result.stability_result.converged);
+    assert_eq!(result.yielded_element_count, 2);
 }
 
 #[test]

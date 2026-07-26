@@ -3,7 +3,8 @@ use crate::frame_2d_arc_length::solve_arc_length_steps;
 use crate::frame_2d_branch_subspace::{
     MAX_SUBSPACE_REFINEMENT_LEVELS, available_subspace_sample_count,
 };
-use crate::frame_2d_corotational::solve_corotational_steps;
+use crate::frame_2d_corotational::solve_corotational_steps_with_materials;
+use crate::frame_2d_material_p_delta::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
 use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
 use crate::linear_algebra::{
@@ -23,6 +24,13 @@ const DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO: f64 = 0.8;
 pub fn solve_frame_2d_p_delta(
     request: &SolveFrame2dPDeltaRequest,
 ) -> Result<SolveFrame2dPDeltaResult, String> {
+    solve_frame_2d_p_delta_with_materials(request, &[]).map(|(result, _)| result)
+}
+
+pub(crate) fn solve_frame_2d_p_delta_with_materials(
+    request: &SolveFrame2dPDeltaRequest,
+    materials: &[Option<CompiledFrame2dMaterial>],
+) -> Result<(SolveFrame2dPDeltaResult, Vec<Frame2dMaterialHistory>), String> {
     validate_request(request)?;
     let mode_index = request.imperfection_mode_index.unwrap_or(0);
     let mut buckling_request = request.buckling.clone();
@@ -78,6 +86,8 @@ pub fn solve_frame_2d_p_delta(
         .clamp(1, 128);
     let mut continuation_state = None;
     let mut continuation_state_correction_norm = None;
+    let mut material_histories =
+        vec![Frame2dMaterialHistory::default(); buckling_request.frame.elements.len()];
     let mut steps = match (request.kinematics, request.path_control) {
         (
             Frame2dStabilityKinematics::LinearizedPDelta,
@@ -91,14 +101,17 @@ pub fn solve_frame_2d_p_delta(
             load_steps,
         )?,
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::LoadControl) => {
-            solve_corotational_steps(
+            let result = solve_corotational_steps_with_materials(
                 request,
                 &system,
                 &initial_imperfection_shape,
                 maximum_load_factor,
                 critical_factor,
                 load_steps,
-            )?
+                materials,
+            )?;
+            material_histories = result.material_histories;
+            result.steps
         }
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::ArcLength) => {
             let result = solve_arc_length_steps(
@@ -128,21 +141,24 @@ pub fn solve_frame_2d_p_delta(
         .map(|step| step.imperfection_amplification)
         .fold(1.0_f64, f64::max);
     let converged = steps.len() == load_steps && steps.iter().all(|step| step.converged);
-    Ok(SolveFrame2dPDeltaResult {
-        input: request.clone(),
-        buckling_result,
-        imperfection_source,
-        kinematics: request.kinematics,
-        path_control: request.path_control,
-        initial_imperfection_shape,
-        critical_factor_limit_ratio: FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO,
-        steps,
-        final_displacements,
-        max_imperfection_amplification,
-        converged,
-        continuation_state,
-        continuation_state_correction_norm,
-    })
+    Ok((
+        SolveFrame2dPDeltaResult {
+            input: request.clone(),
+            buckling_result,
+            imperfection_source,
+            kinematics: request.kinematics,
+            path_control: request.path_control,
+            initial_imperfection_shape,
+            critical_factor_limit_ratio: FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO,
+            steps,
+            final_displacements,
+            max_imperfection_amplification,
+            converged,
+            continuation_state,
+            continuation_state_correction_norm,
+        },
+        material_histories,
+    ))
 }
 
 fn solve_linearized_steps(

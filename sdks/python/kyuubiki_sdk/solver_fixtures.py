@@ -212,6 +212,18 @@ _BUCKLING_FRAME_2D = {
     ],
 }
 
+_MATERIAL_P_DELTA_FRAME_2D = {
+    "nodes": [
+        {"id": "mp0", "x": 0.0, "y": 0.0, "fix_x": True, "fix_y": True, "fix_rz": False, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+        {"id": "mp1", "x": 0.0, "y": 1.0, "fix_x": False, "fix_y": False, "fix_rz": False, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+        {"id": "mp2", "x": 0.0, "y": 2.0, "fix_x": True, "fix_y": False, "fix_rz": False, "load_x": 0.0, "load_y": -100_000.0, "moment_z": 0.0},
+    ],
+    "elements": [
+        {"id": "mpe0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1},
+        {"id": "mpe1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 210_000_000_000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1},
+    ],
+}
+
 _TRUSS_3D = {
     "nodes": [
         {"id": "n0", "x": 0.0, "y": 0.0, "z": 0.0, "fix_x": True, "fix_y": True, "fix_z": True, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0},
@@ -320,6 +332,22 @@ _PAYLOADS = {
         },
         "imperfection_amplitude": 0.001,
         "load_steps": 4,
+    },
+    "frame_2d_material_p_delta": {
+        "stability": {
+            "buckling": {
+                "frame": _MATERIAL_P_DELTA_FRAME_2D,
+                "mode_count": 1,
+            },
+            "imperfection_amplitude": 1.0e-8,
+            "kinematics": "corotational",
+            "maximum_load_factor": 1.0,
+            "load_steps": 4,
+        },
+        "materials": [
+            {"element_id": "mpe0", "yield_strength": 5_000_000.0, "hardening_ratio": 0.1},
+            {"element_id": "mpe1", "yield_strength": 5_000_000.0, "hardening_ratio": 0.1},
+        ],
     },
     "frame_3d": _FRAME_3D,
     "modal_frame_3d": {

@@ -192,7 +192,8 @@
       "trust_goal": "screening_validation",
       "operators": [
         "solve.frame_2d_p_delta",
-        "solve.frame_2d_p_delta_path"
+        "solve.frame_2d_p_delta_path",
+        "solve.frame_2d_material_p_delta"
       ],
       "validation_methods": [
         "modal_imperfection_synthesis",
@@ -219,6 +220,13 @@
         "continuation_state_trivial_root_identity_guard",
         "external_state_seeded_four_column_star_trajectory",
         "nonlinear_elastica_graph_rayleigh_correlation",
+        "monotonic_bilinear_axial_material_reference",
+        "material_consistent_newton_tangent",
+        "incremental_kinematic_hardening_return_mapping",
+        "committed_trial_material_state_transaction",
+        "failed_substep_material_state_rollback",
+        "signed_plastic_strain_and_backstress_observability",
+        "element_scoped_material_assignment",
         "connected_triplet_repeated_mixed_subspace_external_reference",
         "connected_triplet_two_parameter_spectral_unfolding",
         "connected_triplet_five_point_nonlinear_parameter_path",
@@ -257,7 +265,10 @@
         "structured_nonconvergence_diagnostics",
         "multi_member_rigid_rotation_objectivity",
         "critical_limit_rejection",
-        "workflow_route_contract"
+        "workflow_route_contract",
+        "agent_solver_rpc_route_contract",
+        "headless_direct_fem_capability_manifest",
+        "self_host_control_plane_submission_route"
       ],
       "formal_invariants": [
         "imperfection_amplification_matches_one_over_one_minus_load_ratio",
@@ -265,6 +276,8 @@
         "corotational_steps_converge_under_incremental_newton_iteration",
         "corotational_internal_force_is_objective_under_rigid_motion",
         "corotational_analytic_tangent_matches_central_difference",
+        "yielded_bilinear_corotational_tangent_matches_central_difference",
+        "reverse_yield_tangent_matches_central_difference_from_committed_history",
         "short_element_geometry_avoids_near_equal_subtraction",
         "corotational_response_recovers_linearized_response_at_low_load",
         "failed_nominal_step_reports_the_last_achieved_load_factor",
@@ -315,6 +328,12 @@
         "external_star_state_seeds_sixty_four_nontrivial_arc_length_points",
         "star_trajectory_load_error_stays_below_three_percent_and_external_orthogonal_residual_below_one_e_minus_four",
         "star_trajectory_neighbor_direction_overlap_stays_above_point_nine_nine_nine",
+        "bilinear_column_shortening_matches_the_external_piecewise_reference",
+        "yielded_element_stress_plastic_strain_and_tangent_match_the_material_envelope",
+        "reversal_updates_signed_plastic_strain_backstress_and_accumulated_plastic_strain",
+        "rejected_trial_states_do_not_mutate_the_last_committed_material_history",
+        "only_converged_accepted_substeps_commit_material_history",
+        "duplicate_unknown_and_non_monotonic_material_contracts_are_rejected",
         "complete_graph_triplet_recovers_the_symmetric_euler_factor",
         "complete_graph_triplet_recovers_the_repeated_graph_laplacian_factor",
         "connected_triplet_repeated_modes_retain_mixed_column_participation",
@@ -407,7 +426,10 @@
         "workflow_json_preserves_adaptive_subspace_origin_and_level",
         "workflow_json_preserves_adaptive_subspace_parent_angle",
         "workflow_json_round_trips_and_executes_exported_continuation_state",
-        "branch_continuation_failures_do_not_invalidate_the_primary_path"
+        "branch_continuation_failures_do_not_invalidate_the_primary_path",
+        "agent_descriptor_and_rpc_dispatch_expose_the_material_stability_method",
+        "headless_capability_manifest_maps_the_material_action_to_its_direct_route",
+        "self_host_and_official_sdk_route_maps_share_the_material_submission_path"
       ],
       "evidence_paths": [
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
@@ -416,6 +438,7 @@
         "workers/rust/crates/solver/src/frame_2d_continuation_state.rs",
         "workers/rust/crates/solver/src/frame_2d_parameter_path.rs",
         "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_material_p_delta.rs",
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
         "workers/rust/crates/solver/src/buckling_math.rs",
@@ -429,6 +452,7 @@
         "workers/rust/crates/protocol/src/tests/buckling_rpc.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
+        "workers/rust/crates/solver/tests/frame_2d_material_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_williams_toggle_reference.rs",
         "workers/rust/crates/solver/tests/frame_2d_euler_branch_reference.rs",
         "workers/rust/crates/solver/tests/frame_2d_coupled_euler_reference.rs",
@@ -439,7 +463,16 @@
         "workers/rust/crates/solver/tests/frame_2d_branch_controls.rs",
         "workers/rust/crates/solver/tests/frame_2d_branch_reference.rs",
         "workers/rust/crates/engine/tests/frame_2d_p_delta_workflow.rs",
-        "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs"
+        "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs",
+        "workers/rust/crates/cli/src/rpc.rs",
+        "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
+        "workers/rust/crates/headless-sdk/src/direct_fem.rs",
+        "workers/rust/crates/headless-sdk/src/contracts.rs",
+        "apps/web/lib/kyuubiki_web/fem_submit_routes.ex",
+        "apps/web/test/kyuubiki_web/api/advanced_solver_api_test.exs",
+        "sdks/rust/src/control_plane.rs",
+        "sdks/python/kyuubiki_sdk/control_plane.py",
+        "sdks/elixir/lib/kyuubiki_sdk/control_plane_client.ex"
       ],
       "commands": [
         {
@@ -488,6 +521,11 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
         },
         {
+          "id": "frame-2d-material-p-delta-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_material_p_delta_closed_form -- --nocapture"
+        },
+        {
           "id": "frame-2d-williams-toggle-external-reference",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_williams_toggle_reference -- --nocapture"
@@ -526,6 +564,16 @@
           "id": "frame-2d-switched-branch-workflow",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_branch_workflow -- --nocapture"
+        },
+        {
+          "id": "frame-2d-material-agent-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_frame_2d_material_p_delta_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-material-headless-manifest",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk direct_fem::tests -- --nocapture"
         }
       ]
     }

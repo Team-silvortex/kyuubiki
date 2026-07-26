@@ -47,6 +47,13 @@ points, descending and rising equilibrium segments, and opt-in
 critical-mode-constrained branch probes with switched-branch continuation.
 These remain screening paths rather than externally qualified post-buckling
 branches. Neither control mode is a material-plasticity model.
+`solve.frame_2d_material_p_delta` is a separate monotonic load-control
+extension: selected elements use an incremental bilinear axial return mapping
+with linear kinematic hardening during Newton assembly while bending remains
+elastic. Trial states are evaluated from the last committed substep and only a
+converged accepted substep commits plastic strain, backstress, and accumulated
+plastic strain. The public frame load contract is still monotonic; it is not
+yet a cyclic frame-history or general section-yielding model.
 
 ## Retained Checks
 
@@ -61,6 +68,29 @@ branches. Neither control mode is a material-plasticity model.
   the low-load response recovers the linearized P-Delta result.
 - The analytic corotational tangent matches a retained central-difference
   Jacobian at a finite translated and rotated element state.
+- A 16-element column with a `250 MPa` yield strength and 5% hardening follows
+  an independent piecewise-linear axial reference through 13 monotonic load
+  steps to `1.3 Py`. Its top shortening, every element's axial strain and
+  stress, equivalent plastic strain, and post-yield tangent modulus agree
+  within `2e-7` relative error. All 16 elements report yielded state, proving
+  the material return mapping and consistent tangent participate in Newton
+  assembly rather than post-processing. Signed plastic strain and kinematic
+  backstress also match the independent reference. A direct reversal test
+  checks elastic unloading followed by reverse yielding, and a deliberately
+  failed one-iteration equilibrium proves that rejected Newton attempts leave
+  all committed history variables at zero. At a separate finite-rotation
+  post-yield state,
+  every component of the combined material-geometric 6-by-6 tangent matches a
+  retained central-difference Jacobian within `2e-7`. Assignments are
+  element-ID scoped; duplicate and unknown assignments are rejected.
+  Arc-length control and cyclic schedules remain rejected until their public
+  history and continuation contracts are defined.
+- The material operator is reachable through the built-in engine workflow
+  route, agent solver RPC, Rust headless direct-FEM manifest, and the self-host
+  control-plane submission route. Rust, Python, and Elixir official SDK maps
+  share `frame_2d_material_p_delta` and
+  `/api/v1/fem/frame-2d-material-p-delta/jobs`; retained route tests prevent a
+  solver-only capability that callers cannot discover or submit.
 - Stable incremental length and relative-angle identities preserve short-member
   geometry changes that disappear under direct subtraction of near-equal
   lengths or angles.
@@ -498,7 +528,8 @@ branches. Neither control mode is a material-plasticity model.
 
 ## Promotion Gaps
 
-- material yielding, residual stress, and section interaction
+- cyclic frame load schedules, residual stress, and axial-bending
+  fiber-section interaction
 
 ## Performance Reproduction
 

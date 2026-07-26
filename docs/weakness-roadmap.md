@@ -446,7 +446,14 @@ inertias and three unequal live couplers retain all-column participation over
 overlap. This work also added a continuation-state identity guard so a
 fixed-load Newton correction cannot silently replace a nontrivial imported
 branch with the trivial equilibrium. The remaining stability depth is now
-material-nonlinear correlation, residual stress, and section interaction.
+partially entered: `solve.frame_2d_material_p_delta` applies element-scoped
+incremental bilinear axial return mapping with linear kinematic hardening
+inside the corotational Newton assembly. A 16-element column tracks an external
+pre/post-yield reference within `2e-7` for shortening, stress, signed plastic
+strain, backstress, accumulated plastic strain, and tangent modulus. Trial
+states are rollback-safe and only converged accepted substeps commit history.
+The next material gates are a public cyclic frame load schedule, residual
+stress, and axial-bending fiber-section interaction.
 The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance

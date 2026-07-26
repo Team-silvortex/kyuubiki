@@ -24,6 +24,7 @@ mod frame_2d_branch_switch;
 mod frame_2d_continuation_state;
 mod frame_2d_corotational;
 mod frame_2d_corotational_element;
+mod frame_2d_material_p_delta;
 mod frame_2d_math;
 mod frame_2d_p_delta;
 mod frame_2d_parameter_path;
@@ -109,6 +110,7 @@ pub use frame_2d::{
     solve_frame_2d, solve_frame_2d_with_options, solve_thermal_frame_2d,
     solve_thermal_frame_2d_with_options,
 };
+pub use frame_2d_material_p_delta::solve_frame_2d_material_p_delta;
 pub use frame_2d_p_delta::solve_frame_2d_p_delta;
 pub use frame_2d_parameter_path::solve_frame_2d_p_delta_path;
 pub use frame_3d::{solve_frame_3d, solve_frame_3d_with_options};

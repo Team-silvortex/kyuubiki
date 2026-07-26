@@ -258,6 +258,12 @@ pub fn chunk_result(
         (AnalysisResult::Frame2dPDeltaPath(result), ResultChunkKind::Elements) => {
             encode_slice(&result.attempts)?
         }
+        (AnalysisResult::Frame2dMaterialPDelta(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.stability_result.final_displacements)?
+        }
+        (AnalysisResult::Frame2dMaterialPDelta(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.material_states)?
+        }
     };
 
     let offset = request.offset.min(items.len());

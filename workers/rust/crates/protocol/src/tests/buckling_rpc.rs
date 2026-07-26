@@ -2,9 +2,10 @@ use crate::{
     BucklingBeam1dElementInput, BucklingBeam1dModeResult, BucklingBeam1dNodeInput,
     BucklingModeDirectionAssessment, Frame2dBranchDirection, Frame2dBranchProbeOrigin,
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
-    Frame2dNodeInput, Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult,
-    Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest,
-    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveFrame2dPDeltaRequest,
+    Frame2dMaterialStateResult, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
+    Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
+    Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
+    SolveBucklingFrame2dRequest, SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaRequest,
     SolveFrame2dRequest,
 };
 
@@ -179,6 +180,68 @@ fn p_delta_rpc_round_trip_preserves_imperfection_controls() {
     assert_eq!(legacy.branch_continuation_steps, None);
     assert_eq!(legacy.branch_continuation_radius, None);
     assert_eq!(legacy.branch_continuation_min_radius_ratio, None);
+}
+
+#[test]
+fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
+    let base: SolveFrame2dPDeltaRequest = serde_json::from_value(serde_json::json!({
+        "buckling": {
+            "frame": {
+                "nodes": [
+                    {"id": "base", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                    {"id": "top", "x": 0.0, "y": 2.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -1.0, "moment_z": 0.0}
+                ],
+                "elements": [
+                    {"id": "column", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210.0e9, "moment_of_inertia": 8.0e-6, "section_modulus": 1.0e-4}
+                ]
+            }
+        },
+        "imperfection_amplitude": 0.001,
+        "kinematics": "corotational"
+    }))
+    .expect("base material stability request should decode");
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "material-column".to_string(),
+        method: RpcMethod::SolveFrame2dMaterialPDelta,
+        params: serde_json::to_value(SolveFrame2dMaterialPDeltaRequest {
+            stability: base,
+            materials: vec![Frame2dMonotonicBilinearMaterialInput {
+                element_id: "column".to_string(),
+                yield_strength: 250.0e6,
+                hardening_ratio: 0.02,
+            }],
+        })
+        .expect("material p-delta request should serialize"),
+    };
+    let decoded: RpcRequest = serde_json::from_str(
+        &serde_json::to_string(&request).expect("material p-delta rpc should serialize"),
+    )
+    .expect("material p-delta rpc should decode");
+    let params: SolveFrame2dMaterialPDeltaRequest =
+        serde_json::from_value(decoded.params).expect("material p-delta params should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveFrame2dMaterialPDelta);
+    assert_eq!(params.materials[0].element_id, "column");
+    assert_eq!(params.materials[0].yield_strength, 250.0e6);
+    assert_eq!(params.materials[0].hardening_ratio, 0.02);
+}
+
+#[test]
+fn legacy_material_state_defaults_new_signed_history_fields() {
+    let state: Frame2dMaterialStateResult = serde_json::from_value(serde_json::json!({
+        "element_index": 0,
+        "element_id": "column",
+        "axial_strain": -0.002,
+        "axial_stress": -260.0e6,
+        "equivalent_plastic_strain": 0.0007,
+        "tangent_modulus": 10.5e9,
+        "yielded": true
+    }))
+    .expect("legacy material state should decode");
+
+    assert_eq!(state.plastic_strain, 0.0);
+    assert_eq!(state.backstress, 0.0);
 }
 
 #[test]

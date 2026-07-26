@@ -105,6 +105,51 @@ fn workflow_route_executes_corotational_equilibrium() {
 }
 
 #[test]
+fn workflow_route_executes_monotonic_material_p_delta() {
+    let result = run_solve_operator(
+        "solve.frame_2d_material_p_delta",
+        json!({
+            "stability": {
+                "buckling": {
+                    "frame": {
+                        "nodes": [
+                            {"id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                            {"id": "n1", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                            {"id": "n2", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -2500000.0, "moment_z": 0.0}
+                        ],
+                        "elements": [
+                            {"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 200000000000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1},
+                            {"id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 200000000000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1}
+                        ]
+                    },
+                    "mode_count": 1
+                },
+                "imperfection_amplitude": 1.0e-8,
+                "imperfection_mode_index": 0,
+                "kinematics": "corotational",
+                "maximum_load_factor": 1.2,
+                "load_steps": 6,
+                "max_iterations": 64,
+                "tolerance": 1.0e-9
+            },
+            "materials": [
+                {"element_id": "e0", "yield_strength": 250000000.0, "hardening_ratio": 0.1},
+                {"element_id": "e1", "yield_strength": 250000000.0, "hardening_ratio": 0.1}
+            ]
+        }),
+    )
+    .expect("workflow material p-delta route should solve");
+
+    assert_eq!(result["stability_result"]["converged"], true);
+    assert_eq!(result["yielded_element_count"], 2);
+    assert_eq!(result["material_states"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        result["_solver_provenance"]["operator_id"],
+        "solve.frame_2d_material_p_delta"
+    );
+}
+
+#[test]
 fn workflow_route_executes_arc_length_continuation() {
     let mut payload = json!({
         "buckling": {

@@ -396,6 +396,22 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.frame_2d_material_p_delta",
+            "mechanical",
+            "frame_2d_material_p_delta",
+            "Solve a monotonic corotational 2D frame load path with element-scoped bilinear axial material envelopes and explicit yielded-state diagnostics.",
+            &[
+                "screening",
+                "mechanical",
+                "stability",
+                "material-nonlinear",
+                "bilinear",
+                "frame",
+                "p-delta",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.modal_frame_3d",
             "mechanical",
             "modal_frame_3d",

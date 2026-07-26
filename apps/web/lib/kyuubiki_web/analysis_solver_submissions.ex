@@ -262,6 +262,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_frame_2d_p_delta"
       )
 
+  def submit_frame_2d_material_p_delta(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_frame_2d_material_p_delta/1,
+        "solve_frame_2d_material_p_delta"
+      )
+
   def submit_frame_3d(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
 
