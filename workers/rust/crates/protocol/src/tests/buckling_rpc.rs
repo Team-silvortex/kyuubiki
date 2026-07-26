@@ -3,10 +3,10 @@ use crate::{
     BucklingModeDirectionAssessment, Frame2dBranchDirection, Frame2dBranchProbeOrigin,
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
     Frame2dMaterialStateResult, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
-    Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
-    Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest, SolveBucklingBeam1dRequest,
-    SolveBucklingFrame2dRequest, SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest,
+    Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dSectionFiberInput,
+    Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest,
+    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveFrame2dMaterialPDeltaRequest,
+    SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 
 #[test]
@@ -210,7 +210,10 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 element_id: "column".to_string(),
                 yield_strength: 250.0e6,
                 hardening_ratio: 0.02,
+                initial_axial_stress: 25.0e6,
+                section_fibers: Vec::new(),
             }],
+            load_factor_schedule: Some(vec![1.2, 0.0, -1.2]),
         })
         .expect("material p-delta request should serialize"),
     };
@@ -225,6 +228,55 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
     assert_eq!(params.materials[0].element_id, "column");
     assert_eq!(params.materials[0].yield_strength, 250.0e6);
     assert_eq!(params.materials[0].hardening_ratio, 0.02);
+    assert_eq!(params.materials[0].initial_axial_stress, 25.0e6);
+    assert_eq!(params.load_factor_schedule, Some(vec![1.2, 0.0, -1.2]));
+
+    let mut legacy = request.params;
+    legacy
+        .as_object_mut()
+        .unwrap()
+        .remove("load_factor_schedule");
+    let legacy: SolveFrame2dMaterialPDeltaRequest =
+        serde_json::from_value(legacy).expect("legacy material request should decode");
+    assert_eq!(legacy.load_factor_schedule, None);
+
+    let legacy_material: Frame2dMonotonicBilinearMaterialInput =
+        serde_json::from_value(serde_json::json!({
+            "element_id": "column",
+            "yield_strength": 250.0e6,
+            "hardening_ratio": 0.02
+        }))
+        .expect("legacy material input should decode");
+    assert_eq!(legacy_material.initial_axial_stress, 0.0);
+    assert!(legacy_material.section_fibers.is_empty());
+
+    let fiber_material = Frame2dMonotonicBilinearMaterialInput {
+        element_id: "column".to_string(),
+        yield_strength: 250.0e6,
+        hardening_ratio: 0.02,
+        initial_axial_stress: 0.0,
+        section_fibers: vec![
+            Frame2dSectionFiberInput {
+                y: -0.1,
+                area: 0.005,
+                initial_axial_stress: -25.0e6,
+            },
+            Frame2dSectionFiberInput {
+                y: 0.1,
+                area: 0.005,
+                initial_axial_stress: 25.0e6,
+            },
+        ],
+    };
+    let fiber_material: Frame2dMonotonicBilinearMaterialInput = serde_json::from_value(
+        serde_json::to_value(fiber_material).expect("fiber material should serialize"),
+    )
+    .expect("fiber material should decode");
+    assert_eq!(fiber_material.section_fibers.len(), 2);
+    assert_eq!(
+        fiber_material.section_fibers[1].initial_axial_stress,
+        25.0e6
+    );
 }
 
 #[test]
@@ -242,6 +294,9 @@ fn legacy_material_state_defaults_new_signed_history_fields() {
 
     assert_eq!(state.plastic_strain, 0.0);
     assert_eq!(state.backstress, 0.0);
+    assert_eq!(state.initial_axial_stress, 0.0);
+    assert_eq!(state.section_axial_force, None);
+    assert_eq!(state.fiber_point_count, 0);
 }
 
 #[test]

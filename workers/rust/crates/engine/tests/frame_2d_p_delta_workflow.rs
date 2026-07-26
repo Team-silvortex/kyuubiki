@@ -105,7 +105,7 @@ fn workflow_route_executes_corotational_equilibrium() {
 }
 
 #[test]
-fn workflow_route_executes_monotonic_material_p_delta() {
+fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
     let result = run_solve_operator(
         "solve.frame_2d_material_p_delta",
         json!({
@@ -128,13 +128,29 @@ fn workflow_route_executes_monotonic_material_p_delta() {
                 "imperfection_mode_index": 0,
                 "kinematics": "corotational",
                 "maximum_load_factor": 1.2,
-                "load_steps": 6,
+                "load_steps": 7,
                 "max_iterations": 64,
                 "tolerance": 1.0e-9
             },
             "materials": [
-                {"element_id": "e0", "yield_strength": 250000000.0, "hardening_ratio": 0.1},
-                {"element_id": "e1", "yield_strength": 250000000.0, "hardening_ratio": 0.1}
+                {
+                    "element_id": "e0",
+                    "yield_strength": 250000000.0,
+                    "hardening_ratio": 0.1,
+                    "section_fibers": [
+                        {"y": -3.1622776601683795, "area": 0.005},
+                        {"y": 3.1622776601683795, "area": 0.005}
+                    ]
+                },
+                {
+                    "element_id": "e1",
+                    "yield_strength": 250000000.0,
+                    "hardening_ratio": 0.1,
+                    "section_fibers": [
+                        {"y": -3.1622776601683795, "area": 0.005},
+                        {"y": 3.1622776601683795, "area": 0.005}
+                    ]
+                }
             ]
         }),
     )
@@ -143,9 +159,79 @@ fn workflow_route_executes_monotonic_material_p_delta() {
     assert_eq!(result["stability_result"]["converged"], true);
     assert_eq!(result["yielded_element_count"], 2);
     assert_eq!(result["material_states"].as_array().unwrap().len(), 2);
+    assert_eq!(result["material_states"][0]["fiber_point_count"], 4);
+    assert_eq!(result["material_states"][0]["yielded_fiber_point_count"], 4);
+    assert!(
+        result["material_states"][0]["section_axial_force"]
+            .as_f64()
+            .unwrap()
+            < 0.0
+    );
     assert_eq!(
         result["_solver_provenance"]["operator_id"],
         "solve.frame_2d_material_p_delta"
+    );
+}
+
+#[test]
+fn workflow_route_preserves_cyclic_material_history() {
+    let result = run_solve_operator(
+        "solve.frame_2d_material_p_delta",
+        json!({
+            "stability": {
+                "buckling": {
+                    "frame": {
+                        "nodes": [
+                            {"id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                            {"id": "n1", "x": 0.0, "y": 1.0, "fix_x": false, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": 0.0, "moment_z": 0.0},
+                            {"id": "n2", "x": 0.0, "y": 2.0, "fix_x": true, "fix_y": false, "fix_rz": false, "load_x": 0.0, "load_y": -2500000.0, "moment_z": 0.0}
+                        ],
+                        "elements": [
+                            {"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 200000000000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1},
+                            {"id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 200000000000.0, "moment_of_inertia": 0.1, "section_modulus": 0.1}
+                        ]
+                    },
+                    "mode_count": 1
+                },
+                "imperfection_amplitude": 1.0e-8,
+                "kinematics": "corotational",
+                "max_iterations": 64,
+                "tolerance": 1.0e-9,
+                "max_step_cutbacks": 12
+            },
+            "materials": [
+                {"element_id": "e0", "yield_strength": 250000000.0, "hardening_ratio": 0.1},
+                {"element_id": "e1", "yield_strength": 250000000.0, "hardening_ratio": 0.1}
+            ],
+            "load_factor_schedule": [1.2, 0.0, -1.2]
+        }),
+    )
+    .expect("workflow cyclic material route should solve");
+
+    let history = result["material_history"].as_array().unwrap();
+    assert_eq!(history.len(), 3);
+    assert_eq!(history[0]["load_factor"], 1.2);
+    assert_eq!(history[1]["load_factor"], 0.0);
+    assert_eq!(history[2]["load_factor"], -1.2);
+    assert!(
+        history[0]["material_states"][0]["axial_stress"]
+            .as_f64()
+            .unwrap()
+            < 0.0
+    );
+    assert!(
+        history[2]["material_states"][0]["axial_stress"]
+            .as_f64()
+            .unwrap()
+            > 0.0
+    );
+    assert!(
+        history[2]["material_states"][0]["equivalent_plastic_strain"]
+            .as_f64()
+            .unwrap()
+            > history[0]["material_states"][0]["equivalent_plastic_strain"]
+                .as_f64()
+                .unwrap()
     );
 }
 

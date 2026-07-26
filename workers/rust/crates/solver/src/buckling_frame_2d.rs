@@ -1,6 +1,6 @@
 use crate::buckling_math::mode_direction_diagnostics;
 use crate::buckling_sparse::hybrid_generalized_eigenpairs;
-use crate::frame_2d_stability::assemble_frame_2d_stability;
+use crate::frame_2d_stability::{Frame2dStabilitySystem, assemble_frame_2d_stability};
 use crate::linear_algebra::reduce_sparse_system;
 use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingFrame2dModeResult,
@@ -11,6 +11,13 @@ pub fn solve_buckling_frame_2d(
     request: &SolveBucklingFrame2dRequest,
 ) -> Result<SolveBucklingFrame2dResult, String> {
     let system = assemble_frame_2d_stability(request)?;
+    solve_buckling_frame_2d_from_system(request, &system)
+}
+
+pub(crate) fn solve_buckling_frame_2d_from_system(
+    request: &SolveBucklingFrame2dRequest,
+    system: &Frame2dStabilitySystem,
+) -> Result<SolveBucklingFrame2dResult, String> {
     let dof_count = request.frame.nodes.len() * 3;
     let zero_rhs = vec![0.0; dof_count];
     let (reduced_elastic, _, free_dofs) =
@@ -44,8 +51,8 @@ pub fn solve_buckling_frame_2d(
     Ok(SolveBucklingFrame2dResult {
         input: request.clone(),
         minimum_load_factor: modes[0].load_factor,
-        static_result: system.static_result,
-        element_preloads: system.element_preloads,
+        static_result: system.static_result.clone(),
+        element_preloads: system.element_preloads.clone(),
         modes,
         free_dofs,
         mode_cluster_relative_tolerance: BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE,

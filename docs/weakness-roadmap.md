@@ -106,9 +106,10 @@ Current progress:
   limit-point, descending-branch, and segmented member-instability mesh sequence
   with explicit load increments and limit-point events while preserving load
   control as the legacy default
-- stability remains screening-only until complex-frame switched-branch
-  continuation, automatic problem-scale radius bounds, residual stress,
-  material nonlinearity, and independent external correlation exist
+- stability remains screening-only while complex-frame switched-branch depth,
+  automatic problem-scale radius bounds, fiber-discretization convergence,
+  cyclic axial-bending section qualification, and broader independent external
+  correlation remain incomplete
 
 Qualification focus:
 
@@ -452,8 +453,26 @@ inside the corotational Newton assembly. A 16-element column tracks an external
 pre/post-yield reference within `2e-7` for shortening, stress, signed plastic
 strain, backstress, accumulated plastic strain, and tangent modulus. Trial
 states are rollback-safe and only converged accepted substeps commit history.
-The next material gates are a public cyclic frame load schedule, residual
-stress, and axial-bending fiber-section interaction.
+An explicit cyclic load-factor schedule now exposes compression, unload,
+reverse tension, unload, and reload histories at every requested point; a
+five-point external bilinear reference verifies residual strain, backstress
+reversal, and accumulated plasticity. Element materials now also accept an
+initial axial stress that participates in the return mapping, internal force,
+and material-geometric tangent. Opposite parallel residual forces retain an
+explicit zero-load state, while imbalance on any free DOF and initial states
+outside the yield surface are rejected before Newton iteration. The same
+zero-state material tangent now defines the material operator's linear
+eigen-buckling baseline: self-equilibrated compression lowers and tension
+raises the retained critical factor, while a zero initial stress exactly
+recovers the ordinary elastic result. The remaining material gates are
+no longer blocked on a first fiber-section implementation: optional
+section fibers now integrate independent material histories at two Gauss
+stations, carry self-equilibrated residual stress, and produce coupled axial
+force, end moments, and a full generalized consistent tangent. Discrete elastic
+`EA`/`EI`, pure-axial bilinear response, partial axial-bending yield, residual
+stress resultants, and the 6-by-6 element Jacobian are retained checks. The next
+gates are fiber-discretization convergence, richer section libraries, cyclic
+axial-bending external references, and larger localization-sensitive meshes.
 The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance

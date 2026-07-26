@@ -37,6 +37,18 @@ class SolverFixturesTest(unittest.TestCase):
         self.assertIn("nodes", payloads["spring_3d"])
         self.assertGreaterEqual(len(payloads), 40)
 
+    def test_material_frame_fixture_exercises_the_fiber_section_contract(self) -> None:
+        payload = minimal_solver_payloads()["frame_2d_material_p_delta"]
+
+        self.assertEqual(payload["load_factor_schedule"], [1.2, 0.0, -1.2])
+        self.assertEqual(len(payload["materials"]), 2)
+        for material in payload["materials"]:
+            self.assertEqual(len(material["section_fibers"]), 2)
+            self.assertAlmostEqual(
+                sum(fiber["area"] for fiber in material["section_fibers"]),
+                0.01,
+            )
+
     def test_covers_python_solver_rpc_table(self) -> None:
         payloads = minimal_solver_payloads()
         fixture_methods = solver_fixture_rpc_methods()

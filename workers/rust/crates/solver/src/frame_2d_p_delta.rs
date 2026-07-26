@@ -1,9 +1,12 @@
-use crate::buckling_frame_2d::solve_buckling_frame_2d;
+use crate::buckling_frame_2d::solve_buckling_frame_2d_from_system;
 use crate::frame_2d_arc_length::solve_arc_length_steps;
 use crate::frame_2d_branch_subspace::{
     MAX_SUBSPACE_REFINEMENT_LEVELS, available_subspace_sample_count,
 };
-use crate::frame_2d_corotational::solve_corotational_steps_with_materials;
+use crate::frame_2d_corotational::{
+    solve_corotational_steps_with_materials, validate_initial_material_equilibrium,
+};
+use crate::frame_2d_corotational_element::assemble_tangent_and_internal_with_materials;
 use crate::frame_2d_material_p_delta::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
 use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
@@ -24,13 +27,21 @@ const DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO: f64 = 0.8;
 pub fn solve_frame_2d_p_delta(
     request: &SolveFrame2dPDeltaRequest,
 ) -> Result<SolveFrame2dPDeltaResult, String> {
-    solve_frame_2d_p_delta_with_materials(request, &[]).map(|(result, _)| result)
+    solve_frame_2d_p_delta_with_materials(request, &[], None).map(|(result, _, _)| result)
 }
 
 pub(crate) fn solve_frame_2d_p_delta_with_materials(
     request: &SolveFrame2dPDeltaRequest,
     materials: &[Option<CompiledFrame2dMaterial>],
-) -> Result<(SolveFrame2dPDeltaResult, Vec<Frame2dMaterialHistory>), String> {
+    load_factor_schedule: Option<&[f64]>,
+) -> Result<
+    (
+        SolveFrame2dPDeltaResult,
+        Vec<Frame2dMaterialHistory>,
+        Vec<Vec<Frame2dMaterialHistory>>,
+    ),
+    String,
+> {
     validate_request(request)?;
     let mode_index = request.imperfection_mode_index.unwrap_or(0);
     let mut buckling_request = request.buckling.clone();
@@ -41,15 +52,22 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
     };
     buckling_request.mode_count =
         Some(buckling_request.mode_count.unwrap_or(3).max(required_modes));
-    let buckling_result = solve_buckling_frame_2d(&buckling_request)?;
+    let mut system = assemble_frame_2d_stability(&buckling_request)?;
+    apply_initial_material_buckling_baseline(&mut system, &buckling_request.frame, materials)?;
+    let buckling_result = solve_buckling_frame_2d_from_system(&buckling_request, &system)?;
     let critical_factor = buckling_result.minimum_load_factor;
     let maximum_load_factor = request
         .maximum_load_factor
         .unwrap_or(critical_factor * DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO);
-    let maximum_ratio = maximum_load_factor / critical_factor;
-    if !(maximum_load_factor.is_finite() && maximum_load_factor > 0.0) {
+    if load_factor_schedule.is_none()
+        && !(maximum_load_factor.is_finite() && maximum_load_factor > 0.0)
+    {
         return Err("frame 2d p-delta maximum_load_factor must be positive and finite".into());
     }
+    let maximum_compressive_factor = load_factor_schedule
+        .map(|schedule| schedule.iter().copied().fold(0.0_f64, f64::max))
+        .unwrap_or(maximum_load_factor);
+    let maximum_ratio = maximum_compressive_factor / critical_factor;
     if request.path_control == Frame2dStabilityPathControl::LoadControl
         && maximum_ratio >= FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO
     {
@@ -78,16 +96,29 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
         request.imperfection_amplitude,
         buckling_request.frame.nodes.len(),
     )?;
-    let system = assemble_frame_2d_stability(&buckling_request)?;
     let geometric_imperfection = multiply(&system.geometric, &initial_imperfection_shape);
-    let load_steps = request
-        .load_steps
-        .unwrap_or(DEFAULT_LOAD_STEPS)
-        .clamp(1, 128);
+    let load_steps = load_factor_schedule.map_or_else(
+        || {
+            request
+                .load_steps
+                .unwrap_or(DEFAULT_LOAD_STEPS)
+                .clamp(1, 128)
+        },
+        <[f64]>::len,
+    );
+    let load_factors = load_factor_schedule.map_or_else(
+        || {
+            (1..=load_steps)
+                .map(|step| maximum_load_factor * step as f64 / load_steps as f64)
+                .collect::<Vec<_>>()
+        },
+        <[f64]>::to_vec,
+    );
     let mut continuation_state = None;
     let mut continuation_state_correction_norm = None;
     let mut material_histories =
         vec![Frame2dMaterialHistory::default(); buckling_request.frame.elements.len()];
+    let mut material_history_steps = Vec::new();
     let mut steps = match (request.kinematics, request.path_control) {
         (
             Frame2dStabilityKinematics::LinearizedPDelta,
@@ -105,12 +136,12 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
                 request,
                 &system,
                 &initial_imperfection_shape,
-                maximum_load_factor,
                 critical_factor,
-                load_steps,
+                &load_factors,
                 materials,
             )?;
             material_histories = result.material_histories;
+            material_history_steps = result.material_history_steps;
             result.steps
         }
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::ArcLength) => {
@@ -158,7 +189,46 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
             continuation_state_correction_norm,
         },
         material_histories,
+        material_history_steps,
     ))
+}
+
+fn apply_initial_material_buckling_baseline(
+    system: &mut crate::frame_2d_stability::Frame2dStabilitySystem,
+    frame: &kyuubiki_protocol::SolveFrame2dRequest,
+    materials: &[Option<CompiledFrame2dMaterial>],
+) -> Result<(), String> {
+    if !materials
+        .iter()
+        .flatten()
+        .any(CompiledFrame2dMaterial::has_initial_stress)
+    {
+        return Ok(());
+    }
+    let positions = frame
+        .nodes
+        .iter()
+        .map(|node| (node.x, node.y))
+        .collect::<Vec<_>>();
+    let displacement = vec![0.0; frame.nodes.len() * 3];
+    let histories = vec![Frame2dMaterialHistory::default(); frame.elements.len()];
+    validate_initial_material_equilibrium(
+        &positions,
+        &frame.elements,
+        &displacement,
+        system,
+        materials,
+        &histories,
+    )?;
+    let (consistent_tangent, _) = assemble_tangent_and_internal_with_materials(
+        &positions,
+        &frame.elements,
+        &displacement,
+        materials,
+        &histories,
+    )?;
+    system.elastic = consistent_tangent;
+    Ok(())
 }
 
 fn solve_linearized_steps(

@@ -47,13 +47,25 @@ points, descending and rising equilibrium segments, and opt-in
 critical-mode-constrained branch probes with switched-branch continuation.
 These remain screening paths rather than externally qualified post-buckling
 branches. Neither control mode is a material-plasticity model.
-`solve.frame_2d_material_p_delta` is a separate monotonic load-control
+`solve.frame_2d_material_p_delta` is a separate material load-control
 extension: selected elements use an incremental bilinear axial return mapping
-with linear kinematic hardening during Newton assembly while bending remains
-elastic. Trial states are evaluated from the last committed substep and only a
-converged accepted substep commits plastic strain, backstress, and accumulated
-plastic strain. The public frame load contract is still monotonic; it is not
-yet a cyclic frame-history or general section-yielding model.
+with linear kinematic hardening during Newton assembly. The legacy scalar form
+keeps bending elastic; the optional fiber-section form integrates independent
+material points at two longitudinal Gauss stations and couples axial extension
+with both end rotations. It accepts either the generated monotonic path or an
+explicit cyclic `load_factor_schedule`. Trial states are evaluated from the
+last committed substep and only a converged accepted substep commits plastic
+strain, backstress, and accumulated plastic strain. This is a bounded first
+fiber-section slice, not yet a general section library or qualified
+localization model. Each scalar material may carry a finite
+`initial_axial_stress`; fiber materials instead carry per-fiber initial stress
+inside the yield surface. Those stresses participate in the return mapping,
+corotational internal force, and material-geometric tangent. Initial residual
+forces must self-equilibrate on every free DOF; constrained reactions may
+retain the balanced support result. For the material operator, the
+zero-displacement consistent material-geometric tangent also replaces the
+elastic matrix in the linear eigen-buckling baseline; the externally generated
+preload remains the generalized eigenproblem denominator.
 
 ## Retained Checks
 
@@ -83,8 +95,42 @@ yet a cyclic frame-history or general section-yielding model.
   every component of the combined material-geometric 6-by-6 tangent matches a
   retained central-difference Jacobian within `2e-7`. Assignments are
   element-ID scoped; duplicate and unknown assignments are rejected.
-  Arc-length control and cyclic schedules remain rejected until their public
-  history and continuation contracts are defined.
+  Arc-length control remains rejected until material history is integrated with
+  its continuation-state contract.
+- A five-point `+1.3 Py -> 0 -> -1.3 Py -> 0 -> +1.3 Py` frame schedule
+  reproduces the expected stress signs, residual plastic strains, alternating
+  kinematic backstress, and accumulated equivalent plastic strain through both
+  reversals. Every requested point emits its committed element history.
+  Direction-independent cutback supports unloading and reverse loading, while
+  zero-load convergence uses the reference load norm so machine-level force
+  noise cannot trigger false line-search failure.
+- Two parallel members per column segment retain opposite `+50 MPa` and
+  `-50 MPa` initial axial stresses. Their residual nodal forces cancel on all
+  free DOFs, an explicit first `0.0` schedule point converges, and every
+  material state reports its signed initial and current stress without
+  manufacturing plastic strain. A single unbalanced residual stress is
+  rejected before Newton iteration, as is an initial stress outside the yield
+  surface. The initial-stress material-geometric tangent independently matches
+  its central-difference Jacobian.
+- A two-segment column with fixed end supports carries a uniform residual
+  stress that self-equilibrates at its free central joint. Equal-magnitude
+  `-12.5 MPa` compression and `+12.5 MPa` tension move the critical reference
+  factor from `6.214145803` to `6.058747513` and `6.369072402`, respectively.
+  Zero initial stress reproduces the ordinary elastic operator to `1e-12`
+  relative tolerance, while the compression/tension midpoint remains within
+  `5e-5` of the neutral factor after the eigenvector's expected second-order
+  rotation.
+- A four-fiber section at two Gauss stations recovers the discrete `EA/L` and
+  `EI/L` stiffness exactly in the elastic range. A self-equilibrated
+  `[-50,+50,+50,-50] MPa` fiber residual-stress pattern produces zero axial
+  force and zero end moments without manufactured plastic strain.
+- A two-element cantilever driven beyond axial yield matches the external
+  bilinear shortening and force reference while all eight material points per
+  element yield. Combined axial force and end moment yield only part of the
+  section and retain nonzero end moments. Every component of the resulting
+  6-by-6 material-geometric tangent matches a central-difference Jacobian.
+  Fiber area, centroid, and discrete inertia must match the parent element, and
+  uniform plus fiber-distributed initial-stress sources cannot be mixed.
 - The material operator is reachable through the built-in engine workflow
   route, agent solver RPC, Rust headless direct-FEM manifest, and the self-host
   control-plane submission route. Rust, Python, and Elixir official SDK maps
@@ -528,8 +574,9 @@ yet a cyclic frame-history or general section-yielding model.
 
 ## Promotion Gaps
 
-- cyclic frame load schedules, residual stress, and axial-bending
-  fiber-section interaction
+- fiber-discretization and longitudinal-integration convergence
+- cyclic axial-bending interaction against an independent section reference
+- richer section construction and larger localization-sensitive mesh evidence
 
 ## Performance Reproduction
 

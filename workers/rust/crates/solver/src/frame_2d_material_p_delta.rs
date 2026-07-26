@@ -1,46 +1,72 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::frame_2d_corotational_element::element_axial_strain;
+use crate::frame_2d_corotational_element::element_deformation;
+use crate::frame_2d_fiber_section::{committed_effective_axial_tangent, section_response};
 use crate::frame_2d_p_delta::solve_frame_2d_p_delta_with_materials;
 use kyuubiki_protocol::{
-    Frame2dMaterialStateResult, Frame2dMonotonicBilinearMaterialInput, Frame2dStabilityKinematics,
-    Frame2dStabilityPathControl, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dMaterialPDeltaResult,
+    Frame2dBilinearKinematicMaterialInput, Frame2dElementInput, Frame2dMaterialStateResult,
+    Frame2dMaterialStepResult, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dMaterialPDeltaResult,
 };
 
 #[derive(Debug, Clone, Copy)]
+pub(crate) struct CompiledFrame2dFiber {
+    pub(crate) y: f64,
+    pub(crate) area: f64,
+    pub(crate) initial_axial_stress: f64,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct CompiledFrame2dMaterial {
     pub(crate) yield_strength: f64,
     pub(crate) hardening_ratio: f64,
+    pub(crate) initial_axial_stress: f64,
+    pub(crate) section_fibers: Vec<CompiledFrame2dFiber>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct Frame2dMaterialHistory {
+pub(crate) struct Frame2dMaterialPointHistory {
     pub(crate) plastic_strain: f64,
     pub(crate) backstress: f64,
     pub(crate) equivalent_plastic_strain: f64,
     pub(crate) tangent_modulus: f64,
 }
 
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Frame2dMaterialHistory {
+    pub(crate) point: Frame2dMaterialPointHistory,
+    pub(crate) fiber_points: Vec<Frame2dMaterialPointHistory>,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct BilinearResponse {
     pub(crate) stress: f64,
     pub(crate) tangent_modulus: f64,
-    pub(crate) history: Frame2dMaterialHistory,
+    pub(crate) history: Frame2dMaterialPointHistory,
 }
 
 impl CompiledFrame2dMaterial {
+    pub(crate) fn has_initial_stress(&self) -> bool {
+        self.initial_axial_stress != 0.0
+            || self
+                .section_fibers
+                .iter()
+                .any(|fiber| fiber.initial_axial_stress != 0.0)
+    }
+
     pub(crate) fn response(
-        self,
+        &self,
         youngs_modulus: f64,
         strain: f64,
-        committed: Frame2dMaterialHistory,
+        committed: &Frame2dMaterialPointHistory,
+        initial_axial_stress: f64,
     ) -> BilinearResponse {
-        let trial_stress = youngs_modulus * (strain - committed.plastic_strain);
+        let trial_stress =
+            initial_axial_stress + youngs_modulus * (strain - committed.plastic_strain);
         let relative_trial = trial_stress - committed.backstress;
         let yield_excess = relative_trial.abs() - self.yield_strength;
         if yield_excess <= self.yield_strength * 1.0e-12 {
-            let mut history = committed;
+            let mut history = *committed;
             history.tangent_modulus = youngs_modulus;
             return BilinearResponse {
                 stress: trial_stress,
@@ -59,7 +85,7 @@ impl CompiledFrame2dMaterial {
         BilinearResponse {
             stress,
             tangent_modulus,
-            history: Frame2dMaterialHistory {
+            history: Frame2dMaterialPointHistory {
                 plastic_strain,
                 backstress,
                 equivalent_plastic_strain: committed.equivalent_plastic_strain + plastic_increment,
@@ -74,8 +100,12 @@ pub fn solve_frame_2d_material_p_delta(
 ) -> Result<SolveFrame2dMaterialPDeltaResult, String> {
     validate_control_contract(request)?;
     let compiled = compile_materials(request)?;
-    let (stability_result, committed_states) =
-        solve_frame_2d_p_delta_with_materials(&request.stability, &compiled)?;
+    let (stability_result, committed_states, history_steps) =
+        solve_frame_2d_p_delta_with_materials(
+            &request.stability,
+            &compiled,
+            request.load_factor_schedule.as_deref(),
+        )?;
     let frame = &request.stability.buckling.frame;
     let positions = frame
         .nodes
@@ -88,36 +118,33 @@ pub fn solve_frame_2d_material_p_delta(
             )
         })
         .collect::<Vec<_>>();
-    let material_states = frame
-        .elements
+    let material_history = stability_result
+        .steps
         .iter()
-        .enumerate()
-        .filter_map(|(element_index, element)| {
-            compiled[element_index].map(|material| {
-                (
-                    element_index,
-                    element,
-                    material,
-                    committed_states[element_index],
-                )
-            })
-        })
-        .map(|(element_index, element, _material, history)| {
-            let axial_strain =
-                element_axial_strain(&positions, element, &stability_result.final_displacements)?;
-            Ok(Frame2dMaterialStateResult {
-                element_index,
-                element_id: element.id.clone(),
-                axial_strain,
-                axial_stress: element.youngs_modulus * (axial_strain - history.plastic_strain),
-                plastic_strain: history.plastic_strain,
-                backstress: history.backstress,
-                equivalent_plastic_strain: history.equivalent_plastic_strain,
-                tangent_modulus: history.tangent_modulus,
-                yielded: history.equivalent_plastic_strain > 0.0,
+        .zip(&history_steps)
+        .map(|(step, histories)| {
+            Ok(Frame2dMaterialStepResult {
+                step: step.step,
+                load_factor: step.load_factor,
+                achieved_load_factor: step.achieved_load_factor.unwrap_or(step.load_factor),
+                converged: step.converged,
+                material_states: material_state_results(
+                    &positions,
+                    &frame.elements,
+                    &step.displacements,
+                    &compiled,
+                    histories,
+                )?,
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
+    let material_states = material_state_results(
+        &positions,
+        &frame.elements,
+        &stability_result.final_displacements,
+        &compiled,
+        &committed_states,
+    )?;
     let yielded_element_count = material_states.iter().filter(|state| state.yielded).count();
     let max_equivalent_plastic_strain = material_states
         .iter()
@@ -129,7 +156,66 @@ pub fn solve_frame_2d_material_p_delta(
         material_states,
         yielded_element_count,
         max_equivalent_plastic_strain,
+        material_history,
     })
+}
+
+fn material_state_results(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    displacement: &[f64],
+    materials: &[Option<CompiledFrame2dMaterial>],
+    histories: &[Frame2dMaterialHistory],
+) -> Result<Vec<Frame2dMaterialStateResult>, String> {
+    elements
+        .iter()
+        .enumerate()
+        .filter_map(|(element_index, element)| {
+            materials
+                .get(element_index)
+                .and_then(Option::as_ref)
+                .map(|material| (element_index, element, material))
+        })
+        .map(|(element_index, element, material)| {
+            let history = histories.get(element_index).cloned().unwrap_or_default();
+            let deformation = element_deformation(positions, element, displacement)?;
+            let section = section_response(
+                Some(material),
+                element.youngs_modulus,
+                element.area,
+                element.moment_of_inertia,
+                deformation.length,
+                deformation.extension,
+                deformation.phi_i,
+                deformation.phi_j,
+                &history,
+            );
+            let tangent_modulus = committed_effective_axial_tangent(
+                material,
+                element.youngs_modulus,
+                element.area,
+                &history,
+            );
+            Ok(Frame2dMaterialStateResult {
+                element_index,
+                element_id: element.id.clone(),
+                axial_strain: deformation.axial_strain,
+                axial_stress: section.average_stress,
+                initial_axial_stress: section.average_initial_stress,
+                plastic_strain: section.average_plastic_strain,
+                backstress: section.average_backstress,
+                equivalent_plastic_strain: section.max_equivalent_plastic_strain,
+                tangent_modulus,
+                yielded: section.max_equivalent_plastic_strain > 0.0,
+                section_axial_force: Some(section.axial_force),
+                section_end_moment_i: Some(section.moment_i),
+                section_end_moment_j: Some(section.moment_j),
+                fiber_point_count: section.fiber_point_count,
+                yielded_fiber_point_count: section.yielded_fiber_point_count,
+                max_fiber_equivalent_plastic_strain: section.max_equivalent_plastic_strain,
+            })
+        })
+        .collect()
 }
 
 pub(crate) fn update_material_histories(
@@ -142,13 +228,22 @@ pub(crate) fn update_material_histories(
     let mut updated = committed.to_vec();
     updated.resize(elements.len(), Frame2dMaterialHistory::default());
     for (element_index, element) in elements.iter().enumerate() {
-        let Some(material) = materials.get(element_index).copied().flatten() else {
+        let Some(material) = materials.get(element_index).and_then(Option::as_ref) else {
             continue;
         };
-        let strain = element_axial_strain(positions, element, displacement)?;
-        updated[element_index] = material
-            .response(element.youngs_modulus, strain, updated[element_index])
-            .history;
+        let deformation = element_deformation(positions, element, displacement)?;
+        updated[element_index] = section_response(
+            Some(material),
+            element.youngs_modulus,
+            element.area,
+            element.moment_of_inertia,
+            deformation.length,
+            deformation.extension,
+            deformation.phi_i,
+            deformation.phi_j,
+            &updated[element_index],
+        )
+        .history;
     }
     Ok(updated)
 }
@@ -158,12 +253,39 @@ fn validate_control_contract(request: &SolveFrame2dMaterialPDeltaRequest) -> Res
         return Err("frame 2d material p-delta requires corotational kinematics".into());
     }
     if request.stability.path_control != Frame2dStabilityPathControl::LoadControl {
-        return Err(
-            "frame 2d material p-delta currently supports monotonic load control only".into(),
-        );
+        return Err("frame 2d material p-delta supports load control only".into());
     }
     if request.materials.is_empty() {
         return Err("frame 2d material p-delta requires at least one material assignment".into());
+    }
+    if let Some(schedule) = &request.load_factor_schedule {
+        if request.stability.maximum_load_factor.is_some() || request.stability.load_steps.is_some()
+        {
+            return Err(
+                "frame 2d material load_factor_schedule cannot be combined with maximum_load_factor or load_steps"
+                    .into(),
+            );
+        }
+        if schedule.is_empty() || schedule.len() > 256 {
+            return Err(
+                "frame 2d material load_factor_schedule must contain between 1 and 256 points"
+                    .into(),
+            );
+        }
+        let mut previous = 0.0;
+        for (index, &factor) in schedule.iter().enumerate() {
+            if !factor.is_finite() {
+                return Err(format!(
+                    "frame 2d material load_factor_schedule[{index}] must be finite"
+                ));
+            }
+            if index > 0 && factor == previous {
+                return Err(format!(
+                    "frame 2d material load_factor_schedule[{index}] duplicates the previous factor"
+                ));
+            }
+            previous = factor;
+        }
     }
     Ok(())
 }
@@ -184,7 +306,6 @@ fn compile_materials(
     let mut assigned = HashSet::new();
     let mut compiled = vec![None; elements.len()];
     for material in &request.materials {
-        validate_material(material)?;
         let Some(&element_index) = element_indices.get(material.element_id.as_str()) else {
             return Err(format!(
                 "frame 2d material assignment references unknown element '{}'",
@@ -197,15 +318,29 @@ fn compile_materials(
                 material.element_id
             ));
         }
+        validate_material(material, &elements[element_index])?;
         compiled[element_index] = Some(CompiledFrame2dMaterial {
             yield_strength: material.yield_strength,
             hardening_ratio: material.hardening_ratio,
+            initial_axial_stress: material.initial_axial_stress,
+            section_fibers: material
+                .section_fibers
+                .iter()
+                .map(|fiber| CompiledFrame2dFiber {
+                    y: fiber.y,
+                    area: fiber.area,
+                    initial_axial_stress: fiber.initial_axial_stress,
+                })
+                .collect(),
         });
     }
     Ok(compiled)
 }
 
-fn validate_material(material: &Frame2dMonotonicBilinearMaterialInput) -> Result<(), String> {
+fn validate_material(
+    material: &Frame2dBilinearKinematicMaterialInput,
+    element: &Frame2dElementInput,
+) -> Result<(), String> {
     if !(material.yield_strength.is_finite() && material.yield_strength > 0.0) {
         return Err(format!(
             "frame 2d material '{}' yield_strength must be positive and finite",
@@ -218,23 +353,105 @@ fn validate_material(material: &Frame2dMonotonicBilinearMaterialInput) -> Result
             material.element_id
         ));
     }
+    if !material.initial_axial_stress.is_finite() {
+        return Err(format!(
+            "frame 2d material '{}' initial_axial_stress must be finite",
+            material.element_id
+        ));
+    }
+    if material.initial_axial_stress.abs() > material.yield_strength {
+        return Err(format!(
+            "frame 2d material '{}' initial_axial_stress must remain within yield_strength",
+            material.element_id
+        ));
+    }
+    validate_section_fibers(material, element)?;
+    Ok(())
+}
+
+fn validate_section_fibers(
+    material: &Frame2dBilinearKinematicMaterialInput,
+    element: &Frame2dElementInput,
+) -> Result<(), String> {
+    if material.section_fibers.is_empty() {
+        return Ok(());
+    }
+    if !(2..=32).contains(&material.section_fibers.len()) {
+        return Err(format!(
+            "frame 2d material '{}' section_fibers must contain between 2 and 32 fibers",
+            material.element_id
+        ));
+    }
+    if material.initial_axial_stress != 0.0 {
+        return Err(format!(
+            "frame 2d material '{}' cannot combine uniform initial_axial_stress with section_fibers",
+            material.element_id
+        ));
+    }
+    let mut area = 0.0;
+    let mut first_moment = 0.0;
+    let mut inertia = 0.0;
+    let mut max_y = 0.0_f64;
+    for (index, fiber) in material.section_fibers.iter().enumerate() {
+        if !(fiber.y.is_finite() && fiber.area.is_finite() && fiber.area > 0.0) {
+            return Err(format!(
+                "frame 2d material '{}' section_fibers[{index}] requires finite y and positive finite area",
+                material.element_id
+            ));
+        }
+        if !fiber.initial_axial_stress.is_finite()
+            || fiber.initial_axial_stress.abs() > material.yield_strength
+        {
+            return Err(format!(
+                "frame 2d material '{}' section_fibers[{index}] initial_axial_stress must be finite and remain within yield_strength",
+                material.element_id
+            ));
+        }
+        area += fiber.area;
+        first_moment += fiber.area * fiber.y;
+        inertia += fiber.area * fiber.y * fiber.y;
+        max_y = max_y.max(fiber.y.abs());
+    }
+    let area_tolerance = element.area.abs().max(f64::MIN_POSITIVE) * 1.0e-8;
+    if (area - element.area).abs() > area_tolerance {
+        return Err(format!(
+            "frame 2d material '{}' section fiber area must match element area",
+            material.element_id
+        ));
+    }
+    let centroid_tolerance = element.area * max_y.max(1.0e-12) * 1.0e-8;
+    if first_moment.abs() > centroid_tolerance {
+        return Err(format!(
+            "frame 2d material '{}' section fibers must be centered at y=0",
+            material.element_id
+        ));
+    }
+    let inertia_tolerance = element.moment_of_inertia.abs().max(f64::MIN_POSITIVE) * 1.0e-8;
+    if (inertia - element.moment_of_inertia).abs() > inertia_tolerance {
+        return Err(format!(
+            "frame 2d material '{}' section fiber inertia must match element moment_of_inertia",
+            material.element_id
+        ));
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
+    use super::{CompiledFrame2dMaterial, Frame2dMaterialPointHistory};
 
     #[test]
     fn bilinear_response_is_continuous_and_reports_plastic_strain() {
         let material = CompiledFrame2dMaterial {
             yield_strength: 250.0,
             hardening_ratio: 0.1,
+            initial_axial_stress: 0.0,
+            section_fibers: Vec::new(),
         };
-        let initial = Frame2dMaterialHistory::default();
-        let elastic = material.response(1_000.0, 0.2, initial);
-        let yield_point = material.response(1_000.0, 0.25, initial);
-        let plastic = material.response(1_000.0, -0.5, initial);
+        let initial = Frame2dMaterialPointHistory::default();
+        let elastic = material.response(1_000.0, 0.2, &initial, 0.0);
+        let yield_point = material.response(1_000.0, 0.25, &initial, 0.0);
+        let plastic = material.response(1_000.0, -0.5, &initial, 0.0);
 
         assert_eq!(elastic.stress, 200.0);
         assert_eq!(yield_point.stress, 250.0);
@@ -251,11 +468,14 @@ mod tests {
         let material = CompiledFrame2dMaterial {
             yield_strength: 250.0,
             hardening_ratio: 0.1,
+            initial_axial_stress: 0.0,
+            section_fibers: Vec::new(),
         };
-        let loaded = material.response(1_000.0, 0.5, Frame2dMaterialHistory::default());
-        let rejected_trial = material.response(1_000.0, 0.8, loaded.history);
-        let unloaded = material.response(1_000.0, 0.0, loaded.history);
-        let reversed = material.response(1_000.0, -0.5, loaded.history);
+        let initial = Frame2dMaterialPointHistory::default();
+        let loaded = material.response(1_000.0, 0.5, &initial, 0.0);
+        let rejected_trial = material.response(1_000.0, 0.8, &loaded.history, 0.0);
+        let unloaded = material.response(1_000.0, 0.0, &loaded.history, 0.0);
+        let reversed = material.response(1_000.0, -0.5, &loaded.history, 0.0);
 
         assert_eq!(loaded.stress, 275.0);
         assert!(rejected_trial.history.equivalent_plastic_strain > 0.225);
@@ -268,5 +488,27 @@ mod tests {
         assert_eq!(reversed.stress, -275.0);
         assert!((reversed.history.plastic_strain + 0.225).abs() < 1.0e-12);
         assert!((reversed.history.equivalent_plastic_strain - 0.675).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn initial_stress_is_an_observable_elastic_offset() {
+        let material = CompiledFrame2dMaterial {
+            yield_strength: 250.0,
+            hardening_ratio: 0.1,
+            initial_axial_stress: 50.0,
+            section_fibers: Vec::new(),
+        };
+
+        let initial = material.response(
+            1_000.0,
+            0.0,
+            &Frame2dMaterialPointHistory::default(),
+            material.initial_axial_stress,
+        );
+
+        assert_eq!(initial.stress, 50.0);
+        assert_eq!(initial.tangent_modulus, 1_000.0);
+        assert_eq!(initial.history.plastic_strain, 0.0);
+        assert_eq!(initial.history.equivalent_plastic_strain, 0.0);
     }
 }

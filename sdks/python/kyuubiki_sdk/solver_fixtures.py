@@ -341,13 +341,20 @@ _PAYLOADS = {
             },
             "imperfection_amplitude": 1.0e-8,
             "kinematics": "corotational",
-            "maximum_load_factor": 1.0,
-            "load_steps": 4,
         },
         "materials": [
-            {"element_id": "mpe0", "yield_strength": 5_000_000.0, "hardening_ratio": 0.1},
-            {"element_id": "mpe1", "yield_strength": 5_000_000.0, "hardening_ratio": 0.1},
+            {
+                "element_id": element_id,
+                "yield_strength": 5_000_000.0,
+                "hardening_ratio": 0.1,
+                "section_fibers": [
+                    {"y": -3.162_277_660_168_379_5, "area": 0.005},
+                    {"y": 3.162_277_660_168_379_5, "area": 0.005},
+                ],
+            }
+            for element_id in ("mpe0", "mpe1")
         ],
+        "load_factor_schedule": [1.2, 0.0, -1.2],
     },
     "frame_3d": _FRAME_3D,
     "modal_frame_3d": {

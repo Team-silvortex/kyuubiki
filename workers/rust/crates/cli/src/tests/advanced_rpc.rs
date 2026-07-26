@@ -116,7 +116,8 @@ fn handles_frame_2d_p_delta_rpc_requests() {
 fn handles_frame_2d_material_p_delta_rpc_requests() {
     let mut stability = frame_2d_p_delta_request();
     stability.kinematics = Frame2dStabilityKinematics::Corotational;
-    stability.maximum_load_factor = Some(1.0);
+    stability.maximum_load_factor = None;
+    stability.load_steps = None;
     stability.imperfection_amplitude = 1.0e-8;
     stability.max_iterations = Some(64);
     let materials = stability
@@ -128,6 +129,8 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
             element_id: element.id.clone(),
             yield_strength: 5.0e6,
             hardening_ratio: 0.1,
+            initial_axial_stress: 0.0,
+            section_fibers: Vec::new(),
         })
         .collect();
     let response = execute(
@@ -135,6 +138,7 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
         SolveFrame2dMaterialPDeltaRequest {
             stability,
             materials,
+            load_factor_schedule: Some(vec![1.2, 0.0, -1.2]),
         },
     );
 
@@ -144,6 +148,8 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
             .expect("material p-delta result");
     assert!(result.stability_result.converged);
     assert_eq!(result.yielded_element_count, 2);
+    assert_eq!(result.material_history.len(), 3);
+    assert_eq!(result.material_history[1].load_factor, 0.0);
 }
 
 #[test]

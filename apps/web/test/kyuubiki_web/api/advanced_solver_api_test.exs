@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
+  alias KyuubikiWeb.FemModelNormalizer
+
   @solid_tetra_request %{
     "nodes" => [
       %{"id" => "n0", "x" => 0.0, "y" => 0.0, "z" => 0.0},
@@ -187,6 +189,32 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
       assert result_payload["job"]["status"] == "completed"
       assert result_payload["result"][@expected_key] == expected_value(@expected_key)
     end
+  end
+
+  test "preserves an explicit cyclic material load schedule during normalization" do
+    section_fibers = [
+      %{"y" => -0.028_284_271_247_461_9, "area" => 0.005},
+      %{"y" => 0.028_284_271_247_461_9, "area" => 0.005}
+    ]
+
+    request =
+      @material_p_delta_request
+      |> Map.update!("stability", fn stability ->
+        stability
+        |> Map.delete("maximum_load_factor")
+        |> Map.delete("load_steps")
+      end)
+      |> Map.update!("materials", fn [material] ->
+        [Map.put(material, "section_fibers", section_fibers)]
+      end)
+      |> Map.put("load_factor_schedule", [1.3, 0.0, -1.3])
+
+    assert {:ok, normalized} =
+             FemModelNormalizer.normalize_frame_2d_material_p_delta(request)
+
+    assert normalized["load_factor_schedule"] == [1.3, 0.0, -1.3]
+    assert normalized["stability"]["kinematics"] == "corotational"
+    assert normalized["materials"] |> hd() |> Map.fetch!("section_fibers") == section_fibers
   end
 
   defp base_request do

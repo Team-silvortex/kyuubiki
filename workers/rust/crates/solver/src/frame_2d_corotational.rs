@@ -45,15 +45,15 @@ struct AdaptiveStep {
 pub(crate) struct CorotationalSolveResult {
     pub(crate) steps: Vec<Frame2dPDeltaStepResult>,
     pub(crate) material_histories: Vec<Frame2dMaterialHistory>,
+    pub(crate) material_history_steps: Vec<Vec<Frame2dMaterialHistory>>,
 }
 
 pub(crate) fn solve_corotational_steps_with_materials(
     request: &SolveFrame2dPDeltaRequest,
     system: &Frame2dStabilitySystem,
     initial_imperfection: &[f64],
-    maximum_load_factor: f64,
     critical_factor: f64,
-    load_steps: usize,
+    load_factors: &[f64],
     materials: &[Option<CompiledFrame2dMaterial>],
 ) -> Result<CorotationalSolveResult, String> {
     let frame = &request.buckling.frame;
@@ -70,7 +70,16 @@ pub(crate) fn solve_corotational_steps_with_materials(
         .collect::<Vec<_>>();
     let mut displacement = vec![0.0; frame.nodes.len() * 3];
     let mut material_histories = vec![Frame2dMaterialHistory::default(); frame.elements.len()];
-    let mut steps = Vec::with_capacity(load_steps);
+    validate_initial_material_equilibrium(
+        &initial_positions,
+        &frame.elements,
+        &displacement,
+        system,
+        materials,
+        &material_histories,
+    )?;
+    let mut material_history_steps = Vec::with_capacity(load_factors.len());
+    let mut steps = Vec::with_capacity(load_factors.len());
     let max_iterations = request.max_iterations.unwrap_or(DEFAULT_MAX_ITERATIONS);
     let tolerance = request.tolerance.unwrap_or(DEFAULT_RESIDUAL_TOLERANCE);
     let max_cutbacks = request
@@ -78,8 +87,8 @@ pub(crate) fn solve_corotational_steps_with_materials(
         .unwrap_or(DEFAULT_MAX_STEP_CUTBACKS);
     let mut previous_load_factor = 0.0;
 
-    for step in 1..=load_steps {
-        let load_factor = maximum_load_factor * step as f64 / load_steps as f64;
+    for (step_index, &load_factor) in load_factors.iter().enumerate() {
+        let step = step_index + 1;
         let adaptive = solve_adaptive_step(
             &initial_positions,
             &frame.elements,
@@ -95,6 +104,7 @@ pub(crate) fn solve_corotational_steps_with_materials(
         )?;
         displacement = adaptive.displacement;
         material_histories = adaptive.material_histories;
+        material_history_steps.push(material_histories.clone());
 
         steps.push(Frame2dPDeltaStepResult {
             step,
@@ -141,7 +151,54 @@ pub(crate) fn solve_corotational_steps_with_materials(
     Ok(CorotationalSolveResult {
         steps,
         material_histories,
+        material_history_steps,
     })
+}
+
+pub(crate) fn validate_initial_material_equilibrium(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    displacement: &[f64],
+    system: &Frame2dStabilitySystem,
+    materials: &[Option<CompiledFrame2dMaterial>],
+    histories: &[Frame2dMaterialHistory],
+) -> Result<(), String> {
+    if !materials
+        .iter()
+        .flatten()
+        .any(CompiledFrame2dMaterial::has_initial_stress)
+    {
+        return Ok(());
+    }
+    let internal =
+        assemble_internal_with_materials(positions, elements, displacement, materials, histories)?;
+    let mut constrained = vec![false; displacement.len()];
+    for &dof in &system.constrained_dofs {
+        constrained[dof] = true;
+    }
+    let max_unbalanced = internal
+        .iter()
+        .enumerate()
+        .filter(|(dof, _)| !constrained[*dof])
+        .map(|(_, force)| force.abs())
+        .fold(0.0_f64, f64::max);
+    let force_scale = elements
+        .iter()
+        .zip(materials)
+        .filter_map(|(element, material)| {
+            material
+                .as_ref()
+                .map(|material| element.area * material.yield_strength)
+        })
+        .fold(1.0_f64, f64::max);
+    let tolerance = force_scale * 1.0e-9;
+    if max_unbalanced > tolerance {
+        return Err(format!(
+            "frame 2d initial material stress is not self-equilibrated on free DOFs: \
+             maximum residual {max_unbalanced:.6e} exceeds tolerance {tolerance:.6e}"
+        ));
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -208,7 +265,13 @@ fn solve_adaptive_step(
             });
         }
         let midpoint = 0.5 * (achieved_load_factor + attempted_load_factor);
-        if midpoint <= achieved_load_factor + f64::EPSILON * target_load_factor.abs().max(1.0) {
+        let remaining_increment = attempted_load_factor - achieved_load_factor;
+        let increment_tolerance = f64::EPSILON
+            * attempted_load_factor
+                .abs()
+                .max(achieved_load_factor.abs())
+                .max(1.0);
+        if remaining_increment.abs() <= increment_tolerance {
             return Ok(AdaptiveStep {
                 displacement,
                 material_histories,
@@ -544,10 +607,8 @@ fn residual(external: &[f64], internal: &[f64], load_factor: f64) -> Vec<f64> {
 
 pub(crate) fn normalized_residual(residual: &[f64], external: &[f64], load_factor: f64) -> f64 {
     let numerator = residual.iter().map(|value| value.abs()).fold(0.0, f64::max);
-    let denominator = external
-        .iter()
-        .map(|value| (load_factor * value).abs())
-        .fold(1.0, f64::max);
+    let reference_norm = external.iter().map(|value| value.abs()).fold(1.0, f64::max);
+    let denominator = reference_norm * load_factor.abs().max(1.0);
     numerator / denominator
 }
 

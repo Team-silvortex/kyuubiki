@@ -441,16 +441,32 @@ pub struct SolveFrame2dPDeltaResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Frame2dMonotonicBilinearMaterialInput {
+pub struct Frame2dSectionFiberInput {
+    pub y: f64,
+    pub area: f64,
+    #[serde(default)]
+    pub initial_axial_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dBilinearKinematicMaterialInput {
     pub element_id: String,
     pub yield_strength: f64,
     pub hardening_ratio: f64,
+    #[serde(default)]
+    pub initial_axial_stress: f64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section_fibers: Vec<Frame2dSectionFiberInput>,
 }
+
+pub type Frame2dMonotonicBilinearMaterialInput = Frame2dBilinearKinematicMaterialInput;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveFrame2dMaterialPDeltaRequest {
     pub stability: SolveFrame2dPDeltaRequest,
-    pub materials: Vec<Frame2dMonotonicBilinearMaterialInput>,
+    pub materials: Vec<Frame2dBilinearKinematicMaterialInput>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_factor_schedule: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -460,12 +476,35 @@ pub struct Frame2dMaterialStateResult {
     pub axial_strain: f64,
     pub axial_stress: f64,
     #[serde(default)]
+    pub initial_axial_stress: f64,
+    #[serde(default)]
     pub plastic_strain: f64,
     #[serde(default)]
     pub backstress: f64,
     pub equivalent_plastic_strain: f64,
     pub tangent_modulus: f64,
     pub yielded: bool,
+    #[serde(default)]
+    pub section_axial_force: Option<f64>,
+    #[serde(default)]
+    pub section_end_moment_i: Option<f64>,
+    #[serde(default)]
+    pub section_end_moment_j: Option<f64>,
+    #[serde(default)]
+    pub fiber_point_count: usize,
+    #[serde(default)]
+    pub yielded_fiber_point_count: usize,
+    #[serde(default)]
+    pub max_fiber_equivalent_plastic_strain: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dMaterialStepResult {
+    pub step: usize,
+    pub load_factor: f64,
+    pub achieved_load_factor: f64,
+    pub converged: bool,
+    pub material_states: Vec<Frame2dMaterialStateResult>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -475,6 +514,8 @@ pub struct SolveFrame2dMaterialPDeltaResult {
     pub material_states: Vec<Frame2dMaterialStateResult>,
     pub yielded_element_count: usize,
     pub max_equivalent_plastic_strain: f64,
+    #[serde(default)]
+    pub material_history: Vec<Frame2dMaterialStepResult>,
 }
 
 fn default_single_iteration() -> usize {

@@ -24,6 +24,7 @@ mod frame_2d_branch_switch;
 mod frame_2d_continuation_state;
 mod frame_2d_corotational;
 mod frame_2d_corotational_element;
+mod frame_2d_fiber_section;
 mod frame_2d_material_p_delta;
 mod frame_2d_math;
 mod frame_2d_p_delta;
