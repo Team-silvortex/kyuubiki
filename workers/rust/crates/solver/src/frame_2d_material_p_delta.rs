@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::frame_2d_corotational_element::element_deformation;
 use crate::frame_2d_fiber_section::{committed_effective_axial_tangent, section_response};
 use crate::frame_2d_p_delta::solve_frame_2d_p_delta_with_materials;
+use crate::frame_2d_section_library::resolve_section_fibers;
 use kyuubiki_protocol::{
     Frame2dBilinearKinematicMaterialInput, Frame2dElementInput, Frame2dMaterialStateResult,
     Frame2dMaterialStepResult, Frame2dStabilityKinematics, Frame2dStabilityPathControl,
@@ -327,13 +328,13 @@ fn compile_materials(
                 material.element_id
             ));
         }
-        validate_material(material, &elements[element_index])?;
+        let section_fibers = resolve_section_fibers(material)?;
+        validate_material(material, &elements[element_index], &section_fibers)?;
         compiled[element_index] = Some(CompiledFrame2dMaterial {
             yield_strength: material.yield_strength,
             hardening_ratio: material.hardening_ratio,
             initial_axial_stress: material.initial_axial_stress,
-            section_fibers: material
-                .section_fibers
+            section_fibers: section_fibers
                 .iter()
                 .map(|fiber| CompiledFrame2dFiber {
                     y: fiber.y,
@@ -352,6 +353,7 @@ fn compile_materials(
 fn validate_material(
     material: &Frame2dBilinearKinematicMaterialInput,
     element: &Frame2dElementInput,
+    section_fibers: &[kyuubiki_protocol::Frame2dSectionFiberInput],
 ) -> Result<(), String> {
     if !(material.yield_strength.is_finite() && material.yield_strength > 0.0) {
         return Err(format!(
@@ -377,15 +379,16 @@ fn validate_material(
             material.element_id
         ));
     }
-    validate_section_fibers(material, element)?;
+    validate_section_fibers(material, element, section_fibers)?;
     Ok(())
 }
 
 fn validate_section_fibers(
     material: &Frame2dBilinearKinematicMaterialInput,
     element: &Frame2dElementInput,
+    section_fibers: &[kyuubiki_protocol::Frame2dSectionFiberInput],
 ) -> Result<(), String> {
-    if material.section_fibers.is_empty() {
+    if section_fibers.is_empty() {
         if material.longitudinal_integration_points != 2
             || material.adaptive_longitudinal_integration
         {
@@ -411,7 +414,7 @@ fn validate_section_fibers(
             material.element_id
         ));
     }
-    if !(2..=32).contains(&material.section_fibers.len()) {
+    if !(2..=32).contains(&section_fibers.len()) {
         return Err(format!(
             "frame 2d material '{}' section_fibers must contain between 2 and 32 fibers",
             material.element_id
@@ -427,7 +430,7 @@ fn validate_section_fibers(
     let mut first_moment = 0.0;
     let mut inertia = 0.0;
     let mut max_y = 0.0_f64;
-    for (index, fiber) in material.section_fibers.iter().enumerate() {
+    for (index, fiber) in section_fibers.iter().enumerate() {
         if !(fiber.y.is_finite() && fiber.area.is_finite() && fiber.area > 0.0) {
             return Err(format!(
                 "frame 2d material '{}' section_fibers[{index}] requires finite y and positive finite area",

@@ -483,9 +483,19 @@ within the requested generalized-force tolerance, and retains all 29 candidate
 histories per fiber so order changes cannot remap plastic state. Results expose
 the active order, active and evaluated fiber-point counts, and retained error
 estimate; elastic fields downshift to two points while a nonuniform plastic
-front promotes to twelve. The next gates are richer section libraries,
-experimental references, cross-host performance qualification, and larger
-localization-sensitive meshes. The retained five-state independent
+front promotes to twelve. A first protocolized section library now expands
+tagged rectangle, I-section, circular, hollow-box, and asymmetric T-section
+dimensions into the same unified fiber execution IR while preserving exact
+area, centroid, and second moment; explicit and library fibers are mutually
+exclusive. A bounded `layered` form now covers custom nonoverlapping
+piecewise-width and asymmetric profiles with deterministic sorting and exact
+continuous section properties. A native `polygon` form now validates and
+discretizes finite simple three-to-64-vertex rings, including concave profiles,
+while preserving exact continuous area, centroid, and bending inertia in the
+same fiber IR; self-intersection and degenerate geometry are rejected. The next
+gates are composite-material constructors, reusable residual-stress templates,
+experimental references, repeated cross-host performance qualification, and
+larger localization-sensitive meshes. The retained five-state independent
 20,000-station cyclic reference promotes from order 2 to 12 and holds the
 maximum generalized-force error to 0.218395%; the retained regression gate is
 now 1%. A paired
@@ -493,8 +503,11 @@ now 1%. A paired
 two-point integration with identical response and 12 Newton iterations:
 adaptive median time is conservatively 18.91% higher and peak RSS increases by
 4.44 MiB in independent three-repeat processes on the retained Mac host. This
-establishes a reproducible local cost baseline while cross-host qualification
-remains open.
+is now paired with a retained three-repeat Linux lab screen: fixed and adaptive
+medians are 902.874 ms and 914.646 ms respectively, with identical response and
+12 Newton iterations. The remote summary path rejects pair or response drift.
+This establishes reproducible Mac/Linux screening; repeated multi-host
+performance qualification and larger localization-sensitive cases remain open.
 The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance

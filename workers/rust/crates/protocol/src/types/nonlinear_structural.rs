@@ -449,12 +449,72 @@ pub struct Frame2dSectionFiberInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dSectionLayerInput {
+    pub y_min: f64,
+    pub y_max: f64,
+    pub width: f64,
+    pub fiber_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dSectionVertexInput {
+    pub y: f64,
+    pub z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Frame2dSectionLibraryInput {
+    Rectangle {
+        width: f64,
+        depth: f64,
+        fiber_count: usize,
+    },
+    ISection {
+        depth: f64,
+        flange_width: f64,
+        flange_thickness: f64,
+        web_thickness: f64,
+        fibers_per_flange: usize,
+        web_fiber_count: usize,
+    },
+    Circular {
+        radius: f64,
+        fiber_count: usize,
+    },
+    HollowBox {
+        width: f64,
+        depth: f64,
+        wall_thickness: f64,
+        fibers_per_flange: usize,
+        web_fiber_count: usize,
+    },
+    TSection {
+        depth: f64,
+        flange_width: f64,
+        flange_thickness: f64,
+        web_thickness: f64,
+        flange_fiber_count: usize,
+        web_fiber_count: usize,
+    },
+    Layered {
+        layers: Vec<Frame2dSectionLayerInput>,
+    },
+    Polygon {
+        vertices: Vec<Frame2dSectionVertexInput>,
+        fiber_count: usize,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Frame2dBilinearKinematicMaterialInput {
     pub element_id: String,
     pub yield_strength: f64,
     pub hardening_ratio: f64,
     #[serde(default)]
     pub initial_axial_stress: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub section_library: Option<Frame2dSectionLibraryInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section_fibers: Vec<Frame2dSectionFiberInput>,
     #[serde(default = "default_frame_2d_section_integration_points")]

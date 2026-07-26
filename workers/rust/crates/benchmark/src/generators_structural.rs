@@ -441,6 +441,7 @@ pub(crate) fn generate_frame_2d_material_p_delta_case(
                 yield_strength: 25.0e6,
                 hardening_ratio: 0.05,
                 initial_axial_stress: 0.0,
+                section_library: None,
                 section_fibers: (0..fiber_count)
                     .map(|index| Frame2dSectionFiberInput {
                         y: (index as f64 - (fiber_count as f64 - 1.0) / 2.0) * spacing,

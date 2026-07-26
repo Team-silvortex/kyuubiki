@@ -56,8 +56,14 @@ axial extension with both end rotations. It accepts either the generated monoton
 path or an explicit cyclic `load_factor_schedule`. Trial states are evaluated
 from the last committed substep and only a converged accepted substep commits
 plastic strain, backstress, and accumulated plastic strain. This is a bounded
-first fiber-section slice, not yet a general section library or qualified
-localization model. Fiber sections may opt into bounded p-adaptive longitudinal
+fiber-section implementation with protocolized rectangle, I-section, circular,
+hollow-box, asymmetric T-section, layered, and simple single-ring polygon
+constructors, not yet a multi-ring, holed, composite-material, or qualified
+localization model. The `layered` description accepts bounded, nonoverlapping
+horizontal regions for custom piecewise-width profiles. Library descriptions
+compile to the same explicit fiber execution IR; they cannot be combined with
+caller-supplied fibers. Fiber sections may opt
+into bounded p-adaptive longitudinal
 integration: fixed-identity 2-, 3-, 4-, 8-, and 12-point candidates are all
 retained, and the lowest order satisfying the generalized-force tolerance
 supplies the Newton response. Each scalar material may carry a finite
@@ -134,6 +140,31 @@ preload remains the generalized eigenproblem denominator.
   6-by-6 material-geometric tangent matches a central-difference Jacobian.
   Fiber area, centroid, and discrete inertia must match the parent element, and
   uniform plus fiber-distributed initial-stress sources cannot be mixed.
+- `section_library` accepts tagged `rectangle`, `i_section`, `circular`,
+  `hollow_box`, `t_section`, and `polygon` descriptions. Their dimensions and bounded
+  fiber counts expand to the same centered
+  `y/area/initial_axial_stress` representation consumed by the material
+  engine. Circular layers use analytic strip area and first moments; the
+  asymmetric T-section is recentered before execution. Area and second moment
+  match each continuous section exactly after lumped-fiber correction,
+  protocol JSON preserves every tagged description, and the built-in constructors
+  execute complete two-element material P-Delta paths. A material cannot
+  combine a library description with explicit fibers.
+- `layered` custom sections accept one to 16 finite horizontal layers and a
+  total of two to 32 fibers. Input order is normalized deterministically,
+  touching or separated layers are accepted, overlapping layers are rejected,
+  and continuous layer area, centroid, and parallel-axis inertia are preserved
+  after compilation. The retained asymmetric three-layer profile round-trips
+  through protocol JSON and executes the same two-element material P-Delta
+  path as the built-in section families.
+- `polygon` accepts one finite three-to-64-vertex simple ring and two to 32
+  horizontal fibers. Concave profiles and either vertex orientation are
+  supported; duplicate edges, degenerate area or inertia, and self-intersection
+  are rejected. Shoelace area, centroid, and bending inertia are preserved
+  exactly after horizontal-slice fibers are compiled into the common IR. A
+  retained concave L-section round-trips through protocol JSON and executes
+  through both the material solver and Engine workflow route. Holes, multiple
+  rings, and composite fiber materials remain outside this claim.
 - A unit-width rectangular section under constant curvature is compared with
   the analytic elastic-core plus yielded-flange moment integral. Equal-depth
   4, 8, 16, and 32-fiber midpoint discretizations reduce the absolute error
@@ -176,8 +207,17 @@ preload remains the generalized eigenproblem denominator.
   adaptive integration measured `5.528 s` and `17.47 MiB`, a conservative
   end-to-end median cost of 18.91% and 4.44 MiB additional peak memory on the
   retained Mac host. A paired-process rerun showed scheduler-sensitive timing
-  variance, so these remain screening measurements rather than cross-host
-  qualification thresholds.
+  variance.
+- The same matrix was then executed in a three-repeat release process on the
+  retained 16-thread AMD Ryzen 7 7735H Linux lab host. Fixed integration
+  measured a `902.874 ms` median and adaptive integration measured
+  `914.646 ms`, a 1.30% median delta. Both paths retained 12 Newton iterations
+  and exactly matching residual, maximum displacement, and maximum stress.
+  The machine-readable snapshot is retained in
+  `evidence/operator-screening/frame-2d-material-integration-linux.json`, and
+  the remote summary generator now rejects missing fixed/adaptive pairs or
+  response drift. These Mac and Linux results establish cross-host screening,
+  not hardware-independent performance thresholds.
 - The material operator is reachable through the built-in engine workflow
   route, agent solver RPC, Rust headless direct-FEM manifest, and the self-host
   control-plane submission route. Rust, Python, and Elixir official SDK maps
@@ -624,7 +664,9 @@ preload remains the generalized eigenproblem denominator.
 - cross-host cyclic moving-front and performance qualification for adaptive
   longitudinal integration; the retained 12-point ceiling reaches 0.218395%
 - cyclic axial-bending qualification against independent experimental data
-- richer section construction and larger localization-sensitive mesh evidence
+- composite-material section construction, reusable residual-stress templates,
+  polygon sections with holes or multiple rings, and larger
+  localization-sensitive mesh evidence
 
 ## Performance Reproduction
 
@@ -665,4 +707,9 @@ cargo run --release -p kyuubiki-benchmark -- \
 cargo run --release -p kyuubiki-benchmark -- \
   --matrix material-integration --profile medium --repeat 3 \
   --case frame-2d-material-fixed-medium --format table
+make benchmark-profile-remote \
+  PROFILE=medium MATRIX=material-integration REPEAT=3 \
+  OUTPUT_SLUG=frame-2d-material-integration-linux
+cargo test -p kyuubiki-script-runner \
+  retained_linux_material_integration_evidence_is_self_consistent -- --nocapture
 ```

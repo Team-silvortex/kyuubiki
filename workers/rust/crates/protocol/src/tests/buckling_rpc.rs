@@ -4,6 +4,7 @@ use crate::{
     Frame2dBranchSwitchProbeResult, Frame2dBranchSwitchSelection, Frame2dElementInput,
     Frame2dMaterialStateResult, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
     Frame2dPDeltaContinuationState, Frame2dPDeltaStepResult, Frame2dSectionFiberInput,
+    Frame2dSectionLayerInput, Frame2dSectionLibraryInput, Frame2dSectionVertexInput,
     Frame2dStabilityKinematics, Frame2dStabilityPathControl, RPC_VERSION, RpcMethod, RpcRequest,
     SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveFrame2dMaterialPDeltaRequest,
     SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
@@ -211,6 +212,7 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 yield_strength: 250.0e6,
                 hardening_ratio: 0.02,
                 initial_axial_stress: 25.0e6,
+                section_library: None,
                 section_fibers: Vec::new(),
                 longitudinal_integration_points: 2,
                 adaptive_longitudinal_integration: false,
@@ -251,6 +253,7 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
         }))
         .expect("legacy material input should decode");
     assert_eq!(legacy_material.initial_axial_stress, 0.0);
+    assert_eq!(legacy_material.section_library, None);
     assert!(legacy_material.section_fibers.is_empty());
     assert_eq!(legacy_material.longitudinal_integration_points, 2);
     assert!(!legacy_material.adaptive_longitudinal_integration);
@@ -261,6 +264,7 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
         yield_strength: 250.0e6,
         hardening_ratio: 0.02,
         initial_axial_stress: 0.0,
+        section_library: None,
         section_fibers: vec![
             Frame2dSectionFiberInput {
                 y: -0.1,
@@ -289,6 +293,106 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
         fiber_material.section_fibers[1].initial_axial_stress,
         25.0e6
     );
+
+    let library_material: Frame2dMonotonicBilinearMaterialInput =
+        serde_json::from_value(serde_json::json!({
+            "element_id": "column",
+            "yield_strength": 250.0e6,
+            "hardening_ratio": 0.02,
+            "section_library": {
+                "kind": "i_section",
+                "depth": 0.6,
+                "flange_width": 0.24,
+                "flange_thickness": 0.04,
+                "web_thickness": 0.02,
+                "fibers_per_flange": 4,
+                "web_fiber_count": 8
+            }
+        }))
+        .expect("section-library material should decode");
+    assert_eq!(
+        library_material.section_library,
+        Some(Frame2dSectionLibraryInput::ISection {
+            depth: 0.6,
+            flange_width: 0.24,
+            flange_thickness: 0.04,
+            web_thickness: 0.02,
+            fibers_per_flange: 4,
+            web_fiber_count: 8,
+        })
+    );
+    assert!(library_material.section_fibers.is_empty());
+    let library_json =
+        serde_json::to_value(&library_material).expect("section-library material should encode");
+    assert_eq!(library_json["section_library"]["kind"], "i_section");
+
+    for (section, kind) in [
+        (
+            Frame2dSectionLibraryInput::Circular {
+                radius: 0.1,
+                fiber_count: 12,
+            },
+            "circular",
+        ),
+        (
+            Frame2dSectionLibraryInput::HollowBox {
+                width: 0.2,
+                depth: 0.3,
+                wall_thickness: 0.02,
+                fibers_per_flange: 3,
+                web_fiber_count: 6,
+            },
+            "hollow_box",
+        ),
+        (
+            Frame2dSectionLibraryInput::TSection {
+                depth: 0.3,
+                flange_width: 0.2,
+                flange_thickness: 0.03,
+                web_thickness: 0.02,
+                flange_fiber_count: 4,
+                web_fiber_count: 8,
+            },
+            "t_section",
+        ),
+        (
+            Frame2dSectionLibraryInput::Layered {
+                layers: vec![
+                    Frame2dSectionLayerInput {
+                        y_min: -0.2,
+                        y_max: 0.0,
+                        width: 0.04,
+                        fiber_count: 4,
+                    },
+                    Frame2dSectionLayerInput {
+                        y_min: 0.0,
+                        y_max: 0.2,
+                        width: 0.08,
+                        fiber_count: 4,
+                    },
+                ],
+            },
+            "layered",
+        ),
+        (
+            Frame2dSectionLibraryInput::Polygon {
+                vertices: vec![
+                    Frame2dSectionVertexInput { y: -0.2, z: 0.0 },
+                    Frame2dSectionVertexInput { y: -0.2, z: 0.1 },
+                    Frame2dSectionVertexInput { y: 0.2, z: 0.1 },
+                    Frame2dSectionVertexInput { y: 0.2, z: 0.0 },
+                ],
+                fiber_count: 8,
+            },
+            "polygon",
+        ),
+    ] {
+        let encoded = serde_json::to_value(&section).expect("section variant should encode");
+        assert_eq!(encoded["kind"], kind);
+        let decoded: Frame2dSectionLibraryInput =
+            serde_json::from_value(encoded).expect("section variant should decode");
+        assert_eq!(decoded, section);
+    }
 }
 
 #[test]

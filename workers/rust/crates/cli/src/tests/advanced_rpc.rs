@@ -130,6 +130,7 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
             yield_strength: 5.0e6,
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
+            section_library: None,
             section_fibers: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,

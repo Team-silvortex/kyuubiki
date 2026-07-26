@@ -242,6 +242,10 @@
         "axial_bending_material_interaction",
         "fiber_section_consistent_newton_tangent",
         "fiber_section_geometry_contract",
+        "protocolized_builtin_section_construction",
+        "protocolized_layered_section_construction",
+        "protocolized_simple_polygon_section_construction",
+        "unified_section_library_fiber_ir",
         "rectangular_elastoplastic_section_moment_reference",
         "fiber_discretization_sequence",
         "cyclic_axial_bending_reversal_history",
@@ -253,6 +257,7 @@
         "independent_cyclic_dense_longitudinal_history_cross_check",
         "dense_longitudinal_midpoint_cross_check",
         "paired_fixed_adaptive_integration_benchmark",
+        "cross_host_fixed_adaptive_integration_screening",
         "connected_triplet_repeated_mixed_subspace_external_reference",
         "connected_triplet_two_parameter_spectral_unfolding",
         "connected_triplet_five_point_nonlinear_parameter_path",
@@ -377,6 +382,19 @@
         "combined_axial_bending_load_partially_yields_the_fiber_section",
         "yielded_fiber_section_six_by_six_tangent_matches_central_difference",
         "fiber_area_centroid_and_inertia_mismatches_are_rejected",
+        "rectangle_i_circular_hollow_box_and_t_section_libraries_preserve_area_centroid_and_inertia",
+        "asymmetric_t_section_library_recenters_the_execution_fibers",
+        "layered_section_profiles_are_sorted_nonoverlapping_and_recentred",
+        "layered_section_profiles_preserve_continuous_area_and_inertia",
+        "layered_section_protocol_round_trips_and_executes_through_the_material_solver",
+        "concave_polygon_sections_preserve_continuous_area_centroid_and_inertia",
+        "polygon_section_properties_are_independent_of_vertex_orientation",
+        "self_intersecting_degenerate_and_oversized_polygon_contracts_are_rejected",
+        "polygon_section_protocol_round_trips_and_executes_through_engine_json",
+        "section_library_expands_to_the_existing_fiber_execution_ir",
+        "section_library_and_explicit_fibers_are_mutually_exclusive",
+        "invalid_section_library_geometry_and_parent_property_mismatches_are_rejected",
+        "workflow_json_executes_the_protocolized_section_library",
         "workflow_json_preserves_fiber_section_diagnostics",
         "four_to_thirty_two_rectangular_fibers_converge_monotonically_to_the_analytic_plastic_moment",
         "thirty_two_fiber_moment_error_is_below_one_e_minus_three",
@@ -400,6 +418,7 @@
         "adaptive_cyclic_equivalent_plasticity_is_nondecreasing",
         "adaptive_cyclic_candidate_history_size_remains_constant",
         "paired_integration_benchmark_preserves_solution_and_iteration_count",
+        "retained_linux_fixed_adaptive_pair_preserves_response_and_iteration_count",
         "complete_graph_triplet_recovers_the_symmetric_euler_factor",
         "complete_graph_triplet_recovers_the_repeated_graph_laplacian_factor",
         "connected_triplet_repeated_modes_retain_mixed_column_participation",
@@ -499,6 +518,7 @@
       ],
       "evidence_paths": [
         "evidence/operator-screening/frame-2d-p-delta-precritical.md",
+        "evidence/operator-screening/frame-2d-material-integration-linux.json",
         "workers/rust/crates/solver/src/frame_2d_corotational.rs",
         "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
         "workers/rust/crates/solver/src/frame_2d_continuation_state.rs",
@@ -507,6 +527,8 @@
         "workers/rust/crates/solver/src/frame_2d_fiber_section.rs",
         "workers/rust/crates/solver/src/frame_2d_fiber_section_cyclic_reference.rs",
         "workers/rust/crates/solver/src/frame_2d_longitudinal_quadrature.rs",
+        "workers/rust/crates/solver/src/frame_2d_section_library.rs",
+        "workers/rust/crates/solver/src/frame_2d_section_polygon.rs",
         "workers/rust/crates/solver/src/frame_2d_material_p_delta.rs",
         "workers/rust/crates/solver/src/frame_2d_path_events.rs",
         "workers/rust/crates/solver/src/frame_2d_transition_refinement.rs",
@@ -518,6 +540,7 @@
         "workers/rust/crates/solver/src/symmetric_critical_mode.rs",
         "workers/rust/crates/solver/src/symmetric_inertia.rs",
         "workers/rust/crates/protocol/src/types/nonlinear_structural.rs",
+        "workers/rust/crates/protocol/src/tests/buckling_rpc.rs",
         "workers/rust/crates/protocol/src/tests/buckling_rpc.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_closed_form.rs",
         "workers/rust/crates/solver/tests/frame_2d_p_delta_explicit_imperfection.rs",
@@ -559,6 +582,21 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_fiber_section::tests -- --nocapture"
         },
         {
+          "id": "frame-2d-section-library-invariants",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_section_library::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-section-polygon-invariants",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_section_polygon::tests -- --nocapture"
+        },
+        {
+          "id": "frame-2d-section-library-protocol",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-protocol material_p_delta_rpc_round_trip_preserves_element_assignment -- --nocapture"
+        },
+        {
           "id": "frame-2d-fiber-section-cyclic-reference",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_fiber_section::cyclic_reference -- --nocapture"
@@ -572,6 +610,11 @@
           "id": "frame-2d-material-integration-benchmark-contract",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-benchmark material_integration_matrix_pairs_fixed_and_adaptive_fiber_paths -- --nocapture"
+        },
+        {
+          "id": "frame-2d-material-integration-linux-evidence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-script-runner retained_linux_material_integration_evidence_is_self_consistent -- --nocapture"
         },
         {
           "id": "frame-2d-tangent-inertia",

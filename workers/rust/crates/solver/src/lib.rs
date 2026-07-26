@@ -30,6 +30,8 @@ mod frame_2d_math;
 mod frame_2d_p_delta;
 mod frame_2d_parameter_path;
 mod frame_2d_path_events;
+mod frame_2d_section_library;
+mod frame_2d_section_polygon;
 mod frame_2d_stability;
 mod frame_2d_transition_refinement;
 mod frame_2d_validation;

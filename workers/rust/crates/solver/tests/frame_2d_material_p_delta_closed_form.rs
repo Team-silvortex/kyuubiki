@@ -325,6 +325,7 @@ fn request(maximum_load_factor: f64) -> SolveFrame2dMaterialPDeltaRequest {
             yield_strength: YIELD_STRENGTH,
             hardening_ratio: HARDENING_RATIO,
             initial_axial_stress: 0.0,
+            section_library: None,
             section_fibers: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
@@ -429,6 +430,7 @@ fn residual_stress_request() -> SolveFrame2dMaterialPDeltaRequest {
             } else {
                 -0.2 * YIELD_STRENGTH
             },
+            section_library: None,
             section_fibers: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,
@@ -526,6 +528,7 @@ fn prestressed_chain_request(initial_axial_stress: f64) -> SolveFrame2dMaterialP
             yield_strength: YIELD_STRENGTH,
             hardening_ratio: HARDENING_RATIO,
             initial_axial_stress,
+            section_library: None,
             section_fibers: Vec::new(),
             longitudinal_integration_points: 2,
             adaptive_longitudinal_integration: false,

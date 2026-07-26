@@ -2,7 +2,7 @@
   "schema_version": "kyuubiki.docs-book/v1",
   "title": "Kyuubiki Book",
   "version_line": "moxi 2.x",
-  "current_development_version": "2.0.0",
+  "current_development_version": "2.2.8",
   "formal_release_target": "moxi 2.0.0",
   "entry_html": "docs/book.html",
   "purpose": "Single-entry documentation guide for humans and large models.",

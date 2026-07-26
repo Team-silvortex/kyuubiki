@@ -1,0 +1,85 @@
+{
+  "schema_version": "kyuubiki.material-integration-cross-host-screening/v1",
+  "version_line": "moxi 2.x",
+  "status": "screening",
+  "operator_id": "solve.frame_2d_material_p_delta",
+  "profile": "medium",
+  "matrix": "material-integration",
+  "repeat": 3,
+  "captured_at": "2026-07-26",
+  "host": {
+    "role": "kyuubiki-lab",
+    "operating_system": "Linux 7.0.0-28-generic",
+    "architecture": "x86_64",
+    "processor": "AMD Ryzen 7 7735H with Radeon Graphics",
+    "logical_cpu_count": 16,
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)"
+  },
+  "workload": {
+    "node_count": 121,
+    "element_count": 120,
+    "fiber_count_per_element": 8,
+    "load_step_count": 4,
+    "fixed_longitudinal_order": 2,
+    "adaptive_candidate_orders": [
+      2,
+      3,
+      4,
+      8,
+      12
+    ]
+  },
+  "cases": [
+    {
+      "id": "frame-2d-material-fixed-medium",
+      "family": "frame_2d_material_fixed",
+      "ok": true,
+      "median_ms": 902.873599,
+      "mean_ms": 907.2928546666667,
+      "min_ms": 875.904194,
+      "max_ms": 943.100771,
+      "peak_rss_kib": 30424,
+      "solver_iterations": 12,
+      "solver_residual_norm": 9.20714228413999e-12,
+      "max_displacement": 0.00003811071953738409,
+      "max_stress": 999999.9999908666
+    },
+    {
+      "id": "frame-2d-material-adaptive-medium",
+      "family": "frame_2d_material_adaptive",
+      "ok": true,
+      "median_ms": 914.645515,
+      "mean_ms": 904.4205973333334,
+      "min_ms": 869.048953,
+      "max_ms": 929.567324,
+      "peak_rss_kib": 30424,
+      "solver_iterations": 12,
+      "solver_residual_norm": 9.20714228413999e-12,
+      "max_displacement": 0.00003811071953738409,
+      "max_stress": 999999.9999908666
+    }
+  ],
+  "comparison": {
+    "fixed_case_id": "frame-2d-material-fixed-medium",
+    "adaptive_case_id": "frame-2d-material-adaptive-medium",
+    "fixed_median_ms": 902.873599,
+    "adaptive_median_ms": 914.645515,
+    "median_delta_pct": 1.3038276911672144,
+    "fixed_solver_iterations": 12,
+    "adaptive_solver_iterations": 12,
+    "solver_iterations_match": true,
+    "residual_abs_delta": 0.0,
+    "max_displacement_abs_delta": 0.0,
+    "max_stress_abs_delta": 0.0,
+    "response_match": true
+  },
+  "reproduction": {
+    "runner": "scripts/kyuubiki benchmark-profile-remote",
+    "arguments": "PROFILE=medium MATRIX=material-integration REPEAT=3"
+  },
+  "limitations": [
+    "This is a screening snapshot, not a hardware-independent performance threshold.",
+    "Peak RSS is process-level and shared by both cases in the paired benchmark process.",
+    "Qualification still requires repeated runs across additional Linux and macOS hosts."
+  ]
+}

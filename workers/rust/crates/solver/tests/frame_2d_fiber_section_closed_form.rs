@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
     Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput, Frame2dNodeInput,
-    Frame2dSectionFiberInput, Frame2dStabilityKinematics, SolveBucklingFrame2dRequest,
+    Frame2dSectionFiberInput, Frame2dSectionLayerInput, Frame2dSectionLibraryInput,
+    Frame2dSectionVertexInput, Frame2dStabilityKinematics, SolveBucklingFrame2dRequest,
     SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
 };
 use kyuubiki_solver::solve_frame_2d_material_p_delta;
@@ -47,6 +48,227 @@ fn fiber_section_recovers_the_axial_bilinear_reference() {
             state.tangent_modulus,
             HARDENING_RATIO * YOUNGS_MODULUS,
             1.0e-12,
+        );
+    }
+}
+
+#[test]
+fn rectangle_section_library_executes_through_the_material_solver() {
+    let mut request = request(0.4, 0.5 * REFERENCE_MOMENT, [0.0; 4]);
+    let depth = (12.0 * INERTIA / AREA).sqrt();
+    for material in &mut request.materials {
+        material.section_fibers.clear();
+        material.section_library = Some(Frame2dSectionLibraryInput::Rectangle {
+            width: AREA / depth,
+            depth,
+            fiber_count: 8,
+        });
+    }
+
+    let result = solve_frame_2d_material_p_delta(&request)
+        .expect("rectangle section-library path should converge");
+
+    assert!(result.stability_result.converged);
+    assert!(result.material_states.iter().all(|state| {
+        state.fiber_point_count == 16
+            && state.evaluated_fiber_point_count == 16
+            && state.section_axial_force.is_some()
+            && state.section_end_moment_i.is_some()
+            && state.section_end_moment_j.is_some()
+    }));
+}
+
+#[test]
+fn i_section_library_executes_through_the_material_solver() {
+    let mut request = request(0.2, 0.25 * REFERENCE_MOMENT, [0.0; 4]);
+    let depth = 0.6_f64;
+    let flange_width = 0.24_f64;
+    let flange_thickness = 0.04_f64;
+    let web_thickness = 0.02_f64;
+    let web_depth = depth - 2.0 * flange_thickness;
+    let area = 2.0 * flange_width * flange_thickness + web_thickness * web_depth;
+    let inertia =
+        (flange_width * depth.powi(3) - (flange_width - web_thickness) * web_depth.powi(3)) / 12.0;
+    for element in &mut request.stability.buckling.frame.elements {
+        element.area = area;
+        element.moment_of_inertia = inertia;
+        element.section_modulus = inertia / (0.5 * depth);
+    }
+    for material in &mut request.materials {
+        material.section_fibers.clear();
+        material.section_library = Some(Frame2dSectionLibraryInput::ISection {
+            depth,
+            flange_width,
+            flange_thickness,
+            web_thickness,
+            fibers_per_flange: 4,
+            web_fiber_count: 8,
+        });
+    }
+
+    let result = solve_frame_2d_material_p_delta(&request)
+        .expect("i-section section-library path should converge");
+
+    assert!(result.stability_result.converged);
+    assert!(result.material_states.iter().all(|state| {
+        state.fiber_point_count == 32
+            && state.evaluated_fiber_point_count == 32
+            && state.section_axial_force.is_some()
+            && state.section_end_moment_i.is_some()
+            && state.section_end_moment_j.is_some()
+    }));
+}
+
+#[test]
+fn circular_box_and_t_section_libraries_execute_through_the_material_solver() {
+    let radius = 0.1_f64;
+    let circle = (
+        "circular",
+        Frame2dSectionLibraryInput::Circular {
+            radius,
+            fiber_count: 12,
+        },
+        std::f64::consts::PI * radius.powi(2),
+        std::f64::consts::PI * radius.powi(4) / 4.0,
+        12,
+    );
+    let (box_width, box_depth, wall) = (0.2_f64, 0.3_f64, 0.02_f64);
+    let (inner_width, inner_depth) = (box_width - 2.0 * wall, box_depth - 2.0 * wall);
+    let hollow_box = (
+        "hollow_box",
+        Frame2dSectionLibraryInput::HollowBox {
+            width: box_width,
+            depth: box_depth,
+            wall_thickness: wall,
+            fibers_per_flange: 3,
+            web_fiber_count: 6,
+        },
+        box_width * box_depth - inner_width * inner_depth,
+        (box_width * box_depth.powi(3) - inner_width * inner_depth.powi(3)) / 12.0,
+        12,
+    );
+    let (depth, flange_width, flange_thickness, web_thickness) =
+        (0.3_f64, 0.2_f64, 0.03_f64, 0.02_f64);
+    let web_depth = depth - flange_thickness;
+    let web_area = web_thickness * web_depth;
+    let flange_area = flange_width * flange_thickness;
+    let t_area = web_area + flange_area;
+    let web_y = -0.5 * flange_thickness;
+    let flange_y = 0.5 * (depth - flange_thickness);
+    let centroid = (web_area * web_y + flange_area * flange_y) / t_area;
+    let t_inertia = web_thickness * web_depth.powi(3) / 12.0
+        + web_area * (web_y - centroid).powi(2)
+        + flange_width * flange_thickness.powi(3) / 12.0
+        + flange_area * (flange_y - centroid).powi(2);
+    let t_section = (
+        "t_section",
+        Frame2dSectionLibraryInput::TSection {
+            depth,
+            flange_width,
+            flange_thickness,
+            web_thickness,
+            flange_fiber_count: 4,
+            web_fiber_count: 8,
+        },
+        t_area,
+        t_inertia,
+        12,
+    );
+    let layers = vec![
+        Frame2dSectionLayerInput {
+            y_min: -0.3,
+            y_max: -0.1,
+            width: 0.05,
+            fiber_count: 4,
+        },
+        Frame2dSectionLayerInput {
+            y_min: -0.1,
+            y_max: 0.15,
+            width: 0.02,
+            fiber_count: 5,
+        },
+        Frame2dSectionLayerInput {
+            y_min: 0.15,
+            y_max: 0.3,
+            width: 0.1,
+            fiber_count: 3,
+        },
+    ];
+    let layered_area = layers
+        .iter()
+        .map(|layer| layer.width * (layer.y_max - layer.y_min))
+        .sum::<f64>();
+    let layered_centroid = layers
+        .iter()
+        .map(|layer| layer.width * (layer.y_max - layer.y_min) * 0.5 * (layer.y_min + layer.y_max))
+        .sum::<f64>()
+        / layered_area;
+    let layered_inertia = layers
+        .iter()
+        .map(|layer| {
+            let layer_depth = layer.y_max - layer.y_min;
+            let layer_area = layer.width * layer_depth;
+            let layer_y = 0.5 * (layer.y_min + layer.y_max);
+            layer.width * layer_depth.powi(3) / 12.0
+                + layer_area * (layer_y - layered_centroid).powi(2)
+        })
+        .sum::<f64>();
+    let layered = (
+        "layered",
+        Frame2dSectionLibraryInput::Layered { layers },
+        layered_area,
+        layered_inertia,
+        12,
+    );
+    let polygon_area = 0.05_f64 * 0.4 + 0.15 * 0.1;
+    let polygon_centroid = 0.15_f64 * 0.1 * 0.15 / polygon_area;
+    let polygon_inertia = 0.05 * 0.4_f64.powi(3) / 12.0
+        + 0.15 * 0.1_f64.powi(3) / 12.0
+        + 0.15 * 0.1 * 0.15_f64.powi(2)
+        - polygon_area * polygon_centroid.powi(2);
+    let polygon = (
+        "polygon",
+        Frame2dSectionLibraryInput::Polygon {
+            vertices: vec![
+                Frame2dSectionVertexInput { y: -0.2, z: 0.0 },
+                Frame2dSectionVertexInput { y: -0.2, z: 0.05 },
+                Frame2dSectionVertexInput { y: 0.1, z: 0.05 },
+                Frame2dSectionVertexInput { y: 0.1, z: 0.2 },
+                Frame2dSectionVertexInput { y: 0.2, z: 0.2 },
+                Frame2dSectionVertexInput { y: 0.2, z: 0.0 },
+            ],
+            fiber_count: 16,
+        },
+        polygon_area,
+        polygon_inertia,
+        16,
+    );
+
+    for (name, section, area, inertia, fiber_count) in
+        [circle, hollow_box, t_section, layered, polygon]
+    {
+        let mut request = request(0.1, 0.1 * REFERENCE_MOMENT, [0.0; 4]);
+        for element in &mut request.stability.buckling.frame.elements {
+            element.area = area;
+            element.moment_of_inertia = inertia;
+            element.section_modulus = inertia / 0.2;
+        }
+        for material in &mut request.materials {
+            material.section_fibers.clear();
+            material.section_library = Some(section.clone());
+        }
+
+        let result = solve_frame_2d_material_p_delta(&request)
+            .unwrap_or_else(|error| panic!("{name} section-library path failed: {error}"));
+
+        assert!(result.stability_result.converged, "{name}");
+        assert!(
+            result.material_states.iter().all(|state| {
+                state.fiber_point_count == fiber_count * 2
+                    && state.evaluated_fiber_point_count == fiber_count * 2
+            }),
+            "{name}: {:#?}",
+            result.material_states
         );
     }
 }
@@ -179,6 +401,27 @@ fn fiber_section_contract_rejects_inconsistent_geometry_and_stress_sources() {
         .expect_err("uniform and distributed residual stress sources must not be mixed");
     assert!(error.contains("cannot combine uniform"));
 
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].section_library = Some(Frame2dSectionLibraryInput::Rectangle {
+        width: 0.02,
+        depth: 0.5,
+        fiber_count: 8,
+    });
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("library and explicit fibers must not be combined");
+    assert!(error.contains("cannot combine section_library"));
+
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].section_fibers.clear();
+    malformed.materials[0].section_library = Some(Frame2dSectionLibraryInput::Rectangle {
+        width: 0.02,
+        depth: 0.5,
+        fiber_count: 8,
+    });
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("library inertia mismatch must be rejected");
+    assert!(error.contains("fiber inertia must match"));
+
     let unbalanced_stress = 0.2 * YIELD_STRENGTH;
     let unbalanced = request(0.1, 0.0, [unbalanced_stress; 4]);
     let error = solve_frame_2d_material_p_delta(&unbalanced)
@@ -240,6 +483,7 @@ fn request(
             yield_strength: YIELD_STRENGTH,
             hardening_ratio: HARDENING_RATIO,
             initial_axial_stress: 0.0,
+            section_library: None,
             section_fibers: [-0.3, -0.1, 0.1, 0.3]
                 .into_iter()
                 .zip(initial_stresses)

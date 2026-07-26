@@ -31,6 +31,9 @@ const HTML_FILES: &[&str] = &[
 const VERSION_FILES: &[&str] = &[
     "docs/book.html",
     "docs/book-manifest.json",
+    "docs/component-integrity-protocol.html",
+    "docs/installation-integrity-contract.html",
+    "docs/navigation-matrix.html",
     "apps/hub-gui/ui/docs/index.html",
     "apps/hub-gui/ui/docs/current-line.html",
     "apps/hub-gui/ui/docs/installation-integrity.html",
@@ -92,9 +95,11 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
         return Ok(0);
     }
 
+    let channels = read_json(root, UPDATE_CHANNELS_PATH)?;
+    let explicit_version = options.version.is_some();
     let shipping_version = match options.version {
         Some(version) => version,
-        None => read_json(root, UPDATE_CHANNELS_PATH)?
+        None => channels
             .get("shipping_version")
             .and_then(Value::as_str)
             .ok_or_else(|| {
@@ -103,9 +108,15 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
             })?
             .to_string(),
     };
-    let version_line = options
-        .line
-        .unwrap_or_else(|| format!("moxi {shipping_version}"));
+    let version_line = match options.line {
+        Some(line) => line,
+        None if explicit_version => format!("moxi {}.x", semver_major(&shipping_version)?),
+        None => channels
+            .get("line")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("moxi {}", shipping_version)),
+    };
     let minor_line = semver_minor(&shipping_version)?;
 
     let replacements = sync_replacements(&shipping_version, &version_line, &minor_line);
@@ -350,6 +361,7 @@ struct ReplacementRule {
 #[derive(Clone, Copy)]
 enum VersionKind {
     Semver,
+    Line,
     MinorX,
 }
 
@@ -395,8 +407,9 @@ fn sync_replacements(
         (
             "docs/book.html",
             vec![
-                semver_rule("One book for moxi ", "", &display_version),
-                semver_rule("Version line: moxi ", "", &display_version),
+                line_rule("One book for moxi ", "", &display_version),
+                line_rule("Version line: moxi ", "", &display_version),
+                semver_rule("Current development: ", "", shipping_version),
                 semver_rule("Shipping version: ", "", shipping_version),
                 minor_rule("Current prep: ", "", &format!("{minor_line}.x")),
             ],
@@ -404,20 +417,63 @@ fn sync_replacements(
         (
             "docs/book-manifest.json",
             vec![
-                semver_rule("\"version_line\": \"moxi ", "\"", &display_version),
+                line_rule("\"version_line\": \"moxi ", "\"", &display_version),
+                semver_rule(
+                    "\"current_development_version\": \"",
+                    "\"",
+                    shipping_version,
+                ),
                 semver_rule("\"shipping_version\": \"", "\"", shipping_version),
             ],
         ),
         (
+            "docs/component-integrity-protocol.html",
+            vec![semver_rule("Current development: ", "", shipping_version)],
+        ),
+        (
+            "docs/installation-integrity-contract.html",
+            vec![
+                semver_rule("Shipping version: ", "", shipping_version),
+                semver_rule(
+                    "<strong>Value:</strong> <code>",
+                    "</code>",
+                    shipping_version,
+                ),
+            ],
+        ),
+        (
+            "docs/navigation-matrix.html",
+            vec![semver_rule("Current development: ", "", shipping_version)],
+        ),
+        (
             "apps/hub-gui/ui/docs/index.html",
             vec![
-                semver_rule("Desktop reading entry for moxi ", "", &display_version),
-                semver_rule("Current line: moxi ", "", &display_version),
+                line_rule("Desktop reading entry for moxi ", "", &display_version),
+                line_rule("Current line: moxi ", "", &display_version),
+                semver_rule("Current development: ", "", shipping_version),
             ],
         ),
         (
             "apps/hub-gui/ui/docs/current-line.html",
-            vec![semver_rule(">moxi ", "<", &display_version)],
+            vec![
+                line_rule(">moxi ", "<", &display_version),
+                line_rule(
+                    "The current development point is <code>moxi ",
+                    "</code>",
+                    shipping_version,
+                ),
+            ],
+        ),
+        (
+            "apps/hub-gui/ui/docs/installation-integrity.html",
+            vec![
+                semver_rule("Shipping version: ", "", shipping_version),
+                semver_rule(
+                    "<strong>Value:</strong> <code>",
+                    "</code>",
+                    shipping_version,
+                ),
+            ],
         ),
     ]
 }
@@ -431,6 +487,15 @@ fn semver_rule(prefix: &'static str, suffix: &'static str, replacement: &str) ->
     }
 }
 
+fn line_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> ReplacementRule {
+    ReplacementRule {
+        prefix,
+        suffix,
+        replacement: replacement.to_string(),
+        version_kind: VersionKind::Line,
+    }
+}
+
 fn minor_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> ReplacementRule {
     ReplacementRule {
         prefix,
@@ -438,6 +503,14 @@ fn minor_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> 
         replacement: replacement.to_string(),
         version_kind: VersionKind::MinorX,
     }
+}
+
+fn semver_major(version: &str) -> RunnerResult<&str> {
+    version
+        .split('.')
+        .next()
+        .filter(|major| !major.is_empty() && major.bytes().all(|byte| byte.is_ascii_digit()))
+        .ok_or_else(|| format!("invalid semantic version: {version}"))
 }
 
 fn semver_minor(version: &str) -> RunnerResult<String> {
@@ -451,6 +524,9 @@ fn semver_minor(version: &str) -> RunnerResult<String> {
 fn version_token_len(text: &str, kind: VersionKind) -> Option<usize> {
     match kind {
         VersionKind::Semver => parse_version_token_len(text, 3, false),
+        VersionKind::Line => parse_version_token_len(text, 3, false)
+            .or_else(|| parse_version_token_len(text, 2, true))
+            .or_else(|| parse_version_token_len(text, 1, true)),
         VersionKind::MinorX => parse_version_token_len(text, 2, true),
     }
 }
@@ -485,7 +561,8 @@ fn parse_version_token_len(text: &str, numeric_segments: usize, trailing_x: bool
 #[cfg(test)]
 mod tests {
     use super::{
-        ReplacementRule, VersionKind, extract_local_hrefs, required_snippets, semver_minor,
+        ReplacementRule, VersionKind, extract_local_hrefs, required_snippets, semver_major,
+        semver_minor, sync_replacements,
     };
 
     #[test]
@@ -519,7 +596,57 @@ mod tests {
     }
 
     #[test]
+    fn replacement_rule_updates_product_line_tokens() {
+        let rule = ReplacementRule {
+            prefix: "Current line: moxi ",
+            suffix: "<",
+            replacement: "3.x".to_string(),
+            version_kind: VersionKind::Line,
+        };
+        assert_eq!(
+            rule.apply("Current line: moxi 2.x<"),
+            "Current line: moxi 3.x<"
+        );
+    }
+
+    #[test]
+    fn sync_rules_update_every_version_surface() {
+        let replacements = sync_replacements("2.2.8", "moxi 2.x", "2.2");
+        let apply = |path: &str, text: &str| {
+            replacements
+                .iter()
+                .find(|(candidate, _)| *candidate == path)
+                .unwrap()
+                .1
+                .iter()
+                .fold(text.to_string(), |next, rule| rule.apply(&next))
+        };
+        assert_eq!(
+            apply(
+                "docs/book.html",
+                "Version line: moxi 2.x; Current development: 2.0.0"
+            ),
+            "Version line: moxi 2.x; Current development: 2.2.8"
+        );
+        assert_eq!(
+            apply(
+                "apps/hub-gui/ui/docs/installation-integrity.html",
+                "Shipping version: 2.0.0"
+            ),
+            "Shipping version: 2.2.8"
+        );
+        assert_eq!(
+            apply(
+                "apps/hub-gui/ui/docs/current-line.html",
+                "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.x</code>."
+            ),
+            "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.2.8</code>."
+        );
+    }
+
+    #[test]
     fn semver_minor_keeps_major_and_minor() {
+        assert_eq!(semver_major("2.2.8").unwrap(), "2");
         assert_eq!(semver_minor("1.20.0").unwrap(), "1.20");
     }
 }

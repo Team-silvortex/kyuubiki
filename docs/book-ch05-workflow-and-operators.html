@@ -42,6 +42,47 @@
       </section>
 
       <section class="docs-card docs-section">
+        <h2>Rich descriptions, stable execution IR</h2>
+        <p class="docs-copy">
+          Material frame tasks may describe rectangle, I-section, circular,
+          hollow-box, T-section, or custom layered sections. The runtime
+          validates and compiles every description into the same centered fiber
+          representation before the Agent engine executes it. This keeps
+          authoring convenient without coupling the solver to UI-specific
+          section objects.
+        </p>
+        <pre><code>{
+  "kind": "layered",
+  "layers": [
+    {"y_min": -0.30, "y_max": -0.10, "width": 0.05, "fiber_count": 4},
+    {"y_min": -0.10, "y_max": 0.15, "width": 0.02, "fiber_count": 5},
+    {"y_min": 0.15, "y_max": 0.30, "width": 0.10, "fiber_count": 3}
+  ]
+}</code></pre>
+        <p class="docs-copy">
+          Layers may touch or remain separated, but cannot overlap. Area,
+          centroid, and second moment must agree with the parent frame element.
+          This is a piecewise-width profile contract, not a composite-material
+          claim.
+        </p>
+        <pre><code>{
+  "kind": "polygon",
+  "vertices": [
+    {"y": -0.20, "z": 0.00}, {"y": -0.20, "z": 0.05},
+    {"y": 0.10, "z": 0.05}, {"y": 0.10, "z": 0.20},
+    {"y": 0.20, "z": 0.20}, {"y": 0.20, "z": 0.00}
+  ],
+  "fiber_count": 16
+}</code></pre>
+        <p class="docs-copy">
+          Polygon sections accept one simple finite ring, including concave
+          profiles and either vertex orientation. Self-intersection, holes,
+          multiple rings, and composite fiber materials are not silently
+          inferred.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">
           <a class="docs-link" href="./workflow-graph.md">workflow-graph.md</a>

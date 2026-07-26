@@ -105,7 +105,7 @@ fn workflow_route_executes_corotational_equilibrium() {
 }
 
 #[test]
-fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
+fn workflow_route_executes_monotonic_library_fiber_section_material_p_delta() {
     let result = run_solve_operator(
         "solve.frame_2d_material_p_delta",
         json!({
@@ -140,10 +140,12 @@ fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
                     "longitudinal_integration_points": 4,
                     "adaptive_longitudinal_integration": true,
                     "longitudinal_integration_tolerance": 1.0e-8,
-                    "section_fibers": [
-                        {"y": -3.1622776601683795, "area": 0.005},
-                        {"y": 3.1622776601683795, "area": 0.005}
-                    ]
+                    "section_library": {
+                        "kind": "rectangle",
+                        "width": 0.0009128709291752768,
+                        "depth": 10.954451150103322,
+                        "fiber_count": 2
+                    }
                 },
                 {
                     "element_id": "e1",
@@ -152,10 +154,16 @@ fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
                     "longitudinal_integration_points": 4,
                     "adaptive_longitudinal_integration": true,
                     "longitudinal_integration_tolerance": 1.0e-8,
-                    "section_fibers": [
-                        {"y": -3.1622776601683795, "area": 0.005},
-                        {"y": 3.1622776601683795, "area": 0.005}
-                    ]
+                    "section_library": {
+                        "kind": "polygon",
+                        "vertices": [
+                            {"y": -5.477225575051661, "z": 0.0},
+                            {"y": -5.477225575051661, "z": 0.0009128709291752768},
+                            {"y": 5.477225575051661, "z": 0.0009128709291752768},
+                            {"y": 5.477225575051661, "z": 0.0}
+                        ],
+                        "fiber_count": 2
+                    }
                 }
             ]
         }),

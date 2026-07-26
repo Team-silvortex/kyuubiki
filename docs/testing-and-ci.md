@@ -338,6 +338,12 @@ Use these entrypoints:
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
+- `make benchmark-profile-remote PROFILE=medium MATRIX=material-integration REPEAT=3`
+  Compare fixed two-point and adaptive 2/3/4/8/12-point frame material
+  integration on the Linux lab host. The retained summary reports timing and
+  response deltas, and the runner fails if the pair is incomplete or changes
+  Newton iterations, residual, maximum displacement, or maximum stress beyond
+  its numerical equivalence tolerance.
 - `make benchmark-profile-remote PROFILE=300k MATRIX=thermal-core REPEAT=1`
   Run a remote exploratory 300k profile smoke without requiring a checked
   baseline yet.
