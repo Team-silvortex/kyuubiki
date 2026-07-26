@@ -131,6 +131,9 @@ fn handles_frame_2d_material_p_delta_rpc_requests() {
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         })
         .collect();
     let response = execute(

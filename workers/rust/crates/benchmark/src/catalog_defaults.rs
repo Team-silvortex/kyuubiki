@@ -46,6 +46,14 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
             "frame-2d-corotational",
             BenchmarkFamily::Frame2dCorotational,
         ),
+        template(
+            "frame-2d-material-fixed",
+            BenchmarkFamily::Frame2dMaterialFixed,
+        ),
+        template(
+            "frame-2d-material-adaptive",
+            BenchmarkFamily::Frame2dMaterialAdaptive,
+        ),
         template("modal-frame-3d", BenchmarkFamily::ModalFrame3d),
         template("solid-tetra-3d", BenchmarkFamily::SolidTetra3d),
         template("truss-roof", BenchmarkFamily::Truss2d),
@@ -188,6 +196,11 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "frame-2d-p-delta",
                 "frame-2d-corotational",
             ],
+            vec![],
+        ),
+        matrix(
+            "material-integration",
+            &["frame-2d-material-fixed", "frame-2d-material-adaptive"],
             vec![],
         ),
         matrix(

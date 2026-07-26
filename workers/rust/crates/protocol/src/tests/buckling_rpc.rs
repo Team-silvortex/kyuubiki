@@ -212,6 +212,9 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 hardening_ratio: 0.02,
                 initial_axial_stress: 25.0e6,
                 section_fibers: Vec::new(),
+                longitudinal_integration_points: 2,
+                adaptive_longitudinal_integration: false,
+                longitudinal_integration_tolerance: 1.0e-3,
             }],
             load_factor_schedule: Some(vec![1.2, 0.0, -1.2]),
         })
@@ -249,6 +252,9 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
         .expect("legacy material input should decode");
     assert_eq!(legacy_material.initial_axial_stress, 0.0);
     assert!(legacy_material.section_fibers.is_empty());
+    assert_eq!(legacy_material.longitudinal_integration_points, 2);
+    assert!(!legacy_material.adaptive_longitudinal_integration);
+    assert_eq!(legacy_material.longitudinal_integration_tolerance, 1.0e-3);
 
     let fiber_material = Frame2dMonotonicBilinearMaterialInput {
         element_id: "column".to_string(),
@@ -267,12 +273,18 @@ fn material_p_delta_rpc_round_trip_preserves_element_assignment() {
                 initial_axial_stress: 25.0e6,
             },
         ],
+        longitudinal_integration_points: 4,
+        adaptive_longitudinal_integration: true,
+        longitudinal_integration_tolerance: 5.0e-4,
     };
     let fiber_material: Frame2dMonotonicBilinearMaterialInput = serde_json::from_value(
         serde_json::to_value(fiber_material).expect("fiber material should serialize"),
     )
     .expect("fiber material should decode");
     assert_eq!(fiber_material.section_fibers.len(), 2);
+    assert_eq!(fiber_material.longitudinal_integration_points, 4);
+    assert!(fiber_material.adaptive_longitudinal_integration);
+    assert_eq!(fiber_material.longitudinal_integration_tolerance, 5.0e-4);
     assert_eq!(
         fiber_material.section_fibers[1].initial_axial_stress,
         25.0e6
@@ -297,6 +309,9 @@ fn legacy_material_state_defaults_new_signed_history_fields() {
     assert_eq!(state.initial_axial_stress, 0.0);
     assert_eq!(state.section_axial_force, None);
     assert_eq!(state.fiber_point_count, 0);
+    assert_eq!(state.evaluated_fiber_point_count, 0);
+    assert_eq!(state.active_longitudinal_integration_points, 0);
+    assert_eq!(state.longitudinal_integration_error, None);
 }
 
 #[test]

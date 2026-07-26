@@ -107,9 +107,9 @@ Current progress:
   with explicit load increments and limit-point events while preserving load
   control as the legacy default
 - stability remains screening-only while complex-frame switched-branch depth,
-  automatic problem-scale radius bounds, fiber-discretization convergence,
-  cyclic axial-bending section qualification, and broader independent external
-  correlation remain incomplete
+  automatic problem-scale radius bounds, cross-host adaptive-integration
+  qualification, cyclic axial-bending experimental qualification, and broader
+  independent external correlation remain incomplete
 
 Qualification focus:
 
@@ -471,8 +471,30 @@ stations, carry self-equilibrated residual stress, and produce coupled axial
 force, end moments, and a full generalized consistent tangent. Discrete elastic
 `EA`/`EI`, pure-axial bilinear response, partial axial-bending yield, residual
 stress resultants, and the 6-by-6 element Jacobian are retained checks. The next
-gates are fiber-discretization convergence, richer section libraries, cyclic
-axial-bending external references, and larger localization-sensitive meshes.
+gate now includes a 4/8/16/32-fiber sequence that converges monotonically to
+the analytic rectangular elastoplastic bending moment, plus a committed
+axial-bending reversal path whose moment changes sign and whose accumulated
+plasticity grows after reversal. Longitudinal integration is now explicitly
+configurable at 2, 3, or 4 Gauss points; a nonuniform plastic-curvature field
+approaches a 50,000-sample midpoint reference monotonically, with the four-point
+error below half the two-point error. An opt-in bounded p-adaptive mode now
+evaluates fixed-identity 2/3/4/8/12-point candidates, selects the lowest order
+within the requested generalized-force tolerance, and retains all 29 candidate
+histories per fiber so order changes cannot remap plastic state. Results expose
+the active order, active and evaluated fiber-point counts, and retained error
+estimate; elastic fields downshift to two points while a nonuniform plastic
+front promotes to twelve. The next gates are richer section libraries,
+experimental references, cross-host performance qualification, and larger
+localization-sensitive meshes. The retained five-state independent
+20,000-station cyclic reference promotes from order 2 to 12 and holds the
+maximum generalized-force error to 0.218395%; the retained regression gate is
+now 1%. A paired
+120-element release benchmark now measures the adaptive path against fixed
+two-point integration with identical response and 12 Newton iterations:
+adaptive median time is conservatively 18.91% higher and peak RSS increases by
+4.44 MiB in independent three-repeat processes on the retained Mac host. This
+establishes a reproducible local cost baseline while cross-host qualification
+remains open.
 The first internal
 complex-topology isolation reference also proves
 single/multi-mode spectral consistency and fixed-load host-response invariance

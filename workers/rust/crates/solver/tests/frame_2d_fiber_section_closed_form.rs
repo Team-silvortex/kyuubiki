@@ -53,7 +53,13 @@ fn fiber_section_recovers_the_axial_bilinear_reference() {
 
 #[test]
 fn combined_axial_bending_load_yields_only_part_of_the_section() {
-    let result = solve_frame_2d_material_p_delta(&request(0.6, REFERENCE_MOMENT, [0.0; 4]))
+    let mut request = request(0.6, REFERENCE_MOMENT, [0.0; 4]);
+    for material in &mut request.materials {
+        material.longitudinal_integration_points = 4;
+        material.adaptive_longitudinal_integration = true;
+        material.longitudinal_integration_tolerance = 1.0e-10;
+    }
+    let result = solve_frame_2d_material_p_delta(&request)
         .expect("combined fiber-section path should converge");
 
     assert!(
@@ -61,16 +67,65 @@ fn combined_axial_bending_load_yields_only_part_of_the_section() {
         "steps={:#?}",
         result.stability_result.steps
     );
-    assert!(result.material_states.iter().any(|state| {
-        state.yielded_fiber_point_count > 0
-            && state.yielded_fiber_point_count < state.fiber_point_count
-            && state.max_fiber_equivalent_plastic_strain > 0.0
-    }));
+    assert!(
+        result.material_states.iter().any(|state| {
+            state.evaluated_fiber_point_count == 116
+                && [2, 3, 4, 8, 12].contains(&state.active_longitudinal_integration_points)
+                && state.longitudinal_integration_error.is_some()
+                && state.yielded_fiber_point_count > 0
+                && state.yielded_fiber_point_count < state.fiber_point_count
+                && state.max_fiber_equivalent_plastic_strain > 0.0
+        }),
+        "states={:#?}",
+        result.material_states
+    );
+    assert!(
+        result.material_history.iter().all(|step| {
+            step.material_states.iter().all(|state| {
+                state.evaluated_fiber_point_count == 116
+                    && [2, 3, 4, 8, 12].contains(&state.active_longitudinal_integration_points)
+                    && state.longitudinal_integration_error.is_some()
+            })
+        }),
+        "history={:#?}",
+        result.material_history
+    );
     assert!(
         result
             .material_states
             .iter()
             .any(|state| state.section_end_moment_i.unwrap().abs() > 1.0)
+    );
+}
+
+#[test]
+fn cyclic_axial_bending_path_reverses_moment_and_accumulates_fiber_plasticity() {
+    let mut request = request(0.6, REFERENCE_MOMENT, [0.0; 4]);
+    for material in &mut request.materials {
+        material.longitudinal_integration_points = 3;
+    }
+    request.stability.maximum_load_factor = None;
+    request.stability.load_steps = None;
+    request.load_factor_schedule = Some(vec![0.6, 0.0, -0.6]);
+    let result = solve_frame_2d_material_p_delta(&request)
+        .expect("cyclic axial-bending fiber-section path should converge");
+
+    assert_eq!(result.material_history.len(), 3);
+    let forward = &result.material_history[0].material_states[1];
+    let unloaded = &result.material_history[1].material_states[1];
+    let reversed = &result.material_history[2].material_states[1];
+    let forward_moment = forward.section_end_moment_j.unwrap();
+    let reversed_moment = reversed.section_end_moment_j.unwrap();
+
+    assert!(forward.yielded_fiber_point_count > 0);
+    assert_eq!(forward.fiber_point_count, 12);
+    assert!(forward.yielded_fiber_point_count < forward.fiber_point_count);
+    assert!(forward_moment.abs() > 1.0);
+    assert!(reversed_moment.abs() > 1.0);
+    assert!(forward_moment * reversed_moment < 0.0);
+    assert!(unloaded.section_end_moment_j.unwrap().abs() < forward_moment.abs());
+    assert!(
+        reversed.max_fiber_equivalent_plastic_strain > forward.max_fiber_equivalent_plastic_strain
     );
 }
 
@@ -129,6 +184,32 @@ fn fiber_section_contract_rejects_inconsistent_geometry_and_stress_sources() {
     let error = solve_frame_2d_material_p_delta(&unbalanced)
         .expect_err("unbalanced fiber residual stress must be rejected");
     assert!(error.contains("not self-equilibrated"));
+
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].longitudinal_integration_points = 5;
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("unsupported longitudinal integration order must be rejected");
+    assert!(error.contains("must be between 2 and 4"));
+
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].section_fibers.clear();
+    malformed.materials[0].longitudinal_integration_points = 3;
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("scalar material must not silently accept section integration controls");
+    assert!(error.contains("require section_fibers"));
+
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].longitudinal_integration_tolerance = 0.0;
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("adaptive integration tolerance must be bounded");
+    assert!(error.contains("must be finite and in (0, 0.25]"));
+
+    let mut malformed = request(0.1, 0.0, [0.0; 4]);
+    malformed.materials[0].section_fibers.clear();
+    malformed.materials[0].adaptive_longitudinal_integration = true;
+    let error = solve_frame_2d_material_p_delta(&malformed)
+        .expect_err("scalar material must reject adaptive section integration");
+    assert!(error.contains("require section_fibers"));
 }
 
 fn request(
@@ -168,6 +249,9 @@ fn request(
                     initial_axial_stress,
                 })
                 .collect(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         })
         .collect();
     SolveFrame2dMaterialPDeltaRequest {

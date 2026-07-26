@@ -399,7 +399,7 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             "solve.frame_2d_material_p_delta",
             "mechanical",
             "frame_2d_material_p_delta",
-            "Solve generated monotonic or explicit cyclic corotational 2D frame load paths with element-scoped bilinear kinematic-hardening materials, optional axial-bending fiber sections, an initial-stress-consistent buckling baseline, and committed history diagnostics.",
+            "Solve generated monotonic or explicit cyclic corotational 2D frame load paths with element-scoped bilinear kinematic-hardening materials, optional axial-bending fiber sections with fixed or bounded p-adaptive longitudinal integration, an initial-stress-consistent buckling baseline, and committed history diagnostics.",
             &[
                 "screening",
                 "mechanical",
@@ -411,6 +411,7 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
                 "initial-stress",
                 "fiber-section",
                 "axial-bending",
+                "gauss-integration",
                 "frame",
                 "p-delta",
                 "2d",

@@ -205,7 +205,13 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
         |> Map.delete("load_steps")
       end)
       |> Map.update!("materials", fn [material] ->
-        [Map.put(material, "section_fibers", section_fibers)]
+        [
+          material
+          |> Map.put("section_fibers", section_fibers)
+          |> Map.put("longitudinal_integration_points", 4)
+          |> Map.put("adaptive_longitudinal_integration", true)
+          |> Map.put("longitudinal_integration_tolerance", 0.0005)
+        ]
       end)
       |> Map.put("load_factor_schedule", [1.3, 0.0, -1.3])
 
@@ -215,6 +221,10 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     assert normalized["load_factor_schedule"] == [1.3, 0.0, -1.3]
     assert normalized["stability"]["kinematics"] == "corotational"
     assert normalized["materials"] |> hd() |> Map.fetch!("section_fibers") == section_fibers
+    assert normalized["materials"] |> hd() |> Map.fetch!("longitudinal_integration_points") == 4
+    assert normalized["materials"] |> hd() |> Map.fetch!("adaptive_longitudinal_integration")
+    assert normalized["materials"] |> hd() |> Map.fetch!("longitudinal_integration_tolerance") ==
+             0.0005
   end
 
   defp base_request do

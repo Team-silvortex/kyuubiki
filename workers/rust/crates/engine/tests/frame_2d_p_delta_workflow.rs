@@ -137,6 +137,9 @@ fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
                     "element_id": "e0",
                     "yield_strength": 250000000.0,
                     "hardening_ratio": 0.1,
+                    "longitudinal_integration_points": 4,
+                    "adaptive_longitudinal_integration": true,
+                    "longitudinal_integration_tolerance": 1.0e-8,
                     "section_fibers": [
                         {"y": -3.1622776601683795, "area": 0.005},
                         {"y": 3.1622776601683795, "area": 0.005}
@@ -146,6 +149,9 @@ fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
                     "element_id": "e1",
                     "yield_strength": 250000000.0,
                     "hardening_ratio": 0.1,
+                    "longitudinal_integration_points": 4,
+                    "adaptive_longitudinal_integration": true,
+                    "longitudinal_integration_tolerance": 1.0e-8,
                     "section_fibers": [
                         {"y": -3.1622776601683795, "area": 0.005},
                         {"y": 3.1622776601683795, "area": 0.005}
@@ -160,6 +166,14 @@ fn workflow_route_executes_monotonic_fiber_section_material_p_delta() {
     assert_eq!(result["yielded_element_count"], 2);
     assert_eq!(result["material_states"].as_array().unwrap().len(), 2);
     assert_eq!(result["material_states"][0]["fiber_point_count"], 4);
+    assert_eq!(
+        result["material_states"][0]["evaluated_fiber_point_count"],
+        58
+    );
+    assert_eq!(
+        result["material_states"][0]["active_longitudinal_integration_points"],
+        2
+    );
     assert_eq!(result["material_states"][0]["yielded_fiber_point_count"], 4);
     assert!(
         result["material_states"][0]["section_axial_force"]

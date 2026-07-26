@@ -347,6 +347,9 @@ _PAYLOADS = {
                 "element_id": element_id,
                 "yield_strength": 5_000_000.0,
                 "hardening_ratio": 0.1,
+                "longitudinal_integration_points": 3,
+                "adaptive_longitudinal_integration": True,
+                "longitudinal_integration_tolerance": 1.0e-6,
                 "section_fibers": [
                     {"y": -3.162_277_660_168_379_5, "area": 0.005},
                     {"y": 3.162_277_660_168_379_5, "area": 0.005},

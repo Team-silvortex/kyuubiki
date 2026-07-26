@@ -418,6 +418,9 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
         let displacement = [0.0, 0.0, 0.05, 0.01, 0.1, -0.03];
         let history = Frame2dMaterialHistory::default();
@@ -458,6 +461,9 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
         let committed_point = material
             .response(
@@ -470,6 +476,8 @@ mod tests {
         let committed = Frame2dMaterialHistory {
             point: committed_point,
             fiber_points: Vec::new(),
+            active_longitudinal_integration_points: 0,
+            longitudinal_integration_error: None,
         };
         let displacement = [0.0, 0.0, 0.02, -0.01, 0.05, -0.01];
         let analytic = analytic_tangent(
@@ -509,6 +517,9 @@ mod tests {
             hardening_ratio: 0.03,
             initial_axial_stress: -40.0e6,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
         let displacement = [0.0, 0.0, 0.02, 0.0, 0.03, -0.01];
         let history = Frame2dMaterialHistory::default();
@@ -556,6 +567,9 @@ mod tests {
                     initial_axial_stress: 0.0,
                 })
                 .collect(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: true,
+            longitudinal_integration_tolerance: 1.0e-10,
         };
         let displacement = [0.0, 0.0, 0.008, 0.0005, 0.001, -0.002];
         let history = Frame2dMaterialHistory::default();

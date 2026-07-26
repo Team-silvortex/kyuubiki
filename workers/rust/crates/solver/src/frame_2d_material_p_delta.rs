@@ -22,6 +22,9 @@ pub(crate) struct CompiledFrame2dMaterial {
     pub(crate) hardening_ratio: f64,
     pub(crate) initial_axial_stress: f64,
     pub(crate) section_fibers: Vec<CompiledFrame2dFiber>,
+    pub(crate) longitudinal_integration_points: usize,
+    pub(crate) adaptive_longitudinal_integration: bool,
+    pub(crate) longitudinal_integration_tolerance: f64,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -36,6 +39,8 @@ pub(crate) struct Frame2dMaterialPointHistory {
 pub(crate) struct Frame2dMaterialHistory {
     pub(crate) point: Frame2dMaterialPointHistory,
     pub(crate) fiber_points: Vec<Frame2dMaterialPointHistory>,
+    pub(crate) active_longitudinal_integration_points: usize,
+    pub(crate) longitudinal_integration_error: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -211,8 +216,12 @@ fn material_state_results(
                 section_end_moment_i: Some(section.moment_i),
                 section_end_moment_j: Some(section.moment_j),
                 fiber_point_count: section.fiber_point_count,
+                evaluated_fiber_point_count: section.evaluated_fiber_point_count,
                 yielded_fiber_point_count: section.yielded_fiber_point_count,
                 max_fiber_equivalent_plastic_strain: section.max_equivalent_plastic_strain,
+                active_longitudinal_integration_points: section
+                    .active_longitudinal_integration_points,
+                longitudinal_integration_error: section.longitudinal_integration_error,
             })
         })
         .collect()
@@ -332,6 +341,9 @@ fn compile_materials(
                     initial_axial_stress: fiber.initial_axial_stress,
                 })
                 .collect(),
+            longitudinal_integration_points: material.longitudinal_integration_points,
+            adaptive_longitudinal_integration: material.adaptive_longitudinal_integration,
+            longitudinal_integration_tolerance: material.longitudinal_integration_tolerance,
         });
     }
     Ok(compiled)
@@ -374,7 +386,30 @@ fn validate_section_fibers(
     element: &Frame2dElementInput,
 ) -> Result<(), String> {
     if material.section_fibers.is_empty() {
+        if material.longitudinal_integration_points != 2
+            || material.adaptive_longitudinal_integration
+        {
+            return Err(format!(
+                "frame 2d material '{}' longitudinal integration controls require section_fibers",
+                material.element_id
+            ));
+        }
         return Ok(());
+    }
+    if !(2..=4).contains(&material.longitudinal_integration_points) {
+        return Err(format!(
+            "frame 2d material '{}' longitudinal_integration_points must be between 2 and 4",
+            material.element_id
+        ));
+    }
+    if !(material.longitudinal_integration_tolerance.is_finite()
+        && material.longitudinal_integration_tolerance > 0.0
+        && material.longitudinal_integration_tolerance <= 0.25)
+    {
+        return Err(format!(
+            "frame 2d material '{}' longitudinal_integration_tolerance must be finite and in (0, 0.25]",
+            material.element_id
+        ));
     }
     if !(2..=32).contains(&material.section_fibers.len()) {
         return Err(format!(
@@ -447,6 +482,9 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
         let initial = Frame2dMaterialPointHistory::default();
         let elastic = material.response(1_000.0, 0.2, &initial, 0.0);
@@ -470,6 +508,9 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 0.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
         let initial = Frame2dMaterialPointHistory::default();
         let loaded = material.response(1_000.0, 0.5, &initial, 0.0);
@@ -497,6 +538,9 @@ mod tests {
             hardening_ratio: 0.1,
             initial_axial_stress: 50.0,
             section_fibers: Vec::new(),
+            longitudinal_integration_points: 2,
+            adaptive_longitudinal_integration: false,
+            longitudinal_integration_tolerance: 1.0e-3,
         };
 
         let initial = material.response(

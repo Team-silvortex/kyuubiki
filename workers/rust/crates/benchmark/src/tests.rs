@@ -379,6 +379,32 @@ mod tests {
     }
 
     #[test]
+    fn material_integration_matrix_pairs_fixed_and_adaptive_fiber_paths() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "material-integration");
+
+        assert_eq!(cases.len(), 2);
+        assert_eq!(cases[0].family, "frame_2d_material_fixed");
+        assert_eq!(cases[1].family, "frame_2d_material_adaptive");
+        for (case, expected_adaptive) in cases.iter().zip([false, true]) {
+            let BenchmarkWorkload::Frame2dMaterialPDelta(request) = &case.workload else {
+                panic!("material integration matrix must generate material frame workloads");
+            };
+            assert_eq!(request.materials.len(), 120);
+            assert!(request.materials.iter().all(|material| {
+                material.section_fibers.len() == 8
+                    && material.adaptive_longitudinal_integration == expected_adaptive
+            }));
+            let (operator_id, payload) =
+                crate::workflow_payloads::workflow_payload_for_case(case);
+            assert_eq!(operator_id, "solve.frame_2d_material_p_delta");
+            assert_eq!(
+                payload["materials"][0]["adaptive_longitudinal_integration"],
+                expected_adaptive
+            );
+        }
+    }
+
+    #[test]
     fn physics_coverage_families_have_headless_workflow_solve_operators() {
         let cases = benchmark_cases(BenchmarkProfile::Medium, "physics-coverage");
         let supported = kyuubiki_engine::supported_workflow_operator_ids()

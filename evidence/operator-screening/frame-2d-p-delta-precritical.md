@@ -51,13 +51,16 @@ branches. Neither control mode is a material-plasticity model.
 extension: selected elements use an incremental bilinear axial return mapping
 with linear kinematic hardening during Newton assembly. The legacy scalar form
 keeps bending elastic; the optional fiber-section form integrates independent
-material points at two longitudinal Gauss stations and couples axial extension
-with both end rotations. It accepts either the generated monotonic path or an
-explicit cyclic `load_factor_schedule`. Trial states are evaluated from the
-last committed substep and only a converged accepted substep commits plastic
-strain, backstress, and accumulated plastic strain. This is a bounded first
-fiber-section slice, not yet a general section library or qualified
-localization model. Each scalar material may carry a finite
+material points at 2, 3, or 4 fixed longitudinal Gauss stations and couples
+axial extension with both end rotations. It accepts either the generated monotonic
+path or an explicit cyclic `load_factor_schedule`. Trial states are evaluated
+from the last committed substep and only a converged accepted substep commits
+plastic strain, backstress, and accumulated plastic strain. This is a bounded
+first fiber-section slice, not yet a general section library or qualified
+localization model. Fiber sections may opt into bounded p-adaptive longitudinal
+integration: fixed-identity 2-, 3-, 4-, 8-, and 12-point candidates are all
+retained, and the lowest order satisfying the generalized-force tolerance
+supplies the Newton response. Each scalar material may carry a finite
 `initial_axial_stress`; fiber materials instead carry per-fiber initial stress
 inside the yield surface. Those stresses participate in the return mapping,
 corotational internal force, and material-geometric tangent. Initial residual
@@ -131,6 +134,50 @@ preload remains the generalized eigenproblem denominator.
   6-by-6 material-geometric tangent matches a central-difference Jacobian.
   Fiber area, centroid, and discrete inertia must match the parent element, and
   uniform plus fiber-distributed initial-stress sources cannot be mixed.
+- A unit-width rectangular section under constant curvature is compared with
+  the analytic elastic-core plus yielded-flange moment integral. Equal-depth
+  4, 8, 16, and 32-fiber midpoint discretizations reduce the absolute error
+  monotonically by more than 70% per refinement; the 32-fiber relative error
+  is below `1e-3`.
+- A complete two-element frame follows a `+0.6 -> 0 -> -0.6` combined axial
+  force and bending-moment schedule. The accepted history retains partial
+  fiber yield, reverses the section end-moment sign, and increases maximum
+  accumulated fiber plastic strain after reverse loading.
+- The material contract exposes `longitudinal_integration_points` from 2
+  through 4 and defaults legacy input to 2. With section discretization fixed
+  at 32 fibers, all three rules approach an independent 50,000-sample midpoint
+  integration of a nonuniform plastic-curvature field monotonically; the
+  four-point generalized-force error is less than half the two-point error.
+  Result diagnostics report exactly `fiber_count * station_count` material
+  points. Unsupported orders and scalar materials carrying this section-only
+  control are rejected rather than silently ignored.
+- `adaptive_longitudinal_integration` evaluates all 2/3/4/8/12-point candidates
+  without changing material-point identity. Elastic fields select two active
+  stations, while the retained nonuniform plastic-curvature case selects twelve
+  under a `1e-10` tolerance. Adaptive histories retain 29 evaluated points
+  per fiber across repeated commits; results separately expose active point
+  count, evaluated point count, selected order, and the generalized-force error
+  estimate. Nonfinite, nonpositive, or greater-than-`0.25` tolerances are
+  rejected before assembly.
+- A five-state elastic, forward-plastic, unload, reverse-plastic, and reload
+  path is cross-checked against an independently implemented bilinear return
+  mapping at 20,000 longitudinal midpoint stations and 32 section fibers. The
+  selected orders are `[2,12,12,12,12]`; generalized-force errors are
+  `1.58e-9`, `0.1757299%`, `0.2183948%`, `0.1093848%`, and `0.0886345%`.
+  All 928 adaptive candidate histories retain fixed identity, and summed
+  equivalent plasticity remains nondecreasing through reversal. The retained
+  screening gate is 1%.
+- The `material-integration` benchmark matrix pairs the same 120-element,
+  eight-fiber, four-step corotational solve in fixed two-point and adaptive
+  2/3/4/8/12-point modes. Independent three-repeat release processes retained the
+  same 12 Newton iterations, `9.207e-12` final residual,
+  `3.8110719537e-5` maximum displacement, and `9.9999999999e5` maximum stress.
+  Fixed integration measured a `4.649 s` median and `13.03 MiB` peak RSS;
+  adaptive integration measured `5.528 s` and `17.47 MiB`, a conservative
+  end-to-end median cost of 18.91% and 4.44 MiB additional peak memory on the
+  retained Mac host. A paired-process rerun showed scheduler-sensitive timing
+  variance, so these remain screening measurements rather than cross-host
+  qualification thresholds.
 - The material operator is reachable through the built-in engine workflow
   route, agent solver RPC, Rust headless direct-FEM manifest, and the self-host
   control-plane submission route. Rust, Python, and Elixir official SDK maps
@@ -574,8 +621,9 @@ preload remains the generalized eigenproblem denominator.
 
 ## Promotion Gaps
 
-- fiber-discretization and longitudinal-integration convergence
-- cyclic axial-bending interaction against an independent section reference
+- cross-host cyclic moving-front and performance qualification for adaptive
+  longitudinal integration; the retained 12-point ceiling reaches 0.218395%
+- cyclic axial-bending qualification against independent experimental data
 - richer section construction and larger localization-sensitive mesh evidence
 
 ## Performance Reproduction
@@ -607,4 +655,14 @@ cargo run --release -p kyuubiki-benchmark -- \
 cargo run --release -p kyuubiki-benchmark -- \
   --matrix stability-screening --profile large --repeat 3 \
   --case frame-2d-corotational-large --format table
+cargo test -p kyuubiki-solver --lib \
+  frame_2d_fiber_section::cyclic_reference -- --nocapture
+cargo run --release -p kyuubiki-benchmark -- \
+  --matrix material-integration --profile medium --repeat 3 --format table
+cargo run --release -p kyuubiki-benchmark -- \
+  --matrix material-integration --profile medium --repeat 3 \
+  --case frame-2d-material-adaptive-medium --format table
+cargo run --release -p kyuubiki-benchmark -- \
+  --matrix material-integration --profile medium --repeat 3 \
+  --case frame-2d-material-fixed-medium --format table
 ```

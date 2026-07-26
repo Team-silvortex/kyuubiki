@@ -50,6 +50,15 @@ fn run() -> Result<(), String> {
         benchmark_cases(config.profile, &config.matrix)
     };
     let selected = select_cases(&cases, config.case_filter.as_deref());
+    if selected.is_empty() {
+        return Err(match config.case_filter.as_deref() {
+            Some(filter) => format!(
+                "no benchmark case matched '{filter}' in matrix '{}'",
+                config.matrix
+            ),
+            None => format!("benchmark matrix '{}' contains no cases", config.matrix),
+        });
+    }
 
     if config.dry_run_shapes {
         let report = build_shape_report(&selected, config.profile, &config.matrix);

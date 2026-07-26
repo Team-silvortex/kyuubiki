@@ -1,10 +1,11 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, BucklingBeam1dElementInput, BucklingBeam1dNodeInput,
-    ContactGap1dContactInput, Frame2dElementInput, Frame2dNodeInput, Frame2dStabilityKinematics,
-    Frame3dNodeInput, ModalFrame2dElementInput, ModalFrame3dElementInput,
-    NonlinearSpring1dElementInput, NonlinearSpring1dNodeInput, SolidTetra3dElementInput,
-    SolidTetra3dNodeInput, SolveBeam1dRequest, SolveBucklingBeam1dRequest,
-    SolveBucklingFrame2dRequest, SolveContactGap1dRequest, SolveFrame2dPDeltaRequest,
+    ContactGap1dContactInput, Frame2dElementInput, Frame2dMonotonicBilinearMaterialInput,
+    Frame2dNodeInput, Frame2dSectionFiberInput, Frame2dStabilityKinematics, Frame3dNodeInput,
+    ModalFrame2dElementInput, ModalFrame3dElementInput, NonlinearSpring1dElementInput,
+    NonlinearSpring1dNodeInput, SolidTetra3dElementInput, SolidTetra3dNodeInput,
+    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveContactGap1dRequest, SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaRequest,
     SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
     SolveNonlinearSpring1dRequest, SolveSolidTetra3dRequest, SolveSpring1dRequest,
     SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest, Spring1dElementInput,
@@ -406,6 +407,58 @@ pub(crate) fn generate_frame_2d_corotational_case(
     let mut request = generate_frame_2d_p_delta_case(segments, length);
     request.kinematics = Frame2dStabilityKinematics::Corotational;
     request
+}
+
+pub(crate) fn generate_frame_2d_material_p_delta_case(
+    segments: usize,
+    length: f64,
+    adaptive: bool,
+) -> SolveFrame2dMaterialPDeltaRequest {
+    let mut stability = generate_frame_2d_corotational_case(segments, length);
+    stability.imperfection_amplitude = length * 1.0e-4;
+    stability.maximum_load_factor = Some(0.1);
+    stability.load_steps = Some(4);
+    stability.max_iterations = Some(64);
+    stability.tolerance = Some(1.0e-8);
+    stability.max_step_cutbacks = Some(12);
+    let materials = stability
+        .buckling
+        .frame
+        .elements
+        .iter()
+        .map(|element| {
+            let fiber_count = 8;
+            let fiber_area = element.area / fiber_count as f64;
+            let offset_squares = (0..fiber_count)
+                .map(|index| {
+                    let offset = index as f64 - (fiber_count as f64 - 1.0) / 2.0;
+                    offset * offset
+                })
+                .sum::<f64>();
+            let spacing = (element.moment_of_inertia / (fiber_area * offset_squares)).sqrt();
+            Frame2dMonotonicBilinearMaterialInput {
+                element_id: element.id.clone(),
+                yield_strength: 25.0e6,
+                hardening_ratio: 0.05,
+                initial_axial_stress: 0.0,
+                section_fibers: (0..fiber_count)
+                    .map(|index| Frame2dSectionFiberInput {
+                        y: (index as f64 - (fiber_count as f64 - 1.0) / 2.0) * spacing,
+                        area: fiber_area,
+                        initial_axial_stress: 0.0,
+                    })
+                    .collect(),
+                longitudinal_integration_points: 2,
+                adaptive_longitudinal_integration: adaptive,
+                longitudinal_integration_tolerance: 1.0e-3,
+            }
+        })
+        .collect();
+    SolveFrame2dMaterialPDeltaRequest {
+        stability,
+        materials,
+        load_factor_schedule: None,
+    }
 }
 
 pub(crate) fn generate_modal_frame_3d_chain_case(

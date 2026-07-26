@@ -375,6 +375,77 @@ pub(crate) fn run_case_with_preconditioner(
                         Ok(())
                     })
                 }
+                BenchmarkWorkload::Frame2dMaterialPDelta(request) => {
+                    solve(EngineSolveRequest::Frame2dMaterialPDelta(request.clone())).and_then(
+                        |result| {
+                            let AnalysisResult::Frame2dMaterialPDelta(result) = result else {
+                                unreachable!("frame material solve should return material result")
+                            };
+                            if !result.stability_result.converged {
+                                let failed = result
+                                    .stability_result
+                                    .steps
+                                    .iter()
+                                    .find(|step| !step.converged);
+                                return Err(match failed {
+                                    Some(step) => format!(
+                                        "frame material benchmark did not converge at step {}: target={}, achieved={}, residual={}, iterations={}, cutbacks={}, reason={:?}, detail={}",
+                                        step.step,
+                                        step.load_factor,
+                                        step.achieved_load_factor.unwrap_or_default(),
+                                        step.residual_norm,
+                                        step.iterations,
+                                        step.cutbacks,
+                                        step.failure_reason,
+                                        step.failure_detail.as_deref().unwrap_or("none")
+                                    ),
+                                    None => "frame material benchmark ended before all requested steps"
+                                        .to_string(),
+                                });
+                            }
+                            node_count = result
+                                .input
+                                .stability
+                                .buckling
+                                .frame
+                                .nodes
+                                .len();
+                            element_count = result
+                                .input
+                                .stability
+                                .buckling
+                                .frame
+                                .elements
+                                .len();
+                            dof_count = result.stability_result.final_displacements.len();
+                            solver_iterations = Some(
+                                result
+                                    .stability_result
+                                    .steps
+                                    .iter()
+                                    .map(|step| step.iterations)
+                                    .sum(),
+                            );
+                            solver_residual_norm = result
+                                .stability_result
+                                .steps
+                                .last()
+                                .map(|step| step.residual_norm);
+                            max_displacement = result
+                                .stability_result
+                                .final_displacements
+                                .iter()
+                                .map(|value| value.abs())
+                                .fold(0.0_f64, f64::max);
+                            max_stress = result
+                                .material_states
+                                .iter()
+                                .map(|state| state.axial_stress.abs())
+                                .fold(0.0_f64, f64::max);
+                            Ok(())
+                        },
+                    )
+                }
                 BenchmarkWorkload::ModalFrame3d(request) => {
                     solve(EngineSolveRequest::ModalFrame3d(request.clone())).map(|result| {
                         let AnalysisResult::ModalFrame3d(result) = result else {

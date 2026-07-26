@@ -22,10 +22,10 @@ use crate::{
     generators_structural::{
         generate_beam_1d_case, generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
         generate_contact_gap_1d_case, generate_frame_2d_corotational_case,
-        generate_frame_2d_p_delta_case, generate_modal_frame_2d_chain_case,
-        generate_modal_frame_3d_chain_case, generate_nonlinear_spring_1d_case,
-        generate_solid_tetra_3d_specimen_batch, generate_spring_1d_case,
-        generate_spring_2d_ladder_case, generate_spring_3d_cage_case,
+        generate_frame_2d_material_p_delta_case, generate_frame_2d_p_delta_case,
+        generate_modal_frame_2d_chain_case, generate_modal_frame_3d_chain_case,
+        generate_nonlinear_spring_1d_case, generate_solid_tetra_3d_specimen_batch,
+        generate_spring_1d_case, generate_spring_2d_ladder_case, generate_spring_3d_cage_case,
         generate_thermal_beam_1d_case,
     },
     generators_thermal_structural::{
@@ -98,6 +98,8 @@ pub(crate) enum BenchmarkFamily {
     BucklingFrame2d,
     Frame2dPDelta,
     Frame2dCorotational,
+    Frame2dMaterialFixed,
+    Frame2dMaterialAdaptive,
     ModalFrame3d,
     SolidTetra3d,
     Truss2d,
@@ -169,21 +171,19 @@ pub(crate) fn benchmark_cases(profile: BenchmarkProfile, matrix: &str) -> Vec<Be
         .iter()
         .find(|candidate| candidate.profile == profile)
         .expect("benchmark profile spec should exist");
-    let matrix_spec = spec
-        .matrices
-        .iter()
-        .find(|candidate| candidate.name == matrix)
-        .or_else(|| {
-            spec.matrices
-                .iter()
-                .find(|candidate| candidate.name == "core")
-        })
-        .expect("benchmark matrix spec should exist");
+    let matrix_spec = select_matrix_spec(&spec, matrix);
 
     resolve_matrix_templates(&spec, matrix_spec)
         .into_iter()
         .map(|template| build_case(template, profile_spec))
         .collect()
+}
+
+fn select_matrix_spec<'a>(spec: &'a BenchmarkCatalogSpec, matrix: &str) -> &'a BenchmarkMatrixSpec {
+    spec.matrices
+        .iter()
+        .find(|candidate| candidate.name == matrix)
+        .unwrap_or_else(|| panic!("benchmark matrix '{matrix}' is not defined"))
 }
 
 fn resolve_matrix_templates<'a>(
@@ -379,6 +379,28 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
                 profile.axial_elements,
                 profile.space_frame.width,
             )),
+        },
+        BenchmarkFamily::Frame2dMaterialFixed => BenchmarkCase {
+            id,
+            family: "frame_2d_material_fixed",
+            workload: BenchmarkWorkload::Frame2dMaterialPDelta(
+                generate_frame_2d_material_p_delta_case(
+                    profile.axial_elements,
+                    profile.space_frame.width,
+                    false,
+                ),
+            ),
+        },
+        BenchmarkFamily::Frame2dMaterialAdaptive => BenchmarkCase {
+            id,
+            family: "frame_2d_material_adaptive",
+            workload: BenchmarkWorkload::Frame2dMaterialPDelta(
+                generate_frame_2d_material_p_delta_case(
+                    profile.axial_elements,
+                    profile.space_frame.width,
+                    true,
+                ),
+            ),
         },
         BenchmarkFamily::ModalFrame3d => BenchmarkCase {
             id,

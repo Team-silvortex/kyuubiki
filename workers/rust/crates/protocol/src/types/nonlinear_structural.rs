@@ -457,6 +457,12 @@ pub struct Frame2dBilinearKinematicMaterialInput {
     pub initial_axial_stress: f64,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section_fibers: Vec<Frame2dSectionFiberInput>,
+    #[serde(default = "default_frame_2d_section_integration_points")]
+    pub longitudinal_integration_points: usize,
+    #[serde(default)]
+    pub adaptive_longitudinal_integration: bool,
+    #[serde(default = "default_frame_2d_adaptive_integration_tolerance")]
+    pub longitudinal_integration_tolerance: f64,
 }
 
 pub type Frame2dMonotonicBilinearMaterialInput = Frame2dBilinearKinematicMaterialInput;
@@ -493,9 +499,15 @@ pub struct Frame2dMaterialStateResult {
     #[serde(default)]
     pub fiber_point_count: usize,
     #[serde(default)]
+    pub evaluated_fiber_point_count: usize,
+    #[serde(default)]
     pub yielded_fiber_point_count: usize,
     #[serde(default)]
     pub max_fiber_equivalent_plastic_strain: f64,
+    #[serde(default)]
+    pub active_longitudinal_integration_points: usize,
+    #[serde(default)]
+    pub longitudinal_integration_error: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -520,6 +532,14 @@ pub struct SolveFrame2dMaterialPDeltaResult {
 
 fn default_single_iteration() -> usize {
     1
+}
+
+fn default_frame_2d_section_integration_points() -> usize {
+    2
+}
+
+fn default_frame_2d_adaptive_integration_tolerance() -> f64 {
+    1.0e-3
 }
 
 fn default_true() -> bool {

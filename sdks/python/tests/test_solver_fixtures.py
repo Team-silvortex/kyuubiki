@@ -43,6 +43,9 @@ class SolverFixturesTest(unittest.TestCase):
         self.assertEqual(payload["load_factor_schedule"], [1.2, 0.0, -1.2])
         self.assertEqual(len(payload["materials"]), 2)
         for material in payload["materials"]:
+            self.assertEqual(material["longitudinal_integration_points"], 3)
+            self.assertTrue(material["adaptive_longitudinal_integration"])
+            self.assertEqual(material["longitudinal_integration_tolerance"], 1.0e-6)
             self.assertEqual(len(material["section_fibers"]), 2)
             self.assertAlmostEqual(
                 sum(fiber["area"] for fiber in material["section_fibers"]),
