@@ -85,6 +85,42 @@ fn workflow_runs_connector_and_cohesive_coassembly() {
 }
 
 #[test]
+fn workflow_runs_host_truss_and_cohesive_coassembly() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: graph(),
+        input_artifacts: BTreeMap::from([("mesh_input".to_string(), host_truss_model())]),
+    })
+    .expect("host truss and cohesive workflow should succeed");
+
+    let result = run
+        .artifacts
+        .get("mesh_output.result")
+        .expect("workflow output should contain host coassembly result");
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["host_trusses"].as_array().unwrap().len(), 2);
+    assert!((result["nodes"][4]["displacement"][1].as_f64().unwrap() - 0.01).abs() < 1.0e-10);
+    assert!((result["max_host_truss_axial_force"].as_f64().unwrap() - 2.5).abs() < 1.0e-10);
+}
+
+#[test]
+fn workflow_runs_host_plane_and_cohesive_coassembly() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: graph(),
+        input_artifacts: BTreeMap::from([("mesh_input".to_string(), host_plane_model())]),
+    })
+    .expect("host plane and cohesive workflow should succeed");
+
+    let result = run
+        .artifacts
+        .get("mesh_output.result")
+        .expect("workflow output should contain continuum coassembly result");
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["host_plane_triangles"].as_array().unwrap().len(), 1);
+    assert!((result["nodes"][2]["displacement"][1].as_f64().unwrap() - 0.005).abs() < 1.0e-10);
+    assert!((result["max_host_plane_stress"].as_f64().unwrap() - 5.0).abs() < 1.0e-10);
+}
+
+#[test]
 fn cohesive_mesh_results_support_node_and_element_chunks() {
     let request: SolveCohesiveInterfaceMesh2dRequest =
         serde_json::from_value(model()).expect("mesh fixture should decode");
@@ -318,5 +354,76 @@ fn connector_model() -> serde_json::Value {
         {"id": "host-0", "node_i": 2, "node_j": 4, "stiffness": [0.0, 500.0]},
         {"id": "host-1", "node_i": 3, "node_j": 5, "stiffness": [0.0, 500.0]}
     ]);
+    value
+}
+
+fn host_truss_model() -> serde_json::Value {
+    let mut value = model();
+    for node in &mut value["nodes"].as_array_mut().expect("fixture nodes")[2..] {
+        node["load"] = serde_json::json!([0.0, 0.0]);
+    }
+    value["nodes"]
+        .as_array_mut()
+        .expect("fixture nodes")
+        .extend([
+            serde_json::json!({
+                "id": "driver-i",
+                "x": 0.0,
+                "y": 1.0,
+                "fixed": [true, false],
+                "load": [0.0, 2.5]
+            }),
+            serde_json::json!({
+                "id": "driver-j",
+                "x": 1.0,
+                "y": 1.0,
+                "fixed": [true, false],
+                "load": [0.0, 2.5]
+            }),
+        ]);
+    value["host_trusses"] = serde_json::json!([
+        {
+            "id": "host-0",
+            "node_i": 2,
+            "node_j": 4,
+            "area": 1.0,
+            "youngs_modulus": 500.0
+        },
+        {
+            "id": "host-1",
+            "node_i": 3,
+            "node_j": 5,
+            "area": 1.0,
+            "youngs_modulus": 500.0
+        }
+    ]);
+    value
+}
+
+fn host_plane_model() -> serde_json::Value {
+    let mut value = model();
+    for node in value["nodes"].as_array_mut().expect("fixture nodes") {
+        node["load"] = serde_json::json!([0.0, 0.0]);
+    }
+    value["nodes"]
+        .as_array_mut()
+        .expect("fixture nodes")
+        .push(serde_json::json!({
+            "id": "driver",
+            "x": 0.5,
+            "y": 1.0,
+            "fixed": [true, true],
+            "prescribed_displacement": [0.0, 0.015],
+            "load": [0.0, 0.0]
+        }));
+    value["host_plane_triangles"] = serde_json::json!([{
+        "id": "host-plane-0",
+        "node_i": 2,
+        "node_j": 3,
+        "node_k": 4,
+        "thickness": 2.0,
+        "youngs_modulus": 500.0,
+        "poisson_ratio": 0.0
+    }]);
     value
 }

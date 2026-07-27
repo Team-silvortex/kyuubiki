@@ -142,8 +142,17 @@
           connector springs now share the global DOF assembly with cohesive
           elements. A retained series closed form verifies common equilibrium,
           displacement decomposition, connector force, and strain energy through
-          solver, Agent RPC, and workflow paths. This is the first heterogeneous
-          element contract, not solid, shell, beam, or frame co-assembly.
+          solver, Agent RPC, and workflow paths. Small-displacement linear 2D
+          host trusses now reuse the public truss protocol and contribute
+          physical <code>EA/L</code> stiffness to that same global system. A
+          second retained series reference verifies truss strain, stress, axial
+          force, energy density, and common equilibrium. This is the first real
+          structural host element. Constant-strain plane-stress triangles now
+          add the first continuum host through the public plane-element
+          protocol; a prescribed-apex series reference verifies analytic
+          stiffness partition, common force, continuum stress, and energy.
+          Plane quads, 3D solids, shells, beams, and frames are not yet
+          co-assembled.
           Post-peak continuation, coupled mixed-mode delamination, friction,
           three-dimensional composite constitutive behavior, and arc-length
           continuation remain future capabilities.

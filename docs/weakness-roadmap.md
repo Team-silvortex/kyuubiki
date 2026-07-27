@@ -527,9 +527,17 @@ interface line beyond a single prescribed history. Optional linear component
 connector springs now share the same global DOF assembly. A retained
 connector-and-cohesive series reference verifies common force equilibrium,
 displacement decomposition, and connector energy through solver, Agent RPC,
-and workflow paths. The next interface gates are real solid, shell, beam, or
-frame host-element co-assembly, sparse global assembly, arc-length and
-adaptive-step continuation,
+and workflow paths. Small-displacement linear 2D host trusses now reuse the
+public truss element/result contract and contribute physical `EA/L` stiffness
+to the same global system. A retained length-one series reference verifies
+interface/axial-force balance, displacement decomposition, strain, stress, and
+energy density across the same execution layers. Constant-strain plane-stress
+triangles now add the first continuum host using the public plane-element
+contract. A prescribed-apex series reference verifies analytic stiffness
+partition, common force, strain, stress, and energy through Solver, Agent RPC,
+and Engine Workflow. The next interface gates are plane-quad, beam, frame,
+shell, or 3D-solid host-element co-assembly, sparse global assembly, arc-length
+and adaptive-step continuation,
 coupled mixed-mode/friction laws, experimental references, repeated cross-host
 performance qualification, and larger localization-sensitive meshes. The
 retained five-state independent

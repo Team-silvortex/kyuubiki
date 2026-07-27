@@ -877,16 +877,27 @@ translational DOFs and Newton assembly. A retained series-system closed form
 checks that connector force balances the cohesive nodal force, cohesive opening
 plus connector extension equals driver displacement, and reported connector
 strain energy is exact. Connector displacement, force, energy, and per-step
-maximum force remain visible in the result. A deliberately underconstrained
-rigid mode retains singular-tangent diagnostics and zero-state rollback.
+maximum force remain visible in the result. Optional small-displacement linear
+2D host trusses now reuse the public `solve.truss_2d` element and result
+contracts. They contribute physical `EA/L` stiffness to the same global system;
+a retained length-one series reference verifies exact displacement
+decomposition, interface/axial-force balance, strain, stress, force, and energy
+density through Solver, Agent RPC, and Engine Workflow. A deliberately
+underconstrained rigid mode retains singular-tangent diagnostics and zero-state
+rollback. Constant-strain plane-stress host triangles now reuse the public
+`solve.plane_triangle_2d` element/result contracts and contribute continuum
+stiffness directly to the same Newton system. A prescribed-apex series reference
+recovers the analytic interface opening, continuum extension, common force,
+strain, stress, and energy through Solver, Agent RPC, and Engine Workflow.
 Protocol, Agent RPC,
 engine workflow, result chunking, Rust headless discovery, and self-hosted Web
 submission share the same public model. This remains a dense, 512-node screening
 solve under proportional load or displacement control, or explicit prescribed
-control history. Connector springs are a first heterogeneous component contract,
-not solid, shell, beam, or frame co-assembly, arc-length/adaptive continuation,
-coupled mixed-mode interaction, frictional delamination, or experimental
-calibration.
+control history. Linear 2D trusses are the first real structural host element;
+plane-stress triangles are the first continuum host. Plane quads, beams, frames,
+shells, 3D solids, arc-length/adaptive continuation, coupled mixed-mode
+interaction, frictional delamination, and experimental calibration remain
+outside the retained claim.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

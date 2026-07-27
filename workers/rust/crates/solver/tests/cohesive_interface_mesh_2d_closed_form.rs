@@ -2,7 +2,7 @@ use kyuubiki_protocol::{
     CohesiveInterface2dMaterialInput, CohesiveInterfaceMesh2dConnectorSpringInput,
     CohesiveInterfaceMesh2dControlStepInput, CohesiveInterfaceMesh2dElementInput,
     CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput,
-    SolveCohesiveInterfaceMesh2dRequest,
+    PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest, TrussElementInput,
 };
 use kyuubiki_solver::solve_cohesive_interface_mesh_2d;
 
@@ -255,6 +255,108 @@ fn invalid_connector_contracts_are_rejected() {
     assert!(error.contains("stiffness must be finite, non-negative, and non-zero"));
 }
 
+#[test]
+fn host_trusses_share_equilibrium_with_the_cohesive_interface() {
+    let mut request = single_element_request();
+    request.nodes[2].load = [0.0, 0.0];
+    request.nodes[3].load = [0.0, 0.0];
+    request.nodes.push(node("driver-0", 0.0, false, 2.5));
+    request.nodes.push(node("driver-1", 1.0, false, 2.5));
+    request.nodes[4].y = 1.0;
+    request.nodes[5].y = 1.0;
+    request.host_trusses = vec![
+        host_truss("host-0", 2, 4, 1.0, 500.0),
+        host_truss("host-1", 3, 5, 1.0, 500.0),
+    ];
+
+    let result = solve_cohesive_interface_mesh_2d(&request)
+        .expect("host trusses and cohesive elements should co-assemble");
+
+    assert!(result.converged);
+    assert_close(result.nodes[2].displacement[1], 0.005);
+    assert_close(result.nodes[3].displacement[1], 0.005);
+    assert_close(result.nodes[4].displacement[1], 0.01);
+    assert_close(result.nodes[5].displacement[1], 0.01);
+    assert_close(result.elements[0].local_traction[1], 5.0);
+    assert_close(result.max_host_truss_axial_force, 2.5);
+    assert_close(result.max_host_truss_stress, 2.5);
+    for truss in &result.host_trusses {
+        assert_close(truss.length, 1.0);
+        assert_close(truss.strain, 0.005);
+        assert_close(truss.stress, 2.5);
+        assert_close(truss.axial_force, 2.5);
+        assert_close(truss.strain_energy_density, 0.00625);
+    }
+}
+
+#[test]
+fn invalid_host_truss_contracts_are_rejected() {
+    let mut duplicate = single_element_request();
+    duplicate.host_trusses = vec![
+        host_truss("host", 0, 3, 1.0, 500.0),
+        host_truss("host", 1, 2, 1.0, 500.0),
+    ];
+    let error =
+        solve_cohesive_interface_mesh_2d(&duplicate).expect_err("duplicate truss ids must fail");
+    assert!(error.contains("duplicate host truss id"));
+
+    let mut bounds = single_element_request();
+    bounds.host_trusses = vec![host_truss("host", 0, 99, 1.0, 500.0)];
+    let error =
+        solve_cohesive_interface_mesh_2d(&bounds).expect_err("invalid truss nodes must fail");
+    assert!(error.contains("node index is out of bounds"));
+
+    let mut area = single_element_request();
+    area.host_trusses = vec![host_truss("host", 0, 3, 0.0, 500.0)];
+    let error = solve_cohesive_interface_mesh_2d(&area).expect_err("zero truss area must fail");
+    assert!(error.contains("area must be positive"));
+}
+
+#[test]
+fn host_plane_triangle_shares_equilibrium_with_the_cohesive_interface() {
+    let result = solve_cohesive_interface_mesh_2d(&host_plane_request())
+        .expect("host plane triangle and cohesive interface should co-assemble");
+
+    assert!(result.converged);
+    assert_close(result.nodes[2].displacement[1], 0.005);
+    assert_close(result.nodes[3].displacement[1], 0.005);
+    assert_close(result.nodes[4].displacement[1], 0.015);
+    assert_close(result.nodes[4].reaction[1], 5.0);
+    assert_close(result.elements[0].local_traction[1], 5.0);
+    assert_close(result.max_host_plane_stress, 5.0);
+    let host = &result.host_plane_triangles[0];
+    assert_close(host.area, 0.5);
+    assert_close(host.strain_x, 0.0);
+    assert_close(host.strain_y, 0.01);
+    assert_close(host.stress_x, 0.0);
+    assert_close(host.stress_y, 5.0);
+    assert_close(host.von_mises, 5.0);
+    assert_close(host.strain_energy_density, 0.025);
+}
+
+#[test]
+fn invalid_host_plane_triangle_contracts_are_rejected() {
+    let mut duplicate = host_plane_request();
+    duplicate
+        .host_plane_triangles
+        .push(duplicate.host_plane_triangles[0].clone());
+    let error = solve_cohesive_interface_mesh_2d(&duplicate)
+        .expect_err("duplicate host plane ids must fail");
+    assert!(error.contains("duplicate host plane triangle id"));
+
+    let mut bounds = host_plane_request();
+    bounds.host_plane_triangles[0].node_k = 99;
+    let error = solve_cohesive_interface_mesh_2d(&bounds)
+        .expect_err("out-of-range host plane nodes must fail");
+    assert!(error.contains("node index is out of bounds"));
+
+    let mut material = host_plane_request();
+    material.host_plane_triangles[0].thickness = 0.0;
+    let error = solve_cohesive_interface_mesh_2d(&material)
+        .expect_err("non-positive host plane thickness must fail");
+    assert!(error.contains("thickness must be positive"));
+}
+
 fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
     SolveCohesiveInterfaceMesh2dRequest {
         id: "mesh.single".to_string(),
@@ -267,6 +369,8 @@ fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
         materials: vec![material()],
         elements: vec![element("interface-0", 0, 1, 2, 3)],
         connector_springs: vec![],
+        host_trusses: vec![],
+        host_plane_triangles: vec![],
         load_steps: Some(4),
         control_history: None,
         max_iterations: Some(12),
@@ -291,6 +395,8 @@ fn two_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
             element("interface-1", 1, 2, 4, 5),
         ],
         connector_springs: vec![],
+        host_trusses: vec![],
+        host_plane_triangles: vec![],
         load_steps: Some(5),
         control_history: None,
         max_iterations: Some(12),
@@ -381,6 +487,47 @@ fn connector(
         node_j,
         stiffness,
     }
+}
+
+fn host_truss(
+    id: &str,
+    node_i: usize,
+    node_j: usize,
+    area: f64,
+    youngs_modulus: f64,
+) -> TrussElementInput {
+    TrussElementInput {
+        id: id.to_string(),
+        node_i,
+        node_j,
+        area,
+        youngs_modulus,
+    }
+}
+
+fn host_plane_request() -> SolveCohesiveInterfaceMesh2dRequest {
+    let mut request = single_element_request();
+    for node in &mut request.nodes {
+        node.load = [0.0, 0.0];
+    }
+    request.nodes.push(CohesiveInterfaceMesh2dNodeInput {
+        id: "driver".to_string(),
+        x: 0.5,
+        y: 1.0,
+        fixed: [true, true],
+        prescribed_displacement: Some([0.0, 0.015]),
+        load: [0.0, 0.0],
+    });
+    request.host_plane_triangles = vec![PlaneTriangleElementInput {
+        id: "host-plane-0".to_string(),
+        node_i: 2,
+        node_j: 3,
+        node_k: 4,
+        thickness: 2.0,
+        youngs_modulus: 500.0,
+        poisson_ratio: 0.0,
+    }];
+    request
 }
 
 fn assert_close(actual: f64, expected: f64) {

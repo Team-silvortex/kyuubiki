@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use super::plane_frame::PlaneTriangleElementInput;
+use super::plane_results::PlaneTriangleElementResult;
+use super::space_structural::{TrussElementInput, TrussElementResult};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CohesiveTractionRegime {
@@ -198,6 +202,10 @@ pub struct SolveCohesiveInterfaceMesh2dRequest {
     #[serde(default)]
     pub connector_springs: Vec<CohesiveInterfaceMesh2dConnectorSpringInput>,
     #[serde(default)]
+    pub host_trusses: Vec<TrussElementInput>,
+    #[serde(default)]
+    pub host_plane_triangles: Vec<PlaneTriangleElementInput>,
+    #[serde(default)]
     pub load_steps: Option<usize>,
     #[serde(default)]
     pub control_history: Option<Vec<CohesiveInterfaceMesh2dControlStepInput>>,
@@ -238,6 +246,9 @@ pub struct CohesiveInterfaceMesh2dLoadStepResult {
     pub max_shear_damage: f64,
     pub max_normal_damage: f64,
     pub max_connector_force: f64,
+    pub max_host_truss_axial_force: f64,
+    pub max_host_truss_stress: f64,
+    pub max_host_plane_stress: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -246,6 +257,8 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub nodes: Vec<CohesiveInterfaceMesh2dNodeResult>,
     pub elements: Vec<CohesiveInterfaceMesh2dElementResult>,
     pub connector_springs: Vec<CohesiveInterfaceMesh2dConnectorSpringResult>,
+    pub host_trusses: Vec<TrussElementResult>,
+    pub host_plane_triangles: Vec<PlaneTriangleElementResult>,
     pub steps: Vec<CohesiveInterfaceMesh2dLoadStepResult>,
     pub converged: bool,
     pub completed_load_factor: f64,
@@ -254,6 +267,9 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub max_shear_damage: f64,
     pub max_normal_damage: f64,
     pub max_connector_force: f64,
+    pub max_host_truss_axial_force: f64,
+    pub max_host_truss_stress: f64,
+    pub max_host_plane_stress: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_reason: Option<String>,
 }

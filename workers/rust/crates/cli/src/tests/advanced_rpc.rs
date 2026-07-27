@@ -14,7 +14,7 @@ use kyuubiki_protocol::{
     SolveFrame2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
     SolveNonlinearSpring1dRequest, SolveStokesFlowPlaneQuad2dRequest,
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
-    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput,
+    StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput, TrussElementInput,
 };
 
 #[test]
@@ -217,6 +217,59 @@ fn handles_cohesive_interface_mesh_2d_connector_coassembly_rpc() {
     assert_eq!(result.connector_springs.len(), 2);
     assert!((result.nodes[4].displacement[1] - 0.01).abs() < 1.0e-10);
     assert!((result.max_connector_force - 2.5).abs() < 1.0e-10);
+}
+
+#[test]
+fn handles_cohesive_interface_mesh_2d_host_truss_coassembly_rpc() {
+    let mut request = cohesive_interface_mesh_2d_request();
+    for node in &mut request.nodes[2..] {
+        node.load = [0.0, 0.0];
+    }
+    request.nodes.extend([
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-0".to_string(),
+            x: 0.0,
+            y: 1.0,
+            fixed: [true, false],
+            prescribed_displacement: None,
+            load: [0.0, 2.5],
+        },
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-1".to_string(),
+            x: 1.0,
+            y: 1.0,
+            fixed: [true, false],
+            prescribed_displacement: None,
+            load: [0.0, 2.5],
+        },
+    ]);
+    request.host_trusses = vec![
+        TrussElementInput {
+            id: "host-0".to_string(),
+            node_i: 2,
+            node_j: 4,
+            area: 1.0,
+            youngs_modulus: 500.0,
+        },
+        TrussElementInput {
+            id: "host-1".to_string(),
+            node_i: 3,
+            node_j: 5,
+            area: 1.0,
+            youngs_modulus: 500.0,
+        },
+    ];
+
+    let final_response = execute(RpcMethod::SolveCohesiveInterfaceMesh2d, request);
+
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterfaceMesh2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("host truss coassembly result");
+    assert!(result.converged);
+    assert_eq!(result.host_trusses.len(), 2);
+    assert!((result.nodes[4].displacement[1] - 0.01).abs() < 1.0e-10);
+    assert!((result.max_host_truss_axial_force - 2.5).abs() < 1.0e-10);
 }
 
 #[test]
@@ -457,6 +510,8 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             material_id: "adhesive".to_string(),
         }],
         connector_springs: vec![],
+        host_trusses: vec![],
+        host_plane_triangles: vec![],
         load_steps: Some(2),
         control_history: None,
         max_iterations: Some(12),

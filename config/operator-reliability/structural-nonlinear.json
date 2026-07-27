@@ -171,7 +171,7 @@
         "reliability_suite": "cohesive_interface_mesh_2d_closed_form",
         "review": {
           "assumptions": [
-            "cohesive_interface_elements_with_optional_linear_component_connector_springs",
+            "cohesive_interfaces_with_optional_connectors_linear_host_trusses_and_plane_stress_triangles",
             "proportional_load_or_prescribed_displacement_control",
             "optional_explicit_nonproportional_control_history",
             "dense_reduced_newton_system_for_component_screening",
@@ -184,9 +184,13 @@
             "prescribed_displacement_only_on_constrained_axes",
             "generated_and_explicit_control_modes_are_mutually_exclusive",
             "unique_bounded_connector_ids_nodes_and_component_stiffness",
+            "unique_bounded_host_truss_ids_nodes_area_modulus_and_length",
+            "unique_bounded_host_plane_triangle_ids_nodes_material_and_area",
             "post_peak_softening_and_complete_failure_under_displacement_control",
             "cyclic_unload_reload_and_directional_history_independence",
             "connector_and_cohesive_force_equilibrium",
+            "host_truss_and_cohesive_force_equilibrium",
+            "host_plane_triangle_and_cohesive_force_equilibrium",
             "singular_tangent_detection",
             "failed_step_state_rollback"
           ],
@@ -197,7 +201,11 @@
             "element_local_separation_and_traction",
             "element_directional_damage",
             "connector_relative_displacement_force_and_strain_energy",
-            "per_step_and_path_maximum_connector_force"
+            "per_step_and_path_maximum_connector_force",
+            "host_truss_strain_stress_axial_force_and_energy_density",
+            "per_step_and_path_maximum_host_truss_force_and_stress",
+            "host_plane_triangle_strain_stress_and_energy_density",
+            "per_step_and_path_maximum_host_plane_stress"
           ],
           "tests": [
             "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs"
@@ -206,7 +214,9 @@
       },
       "limits": [
         "connector_springs_are_linear_component_proxies_not_bulk_structural_elements",
-        "no_solid_shell_beam_or_frame_elements_in_the_same_global_system",
+        "host_trusses_are_small_displacement_linear_axial_elements",
+        "host_plane_triangles_are_small_displacement_linear_plane_stress_elements",
+        "no_plane_quad_shell_beam_frame_or_3d_solid_elements_in_the_same_global_system",
         "no_arc_length_or_adaptive_step_control",
         "dense_solver_is_bounded_to_512_nodes",
         "uncoupled_normal_and_shear_damage"

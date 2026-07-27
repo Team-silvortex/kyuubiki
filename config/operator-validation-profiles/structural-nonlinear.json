@@ -167,6 +167,8 @@
         "prescribed_displacement_softening_and_failure",
         "explicit_cyclic_and_nonproportional_control_history",
         "connector_and_cohesive_series_closed_form",
+        "host_truss_and_cohesive_series_closed_form",
+        "host_plane_triangle_and_cohesive_series_closed_form",
         "singular_tangent_rollback",
         "rpc_and_workflow_contract"
       ],
@@ -180,6 +182,10 @@
         "normal_and_shear_control_histories_remain_independent",
         "connector_force_balances_the_incident_cohesive_nodal_force",
         "cohesive_opening_plus_connector_extension_equals_driver_displacement",
+        "host_truss_axial_force_balances_the_incident_cohesive_nodal_force",
+        "cohesive_opening_plus_host_truss_extension_equals_driver_displacement",
+        "host_plane_reaction_balances_the_interface_traction_resultant",
+        "cohesive_opening_plus_host_plane_extension_equals_driver_displacement",
         "uniform_elastic_opening_matches_traction_over_initial_stiffness"
       ],
       "evidence_paths": [
