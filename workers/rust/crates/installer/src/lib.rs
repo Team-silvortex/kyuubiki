@@ -209,6 +209,7 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     let manifest_path = release_dir.join("manifests").join("release-manifest.json");
     let runtime_manifest_path = release_dir.join("manifests").join("embedded-runtimes.json");
     let launch_path = release_dir.join("manifests").join("launch.json");
+    let service_launch_path = release_dir.join("manifests").join("service-launch.json");
     let readme_path = release_dir.join("README.txt");
     let env_example_target = release_dir.join("config").join(".env.example");
     let desktop_readme_path = release_dir.join("desktop").join("README.txt");
@@ -230,6 +231,11 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     })?;
     fs::write(&launch_path, build_launch_manifest(&root, platform))
         .map_err(|error| format!("failed to write {}: {error}", launch_path.display()))?;
+    fs::write(
+        &service_launch_path,
+        build_service_launch_manifest(platform),
+    )
+    .map_err(|error| format!("failed to write {}: {error}", service_launch_path.display()))?;
     fs::write(&readme_path, build_release_readme(platform))
         .map_err(|error| format!("failed to write {}: {error}", readme_path.display()))?;
     fs::write(&desktop_readme_path, build_desktop_readme())

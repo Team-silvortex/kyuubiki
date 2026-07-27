@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
-    embedded_runtime_report, expected_release_script_contents, linux_desktop_dependency_plan,
-    workspace_root,
+    build_service_launch_manifest, embedded_runtime_report, expected_release_script_contents,
+    linux_desktop_dependency_plan, workspace_root,
 };
 
 #[test]
@@ -29,15 +29,16 @@ fn launch_manifest_uses_portable_entrypoints() {
 }
 
 #[test]
-fn release_scripts_prefer_embedded_node_runtime() {
+fn release_scripts_require_native_runtime_controller() {
     let macos_scripts = expected_release_script_contents(Platform::Macos);
     let start_script = macos_scripts
         .iter()
         .find(|(path, _)| path == "scripts/start.sh")
         .map(|(_, contents)| contents)
         .unwrap();
-    assert!(start_script.contains("dist/macos/runtimes/macos/node/bin/node"));
-    assert!(start_script.contains("NODE_BIN=\"node\""));
+    assert!(start_script.contains("dist/macos/bin/kyuubiki-runtime"));
+    assert!(start_script.contains("RUNTIME_BIN="));
+    assert!(!start_script.contains("node"));
 
     let windows_scripts = expected_release_script_contents(Platform::Windows);
     let status_script = windows_scripts
@@ -45,8 +46,9 @@ fn release_scripts_prefer_embedded_node_runtime() {
         .find(|(path, _)| path == "scripts/status.cmd")
         .map(|(_, contents)| contents)
         .unwrap();
-    assert!(status_script.contains("dist\\windows\\runtimes\\windows\\node\\node.exe"));
-    assert!(status_script.contains("set NODE_BIN=node"));
+    assert!(status_script.contains("dist\\windows\\bin\\kyuubiki-runtime.exe"));
+    assert!(status_script.contains("set RUNTIME_BIN="));
+    assert!(!status_script.contains("node"));
 }
 
 #[test]
@@ -67,6 +69,26 @@ fn embedded_runtime_report_renders_contract_summary() {
     assert!(rendered.contains("kyuubiki embedded runtimes"));
     assert!(rendered.contains("elixir-otp"));
     assert!(rendered.contains("node"));
+}
+
+#[test]
+fn service_launch_manifest_never_falls_back_to_source_tools() {
+    for platform in [Platform::Macos, Platform::Linux, Platform::Windows] {
+        let rendered = build_service_launch_manifest(platform);
+        let manifest: serde_json::Value = serde_json::from_str(&rendered).unwrap();
+        assert_eq!(manifest["schema_version"], "kyuubiki.service-launch/v1");
+        assert_eq!(manifest["policy"]["source_fallback"], false);
+        let services = manifest["services"].as_array().unwrap();
+        assert_eq!(services.len(), 3);
+        assert!(services.iter().any(|service| service["id"] == "agent"));
+        assert!(
+            rendered.contains("services/frontend/server.js"),
+            "{platform:?}"
+        );
+        for forbidden in ["npm run dev", "mix run", "cargo run", "apps/frontend"] {
+            assert!(!rendered.contains(forbidden), "{platform:?}: {forbidden}");
+        }
+    }
 }
 
 #[test]

@@ -22,7 +22,13 @@
     "allow-open-current-line-doc",
     "allow-open-operations-doc",
     "allow-open-troubleshooting-doc",
+    "allow-open-accuracy-plan-doc",
+    "allow-open-accuracy-baselines-doc",
+    "allow-open-testing-and-ci-doc",
+    "allow-open-direct-mesh-baseline",
+    "allow-open-direct-mesh-output-dir",
     "allow-hub-environment",
+    "allow-hub-direct-mesh-regression-snapshot",
     "allow-hub-regression-gate-report"
   ]
 }

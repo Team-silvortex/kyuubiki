@@ -210,6 +210,7 @@
                   </div>
                 </div>
                 <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="project-create" id="bundles-action-create">New bundle</button>
                   <button class="desktop-shell-button-primary" data-action="project-inspect" id="bundles-action-inspect">Inspect .kyuubiki</button>
                   <button data-action="project-validate" id="bundles-action-validate">Validate .kyuubiki</button>
                   <button data-action="project-normalize" id="bundles-action-normalize">Normalize bundle</button>

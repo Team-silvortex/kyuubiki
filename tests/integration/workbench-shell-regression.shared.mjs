@@ -192,6 +192,12 @@ async function assertActionInvokes(page, action, command, guardedAction) {
       ).length > count,
     { expectedCommand: command, expectedAction: guardedAction, count: before },
   );
+  await page.waitForFunction(
+    (expectedAction) =>
+      window.__kyuubikiWorkbenchLastCompletedAction === expectedAction &&
+      window.__kyuubikiWorkbenchActionStatus === "completed",
+    action,
+  );
 }
 
 async function assertLanguageChange(page, language) {

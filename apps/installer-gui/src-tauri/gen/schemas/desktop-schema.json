@@ -207,6 +207,30 @@
           "markdownDescription": "Enables the guarded_mutation_action command."
         },
         {
+          "description": "Enables the installation_integrity_report command.",
+          "type": "string",
+          "const": "allow-installation-integrity-report",
+          "markdownDescription": "Enables the installation_integrity_report command."
+        },
+        {
+          "description": "Enables the latest_applied_update_record command.",
+          "type": "string",
+          "const": "allow-latest-applied-update-record",
+          "markdownDescription": "Enables the latest_applied_update_record command."
+        },
+        {
+          "description": "Enables the latest_downloaded_update_record command.",
+          "type": "string",
+          "const": "allow-latest-downloaded-update-record",
+          "markdownDescription": "Enables the latest_downloaded_update_record command."
+        },
+        {
+          "description": "Enables the latest_staged_update_record command.",
+          "type": "string",
+          "const": "allow-latest-staged-update-record",
+          "markdownDescription": "Enables the latest_staged_update_record command."
+        },
+        {
           "description": "Enables the read_env_file command.",
           "type": "string",
           "const": "allow-read-env-file",
@@ -223,6 +247,18 @@
           "type": "string",
           "const": "allow-regression-gate-report",
           "markdownDescription": "Enables the regression_gate_report command."
+        },
+        {
+          "description": "Enables the remote_deploy_policy command.",
+          "type": "string",
+          "const": "allow-remote-deploy-policy",
+          "markdownDescription": "Enables the remote_deploy_policy command."
+        },
+        {
+          "description": "Enables the remote_node_registry command.",
+          "type": "string",
+          "const": "allow-remote-node-registry",
+          "markdownDescription": "Enables the remote_node_registry command."
         },
         {
           "description": "Enables the service_status command.",
@@ -247,6 +283,24 @@
           "type": "string",
           "const": "allow-stop-log-stream",
           "markdownDescription": "Enables the stop_log_stream command."
+        },
+        {
+          "description": "Enables the unified_update_plan command.",
+          "type": "string",
+          "const": "allow-unified-update-plan",
+          "markdownDescription": "Enables the unified_update_plan command."
+        },
+        {
+          "description": "Enables the unified_update_preview command.",
+          "type": "string",
+          "const": "allow-unified-update-preview",
+          "markdownDescription": "Enables the unified_update_preview command."
+        },
+        {
+          "description": "Enables the update_source_config command.",
+          "type": "string",
+          "const": "allow-update-source-config",
+          "markdownDescription": "Enables the update_source_config command."
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",

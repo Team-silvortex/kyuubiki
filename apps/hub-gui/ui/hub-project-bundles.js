@@ -26,6 +26,7 @@ export async function runProjectBundleAction({
   elements,
   setBusy,
   projectActionLabels,
+  successOutput,
 }) {
   const executedAt = new Date().toISOString();
   const tauriPayload =
@@ -38,6 +39,10 @@ export async function runProjectBundleAction({
 
   try {
     const result = await invokeTauri(command, { payload: tauriPayload });
+    const renderedResult =
+      typeof successOutput === "function"
+        ? successOutput(result)
+        : successOutput || result;
     saveProjectBundleRecents({
       action,
       bundlePath: elements.projectBundlePath?.value,
@@ -47,7 +52,7 @@ export async function runProjectBundleAction({
       note: result,
       executedAt,
     });
-    outputTarget(result);
+    outputTarget(renderedResult);
     setBusy(false, "ready");
   } catch (error) {
     const message = String(error);
@@ -62,5 +67,6 @@ export async function runProjectBundleAction({
     });
     outputTarget(message);
     setBusy(false, "failed");
+    throw error;
   }
 }

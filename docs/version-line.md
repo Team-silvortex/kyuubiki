@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.2.8`
-- current documentation target: `moxi 2.2.x` line
+- current development point: `moxi 2.7.0`
+- current documentation target: `moxi 2.7.x` line
 - first 2.x baseline:
   `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
   `tamamono 1.x` industrialization bridge
@@ -21,6 +21,13 @@ For the broader product narrative, release posture, and reading path, use
 - line policy:
   new work should strengthen the 2.x industrial baseline rather than reopen
   broad pre-release feature sprawl
+- current checkpoint:
+  heterogeneous cohesive-interface coassembly is available across cohesive,
+  connector, truss, and plane-stress triangle elements, with explicit control
+  histories and transactional state commitment
+- current boundary:
+  wider host-element coverage, sparse large-system assembly, advanced
+  continuation, and broader independent qualification remain active work
 
 ## What this page is for
 

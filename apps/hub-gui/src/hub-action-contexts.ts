@@ -16,6 +16,7 @@ export type HubProjectActionDeps = UnknownRecord & {
   currentProjectBundlePayload: () => UnknownRecord;
   currentProjectBundleOutputPayload: () => UnknownRecord;
   currentProjectBundleComparePayload: () => UnknownRecord;
+  setProjectBundlePath: HubOutputSetter;
   setProjectBundleOutput: HubOutputSetter;
 };
 
@@ -66,6 +67,7 @@ export function buildHubProjectActionContext(deps: HubProjectActionDeps): HubPro
     currentProjectBundlePayload: deps.currentProjectBundlePayload,
     currentProjectBundleOutputPayload: deps.currentProjectBundleOutputPayload,
     currentProjectBundleComparePayload: deps.currentProjectBundleComparePayload,
+    setProjectBundlePath: deps.setProjectBundlePath,
     setProjectBundleOutput: deps.setProjectBundleOutput,
   };
 }

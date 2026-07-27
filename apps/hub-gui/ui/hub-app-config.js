@@ -36,6 +36,7 @@ export const HUB_ASSISTANT_ACTION_RISK = {
     "hub/projectDiff": "low",
 };
 export const PROJECT_ACTION_LABELS = {
+    "project create": "project-create",
     "project inspect": "project-inspect",
     "project validate": "project-validate",
     "project normalize": "project-normalize",

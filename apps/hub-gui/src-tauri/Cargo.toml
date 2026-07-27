@@ -1,6 +1,6 @@
 [package]
 name = "kyuubiki-hub-gui"
-version = "2.2.8"
+version = "2.7.0"
 edition = "2024"
 license = "MIT"
 build = "build.rs"
@@ -9,9 +9,11 @@ build = "build.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+chrono = "0.4"
 kyuubiki-desktop-runtime = { path = "../../../workers/rust/crates/desktop-runtime" }
 kyuubiki-installer = { path = "../../../workers/rust/crates/installer" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
+uuid = { version = "1", features = ["v4"] }
 zip = "2"

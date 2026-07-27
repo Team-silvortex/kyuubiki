@@ -49,6 +49,7 @@ export const HUB_ASSISTANT_ACTION_RISK: Record<string, HubActionRisk> = {
 };
 
 export const PROJECT_ACTION_LABELS: Record<string, string> = {
+  "project create": "project-create",
   "project inspect": "project-inspect",
   "project validate": "project-validate",
   "project normalize": "project-normalize",

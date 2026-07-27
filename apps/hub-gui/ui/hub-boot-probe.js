@@ -36,6 +36,16 @@
   }
 
   function fallbackForAction(action) {
+    async function runBundleRead(command) {
+      const path = document.getElementById("project-bundle-path")?.value || "";
+      const result = await invoke(command, { payload: { path } });
+      const output = document.getElementById("project-bundle-output");
+      if (output) {
+        output.textContent = String(result);
+      }
+      return result;
+    }
+
     switch (action) {
       case "open-workbench":
         return () => invoke("launch_workbench_gui");
@@ -49,6 +59,30 @@
         return () => invoke("desktop_status");
       case "run-doctor":
         return () => invoke("doctor_report");
+      case "project-create":
+        return async () => {
+          const pathInput = document.getElementById("project-bundle-path");
+          const result = await invoke("guarded_mutation_action", {
+            payload: {
+              action: "project_bundle_create",
+              path: pathInput?.value || "",
+            },
+          });
+          const created = JSON.parse(String(result));
+          if (pathInput) {
+            pathInput.value = String(created.path || "");
+            pathInput.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+          const output = document.getElementById("project-bundle-output");
+          if (output) {
+            output.textContent = JSON.stringify(created, null, 2);
+          }
+          return `created ${created.path || "project bundle"}`;
+        };
+      case "project-inspect":
+        return () => runBundleRead("project_bundle_inspect");
+      case "project-validate":
+        return () => runBundleRead("project_bundle_validate");
       case "open-docs-index":
         return () => invoke("open_docs_index");
       case "open-current-line-doc":
@@ -63,15 +97,19 @@
   }
 
   function wasHandledByApp(action) {
+    const claimedAt = Number(window.__kyuubikiHubDomClickAt || 0);
     const startedAt = Number(window.__kyuubikiHubActionStartedAt || 0);
     const completedAt = Number(window.__kyuubikiHubActionCompletedAt || 0);
+    const claimedAction = window.__kyuubikiHubClaimedAction;
     const lastAction = window.__kyuubikiHubLastAction;
     const lastCompletedAction = window.__kyuubikiHubLastCompletedAction;
+    const actionClaimed =
+      claimedAction === action && Number.isFinite(claimedAt) && Date.now() - claimedAt < 1200;
     const actionStarted =
       lastAction === action && Number.isFinite(startedAt) && Date.now() - startedAt < 1200;
     const actionCompleted =
       lastCompletedAction === action && Number.isFinite(completedAt) && Date.now() - completedAt < 1200;
-    return actionStarted || actionCompleted;
+    return actionClaimed || actionStarted || actionCompleted;
   }
 
   function scheduleFallback(action) {
@@ -82,7 +120,6 @@
 
     window.setTimeout(async () => {
       if (wasHandledByApp(action)) {
-        write(`app handled: ${action}`, "boot-probe:app-handled");
         return;
       }
 

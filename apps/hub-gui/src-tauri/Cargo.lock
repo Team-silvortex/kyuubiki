@@ -348,8 +348,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 
@@ -1795,15 +1797,17 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-platform",
+ "libc",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-engine"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -1816,20 +1820,22 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-hub-gui"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
+ "chrono",
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "uuid",
  "zip",
 ]
 
 [[package]]
 name = "kyuubiki-installer"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-platform",
@@ -1839,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -1849,11 +1855,11 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "2.2.8"
+version = "2.7.0"
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1862,7 +1868,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

@@ -31,8 +31,8 @@ pub use crate::linux_desktop_dependencies::{
 };
 pub(crate) use crate::release::{
     build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
-    build_release_manifest, build_release_readme, expected_release_script_contents,
-    write_release_scripts,
+    build_release_manifest, build_release_readme, build_service_launch_manifest,
+    expected_release_script_contents, write_release_scripts,
 };
 pub use crate::remote_deployment::{
     RemoteDeploymentRoadmap, RemoteDeploymentStage, remote_deployment_roadmap,

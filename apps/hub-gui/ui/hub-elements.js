@@ -104,6 +104,7 @@ export function collectHubElements(document) {
   bundlesBundlePathLabel: document.getElementById("bundles-bundle-path-label"),
   bundlesComparePathLabel: document.getElementById("bundles-compare-path-label"),
   bundlesOutputPathLabel: document.getElementById("bundles-output-path-label"),
+  bundlesActionCreate: document.getElementById("bundles-action-create"),
   bundlesActionInspect: document.getElementById("bundles-action-inspect"),
   bundlesActionValidate: document.getElementById("bundles-action-validate"),
   bundlesActionNormalize: document.getElementById("bundles-action-normalize"),

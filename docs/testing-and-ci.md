@@ -35,7 +35,7 @@ The repository now keeps validation split by responsibility.
   installer `tests.rs` as a module index. The Make target runs the audit
   script self-test before scanning the repository.
 - `make architecture-check`
-  Lightweight new-architecture guard for the `2.0.x` line. It runs the
+  Lightweight architecture guard for the `moxi 2.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
   chain contract checks, retained material research bundle and bundle-index
@@ -77,7 +77,7 @@ The repository now keeps validation split by responsibility.
   solve operator has a machine-readable manifest shard entry with benchmark
   coverage, headless workflow support, evidence files, trust level, and visible
   limits. It also runs a checker self-test and enforces the manifest's
-  `minimum_coverage_level`, currently `qualification` for the `moxi 2.0.x`
+  `minimum_coverage_level`, currently `qualification` for the `moxi 2.x`
   physics-coverage gate.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
@@ -331,10 +331,10 @@ Use these entrypoints:
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
 - `make benchmark-physics-coverage`
-  Run the `2.0.x` broad physics smoke matrix across every built-in benchmark
+  Run the `moxi 2.x` broad physics smoke matrix across every built-in benchmark
   template. This is the quickest product-level check that the main physics
-  families still have real solver execution paths before `2.0.x` and `2.0.x`
-  contract work hardens engine/task formats.
+  families still have real solver execution paths while engine and TaskIR
+  contracts harden.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.

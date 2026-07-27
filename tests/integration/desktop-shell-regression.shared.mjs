@@ -113,6 +113,7 @@ function hubMockSource() {
   return `(() => {
   window.__mockErrors = [];
   window.__mockInvocations = [];
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => {} }, configurable: true });
   let currentLanguage = "en";
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
@@ -156,7 +157,7 @@ function hubMockSource() {
         });
       }
       if (url.pathname === "/api/v1/workloads/catalog") {
-        return new Response(JSON.stringify({ entries: [] }), {
+        return new Response(JSON.stringify({ schema_version: "kyuubiki.workload-catalog/v1", workloads: [] }), {
           status: 200,
           headers: { "content-type": "application/json" },
         });
@@ -212,10 +213,14 @@ function hubMockSource() {
             return regressionGateReport;
           case "launch_workbench_gui":
             return "workbench launch mock";
+          case "doctor_report":
+            return { rendered: "doctor ok" };
+          case "guarded_mutation_action":
+            return payload?.payload?.action === "project_bundle_create" ? JSON.stringify({ path: "/tmp/ui-created.kyuubiki" }) : "guarded mutation mock";
           case "open_docs_index":
             return "docs index mock";
           case "project_bundle_inspect":
-            return "project bundle inspect mock";
+            return JSON.stringify({ project_id: "ui-project", project_name: "UI project", schema: "kyuubiki.project/v2", layout: "kyuubiki.project-layout/v1", models: [], versions: [], jobs: [], results: [] });
           case "project_bundle_validate":
             return "project bundle validate mock";
           default:
@@ -351,7 +356,7 @@ function installerMockSource() {
             };
           case "remote_node_registry":
             return {
-              nodes: [],
+              nodes: [{ label: "solver-a", target_host: "192.0.2.10", ssh_user: "kyuubiki", ssh_port: 22, workspace: "/opt/kyuubiki", control_mode: "orchestrated" }],
               rendered: "remote node registry mock",
             };
           case "service_status":
@@ -536,6 +541,19 @@ async function assertActionInvokes(
       { expectedCommand: command, expectedAction: guardedAction, count: before },
       { timeout: 5_000 },
     );
+    const installerAction = await button.getAttribute("data-action");
+    const hasInstallerLifecycle = await page.evaluate(
+      () => typeof window.__kyuubikiInstallerActionStatus === "string",
+    );
+    if (installerAction && hasInstallerLifecycle) {
+      await page.waitForFunction(
+        (expectedAction) =>
+          window.__kyuubikiInstallerLastCompletedAction === expectedAction &&
+          window.__kyuubikiInstallerActionStatus === "completed",
+        installerAction,
+        { timeout: 5_000 },
+      );
+    }
   } catch (error) {
     const observed = await page.evaluate(() => ({
       busy: document.body?.dataset?.busy || null,

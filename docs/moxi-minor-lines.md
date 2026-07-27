@@ -107,3 +107,23 @@ When in doubt, new `moxi 2.x` work should answer three questions:
 1. Does it improve calculation trust, runtime safety, or workflow repeatability?
 2. Is the contract visible to headless SDKs and not only to GUI code?
 3. Can the coverage tensor, benchmark lane, or integrity checker observe it?
+
+## Current checkpoint: `2.7.0`
+
+The repository is currently inside the `2.5` to `2.8` hardening window.
+Distributed reliability remains the line-level goal, while the calculation
+path has also gained a concrete heterogeneous workflow checkpoint:
+
+- a language-neutral cohesive-interface mesh request reaches solver, Agent
+  RPC, and workflow execution without UI-owned semantics
+- cohesive elements can share global assembly with connector springs, trusses,
+  and plane-stress triangles
+- explicit displacement histories cover cyclic and non-proportional control
+- convergence commits constitutive history transactionally and reports bounded
+  failure reasons
+- retained solver, protocol, engine, and workflow tests protect the same
+  contract
+
+The next trust step is not another broad operator count increase. It is deeper
+host-element coverage, sparse assembly, adaptive continuation, larger retained
+fixtures, and independent correlation.

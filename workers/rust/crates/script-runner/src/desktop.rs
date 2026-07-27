@@ -1,6 +1,13 @@
 use std::ffi::OsString;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
+#[cfg(target_os = "macos")]
+use std::process::Command;
 
+use crate::desktop_distribution::{
+    distribution_preflight, distribution_readiness, runtime_payload_readiness,
+    verify_distribution_artifacts, verify_runtime_payload,
+};
 use crate::{RepoPaths, RunnerResult, run_installer, run_with_env};
 
 #[derive(Clone, Copy)]
@@ -108,16 +115,31 @@ pub fn run_desktop_stage(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult
 
 pub fn run_desktop_build_host(paths: &RepoPaths) -> RunnerResult<u8> {
     prepare_desktop_assets(paths)?;
+    let snapshots = desktop_artifact_snapshot_root(paths);
+    remove_dir_if_present(&snapshots)?;
+
     for app in desktop_apps() {
+        // Tauri shares one Cargo target directory across the shells. Clear only
+        // the bundle output so each snapshot contains the current shell.
+        remove_dir_if_present(&desktop_bundle_root(paths))?;
         let status = run_host_desktop_build_unprepared(paths, app)?;
         if status != 0 {
+            remove_dir_if_present(&snapshots)?;
             return Ok(status);
         }
+        snapshot_desktop_bundle(paths, app, &snapshots)?;
     }
+
+    remove_dir_if_present(&desktop_bundle_root(paths))?;
+    restore_desktop_bundles(paths, &snapshots)?;
+    remove_dir_if_present(&snapshots)?;
+    unregister_macos_build_apps()?;
     Ok(0)
 }
 
 pub fn run_desktop_release(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
+    let platform = distribution_platform(rest.first())?;
+    distribution_preflight(paths, platform)?;
     let stage = run_desktop_stage(paths, rest.clone())?;
     if stage != 0 {
         return Ok(stage);
@@ -126,7 +148,13 @@ pub fn run_desktop_release(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
     if build != 0 {
         return Ok(build);
     }
-    run_desktop_verify(paths, rest)
+    verify_runtime_payload(paths, platform)?;
+    let verify = run_desktop_verify(paths, rest)?;
+    if verify != 0 {
+        return Ok(verify);
+    }
+    verify_distribution_artifacts(paths, platform)?;
+    Ok(0)
 }
 
 pub fn run_desktop_status(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
@@ -243,6 +271,153 @@ where
     run_with_env(cwd, program, args, &[("CARGO_TARGET_DIR", target_dir_text)])
 }
 
+fn desktop_artifact_snapshot_root(paths: &RepoPaths) -> PathBuf {
+    paths
+        .root
+        .join("target")
+        .join("desktop-artifacts")
+        .join(host_platform().as_str())
+}
+
+fn desktop_bundle_root(paths: &RepoPaths) -> PathBuf {
+    desktop_target_cache_dir(&paths.root, host_platform())
+        .join("release")
+        .join("bundle")
+}
+
+fn snapshot_desktop_bundle(
+    paths: &RepoPaths,
+    app: DesktopApp,
+    snapshots: &Path,
+) -> RunnerResult<()> {
+    let source = desktop_bundle_root(paths);
+    if !source.is_dir() {
+        return Err(format!(
+            "desktop build did not produce a bundle directory: {}",
+            source.display()
+        ));
+    }
+
+    let target = snapshots.join(desktop_app_name(app));
+    remove_dir_if_present(&target)?;
+    copy_dir_tree(&source, &target)?;
+    println!(
+        "preserved {} desktop bundle artifacts at {}",
+        desktop_app_name(app),
+        target.display()
+    );
+    Ok(())
+}
+
+fn restore_desktop_bundles(paths: &RepoPaths, snapshots: &Path) -> RunnerResult<()> {
+    let target = desktop_bundle_root(paths);
+    for app in desktop_apps() {
+        let source = snapshots.join(desktop_app_name(app));
+        if !source.is_dir() {
+            return Err(format!(
+                "missing preserved desktop bundle for {}: {}",
+                desktop_app_name(app),
+                source.display()
+            ));
+        }
+        copy_dir_tree(&source, &target)?;
+    }
+    println!(
+        "restored all desktop bundle artifacts to {}",
+        target.display()
+    );
+    Ok(())
+}
+
+fn remove_dir_if_present(path: &Path) -> RunnerResult<()> {
+    if path.exists() {
+        fs::remove_dir_all(path)
+            .map_err(|error| format!("failed to remove {}: {error}", path.display()))?;
+    }
+    Ok(())
+}
+
+fn copy_dir_tree(source: &Path, target: &Path) -> RunnerResult<()> {
+    fs::create_dir_all(target)
+        .map_err(|error| format!("failed to create {}: {error}", target.display()))?;
+    for entry in fs::read_dir(source)
+        .map_err(|error| format!("failed to read {}: {error}", source.display()))?
+    {
+        let entry =
+            entry.map_err(|error| format!("failed to read {} entry: {error}", source.display()))?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("failed to inspect {}: {error}", source_path.display()))?;
+        if file_type.is_dir() {
+            copy_dir_tree(&source_path, &target_path)?;
+        } else if file_type.is_file() {
+            fs::copy(&source_path, &target_path).map_err(|error| {
+                format!(
+                    "failed to copy {} to {}: {error}",
+                    source_path.display(),
+                    target_path.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn unregister_macos_build_apps() -> RunnerResult<()> {
+    const LSREGISTER: &str = "/System/Library/Frameworks/CoreServices.framework/Frameworks/\
+LaunchServices.framework/Support/lsregister";
+    let output = Command::new(LSREGISTER)
+        .arg("-dump")
+        .output()
+        .map_err(|error| format!("failed to inspect macOS LaunchServices: {error}"))?;
+    if !output.status.success() {
+        return Err("macOS LaunchServices inspection failed".to_string());
+    }
+
+    let dump = String::from_utf8_lossy(&output.stdout);
+    let mut removed = 0usize;
+    for path in dump.lines().filter_map(launch_services_bundle_path) {
+        if path.starts_with("/Applications/") {
+            continue;
+        }
+        let status = Command::new(LSREGISTER)
+            .arg("-u")
+            .arg(&path)
+            .status()
+            .map_err(|error| {
+                format!(
+                    "failed to unregister macOS build app {}: {error}",
+                    path.display()
+                )
+            })?;
+        if status.success() {
+            removed += 1;
+        }
+    }
+    println!("unregistered {removed} non-installed macOS desktop app records");
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn unregister_macos_build_apps() -> RunnerResult<()> {
+    Ok(())
+}
+
+fn launch_services_bundle_path(line: &str) -> Option<PathBuf> {
+    let value = line.strip_prefix("path:")?.trim();
+    let value = value.rsplit_once(" (0x")?.0;
+    let path = Path::new(value);
+    let name = path.file_name()?.to_str()?;
+    if name.starts_with("Kyuubiki ") && name.ends_with(".app") {
+        Some(path.to_path_buf())
+    } else {
+        None
+    }
+}
+
 fn stage_desktop_platform(paths: &RepoPaths, platform: Platform) -> RunnerResult<u8> {
     run_installer(
         paths,
@@ -271,6 +446,14 @@ fn print_desktop_status(paths: &RepoPaths, platform: Platform) {
         } else {
             "missing"
         }
+    );
+    println!(
+        "  distribution signing: {}",
+        distribution_readiness(platform)
+    );
+    println!(
+        "  runtime payload: {}",
+        runtime_payload_readiness(paths, platform)
     );
     for app in desktop_apps() {
         let app_name = desktop_app_name(app);
@@ -424,5 +607,37 @@ fn parse_desktop_platform_text(value: Option<&str>) -> RunnerResult<Platform> {
         Some(other) => Err(format!(
             "unsupported desktop platform `{other}`; expected macos, linux, windows, or all"
         )),
+    }
+}
+
+fn distribution_platform(value: Option<&OsString>) -> RunnerResult<Platform> {
+    match value.and_then(|value| value.to_str()) {
+        Some("all") => Err(
+            "desktop-release builds one native distribution at a time; choose the host platform"
+                .to_string(),
+        ),
+        other => parse_desktop_platform_text(other),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::launch_services_bundle_path;
+
+    #[test]
+    fn parses_kyuubiki_launch_services_bundle_paths() {
+        let line = "path:  /Volumes/dmg.test/Kyuubiki Hub.app (0x1234)";
+        assert_eq!(
+            launch_services_bundle_path(line)
+                .expect("bundle path")
+                .to_string_lossy(),
+            "/Volumes/dmg.test/Kyuubiki Hub.app"
+        );
+    }
+
+    #[test]
+    fn ignores_unrelated_launch_services_records() {
+        assert!(launch_services_bundle_path("path: /Applications/Safari.app (0x1)").is_none());
+        assert!(launch_services_bundle_path("identifier: com.kyuubiki.hub").is_none());
     }
 }

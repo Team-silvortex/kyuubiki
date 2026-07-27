@@ -2,7 +2,7 @@
   "version": "2.2.8",
   "codename": "moxi",
   "line": "2.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-07-19",
   "git_commit": "20da8436e54f9d782d80d08dd584ef3c950ce556",
   "summary": "Moxi 2.2.8 current development snapshot for pre-2.4.0 stabilization.",

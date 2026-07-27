@@ -4,7 +4,7 @@ Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
 runtime control plane.
 
 The active repository line is `moxi 2.x`. The current development snapshot is
-`moxi 2.0.0`, the first formal Kyuubiki 2.x line after the `tamamono 1.x`
+`moxi 2.7.0`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
 industrialization bridge.
 
 ## What This Repo Contains
@@ -58,15 +58,30 @@ Start with:
 - [docs/app-runtime-boundaries.md](docs/app-runtime-boundaries.md)
 - [docs/agent-control-authority.md](docs/agent-control-authority.md)
 
-## Moxi Baseline
+## Moxi 2.7 Posture
 
-`moxi 2.0.0` is not a reset. It carries forward the stabilized `tamamono 1.x`
-contracts and makes them the baseline for the first formal 2.x product line.
+`moxi 2.0.0` established the product baseline. `moxi 2.7.0` keeps those
+contracts and advances the calculation and workflow path rather than resetting
+the architecture.
 
 The 2.x rule is:
 
 `preserve the engine contracts, prove the computations, and keep UI/runtime
 authority separated`.
+
+The current checkpoint adds a real heterogeneous cohesive-interface workflow:
+
+- cohesive elements, connector springs, structural trusses, and plane-stress
+  triangles can contribute to one global equilibrium system
+- explicit displacement histories support cyclic and non-proportional control
+- converged history is committed transactionally and failed steps retain the
+  prior state with a machine-readable reason
+- solver, Agent RPC, workflow, reliability, and qualification paths share the
+  same protocol representation
+
+This remains a bounded small-displacement 2D capability. Plane quads, beams,
+frames, shells, 3D solids, sparse large-system assembly, and arc-length
+continuation are not implied by the current cohesive coassembly path.
 
 Use these gates when deciding whether a new 2.x change is safe to treat as
 part of the industrial baseline:
@@ -165,6 +180,8 @@ trust levels:
 - electrostatic and magnetostatic field studies
 - acoustic, modal, transport, simplified Stokes, nonlinear, and contact paths
 - composite workflow and material research prototypes
+- heterogeneous cohesive-interface workflows with connector, truss, and
+  plane-stress host elements
 - headless Rust-led material study workflows with retained evidence bundles
 - 500k/1m exploratory benchmark lanes on the shared lab host
 

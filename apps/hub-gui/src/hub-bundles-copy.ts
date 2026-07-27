@@ -16,6 +16,7 @@ export function renderHubBundlesCopy(params: HubBundlesCopyParams): void {
   setText(elements.bundlesBundlePathLabel, copy.bundles.bundlePath);
   setText(elements.bundlesComparePathLabel, copy.bundles.comparePath);
   setText(elements.bundlesOutputPathLabel, copy.bundles.outputPath);
+  setText(elements.bundlesActionCreate, copy.bundles.create);
   setText(elements.bundlesActionInspect, copy.bundles.inspect);
   setText(elements.bundlesActionValidate, copy.bundles.validate);
   setText(elements.bundlesActionNormalize, copy.bundles.normalize);
@@ -39,7 +40,7 @@ export function renderHubBundlesCopy(params: HubBundlesCopyParams): void {
   setText(elements.bundlesHistoryClear, copy.bundles.clear);
   setText(elements.bundlesFavoritesLabel, copy.bundles.favorites);
   setText(elements.bundlesRecentLabel, copy.bundles.recent);
-  if (elements.projectBundleOutput && !isBusy) {
+  if (elements.projectBundleOutput && !isBusy && !elements.projectBundleOutput.textContent?.trim()) {
     elements.projectBundleOutput.textContent = copy.bundles.ready;
   }
 }

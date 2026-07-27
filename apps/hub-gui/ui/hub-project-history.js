@@ -49,6 +49,7 @@ export function projectActionStateClass(status) {
 }
 
 export function rememberProjectBundleAction(
+  actions,
   action,
   { bundlePath = "", comparePath = "", outputPath = "", status = "idle", note = "", executedAt = "" } = {},
 ) {
@@ -57,8 +58,8 @@ export function rememberProjectBundleAction(
     return [];
   }
 
-  const recents = loadHubRecents();
-  const existingEntry = (recents.actions ?? []).find((entry) => {
+  const existingActions = Array.isArray(actions) ? actions : [];
+  const existingEntry = existingActions.find((entry) => {
     return (
       entry.action === normalizedAction &&
       String(entry.bundlePath || "").trim() === String(bundlePath || "").trim() &&
@@ -80,7 +81,7 @@ export function rememberProjectBundleAction(
 
   return [
     nextEntry,
-    ...(recents.actions ?? []).filter((entry) => {
+    ...existingActions.filter((entry) => {
       return !(
         entry.action === nextEntry.action &&
         entry.bundlePath === nextEntry.bundlePath &&

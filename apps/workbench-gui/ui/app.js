@@ -383,63 +383,58 @@ async function refreshLog() {
 }
 
 async function runAction(action) {
+  window.__kyuubikiWorkbenchLastAction = action;
+  window.__kyuubikiWorkbenchActionStartedAt = Date.now();
+  window.__kyuubikiWorkbenchActionStatus = "running";
   try {
-    if (action === "refresh") {
-      await refreshStatus();
-      if (state.consoleTab === "logs") {
+    switch (action) {
+      case "refresh":
+        await refreshStatus();
+        if (state.consoleTab === "logs") await refreshLog();
+        break;
+      case "reload-frame":
+        loadWorkbenchFrame();
+        break;
+      case "open-local":
+        loadWorkbenchFrame();
+        await refreshStatus();
+        if (state.consoleTab === "logs") await refreshLog();
+        break;
+      case "refresh-log":
         await refreshLog();
-      }
-      return;
+        break;
+      case "stop":
+        await invokeGuardedMutation("service_stop");
+        await refreshStatus();
+        if (state.consoleTab === "logs") await refreshLog();
+        break;
+      case "start-local":
+        await invokeGuardedMutation("service_start", { mode: "local" });
+        await refreshStatus();
+        loadWorkbenchFrame();
+        if (state.consoleTab === "logs") await refreshLog();
+        break;
+      case "restart-local":
+        await invokeGuardedMutation("service_restart", { mode: "local" });
+        await refreshStatus();
+        loadWorkbenchFrame();
+        if (state.consoleTab === "logs") await refreshLog();
+        break;
+      default:
+        elements.statusOutput.textContent = `No Workbench action handler is registered for: ${action}`;
+        window.__kyuubikiWorkbenchActionStatus = "missing";
+        return false;
     }
-
-    if (action === "reload-frame") {
-      loadWorkbenchFrame();
-      return;
-    }
-
-    if (action === "open-local") {
-      loadWorkbenchFrame();
-      await refreshStatus();
-      if (state.consoleTab === "logs") {
-        await refreshLog();
-      }
-      return;
-    }
-
-    if (action === "refresh-log") {
-      await refreshLog();
-      return;
-    }
-
-    if (action === "stop") {
-      await invokeGuardedMutation("service_stop");
-      await refreshStatus();
-      if (state.consoleTab === "logs") {
-        await refreshLog();
-      }
-      return;
-    }
-
-    if (action === "start-local") {
-      await invokeGuardedMutation("service_start", { mode: "local" });
-      await refreshStatus();
-      loadWorkbenchFrame();
-      if (state.consoleTab === "logs") {
-        await refreshLog();
-      }
-      return;
-    }
-
-    if (action === "restart-local") {
-      await invokeGuardedMutation("service_restart", { mode: "local" });
-      await refreshStatus();
-      loadWorkbenchFrame();
-      if (state.consoleTab === "logs") {
-        await refreshLog();
-      }
-    }
+    window.__kyuubikiWorkbenchActionCompletedAt = Date.now();
+    window.__kyuubikiWorkbenchLastCompletedAction = action;
+    window.__kyuubikiWorkbenchActionStatus = "completed";
+    return true;
   } catch (error) {
     elements.statusOutput.textContent = String(error);
+    window.__kyuubikiWorkbenchActionCompletedAt = Date.now();
+    window.__kyuubikiWorkbenchLastCompletedAction = action;
+    window.__kyuubikiWorkbenchActionStatus = "failed";
+    return false;
   }
 }
 

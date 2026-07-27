@@ -15,6 +15,7 @@ test("hub shell registers section switching behavior", () => {
   const assistantLocal = read("ui/hub-assistant-local.js");
   const assistantPanel = read("ui/hub-assistant-panel.js");
   const appEvents = read("ui/hub-app-events.js");
+  const bootProbe = read("ui/hub-boot-probe.js");
   const bridge = read("ui/shared/tauri-bridge.js");
   const elements = read("ui/hub-elements.js");
   const libraryCopy = read("ui/hub-library-copy.js");
@@ -97,6 +98,21 @@ test("hub shell registers section switching behavior", () => {
   assert.match(localizationPosture, /"hub"[\s\S]*"posture": "shipped-pack-surface"/);
   assert.match(localizationPosture, /"installer"[\s\S]*"posture": "adapter-surface"/);
   assert.match(appEvents, /function languageChangeSummary/);
+  assert.match(bootProbe, /project_bundle_create/);
+  assert.match(bootProbe, /project_bundle_inspect/);
+  assert.match(bootProbe, /project_bundle_validate/);
+  assert.match(bootProbe, /project-bundle-path/);
+  assert.match(bootProbe, /__kyuubikiHubClaimedAction/);
+  assert.doesNotMatch(bootProbe, /action === "project-inspect" \|\| action === "project-validate"/);
+  assert.ok(
+    appEvents.indexOf('closest?.("[data-action]")') < appEvents.indexOf("elements.navItems.forEach"),
+    "core action delegation must mount before optional panel bindings",
+  );
+  assert.match(
+    appEvents,
+    /closest\?\.\("\[data-action\]"\)[\s\S]*?await runAction\(action\);[\s\S]*?true,\s*\);/,
+  );
+  assert.match(read("ui/hub-bundles-copy.js"), /!elements\.projectBundleOutput\.textContent\?\.trim/);
   assert.doesNotMatch(appEvents, /Language changed to/);
   assertMatches(bridge, HUB_MODULE_PATTERNS.bridge);
   assertMatches(projectBundles, HUB_MODULE_PATTERNS.projectBundles);

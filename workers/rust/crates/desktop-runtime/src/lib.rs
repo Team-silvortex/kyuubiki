@@ -4,7 +4,9 @@ use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
+
+mod runtime_control;
+mod runtime_layout;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 
@@ -139,39 +141,8 @@ pub fn append_desktop_audit_line(file_name: &str, line: &str) -> Result<(), Stri
     Ok(())
 }
 
-pub fn run_workspace_command(args: &[&str]) -> Result<String, String> {
-    let root = workspace_root();
-    let (program, tail) = args
-        .split_first()
-        .ok_or_else(|| "missing process command".to_string())?;
-
-    let output = Command::new(program)
-        .args(tail)
-        .current_dir(&root)
-        .output()
-        .map_err(|error| format!("failed to run {}: {error}", args.join(" ")))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        Ok(if stdout.is_empty() {
-            "command completed".to_string()
-        } else {
-            stdout
-        })
-    } else {
-        let detail = if stderr.is_empty() { stdout } else { stderr };
-        Err(if detail.is_empty() {
-            format!("command failed: {}", args.join(" "))
-        } else {
-            detail
-        })
-    }
-}
-
 pub fn service_status() -> Result<String, String> {
-    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "status"])
+    runtime_control::service_status()
 }
 
 pub fn service_status_summary() -> Result<ServiceStatusSummary, String> {
@@ -183,93 +154,65 @@ pub fn summarize_service_status(rendered: &str) -> ServiceStatusSummary {
 }
 
 pub fn service_start(mode: ServiceMode) -> Result<String, String> {
-    run_workspace_command(&[
-        "node",
-        "./scripts/kyuubiki-runtime.mjs",
-        mode.start_command(),
-    ])
+    runtime_control::service_start(mode)
 }
 
 pub fn service_restart(mode: ServiceMode) -> Result<String, String> {
-    run_workspace_command(&[
-        "node",
-        "./scripts/kyuubiki-runtime.mjs",
-        mode.restart_command(),
-    ])
+    runtime_control::service_restart(mode)
 }
 
 pub fn service_stop() -> Result<String, String> {
-    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "stop"])
+    runtime_control::service_stop()
 }
 
 pub fn hot_service_status() -> Result<String, String> {
-    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "hot-status"])
+    runtime_control::hot_service_status()
 }
 
 pub fn hot_service_start(mode: HotServiceMode) -> Result<String, String> {
-    run_workspace_command(&[
-        "node",
-        "./scripts/kyuubiki-runtime.mjs",
-        mode.start_command(),
-    ])
+    runtime_control::hot_service_start(mode)
 }
 
 pub fn hot_service_stop() -> Result<String, String> {
-    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "hot-stop"])
+    runtime_control::hot_service_stop()
+}
+
+pub fn export_database(url: Option<&str>) -> Result<String, String> {
+    runtime_control::export_database(url)
 }
 
 pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
-    let root = workspace_root();
+    let paths = runtime_layout::runtime_paths()?;
     let filename = match service {
         "frontend" => "frontend.log",
         "orchestrator" => "orchestrator.log",
         "agent-5001" => "agent-5001.log",
         "agent-5002" => "agent-5002.log",
         "hot-stack" => {
-            return Ok(root
-                .join("tmp")
-                .join("run")
-                .join("hot")
-                .join("stack.console.log"));
+            return Ok(paths.hot.join("stack.console.log"));
         }
         "hot-web" => {
-            return Ok(root
-                .join("tmp")
-                .join("run")
-                .join("hot")
-                .join("web-4000.log"));
+            return Ok(paths.hot.join("web-4000.log"));
         }
         "hot-frontend" => {
-            return Ok(root
-                .join("tmp")
-                .join("run")
-                .join("hot")
-                .join("frontend-3000.log"));
+            return Ok(paths.hot.join("frontend-3000.log"));
         }
         "hot-agent-5001" => {
-            return Ok(root
-                .join("tmp")
-                .join("run")
-                .join("hot")
-                .join("agent-5001.log"));
+            return Ok(paths.hot.join("agent-5001.log"));
         }
         "hot-agent-5002" => {
-            return Ok(root
-                .join("tmp")
-                .join("run")
-                .join("hot")
-                .join("agent-5002.log"));
+            return Ok(paths.hot.join("agent-5002.log"));
         }
         other => return Err(format!("unknown service log: {other}")),
     };
 
-    Ok(root.join("tmp").join("run").join(filename))
+    Ok(paths.run.join(filename))
 }
 
 pub fn read_runtime_log(service: &str, max_lines: usize) -> Result<String, String> {
     let log_path = log_path_for(service)?;
     let contents = fs::read_to_string(&log_path)
-        .map_err(|error| format!("failed to read {} log: {error}", service))?;
+        .map_err(|error| format!("failed to read {service} log: {error}"))?;
     let lines: Vec<&str> = contents.lines().collect();
     let start = lines.len().saturating_sub(max_lines);
     Ok(lines[start..].join("\n"))

@@ -84,9 +84,39 @@ description = "Enables the open_troubleshooting_doc command."
 commands.allow = ["open_troubleshooting_doc"]
 
 [[permission]]
+identifier = "allow-open-accuracy-plan-doc"
+description = "Enables the open_accuracy_plan_doc command."
+commands.allow = ["open_accuracy_plan_doc"]
+
+[[permission]]
+identifier = "allow-open-accuracy-baselines-doc"
+description = "Enables the open_accuracy_baselines_doc command."
+commands.allow = ["open_accuracy_baselines_doc"]
+
+[[permission]]
+identifier = "allow-open-testing-and-ci-doc"
+description = "Enables the open_testing_and_ci_doc command."
+commands.allow = ["open_testing_and_ci_doc"]
+
+[[permission]]
+identifier = "allow-open-direct-mesh-baseline"
+description = "Enables the open_direct_mesh_baseline command."
+commands.allow = ["open_direct_mesh_baseline"]
+
+[[permission]]
+identifier = "allow-open-direct-mesh-output-dir"
+description = "Enables the open_direct_mesh_output_dir command."
+commands.allow = ["open_direct_mesh_output_dir"]
+
+[[permission]]
 identifier = "allow-hub-environment"
 description = "Enables the hub_environment command."
 commands.allow = ["hub_environment"]
+
+[[permission]]
+identifier = "allow-hub-direct-mesh-regression-snapshot"
+description = "Enables the hub_direct_mesh_regression_snapshot command."
+commands.allow = ["hub_direct_mesh_regression_snapshot"]
 
 [[permission]]
 identifier = "allow-hub-regression-gate-report"

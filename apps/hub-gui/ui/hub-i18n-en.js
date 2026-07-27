@@ -278,6 +278,7 @@ export const HUB_I18N_EN = {
       ready: "Workload library is ready.",
     },
     bundles: {
+      create: "New bundle",
       all: "All",
       failed: "Failed",
       keepFailed: "Keep failed only",

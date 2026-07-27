@@ -13,28 +13,24 @@ pub(crate) fn write_release_scripts(release_dir: &Path, platform: Platform) -> R
 
 pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(String, String)> {
     if platform == Platform::Windows {
-        let node_path = format!(
-            ".\\dist\\{}\\runtimes\\{}\\node\\node.exe",
-            platform.as_str(),
-            platform.as_str()
-        );
+        let runtime_path = format!(".\\dist\\{}\\bin\\kyuubiki-runtime.exe", platform.as_str());
         return vec![
             (
                 "scripts/start.cmd".to_string(),
-                windows_runtime_script(&node_path, "start"),
+                windows_runtime_script(&runtime_path, "start"),
             ),
             (
                 "scripts/stop.cmd".to_string(),
-                windows_runtime_script(&node_path, "stop"),
+                windows_runtime_script(&runtime_path, "stop"),
             ),
             (
                 "scripts/status.cmd".to_string(),
-                windows_runtime_script(&node_path, "status"),
+                windows_runtime_script(&runtime_path, "status"),
             ),
             (
                 "scripts/export-db.cmd".to_string(),
                 windows_runtime_script_with_redirect(
-                    &node_path,
+                    &runtime_path,
                     "export-db",
                     ".\\dist\\windows\\exports\\kyuubiki-database.json",
                 ),
@@ -42,28 +38,24 @@ pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(Strin
         ];
     }
 
-    let node_path = format!(
-        "./dist/{}/runtimes/{}/node/bin/node",
-        platform.as_str(),
-        platform.as_str()
-    );
+    let runtime_path = format!("./dist/{}/bin/kyuubiki-runtime", platform.as_str());
     vec![
         (
             "scripts/start.sh".to_string(),
-            unix_runtime_script(&node_path, "start"),
+            unix_runtime_script(&runtime_path, "start"),
         ),
         (
             "scripts/stop.sh".to_string(),
-            unix_runtime_script(&node_path, "stop"),
+            unix_runtime_script(&runtime_path, "stop"),
         ),
         (
             "scripts/status.sh".to_string(),
-            unix_runtime_script(&node_path, "status"),
+            unix_runtime_script(&runtime_path, "status"),
         ),
         (
             "scripts/export-db.sh".to_string(),
             unix_runtime_script_with_redirect(
-                &node_path,
+                &runtime_path,
                 "export-db",
                 &format!(
                     "./dist/{}/exports/kyuubiki-database.json",
@@ -74,31 +66,35 @@ pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(Strin
     ]
 }
 
-fn unix_runtime_script(node_path: &str, command: &str) -> String {
+fn unix_runtime_script(runtime_path: &str, command: &str) -> String {
     format!(
-        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nNODE_BIN=\"{node_path}\"\nif [ ! -x \"$NODE_BIN\" ]; then NODE_BIN=\"node\"; fi\n\"$NODE_BIN\" ./scripts/kyuubiki-runtime.mjs {command}\n"
+        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nRUNTIME_BIN=\"{runtime_path}\"\nif [ ! -x \"$RUNTIME_BIN\" ]; then echo \"missing native runtime controller: $RUNTIME_BIN\" >&2; exit 1; fi\nexec \"$RUNTIME_BIN\" {command}\n"
     )
 }
 
-fn unix_runtime_script_with_redirect(node_path: &str, command: &str, output_path: &str) -> String {
-    format!(
-        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nNODE_BIN=\"{node_path}\"\nif [ ! -x \"$NODE_BIN\" ]; then NODE_BIN=\"node\"; fi\n\"$NODE_BIN\" ./scripts/kyuubiki-runtime.mjs {command} > {output_path}\n"
-    )
-}
-
-fn windows_runtime_script(node_path: &str, command: &str) -> String {
-    format!(
-        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset NODE_BIN={node_path}\r\nif not exist \"%NODE_BIN%\" set NODE_BIN=node\r\n\"%NODE_BIN%\" .\\scripts\\kyuubiki-runtime.mjs {command}\r\n"
-    )
-}
-
-fn windows_runtime_script_with_redirect(
-    node_path: &str,
+fn unix_runtime_script_with_redirect(
+    runtime_path: &str,
     command: &str,
     output_path: &str,
 ) -> String {
     format!(
-        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset NODE_BIN={node_path}\r\nif not exist \"%NODE_BIN%\" set NODE_BIN=node\r\n\"%NODE_BIN%\" .\\scripts\\kyuubiki-runtime.mjs {command} > {output_path}\r\n"
+        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nRUNTIME_BIN=\"{runtime_path}\"\nif [ ! -x \"$RUNTIME_BIN\" ]; then echo \"missing native runtime controller: $RUNTIME_BIN\" >&2; exit 1; fi\n\"$RUNTIME_BIN\" {command} > {output_path}\n"
+    )
+}
+
+fn windows_runtime_script(runtime_path: &str, command: &str) -> String {
+    format!(
+        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset RUNTIME_BIN={runtime_path}\r\nif not exist \"%RUNTIME_BIN%\" (\r\n  echo missing native runtime controller: %RUNTIME_BIN% 1>&2\r\n  exit /b 1\r\n)\r\n\"%RUNTIME_BIN%\" {command}\r\n"
+    )
+}
+
+fn windows_runtime_script_with_redirect(
+    runtime_path: &str,
+    command: &str,
+    output_path: &str,
+) -> String {
+    format!(
+        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset RUNTIME_BIN={runtime_path}\r\nif not exist \"%RUNTIME_BIN%\" (\r\n  echo missing native runtime controller: %RUNTIME_BIN% 1>&2\r\n  exit /b 1\r\n)\r\n\"%RUNTIME_BIN%\" {command} > {output_path}\r\n"
     )
 }
 
@@ -162,6 +158,56 @@ pub(crate) fn build_launch_manifest(_root: &Path, platform: Platform) -> String 
         workspace = portable_workspace_hint(),
         entry = escape_json(platform.entrypoint_command()),
     )
+}
+
+pub(crate) fn build_service_launch_manifest(platform: Platform) -> String {
+    let executable = |name: &str| {
+        if platform == Platform::Windows {
+            format!("{name}.exe")
+        } else {
+            name.to_string()
+        }
+    };
+    let orchestrator = if platform == Platform::Windows {
+        "kyuubiki_web.bat"
+    } else {
+        "kyuubiki_web"
+    };
+    let manifest = serde_json::json!({
+        "schema_version": "kyuubiki.service-launch/v1",
+        "platform": platform.as_str(),
+        "owner": "installer",
+        "policy": {
+            "source_fallback": false,
+            "relative_paths_only": true,
+            "missing_payload": "block_and_repair"
+        },
+        "services": [
+            {
+                "id": "agent",
+                "command": format!("bin/{}", executable("kyuubiki-cli")),
+                "args": ["agent", "--port", "{port}"],
+                "cwd": "."
+            },
+            {
+                "id": "orchestrator",
+                "command": format!("services/orchestrator/bin/{orchestrator}"),
+                "args": ["foreground"],
+                "cwd": "services/orchestrator"
+            },
+            {
+                "id": "frontend",
+                "command": format!(
+                    "runtimes/{}/node/bin/{}",
+                    platform.as_str(),
+                    executable("node")
+                ),
+                "args": ["services/frontend/server.js"],
+                "cwd": "."
+            }
+        ]
+    });
+    serde_json::to_string_pretty(&manifest).expect("service launch manifest is serializable")
 }
 
 pub(crate) fn build_release_readme(platform: Platform) -> String {

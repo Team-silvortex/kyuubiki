@@ -281,6 +281,7 @@ export const HUB_I18N_ZH = {
     ready: "工作负载库已就绪。",
   },
     bundles: {
+      create: "新建 Bundle",
       all: "全部",
       failed: "失败",
       keepFailed: "只保留失败项",

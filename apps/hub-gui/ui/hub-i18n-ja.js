@@ -281,6 +281,7 @@ export const HUB_I18N_JA = {
       ready: "ワークロードライブラリの準備ができました。",
     },
     bundles: {
+      create: "Bundle を新規作成",
       all: "すべて",
       failed: "失敗",
       keepFailed: "失敗だけ残す",

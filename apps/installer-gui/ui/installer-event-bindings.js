@@ -1,9 +1,39 @@
+function publishInstallerActionState(action, status, error) {
+  const now = Date.now();
+  window.__kyuubikiInstallerLastAction = action;
+  window.__kyuubikiInstallerActionStatus = status;
+  if (status === "running") {
+    window.__kyuubikiInstallerActionStartedAt = now;
+  } else {
+    window.__kyuubikiInstallerActionCompletedAt = now;
+    window.__kyuubikiInstallerLastCompletedAction = action;
+  }
+  document.dispatchEvent(new CustomEvent("kyuubiki:installer-action", {
+    detail: {
+      action,
+      status,
+      error: error ? String(error?.message || error) : null,
+    },
+  }));
+}
+
 export function bindInstallerActionHandlers(actionHandlers) {
   document.addEventListener("click", async (event) => {
     const button = event.target?.closest?.("[data-action]");
-    if (!button) return;
-    const handler = actionHandlers[button.dataset.action];
-    if (handler) await handler();
+    if (!button || button.disabled) return;
+    const action = button.dataset.action;
+    const handler = actionHandlers[action];
+    if (!handler) {
+      publishInstallerActionState(action, "missing");
+      return;
+    }
+    publishInstallerActionState(action, "running");
+    try {
+      await handler();
+      publishInstallerActionState(action, "completed");
+    } catch (error) {
+      publishInstallerActionState(action, "failed", error);
+    }
   });
 }
 

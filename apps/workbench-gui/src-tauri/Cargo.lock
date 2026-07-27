@@ -1675,19 +1675,21 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-platform",
+ "libc",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-platform"
-version = "2.2.8"
+version = "2.7.0"
 
 [[package]]
 name = "kyuubiki-workbench-gui"
-version = "2.2.8"
+version = "2.7.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "serde",

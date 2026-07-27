@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.2.8`.
+The current development point in this line is `moxi 2.7.0`.
 
 The 2.x line optimizes for:
 
@@ -51,24 +51,26 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current Backend Momentum
+## Current 2.7 Checkpoint
 
-Recent operator work and runtime-control work now follow the `moxi 2.x` rule:
+`moxi 2.7.0` turns the cohesive-interface path from an isolated kernel into a
+bounded heterogeneous structural workflow:
 
-- add the solver and protocol path
-- add agent/runtime support
-- add sample-backed orchestrated smoke
-- add benchmark or accuracy evidence
-- then decide whether wider UI exposure is worth it
+- cohesive elements, connector springs, truss elements, and plane-stress
+  triangles contribute to one global equilibrium solve
+- proportional loading and explicit cyclic or non-proportional displacement
+  histories use the same control contract
+- Gauss-point history commits only after convergence; a rejected step retains
+  the prior state and exposes a failure reason
+- retained closed forms verify force balance, displacement partition, stress,
+  strain, and energy through solver, Agent RPC, and workflow paths
+- control, Newton iteration, truss assembly, and continuum assembly are split
+  into bounded modules rather than one oversized solver source
 
-The verified `frame_3d`, `thermal_frame_3d`, and `thermal_truss_3d` backend
-line is the model:
-
-- Rust solver support exists
-- protocol and engine paths exist
-- agent RPC handling is wired through
-- formal accuracy baselines exist
-- official-sample orchestrated API smoke exists for all three studies
+The boundary is explicit: this checkpoint does not yet coassemble plane quads,
+beams, frames, shells, or 3D solids, and it does not claim sparse large-system
+assembly, frictional contact, mixed-mode delamination qualification, or
+arc-length continuation.
 
 ## Current Reading Path
 
@@ -80,7 +82,7 @@ line is the model:
 3. [minimal-industrial-closure.md](minimal-industrial-closure.md)
    Minimum industrial loop for research, validation, recovery, and packaging.
 4. [weakness-roadmap.md](weakness-roadmap.md)
-   Current weak-spot roadmap for the `moxi 2.0.x` trust boundary.
+   Current weak-spot roadmap for the active `moxi 2.x` trust boundary.
 5. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.
 6. [material-research-roadmap.md](material-research-roadmap.md)

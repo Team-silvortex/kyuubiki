@@ -39,6 +39,7 @@ type HubActionRunnerContext = UnknownRecord & {
   setSection: (section: string) => void;
   setProjectsPage: (page: string) => void;
   runProjectBundleAction: (options: UnknownRecord) => Promise<unknown>;
+  setProjectBundlePath: (value: unknown) => void;
   setProjectBundleOutput: (value: unknown) => void;
   refreshRuntimeStatus: () => Promise<unknown>;
   refreshHotRuntimeStatus: () => Promise<unknown>;
@@ -66,6 +67,7 @@ declare global {
     __kyuubikiHubLastAction?: string;
     __kyuubikiHubActionCompletedAt?: number;
     __kyuubikiHubLastCompletedAction?: string;
+    __kyuubikiHubActionStatus?: "running" | "completed" | "failed" | "missing";
   }
 }
 
@@ -102,6 +104,8 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
   ): Promise<void> {
     context.setEventMessage?.(`action received: ${action}`, "action:received");
     if (context.state.isBusy) {
+      window.__kyuubikiHubLastAction = action;
+      window.__kyuubikiHubActionStatus = "completed";
       context.setOperationOutput(
         `Hub is still finishing the current action. Try again after the activity state returns to idle. Requested action: ${action}`,
       );
@@ -111,6 +115,8 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
     }
 
     if (!options.skipConfirmation && !confirmHubDesktopAction(action)) {
+      window.__kyuubikiHubLastAction = action;
+      window.__kyuubikiHubActionStatus = "completed";
       context.setOperationOutput(`cancelled desktop action: ${action}`);
       context.applyDesktopState(context.elements.actionState, "cancelled", { kind: "activity" });
       return;
@@ -119,6 +125,7 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
     context.setBusy(true, "running");
     window.__kyuubikiHubActionStartedAt = Date.now();
     window.__kyuubikiHubLastAction = action;
+    window.__kyuubikiHubActionStatus = "running";
     context.setEventMessage?.(`running: ${action}`, "action:running");
 
     try {
@@ -133,6 +140,7 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
         currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
         currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
         currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),
+        setProjectBundlePath: context.setProjectBundlePath,
         setProjectBundleOutput: context.setProjectBundleOutput,
       }))) {
         handled = true;
@@ -181,18 +189,21 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
       }
 
       if (!handled) {
+        window.__kyuubikiHubActionStatus = "missing";
         context.setOperationOutput(`No Hub action handler is registered for: ${action}`);
         context.setEventMessage?.(`unhandled action: ${action}`, "action:missing");
       } else {
+        window.__kyuubikiHubActionStatus = "completed";
         window.__kyuubikiHubActionCompletedAt = Date.now();
         window.__kyuubikiHubLastCompletedAction = action;
         context.setEventMessage?.(`completed: ${action}`, "action:complete");
       }
     } catch (error) {
+      window.__kyuubikiHubActionStatus = "failed";
       context.setOperationOutput(context.formatHubOperatorError(error, {
         actionLabel: "This desktop action",
       }));
-      context.setEventMessage?.(`failed: ${action}`, "action:failed");
+      context.setEventMessage?.(`failed: ${action}: ${String(error)}`, "action:failed");
       context.setBusy(false, "failed");
       return;
     } finally {

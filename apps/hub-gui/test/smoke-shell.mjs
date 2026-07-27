@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
 import { suggestWorkflowCatalogEntries } from "../ui/hub-workflow-catalog.js";
+import { runHubProjectAction } from "../ui/hub-project-actions.js";
+import { rememberProjectBundleAction } from "../ui/hub-project-history.js";
 import {
   HUB_INFORMATION_ARCHITECTURE_PATTERNS,
   HUB_PLATFORM_HELPER_PATTERNS,
@@ -98,4 +100,57 @@ test("hub workflow catalog suggestions return empty for unmatched queries", () =
 
   const suggestions = suggestWorkflowCatalogEntries(entries, "electrostatic mesh");
   assert.deepEqual(suggestions, []);
+});
+
+test("hub project history records actions without hidden storage dependencies", () => {
+  const previous = {
+    action: "project create",
+    bundlePath: "/tmp/Research.kyuubiki",
+    comparePath: "",
+    outputPath: "",
+    status: "ok",
+    note: "older result",
+    executedAt: "2026-07-26T00:00:00.000Z",
+    pinned: true,
+    favoriteLabel: "Research seed",
+  };
+  const actions = rememberProjectBundleAction(
+    [previous],
+    "project create",
+    {
+      bundlePath: "/tmp/Research.kyuubiki",
+      status: "ok",
+      note: "created",
+      executedAt: "2026-07-27T00:00:00.000Z",
+    },
+  );
+
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].note, "created");
+  assert.equal(actions[0].pinned, true);
+  assert.equal(actions[0].favoriteLabel, "Research seed");
+});
+
+test("hub new-bundle action stores the native path as active context", async () => {
+  let activePath = "";
+  let actionOptions;
+  const options = {
+    currentProjectBundlePayload: () => ({ path: "" }),
+    runProjectBundleAction: async (value) => {
+      actionOptions = value;
+      const rendered = value.successOutput(
+        JSON.stringify({ created: true, path: "/tmp/Research.kyuubiki" }),
+      );
+      assert.match(rendered, /Research\.kyuubiki/);
+    },
+    setProjectBundlePath: (value) => {
+      activePath = value;
+    },
+    setProjectBundleOutput: () => {},
+  };
+
+  assert.equal(await runHubProjectAction("project-create", options), true);
+  assert.equal(actionOptions.command, "guarded_mutation_action");
+  assert.deepEqual(actionOptions.payload, { path: "" });
+  assert.equal(activePath, "/tmp/Research.kyuubiki");
 });

@@ -24,7 +24,11 @@ export function createHubProjectHistoryPanel(context) {
     next.bundles = pushRecentValue(next.bundles, bundlePath);
     next.compares = pushRecentValue(next.compares, comparePath);
     next.outputs = pushRecentValue(next.outputs, outputPath);
-    next.actions = rememberProjectBundleAction(action, { bundlePath, comparePath, outputPath, status, note, executedAt });
+    next.actions = rememberProjectBundleAction(
+      next.actions,
+      action,
+      { bundlePath, comparePath, outputPath, status, note, executedAt },
+    );
     context.saveHubRecents(next);
   }
 

@@ -9,6 +9,7 @@ export function buildHubProjectActionContext(deps) {
         currentProjectBundlePayload: deps.currentProjectBundlePayload,
         currentProjectBundleOutputPayload: deps.currentProjectBundleOutputPayload,
         currentProjectBundleComparePayload: deps.currentProjectBundleComparePayload,
+        setProjectBundlePath: deps.setProjectBundlePath,
         setProjectBundleOutput: deps.setProjectBundleOutput,
     };
 }

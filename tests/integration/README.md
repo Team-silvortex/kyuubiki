@@ -57,6 +57,11 @@ Run with:
 - `make test-integration-ui-mechanical`
 - `make test-integration-ui-thermal`
 
+`make test-integration-desktop-gui` also checks the complete desktop call-chain
+contract before browser regression: declarative action routing, guarded
+mutation allowlists, Tauri registration, command permissions, and main-window
+capabilities for Hub, Workbench, and Installer.
+
 Remote deployment SSH fixture scaffolding lives under:
 
 - `tests/integration/remote-ssh-fixture/`

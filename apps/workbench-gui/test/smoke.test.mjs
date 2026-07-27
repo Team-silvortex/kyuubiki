@@ -61,6 +61,8 @@ test("desktop shell registers local runtime actions and shortcuts", () => {
     /"pt-BR", "Português \(Brasil\)"/,
     /"zh-TW", "繁體中文 · Traditional Chinese"/,
     /normalizeDesktopPlatform/,
+    /__kyuubikiWorkbenchLastCompletedAction/,
+    /__kyuubikiWorkbenchActionStatus/,
     /keydown/,
   ]);
   assert.match(bridge, /export async function invokeTauri/);

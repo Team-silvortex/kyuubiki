@@ -55,6 +55,7 @@ fn guarded_mutation_action(payload: GuardedMutationPayload) -> Result<String, St
         "desktop_stage" => stage_release(parse_platform(payload.platform.clone()), None),
         "desktop_verify" => verify_desktop_platform(parse_platform(payload.platform.clone())),
         "desktop_build_host" => build_host_desktop_bundles(),
+        "project_bundle_create" => create_project_bundle(payload.path.as_deref().unwrap_or("")),
         "project_bundle_normalize" => run_project_cli_with_output(
             "normalize",
             payload.path.as_deref().unwrap_or(""),

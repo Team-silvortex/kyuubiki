@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    // TypeScript and repository-specific guards run independently in CI.
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     return [
       {

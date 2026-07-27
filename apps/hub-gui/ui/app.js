@@ -454,6 +454,14 @@ function setProjectBundleOutput(value) {
   elements.projectBundleOutput.textContent = value;
 }
 
+function setProjectBundlePath(value) {
+  if (!elements.projectBundlePath) {
+    return;
+  }
+  elements.projectBundlePath.value = String(value || "");
+  elements.projectBundlePath.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function setAssistantOutput(value) {
   if (elements.assistantOutput) {
     elements.assistantOutput.textContent = value;
@@ -526,6 +534,7 @@ hubActionRunner = createHubActionRunner({
   setBusy,
   setEventMessage,
   setOperationOutput,
+  setProjectBundlePath,
   setProjectBundleOutput,
   setProjectsPage,
   setSection,

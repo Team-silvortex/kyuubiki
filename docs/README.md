@@ -33,16 +33,16 @@ Read these first, in order:
 14. `minimal-industrial-closure.md`
 15. `weakness-roadmap.md`
 
-For the current `2.0.x` hardening path, keep four threads mentally linked:
+For the current `2.7.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
 - Installer-owned remote control
 - orchestrated and direct-mesh runtime posture
 
-`2.0.x` is the final planned `moxi 2.x` minor. Documentation changes in
-this window should make the handoff to `moxi 2.0.0` clearer rather than create
-a new `1.21.x` planning lane.
+`2.7.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
+in this window should connect each capability to its contract, evidence,
+runtime owner, and explicit limitation.
 
 ## Central Book
 
@@ -89,13 +89,12 @@ Then branch by intent:
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
 - `moxi-handoff.md`
-  Final `moxi 2.x` patch handoff gate for closing, proving, deferring, or
-  retiring work before the `moxi 2.0.0` line opens.
+  Historical gate that defined the transition into the `moxi 2.x` line.
 - `weakness-roadmap.md`
-  Current weak-spot roadmap from `moxi 2.0.x` through the `moxi 2.0.0`
-  trust boundary, covering numerical trust, operator SDK industrialization,
-  agent/orchestra/mesh reliability, TaskIR stability, frontend/runtime
-  consistency, security fuzz coverage, and the flagship material research loop.
+  Current `moxi 2.x` weak-spot roadmap covering numerical trust, operator SDK
+  industrialization, agent/orchestra/mesh reliability, TaskIR stability,
+  frontend/runtime consistency, security fuzz coverage, and the flagship
+  material research loop.
 - `commercial-readiness-2.0.manifest.json`
   Machine-readable gate map for the same `2.0` checklist, validated by
   `./scripts/kyuubiki validate-commercial-readiness`.
@@ -163,16 +162,15 @@ Then branch by intent:
 - `material-score-contract.manifest.json`
   Machine-readable material scoring contract paired with the Markdown note.
 - `physics-coverage-map.md`
-  `2.0.x` coverage map for broad solver-family execution coverage and the
-  review-level reliability gate before the `2.0.x` and `2.0.x`
-  engine/task-format contract freeze.
+  `moxi 2.x` coverage map for broad solver-family execution coverage and the
+  reliability gates that protect engine and task-format contracts.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`
   ONNX-like cross-operator data contract for workflow-carried values.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the `2.0.x` preparation line.
+  control-surface note for the active `moxi 2.x` line.
 - `remote-deployment-roadmap.html`
   Maturity roadmap for moving Installer remote deployment from policy-bounded
   SSH transport to a deployment service with plans, journals, artifact
@@ -231,7 +229,7 @@ Then branch by intent:
 - `browser-storage-security-audit.html`
   Browser storage security review for frontend persistence and local state.
 - `project-architecture-organization.md`
-  Current `2.0.x` architecture organization map for Hub, Workbench,
+  Current `moxi 2.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and line-limit cleanup
   boundaries.
 - `minimal-industrial-closure.md`
@@ -284,7 +282,7 @@ Then branch by intent:
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `2.0.x` trust-hardening and asset-formalization path.
+  inside the `moxi 2.x` trust-hardening and asset-formalization path.
 - `component-integrity-protocol.html`
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.

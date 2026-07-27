@@ -100,13 +100,33 @@ export function bindHubAppEvents({
       if (!target) {
         return;
       }
+      if (target.dataset?.action) {
+        return;
+      }
       const label =
-        target.dataset?.action ||
         target.id ||
         target.getAttribute?.("aria-label") ||
         target.textContent?.trim()?.slice(0, 48) ||
         target.tagName;
       scheduleCapturedClickMessage(`captured click: ${label}`, `target:${target.tagName?.toLowerCase?.() || "unknown"}`);
+    },
+    true,
+  );
+
+  // WebKit can terminate bubbling for controls inside streamed chunks. Claim
+  // core actions during capture, before optional panel bindings or target code.
+  document.addEventListener(
+    "click",
+    async (event) => {
+      const button = event.target?.closest?.("[data-action]");
+      if (!button || button.disabled) {
+        return;
+      }
+      const action = button.dataset.action;
+      window.__kyuubikiHubDomClickAt = Date.now();
+      window.__kyuubikiHubClaimedAction = action;
+      setEventMessage?.(`button click: ${action}`, "dom:click");
+      await runAction(action);
     },
     true,
   );
@@ -193,18 +213,6 @@ export function bindHubAppEvents({
     }
     event.preventDefault();
     answerWithLocalGuide();
-  });
-  
-  // Project, guide, and assistant cards are mounted after startup. Delegate once
-  // so their actions share the same backend path as controls present at boot.
-  document.addEventListener("click", async (event) => {
-    const button = event.target?.closest?.("[data-action]");
-    if (!button || button.disabled) {
-      return;
-    }
-    window.__kyuubikiHubDomClickAt = Date.now();
-    setEventMessage?.(`button click: ${button.dataset.action}`, "dom:click");
-    await runAction(button.dataset.action);
   });
   
   elements.sectionJumpButtons.forEach((button) => {

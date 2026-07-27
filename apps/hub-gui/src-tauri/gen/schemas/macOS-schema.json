@@ -207,6 +207,12 @@
           "markdownDescription": "Enables the hot_service_status command."
         },
         {
+          "description": "Enables the hub_direct_mesh_regression_snapshot command.",
+          "type": "string",
+          "const": "allow-hub-direct-mesh-regression-snapshot",
+          "markdownDescription": "Enables the hub_direct_mesh_regression_snapshot command."
+        },
+        {
           "description": "Enables the hub_environment command.",
           "type": "string",
           "const": "allow-hub-environment",
@@ -231,10 +237,34 @@
           "markdownDescription": "Enables the launch_workbench_gui command."
         },
         {
+          "description": "Enables the open_accuracy_baselines_doc command.",
+          "type": "string",
+          "const": "allow-open-accuracy-baselines-doc",
+          "markdownDescription": "Enables the open_accuracy_baselines_doc command."
+        },
+        {
+          "description": "Enables the open_accuracy_plan_doc command.",
+          "type": "string",
+          "const": "allow-open-accuracy-plan-doc",
+          "markdownDescription": "Enables the open_accuracy_plan_doc command."
+        },
+        {
           "description": "Enables the open_current_line_doc command.",
           "type": "string",
           "const": "allow-open-current-line-doc",
           "markdownDescription": "Enables the open_current_line_doc command."
+        },
+        {
+          "description": "Enables the open_direct_mesh_baseline command.",
+          "type": "string",
+          "const": "allow-open-direct-mesh-baseline",
+          "markdownDescription": "Enables the open_direct_mesh_baseline command."
+        },
+        {
+          "description": "Enables the open_direct_mesh_output_dir command.",
+          "type": "string",
+          "const": "allow-open-direct-mesh-output-dir",
+          "markdownDescription": "Enables the open_direct_mesh_output_dir command."
         },
         {
           "description": "Enables the open_docs_index command.",
@@ -247,6 +277,12 @@
           "type": "string",
           "const": "allow-open-operations-doc",
           "markdownDescription": "Enables the open_operations_doc command."
+        },
+        {
+          "description": "Enables the open_testing_and_ci_doc command.",
+          "type": "string",
+          "const": "allow-open-testing-and-ci-doc",
+          "markdownDescription": "Enables the open_testing_and_ci_doc command."
         },
         {
           "description": "Enables the open_troubleshooting_doc command.",

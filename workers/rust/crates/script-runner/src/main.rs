@@ -18,6 +18,7 @@ mod component_integrity_protocol;
 mod contracts_runtime_api_surface;
 mod dependency_audit;
 mod desktop;
+mod desktop_distribution;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;

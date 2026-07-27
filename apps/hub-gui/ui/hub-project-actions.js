@@ -64,6 +64,19 @@ export async function runHubProjectAction(action, options) {
             options.setProjectsPage("guides");
             options.setBusy(false, "ready");
             return true;
+        case "project-create":
+            await options.runProjectBundleAction({
+                action: "project create",
+                command: "guarded_mutation_action",
+                payload: options.currentProjectBundlePayload(),
+                outputTarget: options.setProjectBundleOutput,
+                successOutput: (result) => {
+                    const created = JSON.parse(String(result));
+                    options.setProjectBundlePath(String(created.path || ""));
+                    return JSON.stringify(created, null, 2);
+                },
+            });
+            return true;
         case "project-inspect":
             await options.runProjectBundleAction({
                 action: "project inspect",

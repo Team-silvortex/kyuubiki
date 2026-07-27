@@ -114,6 +114,12 @@ test("installer shell wires core install and runtime actions", () => {
     /revoke_node_certificate/,
     /mountRemotePanel/,
   ]);
+  assertMatches(read("ui/installer-event-bindings.js"), [
+    /publishInstallerActionState/,
+    /kyuubiki:installer-action/,
+    /__kyuubikiInstallerLastCompletedAction/,
+    /catch \(error\)/,
+  ]);
   assertMatches(shellCopy, [
     /installerLanguageOptions/,
     /value: "pt-BR"/,

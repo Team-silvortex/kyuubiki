@@ -1,9 +1,182 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 
+use chrono::{SecondsFormat, Utc};
+use uuid::Uuid;
 use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 const PROJECT_MANIFEST: &str = "project.json";
+const PROJECT_EXTENSION: &str = "kyuubiki";
+
+fn default_project_file_manifest() -> serde_json::Value {
+    json!({
+        "layout_version": "kyuubiki.project-layout/v1",
+        "engine_manifest_path": ".kyuubiki/project.json",
+        "root_manifest_path": PROJECT_MANIFEST,
+        "project_record_path": "Assets/project/project.json",
+        "workspace_settings_path": "ProjectSettings/workspace.json",
+        "workspace_snapshot_path": "Workspace/current-model.json",
+        "automation_presets_path": "ProjectSettings/automation-presets.json",
+        "asset_catalog_path": "ProjectSettings/asset-catalog.json",
+        "asset_references_path": "ProjectSettings/asset-references.json",
+        "model_directory": "Assets/models",
+        "version_directory": "Assets/versions",
+        "job_directory": "Analysis/jobs",
+        "result_directory": "Analysis/results",
+    })
+}
+
+fn default_bundle_root() -> PathBuf {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+        .join("Documents")
+        .join("Kyuubiki Projects")
+}
+
+fn unique_default_bundle_path(root: &Path) -> PathBuf {
+    let first = root.join("Untitled.kyuubiki");
+    if !first.exists() {
+        return first;
+    }
+    for index in 2..10_000 {
+        let candidate = root.join(format!("Untitled {index}.kyuubiki"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    root.join(format!("Untitled-{}.kyuubiki", Uuid::new_v4()))
+}
+
+fn normalize_new_bundle_path(value: &str) -> Result<PathBuf, String> {
+    let trimmed = value.trim();
+    let mut candidate = if trimmed.is_empty() {
+        unique_default_bundle_path(&default_bundle_root())
+    } else {
+        let supplied = PathBuf::from(trimmed);
+        if !supplied.is_absolute() {
+            return Err("new project bundle path must be absolute".to_string());
+        }
+        supplied
+    };
+    if candidate.extension().is_none() {
+        candidate.set_extension(PROJECT_EXTENSION);
+    }
+    if !path_has_extension(&candidate, PROJECT_EXTENSION) {
+        return Err("new project bundle path must end with .kyuubiki".to_string());
+    }
+    if candidate.exists() {
+        return Err(format!("refusing to overwrite existing project bundle: {}", candidate.display()));
+    }
+    let parent = candidate
+        .parent()
+        .ok_or_else(|| format!("new project bundle has no parent: {}", candidate.display()))?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    Ok(candidate)
+}
+
+fn write_json_entry(
+    writer: &mut ZipWriter<File>,
+    path: &str,
+    value: &serde_json::Value,
+) -> Result<(), String> {
+    writer
+        .start_file(path, zip_options())
+        .map_err(|error| format!("failed to add {path}: {error}"))?;
+    writer
+        .write_all(
+            serde_json::to_string_pretty(value)
+                .map_err(|error| format!("failed to serialize {path}: {error}"))?
+                .as_bytes(),
+        )
+        .map_err(|error| format!("failed to write {path}: {error}"))
+}
+
+fn create_project_bundle(path: &str) -> Result<String, String> {
+    let output = normalize_new_bundle_path(path)?;
+    let now = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+    let project_name = output
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("Untitled");
+    let project = json!({
+        "project_id": format!("project-{}", Uuid::new_v4()),
+        "name": project_name,
+        "description": null,
+        "inserted_at": now,
+        "updated_at": now,
+    });
+    let file_manifest = default_project_file_manifest();
+    let manifest = json!({
+        "project_schema_version": "kyuubiki.project/v2",
+        "exported_at": now,
+        "project_file_manifest": file_manifest,
+        "project": project,
+        "models": [],
+        "model_versions": [],
+        "jobs": [],
+        "results": [],
+        "active_model_id": null,
+        "active_version_id": null,
+        "workspace_snapshot": null,
+        "automation_presets": [],
+        "asset_catalog": [],
+        "asset_references": [],
+    });
+    let workspace_settings = json!({
+        "active_model_id": null,
+        "active_version_id": null,
+        "exported_at": now,
+        "project_schema_version": "kyuubiki.project/v2",
+        "layout_version": "kyuubiki.project-layout/v1",
+    });
+
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&output)
+        .map_err(|error| format!("failed to create {}: {error}", output.display()))?;
+    let write_result = (|| {
+        let mut writer = ZipWriter::new(file);
+        write_json_entry(&mut writer, PROJECT_MANIFEST, &manifest)?;
+        write_json_entry(&mut writer, ".kyuubiki/project.json", &file_manifest)?;
+        write_json_entry(&mut writer, "project/project.json", &project)?;
+        write_json_entry(&mut writer, "Assets/project/project.json", &project)?;
+        write_json_entry(&mut writer, "ProjectSettings/workspace.json", &workspace_settings)?;
+        write_json_entry(&mut writer, "ProjectSettings/asset-catalog.json", &json!([]))?;
+        write_json_entry(&mut writer, "ProjectSettings/asset-references.json", &json!([]))?;
+        write_json_entry(&mut writer, "jobs/jobs.json", &json!([]))?;
+        write_json_entry(&mut writer, "Analysis/jobs/index.json", &json!([]))?;
+        write_json_entry(&mut writer, "results/results.json", &json!([]))?;
+        write_json_entry(&mut writer, "Analysis/results/index.json", &json!([]))?;
+        writer
+            .start_file("README.txt", zip_options())
+            .map_err(|error| format!("failed to add README.txt: {error}"))?;
+        writer
+            .write_all(
+                b"Kyuubiki project bundle\n\nSchema: kyuubiki.project/v2\nLayout: kyuubiki.project-layout/v1\nManifest: project.json\n",
+            )
+            .map_err(|error| format!("failed to write README.txt: {error}"))?;
+        writer
+            .finish()
+            .map_err(|error| format!("failed to finalize project bundle: {error}"))?;
+        Ok::<(), String>(())
+    })();
+    if let Err(error) = write_result {
+        let _ = fs::remove_file(&output);
+        return Err(error);
+    }
+
+    serde_json::to_string_pretty(&json!({
+        "created": true,
+        "path": output,
+        "summary": project_summary(&manifest),
+    }))
+    .map_err(|error| error.to_string())
+}
 
 fn read_project_bundle(path: &Path) -> Result<serde_json::Value, String> {
     let file = File::open(path).map_err(|error| format!("failed to open {}: {error}", path.display()))?;
@@ -227,4 +400,47 @@ fn run_project_cli_compare(_command: &str, left_path: &str, right_path: &str) ->
     let left = read_project_bundle(&normalize_existing_bundle_path(left_path, "left project bundle path")?)?;
     let right = read_project_bundle(&normalize_existing_bundle_path(right_path, "right project bundle path")?)?;
     serde_json::to_string_pretty(&json!({ "left": project_summary(&left), "right": project_summary(&right), "changed_project_identity": project_string(&left, &["project", "project_id"]) != project_string(&right, &["project", "project_id"]), "active_model_changed": left.get("active_model_id") != right.get("active_model_id"), "active_version_changed": left.get("active_version_id") != right.get("active_version_id") })).map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod project_bundle_tests {
+    use super::*;
+
+    fn test_bundle_path(label: &str) -> PathBuf {
+        std::env::temp_dir()
+            .join(format!("kyuubiki-hub-{label}-{}", Uuid::new_v4()))
+            .join("Research Study.kyuubiki")
+    }
+
+    #[test]
+    fn creates_a_valid_empty_project_bundle_without_overwriting() {
+        let path = test_bundle_path("create");
+        let rendered = create_project_bundle(path.to_str().expect("UTF-8 test path"))
+            .expect("create project bundle");
+        let created: serde_json::Value =
+            serde_json::from_str(&rendered).expect("created response JSON");
+
+        assert_eq!(created["created"], true);
+        assert_eq!(created["path"], path.to_string_lossy().as_ref());
+        let bundle = read_project_bundle(&path).expect("read created project bundle");
+        assert_eq!(validate_project_bundle(&bundle)["ok"], true);
+        assert_eq!(bundle["project"]["name"], "Research Study");
+
+        let duplicate = create_project_bundle(path.to_str().expect("UTF-8 test path"));
+        assert!(duplicate.expect_err("must refuse overwrite").contains("refusing to overwrite"));
+
+        fs::remove_dir_all(path.parent().expect("test bundle parent"))
+            .expect("clean project bundle fixture");
+    }
+
+    #[test]
+    fn rejects_relative_and_non_bundle_create_paths() {
+        assert!(create_project_bundle("relative.kyuubiki")
+            .expect_err("relative path must fail")
+            .contains("must be absolute"));
+        let path = test_bundle_path("extension").with_extension("zip");
+        assert!(create_project_bundle(path.to_str().expect("UTF-8 test path"))
+            .expect_err("wrong extension must fail")
+            .contains("must end with .kyuubiki"));
+    }
 }

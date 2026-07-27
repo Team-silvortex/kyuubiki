@@ -16,7 +16,7 @@ delivery.
 ## Shipped support packs
 
 The repo now keeps distributable support packs under
-[`language-packs`](../language-packs/). As of `moxi 2.0.x`, the shipped
+[`language-packs`](../language-packs/). In the current `moxi 2.x` line, the shipped
 catalog covers 30 mainstream translated core locales for both Workbench and Hub,
 for 60 shipped pack envelopes total:
 
@@ -102,7 +102,7 @@ family:
 - Pwdt is documented as Workbench-first, while Installer only exposes restricted
   diagnostics copy
 
-This keeps the install/update surface localized enough for `moxi 2.0.x` while
+This keeps the install/update surface localized enough for `moxi 2.x` while
 leaving room to add true `targetSurface: "installer"` packs later if Installer
 copy grows beyond shell-level setup and diagnostics.
 

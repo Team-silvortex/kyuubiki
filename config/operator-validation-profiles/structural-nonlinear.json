@@ -24,7 +24,6 @@
         "load_step_factors_are_monotonic"
       ],
       "evidence_paths": [
-        "config/operator-reliability/structural-nonlinear.json",
         "docs/operator-reliability.md",
         "evidence/operator-qualification/nonlinear-spring-1d-closed-form.md",
         "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs",
@@ -71,7 +70,6 @@
         "compressive_closure_remains_active_after_tensile_failure"
       ],
       "evidence_paths": [
-        "config/operator-reliability/structural-nonlinear.json",
         "docs/operator-reliability.md",
         "evidence/operator-screening/cohesive-interface-1d.md",
         "workers/rust/crates/solver/tests/cohesive_interface_1d_closed_form.rs",
@@ -126,7 +124,6 @@
         "normal_and_shear_damage_are_monotonic_and_bounded"
       ],
       "evidence_paths": [
-        "config/operator-reliability/structural-nonlinear.json",
         "docs/operator-reliability.md",
         "evidence/operator-screening/cohesive-interface-2d.md",
         "workers/rust/crates/solver/tests/cohesive_interface_2d_closed_form.rs",

@@ -21,7 +21,7 @@ The goal is to keep the documentation useful for three readers at once:
 - `current-line.md`
   Product-line posture and current handoff direction.
 - `moxi-handoff.md`
-  Final `moxi 2.x` patch gate before `moxi 2.0.0`.
+  Historical gate that defined the transition into `moxi 2.x`.
 
 ### Source-of-truth narratives
 
@@ -92,16 +92,16 @@ document is good; it ensures no document is invisible.
 6. Avoid absolute local paths, machine-specific commands, or chat-only context
    in source docs.
 
-## Moxi Closeout Posture
+## Moxi Maintenance Posture
 
-During the final `moxi 2.x` patch, documentation changes should close one
-of these gaps:
+During the active `moxi 2.x` line, documentation changes should close one of
+these gaps:
 
-- make the `moxi 2.0.0` handoff clearer
+- keep the current shipping point and the `2.0.0` historical baseline distinct
 - turn hidden operational knowledge into a source document
 - link a capability to its test, evidence, or limitation
 - reduce duplicate source-of-truth narratives
 - label work as ready, active, watch, or deferred
 
 If a documentation change does none of these, it probably belongs in a later
-`2.x` cleanup rather than the final `1.x` patch.
+cleanup rather than the current release checkpoint.

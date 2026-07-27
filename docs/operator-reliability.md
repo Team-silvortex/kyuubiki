@@ -86,7 +86,7 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
-For `moxi 2.0.x`, the manifest also declares
+For `moxi 2.x`, the manifest also declares
 `minimum_coverage_level: qualification`. `make check-operator-reliability`
 treats this as a release gate, so future edits cannot silently downgrade a
 covered operator back to `review`, `baseline`, or `smoke`. The Make target runs
@@ -125,7 +125,7 @@ Each roadmap candidate also carries a machine-readable qualification posture:
 
 - `target_level`
   the trust level the candidate is trying to reach. Release-gated roadmap
-  candidates for `moxi 2.0.x` target `qualification`; screening-only or
+  candidates for `moxi 2.x` target `qualification`; screening-only or
   exploratory families should stay outside this release candidate queue until
   they have a qualification path.
 - `evidence_phase`
@@ -407,7 +407,7 @@ current modal evidence lives at
 
 ## Current State
 
-The current `moxi 2.0.x` manifest covers all 38 solve operators in the
+The current `moxi 2.x` manifest covers all 38 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring
 `qualification` evidence for every covered operator.
 
@@ -898,6 +898,12 @@ plane-stress triangles are the first continuum host. Plane quads, beams, frames,
 shells, 3D solids, arc-length/adaptive continuation, coupled mixed-mode
 interaction, frictional delamination, and experimental calibration remain
 outside the retained claim.
+
+These three cohesive operators intentionally remain in the component validation
+profile rather than the release-gated reliability manifest. That manifest only
+accepts physics-coverage operators with retained qualification evidence; adding
+a new ad hoc `screening` coverage level would weaken the gate instead of
+describing the current claim honestly.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

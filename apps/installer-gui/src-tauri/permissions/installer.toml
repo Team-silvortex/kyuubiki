@@ -4,9 +4,44 @@ description = "Enables the doctor_report command."
 commands.allow = ["doctor_report"]
 
 [[permission]]
+identifier = "allow-installation-integrity-report"
+description = "Enables the installation_integrity_report command."
+commands.allow = ["installation_integrity_report"]
+
+[[permission]]
 identifier = "allow-regression-gate-report"
 description = "Enables the regression_gate_report command."
 commands.allow = ["regression_gate_report"]
+
+[[permission]]
+identifier = "allow-latest-applied-update-record"
+description = "Enables the latest_applied_update_record command."
+commands.allow = ["latest_applied_update_record"]
+
+[[permission]]
+identifier = "allow-latest-downloaded-update-record"
+description = "Enables the latest_downloaded_update_record command."
+commands.allow = ["latest_downloaded_update_record"]
+
+[[permission]]
+identifier = "allow-latest-staged-update-record"
+description = "Enables the latest_staged_update_record command."
+commands.allow = ["latest_staged_update_record"]
+
+[[permission]]
+identifier = "allow-update-source-config"
+description = "Enables the update_source_config command."
+commands.allow = ["update_source_config"]
+
+[[permission]]
+identifier = "allow-unified-update-plan"
+description = "Enables the unified_update_plan command."
+commands.allow = ["unified_update_plan"]
+
+[[permission]]
+identifier = "allow-unified-update-preview"
+description = "Enables the unified_update_preview command."
+commands.allow = ["unified_update_preview"]
 
 [[permission]]
 identifier = "allow-export-launch"
@@ -22,6 +57,16 @@ commands.allow = ["read_env_file"]
 identifier = "allow-certificate-authority-policy"
 description = "Enables the certificate_authority_policy command."
 commands.allow = ["certificate_authority_policy"]
+
+[[permission]]
+identifier = "allow-remote-deploy-policy"
+description = "Enables the remote_deploy_policy command."
+commands.allow = ["remote_deploy_policy"]
+
+[[permission]]
+identifier = "allow-remote-node-registry"
+description = "Enables the remote_node_registry command."
+commands.allow = ["remote_node_registry"]
 
 [[permission]]
 identifier = "allow-service-status"

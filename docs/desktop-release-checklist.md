@@ -37,7 +37,7 @@ Use a predictable versioned prefix for all desktop-facing outputs:
 - `kyuubiki-hub-v<version>-<platform>-<bundle>`
 - `kyuubiki-workbench-v<version>-<platform>-<bundle>`
 
-Examples for the current `2.2.8` workspace-prep line:
+Examples for the current `2.7.0` workspace-prep line:
 
 - `kyuubiki-installer-v2.0.0-macos-dmg`
 - `kyuubiki-hub-v2.0.0-linux-appimage`
@@ -52,6 +52,12 @@ Keep these names aligned with:
 
 ## Shared preflight
 
+- Choose the correct build class:
+  - `desktop-build-host` creates local developer bundles and does not claim
+    distribution trust.
+  - `desktop-release <host-platform>` creates a distribution candidate and
+    fails closed when signing, notarization, or installed-runtime payload
+    requirements are missing.
 - Review current readiness:
   - `./scripts/kyuubiki desktop-status all`
 - If the release includes workflow builder, operator search, package-import,
@@ -66,6 +72,12 @@ Keep these names aligned with:
   - [apps/workbench-gui/src-tauri/icons](../apps/workbench-gui/src-tauri/icons)
 - Confirm runtime scaffold exists:
   - `./scripts/kyuubiki package-runtime`
+- Confirm `dist/<platform>/manifests/service-launch.json` declares only
+  Installer-owned relative commands. Installed desktop shells never fall back
+  to source-tree `npm run dev`, `mix run`, or `cargo run`.
+- Confirm every declared service command and working directory is populated.
+  A manifest-only scaffold is valid for planning, but `desktop-release` rejects
+  it as an incomplete distribution runtime.
 - Confirm desktop manifests exist:
   - `./scripts/kyuubiki package-desktop all`
 
@@ -100,6 +112,11 @@ Suggested verification:
 - confirm `.icns` is present in each Tauri icon directory
 - confirm staged manifest declares `app` and `dmg`
 - confirm runtime scaffold exists under `dist/macos`
+- configure `APPLE_SIGNING_IDENTITY` with a Developer ID Application identity
+- configure either the Apple ID notarization triplet or App Store Connect API
+  key variables
+- require `codesign --verify`, `xcrun stapler validate`, and `spctl --assess`
+  to pass for every `.app`; notarized `.dmg` files are validated too
 
 ## Linux
 
@@ -205,3 +222,8 @@ When preparing a release, keep the order stable:
 - The source of truth for bundle metadata is:
   - [docs/packaging-and-deployment.md](packaging-and-deployment.md)
   - [releases/README.md](../releases/README.md)
+- Release-mode Workbench resolves its runtime from
+  `KYUUBIKI_RUNTIME_ROOT` when explicitly supplied, otherwise from the
+  Installer-owned `runtime/current` directory in the platform application-data
+  root. Debug builds use the source workspace unless an explicit runtime root
+  is supplied.
