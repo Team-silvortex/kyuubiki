@@ -24,6 +24,22 @@
         "scripts/kyuubiki.cmd"
       ],
       "forbidden_tokens": ["kyuubiki-runtime.mjs"]
+    },
+    {
+      "id": "native-integration-and-remote-runtime",
+      "paths": [
+        "tests/integration/workbench-ui-smoke.shared.mjs",
+        "tests/integration/direct-mesh-gui-smoke.test.mjs",
+        "tests/integration/orchestrator-agent-api-smoke/support.mjs",
+        "tests/integration/distributed-control-plane-smoke.test.mjs",
+        "tests/integration/workflow-branch-diagnostics-smoke.test.mjs",
+        "tests/integration/workflow-complex-smoke.test.mjs",
+        "tests/integration/workflow-distributed-smoke.test.mjs",
+        "tests/integration/workflow-offline-mesh-smoke.test.mjs",
+        "tests/integration/workflow-offline-mesh-branch-diagnostics-smoke.test.mjs",
+        "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs"
+      ],
+      "forbidden_tokens": ["kyuubiki-runtime.mjs"]
     }
   ],
   "journeys": [

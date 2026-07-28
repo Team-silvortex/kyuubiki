@@ -9,7 +9,7 @@ import {
 } from "../support/local-runtime-lock.mjs";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
+export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 export const ORCHESTRATOR_URL = "http://127.0.0.1:4000";
 
 export function runKyuubiki(...args) {
@@ -18,7 +18,7 @@ export function runKyuubiki(...args) {
   if (startsRuntime) {
     acquireLocalRuntimeLock();
     try {
-      assertNoUnmanagedLocalRuntime(execFileSync("node", [ENTRYPOINT, "status"], {
+      assertNoUnmanagedLocalRuntime(execFileSync(ENTRYPOINT, ["status"], {
         cwd: ROOT,
         stdio: "pipe",
         encoding: "utf8",
@@ -29,7 +29,7 @@ export function runKyuubiki(...args) {
     }
   }
   try {
-    return execFileSync("node", [ENTRYPOINT, ...args], {
+    return execFileSync(ENTRYPOINT, args, {
       cwd: ROOT,
       stdio: "pipe",
       encoding: "utf8",

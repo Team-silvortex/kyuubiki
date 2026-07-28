@@ -19,7 +19,7 @@ check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
 
 check-doc-inventory:
-	@node ./scripts/check-doc-inventory.mjs
+	@$(ENTRYPOINT) check-doc-inventory
 
 sync-doc-book-version:
 	@$(ENTRYPOINT) sync-doc-book-version
@@ -34,7 +34,7 @@ check-commercial-readiness:
 	@$(ENTRYPOINT) validate-commercial-readiness
 
 check-moxi-handoff:
-	@node ./scripts/check-moxi-handoff.mjs
+	@$(ENTRYPOINT) check-moxi-handoff
 
 check-install-update-disk-hygiene:
 	@$(ENTRYPOINT) check-install-update-disk-hygiene --self-test

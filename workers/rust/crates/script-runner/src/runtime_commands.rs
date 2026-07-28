@@ -93,14 +93,29 @@ mod tests {
     #[test]
     fn production_entrypoints_do_not_use_legacy_node_runtime() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+        let legacy_name = ["kyuubiki-runtime", ".mjs"].concat();
+        assert!(
+            !root.join("scripts").join(&legacy_name).exists(),
+            "legacy Node runtime launcher must stay deleted"
+        );
         for relative in [
             "workers/rust/crates/script-runner/src/main.rs",
             "scripts/kyuubiki.cmd",
+            "tests/integration/workbench-ui-smoke.shared.mjs",
+            "tests/integration/direct-mesh-gui-smoke.test.mjs",
+            "tests/integration/orchestrator-agent-api-smoke/support.mjs",
+            "tests/integration/distributed-control-plane-smoke.test.mjs",
+            "tests/integration/workflow-branch-diagnostics-smoke.test.mjs",
+            "tests/integration/workflow-complex-smoke.test.mjs",
+            "tests/integration/workflow-distributed-smoke.test.mjs",
+            "tests/integration/workflow-offline-mesh-smoke.test.mjs",
+            "tests/integration/workflow-offline-mesh-branch-diagnostics-smoke.test.mjs",
+            "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs",
         ] {
             let source =
                 fs::read_to_string(root.join(relative)).expect("read production entrypoint");
             assert!(
-                !source.contains("kyuubiki-runtime.mjs"),
+                !source.contains(&legacy_name),
                 "{relative} must use kyuubiki-desktop-runtime"
             );
         }

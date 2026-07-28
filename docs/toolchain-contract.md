@@ -38,6 +38,6 @@ Portable releases also generate
 manifest is the installer-facing promise that Kyuubiki can carry Elixir/OTP and
 Node as managed runtime payloads, similar to products that bundle their
 language runtime dependencies instead of asking users to install them manually.
-Runtime launchers prepend manifest-declared runtime `bin` paths before starting
-services and expose host fallback in `status`; set `KYUUBIKI_RUNTIME_STRICT=1`
-to make missing required embedded runtimes a deployment failure.
+The native runtime reports explicit host-tool fallback only in development
+source mode. Installer-managed mode resolves solely from the activated
+manifest and treats every missing required runtime as a deployment failure.

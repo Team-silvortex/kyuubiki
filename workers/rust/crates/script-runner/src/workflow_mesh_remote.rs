@@ -12,10 +12,6 @@ const WORKFLOW_MESH_SCRIPT_SOURCES: &[&str] = &[
     "scripts/build-workflow-mesh-regression-index.mjs",
     "scripts/build-workflow-mesh-regression-summary.mjs",
     "scripts/build-nightly-artifact-overview.mjs",
-    "scripts/kyuubiki-runtime.mjs",
-    "scripts/kyuubiki-runtime-env.mjs",
-    "scripts/kyuubiki-runtime-process.mjs",
-    "scripts/kyuubiki-runtime-resolver.mjs",
     "scripts/run-workflow-mesh-regression.sh",
     "scripts/run-workflow-mesh-regression-remote.sh",
 ];
@@ -392,16 +388,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn script_source_closure_contains_runtime_modules() {
-        for required in [
-            "scripts/kyuubiki",
-            "scripts/kyuubiki-runtime.mjs",
-            "scripts/kyuubiki-runtime-env.mjs",
-            "scripts/kyuubiki-runtime-process.mjs",
-            "scripts/kyuubiki-runtime-resolver.mjs",
-        ] {
+    fn script_source_closure_uses_native_runtime_entrypoint() {
+        for required in ["scripts/kyuubiki"] {
             assert!(WORKFLOW_MESH_SCRIPT_SOURCES.contains(&required));
         }
+        assert!(
+            WORKFLOW_MESH_SCRIPT_SOURCES
+                .iter()
+                .all(|source| !source.contains("kyuubiki-runtime"))
+        );
     }
 
     #[test]

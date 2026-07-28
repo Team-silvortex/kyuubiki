@@ -6,7 +6,7 @@ use std::process::Command;
 
 const TOOLCHAINS_PATH: &str = "config/toolchains.json";
 const MIX_PATH: &str = "apps/web/mix.exs";
-const CONFIG_PATH: &str = "apps/web/config/config.exs";
+const CONFIG_PATH: &str = "apps/web/config/runtime.exs";
 const SCHEMA_VERSION: &str = "kyuubiki.elixir-self-host-preflight/v1";
 
 type RunnerResult<T> = Result<T, String>;
@@ -97,7 +97,7 @@ fn build_report(root: &Path, options: &Options) -> RunnerResult<Value> {
             "elixir": field(elixir, "lab_elixir"),
             "otp": field(elixir, "lab_otp"),
             "container_base": field(elixir, "container_base"),
-            "strict_mode_env": "KYUUBIKI_RUNTIME_STRICT=1"
+            "runtime_policy": "installer-managed-fail-closed"
         },
         "detected": {},
         "env": {},

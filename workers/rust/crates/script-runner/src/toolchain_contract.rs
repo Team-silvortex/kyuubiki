@@ -119,11 +119,11 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
         );
     }
 
-    let web_config = read_text(root, "apps/web/config/config.exs")?;
+    let web_config = read_text(root, "apps/web/config/runtime.exs")?;
     for env_key in string_array(elixir, "self_host_required_env") {
         require_contains(
             &mut issues,
-            "apps/web/config/config.exs",
+            "apps/web/config/runtime.exs",
             &web_config,
             &env_key,
             &format!("self-host env {env_key}"),
@@ -158,11 +158,14 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
     require_file_tokens(
         root,
         &mut issues,
-        "scripts/kyuubiki-runtime-resolver.mjs",
+        "workers/rust/crates/desktop-runtime/src/runtime_layout.rs",
         &[
             ("embedded-runtimes.json", "embedded runtime manifest lookup"),
-            ("KYUUBIKI_RUNTIME_STRICT", "strict runtime mode"),
-            ("host-fallback", "host fallback visibility"),
+            (
+                "development runtime command",
+                "visible development command fallback",
+            ),
+            ("installer-managed", "strict installed runtime policy"),
         ],
     )?;
     require_file_tokens(

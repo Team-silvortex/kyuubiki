@@ -10,14 +10,14 @@ import {
 } from "./support/local-runtime-lock.mjs";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
+export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 export const FRONTEND_URL = "http://127.0.0.1:3000";
 
 const requireFromFrontend = createRequire(`${ROOT}/apps/frontend/package.json`);
 export const { chromium } = requireFromFrontend("playwright");
 
 export function runKyuubiki(args) {
-  return execFileSync("node", [ENTRYPOINT, ...args], {
+  return execFileSync(ENTRYPOINT, args, {
     cwd: ROOT,
     stdio: "pipe",
     encoding: "utf8",

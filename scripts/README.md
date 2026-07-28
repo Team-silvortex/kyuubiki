@@ -63,10 +63,10 @@ This directory contains host-native operational entry points.
   invocation for centralized book version alignment, required chapter markers,
   local-link validation, and legacy wording rejection. The old
   `check-doc-book.mjs` remains as a compatibility script for direct callers.
-- `check-doc-inventory.mjs`
-  Lightweight inventory guard that verifies every local `docs/*.md/html/json`
-  file is mentioned in `docs/README.md` and every Hub shelf page is mentioned
-  in `apps/hub-gui/ui/docs/README.md`.
+- `kyuubiki-script-runner check-doc-inventory`
+  Native inventory guard that verifies every local `docs/*.md/html/json` file
+  is mentioned in `docs/README.md` and every Hub shelf page is mentioned in
+  `apps/hub-gui/ui/docs/README.md`.
 - `kyuubiki-script-runner sync-doc-book-version`
   Native docs-book version synchronizer used by `make sync-doc-book-version`.
   It keeps the `--version` and `--line` options from the legacy Node script
@@ -139,6 +139,10 @@ This directory contains host-native operational entry points.
   path safety, required override-key coverage, and unsafe-text rejection for UI
   copy. Make now uses the native runner; the retained `.mjs` script is only a
   parity reference.
+- `kyuubiki-script-runner build-workbench-language-pack-catalog`
+  Native deterministic generator for the built-in Workbench TypeScript catalog.
+  It validates fragment identity, safe paths, timestamps, and unsafe text before
+  merging overrides, and supports `--check` for release drift detection.
 - `report-language-pack-coverage.mjs`
   Emit a JSON coverage report for shipped language packs. It summarizes
   language-count coverage and required override-key coverage by UI surface, then
@@ -337,10 +341,11 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
-- `check-moxi-handoff.mjs`
-  Verify the `moxi 2.0.0` to `moxi 2.x` status handoff manifest against its
-  Markdown gate. This keeps the current hardening work focused on preserving
-  stable contracts while improving evidence, recovery, and user-facing trust.
+- `kyuubiki-script-runner check-moxi-handoff`
+  Native verification of the `moxi 2.0.0` to `moxi 2.x` status handoff
+  manifest against its Markdown gate. This keeps the current hardening work
+  focused on preserving stable contracts while improving evidence, recovery,
+  and user-facing trust.
 - `kyuubiki-script-runner validate-minimal-industrial-closure`
   Verify the narrower `moxi 2.x` minimum industrial closure manifest
   against its Markdown gate, including gate count, evidence links, supported
@@ -556,10 +561,10 @@ Useful smoke wrappers:
   Print the installer-managed runtime payload contract for the current
   platform. The same data is written to
   `dist/<platform>/manifests/embedded-runtimes.json` during `stage-release`.
-- `KYUUBIKI_RUNTIME_STRICT=1 ./scripts/kyuubiki-runtime.mjs status`
-  Resolve runtime commands from the embedded runtime manifest and fail if a
-  required self-host runtime payload is missing instead of silently using the
-  host PATH.
+- `./scripts/kyuubiki status`
+  Inspect the native runtime policy and resolved commands. Development source
+  mode reports host-tool paths explicitly; installer-managed mode accepts only
+  the activated runtime manifest and fails closed when a component is absent.
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
 - `./scripts/kyuubiki headless-test`

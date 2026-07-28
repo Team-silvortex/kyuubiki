@@ -8,7 +8,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
+const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 const RUST_DIR = path.join(ROOT, "workers/rust");
 const RUN_DIR = path.join(ROOT, "tmp/run");
 const AGENT_BIN = path.join(RUST_DIR, "target/debug/kyuubiki-cli");
@@ -42,7 +42,7 @@ const SECURITY_ENV = {
 };
 
 function runKyuubiki(args, extraEnv = {}) {
-  return execFileSync("node", [ENTRYPOINT, ...args], {
+  return execFileSync(ENTRYPOINT, args, {
     cwd: ROOT,
     stdio: "pipe",
     encoding: "utf8",

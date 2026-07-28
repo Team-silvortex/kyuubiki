@@ -502,7 +502,7 @@ fn string_field<'a>(value: &'a Value, field: &str) -> &'a str {
         .unwrap_or_default()
 }
 
-fn looks_like_iso_datetime(value: &str) -> bool {
+pub(crate) fn looks_like_iso_datetime(value: &str) -> bool {
     value.len() >= 20 && value.contains('T') && value.ends_with('Z')
 }
 
@@ -556,7 +556,7 @@ fn missing_override_paths(pack: &Value, required_paths: &[&str]) -> Vec<String> 
         .collect()
 }
 
-fn unsafe_language_pack_text_issues(value: &Value, label: &str) -> Vec<String> {
+pub(crate) fn unsafe_language_pack_text_issues(value: &Value, label: &str) -> Vec<String> {
     let mut issues = Vec::new();
     collect_unsafe_language_pack_text(value, label, &mut issues);
     issues

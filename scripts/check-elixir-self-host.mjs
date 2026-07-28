@@ -85,7 +85,7 @@ async function main() {
       elixir: contract.elixir.lab_elixir,
       otp: contract.elixir.lab_otp,
       container_base: contract.elixir.container_base,
-      strict_mode_env: "KYUUBIKI_RUNTIME_STRICT=1",
+      runtime_policy: "installer-managed-fail-closed",
     },
     detected: {},
     env: {},
@@ -97,7 +97,7 @@ async function main() {
     issues.push(`apps/web/mix.exs does not declare ${contract.elixir.constraint}`);
   }
 
-  const config = await readText("apps/web/config/config.exs");
+  const config = await readText("apps/web/config/runtime.exs");
   for (const key of contract.elixir.self_host_required_env) {
     const present = config.includes(key);
     report.env[key] = {
@@ -105,7 +105,7 @@ async function main() {
       value_present: Boolean(process.env[key]),
     };
     if (!present) {
-      issues.push(`apps/web/config/config.exs does not reference ${key}`);
+      issues.push(`apps/web/config/runtime.exs does not reference ${key}`);
     }
   }
 

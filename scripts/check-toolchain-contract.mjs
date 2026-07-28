@@ -90,9 +90,9 @@ async function main() {
   const sdkMix = await readText("sdks/elixir/mix.exs");
   requireContains(issues, "sdks/elixir/mix.exs", sdkMix, `elixir: "${contract.elixir.constraint}"`, "Elixir SDK constraint");
 
-  const webConfig = await readText("apps/web/config/config.exs");
+  const webConfig = await readText("apps/web/config/runtime.exs");
   for (const envKey of contract.elixir.self_host_required_env) {
-    requireContains(issues, "apps/web/config/config.exs", webConfig, envKey, `self-host env ${envKey}`);
+    requireContains(issues, "apps/web/config/runtime.exs", webConfig, envKey, `self-host env ${envKey}`);
   }
 
   const elixirSelfHostScript = await readText("scripts/check-elixir-self-host.mjs");
@@ -104,10 +104,10 @@ async function main() {
   requireContains(issues, "workers/rust/crates/installer/src/embedded_runtime.rs", embeddedRuntime, "config/toolchains.json#/elixir", "embedded Elixir source contract");
   requireContains(issues, "workers/rust/crates/installer/src/embedded_runtime.rs", embeddedRuntime, "config/toolchains.json#/node", "embedded Node source contract");
 
-  const runtimeResolver = await readText("scripts/kyuubiki-runtime-resolver.mjs");
-  requireContains(issues, "scripts/kyuubiki-runtime-resolver.mjs", runtimeResolver, "embedded-runtimes.json", "embedded runtime manifest lookup");
-  requireContains(issues, "scripts/kyuubiki-runtime-resolver.mjs", runtimeResolver, "KYUUBIKI_RUNTIME_STRICT", "strict runtime mode");
-  requireContains(issues, "scripts/kyuubiki-runtime-resolver.mjs", runtimeResolver, "host-fallback", "host fallback visibility");
+  const runtimeResolver = await readText("workers/rust/crates/desktop-runtime/src/runtime_layout.rs");
+  requireContains(issues, "workers/rust/crates/desktop-runtime/src/runtime_layout.rs", runtimeResolver, "embedded-runtimes.json", "embedded runtime manifest lookup");
+  requireContains(issues, "workers/rust/crates/desktop-runtime/src/runtime_layout.rs", runtimeResolver, "development runtime command", "visible development command fallback");
+  requireContains(issues, "workers/rust/crates/desktop-runtime/src/runtime_layout.rs", runtimeResolver, "installer-managed", "strict installed runtime policy");
 
   const remoteMeshRunner = await readText("workers/rust/crates/script-runner/src/workflow_mesh_remote.rs");
   requireContains(issues, "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs", remoteMeshRunner, "scripts/toolchain-env.mjs", "toolchain env loader");

@@ -38,7 +38,9 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   check-make-modules\n  \
   check-doc-book\n  \
+  check-doc-inventory\n  \
   sync-doc-book-version\n  \
+  check-moxi-handoff\n  \
   check-toolchain-contract\n  \
   check-install-update-disk-hygiene\n  \
   check-component-integrity-protocol\n  \
@@ -60,6 +62,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   validate-minimal-industrial-closure\n  \
   check-contracts-runtime-api-surface\n  \
   validate-language-packs\n  \
+  build-workbench-language-pack-catalog\n  \
   check-ui-automation-contract\n  \
   check-gui-runtime-capability-contract\n  \
   check-usability-release-gate\n  \

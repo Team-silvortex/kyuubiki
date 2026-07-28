@@ -45,4 +45,4 @@ build-update-catalog:
 	@$(ENTRYPOINT) build-update-catalog
 
 build-workbench-language-pack-catalog:
-	@node ./scripts/build-workbench-language-pack-catalog.mjs
+	@$(ENTRYPOINT) build-workbench-language-pack-catalog

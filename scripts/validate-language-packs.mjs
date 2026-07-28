@@ -358,8 +358,8 @@ const frontendCatalogTest = spawnSync(
 );
 
 const frontendCatalogDataCheck = spawnSync(
-  "node",
-  ["./scripts/build-workbench-language-pack-catalog.mjs", "--check"],
+  "./scripts/kyuubiki",
+  ["build-workbench-language-pack-catalog", "--check"],
   { cwd: repoRoot, encoding: "utf8" },
 );
 

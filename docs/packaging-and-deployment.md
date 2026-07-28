@@ -170,21 +170,18 @@ runtime payloads expected for self-host operation:
 - `node` for runtime scripts, frontend launch surfaces, and docs/contract
   checks
 
-The first implementation is manifest-first: it makes versions, target paths,
-and host-fallback policy visible before payload download/extraction is wired
-into the installer. Missing runtime payloads should be treated as deployment
-blockers for self-host releases, not as hidden user prerequisites.
+The runtime contract makes versions, target paths, development fallback, and
+installer-managed fail-closed policy visible. Missing runtime payloads are
+deployment blockers for self-host releases, not hidden user prerequisites.
 
-Development launch commands and all three desktop shells now resolve runtime commands
-through the shared native `kyuubiki-desktop-runtime` crate. The legacy
-`scripts/kyuubiki-runtime.mjs` file is retained only while its integration-test
-callers are migrated; it is not part of the user-facing launch path.
-in this order:
+Development launch commands, integration tests, remote mesh regression, and
+all three desktop shells resolve runtime commands through the shared native
+`kyuubiki-desktop-runtime` crate:
 
 1. installer-managed runtime paths declared by `embedded-runtimes.json`
-2. host-installed tools only as visible fallback
-3. hard failure when `KYUUBIKI_RUNTIME_STRICT=1` and a required embedded
-   runtime command is missing
+2. host-installed tools as an explicit development-source fallback only
+3. hard failure in installer-managed mode when a declared component is
+   missing
 
 This keeps local development flexible while making self-host deployment
 version choices deterministic and inspectable.

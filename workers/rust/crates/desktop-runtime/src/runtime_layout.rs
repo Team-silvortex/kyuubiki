@@ -399,7 +399,10 @@ fn command_names(name: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Platform, checked_relative_path, installed_paths, resolve_active_runtime_root};
+    use super::{
+        Platform, checked_relative_path, installed_paths, resolve_active_runtime_root,
+        runtime_bin_dirs,
+    };
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -425,6 +428,25 @@ mod tests {
         let error = installed_paths(root.clone()).err().unwrap();
         fs::remove_dir_all(root).unwrap();
         assert!(error.contains("missing required service"));
+    }
+
+    #[test]
+    fn embedded_runtime_bin_dirs_are_manifest_scoped() {
+        let root = fixture_root("embedded-bin-dirs");
+        fs::create_dir_all(root.join("manifests")).unwrap();
+        fs::create_dir_all(root.join("runtimes/node/bin")).unwrap();
+        fs::write(
+            root.join("manifests/embedded-runtimes.json"),
+            r#"{
+              "schema_version":"kyuubiki.embedded-runtimes/v1",
+              "runtimes":[
+                {"id":"node","bin_dirs":["runtimes/node/bin","runtimes/missing/bin"]}
+              ]
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(runtime_bin_dirs(&root), [root.join("runtimes/node/bin")]);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
