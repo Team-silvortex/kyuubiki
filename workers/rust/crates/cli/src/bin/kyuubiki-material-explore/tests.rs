@@ -180,9 +180,104 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     assert!(
         exploration["report"]["candidates"]
             .as_array()
-            .is_some_and(|rows| rows.iter().all(|row| {
-                row["interface_risk_score"].is_number() && row["weakest_interface"].is_object()
+            .is_some_and(|rows| {
+                rows.iter().all(|row| {
+                row["interface_risk_score"].is_number()
+                    && row["weakest_interface"].is_object()
+                    && row["electrostatic_cross_validation"]["status"].as_str() == Some("pass")
+                    && row["electrostatic_cross_validation"]["relative_error"]
+                        .as_f64()
+                        .is_some_and(|error| error <= 1.0e-9)
+                    && row["electrostatic_mesh_convergence"]["status"].as_str() == Some("pass")
+                    && row["electrostatic_mesh_convergence"]["samples"]
+                        .as_array()
+                        .is_some_and(|samples| samples.len() == 4)
+                    && row["heat_cross_validation"]["status"].as_str() == Some("pass")
+                    && row["heat_mesh_convergence"]["status"].as_str() == Some("pass")
+                    && row["heat_mesh_convergence"]["samples"]
+                        .as_array()
+                        .is_some_and(|samples| samples.len() == 4)
+                    && row["thermal_mesh_convergence"]["status"].as_str() == Some("fail")
+                    && row["thermal_mesh_convergence"]["samples"]
+                        .as_array()
+                        .is_some_and(|samples| samples.len() == 4)
+                    && row["thermal_constraint_regularized_mesh_convergence"]["status"].as_str()
+                        == Some("fail")
+                    && row["thermal_constraint_sensitivity"]["diagnosis"].as_str()
+                        == Some("mixed_restraint_sensitivity_and_persistent_energy_nonconvergence")
+                    && row["thermal_stress_recovery"]["status"].as_str() == Some("fail")
+                    && row["thermal_interface_grading_assessment"]["diagnosis"].as_str()
+                        == Some(
+                            "localized_tail_resolution_improved_but_global_energy_and_peak_unstable"
+                        )
+                    && row["thermal_interface_grading_assessment"]["qualification_effect"].as_str()
+                        == Some("diagnostic_only_does_not_override_uniform_mesh_gates")
+            })
+            })
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.electrostatic_closed_form.relative_error")
+                    && gate["status"].as_str() == Some("pass")
             }))
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.heat_"))
+                        && gate["status"].as_str() == Some("pass")
+                })
+                .count()
+                == 3)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.electrostatic_mesh_convergence."))
+                        && gate["status"].as_str() == Some("pass")
+                })
+                .count()
+                == 2)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.thermal_stress_recovery."))
+                        && gate["status"].as_str() == Some("violate")
+                })
+                .count()
+                == 2)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.thermal_mesh_convergence."))
+                        && gate["status"].as_str() == Some("violate")
+                })
+                .count()
+                == 2)
     );
     assert_eq!(
         exploration["next_round"]["decision"].as_str(),
@@ -193,8 +288,36 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
         Some("kyuubiki.composite-thermo-electric-panel-result/v1")
     );
     assert!(exploration["result_payloads"][0]["electrostatic"].is_object());
+    assert!(
+        exploration["result_payloads"][0]["electrostatic_mesh_convergence"]["samples"]
+            .as_array()
+            .is_some_and(|samples| samples.len() == 4)
+    );
     assert!(exploration["result_payloads"][0]["heat"].is_object());
+    assert_eq!(
+        exploration["result_payloads"][0]["heat_cross_validation"]["status"].as_str(),
+        Some("pass")
+    );
+    assert!(
+        exploration["result_payloads"][0]["heat_mesh_convergence"]["samples"]
+            .as_array()
+            .is_some_and(|samples| samples.len() == 4)
+    );
     assert!(exploration["result_payloads"][0]["thermal"].is_object());
+    assert_eq!(
+        exploration["result_payloads"][0]["thermal_mesh_convergence"]["status"].as_str(),
+        Some("fail")
+    );
+    assert_eq!(
+        exploration["result_payloads"][0]["thermal_constraint_sensitivity"]["qualification_effect"]
+            .as_str(),
+        Some("diagnostic_only_does_not_override_primary_quality_gates")
+    );
+    assert_eq!(
+        exploration["result_payloads"][0]["thermal_interface_grading_assessment"]["diagnosis"]
+            .as_str(),
+        Some("localized_tail_resolution_improved_but_global_energy_and_peak_unstable")
+    );
 }
 
 #[test]

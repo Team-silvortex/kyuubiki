@@ -18,14 +18,19 @@ mod material_candidate_review_batches;
 mod material_card_refs;
 mod material_composite;
 mod material_composite_candidates;
+mod material_composite_heat_validation;
 mod material_composite_interfaces;
 mod material_composite_materialization;
 #[cfg(test)]
 mod material_composite_materialization_tests;
 mod material_composite_materialized_report;
 mod material_composite_models;
+mod material_composite_quality;
+mod material_composite_stress_recovery;
+mod material_composite_structural_validation;
 #[cfg(test)]
 mod material_composite_tests;
+mod material_composite_validation;
 mod material_dielectric;
 mod material_envelope_workflow;
 mod material_exploration;
@@ -106,11 +111,45 @@ pub use material_composite::{
     build_composite_panel_steps, composite_panel_metric_specs,
 };
 pub use material_composite_candidates::{CompositePanelCandidate, composite_panel_candidates};
+pub use material_composite_heat_validation::{
+    COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION, COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION,
+    COMPOSITE_HEAT_REFINEMENT_LEVELS, CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
+    CompositeHeatMeshConvergenceSample, composite_heat_cross_validation,
+    composite_heat_mesh_convergence, composite_heat_refinement_requests,
+};
 pub use material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, composite_material_regions,
 };
 pub use material_composite_materialization::build_composite_materialized_candidate_steps;
 pub use material_composite_materialized_report::build_composite_materialized_candidate_report;
+pub use material_composite_stress_recovery::{
+    COMPOSITE_THERMAL_INTERFACE_GRADING_SCHEMA_VERSION,
+    COMPOSITE_THERMAL_STRESS_RECOVERY_SCHEMA_VERSION, CompositeThermalInterfaceGradingAssessment,
+    CompositeThermalRecoveredStressStatistics, CompositeThermalStressRecovery,
+    CompositeThermalStressRecoverySample, composite_thermal_interface_graded_stress_recovery,
+    composite_thermal_interface_grading_assessment, composite_thermal_recovered_stress_statistics,
+    composite_thermal_stress_recovery,
+};
+pub use material_composite_structural_validation::{
+    COMPOSITE_THERMAL_CONSTRAINT_SENSITIVITY_SCHEMA_VERSION,
+    COMPOSITE_THERMAL_MESH_CONVERGENCE_SCHEMA_VERSION, COMPOSITE_THERMAL_REFINEMENT_LEVELS,
+    CompositeThermalConstraintSensitivity, CompositeThermalMeshConvergence,
+    CompositeThermalMeshSample, composite_thermal_constraint_sensitivity,
+    composite_thermal_interface_graded_mesh_convergence,
+    composite_thermal_interface_graded_refinement_requests, composite_thermal_mesh_convergence,
+    composite_thermal_refinement_requests, composite_thermal_regularized_mesh_convergence,
+    composite_thermal_regularized_refinement_requests,
+};
+pub use material_composite_validation::{
+    COMPOSITE_ELECTROSTATIC_CROSS_VALIDATION_SCHEMA_VERSION,
+    COMPOSITE_ELECTROSTATIC_MESH_CONVERGENCE_SCHEMA_VERSION,
+    COMPOSITE_ELECTROSTATIC_REFINEMENT_LEVELS, CompositeElectrostaticCrossValidation,
+    CompositeElectrostaticMeshConvergence, CompositeElectrostaticMeshConvergenceSample,
+    composite_electrostatic_cross_validation, composite_electrostatic_mesh_convergence,
+    composite_electrostatic_mesh_convergence_for_dielectric,
+    composite_electrostatic_refinement_requests,
+    composite_electrostatic_refinement_requests_for_dielectric,
+};
 pub use material_dielectric::{
     DielectricMaterialCandidate, DielectricMaterialCandidateReport, DielectricMaterialReport,
     build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,

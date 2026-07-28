@@ -48,5 +48,70 @@ fn composite_report_exposes_regions_and_reliability() {
             .iter()
             .any(|gate| { gate.id == "gate.interface_risk.prototype" })
     );
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| row.electrostatic_cross_validation.status == "fail"),
+        "the synthetic test payloads should visibly fail the analytic cross-check"
+    );
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| row.electrostatic_mesh_convergence.status == "missing"),
+        "synthetic payloads without real refinement runs must not claim mesh convergence"
+    );
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.electrostatic_closed_form.relative_error" && gate.status == "violate"
+    }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.electrostatic_mesh_convergence.finest_pair" && gate.status == "unknown"
+    }));
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| row.heat_cross_validation.status == "fail"
+                && row.heat_mesh_convergence.status == "missing")
+    );
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.heat_closed_form.relative_error" && gate.status == "violate"
+    }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.heat_mesh_convergence.finest_pair" && gate.status == "unknown"
+    }));
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| row.thermal_mesh_convergence.status == "missing")
+    );
+    assert!(report.candidates.iter().all(|row| {
+        row.thermal_constraint_sensitivity.diagnosis == "insufficient_evidence"
+            && row.thermal_constraint_sensitivity.qualification_effect
+                == "diagnostic_only_does_not_override_primary_quality_gates"
+    }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.thermal_mesh_convergence.strain_energy" && gate.status == "unknown"
+    }));
+    assert!(
+        report
+            .candidates
+            .iter()
+            .all(|row| row.thermal_stress_recovery.status == "missing")
+    );
+    assert!(report.candidates.iter().all(|row| {
+        row.thermal_interface_grading_assessment.diagnosis == "insufficient_evidence"
+            && row
+                .thermal_interface_grading_assessment
+                .qualification_effect
+                == "diagnostic_only_does_not_override_uniform_mesh_gates"
+    }));
+    assert!(
+        report.reliability.quality_gates.iter().any(|gate| {
+            gate.id == "gate.thermal_stress_recovery.p95" && gate.status == "unknown"
+        })
+    );
     assert!(report.winner_candidate_id.is_some());
 }

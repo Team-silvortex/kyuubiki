@@ -58,6 +58,65 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         .and_then(|field| {
             read_path_f64(parameters, &["dielectric_breakdown_field_v_m"]).map(|v| v / field)
         });
+    let electrostatic_mesh_convergence = result
+        .get("electrostatic_mesh_convergence")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let heat_cross_validation = result
+        .get("heat_cross_validation")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let heat_mesh_convergence = result
+        .get("heat_mesh_convergence")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_mesh_convergence = result
+        .get("thermal_mesh_convergence")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_constraint_regularized_mesh_convergence = result
+        .get("thermal_constraint_regularized_mesh_convergence")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_constraint_sensitivity = result
+        .get("thermal_constraint_sensitivity")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_stress_recovery = result
+        .get("thermal_stress_recovery")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_interface_grading_assessment = result
+        .get("thermal_interface_grading_assessment")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let mut missing = missing_metrics(&[
+        ("max_electric_field_v_m", max_electric_field_v_m),
+        ("max_temperature_c", max_temperature_c),
+        ("max_thermal_stress_pa", max_thermal_stress_pa),
+        ("breakdown_safety_factor", breakdown_safety_factor),
+        (
+            "interface_risk_score",
+            read_path_f64(parameters, &["interface_risk_score"]),
+        ),
+        (
+            "areal_mass_kg_m2",
+            read_path_f64(parameters, &["areal_mass_kg_m2"]),
+        ),
+    ]);
+    if electrostatic_mesh_convergence
+        .get("status")
+        .and_then(Value::as_str)
+        != Some("pass")
+    {
+        missing.push("electrostatic_mesh_convergence".to_string());
+    }
+    if heat_cross_validation.get("status").and_then(Value::as_str) != Some("pass") {
+        missing.push("heat_cross_validation".to_string());
+    }
+    if heat_mesh_convergence.get("status").and_then(Value::as_str) != Some("pass") {
+        missing.push("heat_mesh_convergence".to_string());
+    }
     Ok(json!({
         "candidate_id": candidate_id,
         "candidate_label": research
@@ -70,20 +129,21 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         "rank": 0,
         "score": 0.0,
         "max_electric_field_v_m": max_electric_field_v_m,
+        "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "max_temperature_c": max_temperature_c,
+        "heat_cross_validation": heat_cross_validation,
+        "heat_mesh_convergence": heat_mesh_convergence,
         "max_thermal_stress_pa": max_thermal_stress_pa,
+        "thermal_mesh_convergence": thermal_mesh_convergence,
+        "thermal_constraint_regularized_mesh_convergence": thermal_constraint_regularized_mesh_convergence,
+        "thermal_constraint_sensitivity": thermal_constraint_sensitivity,
+        "thermal_stress_recovery": thermal_stress_recovery,
+        "thermal_interface_grading_assessment": thermal_interface_grading_assessment,
         "breakdown_safety_factor": breakdown_safety_factor,
         "interface_risk_score": read_path_f64(parameters, &["interface_risk_score"]),
         "areal_mass_kg_m2": read_path_f64(parameters, &["areal_mass_kg_m2"]),
         "materials": research.get("materials").cloned().unwrap_or(Value::Null),
-        "missing_metrics": missing_metrics(&[
-            ("max_electric_field_v_m", max_electric_field_v_m),
-            ("max_temperature_c", max_temperature_c),
-            ("max_thermal_stress_pa", max_thermal_stress_pa),
-            ("breakdown_safety_factor", breakdown_safety_factor),
-            ("interface_risk_score", read_path_f64(parameters, &["interface_risk_score"])),
-            ("areal_mass_kg_m2", read_path_f64(parameters, &["areal_mass_kg_m2"])),
-        ])
+        "missing_metrics": missing
     }))
 }
 
@@ -160,6 +220,105 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             max_value(&rows, "interface_risk_score"),
         ),
         gate(
+            "gate.electrostatic_mesh_convergence.finest_pair",
+            "electrostatic_mesh_finest_pair_relative_change",
+            "<=",
+            1.0e-8,
+            max_nested_value(
+                &rows,
+                &[
+                    "electrostatic_mesh_convergence",
+                    "finest_pair_relative_change",
+                ],
+            ),
+        ),
+        gate(
+            "gate.electrostatic_mesh_convergence.analytic_error",
+            "electrostatic_mesh_max_analytic_relative_error",
+            "<=",
+            1.0e-8,
+            max_nested_value(
+                &rows,
+                &[
+                    "electrostatic_mesh_convergence",
+                    "max_analytic_relative_error",
+                ],
+            ),
+        ),
+        gate(
+            "gate.heat_closed_form.relative_error",
+            "heat_closed_form_relative_error",
+            "<=",
+            1.0e-9,
+            max_nested_value(&rows, &["heat_cross_validation", "relative_error"]),
+        ),
+        gate(
+            "gate.heat_mesh_convergence.finest_pair",
+            "heat_mesh_finest_pair_relative_change",
+            "<=",
+            1.0e-8,
+            max_nested_value(
+                &rows,
+                &["heat_mesh_convergence", "finest_pair_relative_change"],
+            ),
+        ),
+        gate(
+            "gate.heat_mesh_convergence.analytic_error",
+            "heat_mesh_max_analytic_relative_error",
+            "<=",
+            1.0e-8,
+            max_nested_value(
+                &rows,
+                &["heat_mesh_convergence", "max_analytic_relative_error"],
+            ),
+        ),
+        gate(
+            "gate.thermal_mesh_convergence.displacement",
+            "thermal_mesh_finest_pair_displacement_relative_change",
+            "<=",
+            2.0e-2,
+            max_nested_value(
+                &rows,
+                &[
+                    "thermal_mesh_convergence",
+                    "finest_pair_displacement_relative_change",
+                ],
+            ),
+        ),
+        gate(
+            "gate.thermal_mesh_convergence.strain_energy",
+            "thermal_mesh_finest_pair_strain_energy_relative_change",
+            "<=",
+            2.0e-2,
+            max_nested_value(
+                &rows,
+                &[
+                    "thermal_mesh_convergence",
+                    "finest_pair_strain_energy_relative_change",
+                ],
+            ),
+        ),
+        gate(
+            "gate.thermal_stress_recovery.rms",
+            "thermal_stress_recovery_finest_pair_rms_relative_change",
+            "<=",
+            2.0e-2,
+            max_nested_value(
+                &rows,
+                &["thermal_stress_recovery", "finest_pair_rms_relative_change"],
+            ),
+        ),
+        gate(
+            "gate.thermal_stress_recovery.p95",
+            "thermal_stress_recovery_finest_pair_p95_relative_change",
+            "<=",
+            2.0e-2,
+            max_nested_value(
+                &rows,
+                &["thermal_stress_recovery", "finest_pair_p95_relative_change"],
+            ),
+        ),
+        gate(
             "gate.result_completeness",
             "complete_candidate_count",
             ">=",
@@ -194,6 +353,12 @@ fn min_value(rows: &[Value], key: &str) -> Option<f64> {
 
 fn max_value(rows: &[Value], key: &str) -> Option<f64> {
     values(rows, key).into_iter().reduce(f64::max)
+}
+
+fn max_nested_value(rows: &[Value], path: &[&str]) -> Option<f64> {
+    rows.iter()
+        .filter_map(|row| read_path_f64(row, path))
+        .reduce(f64::max)
 }
 
 fn normalize_min(value: Option<f64>, values: &[f64]) -> f64 {

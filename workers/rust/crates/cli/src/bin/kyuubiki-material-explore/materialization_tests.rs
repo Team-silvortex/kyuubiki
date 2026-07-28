@@ -52,6 +52,63 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         rerun["result_payloads"][0]["research"]["candidate_id"].as_str(),
         Some("copper_ptfe_glass_epoxy__add_compliant_interlayer")
     );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["electrostatic_mesh_convergence"]["status"].as_str(),
+        Some("pass")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["heat_cross_validation"]["status"].as_str(),
+        Some("pass")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["heat_mesh_convergence"]["status"].as_str(),
+        Some("pass")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_mesh_convergence"]["status"].as_str(),
+        Some("fail")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_constraint_sensitivity"]["diagnosis"].as_str(),
+        Some("mixed_restraint_sensitivity_and_persistent_energy_nonconvergence")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_stress_recovery"]["status"].as_str(),
+        Some("fail")
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_interface_grading_assessment"]["diagnosis"]
+            .as_str(),
+        Some("localized_tail_resolution_improved_but_global_energy_and_peak_unstable")
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.electrostatic_mesh_convergence."))
+                        && gate["status"].as_str() == Some("pass")
+                })
+                .count()
+                == 2)
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.heat_"))
+                        && gate["status"].as_str() == Some("pass")
+                })
+                .count()
+                == 3)
+    );
     assert!(rerun["next_round"]["decision"].is_string());
     let _ = fs::remove_file(path);
 }
@@ -494,10 +551,15 @@ fn runs_full_reviewed_materialization_smoke_chain() {
 }
 
 fn composite_next_round_plan_value() -> serde_json::Value {
-    let exploration =
-        run_material_exploration("composite-thermo-electric-panel").expect("exploration");
-    let plan = build_material_exploration_next_round_execution_plan(&exploration).expect("plan");
-    serde_json::to_value(&plan).expect("plan json")
+    static PLAN: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::new();
+    PLAN.get_or_init(|| {
+        let exploration =
+            run_material_exploration("composite-thermo-electric-panel").expect("exploration");
+        let plan =
+            build_material_exploration_next_round_execution_plan(&exploration).expect("plan");
+        serde_json::to_value(&plan).expect("plan json")
+    })
+    .clone()
 }
 
 fn temp_path(prefix: &str) -> std::path::PathBuf {

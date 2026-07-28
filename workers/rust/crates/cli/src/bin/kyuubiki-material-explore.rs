@@ -18,8 +18,17 @@ mod tests;
 use kyuubiki_headless_sdk::{
     HeadlessWorkflowStep, build_material_exploration_next_round_execution_plan,
     build_material_exploration_run, build_material_exploration_run_for_iteration,
-    build_material_study_execution_plan, describe_material_study, material_exploration_steps,
-    material_study_catalog,
+    build_material_study_execution_plan, composite_electrostatic_mesh_convergence_for_dielectric,
+    composite_electrostatic_refinement_requests_for_dielectric, composite_heat_cross_validation,
+    composite_heat_mesh_convergence, composite_heat_refinement_requests,
+    composite_thermal_constraint_sensitivity, composite_thermal_interface_graded_mesh_convergence,
+    composite_thermal_interface_graded_refinement_requests,
+    composite_thermal_interface_graded_stress_recovery,
+    composite_thermal_interface_grading_assessment, composite_thermal_mesh_convergence,
+    composite_thermal_recovered_stress_statistics, composite_thermal_refinement_requests,
+    composite_thermal_regularized_mesh_convergence,
+    composite_thermal_regularized_refinement_requests, composite_thermal_stress_recovery,
+    describe_material_study, material_exploration_steps, material_study_catalog,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -421,17 +430,181 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
             .map_err(|error| error.to_string())?;
     let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request)
         .map_err(|error| format!("composite electrostatic solve failed: {error}"))?;
+    let dielectric_relative_permittivity =
+        composite_dielectric_relative_permittivity(&electrostatic_request)?;
+    let mut mesh_fields = vec![(1, electrostatic.max_electric_field)];
+    for (level, request) in
+        composite_electrostatic_refinement_requests_for_dielectric(dielectric_relative_permittivity)
+            .into_iter()
+            .filter(|(level, _)| *level > 1)
+    {
+        let result = solve_electrostatic_plane_quad_2d(&request).map_err(|error| {
+            format!("composite electrostatic mesh level {level} solve failed: {error}")
+        })?;
+        mesh_fields.push((level, result.max_electric_field));
+    }
+    let electrostatic_mesh_convergence = composite_electrostatic_mesh_convergence_for_dielectric(
+        dielectric_relative_permittivity,
+        &mesh_fields,
+    );
     let heat = solve_heat_plane_quad_2d(&heat_request)
         .map_err(|error| format!("composite heat solve failed: {error}"))?;
+    let heat_conductivities = composite_heat_conductivities(&heat_request)?;
+    let heat_cross_validation =
+        composite_heat_cross_validation(heat_conductivities, Some(heat.max_temperature));
+    let mut heat_mesh_temperatures = vec![(1, heat.max_temperature)];
+    for (level, request) in composite_heat_refinement_requests(heat_conductivities)
+        .into_iter()
+        .filter(|(level, _)| *level > 1)
+    {
+        let result = solve_heat_plane_quad_2d(&request)
+            .map_err(|error| format!("composite heat mesh level {level} solve failed: {error}"))?;
+        heat_mesh_temperatures.push((level, result.max_temperature));
+    }
+    let heat_mesh_convergence =
+        composite_heat_mesh_convergence(heat_conductivities, &heat_mesh_temperatures);
     let thermal = solve_thermal_plane_quad_2d(&thermal_request)
         .map_err(|error| format!("composite thermal solve failed: {error}"))?;
+    let mut thermal_stress_statistics =
+        vec![(1, composite_thermal_recovered_stress_statistics(&thermal)?)];
+    let mut thermal_mesh_samples = vec![(
+        1,
+        thermal.max_displacement,
+        thermal.total_strain_energy,
+        thermal.max_stress,
+    )];
+    for (level, request) in composite_thermal_refinement_requests(&thermal_request)?
+        .into_iter()
+        .filter(|(level, _)| *level > 1)
+    {
+        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
+            format!("composite thermal mesh level {level} solve failed: {error}")
+        })?;
+        thermal_mesh_samples.push((
+            level,
+            result.max_displacement,
+            result.total_strain_energy,
+            result.max_stress,
+        ));
+        thermal_stress_statistics.push((
+            level,
+            composite_thermal_recovered_stress_statistics(&result)?,
+        ));
+    }
+    let thermal_mesh_convergence = composite_thermal_mesh_convergence(&thermal_mesh_samples);
+    let thermal_stress_recovery = composite_thermal_stress_recovery(&thermal_stress_statistics);
+    let mut regularized_mesh_samples = Vec::new();
+    for (level, request) in composite_thermal_regularized_refinement_requests(&thermal_request)? {
+        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
+            format!("composite regularized thermal mesh level {level} solve failed: {error}")
+        })?;
+        regularized_mesh_samples.push((
+            level,
+            result.max_displacement,
+            result.total_strain_energy,
+            result.max_stress,
+        ));
+    }
+    let thermal_constraint_regularized_mesh_convergence =
+        composite_thermal_regularized_mesh_convergence(&regularized_mesh_samples);
+    let thermal_constraint_sensitivity = composite_thermal_constraint_sensitivity(
+        &thermal_mesh_convergence,
+        &thermal_constraint_regularized_mesh_convergence,
+    );
+    let mut graded_mesh_samples = vec![thermal_mesh_samples[0]];
+    let mut graded_stress_statistics = vec![thermal_stress_statistics[0].clone()];
+    for (level, request) in
+        composite_thermal_interface_graded_refinement_requests(&thermal_request)?
+            .into_iter()
+            .filter(|(level, _)| *level > 1)
+    {
+        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
+            format!("composite interface-graded thermal mesh level {level} failed: {error}")
+        })?;
+        graded_mesh_samples.push((
+            level,
+            result.max_displacement,
+            result.total_strain_energy,
+            result.max_stress,
+        ));
+        graded_stress_statistics.push((
+            level,
+            composite_thermal_recovered_stress_statistics(&result)?,
+        ));
+    }
+    let thermal_interface_graded_mesh_convergence =
+        composite_thermal_interface_graded_mesh_convergence(&graded_mesh_samples);
+    let thermal_interface_graded_stress_recovery =
+        composite_thermal_interface_graded_stress_recovery(&graded_stress_statistics);
+    let thermal_interface_grading_assessment = composite_thermal_interface_grading_assessment(
+        &thermal_mesh_convergence,
+        &thermal_stress_recovery,
+        thermal_interface_graded_mesh_convergence,
+        thermal_interface_graded_stress_recovery,
+    );
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.composite-thermo-electric-panel-result/v1",
         "research": step.payload.get("research").cloned().unwrap_or(Value::Null),
         "electrostatic": electrostatic,
+        "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "heat": heat,
+        "heat_cross_validation": heat_cross_validation,
+        "heat_mesh_convergence": heat_mesh_convergence,
         "thermal": thermal,
+        "thermal_mesh_convergence": thermal_mesh_convergence,
+        "thermal_stress_recovery": thermal_stress_recovery,
+        "thermal_constraint_regularized_mesh_convergence": thermal_constraint_regularized_mesh_convergence,
+        "thermal_constraint_sensitivity": thermal_constraint_sensitivity,
+        "thermal_interface_grading_assessment": thermal_interface_grading_assessment,
     }))
+}
+
+fn composite_dielectric_relative_permittivity(
+    request: &SolveElectrostaticPlaneQuad2dRequest,
+) -> Result<f64, String> {
+    let value = request
+        .elements
+        .iter()
+        .find(|element| element.id == "dielectric_core")
+        .or_else(|| request.elements.get(request.elements.len() / 2))
+        .map(|element| element.permittivity)
+        .ok_or_else(|| "composite electrostatic model has no dielectric element".to_string())?;
+    if !value.is_finite() || value <= 0.0 {
+        return Err(
+            "composite electrostatic model dielectric permittivity must be finite and positive"
+                .to_string(),
+        );
+    }
+    Ok(value)
+}
+
+fn composite_heat_conductivities(
+    request: &SolveHeatPlaneQuad2dRequest,
+) -> Result<[f64; 3], String> {
+    let conductivity = |id: &str, fallback: usize| {
+        request
+            .elements
+            .iter()
+            .find(|element| element.id == id)
+            .or_else(|| request.elements.get(fallback))
+            .map(|element| element.conductivity)
+    };
+    let values = [
+        conductivity("conductor_left", 0),
+        conductivity("dielectric_core", request.elements.len() / 2),
+        conductivity("substrate_right", request.elements.len().saturating_sub(1)),
+    ];
+    let [Some(conductor), Some(dielectric), Some(substrate)] = values else {
+        return Err("composite heat model must contain three material regions".to_string());
+    };
+    let conductivities = [conductor, dielectric, substrate];
+    if conductivities
+        .iter()
+        .any(|value| !value.is_finite() || *value <= 0.0)
+    {
+        return Err("composite heat model conductivities must be finite and positive".to_string());
+    }
+    Ok(conductivities)
 }
 
 fn required_payload(step: &HeadlessWorkflowStep, key: &str) -> Result<Value, String> {

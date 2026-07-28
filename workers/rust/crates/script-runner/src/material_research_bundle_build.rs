@@ -1,3 +1,4 @@
+use crate::material_research_bundle_validation_baselines::validation_baseline_refs;
 use crate::native_time::utc_iso_timestamp;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -307,16 +308,20 @@ fn validation_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
             })
         })
         .collect::<Vec<_>>();
-    let validation_readiness = validation_readiness(&candidate_confidence, &violated_gate_ids);
+    let baseline_refs = validation_baseline_refs(report);
+    let analytic_baseline_passed = baseline_refs.iter().any(|baseline| {
+        baseline.get("kind").and_then(Value::as_str) == Some("analytic_closed_form")
+            && baseline.get("status").and_then(Value::as_str) == Some("pass")
+    });
+    let validation_readiness = validation_readiness(
+        &candidate_confidence,
+        &violated_gate_ids,
+        analytic_baseline_passed,
+    );
     json!({
         "schema_version": "kyuubiki.material-validation-evidence/v1",
         "validation_posture": "screening_validation",
-        "baseline_refs": [{
-            "baseline_id": report.pointer("/optimization/id").cloned().unwrap_or(Value::Null),
-            "kind": "built_in_screening_fixture",
-            "status": "retained",
-            "scope": "internal deterministic solver fixture; external calibration still required",
-        }],
+        "baseline_refs": baseline_refs,
         "candidate_confidence_counts": candidate_confidence,
         "sensitivity_summary": {
             "schema_version": "kyuubiki.material-sensitivity-summary/v1",
@@ -337,20 +342,28 @@ fn validation_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
         },
         "validation_readiness": validation_readiness,
         "external_validation_plan": [
-            "compare winning candidate ranking against an external solver or analytic benchmark",
+            "compare winning candidate ranking against an external solver, literature benchmark, or experiment",
             "replace scalar material cards with temperature-dependent or anisotropic curves where applicable",
-            "run mesh and boundary-condition perturbation before qualification claims"
+            "extend mesh and boundary-condition perturbation beyond the retained electrostatic h-refinement"
         ],
         "violated_quality_gate_ids": violated_gate_ids,
     })
 }
 
-fn validation_readiness(candidate_confidence: &Value, violated_gate_ids: &[Value]) -> Value {
+fn validation_readiness(
+    candidate_confidence: &Value,
+    violated_gate_ids: &[Value],
+    analytic_baseline_passed: bool,
+) -> Value {
     let low = confidence_count(candidate_confidence, "low");
     let unknown = confidence_count(candidate_confidence, "unknown");
     let mut score = 0.70_f64;
     let mut reasons = vec![Value::from("external_validation_required")];
-    let mut actions = vec![Value::from("run_external_solver_or_analytic_baseline")];
+    let mut actions = vec![Value::from(if analytic_baseline_passed {
+        "run_external_solver_literature_or_experimental_correlation"
+    } else {
+        "run_external_solver_or_analytic_baseline"
+    })];
     if !violated_gate_ids.is_empty() {
         score -= 0.20;
         reasons.push(Value::from("violated_quality_gates"));
@@ -490,8 +503,11 @@ fn sha256_json(value: &Value) -> RunnerResult<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{execution_authority_trace, material_explore_template, study_profile};
-    use serde_json::json;
+    use super::{
+        execution_authority_trace, material_explore_template, study_profile,
+        validation_baseline_refs, validation_readiness,
+    };
+    use serde_json::{Value, json};
 
     #[test]
     fn supports_retained_bundle_studies() {
@@ -531,5 +547,83 @@ mod tests {
         assert_eq!(trace["assertions"]["no_mock_execution"], true);
         assert_eq!(trace["assertions"]["no_fallback"], true);
         assert_eq!(trace["chain"].as_array().map(Vec::len), Some(2));
+    }
+
+    #[test]
+    fn analytic_baseline_requires_every_candidate_cross_validation_to_pass() {
+        let report = json!({
+            "optimization": { "id": "composite-screening" },
+            "candidates": [
+                {
+                    "electrostatic_cross_validation": {
+                        "schema_version": "kyuubiki.composite-electrostatic-cross-validation/v1",
+                        "status": "pass",
+                        "relative_error": 2.0e-16
+                    },
+                    "electrostatic_mesh_convergence": {
+                        "schema_version": "kyuubiki.composite-electrostatic-mesh-convergence/v1",
+                        "status": "pass",
+                        "samples": [{}, {}, {}, {}],
+                        "max_analytic_relative_error": 3.0e-15,
+                        "finest_pair_relative_change": 1.0e-15
+                    }
+                },
+                {
+                    "electrostatic_cross_validation": {
+                        "schema_version": "kyuubiki.composite-electrostatic-cross-validation/v1",
+                        "status": "pass",
+                        "relative_error": 4.0e-16
+                    },
+                    "electrostatic_mesh_convergence": {
+                        "schema_version": "kyuubiki.composite-electrostatic-mesh-convergence/v1",
+                        "status": "pass",
+                        "samples": [{}, {}, {}, {}],
+                        "max_analytic_relative_error": 5.0e-15,
+                        "finest_pair_relative_change": 2.0e-15
+                    }
+                }
+            ]
+        });
+
+        let refs = validation_baseline_refs(&report);
+
+        assert_eq!(refs.len(), 3);
+        assert_eq!(refs[1]["kind"], "analytic_closed_form");
+        assert_eq!(refs[1]["candidate_count"], 2);
+        assert_eq!(refs[1]["max_relative_error"], 4.0e-16);
+        assert_eq!(refs[2]["kind"], "mesh_convergence");
+        assert_eq!(refs[2]["candidate_count"], 2);
+        assert_eq!(refs[2]["max_analytic_relative_error"], 5.0e-15);
+        assert_eq!(refs[2]["max_finest_pair_relative_change"], 2.0e-15);
+
+        let mut failed = report;
+        failed["candidates"][1]["electrostatic_cross_validation"]["status"] = Value::from("fail");
+        assert_eq!(validation_baseline_refs(&failed).len(), 1);
+
+        failed["candidates"][1]
+            .as_object_mut()
+            .expect("candidate object")
+            .remove("electrostatic_cross_validation");
+        assert_eq!(validation_baseline_refs(&failed).len(), 1);
+
+        failed["candidates"][1]["electrostatic_cross_validation"] = json!({
+            "schema_version": "kyuubiki.composite-electrostatic-cross-validation/v1",
+            "status": "pass"
+        });
+        assert_eq!(validation_baseline_refs(&failed).len(), 1);
+    }
+
+    #[test]
+    fn analytic_baseline_advances_the_external_validation_action() {
+        let readiness = validation_readiness(
+            &json!({ "low": 0, "medium": 0, "high": 3, "unknown": 0 }),
+            &[],
+            true,
+        );
+
+        assert_eq!(
+            readiness["next_validation_actions"][0],
+            "run_external_solver_literature_or_experimental_correlation"
+        );
     }
 }

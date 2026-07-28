@@ -115,7 +115,7 @@ Execution authority and numerical qualification are intentionally separate.
 `no_mock_execution`, and `no_fallback` as true or the bundle is rejected. The
 bundle can still remain `screening_research_bundle` because real computation
 does not by itself provide external calibration, high-confidence material
-cards, mesh convergence, or qualification-grade physics evidence.
+cards, coupled-field mesh convergence, or qualification-grade physics evidence.
 
 The `validation_evidence` block is deliberately conservative. It does not claim
 experimental qualification. It records that the current retained loop is a
@@ -124,6 +124,71 @@ mirrors the violated quality gates as acceptance criteria, and keeps the
 external validation plan visible next to the results. That gives agents a
 machine-readable reason to continue with sensitivity and calibration work before
 any qualification claim.
+
+The composite thermo-electric profile also retains an independent
+layered-dielectric closed-form cross-check. It derives the expected electric
+field from displacement continuity across the three dielectric regions and
+compares that result with the FEM maximum field for every candidate. The
+`analytic_closed_form` baseline is emitted only when every candidate passes the
+`1e-9` relative-error gate. This is an independent formulation check, not an
+external-tool or experimental calibration, so it does not remove the
+`external_validation_required` blocker.
+
+The same profile executes real structured-quad electrostatic refinements at
+`1`, `2`, `4`, and `8` elements per material layer. It retains each maximum
+field, the error against the closed form, and the relative change between mesh
+levels. A `mesh_convergence` baseline is promoted only when all candidates
+contain all four solver runs and pass both the analytic-error and finest-pair
+stability gates. This closes the electrostatic subproblem convergence loop; by
+itself it does not qualify the remaining fields or their coupling.
+
+The heat subproblem follows the same protocol. Its independent baseline uses
+the downstream thermal resistance from the loaded conductor/dielectric
+interface to the fixed-temperature edge and predicts `115.125 C` for the
+retained fixture. Real `1/2/4/8` heat-quad refinements must pass both the
+closed-form and mesh-stability gates before the bundle emits heat
+`analytic_closed_form` and `mesh_convergence` baselines.
+
+The thermal-structural subproblem now also runs real two-dimensional
+`1/2/4/8` structured-quad refinement while preserving the original
+piecewise-linear temperature field and each material layer. Its pass decision
+uses maximum displacement and total strain energy; peak von Mises stress is
+retained only as a diagnostic because fixed-edge and material-interface corners
+can be singular. The retained candidates currently fail this gate: finest-pair
+changes are about `2.4-2.6%` for displacement and `27.5-27.6%` for strain
+energy, while peak stress changes by about `21.5%`. This is an intentional
+blocker, not a relaxed baseline. Boundary regularization, interface mechanics,
+local refinement, and coupled-field convergence remain required before
+structural qualification.
+
+A second diagnostic solve changes the full vertical clamp into a horizontal
+roller edge with one vertical anchor. It reduces the finest-pair displacement
+change to `1.21-1.25%` and the peak-stress change to about `13.5%`, but the
+strain-energy change remains `30.6-30.8%`. The emitted
+`kyuubiki.composite-thermal-constraint-sensitivity/v1` record therefore reports
+`mixed_restraint_sensitivity_and_persistent_energy_nonconvergence`. Its
+qualification effect is explicitly diagnostic-only and cannot override the
+primary structural quality gates.
+
+The same retained meshes also feed an area-weighted stress-recovery check.
+It tracks von Mises RMS and P95 as pass metrics while keeping the raw maximum
+and `max/P95` concentration ratio diagnostic-only. The current candidates still
+fail: finest-pair RMS changes by about `12.1%`, P95 changes by about `26.65%`,
+and the finest-mesh maximum is about `2.23` times P95. Nonconvergence therefore
+extends beyond one isolated peak element. The result adds two blocking gates
+under `gate.thermal_stress_recovery.*` and points the next iteration toward
+local refinement, higher-order recovery, or an independently correlated
+structural formulation.
+
+An interface-graded companion run clusters the same element budgets at the
+clamp, material interfaces, and free edges. It cuts finest-pair P95 drift from
+about `26.65%` to `4.19%`, but RMS drift rises from about `12.1%` to `13.7%`,
+strain-energy drift remains near `28.4%`, and raw-maximum drift rises from
+about `21.5%` to `37.5%`. The machine-readable diagnosis is therefore
+`localized_tail_resolution_improved_but_global_energy_and_peak_unstable`.
+This is useful localization evidence, but remains diagnostic-only and cannot
+override the uniform-mesh gates.
+
 Its `validation_readiness` sub-block is intentionally a scheduling signal, not a
 material score: it records `screening_only`, a bounded readiness score, blocking
 reasons such as external-validation and low-confidence material cards, and the

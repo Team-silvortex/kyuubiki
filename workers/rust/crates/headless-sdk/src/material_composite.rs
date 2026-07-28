@@ -7,10 +7,19 @@ use crate::material_composite_interfaces::{
 use crate::material_composite_models::{
     composite_research_metadata, electrostatic_model, heat_model, thermal_model,
 };
+use crate::material_composite_quality::composite_stress_recovery_quality_gates;
 use crate::{
-    HeadlessWorkflowStep, MaterialCardReference, MaterialEvidenceRef, MaterialModelAssumption,
+    CompositeElectrostaticCrossValidation, CompositeElectrostaticMeshConvergence,
+    CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
+    CompositeThermalConstraintSensitivity, CompositeThermalInterfaceGradingAssessment,
+    CompositeThermalMeshConvergence, CompositeThermalStressRecovery, HeadlessWorkflowStep,
+    MaterialCardReference, MaterialEvidenceRef, MaterialModelAssumption,
     MaterialOptimizationProfile, MaterialOptimizationTerm, MaterialQualityGate,
-    MaterialReliabilityEnvelope, MaterialResearchMetricSpec, material_evidence_ref,
+    MaterialReliabilityEnvelope, MaterialResearchMetricSpec,
+    composite_electrostatic_cross_validation, composite_electrostatic_mesh_convergence,
+    composite_heat_cross_validation, composite_heat_mesh_convergence,
+    composite_thermal_constraint_sensitivity, composite_thermal_interface_grading_assessment,
+    composite_thermal_mesh_convergence, composite_thermal_stress_recovery, material_evidence_ref,
     material_model_assumption, material_optimization_constraint, material_optimization_profile,
     material_optimization_term, material_optimization_weight, material_quality_gate,
     material_reliability_summary, profile_weight,
@@ -25,8 +34,17 @@ pub struct CompositePanelCandidateReport {
     pub rank: usize,
     pub score: f64,
     pub max_electric_field_v_m: Option<f64>,
+    pub electrostatic_cross_validation: CompositeElectrostaticCrossValidation,
+    pub electrostatic_mesh_convergence: CompositeElectrostaticMeshConvergence,
     pub max_temperature_c: Option<f64>,
+    pub heat_cross_validation: CompositeHeatCrossValidation,
+    pub heat_mesh_convergence: CompositeHeatMeshConvergence,
     pub max_thermal_stress_pa: Option<f64>,
+    pub thermal_mesh_convergence: CompositeThermalMeshConvergence,
+    pub thermal_constraint_regularized_mesh_convergence: CompositeThermalMeshConvergence,
+    pub thermal_constraint_sensitivity: CompositeThermalConstraintSensitivity,
+    pub thermal_stress_recovery: CompositeThermalStressRecovery,
+    pub thermal_interface_grading_assessment: CompositeThermalInterfaceGradingAssessment,
     pub breakdown_safety_factor: Option<f64>,
     pub interface_risk_score: Option<f64>,
     pub weakest_interface: Option<CompositePanelInterfaceAssessment>,
@@ -198,9 +216,64 @@ fn composite_candidate_report(
     let max_electric_field_v_m = read_path_f64(result, &["electrostatic", "max_electric_field"]);
     let max_temperature_c = read_path_f64(result, &["heat", "max_temperature"]);
     let max_thermal_stress_pa = read_path_f64(result, &["thermal", "max_stress"]);
+    let thermal_mesh_convergence = result
+        .get("thermal_mesh_convergence")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| composite_thermal_mesh_convergence(&[]));
+    let thermal_constraint_regularized_mesh_convergence = result
+        .get("thermal_constraint_regularized_mesh_convergence")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| crate::composite_thermal_regularized_mesh_convergence(&[]));
+    let thermal_constraint_sensitivity = result
+        .get("thermal_constraint_sensitivity")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| {
+            composite_thermal_constraint_sensitivity(
+                &thermal_mesh_convergence,
+                &thermal_constraint_regularized_mesh_convergence,
+            )
+        });
+    let thermal_stress_recovery = result
+        .get("thermal_stress_recovery")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| composite_thermal_stress_recovery(&[]));
+    let thermal_interface_grading_assessment = result
+        .get("thermal_interface_grading_assessment")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| {
+            composite_thermal_interface_grading_assessment(
+                &thermal_mesh_convergence,
+                &thermal_stress_recovery,
+                crate::composite_thermal_interface_graded_mesh_convergence(&[]),
+                crate::composite_thermal_interface_graded_stress_recovery(&[]),
+            )
+        });
     let breakdown_safety_factor = max_electric_field_v_m
         .filter(|field| *field > 0.0)
         .map(|field| candidate.dielectric_breakdown_field_v_m / field);
+    let electrostatic_cross_validation =
+        composite_electrostatic_cross_validation(candidate, max_electric_field_v_m);
+    let electrostatic_mesh_convergence = result
+        .get("electrostatic_mesh_convergence")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| composite_electrostatic_mesh_convergence(candidate, &[]));
+    let heat_conductivities = [candidate.conductor_conductivity_w_mk, 0.25, 160.0];
+    let heat_cross_validation = result
+        .get("heat_cross_validation")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| composite_heat_cross_validation(heat_conductivities, max_temperature_c));
+    let heat_mesh_convergence = result
+        .get("heat_mesh_convergence")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(|| composite_heat_mesh_convergence(heat_conductivities, &[]));
     let interfaces = assess_composite_interfaces(candidate);
     let weakest_interface = interfaces
         .iter()
@@ -231,8 +304,17 @@ fn composite_candidate_report(
         rank: 0,
         score: 0.0,
         max_electric_field_v_m,
+        electrostatic_cross_validation,
+        electrostatic_mesh_convergence,
         max_temperature_c,
+        heat_cross_validation,
+        heat_mesh_convergence,
         max_thermal_stress_pa,
+        thermal_mesh_convergence,
+        thermal_constraint_regularized_mesh_convergence,
+        thermal_constraint_sensitivity,
+        thermal_stress_recovery,
+        thermal_interface_grading_assessment,
         breakdown_safety_factor,
         interface_risk_score,
         weakest_interface,
@@ -365,13 +447,86 @@ fn composite_reliability_envelope(
             "Material regions are scalar and isotropic; anisotropy, temperature-dependent curves, and delamination propagation are not modeled yet.".to_string(),
             "Electrical heating is represented by a screening heat fixture, not a Joule-loss field projection from electrostatic energy density.".to_string(),
             "Interface risk is a screening heuristic over CTE mismatch and stiffness contrast, not an adhesive fracture mechanics model.".to_string(),
+            "The regularized restraint solve is diagnostic only; persistent strain-energy nonconvergence remains a qualification blocker.".to_string(),
             "Use this prototype for architecture validation and candidate ordering only, not qualification claims.".to_string(),
         ],
     }
 }
 
 fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<MaterialQualityGate> {
-    vec![
+    let mut gates = vec![
+        material_quality_gate(
+            "gate.electrostatic_closed_form.relative_error",
+            "Layered dielectric closed-form cross-validation",
+            "electrostatic_closed_form_relative_error",
+            "<=",
+            1.0e-9,
+            max_optional(
+                rows.iter()
+                    .filter_map(|row| row.electrostatic_cross_validation.relative_error),
+            ),
+            "FEM maximum electric field must match the independent layered-dielectric closed form.",
+        ),
+        material_quality_gate(
+            "gate.electrostatic_mesh_convergence.finest_pair",
+            "Electrostatic mesh convergence",
+            "electrostatic_mesh_finest_pair_relative_change",
+            "<=",
+            1.0e-8,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrostatic_mesh_convergence
+                    .finest_pair_relative_change
+            })),
+            "The maximum electric field must remain stable between the two finest retained meshes.",
+        ),
+        material_quality_gate(
+            "gate.electrostatic_mesh_convergence.analytic_error",
+            "Electrostatic refined-mesh analytic error",
+            "electrostatic_mesh_max_analytic_relative_error",
+            "<=",
+            1.0e-8,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrostatic_mesh_convergence
+                    .max_analytic_relative_error
+            })),
+            "Every retained mesh level must remain consistent with the layered-dielectric closed form.",
+        ),
+        material_quality_gate(
+            "gate.heat_closed_form.relative_error",
+            "Layered thermal-resistance cross-validation",
+            "heat_closed_form_relative_error",
+            "<=",
+            1.0e-9,
+            max_optional(
+                rows.iter()
+                    .filter_map(|row| row.heat_cross_validation.relative_error),
+            ),
+            "FEM maximum temperature must match the independent layered thermal-resistance solution.",
+        ),
+        material_quality_gate(
+            "gate.heat_mesh_convergence.finest_pair",
+            "Heat mesh convergence",
+            "heat_mesh_finest_pair_relative_change",
+            "<=",
+            1.0e-8,
+            max_optional(
+                rows.iter()
+                    .filter_map(|row| row.heat_mesh_convergence.finest_pair_relative_change),
+            ),
+            "The maximum temperature must remain stable between the two finest retained meshes.",
+        ),
+        material_quality_gate(
+            "gate.heat_mesh_convergence.analytic_error",
+            "Heat refined-mesh analytic error",
+            "heat_mesh_max_analytic_relative_error",
+            "<=",
+            1.0e-8,
+            max_optional(
+                rows.iter()
+                    .filter_map(|row| row.heat_mesh_convergence.max_analytic_relative_error),
+            ),
+            "Every retained heat mesh must remain consistent with the layered thermal-resistance solution.",
+        ),
         material_quality_gate(
             "gate.breakdown_margin.prototype",
             "Breakdown safety prototype gate",
@@ -400,6 +555,30 @@ fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<Materi
             "Thermal stress should stay within a conservative prototype warning bound.",
         ),
         material_quality_gate(
+            "gate.thermal_mesh_convergence.displacement",
+            "Thermal-structural displacement mesh convergence",
+            "thermal_mesh_finest_pair_displacement_relative_change",
+            "<=",
+            2.0e-2,
+            max_optional(rows.iter().filter_map(|row| {
+                row.thermal_mesh_convergence
+                    .finest_pair_displacement_relative_change
+            })),
+            "Maximum displacement should stabilize between the two finest two-dimensional meshes.",
+        ),
+        material_quality_gate(
+            "gate.thermal_mesh_convergence.strain_energy",
+            "Thermal-structural energy mesh convergence",
+            "thermal_mesh_finest_pair_strain_energy_relative_change",
+            "<=",
+            2.0e-2,
+            max_optional(rows.iter().filter_map(|row| {
+                row.thermal_mesh_convergence
+                    .finest_pair_strain_energy_relative_change
+            })),
+            "Total strain energy should stabilize between the two finest two-dimensional meshes.",
+        ),
+        material_quality_gate(
             "gate.interface_risk.prototype",
             "Interface compatibility prototype gate",
             "interface_risk_score",
@@ -421,11 +600,69 @@ fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<Materi
             ),
             "Every candidate should expose electric, heat, thermal, and margin metrics.",
         ),
-    ]
+    ];
+    gates.extend(composite_stress_recovery_quality_gates(rows));
+    gates
 }
 
 fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
     vec![
+        material_evidence_ref(
+            "evidence.layered_dielectric_closed_form",
+            "Layered dielectric series closed form",
+            "analytic_cross_check",
+            "kyuubiki.composite-electrostatic-cross-validation/v1",
+            "retained",
+            "Independent one-dimensional displacement-continuity solution for the three-region electrostatic fixture.",
+        ),
+        material_evidence_ref(
+            "evidence.electrostatic_mesh_convergence",
+            "Electrostatic structured mesh convergence",
+            "mesh_convergence",
+            "kyuubiki.composite-electrostatic-mesh-convergence/v1",
+            "retained",
+            "Real Rust solver runs at one, two, four, and eight quad elements per material layer.",
+        ),
+        material_evidence_ref(
+            "evidence.layered_thermal_resistance_closed_form",
+            "Layered thermal-resistance closed form",
+            "analytic_cross_check",
+            "kyuubiki.composite-heat-cross-validation/v1",
+            "retained",
+            "Independent downstream thermal-resistance solution for interface heating and fixed right-edge temperature.",
+        ),
+        material_evidence_ref(
+            "evidence.heat_mesh_convergence",
+            "Heat structured mesh convergence",
+            "mesh_convergence",
+            "kyuubiki.composite-heat-mesh-convergence/v1",
+            "retained",
+            "Real Rust solver runs at one, two, four, and eight heat quads per material layer.",
+        ),
+        material_evidence_ref(
+            "evidence.thermal_structural_mesh_convergence",
+            "Thermal-structural two-dimensional mesh convergence",
+            "mesh_convergence",
+            "kyuubiki.composite-thermal-mesh-convergence/v1",
+            "active_gate",
+            "Real Rust solver runs at one, two, four, and eight subdivisions in both panel directions; displacement and strain energy control the gate.",
+        ),
+        material_evidence_ref(
+            "evidence.thermal_constraint_sensitivity",
+            "Thermal-structural restraint sensitivity",
+            "boundary_condition_sensitivity",
+            "kyuubiki.composite-thermal-constraint-sensitivity/v1",
+            "diagnostic",
+            "Compares the full edge clamp with a roller edge and one vertical anchor without overriding the primary quality gates.",
+        ),
+        material_evidence_ref(
+            "evidence.thermal_stress_recovery",
+            "Area-weighted thermal-stress recovery",
+            "stress_recovery",
+            "kyuubiki.composite-thermal-stress-recovery/v1",
+            "active_gate",
+            "Tracks area-weighted von Mises RMS and P95 convergence while retaining the raw maximum as a singularity diagnostic.",
+        ),
         material_evidence_ref(
             "evidence.prototype_material_cards",
             "Prototype material cards",

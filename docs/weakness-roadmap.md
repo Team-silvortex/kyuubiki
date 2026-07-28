@@ -58,6 +58,37 @@ Current moxi hardening focus:
 
 Current progress:
 
+- the composite thermo-electric material loop now cross-validates every
+  electrostatic candidate against an independent layered-dielectric closed
+  form, retains the maximum relative error as a quality gate, and promotes the
+  analytic baseline into the research bundle only when all candidates pass;
+  the same loop now retains real `1/2/4/8` electrostatic mesh refinement for
+  every candidate
+- the composite heat subproblem now retains an independent layered
+  thermal-resistance check plus real `1/2/4/8` heat-quad refinement for main
+  and materialized candidates
+- the composite thermal-structural subproblem now runs real two-dimensional
+  `1/2/4/8` quad refinement for main and materialized candidates, preserving
+  the source temperature interpolation and material parameters; the current
+  fixture correctly fails displacement/strain-energy convergence and keeps
+  peak stress diagnostic-only, exposing fixed-edge/interface localization
+  instead of claiming mesh independence
+- structural follow-up must regularize the clamp, add interface mechanics and
+  local refinement/stress recovery, then correlate against an independent
+  solver; coupled-field convergence evidence also remains open
+- a retained roller-edge/vertical-anchor diagnostic now proves that relaxing
+  the clamp roughly halves displacement drift and reduces peak-stress drift,
+  while strain-energy drift remains above `30%`; the machine-readable
+  diagnosis is restraint-sensitive but persistently energy-nonconvergent and
+  cannot override the primary gates
+- area-weighted von Mises RMS and P95 recovery now rejects the simpler
+  explanation that only one peak element is unstable: finest-pair drift remains
+  about `12.1%` and `26.65%`, with `max/P95` near `2.23`; local refinement,
+  higher-order recovery, and independent structural correlation remain open
+- cosine grading at the clamp, layer interfaces, and free edges now reduces
+  P95 drift to about `4.19%`, while RMS and strain-energy drift remain about
+  `13.7%` and `28.4%` and raw-peak drift worsens to about `37.5%`; this narrows
+  the localization diagnosis without promoting structural qualification
 - `solve.solid_tetra_3d` now retains parameter-perturbation and rigid-rotation
   objectivity checks in its active qualification profile; multi-element mesh
   convergence remains an explicit next-depth boundary rather than an implied
