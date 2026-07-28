@@ -201,6 +201,32 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                     && row["thermal_mesh_convergence"]["samples"]
                         .as_array()
                         .is_some_and(|samples| samples.len() == 4)
+                    && row["thermal_mesh_convergence"]["regime_assessment"]["diagnosis"].as_str()
+                        == Some(
+                            "displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging"
+                        )
+                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][0]
+                        ["fine_grid_gci"]
+                        .is_null()
+                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][1]
+                        ["fine_grid_gci"]
+                        .as_f64()
+                        .is_some_and(|value| value > 0.25)
+                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][2]["regime"]
+                        .as_str()
+                        == Some("monotonic_diverging")
+                    && row["thermal_mesh_convergence"]["algebraic_validation"]["status"].as_str()
+                        == Some("pass")
+                    && row["thermal_mesh_convergence"]["algebraic_validation"]["series"]
+                        .as_array()
+                        .is_some_and(|series| {
+                            series.len() == 3
+                                && series.iter().all(|entry| {
+                                    entry["samples"]
+                                        .as_array()
+                                        .is_some_and(|samples| samples.len() == 4)
+                                })
+                        })
                     && row["thermal_constraint_regularized_mesh_convergence"]["status"].as_str()
                         == Some("fail")
                     && row["thermal_constraint_sensitivity"]["diagnosis"].as_str()
@@ -221,6 +247,17 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
             .is_some_and(|gates| gates.iter().any(|gate| {
                 gate["id"].as_str() == Some("gate.electrostatic_closed_form.relative_error")
                     && gate["status"].as_str() == Some("pass")
+            }))
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_solver.relative_residual")
+                    && gate["status"].as_str() == Some("pass")
+                    && gate["actual_value"]
+                        .as_f64()
+                        .is_some_and(|value| value <= 1.0e-10)
             }))
     );
     assert!(
@@ -250,6 +287,22 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                 })
                 .count()
                 == 2)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_mesh_gci.displacement")
+                    && gate["status"].as_str() == Some("unknown")
+            }))
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_mesh_gci.strain_energy")
+                    && gate["status"].as_str() == Some("violate")
+            }))
     );
     assert!(
         exploration["report"]["reliability"]["quality_gates"]

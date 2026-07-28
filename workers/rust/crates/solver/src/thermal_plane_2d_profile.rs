@@ -15,6 +15,7 @@ pub struct ThermalPlaneTriangleProfile {
     pub solver_iterations: usize,
     pub solver_matrix_non_zero_count: usize,
     pub solver_residual_norm: f64,
+    pub solver_rhs_norm: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub struct ThermalPlaneQuadProfile {
     pub solver_iterations: usize,
     pub solver_matrix_non_zero_count: usize,
     pub solver_residual_norm: f64,
+    pub solver_rhs_norm: f64,
 }
 
 pub(crate) fn push_thermal_plane_stage(

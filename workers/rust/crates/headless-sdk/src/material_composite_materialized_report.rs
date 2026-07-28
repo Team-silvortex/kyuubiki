@@ -299,6 +299,34 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             ),
         ),
         gate(
+            "gate.thermal_mesh_gci.displacement",
+            "thermal_mesh_displacement_fine_grid_gci",
+            "<=",
+            2.0e-2,
+            max_regime_metric_value(&rows, "max_displacement_m"),
+        ),
+        gate(
+            "gate.thermal_mesh_gci.strain_energy",
+            "thermal_mesh_strain_energy_fine_grid_gci",
+            "<=",
+            2.0e-2,
+            max_regime_metric_value(&rows, "total_strain_energy_j"),
+        ),
+        gate(
+            "gate.thermal_solver.relative_residual",
+            "thermal_solver_max_relative_residual",
+            "<=",
+            1.0e-10,
+            max_nested_value(
+                &rows,
+                &[
+                    "thermal_mesh_convergence",
+                    "algebraic_validation",
+                    "max_relative_residual",
+                ],
+            ),
+        ),
+        gate(
             "gate.thermal_stress_recovery.rms",
             "thermal_stress_recovery_finest_pair_rms_relative_change",
             "<=",
@@ -340,7 +368,14 @@ fn gate(id: &str, metric: &str, op: &str, threshold: f64, observed: Option<f64>)
             value <= threshold
         }
     });
-    json!({ "id": id, "metric": metric, "operator": op, "threshold": threshold, "observed": observed, "status": if pass { "pass" } else { "violate" } })
+    let status = if observed.is_none() {
+        "unknown"
+    } else if pass {
+        "pass"
+    } else {
+        "violate"
+    };
+    json!({ "id": id, "metric": metric, "operator": op, "threshold": threshold, "observed": observed, "status": status })
 }
 
 fn values(rows: &[Value], key: &str) -> Vec<f64> {
@@ -358,6 +393,18 @@ fn max_value(rows: &[Value], key: &str) -> Option<f64> {
 fn max_nested_value(rows: &[Value], path: &[&str]) -> Option<f64> {
     rows.iter()
         .filter_map(|row| read_path_f64(row, path))
+        .reduce(f64::max)
+}
+
+fn max_regime_metric_value(rows: &[Value], metric: &str) -> Option<f64> {
+    rows.iter()
+        .filter_map(|row| {
+            row["thermal_mesh_convergence"]["regime_assessment"]["metrics"]
+                .as_array()?
+                .iter()
+                .find(|entry| entry["metric"].as_str() == Some(metric))?["fine_grid_gci"]
+                .as_f64()
+        })
         .reduce(f64::max)
 }
 

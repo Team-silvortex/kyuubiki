@@ -56,6 +56,27 @@ fn sparse_spd_solver_rejects_non_finite_rhs_before_solving() {
 }
 
 #[test]
+fn dense_spd_profile_reports_recomputed_residual() {
+    let mut matrix = SparseMatrix::new(2);
+    for (row, column, value) in [(0, 0, 0.1), (0, 1, 0.03), (1, 0, 0.03), (1, 1, 0.2)] {
+        add_at(&mut matrix, row, column, value);
+    }
+    let rhs = [0.7, 0.11];
+    let profile = solve_spd_system_profile_with_options(&matrix, &rhs, SpdSolveOptions::default())
+        .expect("dense SPD system should solve");
+    let residual = [
+        rhs[0] - 0.1 * profile.solution[0] - 0.03 * profile.solution[1],
+        rhs[1] - 0.03 * profile.solution[0] - 0.2 * profile.solution[1],
+    ]
+    .iter()
+    .map(|value| value * value)
+    .sum::<f64>()
+    .sqrt();
+
+    assert!((profile.residual_norm - residual).abs() <= f64::EPSILON);
+}
+
+#[test]
 fn sparse_spd_profile_exposes_iterative_hotspots() {
     let size = 1025;
     let mut matrix = SparseMatrix::new(size);

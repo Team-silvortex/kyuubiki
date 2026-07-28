@@ -12,6 +12,7 @@ pub(crate) struct ThermalPlaneSolvedDisplacements {
     pub(crate) solver_iterations: usize,
     pub(crate) solver_matrix_non_zero_count: usize,
     pub(crate) solver_residual_norm: f64,
+    pub(crate) solver_rhs_norm: f64,
 }
 
 pub(crate) fn solve_thermal_plane_displacements(
@@ -50,6 +51,11 @@ pub(crate) fn solve_thermal_plane_displacements(
     let solver_iterations = solve_profile.iterations;
     let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
     let solver_residual_norm = solve_profile.residual_norm;
+    let solver_rhs_norm = reduced_force
+        .iter()
+        .map(|value| value * value)
+        .sum::<f64>()
+        .sqrt();
     let reduced_displacements = solve_profile.solution;
     push_thermal_plane_stage(
         stages,
@@ -67,5 +73,6 @@ pub(crate) fn solve_thermal_plane_displacements(
         solver_iterations,
         solver_matrix_non_zero_count,
         solver_residual_norm,
+        solver_rhs_norm,
     })
 }

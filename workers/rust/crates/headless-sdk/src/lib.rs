@@ -17,7 +17,10 @@ mod material_candidate_review;
 mod material_candidate_review_batches;
 mod material_card_refs;
 mod material_composite;
+mod material_composite_algebraic_validation;
 mod material_composite_candidates;
+mod material_composite_convergence_regime;
+mod material_composite_evidence;
 mod material_composite_heat_validation;
 mod material_composite_interfaces;
 mod material_composite_materialization;
@@ -110,7 +113,18 @@ pub use material_composite::{
     CompositePanelCandidateReport, CompositePanelReport, build_composite_panel_report,
     build_composite_panel_steps, composite_panel_metric_specs,
 };
+pub use material_composite_algebraic_validation::{
+    COMPOSITE_THERMAL_ALGEBRAIC_VALIDATION_SCHEMA_VERSION, CompositeThermalAlgebraicSample,
+    CompositeThermalAlgebraicSeries, CompositeThermalAlgebraicValidation,
+    composite_thermal_algebraic_series, composite_thermal_algebraic_validation,
+    missing_thermal_algebraic_validation,
+};
 pub use material_composite_candidates::{CompositePanelCandidate, composite_panel_candidates};
+pub use material_composite_convergence_regime::{
+    COMPOSITE_THERMAL_CONVERGENCE_REGIME_SCHEMA_VERSION, CompositeConvergenceMetricAssessment,
+    CompositeThermalConvergenceRegimeAssessment, composite_thermal_convergence_regime,
+    missing_thermal_convergence_regime,
+};
 pub use material_composite_heat_validation::{
     COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION, COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION,
     COMPOSITE_HEAT_REFINEMENT_LEVELS, CompositeHeatCrossValidation, CompositeHeatMeshConvergence,

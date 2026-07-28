@@ -69,6 +69,12 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         Some("fail")
     );
     assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_mesh_convergence"]["regime_assessment"]
+            ["diagnosis"]
+            .as_str(),
+        Some("displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging")
+    );
+    assert_eq!(
         rerun["report"]["candidates"][0]["thermal_constraint_sensitivity"]["diagnosis"].as_str(),
         Some("mixed_restraint_sensitivity_and_persistent_energy_nonconvergence")
     );
@@ -108,6 +114,30 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
                 })
                 .count()
                 == 3)
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_mesh_gci.displacement")
+                    && gate["status"].as_str() == Some("unknown")
+            }))
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_solver.relative_residual")
+                    && gate["status"].as_str() == Some("pass")
+            }))
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_mesh_gci.strain_energy")
+                    && gate["status"].as_str() == Some("violate")
+            }))
     );
     assert!(rerun["next_round"]["decision"].is_string());
     let _ = fs::remove_file(path);

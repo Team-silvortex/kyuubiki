@@ -95,6 +95,15 @@ fn composite_report_exposes_regions_and_reliability() {
     assert!(report.reliability.quality_gates.iter().any(|gate| {
         gate.id == "gate.thermal_mesh_convergence.strain_energy" && gate.status == "unknown"
     }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.thermal_mesh_gci.displacement" && gate.status == "unknown"
+    }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.thermal_mesh_gci.strain_energy" && gate.status == "unknown"
+    }));
+    assert!(report.reliability.quality_gates.iter().any(|gate| {
+        gate.id == "gate.thermal_solver.relative_residual" && gate.status == "unknown"
+    }));
     assert!(
         report
             .candidates

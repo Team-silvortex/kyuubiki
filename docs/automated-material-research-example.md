@@ -189,6 +189,23 @@ about `21.5%` to `37.5%`. The machine-readable diagnosis is therefore
 This is useful localization evidence, but remains diagnostic-only and cannot
 override the uniform-mesh gates.
 
+The four-level histories now also receive an observed-order and Grid
+Convergence Index assessment. Displacement remains monotonic but
+pre-asymptotic: its coarse-triplet order is about `0.54-0.60`, while the
+fine-triplet order rises to `1.44-1.54`, so no Richardson value or GCI is
+claimed. Strain energy is asymptotically consistent at orders near
+`1.31-1.39`, but its fine-grid GCI is still `29.4-29.7%` and therefore violates
+the `2%` gate. Peak stress has negative observed order and is classified as
+monotonically divergent. This distinction prevents a decreasing response from
+being mistaken for mesh independence.
+
+Every thermal-structural solve also retains an original-system algebraic
+residual profile. Across three candidates, three mesh families, and four
+refinement levels, all `36` solves pass the `1e-10` relative-residual gate; the
+largest observed value is about `5.13e-14`. This separates a converged linear
+solve from a converged physical discretization: algebraic convergence passes,
+while the displacement, energy, and stress mesh gates remain blocked.
+
 Its `validation_readiness` sub-block is intentionally a scheduling signal, not a
 material score: it records `screening_only`, a bounded readiness score, blocking
 reasons such as external-validation and low-confidence material cards, and the

@@ -16,11 +16,13 @@ mod materialization_tests;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    HeadlessWorkflowStep, build_material_exploration_next_round_execution_plan,
-    build_material_exploration_run, build_material_exploration_run_for_iteration,
-    build_material_study_execution_plan, composite_electrostatic_mesh_convergence_for_dielectric,
+    CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
+    build_material_exploration_next_round_execution_plan, build_material_exploration_run,
+    build_material_exploration_run_for_iteration, build_material_study_execution_plan,
+    composite_electrostatic_mesh_convergence_for_dielectric,
     composite_electrostatic_refinement_requests_for_dielectric, composite_heat_cross_validation,
     composite_heat_mesh_convergence, composite_heat_refinement_requests,
+    composite_thermal_algebraic_series, composite_thermal_algebraic_validation,
     composite_thermal_constraint_sensitivity, composite_thermal_interface_graded_mesh_convergence,
     composite_thermal_interface_graded_refinement_requests,
     composite_thermal_interface_graded_stress_recovery,
@@ -35,6 +37,7 @@ use kyuubiki_protocol::{
     SolveThermalPlaneQuad2dRequest,
 };
 use kyuubiki_solver::{
+    SpdSolveOptions, ThermalPlaneQuadProfile, profile_thermal_plane_quad_2d_with_options,
     solve_electrostatic_plane_quad_2d, solve_heat_plane_quad_2d, solve_plane_quad_2d,
     solve_thermal_plane_quad_2d,
 };
@@ -463,8 +466,11 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     }
     let heat_mesh_convergence =
         composite_heat_mesh_convergence(heat_conductivities, &heat_mesh_temperatures);
-    let thermal = solve_thermal_plane_quad_2d(&thermal_request)
-        .map_err(|error| format!("composite thermal solve failed: {error}"))?;
+    let thermal_profile =
+        profile_thermal_plane_quad_2d_with_options(&thermal_request, SpdSolveOptions::default())
+            .map_err(|error| format!("composite thermal solve failed: {error}"))?;
+    let mut thermal_algebraic_samples = vec![thermal_algebraic_sample(1, &thermal_profile)];
+    let thermal = thermal_profile.result;
     let mut thermal_stress_statistics =
         vec![(1, composite_thermal_recovered_stress_statistics(&thermal)?)];
     let mut thermal_mesh_samples = vec![(
@@ -477,9 +483,13 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         .into_iter()
         .filter(|(level, _)| *level > 1)
     {
-        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
-            format!("composite thermal mesh level {level} solve failed: {error}")
-        })?;
+        let profile =
+            profile_thermal_plane_quad_2d_with_options(&request, SpdSolveOptions::default())
+                .map_err(|error| {
+                    format!("composite thermal mesh level {level} solve failed: {error}")
+                })?;
+        thermal_algebraic_samples.push(thermal_algebraic_sample(level, &profile));
+        let result = profile.result;
         thermal_mesh_samples.push((
             level,
             result.max_displacement,
@@ -491,13 +501,20 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
             composite_thermal_recovered_stress_statistics(&result)?,
         ));
     }
-    let thermal_mesh_convergence = composite_thermal_mesh_convergence(&thermal_mesh_samples);
+    let mut thermal_mesh_convergence = composite_thermal_mesh_convergence(&thermal_mesh_samples);
     let thermal_stress_recovery = composite_thermal_stress_recovery(&thermal_stress_statistics);
     let mut regularized_mesh_samples = Vec::new();
+    let mut regularized_algebraic_samples = Vec::new();
     for (level, request) in composite_thermal_regularized_refinement_requests(&thermal_request)? {
-        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
-            format!("composite regularized thermal mesh level {level} solve failed: {error}")
-        })?;
+        let profile =
+            profile_thermal_plane_quad_2d_with_options(&request, SpdSolveOptions::default())
+                .map_err(|error| {
+                    format!(
+                        "composite regularized thermal mesh level {level} solve failed: {error}"
+                    )
+                })?;
+        regularized_algebraic_samples.push(thermal_algebraic_sample(level, &profile));
+        let result = profile.result;
         regularized_mesh_samples.push((
             level,
             result.max_displacement,
@@ -513,14 +530,19 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     );
     let mut graded_mesh_samples = vec![thermal_mesh_samples[0]];
     let mut graded_stress_statistics = vec![thermal_stress_statistics[0].clone()];
+    let mut graded_algebraic_samples = vec![thermal_algebraic_samples[0].clone()];
     for (level, request) in
         composite_thermal_interface_graded_refinement_requests(&thermal_request)?
             .into_iter()
             .filter(|(level, _)| *level > 1)
     {
-        let result = solve_thermal_plane_quad_2d(&request).map_err(|error| {
-            format!("composite interface-graded thermal mesh level {level} failed: {error}")
-        })?;
+        let profile =
+            profile_thermal_plane_quad_2d_with_options(&request, SpdSolveOptions::default())
+                .map_err(|error| {
+                    format!("composite interface-graded thermal mesh level {level} failed: {error}")
+                })?;
+        graded_algebraic_samples.push(thermal_algebraic_sample(level, &profile));
+        let result = profile.result;
         graded_mesh_samples.push((
             level,
             result.max_displacement,
@@ -542,6 +564,18 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         thermal_interface_graded_mesh_convergence,
         thermal_interface_graded_stress_recovery,
     );
+    let thermal_algebraic_validation = composite_thermal_algebraic_validation(vec![
+        composite_thermal_algebraic_series("uniform_full_edge_clamp", thermal_algebraic_samples),
+        composite_thermal_algebraic_series(
+            "uniform_regularized_restraint",
+            regularized_algebraic_samples,
+        ),
+        composite_thermal_algebraic_series(
+            "interface_graded_full_edge_clamp",
+            graded_algebraic_samples,
+        ),
+    ]);
+    thermal_mesh_convergence.algebraic_validation = thermal_algebraic_validation;
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.composite-thermo-electric-panel-result/v1",
         "research": step.payload.get("research").cloned().unwrap_or(Value::Null),
@@ -557,6 +591,21 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         "thermal_constraint_sensitivity": thermal_constraint_sensitivity,
         "thermal_interface_grading_assessment": thermal_interface_grading_assessment,
     }))
+}
+
+fn thermal_algebraic_sample(
+    level: usize,
+    profile: &ThermalPlaneQuadProfile,
+) -> CompositeThermalAlgebraicSample {
+    CompositeThermalAlgebraicSample::new(
+        level,
+        profile.result.nodes.len(),
+        profile.result.elements.len(),
+        profile.solver_iterations,
+        profile.solver_matrix_non_zero_count,
+        profile.solver_residual_norm,
+        profile.solver_rhs_norm,
+    )
 }
 
 fn composite_dielectric_relative_permittivity(

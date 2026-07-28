@@ -521,11 +521,12 @@ pub(crate) fn solve_spd_system_profile_with_options(
     }
     if size <= 1024 {
         return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| {
+            let residual_norm = sparse_residual_norm(matrix, rhs, &solution);
             SpdSolveProfile {
                 solution,
                 iterations: 0,
                 matrix_non_zero_count: matrix.non_zero_count(),
-                residual_norm: 0.0,
+                residual_norm,
                 stages: Vec::new(),
             }
         });
@@ -561,6 +562,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
         }
     }
     .map(|mut profile| {
+        profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
         profile
             .stages
             .push(crate::linear_solver_profile::SpdSolveStage {
@@ -569,6 +571,22 @@ pub(crate) fn solve_spd_system_profile_with_options(
             });
         scaling::unscale_profile(profile, &scaling)
     })
+}
+
+fn sparse_residual_norm(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> f64 {
+    matrix
+        .rows
+        .iter()
+        .zip(rhs)
+        .map(|(row, expected)| {
+            let actual = row
+                .iter()
+                .map(|(column, value)| value * solution[*column])
+                .sum::<f64>();
+            (expected - actual).powi(2)
+        })
+        .sum::<f64>()
+        .sqrt()
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {

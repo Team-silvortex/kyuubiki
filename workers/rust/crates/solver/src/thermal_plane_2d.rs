@@ -140,6 +140,7 @@ fn solve_thermal_plane_triangle_2d_internal(
         solver_iterations: solved.solver_iterations,
         solver_matrix_non_zero_count: solved.solver_matrix_non_zero_count,
         solver_residual_norm: solved.solver_residual_norm,
+        solver_rhs_norm: solved.solver_rhs_norm,
     })
 }
 
@@ -258,6 +259,7 @@ fn solve_thermal_plane_quad_2d_internal(
         solver_iterations: solved.solver_iterations,
         solver_matrix_non_zero_count: solved.solver_matrix_non_zero_count,
         solver_residual_norm: solved.solver_residual_norm,
+        solver_rhs_norm: solved.solver_rhs_norm,
     })
 }
 

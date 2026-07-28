@@ -3,6 +3,12 @@ use kyuubiki_protocol::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    CompositeThermalAlgebraicValidation, CompositeThermalConvergenceRegimeAssessment,
+    composite_thermal_convergence_regime, missing_thermal_algebraic_validation,
+    missing_thermal_convergence_regime,
+};
+
 pub const COMPOSITE_THERMAL_MESH_CONVERGENCE_SCHEMA_VERSION: &str =
     "kyuubiki.composite-thermal-mesh-convergence/v1";
 pub const COMPOSITE_THERMAL_CONSTRAINT_SENSITIVITY_SCHEMA_VERSION: &str =
@@ -37,6 +43,10 @@ pub struct CompositeThermalMeshConvergence {
     pub convergence_tolerance: f64,
     pub pass_metrics: Vec<String>,
     pub diagnostic_metrics: Vec<String>,
+    #[serde(default = "missing_thermal_convergence_regime")]
+    pub regime_assessment: CompositeThermalConvergenceRegimeAssessment,
+    #[serde(default = "missing_thermal_algebraic_validation")]
+    pub algebraic_validation: CompositeThermalAlgebraicValidation,
     pub status: String,
 }
 
@@ -243,6 +253,8 @@ fn build_mesh_convergence(
             "total_strain_energy_j".to_string(),
         ],
         diagnostic_metrics: vec!["max_von_mises_stress_pa".to_string()],
+        regime_assessment: composite_thermal_convergence_regime(samples_by_level),
+        algebraic_validation: missing_thermal_algebraic_validation(),
         status: status.to_string(),
     }
 }
@@ -515,7 +527,9 @@ mod tests {
 
         assert_eq!(passed.status, "pass");
         assert_eq!(passed.diagnostic_metrics, ["max_von_mises_stress_pa"]);
+        assert_eq!(passed.regime_assessment.metrics.len(), 3);
         assert_eq!(missing.status, "missing");
+        assert_eq!(missing.regime_assessment.status, "missing");
     }
 
     #[test]

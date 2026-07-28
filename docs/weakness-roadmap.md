@@ -89,6 +89,16 @@ Current progress:
   P95 drift to about `4.19%`, while RMS and strain-energy drift remain about
   `13.7%` and `28.4%` and raw-peak drift worsens to about `37.5%`; this narrows
   the localization diagnosis without promoting structural qualification
+- four-level observed-order analysis now refuses displacement extrapolation
+  because its coarse and fine orders are inconsistent, reports a
+  `29.4-29.7%` fine-grid GCI for asymptotically converging strain energy, and
+  classifies peak stress as monotonically divergent; independent correlation
+  and a better structural formulation remain the qualification blockers
+- the SPD profile path now recomputes residuals against the original matrix
+  instead of reporting synthetic zero for dense solves; all `36` retained
+  composite thermal solves pass at or below `5.13e-14` relative residual, so
+  the remaining failure is isolated to discretization or modeling rather than
+  algebraic nonconvergence
 - `solve.solid_tetra_3d` now retains parameter-perturbation and rigid-rotation
   objectivity checks in its active qualification profile; multi-element mesh
   convergence remains an explicit next-depth boundary rather than an implied
