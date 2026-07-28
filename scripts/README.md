@@ -232,9 +232,10 @@ This directory contains host-native operational entry points.
   with headless SDK and remote scheduler expectations before solver dispatch.
   Make now uses the native runner; the retained `.mjs` script is only a parity
   reference.
-- `build-material-research-bundle.mjs`, `kyuubiki-script-runner check-material-research-bundle`,
-  `build-material-research-bundle-index.mjs`, and
-  `check-material-research-bundle-contract.mjs`
+- `kyuubiki-script-runner build-material-research-bundle`,
+  `kyuubiki-script-runner check-material-research-bundle`,
+  `kyuubiki-script-runner build-material-research-bundle-index`, and
+  `kyuubiki-script-runner check-material-research-bundle-contract`
   Build and verify the first retained material research bundle. The bundle
   captures initial exploration, next-round execution planning, a rerun,
   chained rounds, artifact checksums, and repo-relative reproduction commands
@@ -243,7 +244,9 @@ This directory contains host-native operational entry points.
   runnable step count, and chain stop reason. It also verifies the retained
   `research_evidence` index: ranked candidates, optimization metrics, violated
   quality gates, focus candidates, plan step count, chain trace count, and final
-  chain winner. Override `STUDY=` through Make to build the heat-spreader or
+  chain winner. The native builder also records execution authority for every
+  retained solver round; the checker rejects missing, mock, or fallback
+  authority. Override `STUDY=` through Make to build the heat-spreader or
   composite thermo-electric panel retained profile. Runtime checker negative
   fixtures live in
   `workers/rust/crates/script-runner/src/material_research_bundle_self_test.rs`.

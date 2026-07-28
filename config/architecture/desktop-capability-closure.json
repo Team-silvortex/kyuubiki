@@ -1,0 +1,226 @@
+{
+  "schema_version": "kyuubiki.desktop-capability-closure/v1",
+  "purpose": "Required desktop capabilities must close UI entry, route, native operation, observable outcome, and automation parity where declared.",
+  "capabilities": [
+    {
+      "id": "hub.project.create",
+      "app": "hub-gui",
+      "ui_action": "project-create",
+      "route_file": "apps/hub-gui/ui/hub-project-actions.js",
+      "route_tokens": ["case \"project-create\"", "project create", "setProjectBundlePath"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "project_bundle_create",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["create_project_bundle"],
+      "automation_action": "hub/projectCreate"
+    },
+    {
+      "id": "hub.project.inspect",
+      "app": "hub-gui",
+      "ui_action": "project-inspect",
+      "route_file": "apps/hub-gui/ui/hub-project-actions.js",
+      "route_tokens": ["case \"project-inspect\"", "project_bundle_inspect", "setProjectBundleOutput"],
+      "native_command": "project_bundle_inspect",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["run_project_cli(\"inspect\""],
+      "automation_action": "hub/projectInspect"
+    },
+    {
+      "id": "hub.project.validate",
+      "app": "hub-gui",
+      "ui_action": "project-validate",
+      "route_file": "apps/hub-gui/ui/hub-project-actions.js",
+      "route_tokens": ["case \"project-validate\"", "project_bundle_validate", "setProjectBundleOutput"],
+      "native_command": "project_bundle_validate",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["run_project_cli(\"validate\""],
+      "automation_action": "hub/projectValidate"
+    },
+    {
+      "id": "hub.project.open-workbench",
+      "app": "hub-gui",
+      "ui_action": "open-workbench",
+      "route_file": "apps/hub-gui/ui/hub-project-actions.js",
+      "route_tokens": ["case \"open-workbench\"", "launch_workbench_gui", "setOperationOutput"],
+      "native_command": "launch_workbench_gui",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["launch_desktop_app_with_fallback", "Kyuubiki Workbench"],
+      "automation_action": "hub/openWorkbench"
+    },
+    {
+      "id": "hub.runtime.start-local",
+      "app": "hub-gui",
+      "ui_action": "start-local",
+      "route_file": "apps/hub-gui/ui/hub-runtime-actions.js",
+      "route_tokens": ["case \"start-local\"", "service_start", "refreshRuntimeStatus"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "service_start",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["desktop_service_start"],
+      "automation_action": "hub/startLocal"
+    },
+    {
+      "id": "hub.environment.validate",
+      "app": "hub-gui",
+      "ui_action": "validate-env",
+      "route_file": "apps/hub-gui/ui/hub-runtime-actions.js",
+      "route_tokens": ["case \"validate-env\"", "validate_env", "setOperationOutput"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "validate_env",
+      "native_file": "apps/hub-gui/src-tauri/src/hub_commands.rs",
+      "native_tokens": ["validate_env_file"],
+      "automation_action": "hub/validateEnv"
+    },
+    {
+      "id": "installer.workspace.bootstrap",
+      "app": "installer-gui",
+      "ui_action": "bootstrap",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["bootstrap: () =>", "invokeGuardedMutation(\"bootstrap\")", "refreshDoctor"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "bootstrap",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_prepare_layout()?", "installer_init_env(false)?", "validate_env_file()"]
+    },
+    {
+      "id": "installer.environment.init",
+      "app": "installer-gui",
+      "ui_action": "init-env",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"init-env\":", "invokeGuardedMutation(\"init_env\"", "hydrateEnv(await invoke(\"read_env_file\"))"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "init_env",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_init_env"]
+    },
+    {
+      "id": "installer.integrity.inspect",
+      "app": "installer-gui",
+      "ui_action": "refresh-integrity",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"refresh-integrity\":", "refreshIntegrityReport"],
+      "native_command": "installation_integrity_report",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installation_integrity_report"]
+    },
+    {
+      "id": "installer.integrity.repair",
+      "app": "installer-gui",
+      "ui_action": "repair-installation",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"repair-installation\":", "repair_installation", "refreshIntegrityReport"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "repair_installation",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_repair_installation"]
+    },
+    {
+      "id": "installer.runtime.start-local",
+      "app": "installer-gui",
+      "ui_action": "service-start-local",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"service-start-local\":", "service_start", "refreshServiceStatus"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "service_start",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["desktop_service_start"]
+    },
+    {
+      "id": "installer.remote.bootstrap",
+      "app": "installer-gui",
+      "ui_action": "remote-bootstrap",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"remote-bootstrap\":", "remote_bootstrap", "currentRemoteBootstrapPayload"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "remote_bootstrap",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["remote_bootstrap(remote)"]
+    },
+    {
+      "id": "installer.remote.start-agent",
+      "app": "installer-gui",
+      "ui_action": "remote-start-agent",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"remote-start-agent\":", "remote_start_agent", "currentRemoteAgentPayload"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "remote_start_agent",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["remote_start_agent(remote)"]
+    },
+    {
+      "id": "installer.security.initialize-ca",
+      "app": "installer-gui",
+      "ui_action": "initialize-certificate-authority",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"initialize-certificate-authority\":", "initialize_certificate_authority", "refreshCertificateAuthority"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "initialize_certificate_authority",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["initialize_certificate_authority()"]
+    },
+    {
+      "id": "installer.update.download",
+      "app": "installer-gui",
+      "ui_action": "download-update",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"download-update\":", "download_update", "refreshLatestDownloadedUpdate"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "download_update",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_download_update"]
+    },
+    {
+      "id": "installer.update.apply",
+      "app": "installer-gui",
+      "ui_action": "apply-downloaded-update",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"apply-downloaded-update\":", "apply_downloaded_update", "refreshLatestAppliedUpdate"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "apply_downloaded_update",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_apply_downloaded_update"]
+    },
+    {
+      "id": "installer.runtime.install-payload",
+      "app": "installer-gui",
+      "ui_action": "install-runtime-payload",
+      "route_file": "apps/installer-gui/ui/app.js",
+      "route_tokens": ["\"install-runtime-payload\":", "install_runtime_payload", "refreshRuntimePayloadStatus"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "install_runtime_payload",
+      "native_file": "apps/installer-gui/src-tauri/src/main.rs",
+      "native_tokens": ["installer_install_runtime_payload"]
+    },
+    {
+      "id": "workbench.runtime.start-local",
+      "app": "workbench-gui",
+      "ui_action": "start-local",
+      "route_file": "apps/workbench-gui/ui/app.js",
+      "route_tokens": ["case \"start-local\"", "service_start", "refreshStatus", "loadWorkbenchFrame"],
+      "native_command": "guarded_mutation_action",
+      "native_action": "service_start",
+      "native_file": "apps/workbench-gui/src-tauri/src/main.rs",
+      "native_tokens": ["desktop_service_start"]
+    },
+    {
+      "id": "workbench.runtime.inspect",
+      "app": "workbench-gui",
+      "ui_action": "refresh",
+      "route_file": "apps/workbench-gui/ui/app.js",
+      "route_tokens": ["case \"refresh\"", "refreshStatus"],
+      "native_command": "service_status",
+      "native_file": "apps/workbench-gui/src-tauri/src/main.rs",
+      "native_tokens": ["desktop_service_status", "desktop_summarize_service_status"]
+    },
+    {
+      "id": "workbench.analysis.open-local",
+      "app": "workbench-gui",
+      "ui_action": "open-local",
+      "route_file": "apps/workbench-gui/ui/app.js",
+      "route_tokens": ["case \"open-local\"", "loadWorkbenchFrame", "refreshStatus"],
+      "native_command": "service_status",
+      "native_file": "apps/workbench-gui/src-tauri/src/main.rs",
+      "native_tokens": ["service_status"]
+    }
+  ]
+}

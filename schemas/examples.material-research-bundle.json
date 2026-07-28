@@ -75,7 +75,50 @@
     "initial_duration_ms": 1,
     "plan_next_duration_ms": 1,
     "run_next_duration_ms": 1,
-    "chain_next_duration_ms": 1
+    "chain_next_duration_ms": 1,
+    "authority": {
+      "schema_version": "kyuubiki.research-execution-authority-trace/v1",
+      "initial": {
+        "schema_version": "kyuubiki.execution-authority/v1",
+        "execution_class": "real_solver",
+        "executor_id": "kyuubiki.rust.local-solver",
+        "runtime": "rust_native",
+        "result_origin": "computed_in_process",
+        "mock_execution": false,
+        "fallback_used": false,
+        "production_eligible": true,
+        "evidence_statement": "result payloads were computed by linked Rust solver kernels without mock fallback"
+      },
+      "next": {
+        "schema_version": "kyuubiki.execution-authority/v1",
+        "execution_class": "real_solver",
+        "executor_id": "kyuubiki.rust.local-solver",
+        "runtime": "rust_native",
+        "result_origin": "computed_in_process",
+        "mock_execution": false,
+        "fallback_used": false,
+        "production_eligible": true,
+        "evidence_statement": "result payloads were computed by linked Rust solver kernels without mock fallback"
+      },
+      "chain": [
+        {
+          "schema_version": "kyuubiki.execution-authority/v1",
+          "execution_class": "real_solver",
+          "executor_id": "kyuubiki.rust.local-solver",
+          "runtime": "rust_native",
+          "result_origin": "computed_in_process",
+          "mock_execution": false,
+          "fallback_used": false,
+          "production_eligible": true,
+          "evidence_statement": "result payloads were computed by linked Rust solver kernels without mock fallback"
+        }
+      ],
+      "assertions": {
+        "all_real_solver": true,
+        "no_mock_execution": true,
+        "no_fallback": true
+      }
+    }
   },
   "research_evidence": {
     "schema_version": "kyuubiki.material-research-evidence/v1",

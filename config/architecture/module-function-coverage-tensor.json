@@ -31,6 +31,24 @@
           "headless_sdk_parity_required",
           "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
         ]
+      },
+      {
+        "id": "desktop-capability-closure-contract",
+        "files": [
+          "config/architecture/desktop-capability-closure.json",
+          "tests/integration/desktop-gui-capability-closure.test.mjs",
+          "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+          "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/hub-shell-regression.shared.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-capability-closure/v1",
+          "hub.project.create",
+          "installer.environment.init",
+          "workbench.analysis.open-local",
+          "every required desktop capability closes UI, route, native, and result layers",
+          "created bundle must become the active path for the next operation"
+        ]
       }
     ],
     "validation": [

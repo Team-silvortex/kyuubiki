@@ -311,6 +311,11 @@ export async function executeHubAssistantAction(action, payload = {}, source = "
       options.setAssistantOutput(options.hubDynamic("assistantUpdatedBundle"));
       options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "updated bundle inputs" });
       return;
+    case "hub/projectCreate":
+      applyAssistantBundlePayload(payload, options);
+      await options.runActionWithOptions("project-create", { skipConfirmation: true });
+      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "created project bundle and activated its path" });
+      return;
     case "hub/projectInspect":
       applyAssistantBundlePayload(payload, options);
       await options.runActionWithOptions("project-inspect", { skipConfirmation: true });

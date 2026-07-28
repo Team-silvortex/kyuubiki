@@ -5,8 +5,8 @@ use crate::material_candidate_review_batches::material_candidate_draft_batches;
 use crate::material_exploration_objectives::next_round_optimization_objectives;
 use crate::material_exploration_risk::risk_mitigation_hints;
 use crate::{
-    HeadlessWorkflowStep, build_composite_panel_steps, build_dielectric_screening_steps,
-    build_heat_spreader_screening_steps, build_material_report,
+    ExecutionAuthority, HeadlessWorkflowStep, build_composite_panel_steps,
+    build_dielectric_screening_steps, build_heat_spreader_screening_steps, build_material_report,
     build_structural_panel_screening_steps, build_thermo_shield_screening_steps,
     describe_material_study,
 };
@@ -25,6 +25,7 @@ pub const MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION: &str =
 pub struct MaterialExplorationRun {
     pub schema_version: String,
     pub mode: String,
+    pub execution_authority: ExecutionAuthority,
     pub iteration: usize,
     pub study: String,
     pub template_id: String,
@@ -93,6 +94,7 @@ pub fn build_material_exploration_run_for_iteration(
     result_payloads: Vec<Value>,
     iteration: usize,
 ) -> Result<MaterialExplorationRun, String> {
+    let mode = mode.into();
     let description = describe_material_study(study)
         .ok_or_else(|| format!("unsupported material study: {study}"))?;
     let report = build_material_report(&description.id, &result_payloads)?;
@@ -100,7 +102,8 @@ pub fn build_material_exploration_run_for_iteration(
     let next_round = build_material_exploration_next_round_plan(&report, iteration);
     Ok(MaterialExplorationRun {
         schema_version: MATERIAL_EXPLORATION_SCHEMA_VERSION.to_string(),
-        mode: mode.into(),
+        execution_authority: ExecutionAuthority::from_material_mode(&mode),
+        mode,
         iteration,
         study: description.id,
         template_id: description.template_id,

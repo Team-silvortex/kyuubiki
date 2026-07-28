@@ -46,6 +46,7 @@ mod material_card_contract;
 mod material_exploration_chain_contract;
 mod material_research;
 mod material_research_bundle;
+mod material_research_bundle_authority;
 mod material_research_bundle_build;
 mod material_research_bundle_contract;
 mod material_research_bundle_index;

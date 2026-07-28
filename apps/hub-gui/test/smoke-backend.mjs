@@ -13,5 +13,10 @@ test("tauri backend exposes hub runtime commands", () => {
 
   assertMatches(backendSource, HUB_BACKEND_PATTERNS);
   assert.match(backendSource, /hub_regression_gate_report/);
+  assert.doesNotMatch(
+    commands,
+    /"desktop_(?:stage|verify|build_host)"\s*=>/,
+    "Installer owns deployment mutations; Hub must not retain duplicate native branches",
+  );
   assert.match(runtimeRust, /failed to read .* log:/);
 });

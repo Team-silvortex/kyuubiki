@@ -77,6 +77,16 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
+    let execution_trace_required = schema
+        .pointer("/$defs/executionTrace/required")
+        .and_then(Value::as_array)
+        .map(|fields| fields.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if !execution_trace_required.contains(&"authority") {
+        issues.push(format!(
+            "{SCHEMA_PATH}: executionTrace missing required authority"
+        ));
+    }
     if !required_fields(schema)
         .iter()
         .any(|required| *required == "research_evidence")
@@ -208,6 +218,7 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     validate_material_card_refs(example, issues);
+    validate_execution_authority_trace(example, issues);
     require_string(
         example.pointer("/summary/next_round_decision"),
         "summary.next_round_decision",
@@ -296,6 +307,31 @@ fn check_example(example: &Value, issues: &mut Vec<String>) -> RunnerResult<()> 
         issues,
     );
     Ok(())
+}
+
+fn validate_execution_authority_trace(example: &Value, issues: &mut Vec<String>) {
+    if example
+        .pointer("/execution_trace/authority/schema_version")
+        .and_then(Value::as_str)
+        != Some("kyuubiki.research-execution-authority-trace/v1")
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: missing research execution authority trace"
+        ));
+    }
+    for assertion in ["all_real_solver", "no_mock_execution", "no_fallback"] {
+        if example
+            .pointer(&format!(
+                "/execution_trace/authority/assertions/{assertion}"
+            ))
+            .and_then(Value::as_bool)
+            != Some(true)
+        {
+            issues.push(format!(
+                "{EXAMPLE_PATH}: execution authority assertion {assertion} must be true"
+            ));
+        }
+    }
 }
 
 fn validate_validation_evidence(example: &Value, issues: &mut Vec<String>) {

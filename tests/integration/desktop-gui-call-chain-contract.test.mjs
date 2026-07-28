@@ -165,6 +165,11 @@ for (const app of APPS) {
       [],
       "frontend guarded mutations are absent from the Rust allowlist",
     );
+    assert.deepEqual(
+      missingValues(acceptedGuardedActions(sources.rust), guarded),
+      [],
+      "desktop Rust guarded mutations have no frontend owner",
+    );
   });
 }
 

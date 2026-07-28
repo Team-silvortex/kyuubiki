@@ -90,6 +90,7 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
     require_non_empty(&bundle.generated_at_utc, "generated_at_utc")?;
     require_non_empty(&bundle.study, "study")?;
     validate_reproducibility(&bundle.reproducibility)?;
+    validate_execution_trace(&bundle.execution_trace)?;
     validate_checksums(&bundle.artifact_checksums)?;
     require_artifact_schema(
         &bundle.initial_exploration,
@@ -129,6 +130,59 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
         &bundle.summary.chain_stop_reason,
         "summary.chain_stop_reason",
     )?;
+    Ok(())
+}
+
+fn validate_execution_trace(trace: &Value) -> Result<(), String> {
+    let authority = trace
+        .get("authority")
+        .ok_or_else(|| "execution_trace.authority is required".to_string())?;
+    require_value_str_equal(
+        authority,
+        "schema_version",
+        "kyuubiki.research-execution-authority-trace/v1",
+        "execution_trace.authority.schema_version",
+    )?;
+    for assertion in ["all_real_solver", "no_mock_execution", "no_fallback"] {
+        if authority
+            .pointer(&format!("/assertions/{assertion}"))
+            .and_then(Value::as_bool)
+            != Some(true)
+        {
+            return Err(format!(
+                "execution_trace.authority.assertions.{assertion} must be true"
+            ));
+        }
+    }
+    for field in ["initial", "next"] {
+        validate_real_solver_authority(
+            authority
+                .get(field)
+                .ok_or_else(|| format!("execution_trace.authority.{field} is required"))?,
+            &format!("execution_trace.authority.{field}"),
+        )?;
+    }
+    let chain = authority
+        .get("chain")
+        .and_then(Value::as_array)
+        .filter(|items| !items.is_empty())
+        .ok_or_else(|| "execution_trace.authority.chain must be non-empty".to_string())?;
+    for (index, item) in chain.iter().enumerate() {
+        validate_real_solver_authority(item, &format!("execution_trace.authority.chain[{index}]"))?;
+    }
+    Ok(())
+}
+
+fn validate_real_solver_authority(authority: &Value, field: &str) -> Result<(), String> {
+    if authority.get("execution_class").and_then(Value::as_str) != Some("real_solver") {
+        return Err(format!("{field}.execution_class must be real_solver"));
+    }
+    if authority.get("mock_execution").and_then(Value::as_bool) != Some(false) {
+        return Err(format!("{field}.mock_execution must be false"));
+    }
+    if authority.get("fallback_used").and_then(Value::as_bool) != Some(false) {
+        return Err(format!("{field}.fallback_used must be false"));
+    }
     Ok(())
 }
 

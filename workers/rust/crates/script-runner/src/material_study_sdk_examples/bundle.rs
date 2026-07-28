@@ -60,6 +60,7 @@ fn build_bundle(root: &Path, study: &str, rounds: u64) -> RunnerResult<Value> {
             "plan_next_duration_ms": 1,
             "run_next_duration_ms": 1,
             "chain_next_duration_ms": 1,
+            "authority": execution_authority_trace(&initial, &next, &chain),
         },
         "summary": bundle_summary(&initial, &plan, &next, &chain),
         "initial_exploration": initial,
@@ -67,6 +68,46 @@ fn build_bundle(root: &Path, study: &str, rounds: u64) -> RunnerResult<Value> {
         "next_exploration": next,
         "chain": chain,
     }))
+}
+
+fn execution_authority_trace(initial: &Value, next: &Value, chain: &Value) -> Value {
+    let initial_authority = initial
+        .get("execution_authority")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let next_authority = next
+        .get("execution_authority")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let chain_authorities = chain
+        .get("runs")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|run| run.get("execution_authority").cloned())
+        .collect::<Vec<_>>();
+    let mut authorities = std::iter::once(&initial_authority)
+        .chain(std::iter::once(&next_authority))
+        .chain(chain_authorities.iter());
+    let no_mock_execution = authorities
+        .clone()
+        .all(|item| item.get("mock_execution").and_then(Value::as_bool) == Some(false));
+    let no_fallback = authorities
+        .clone()
+        .all(|item| item.get("fallback_used").and_then(Value::as_bool) == Some(false));
+    let all_real_solver = authorities
+        .all(|item| item.get("execution_class").and_then(Value::as_str) == Some("real_solver"));
+    json!({
+        "schema_version": "kyuubiki.research-execution-authority-trace/v1",
+        "initial": initial_authority,
+        "next": next_authority,
+        "chain": chain_authorities,
+        "assertions": {
+            "all_real_solver": all_real_solver,
+            "no_mock_execution": no_mock_execution,
+            "no_fallback": no_fallback,
+        }
+    })
 }
 
 fn run_material_explore(root: &Path, args: &[&str]) -> RunnerResult<Value> {

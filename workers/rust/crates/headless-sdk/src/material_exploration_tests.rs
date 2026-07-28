@@ -132,6 +132,8 @@ fn builds_stable_exploration_run_contract() {
 
     assert_eq!(run.schema_version, MATERIAL_EXPLORATION_SCHEMA_VERSION);
     assert_eq!(run.mode, "unit-test");
+    assert_eq!(run.execution_authority.execution_class, "unverified");
+    assert!(!run.execution_authority.production_eligible);
     assert_eq!(run.iteration, 1);
     assert_eq!(run.candidate_count, 3);
     assert_eq!(
@@ -150,6 +152,26 @@ fn builds_stable_exploration_run_contract() {
             .actions
             .contains(&"run_next_quality_batch".to_string())
     );
+}
+
+#[test]
+fn local_solver_mode_records_real_execution_authority() {
+    let run = build_material_exploration_run(
+        "heat-spreader",
+        "local_solver",
+        sample_material_result_payloads("heat-spreader"),
+    )
+    .expect("exploration run");
+
+    assert_eq!(run.execution_authority.execution_class, "real_solver");
+    assert_eq!(
+        run.execution_authority.executor_id,
+        "kyuubiki.rust.local-solver"
+    );
+    assert_eq!(run.execution_authority.result_origin, "computed_in_process");
+    assert!(!run.execution_authority.mock_execution);
+    assert!(!run.execution_authority.fallback_used);
+    assert!(run.execution_authority.production_eligible);
 }
 
 #[test]

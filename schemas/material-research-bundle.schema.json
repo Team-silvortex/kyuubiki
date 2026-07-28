@@ -186,7 +186,8 @@
         "initial_duration_ms",
         "plan_next_duration_ms",
         "run_next_duration_ms",
-        "chain_next_duration_ms"
+        "chain_next_duration_ms",
+        "authority"
       ],
       "properties": {
         "initial_duration_ms": {
@@ -204,6 +205,90 @@
         "chain_next_duration_ms": {
           "type": "integer",
           "minimum": 0
+        },
+        "authority": {
+          "$ref": "#/$defs/executionAuthorityTrace"
+        }
+      }
+    },
+    "executionAuthorityTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "initial", "next", "chain", "assertions"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.research-execution-authority-trace/v1"
+        },
+        "initial": {
+          "$ref": "#/$defs/executionAuthority"
+        },
+        "next": {
+          "$ref": "#/$defs/executionAuthority"
+        },
+        "chain": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/executionAuthority"
+          }
+        },
+        "assertions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all_real_solver", "no_mock_execution", "no_fallback"],
+          "properties": {
+            "all_real_solver": { "const": true },
+            "no_mock_execution": { "const": true },
+            "no_fallback": { "const": true }
+          }
+        }
+      }
+    },
+    "executionAuthority": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "execution_class",
+        "executor_id",
+        "runtime",
+        "result_origin",
+        "mock_execution",
+        "fallback_used",
+        "production_eligible",
+        "evidence_statement"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.execution-authority/v1"
+        },
+        "execution_class": {
+          "const": "real_solver"
+        },
+        "executor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_origin": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mock_execution": {
+          "const": false
+        },
+        "fallback_used": {
+          "const": false
+        },
+        "production_eligible": {
+          "const": true
+        },
+        "evidence_statement": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

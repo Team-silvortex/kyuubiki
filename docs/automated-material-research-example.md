@@ -88,6 +88,9 @@ agent, CI lane, or human reviewer. It contains:
 - `chain`
 - SHA-256 checksums for each retained artifact
 - command templates for reproducing the same loop
+- `execution_trace.authority`, which proves that the initial run, next run, and
+  every retained chain round used real Rust solver kernels without mock or
+  fallback execution
 - a summary with winner, reliability decision, next-round decision, chain stop
   reason, convergence state, next iteration, and runnable next-step count
 - `research_evidence`, a compact machine-checkable index of ranked candidates,
@@ -106,6 +109,13 @@ ranked candidate set, focus candidates, quality-gate decision, plan decision,
 step count, and chain trace count aligned with the retained artifacts. This
 keeps the single-file story honest when an agent or reviewer reads only the
 top-level summary first.
+
+Execution authority and numerical qualification are intentionally separate.
+`execution_trace.authority.assertions` must report `all_real_solver`,
+`no_mock_execution`, and `no_fallback` as true or the bundle is rejected. The
+bundle can still remain `screening_research_bundle` because real computation
+does not by itself provide external calibration, high-confidence material
+cards, mesh convergence, or qualification-grade physics evidence.
 
 The `validation_evidence` block is deliberately conservative. It does not claim
 experimental qualification. It records that the current retained loop is a

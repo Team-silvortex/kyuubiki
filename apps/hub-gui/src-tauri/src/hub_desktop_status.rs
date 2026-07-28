@@ -111,7 +111,6 @@ struct ProjectBundleComparePayload {
 struct GuardedMutationPayload {
     action: String,
     mode: Option<String>,
-    platform: Option<String>,
     path: Option<String>,
     out: Option<String>,
     left_path: Option<String>,
@@ -136,7 +135,6 @@ fn append_guarded_mutation_audit(
         "status": status,
         "detail": detail,
         "mode": payload.mode,
-        "platform": payload.platform,
         "path": payload.path,
         "out": payload.out,
         "left_path": payload.left_path,

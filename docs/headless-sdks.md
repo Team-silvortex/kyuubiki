@@ -55,6 +55,14 @@ The stable headless surface is the contract set: task and workflow envelopes,
 operator descriptors, result bundles, report schemas, review records,
 materialization plans, lineage metadata, and execution status semantics.
 
+The Rust CLI keeps preview and research execution distinct. `--execute` always
+requires an explicit `--executor`; it never silently selects `mock`.
+`--execution-posture research` accepts only the `service` executor because
+`mock` and the browser-capable `hybrid` path cannot provide a no-mock
+guarantee. Local material exploration is a separate native reference runner:
+its artifacts carry `kyuubiki.execution-authority/v1` and identify the linked
+Rust solver kernels as the result source.
+
 Coupled multiphysics routes are discoverable through the Rust SDK's
 `coupled_workflow_catalog()`, `find_coupled_workflow()`, and
 `search_coupled_workflows()` APIs. The catalog is projected from protocol-owned

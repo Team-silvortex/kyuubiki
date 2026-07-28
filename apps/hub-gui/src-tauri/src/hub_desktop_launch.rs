@@ -1,8 +1,3 @@
-fn build_host_desktop_bundles() -> Result<String, String> {
-    stage_release(parse_platform(None), None)?;
-    Ok("desktop release staging completed; installed applications update through the Installer, not an npm build command".to_string())
-}
-
 fn spawn_background_command(mut command: Command, failure_context: &str) -> Result<(), String> {
     command
         .stdout(Stdio::null())

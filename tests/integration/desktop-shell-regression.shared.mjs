@@ -216,7 +216,18 @@ function hubMockSource() {
           case "doctor_report":
             return { rendered: "doctor ok" };
           case "guarded_mutation_action":
-            return payload?.payload?.action === "project_bundle_create" ? JSON.stringify({ path: "/tmp/ui-created.kyuubiki" }) : "guarded mutation mock";
+            return payload?.payload?.action === "project_bundle_create"
+              ? JSON.stringify({
+                  created: true,
+                  path: "/tmp/ui-created.kyuubiki",
+                  summary: {
+                    project_id: "ui-created-project",
+                    project_name: "ui-created",
+                    schema: "kyuubiki.project/v2",
+                    layout: "kyuubiki.project-layout/v1",
+                  },
+                })
+              : "guarded mutation mock";
           case "open_docs_index":
             return "docs index mock";
           case "project_bundle_inspect":
@@ -631,6 +642,12 @@ export async function assertInstallerRegression(page, viewport) {
 
   await page.locator('button.sidebar-tab[data-tab="setup"]').click();
   await page.waitForSelector('[data-panel="setup"].panel-visible');
+  await assertActionInvokes(
+    page,
+    "init-env",
+    "guarded_mutation_action",
+    "init_env",
+  );
   await page.locator('button[data-action="use-cloud-mode"]:visible').first().click();
   await page.waitForFunction(() => /Cloud PostgreSQL profile selected/.test(
     document.querySelector("#completion-message")?.textContent || "",
@@ -686,6 +703,7 @@ export async function assertInstallerRegression(page, viewport) {
     "update_source_config",
     "service_status",
     "read_runtime_log",
+    "read_env_file",
   ]);
   await assertNoPageErrors(page);
 }

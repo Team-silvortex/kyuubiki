@@ -9,6 +9,22 @@ fn explores_heat_spreader_with_real_solver_results() {
     );
     assert_eq!(exploration["candidate_count"].as_u64(), Some(3));
     assert_eq!(exploration["iteration"].as_u64(), Some(1));
+    assert_eq!(
+        exploration["execution_authority"]["execution_class"].as_str(),
+        Some("real_solver")
+    );
+    assert_eq!(
+        exploration["execution_authority"]["mock_execution"].as_bool(),
+        Some(false)
+    );
+    assert_eq!(
+        exploration["execution_authority"]["fallback_used"].as_bool(),
+        Some(false)
+    );
+    assert_eq!(
+        exploration["execution_authority"]["production_eligible"].as_bool(),
+        Some(true)
+    );
     assert!(exploration["report"]["winner_candidate_id"].is_string());
     assert!(
         matches!(
@@ -242,6 +258,10 @@ fn runs_next_round_from_previous_exploration_json() {
         Some("kyuubiki.material-exploration-run/v1")
     );
     assert_eq!(next["mode"].as_str(), Some("local_solver_next_round"));
+    assert_eq!(
+        next["execution_authority"]["executor_id"].as_str(),
+        Some("kyuubiki.rust.local-solver")
+    );
     assert_eq!(next["iteration"].as_u64(), Some(2));
     assert_eq!(next["next_round"]["iteration"].as_u64(), Some(3));
     assert_eq!(next["candidate_count"].as_u64(), Some(3));

@@ -83,6 +83,7 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Sdk
     require_non_empty(&mut errors, &bundle.study, "study");
     validate_checksums(&mut errors, &bundle.artifact_checksums);
     validate_reproducibility(&mut errors, &bundle.reproducibility);
+    validate_execution_trace(&mut errors, &bundle.execution_trace);
     require_artifact_schema(
         &mut errors,
         &bundle.initial_exploration,
@@ -128,6 +129,29 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Sdk
         Ok(())
     } else {
         Err(SdkError::Validation { errors })
+    }
+}
+
+fn validate_execution_trace(errors: &mut Vec<String>, trace: &Value) {
+    let Some(authority) = trace.get("authority") else {
+        errors.push("execution_trace.authority is required".to_string());
+        return;
+    };
+    if authority.get("schema_version").and_then(Value::as_str)
+        != Some("kyuubiki.research-execution-authority-trace/v1")
+    {
+        errors.push("execution_trace.authority.schema_version is invalid".to_string());
+    }
+    for assertion in ["all_real_solver", "no_mock_execution", "no_fallback"] {
+        if authority
+            .pointer(&format!("/assertions/{assertion}"))
+            .and_then(Value::as_bool)
+            != Some(true)
+        {
+            errors.push(format!(
+                "execution_trace.authority.assertions.{assertion} must be true"
+            ));
+        }
     }
 }
 

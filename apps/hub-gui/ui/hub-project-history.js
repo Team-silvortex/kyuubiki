@@ -192,6 +192,8 @@ export function buildPythonMacroStub(entry) {
   const label = JSON.stringify(String(entry?.favoriteLabel || entry?.action || "favorite-workflow").trim());
 
   switch (action) {
+    case "project create":
+      return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectCreate", {"path": ${bundlePath}})\n`;
     case "project inspect":
       return `# Pwdt Workbench launcher: ${JSON.parse(label)}\nawait ky.invoke("hub/projectInspect", {"path": ${bundlePath}})\n`;
     case "project validate":

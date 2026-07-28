@@ -188,8 +188,10 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
+    let selected_executor = flags.selected_executor()?;
     let report = if flags.execute {
-        let executor_name = flags.executor.as_deref().unwrap_or("mock");
+        let executor_name = selected_executor
+            .ok_or_else(|| "internal error: execution selected without an executor".to_string())?;
         let compatibility_issues = collect_executor_compatibility_issues(&batch, executor_name);
         if !compatibility_issues.is_empty() {
             return Err(format!(

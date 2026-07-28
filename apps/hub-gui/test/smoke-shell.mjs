@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
 import { suggestWorkflowCatalogEntries } from "../ui/hub-workflow-catalog.js";
 import { runHubProjectAction } from "../ui/hub-project-actions.js";
-import { rememberProjectBundleAction } from "../ui/hub-project-history.js";
+import {
+  buildProjectCliCommand,
+  buildPythonMacroStub,
+  rememberProjectBundleAction,
+} from "../ui/hub-project-history.js";
 import {
   HUB_INFORMATION_ARCHITECTURE_PATTERNS,
   HUB_PLATFORM_HELPER_PATTERNS,
@@ -157,4 +161,16 @@ test("hub new-bundle action stores the native path as active context", async () 
   assert.equal(actionOptions.command, "guarded_mutation_action");
   assert.deepEqual(actionOptions.payload, { path: "" });
   assert.equal(activePath, "/tmp/Research.kyuubiki");
+});
+
+test("hub new-bundle history exports only implemented automation routes", () => {
+  const entry = {
+    action: "project create",
+    bundlePath: "/tmp/Research.kyuubiki",
+    favoriteLabel: "Research seed",
+  };
+
+  assert.equal(buildProjectCliCommand(entry), "");
+  assert.match(buildPythonMacroStub(entry), /hub\/projectCreate/);
+  assert.match(buildPythonMacroStub(entry), /Research\.kyuubiki/);
 });

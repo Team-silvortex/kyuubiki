@@ -6,6 +6,7 @@ mod contracts_types;
 mod coupled_workflows;
 mod direct_fem;
 mod engine_solver_bridge;
+mod execution_authority;
 mod executor;
 mod hybrid_executor;
 mod material_candidate_drafts;
@@ -87,6 +88,9 @@ pub use direct_fem::{
 pub use engine_solver_bridge::{
     ENGINE_SOLVER_HEADLESS_BRIDGE_SCHEMA_VERSION, EngineSolverHeadlessBridgeManifest,
     EngineSolverHeadlessBridgeRoute, engine_solver_headless_bridge_manifest,
+};
+pub use execution_authority::{
+    EXECUTION_AUTHORITY_SCHEMA_VERSION, ExecutionAuthority, validate_execution_authority,
 };
 pub use executor::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, MockHeadlessExecutor,

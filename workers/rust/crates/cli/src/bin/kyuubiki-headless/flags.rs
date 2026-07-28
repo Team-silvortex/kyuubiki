@@ -4,6 +4,7 @@ pub(crate) struct Flags {
     pub(crate) json: bool,
     pub(crate) execute: bool,
     pub(crate) executor: Option<String>,
+    pub(crate) execution_posture: Option<String>,
     pub(crate) allow_sensitive: bool,
     pub(crate) allow_destructive: bool,
     pub(crate) api_base_url: Option<String>,
@@ -30,6 +31,10 @@ impl Flags {
                 "--execute" => flags.execute = true,
                 "--executor" => {
                     flags.executor = Some(take_value(args, &mut index, "--executor")?);
+                }
+                "--execution-posture" => {
+                    flags.execution_posture =
+                        Some(take_value(args, &mut index, "--execution-posture")?);
                 }
                 "--allow-sensitive" => flags.allow_sensitive = true,
                 "--allow-destructive" => flags.allow_destructive = true,
@@ -87,6 +92,35 @@ impl Flags {
             .cloned()
             .ok_or_else(|| "command requires an input path".to_string())
     }
+
+    pub(crate) fn selected_executor(&self) -> Result<Option<&str>, String> {
+        if !self.execute {
+            if self.executor.is_some() || self.execution_posture.is_some() {
+                return Err("--executor and --execution-posture require --execute".to_string());
+            }
+            return Ok(None);
+        }
+        let executor = self.executor.as_deref().ok_or_else(|| {
+            "--execute requires an explicit --executor; use mock only for previews or service for real execution"
+                .to_string()
+        })?;
+        let posture = self.execution_posture.as_deref().unwrap_or("preview");
+        match posture {
+            "preview" => {}
+            "research" if executor == "service" => {}
+            "research" => {
+                return Err(format!(
+                    "research execution requires --executor service; {executor} cannot provide a no-mock execution guarantee"
+                ));
+            }
+            other => {
+                return Err(format!(
+                    "unsupported execution posture \"{other}\"; available: preview, research"
+                ));
+            }
+        }
+        Ok(Some(executor))
+    }
 }
 
 fn take_value(args: &[String], index: &mut usize, option: &str) -> Result<String, String> {
@@ -98,4 +132,72 @@ fn take_value(args: &[String], index: &mut usize, option: &str) -> Result<String
         return Err(format!("{option} requires a value"));
     }
     Ok(value.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Flags;
+
+    fn flags(args: &[&str]) -> Flags {
+        Flags::parse(
+            &args
+                .iter()
+                .map(|value| (*value).to_string())
+                .collect::<Vec<_>>(),
+        )
+        .expect("flags")
+    }
+
+    #[test]
+    fn execute_requires_explicit_executor() {
+        let error = flags(&["workflow.json", "--execute"])
+            .selected_executor()
+            .expect_err("executor should be required");
+
+        assert!(error.contains("explicit --executor"));
+    }
+
+    #[test]
+    fn research_posture_only_accepts_service_executor() {
+        let service = flags(&[
+            "workflow.json",
+            "--execute",
+            "--executor",
+            "service",
+            "--execution-posture",
+            "research",
+        ]);
+        let mock = flags(&[
+            "workflow.json",
+            "--execute",
+            "--executor",
+            "mock",
+            "--execution-posture",
+            "research",
+        ]);
+
+        assert_eq!(
+            service.selected_executor().expect("service"),
+            Some("service")
+        );
+        assert!(
+            mock.selected_executor()
+                .expect_err("mock should fail")
+                .contains("no-mock execution guarantee")
+        );
+    }
+
+    #[test]
+    fn preview_posture_keeps_explicit_mock_available() {
+        let preview = flags(&[
+            "workflow.json",
+            "--execute",
+            "--executor",
+            "mock",
+            "--execution-posture",
+            "preview",
+        ]);
+
+        assert_eq!(preview.selected_executor().expect("preview"), Some("mock"));
+    }
 }

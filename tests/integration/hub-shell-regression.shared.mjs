@@ -144,7 +144,23 @@ export async function assertHubRegression(page, viewport) {
 
   await page.locator("#projects-tab-bundles").click();
   await page.waitForSelector('[data-projects-pane="bundles"]:not(.hidden) #project-bundle-path');
-  await page.locator("#project-bundle-path").fill("/tmp/ui-invocation.kyuubiki");
+  await page.locator("#project-bundle-path").fill("");
+  await assertActionInvokes(
+    page,
+    "project-create",
+    "guarded_mutation_action",
+    "project_bundle_create",
+    "#bundles-action-create",
+    { acceptConfirmation: true },
+  );
+  assert.equal(
+    await page.locator("#project-bundle-path").inputValue(),
+    "/tmp/ui-created.kyuubiki",
+    "created bundle must become the active path for the next operation",
+  );
+  await page.waitForFunction(
+    () => document.querySelector("#project-bundle-output")?.textContent?.includes("ui-created.kyuubiki"),
+  );
   await assertActionInvokes(
     page,
     "project-inspect",

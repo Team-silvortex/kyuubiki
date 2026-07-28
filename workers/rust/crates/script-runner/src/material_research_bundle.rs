@@ -4,6 +4,8 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::material_research_bundle_authority::validate_execution_authority_trace;
+
 const DEFAULT_INPUT: &str = "tmp/material-research-bundle.json";
 const BUNDLE_SCHEMA_VERSION: &str = "kyuubiki.material-research-bundle/v1";
 const POSTURE: &str = "screening_research_bundle";
@@ -96,6 +98,7 @@ fn validate_bundle(root: &Path, bundle: &Value, raw_text: Option<&str>) -> Runne
         "schema_version",
     )?;
     assert_eq_str(field(bundle, "posture"), POSTURE, "posture")?;
+    validate_execution_authority_trace(bundle)?;
     if !SUPPORTED_STUDIES.contains(&field(bundle, "study")) {
         return Err(format!(
             "study: unsupported retained bundle study {:?}",

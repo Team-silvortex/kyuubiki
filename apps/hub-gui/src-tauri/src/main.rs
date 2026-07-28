@@ -16,8 +16,7 @@ use kyuubiki_desktop_runtime::{
     write_global_language_preference as desktop_write_global_language_preference,
 };
 use kyuubiki_installer::{
-    Platform, doctor_report as build_doctor_report, parse_platform, stage_release,
-    validate_env_file,
+    Platform, doctor_report as build_doctor_report, parse_platform, validate_env_file,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;

@@ -150,6 +150,7 @@ fn build_bundle(root: &Path, options: &Options) -> RunnerResult<Value> {
             "plan_next_duration_ms": plan.duration_ms,
             "run_next_duration_ms": next.duration_ms,
             "chain_next_duration_ms": chain.duration_ms,
+            "authority": execution_authority_trace(&initial.payload, &next.payload, &chain.payload),
         },
         "research_evidence": research_evidence(&initial.payload, &plan.payload, &chain.payload),
         "validation_evidence": validation_evidence(&initial.payload, &plan.payload, &chain.payload),
@@ -159,6 +160,47 @@ fn build_bundle(root: &Path, options: &Options) -> RunnerResult<Value> {
         "next_exploration": next.payload,
         "chain": chain.payload,
     }))
+}
+
+fn execution_authority_trace(initial: &Value, next: &Value, chain: &Value) -> Value {
+    let initial_authority = initial
+        .get("execution_authority")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let next_authority = next
+        .get("execution_authority")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let chain_authorities = chain
+        .get("runs")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|run| run.get("execution_authority").cloned())
+        .collect::<Vec<_>>();
+    let mut authorities = std::iter::once(&initial_authority)
+        .chain(std::iter::once(&next_authority))
+        .chain(chain_authorities.iter());
+    let no_mock_execution = authorities
+        .clone()
+        .all(|authority| authority.get("mock_execution").and_then(Value::as_bool) == Some(false));
+    let no_fallback = authorities
+        .clone()
+        .all(|authority| authority.get("fallback_used").and_then(Value::as_bool) == Some(false));
+    let all_real_solver = authorities.all(|authority| {
+        authority.get("execution_class").and_then(Value::as_str) == Some("real_solver")
+    });
+    json!({
+        "schema_version": "kyuubiki.research-execution-authority-trace/v1",
+        "initial": initial_authority,
+        "next": next_authority,
+        "chain": chain_authorities,
+        "assertions": {
+            "all_real_solver": all_real_solver,
+            "no_mock_execution": no_mock_execution,
+            "no_fallback": no_fallback,
+        }
+    })
 }
 
 struct MaterialExploreRun {
@@ -448,7 +490,8 @@ fn sha256_json(value: &Value) -> RunnerResult<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{material_explore_template, study_profile};
+    use super::{execution_authority_trace, material_explore_template, study_profile};
+    use serde_json::json;
 
     #[test]
     fn supports_retained_bundle_studies() {
@@ -463,5 +506,30 @@ mod tests {
     fn material_explore_template_keeps_json_flag() {
         let argv = material_explore_template(&["heat-spreader"]);
         assert_eq!(argv.last().map(String::as_str), Some("--json"));
+    }
+
+    #[test]
+    fn authority_trace_requires_every_run_to_be_real_and_without_fallback() {
+        let authority = json!({
+            "schema_version": "kyuubiki.execution-authority/v1",
+            "execution_class": "real_solver",
+            "executor_id": "kyuubiki.rust.local-solver",
+            "runtime": "rust_native",
+            "result_origin": "computed_in_process",
+            "mock_execution": false,
+            "fallback_used": false,
+            "production_eligible": true,
+            "evidence_statement": "test"
+        });
+        let initial = json!({ "execution_authority": authority });
+        let next = initial.clone();
+        let chain = json!({ "runs": [initial.clone(), next.clone()] });
+
+        let trace = execution_authority_trace(&initial, &next, &chain);
+
+        assert_eq!(trace["assertions"]["all_real_solver"], true);
+        assert_eq!(trace["assertions"]["no_mock_execution"], true);
+        assert_eq!(trace["assertions"]["no_fallback"], true);
+        assert_eq!(trace["chain"].as_array().map(Vec::len), Some(2));
     }
 }

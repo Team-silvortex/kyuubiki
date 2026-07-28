@@ -309,6 +309,10 @@ Current moxi hardening focus:
 - keep the heat-spreader example reproducible
 - expand score contracts and feasibility explanations
 - connect headless SDK output, evidence bundles, and report artifacts
+- require explicit Headless executors and reserve `research` posture for the
+  no-mock service path
+- retain execution-authority evidence proving that local material exploration
+  used real Rust solver kernels without fallback
 
 Qualification focus:
 
@@ -316,6 +320,14 @@ Qualification focus:
 - include parameter sweep, optimization objectives, ranking, failure
   explanations, and exported report artifacts
 - run the same example through CLI/headless and Workbench-facing paths
+
+Current progress:
+
+- retained material research bundles now reject missing, mock, or fallback
+  execution authority across the initial run, next run, and every chained run
+- the composite thermo-electric panel bundle is still correctly classified as
+  screening-only until external validation, failed quality gates, and
+  low-confidence material cards are addressed
 
 Moxi readiness standard:
 

@@ -71,7 +71,7 @@ fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
         study: "heat-spreader".to_string(),
         artifact_checksums: valid_checksums(),
         reproducibility: reproducibility(),
-        execution_trace: json!({ "duration_ms": 0 }),
+        execution_trace: execution_trace(),
         summary: MaterialResearchBundleSummary {
             winner_candidate_id: "aluminum_6061".to_string(),
             reliability_decision: "blocked_by_quality_gates".to_string(),
@@ -91,6 +91,33 @@ fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
     };
 
     validate_material_research_bundle(&bundle).expect("validation repair bundle should validate");
+}
+
+fn execution_trace() -> serde_json::Value {
+    let authority = json!({
+        "schema_version": "kyuubiki.execution-authority/v1",
+        "execution_class": "real_solver",
+        "executor_id": "kyuubiki.rust.local-solver",
+        "runtime": "rust_native",
+        "result_origin": "computed_in_process",
+        "mock_execution": false,
+        "fallback_used": false,
+        "production_eligible": true,
+        "evidence_statement": "test authority"
+    });
+    json!({
+        "authority": {
+            "schema_version": "kyuubiki.research-execution-authority-trace/v1",
+            "initial": authority,
+            "next": authority,
+            "chain": [authority],
+            "assertions": {
+                "all_real_solver": true,
+                "no_mock_execution": true,
+                "no_fallback": true
+            }
+        }
+    })
 }
 
 fn material_card_refs() -> Vec<MaterialResearchBundleMaterialCardRef> {
