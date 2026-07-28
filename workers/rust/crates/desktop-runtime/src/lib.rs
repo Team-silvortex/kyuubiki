@@ -1,14 +1,17 @@
 use kyuubiki_platform::desktop_preferences_dir as shared_desktop_preferences_dir;
 use serde::Serialize;
+use serde_json::json;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod runtime_control;
 mod runtime_layout;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
+const PACKAGED_BOOT_RECEIPT_ENV: &str = "KYUUBIKI_PACKAGED_BOOT_RECEIPT";
+const PACKAGED_BOOT_SCHEMA: &str = "kyuubiki.packaged-desktop-boot-receipt/v1";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ServiceEndpointSummary {
@@ -139,6 +142,59 @@ pub fn append_desktop_audit_line(file_name: &str, line: &str) -> Result<(), Stri
     writeln!(file, "{line}")
         .map_err(|error| format!("failed to append {}: {error}", path.display()))?;
     Ok(())
+}
+
+pub fn report_packaged_boot_ready(surface: &str) -> Result<String, String> {
+    if !matches!(surface, "hub" | "installer" | "workbench") {
+        return Err(format!("unsupported packaged desktop surface: {surface}"));
+    }
+    let Some(value) = std::env::var_os(PACKAGED_BOOT_RECEIPT_ENV) else {
+        return Ok("packaged boot receipt is not armed".to_string());
+    };
+    let path = validated_boot_receipt_path(Path::new(&value), &std::env::temp_dir())?;
+    let receipt = json!({
+        "schema_version": PACKAGED_BOOT_SCHEMA,
+        "surface": surface,
+        "version": env!("CARGO_PKG_VERSION"),
+        "pid": std::process::id(),
+    });
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
+    writeln!(
+        file,
+        "{}",
+        serde_json::to_string(&receipt)
+            .map_err(|error| format!("failed to serialize boot receipt: {error}"))?
+    )
+    .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
+    file.sync_all()
+        .map_err(|error| format!("failed to sync {}: {error}", path.display()))?;
+    Ok(format!("packaged boot ready: {surface}"))
+}
+
+fn validated_boot_receipt_path(path: &Path, temp_root: &Path) -> Result<PathBuf, String> {
+    if !path.is_absolute() || path.extension().and_then(|value| value.to_str()) != Some("json") {
+        return Err("packaged boot receipt must be an absolute .json path".to_string());
+    }
+    let parent = path
+        .parent()
+        .ok_or_else(|| "packaged boot receipt has no parent".to_string())?;
+    let temp_root = temp_root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve temp directory: {error}"))?;
+    let parent = parent
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve receipt directory: {error}"))?;
+    if !parent.starts_with(&temp_root) {
+        return Err("packaged boot receipt must stay under the system temp directory".to_string());
+    }
+    Ok(parent.join(
+        path.file_name()
+            .ok_or_else(|| "packaged boot receipt has no file name".to_string())?,
+    ))
 }
 
 pub fn service_status() -> Result<String, String> {
@@ -310,7 +366,7 @@ fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
 mod tests {
     use super::{
         ServiceEndpointSummary, ServiceStatusSummary, normalize_language,
-        parse_service_status_summary, workspace_root,
+        parse_service_status_summary, validated_boot_receipt_path, workspace_root,
     };
 
     #[test]
@@ -321,6 +377,13 @@ mod tests {
             "workspace root should resolve to repo root, got {}",
             root.display()
         );
+    }
+
+    #[test]
+    fn packaged_boot_receipt_rejects_paths_outside_temp_root() {
+        let temp = std::env::temp_dir();
+        let outside = workspace_root().join("receipt.json");
+        assert!(validated_boot_receipt_path(&outside, &temp).is_err());
     }
 
     #[test]

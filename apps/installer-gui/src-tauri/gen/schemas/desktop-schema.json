@@ -231,6 +231,12 @@
           "markdownDescription": "Enables the latest_staged_update_record command."
         },
         {
+          "description": "Enables the packaged_boot_ready command.",
+          "type": "string",
+          "const": "allow-packaged-boot-ready",
+          "markdownDescription": "Enables the packaged_boot_ready command."
+        },
+        {
           "description": "Enables the read_env_file command.",
           "type": "string",
           "const": "allow-read-env-file",

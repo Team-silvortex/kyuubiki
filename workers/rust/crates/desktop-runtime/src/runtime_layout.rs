@@ -107,11 +107,12 @@ pub(crate) fn resolve_development_command(root: &Path, name: &str) -> Result<Pat
     if let Some(home) = env::var_os("HOME") {
         dirs.push(PathBuf::from(home).join(".cargo/bin"));
     }
+    #[cfg(unix)]
     dirs.extend([
-        PathBuf::from("/opt/homebrew/bin"),
-        PathBuf::from("/usr/local/bin"),
-        PathBuf::from("/usr/bin"),
-        PathBuf::from("/bin"),
+        unix_rooted_path(&["opt", "homebrew", "bin"]),
+        unix_rooted_path(&["usr", "local", "bin"]),
+        unix_rooted_path(&["usr", "bin"]),
+        unix_rooted_path(&["bin"]),
     ]);
     if let Some(path) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&path));
@@ -375,6 +376,13 @@ fn checked_relative_path(root: &Path, relative: &str, kind: &str) -> Result<Path
         return Ok(canonical_path);
     }
     Ok(joined)
+}
+
+#[cfg(unix)]
+fn unix_rooted_path(parts: &[&str]) -> PathBuf {
+    let mut path = PathBuf::from(std::path::MAIN_SEPARATOR.to_string());
+    path.extend(parts);
+    path
 }
 
 fn command_names(name: &str) -> Vec<String> {

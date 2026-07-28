@@ -1,5 +1,5 @@
 .PHONY: build-hub-gui build-installer-gui build-workbench-gui
-.PHONY: desktop-status desktop-stage desktop-build-host desktop-release desktop-verify
+.PHONY: desktop-status desktop-stage desktop-build-host desktop-install-host desktop-packaged-smoke desktop-release desktop-verify
 .PHONY: desktop-linux-remote desktop-linux-remote-install-deps desktop-linux-remote-preflight
 .PHONY: hot-hub-gui hot-installer-gui hot-workbench-gui
 .PHONY: hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build
@@ -22,6 +22,12 @@ desktop-stage:
 
 desktop-build-host:
 	@$(ENTRYPOINT) desktop-build-host
+
+desktop-install-host:
+	@$(ENTRYPOINT) desktop-install-host
+
+desktop-packaged-smoke:
+	@$(ENTRYPOINT) desktop-packaged-smoke $(PLATFORM)
 
 desktop-release:
 	@$(ENTRYPOINT) desktop-release $(PLATFORM)

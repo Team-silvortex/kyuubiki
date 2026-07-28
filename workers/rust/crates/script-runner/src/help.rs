@@ -27,6 +27,8 @@ project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
+desktop-install-host\n  \
+desktop-packaged-smoke [macos] [--bundle-root <dir>] [--out <report>]\n  \
 desktop-release desktop-verify desktop-runtime-payload\n  \
 desktop-linux-remote\n  \
 desktop-upload-remote desktop-release-upload-remote\n  \
@@ -60,6 +62,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   validate-language-packs\n  \
   check-ui-automation-contract\n  \
   check-gui-runtime-capability-contract\n  \
+  check-usability-release-gate\n  \
   check-workflow-dataset-contract\n  \
   check-material-card-contract\n  \
   check-materialization-plan-contract\n  \

@@ -39,9 +39,8 @@ echo For advanced desktop build and dev commands, use the Unix entrypoint or ext
 exit /b 1
 
 :runtime
-shift
-cd /d "%ROOT%"
-node .\scripts\kyuubiki-runtime.mjs "%COMMAND%" %*
+cd /d "%ROOT%\workers\rust"
+cargo run -p kyuubiki-script-runner -- %*
 exit /b %ERRORLEVEL%
 
 :installer

@@ -4,6 +4,7 @@ import {
   loadDesktopBrand,
   loadDesktopLanguagePreference,
   normalizeDesktopLanguage,
+  reportPackagedBootReady,
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
@@ -564,7 +565,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
 
   bindInstallerActionHandlers(actionHandlers);
 
-  runInstallerStartup({
+  void runInstallerStartup({
     invoke,
     runAction,
     loadDesktopLanguagePreference,
@@ -605,5 +606,5 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderRegressionGateReport: (report) => renderRegressionGateReport(ui, report),
     showCompletion,
     brandConfigName: () => brandConfig?.installerName || "Installer GUI",
-  });
+  }).then(() => reportPackagedBootReady());
 })();

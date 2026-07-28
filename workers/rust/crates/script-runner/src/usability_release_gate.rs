@@ -1,0 +1,486 @@
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+type RunnerResult<T> = Result<T, String>;
+
+const CONFIG_PATH: &str = "config/architecture/usability-release-gate.json";
+const CONFIG_SCHEMA: &str = "kyuubiki.usability-release-gate/v1";
+const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
+const REPORT_SCHEMA: &str = "kyuubiki.usability-readiness-report/v1";
+const DEFAULT_OUT: &str = "tmp/usability-readiness-report.json";
+
+#[derive(Deserialize)]
+struct GateConfig {
+    schema_version: String,
+    baseline_release: String,
+    target_release: String,
+    policy: Policy,
+    capability_contract: String,
+    source_guards: Vec<SourceGuard>,
+    journeys: Vec<Journey>,
+}
+
+#[derive(Deserialize)]
+struct Policy {
+    all_blocking_journeys_must_pass: bool,
+    planned_or_static_only_is_not_release_evidence: bool,
+    production_runtime_must_be_native: bool,
+    gate_scope: String,
+    release_claim_allowed: bool,
+    unclosed_release_tiers: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct SourceGuard {
+    id: String,
+    paths: Vec<String>,
+    forbidden_tokens: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct Journey {
+    id: String,
+    title: String,
+    blocking: bool,
+    capabilities: Vec<String>,
+    probes: Vec<Vec<String>>,
+}
+
+#[derive(Clone, Serialize)]
+struct ProbeResult {
+    command: Vec<String>,
+    status: String,
+    exit_code: Option<i32>,
+    elapsed_ms: u128,
+    output: String,
+}
+
+#[derive(Serialize)]
+struct JourneyResult {
+    id: String,
+    title: String,
+    blocking: bool,
+    status: String,
+    capabilities: Vec<String>,
+    probes: Vec<ProbeResult>,
+}
+
+#[derive(Serialize)]
+struct ReadinessReport {
+    schema_version: &'static str,
+    generated_at_unix_ms: u128,
+    baseline_release: String,
+    target_release: String,
+    gate_scope: String,
+    release_claim_allowed: bool,
+    unclosed_release_tiers: Vec<String>,
+    executed: bool,
+    status: String,
+    summary: Summary,
+    journeys: Vec<JourneyResult>,
+}
+
+#[derive(Serialize)]
+struct Summary {
+    journey_count: usize,
+    blocking_count: usize,
+    passed_count: usize,
+    failed_count: usize,
+    planned_count: usize,
+    unique_probe_count: usize,
+}
+
+#[derive(Default)]
+struct Options {
+    execute: bool,
+    self_test: bool,
+    help: bool,
+    out: Option<String>,
+}
+
+pub(crate) fn run_check_usability_release_gate(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let options = parse_args(args)?;
+    if options.help {
+        println!(
+            "usage: kyuubiki-script-runner check-usability-release-gate [--execute] [--out <path>]"
+        );
+        return Ok(0);
+    }
+    if options.self_test {
+        run_self_test()?;
+        println!("usability release gate self-test passed");
+        return Ok(0);
+    }
+
+    let config: GateConfig = read_json(root, CONFIG_PATH)?;
+    validate_config(root, &config)?;
+    let report = build_report(&config, options.execute)?;
+    validate_report(&config, &report)?;
+    let output_path = options
+        .out
+        .as_deref()
+        .or(options.execute.then_some(DEFAULT_OUT));
+    if let Some(out) = output_path {
+        write_json(root, out, &report)?;
+        println!("usability readiness report written: {out}");
+    }
+    println!(
+        "usability release gate {}: {}/{} journey(s) passed, executed={}",
+        report.status, report.summary.passed_count, report.summary.journey_count, report.executed
+    );
+    Ok(if report.status == "fail" { 1 } else { 0 })
+}
+
+fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
+    let mut options = Options::default();
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.to_string_lossy().as_ref() {
+            "--execute" => options.execute = true,
+            "--self-test" => options.self_test = true,
+            "--out" => {
+                options.out = Some(
+                    iter.next()
+                        .ok_or_else(|| "--out requires a path".to_string())?
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            }
+            "--help" | "-h" => {
+                options.help = true;
+            }
+            other => return Err(format!("unknown argument {other}")),
+        }
+    }
+    Ok(options)
+}
+
+fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
+    if config.schema_version != CONFIG_SCHEMA {
+        return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
+    }
+    if config.baseline_release != "moxi 2.7.x" || config.target_release != "moxi 3.0.0" {
+        return Err("usability gate must describe the moxi 2.7.x to 3.0.0 line".to_string());
+    }
+    if !config.policy.all_blocking_journeys_must_pass
+        || !config.policy.planned_or_static_only_is_not_release_evidence
+        || !config.policy.production_runtime_must_be_native
+    {
+        return Err("all 3.0 usability policies must remain enabled".to_string());
+    }
+    if config.policy.gate_scope.trim().is_empty() {
+        return Err("usability gate scope must be explicit".to_string());
+    }
+    if config.policy.release_claim_allowed != config.policy.unclosed_release_tiers.is_empty() {
+        return Err(
+            "release_claim_allowed must be true only when no release tiers remain unclosed"
+                .to_string(),
+        );
+    }
+
+    let capability_contract: serde_json::Value = read_json(root, &config.capability_contract)?;
+    if capability_contract
+        .get("schema_version")
+        .and_then(serde_json::Value::as_str)
+        != Some(CAPABILITY_SCHEMA)
+    {
+        return Err(format!(
+            "{} must use {CAPABILITY_SCHEMA}",
+            config.capability_contract
+        ));
+    }
+    let known_capabilities = capability_contract
+        .get("capabilities")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.get("id").and_then(serde_json::Value::as_str))
+        .collect::<BTreeSet<_>>();
+
+    let mut ids = BTreeSet::new();
+    if config.journeys.is_empty() || !config.journeys.iter().all(|journey| journey.blocking) {
+        return Err("3.0 gate requires at least one journey and all journeys blocking".to_string());
+    }
+    for journey in &config.journeys {
+        if journey.id.trim().is_empty() || !ids.insert(journey.id.as_str()) {
+            return Err(format!("missing or duplicate journey id {}", journey.id));
+        }
+        if journey.title.trim().is_empty()
+            || journey.capabilities.is_empty()
+            || journey.probes.is_empty()
+        {
+            return Err(format!("journey {} is incomplete", journey.id));
+        }
+        for capability in &journey.capabilities {
+            if !known_capabilities.contains(capability.as_str()) {
+                return Err(format!(
+                    "journey {} references unknown capability {capability}",
+                    journey.id
+                ));
+            }
+        }
+        for probe in &journey.probes {
+            if probe.is_empty() || probe[0].trim().is_empty() {
+                return Err(format!("journey {} contains an empty probe", journey.id));
+            }
+        }
+    }
+    validate_source_guards(root, &config.source_guards)
+}
+
+fn validate_source_guards(root: &Path, guards: &[SourceGuard]) -> RunnerResult<()> {
+    if guards.is_empty() {
+        return Err("usability gate requires source guards".to_string());
+    }
+    for guard in guards {
+        if guard.id.trim().is_empty() || guard.paths.is_empty() || guard.forbidden_tokens.is_empty()
+        {
+            return Err("source guard must declare id, paths, and forbidden tokens".to_string());
+        }
+        for relative in &guard.paths {
+            let source = fs::read_to_string(repo_path(root, relative)?)
+                .map_err(|error| format!("failed to read {relative}: {error}"))?;
+            for token in &guard.forbidden_tokens {
+                if source.contains(token) {
+                    return Err(format!(
+                        "source guard {} rejected {relative}: {token}",
+                        guard.id
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessReport> {
+    let mut cache = BTreeMap::<String, ProbeResult>::new();
+    if execute {
+        for probe in config.journeys.iter().flat_map(|journey| &journey.probes) {
+            let key = probe.join("\u{1f}");
+            if !cache.contains_key(&key) {
+                cache.insert(key, execute_probe(probe)?);
+            }
+        }
+    }
+
+    let journeys = config
+        .journeys
+        .iter()
+        .map(|journey| {
+            let probes = journey
+                .probes
+                .iter()
+                .map(|probe| {
+                    cache
+                        .get(&probe.join("\u{1f}"))
+                        .cloned()
+                        .unwrap_or_else(|| ProbeResult {
+                            command: probe.clone(),
+                            status: "planned".to_string(),
+                            exit_code: None,
+                            elapsed_ms: 0,
+                            output: String::new(),
+                        })
+                })
+                .collect::<Vec<_>>();
+            let status = if !execute {
+                "planned"
+            } else if probes.iter().all(|probe| probe.status == "pass") {
+                "pass"
+            } else {
+                "fail"
+            };
+            JourneyResult {
+                id: journey.id.clone(),
+                title: journey.title.clone(),
+                blocking: journey.blocking,
+                status: status.to_string(),
+                capabilities: journey.capabilities.clone(),
+                probes,
+            }
+        })
+        .collect::<Vec<_>>();
+    let passed_count = count_status(&journeys, "pass");
+    let failed_count = count_status(&journeys, "fail");
+    let planned_count = count_status(&journeys, "planned");
+    let status = if !execute {
+        "planned"
+    } else if failed_count == 0 {
+        if config.policy.release_claim_allowed {
+            "pass"
+        } else {
+            "baseline_pass"
+        }
+    } else {
+        "fail"
+    };
+    Ok(ReadinessReport {
+        schema_version: REPORT_SCHEMA,
+        generated_at_unix_ms: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| format!("system clock before epoch: {error}"))?
+            .as_millis(),
+        baseline_release: config.baseline_release.clone(),
+        target_release: config.target_release.clone(),
+        gate_scope: config.policy.gate_scope.clone(),
+        release_claim_allowed: config.policy.release_claim_allowed,
+        unclosed_release_tiers: config.policy.unclosed_release_tiers.clone(),
+        executed: execute,
+        status: status.to_string(),
+        summary: Summary {
+            journey_count: journeys.len(),
+            blocking_count: journeys.iter().filter(|journey| journey.blocking).count(),
+            passed_count,
+            failed_count,
+            planned_count,
+            unique_probe_count: if execute {
+                cache.len()
+            } else {
+                config
+                    .journeys
+                    .iter()
+                    .flat_map(|journey| &journey.probes)
+                    .map(|probe| probe.join("\u{1f}"))
+                    .collect::<BTreeSet<_>>()
+                    .len()
+            },
+        },
+        journeys,
+    })
+}
+
+fn execute_probe(args: &[String]) -> RunnerResult<ProbeResult> {
+    let executable =
+        std::env::current_exe().map_err(|error| format!("failed to resolve runner: {error}"))?;
+    let started = Instant::now();
+    let output = Command::new(executable)
+        .args(args)
+        .output()
+        .map_err(|error| format!("failed to execute {}: {error}", args.join(" ")))?;
+    let rendered = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(ProbeResult {
+        command: args.to_vec(),
+        status: if output.status.success() {
+            "pass"
+        } else {
+            "fail"
+        }
+        .to_string(),
+        exit_code: output.status.code(),
+        elapsed_ms: started.elapsed().as_millis(),
+        output: truncate(&rendered, 4000),
+    })
+}
+
+fn validate_report(config: &GateConfig, report: &ReadinessReport) -> RunnerResult<()> {
+    if report.journeys.len() != config.journeys.len()
+        || report.summary.journey_count != config.journeys.len()
+    {
+        return Err("usability report journey count mismatch".to_string());
+    }
+    if report.executed && report.summary.planned_count != 0 {
+        return Err("executed usability report cannot contain planned journeys".to_string());
+    }
+    if !report.executed && report.status != "planned" {
+        return Err("static usability report must remain planned".to_string());
+    }
+    if report.status == "pass" && !report.release_claim_allowed {
+        return Err("release pass cannot be emitted while release claims are blocked".to_string());
+    }
+    Ok(())
+}
+
+fn count_status(journeys: &[JourneyResult], status: &str) -> usize {
+    journeys
+        .iter()
+        .filter(|journey| journey.status == status)
+        .count()
+}
+
+fn truncate(value: &str, max_chars: usize) -> String {
+    value.chars().take(max_chars).collect()
+}
+
+fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
+    let path = Path::new(relative);
+    if path.is_absolute()
+        || relative.is_empty()
+        || path.components().any(|part| part.as_os_str() == "..")
+    {
+        return Err(format!("path escapes repository: {relative}"));
+    }
+    Ok(root.join(path))
+}
+
+fn read_json<T: serde::de::DeserializeOwned>(root: &Path, relative: &str) -> RunnerResult<T> {
+    let text = fs::read_to_string(repo_path(root, relative)?)
+        .map_err(|error| format!("failed to read {relative}: {error}"))?;
+    serde_json::from_str(&text).map_err(|error| format!("{relative}: invalid JSON: {error}"))
+}
+
+fn write_json(root: &Path, relative: &str, report: &ReadinessReport) -> RunnerResult<()> {
+    let path = repo_path(root, relative)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    let rendered = serde_json::to_string_pretty(report)
+        .map_err(|error| format!("failed to serialize usability report: {error}"))?;
+    fs::write(&path, format!("{rendered}\n"))
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
+}
+
+fn run_self_test() -> RunnerResult<()> {
+    let planned = JourneyResult {
+        id: "test".to_string(),
+        title: "Test".to_string(),
+        blocking: true,
+        status: "planned".to_string(),
+        capabilities: vec!["test.capability".to_string()],
+        probes: Vec::new(),
+    };
+    if count_status(&[planned], "planned") != 1 {
+        return Err("planned journey counting failed".to_string());
+    }
+    if truncate("abcdef", 3) != "abc" {
+        return Err("probe output truncation failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{JourneyResult, count_status, truncate};
+
+    #[test]
+    fn counts_planned_journeys() {
+        let planned = JourneyResult {
+            id: "test".to_string(),
+            title: "Test".to_string(),
+            blocking: true,
+            status: "planned".to_string(),
+            capabilities: Vec::new(),
+            probes: Vec::new(),
+        };
+        assert_eq!(count_status(&[planned], "planned"), 1);
+    }
+
+    #[test]
+    fn truncates_probe_output_by_character() {
+        assert_eq!(truncate("abcdef", 3), "abc");
+        assert_eq!(truncate("可用性", 2), "可用");
+    }
+}

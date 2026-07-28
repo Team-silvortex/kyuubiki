@@ -4,6 +4,11 @@ description = "Enables the service_status command."
 commands.allow = ["service_status"]
 
 [[permission]]
+identifier = "allow-packaged-boot-ready"
+description = "Enables the packaged_boot_ready command."
+commands.allow = ["packaged_boot_ready"]
+
+[[permission]]
 identifier = "allow-hot-service-status"
 description = "Enables the hot_service_status command."
 commands.allow = ["hot_service_status"]

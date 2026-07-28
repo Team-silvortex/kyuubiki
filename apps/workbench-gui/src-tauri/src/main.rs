@@ -1,6 +1,7 @@
 use kyuubiki_desktop_runtime::{
     append_desktop_audit_line as desktop_append_audit_line,
     read_global_language_preference as desktop_read_global_language_preference,
+    report_packaged_boot_ready as desktop_report_packaged_boot_ready,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
     service_stop as desktop_service_stop, summarize_service_status as desktop_summarize_service_status,
@@ -49,6 +50,11 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
         summary: desktop_summarize_service_status(&rendered),
         rendered,
     })
+}
+
+#[tauri::command]
+fn packaged_boot_ready() -> Result<String, String> {
+    desktop_report_packaged_boot_ready("workbench")
 }
 
 fn parse_service_mode(mode: Option<&str>) -> ServiceMode {
@@ -148,6 +154,7 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             service_status,
+            packaged_boot_ready,
             read_runtime_log,
             workbench_environment,
             get_global_language_preference,

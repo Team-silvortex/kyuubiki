@@ -30,6 +30,7 @@ use env_panel::{WriteEnvPayload, read_env_file, write_env_file};
 use kyuubiki_desktop_runtime::{
     ServiceMode, ServiceStatusSummary, append_desktop_audit_line as desktop_append_audit_line,
     read_global_language_preference as desktop_read_global_language_preference,
+    report_packaged_boot_ready as desktop_report_packaged_boot_ready,
     service_restart as desktop_service_restart, service_start as desktop_service_start,
     service_status as desktop_service_status, service_stop as desktop_service_stop,
     summarize_service_status as desktop_summarize_service_status,
@@ -207,6 +208,11 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
         summary: desktop_summarize_service_status(&rendered),
         rendered,
     })
+}
+
+#[tauri::command]
+fn packaged_boot_ready() -> Result<String, String> {
+    desktop_report_packaged_boot_ready("installer")
 }
 
 #[tauri::command]
@@ -418,6 +424,7 @@ fn main() {
             export_launch,
             read_env_file,
             service_status,
+            packaged_boot_ready,
             runtime_payload_status,
             get_global_language_preference,
             set_global_language_preference,

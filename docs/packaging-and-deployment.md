@@ -85,6 +85,12 @@ Use these commands when building deployable layouts:
 - `make desktop-build-host`
   Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host using
   one shared, platform-scoped Cargo cache
+- `make desktop-install-host`
+  Stages, validates, and atomically replaces the three fixed macOS application
+  bundles, restoring the previous bundle if activation fails
+- `make desktop-packaged-smoke PLATFORM=macos`
+  Launches all three packaged macOS binaries, waits for their interactive UI
+  startup receipts, validates version/surface/PID identity, and retains logs
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -118,6 +124,8 @@ the apt package set, and the preflight command.
 - `./scripts/kyuubiki desktop-status macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-stage macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-build-host`
+- `./scripts/kyuubiki desktop-install-host`
+- `./scripts/kyuubiki desktop-packaged-smoke macos`
 - `./scripts/kyuubiki desktop-release macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-linux-remote`
@@ -167,7 +175,10 @@ and host-fallback policy visible before payload download/extraction is wired
 into the installer. Missing runtime payloads should be treated as deployment
 blockers for self-host releases, not as hidden user prerequisites.
 
-Launch scripts and `scripts/kyuubiki-runtime.mjs` now resolve runtime commands
+Development launch commands and all three desktop shells now resolve runtime commands
+through the shared native `kyuubiki-desktop-runtime` crate. The legacy
+`scripts/kyuubiki-runtime.mjs` file is retained only while its integration-test
+callers are migrated; it is not part of the user-facing launch path.
 in this order:
 
 1. installer-managed runtime paths declared by `embedded-runtimes.json`
@@ -378,10 +389,29 @@ When packaging desktop deliverables, the smoothest path is now:
    `make desktop-stage PLATFORM=all`
 4. build host-native desktop bundles:
    `make desktop-build-host`
-5. run the integrated release pass for the current host:
+5. prove that every packaged macOS shell reaches its interactive startup point:
+   `make desktop-packaged-smoke PLATFORM=macos`
+6. run the integrated release pass for the current host:
    `make desktop-release`
-6. re-check descriptors and icon coverage:
+7. re-check descriptors and icon coverage:
    `make desktop-verify PLATFORM=all`
+
+These checks prove different layers. `desktop-verify` validates staged
+descriptors and icon inputs. `desktop-packaged-smoke` executes the packaged
+shells and verifies the native-to-WebView startup path. `desktop-release`
+additionally enforces distribution signing and notarization policy; a local
+ad-hoc build passing the smoke test is not a public release artifact.
+
+After installing the bundles, run the same probe against the installed copy:
+
+```sh
+./scripts/kyuubiki desktop-packaged-smoke macos \
+  --bundle-root /Applications \
+  --out tmp/packaged-desktop-installed-smoke.json
+```
+
+This prevents a source bundle pass from hiding a stale application under the
+system application directory.
 
 `desktop-status` is intentionally the first stop. It gives operators one place
 to see:

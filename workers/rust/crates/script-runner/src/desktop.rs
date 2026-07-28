@@ -622,16 +622,20 @@ fn distribution_platform(value: Option<&OsString>) -> RunnerResult<Platform> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::launch_services_bundle_path;
 
     #[test]
     fn parses_kyuubiki_launch_services_bundle_paths() {
-        let line = "path:  /Volumes/dmg.test/Kyuubiki Hub.app (0x1234)";
+        let bundle_path = PathBuf::from(std::path::MAIN_SEPARATOR.to_string())
+            .join("Volumes")
+            .join("dmg.test")
+            .join("Kyuubiki Hub.app");
+        let line = format!("path:  {} (0x1234)", bundle_path.display());
         assert_eq!(
-            launch_services_bundle_path(line)
-                .expect("bundle path")
-                .to_string_lossy(),
-            "/Volumes/dmg.test/Kyuubiki Hub.app"
+            launch_services_bundle_path(&line).expect("bundle path"),
+            bundle_path
         );
     }
 

@@ -1,0 +1,160 @@
+{
+  "schema_version": "kyuubiki.usability-release-gate/v1",
+  "baseline_release": "moxi 2.7.x",
+  "target_release": "moxi 3.0.0",
+  "policy": {
+    "all_blocking_journeys_must_pass": true,
+    "planned_or_static_only_is_not_release_evidence": true,
+    "production_runtime_must_be_native": true,
+    "gate_scope": "development_contract_and_ui_invocation",
+    "release_claim_allowed": false,
+    "unclosed_release_tiers": [
+      "packaged_desktop_round_trip",
+      "fault_injection_and_recovery",
+      "remote_agent_orchestra_round_trip",
+      "upgrade_and_rollback"
+    ]
+  },
+  "capability_contract": "config/architecture/desktop-capability-closure.json",
+  "source_guards": [
+    {
+      "id": "native-production-runtime",
+      "paths": [
+        "workers/rust/crates/script-runner/src/main.rs",
+        "scripts/kyuubiki.cmd"
+      ],
+      "forbidden_tokens": ["kyuubiki-runtime.mjs"]
+    }
+  ],
+  "journeys": [
+    {
+      "id": "install-repair",
+      "title": "Install, inspect, and repair a local deployment",
+      "blocking": true,
+      "capabilities": [
+        "installer.workspace.bootstrap",
+        "installer.environment.init",
+        "installer.integrity.inspect",
+        "installer.integrity.repair",
+        "installer.runtime.install-payload"
+      ],
+      "probes": [
+        ["check-install-update-disk-hygiene"],
+        ["check-component-integrity-protocol"]
+      ]
+    },
+    {
+      "id": "create-open-project",
+      "title": "Create, validate, and open a project bundle",
+      "blocking": true,
+      "capabilities": [
+        "hub.project.create",
+        "hub.project.inspect",
+        "hub.project.validate",
+        "hub.project.open-workbench"
+      ],
+      "probes": [
+        ["integration-desktop-gui-node-test"]
+      ]
+    },
+    {
+      "id": "compose-workflow",
+      "title": "Compose and validate a workflow with cross-operator datasets",
+      "blocking": true,
+      "capabilities": [
+        "workbench.analysis.open-local"
+      ],
+      "probes": [
+        ["check-workflow-dataset-contract"],
+        ["integration-ui-workflow-node-test"]
+      ]
+    },
+    {
+      "id": "execute-observe",
+      "title": "Execute a TaskIR workload and observe its outcome",
+      "blocking": true,
+      "capabilities": [
+        "hub.runtime.start-local",
+        "workbench.runtime.start-local",
+        "workbench.runtime.inspect"
+      ],
+      "probes": [
+        ["check-operator-task-ir-contract"],
+        [
+          "check-operator-validation",
+          "--execute",
+          "--profile",
+          "line-field-closed-form",
+          "--out",
+          "tmp/usability-line-field-validation.json"
+        ]
+      ]
+    },
+    {
+      "id": "diagnose-recover",
+      "title": "Diagnose a failed path and recover without cascading failure",
+      "blocking": true,
+      "capabilities": [
+        "hub.environment.validate",
+        "installer.integrity.inspect",
+        "installer.integrity.repair",
+        "workbench.runtime.inspect"
+      ],
+      "probes": [
+        ["integration-desktop-gui-node-test"],
+        ["check-component-integrity-protocol"]
+      ]
+    },
+    {
+      "id": "retain-export",
+      "title": "Retain and validate reproducible research evidence",
+      "blocking": true,
+      "capabilities": [
+        "hub.project.inspect",
+        "hub.project.validate"
+      ],
+      "probes": [
+        [
+          "build-material-research-bundle",
+          "--study",
+          "heat-spreader",
+          "--out",
+          "tmp/usability-material-research-bundle.json"
+        ],
+        [
+          "check-material-research-bundle",
+          "--in",
+          "tmp/usability-material-research-bundle.json"
+        ],
+        ["check-material-exploration-chain-contract"]
+      ]
+    },
+    {
+      "id": "localize-layout",
+      "title": "Use supported languages and stable desktop interaction layouts",
+      "blocking": true,
+      "capabilities": [
+        "hub.project.open-workbench",
+        "workbench.analysis.open-local"
+      ],
+      "probes": [
+        ["validate-language-packs"],
+        ["integration-desktop-gui-node-test"]
+      ]
+    },
+    {
+      "id": "update-cleanly",
+      "title": "Download and apply updates without unmanaged residue",
+      "blocking": true,
+      "capabilities": [
+        "installer.update.download",
+        "installer.update.apply",
+        "installer.integrity.inspect"
+      ],
+      "probes": [
+        ["check-install-update-disk-hygiene"],
+        ["check-component-integrity-protocol"]
+      ]
+    }
+  ]
+}

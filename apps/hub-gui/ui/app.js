@@ -3,6 +3,7 @@ import {
   invokeTauri,
   loadDesktopLanguagePreference,
   normalizeDesktopLanguage,
+  reportPackagedBootReady,
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
@@ -609,4 +610,4 @@ void runHubStartupPhases({
   refreshRuntimeStatus, renderAssistantPanel, renderHotRuntimeLogServiceLabel,
   renderHubDensityToggles, renderHubRecents, renderPanelPages, rerenderLocalizedHubShell,
   setBusy, setEventMessage, setSection, state, syncDesktopStates,
-});
+}).then(() => reportPackagedBootReady());

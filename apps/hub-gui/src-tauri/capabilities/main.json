@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "allow-service-status",
+    "allow-packaged-boot-ready",
     "allow-hot-service-status",
     "allow-read-runtime-log",
     "allow-doctor-report",

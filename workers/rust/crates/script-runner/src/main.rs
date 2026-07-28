@@ -20,6 +20,7 @@ mod dependency_audit;
 mod desktop;
 mod desktop_distribution;
 mod desktop_icon_variants;
+mod desktop_install;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;
 mod desktop_runtime_payload;
@@ -76,6 +77,7 @@ mod operator_reliability_rules;
 mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
+mod packaged_desktop_smoke;
 mod project_organization_audit;
 mod regression_gate_report;
 mod regression_lane_catalog;
@@ -87,6 +89,7 @@ mod remote_material_research_example;
 mod remote_material_stage_health;
 mod remote_material_summary;
 mod remote_ssh_fixture;
+mod runtime_commands;
 mod rust_line_counts;
 mod standard_benchmark_index;
 mod standard_benchmark_remote;
@@ -94,6 +97,7 @@ mod standard_benchmark_report;
 mod toolchain_contract;
 mod ui_automation_contract;
 mod update_catalog_docs;
+mod usability_release_gate;
 mod verification_evidence_surface;
 mod version_line_audit;
 mod workflow_catalog_benchmark_compare;
@@ -158,6 +162,9 @@ fn run() -> RunnerResult<u8> {
     if let Some(result) = node_tests::run_node_command(&paths, &command, rest.clone()) {
         return result;
     }
+    if let Some(result) = runtime_commands::run_runtime_command(&command, rest.clone()) {
+        return result;
+    }
 
     match command.as_str() {
         "help" | "--help" | "-h" => {
@@ -171,32 +178,6 @@ fn run() -> RunnerResult<u8> {
         ),
         "audit-version-line" => version_line_audit::run_audit_version_line(&paths.root, rest),
         "create-release-snapshot" => release_snapshot::run_create_release_snapshot(rest),
-        "status"
-        | "start"
-        | "start-local"
-        | "start-cloud"
-        | "start-distributed"
-        | "restart"
-        | "restart-local"
-        | "restart-cloud"
-        | "restart-distributed"
-        | "stop"
-        | "export-db"
-        | "hot-status"
-        | "hot-start-local"
-        | "hot-start-cloud"
-        | "hot-start-distributed"
-        | "hot-stop" => {
-            let mut runtime_args = vec![
-                paths
-                    .root
-                    .join("scripts/kyuubiki-runtime.mjs")
-                    .into_os_string(),
-                OsString::from(&command),
-            ];
-            runtime_args.extend(rest);
-            run_command(&paths.root, "node", runtime_args)
-        }
         "doctor" => run_installer(&paths, "doctor", rest),
         "validate-env" => run_installer(&paths, "validate-env", rest),
         "cross-platform-audit" => run_installer(&paths, "cross-platform-audit", rest),
@@ -326,6 +307,10 @@ fn run() -> RunnerResult<u8> {
         "desktop-status" => run_desktop_status(&paths, rest),
         "desktop-stage" => run_desktop_stage(&paths, rest),
         "desktop-build-host" => run_desktop_build_host(&paths),
+        "desktop-install-host" => desktop_install::run_desktop_install_host(&paths.root, rest),
+        "desktop-packaged-smoke" => {
+            packaged_desktop_smoke::run_packaged_desktop_smoke(&paths.root, rest)
+        }
         "desktop-release" => run_desktop_release(&paths, rest),
         "desktop-runtime-payload" => {
             desktop_runtime_payload::run_desktop_runtime_payload(&paths, rest)

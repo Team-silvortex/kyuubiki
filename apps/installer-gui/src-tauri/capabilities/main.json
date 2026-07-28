@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "allow-doctor-report",
+    "allow-packaged-boot-ready",
     "allow-installation-integrity-report",
     "allow-regression-gate-report",
     "allow-latest-applied-update-record",

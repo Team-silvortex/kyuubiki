@@ -291,6 +291,12 @@
           "markdownDescription": "Enables the open_troubleshooting_doc command."
         },
         {
+          "description": "Enables the packaged_boot_ready command.",
+          "type": "string",
+          "const": "allow-packaged-boot-ready",
+          "markdownDescription": "Enables the packaged_boot_ready command."
+        },
+        {
           "description": "Enables the project_bundle_diff command.",
           "type": "string",
           "const": "allow-project-bundle-diff",

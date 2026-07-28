@@ -63,6 +63,15 @@ export async function listenTauri(
   return tauri.event.listen(eventName, handler);
 }
 
+export async function reportPackagedBootReady(): Promise<unknown | null> {
+  try {
+    return await invokeTauri("packaged_boot_ready");
+  } catch (error) {
+    console.warn("Packaged desktop boot receipt failed.", error);
+    return null;
+  }
+}
+
 export async function loadDesktopBrand(): Promise<unknown | null> {
   try {
     const response = await fetch("./assets/brand.json");

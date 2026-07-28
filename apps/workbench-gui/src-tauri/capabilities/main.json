@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "allow-service-status",
+    "allow-packaged-boot-ready",
     "allow-read-runtime-log",
     "allow-guarded-mutation-action",
     "allow-workbench-environment",

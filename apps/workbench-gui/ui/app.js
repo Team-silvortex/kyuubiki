@@ -4,6 +4,7 @@ import {
   loadDesktopBrand,
   loadDesktopLanguagePreference,
   normalizeDesktopLanguage,
+  reportPackagedBootReady,
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
@@ -625,6 +626,7 @@ async function boot() {
   renderConsoleTabs();
   renderLogServiceTabs();
   await refreshStatus();
+  await reportPackagedBootReady();
   window.setInterval(async () => {
     if (document.visibilityState === "hidden") {
       return;

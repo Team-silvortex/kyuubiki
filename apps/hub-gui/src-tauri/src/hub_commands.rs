@@ -8,6 +8,11 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
 }
 
 #[tauri::command]
+fn packaged_boot_ready() -> Result<String, String> {
+    desktop_report_packaged_boot_ready("hub")
+}
+
+#[tauri::command]
 fn get_global_language_preference() -> DesktopPreferencesPayload {
     DesktopPreferencesPayload {
         language: desktop_read_global_language_preference().unwrap_or_else(|| "en".to_string()),
@@ -213,6 +218,7 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             service_status,
+            packaged_boot_ready,
             hot_service_status,
             read_runtime_log,
             doctor_report,

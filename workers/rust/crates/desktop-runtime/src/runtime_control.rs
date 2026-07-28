@@ -730,11 +730,12 @@ fn augment_path(paths: &RuntimePaths, env: &mut HashMap<String, String>) {
         if let Some(home) = env.get("HOME") {
             entries.push(PathBuf::from(home).join(".cargo/bin"));
         }
+        #[cfg(unix)]
         entries.extend([
-            PathBuf::from("/opt/homebrew/bin"),
-            PathBuf::from("/usr/local/bin"),
-            PathBuf::from("/usr/bin"),
-            PathBuf::from("/bin"),
+            unix_rooted_path(&["opt", "homebrew", "bin"]),
+            unix_rooted_path(&["usr", "local", "bin"]),
+            unix_rooted_path(&["usr", "bin"]),
+            unix_rooted_path(&["bin"]),
         ]);
         if let Some(current) = env.get("PATH") {
             entries.extend(env::split_paths(current));
@@ -745,6 +746,13 @@ fn augment_path(paths: &RuntimePaths, env: &mut HashMap<String, String>) {
         .to_string_lossy()
         .to_string();
     env.insert("PATH".to_string(), joined);
+}
+
+#[cfg(unix)]
+fn unix_rooted_path(parts: &[&str]) -> PathBuf {
+    let mut path = PathBuf::from(std::path::MAIN_SEPARATOR.to_string());
+    path.extend(parts);
+    path
 }
 
 fn service_mode_name(mode: ServiceMode) -> &'static str {

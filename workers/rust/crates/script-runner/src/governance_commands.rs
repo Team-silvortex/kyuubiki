@@ -8,7 +8,7 @@ use crate::{
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, operator_task_ir_contract,
     project_organization_audit, toolchain_contract, ui_automation_contract, update_catalog_docs,
-    verification_evidence_surface, workflow_dataset_contract,
+    usability_release_gate, verification_evidence_surface, workflow_dataset_contract,
 };
 use std::ffi::OsString;
 use std::path::Path;
@@ -79,6 +79,9 @@ pub(crate) fn run_governance_command(
         }
         "check-gui-runtime-capability-contract" => {
             gui_runtime_capability_contract::run_check_gui_runtime_capability_contract(root, args)
+        }
+        "check-usability-release-gate" => {
+            usability_release_gate::run_check_usability_release_gate(root, args)
         }
         "check-workflow-dataset-contract" => {
             workflow_dataset_contract::run_check_workflow_dataset_contract(root, args)

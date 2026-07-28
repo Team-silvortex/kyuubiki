@@ -189,6 +189,12 @@
           "markdownDescription": "Enables the guarded_mutation_action command."
         },
         {
+          "description": "Enables the packaged_boot_ready command.",
+          "type": "string",
+          "const": "allow-packaged-boot-ready",
+          "markdownDescription": "Enables the packaged_boot_ready command."
+        },
+        {
           "description": "Enables the read_runtime_log command.",
           "type": "string",
           "const": "allow-read-runtime-log",

@@ -74,6 +74,11 @@ description = "Enables the service_status command."
 commands.allow = ["service_status"]
 
 [[permission]]
+identifier = "allow-packaged-boot-ready"
+description = "Enables the packaged_boot_ready command."
+commands.allow = ["packaged_boot_ready"]
+
+[[permission]]
 identifier = "allow-runtime-payload-status"
 description = "Enables the runtime_payload_status command."
 commands.allow = ["runtime_payload_status"]
