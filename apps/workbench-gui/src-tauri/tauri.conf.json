@@ -14,7 +14,7 @@
         "title": "Kyuubiki Workbench",
         "width": 1600,
         "height": 980,
-        "minWidth": 1180,
+        "minWidth": 1080,
         "minHeight": 760,
         "resizable": true
       }
@@ -30,6 +30,9 @@
       "icons/kyuubiki-app.png",
       "icons/kyuubiki-app.icns",
       "icons/kyuubiki-app.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

@@ -37,6 +37,10 @@ test("desktop shell exposes runtime and log panels", () => {
     /data-shell-page="workbench"/,
     /data-shell-pane="control"/,
     /data-shell-pane="workbench"/,
+    /workflow-ribbon/,
+    /workflow-step--primary/,
+    /shell-shell shell-shell--workbench/,
+    /shell-tab is-active" data-shell-page="workbench"/,
     /id="workbench-frame"/,
   ]);
 });
@@ -55,6 +59,7 @@ test("desktop shell registers local runtime actions and shortcuts", () => {
     /watchDesktopLanguagePreference/,
     /setShellPage/,
     /renderShellPages/,
+    /shellPage: "workbench"/,
     /workbenchShellLanguageOptions/,
     /loadDesktopLanguagePack/,
     /ensureShellLanguage/,

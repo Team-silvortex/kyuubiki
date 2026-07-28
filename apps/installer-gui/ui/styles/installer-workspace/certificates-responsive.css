@@ -62,7 +62,7 @@
   overflow: auto;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 840px) {
   .workspace {
     grid-template-columns: 1fr;
     gap: var(--desktop-content-gap);

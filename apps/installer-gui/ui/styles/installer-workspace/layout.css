@@ -1,8 +1,10 @@
 .workspace {
+  grid-area: workspace;
   display: grid;
   grid-template-columns: minmax(var(--desktop-sidebar-width), 1fr) minmax(0, 3fr);
   gap: var(--desktop-content-gap);
-  min-height: calc(100vh - 14rem);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -12,6 +14,7 @@
   padding: 14px;
   border-radius: var(--desktop-radius-shell);
   min-width: 0;
+  overflow: auto;
 }
 
 .sidebar-brand {
@@ -111,6 +114,80 @@ button.primary {
   display: grid;
 }
 
+.panel--sectioned {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.panel--sectioned > .section-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.panel--sectioned > .section-header > .action-row {
+  flex-wrap: nowrap;
+  min-width: 0;
+  padding-bottom: 3px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.panel--sectioned > .section-header > .action-row > * {
+  flex: 0 0 auto;
+}
+
+.panel--sectioned > .section-header > .action-row button {
+  padding: 9px 11px;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.panel--sectioned > .section-header .update-panel__channel {
+  min-width: 150px;
+}
+
+.installer-section-nav {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 0 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.installer-section-tab {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  white-space: nowrap;
+  transition: none;
+}
+
+.installer-section-tab.installer-section-tab--active {
+  color: var(--text);
+  border-color: rgba(245, 166, 35, 0.38);
+  background: var(--accent-soft);
+}
+
+.installer-panel-section {
+  display: none;
+  min-height: 0;
+  padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.installer-panel-section--active {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
 .integrity-subview {
   display: none;
   gap: 16px;
@@ -198,6 +275,40 @@ button.primary {
 .hub-stack .desktop-shell-note,
 #regression-gate-reasons {
   overflow-wrap: anywhere;
+}
+
+@media (max-height: 820px) and (min-width: 721px) {
+  .sidebar {
+    gap: 6px;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  .sidebar-brand {
+    gap: 8px;
+    padding: 4px 4px 9px;
+    margin-bottom: 0;
+  }
+
+  .sidebar-brand__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .sidebar-brand span {
+    display: none;
+  }
+
+  .sidebar-tab {
+    gap: 8px;
+    padding: 7px 10px;
+  }
+
+  .sidebar-tab__glyph {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
 }
 
 .integrity-subnav {

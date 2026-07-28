@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="shell">
-      <div class="shell-shell" id="shell-root">
+      <div class="shell-shell shell-shell--workbench" id="shell-root">
       <header class="shell-head desktop-shell-surface-card">
         <div class="brand">
           <img alt="Kyuubiki" class="brand__icon" src="./assets/kyuubiki-app.png" />
@@ -33,14 +33,38 @@
               <option value="es">Español</option>
             </select>
           </label>
-          <button class="shell-tab is-active" data-shell-page="control" type="button">Control</button>
-          <button class="shell-tab" data-shell-page="workbench" type="button">Workbench</button>
+          <button class="shell-tab" data-shell-page="control" type="button">Control</button>
+          <button class="shell-tab is-active" data-shell-page="workbench" type="button">Workbench</button>
         </div>
       </header>
 
-      <section class="shell-page" data-shell-pane="control">
+      <section class="shell-page hidden" data-shell-pane="control">
+        <section class="workflow-ribbon desktop-shell-surface-card" aria-labelledby="workflow-ribbon-title">
+          <div class="workflow-ribbon__intro">
+            <div class="brand__eyebrow desktop-shell-eyebrow" id="workflow-ribbon-eyebrow">Primary flow</div>
+            <h2 id="workflow-ribbon-title">From runtime to study in three steps</h2>
+          </div>
+          <div class="workflow-ribbon__steps">
+            <button class="workflow-step" data-action="start-local" id="workflow-step-start" type="button">
+              <span class="workflow-step__index">01</span>
+              <strong id="workflow-step-start-title">Start runtime</strong>
+              <span id="workflow-step-start-copy">Bring up the local execution stack.</span>
+            </button>
+            <button class="workflow-step" data-action="refresh" id="workflow-step-verify" type="button">
+              <span class="workflow-step__index">02</span>
+              <strong id="workflow-step-verify-title">Verify health</strong>
+              <span id="workflow-step-verify-copy">Confirm the control plane and agents.</span>
+            </button>
+            <button class="workflow-step workflow-step--primary" data-shell-target="workbench" id="workflow-step-enter" type="button">
+              <span class="workflow-step__index">03</span>
+              <strong id="workflow-step-enter-title">Enter Workbench</strong>
+              <span id="workflow-step-enter-copy">Continue into the full analysis surface.</span>
+            </button>
+          </div>
+        </section>
+
         <div class="control-grid">
-          <section class="panel desktop-shell-surface-card">
+          <section class="panel panel--runtime desktop-shell-surface-card">
             <div class="panel__title desktop-shell-card-title">Runtime</div>
             <div class="status-grid">
               <div>
@@ -62,7 +86,7 @@
             </div>
           </section>
 
-          <section class="panel desktop-shell-surface-card">
+          <section class="panel panel--console desktop-shell-surface-card">
             <div class="panel__title desktop-shell-card-title">Runtime Console</div>
             <div class="segmented-tabs">
               <button class="segmented-tabs__tab is-active" data-console-tab="status" type="button">Status</button>
@@ -90,7 +114,7 @@
             </div>
           </section>
 
-          <section class="panel desktop-shell-surface-card panel--controls">
+          <section class="panel panel--controls desktop-shell-surface-card">
             <div class="panel__title desktop-shell-card-title">Viewer controls</div>
             <div class="button-row desktop-shell-action-row">
               <button data-action="reload-frame">Reload frame</button>
@@ -112,7 +136,7 @@
         </div>
       </section>
 
-      <main class="viewer shell-page hidden" data-shell-pane="workbench">
+      <main class="viewer shell-page" data-shell-pane="workbench">
         <div class="viewer__toolbar">
           <img alt="Dock" class="viewer__dock-icon" src="./assets/kyuubiki-dock.png" />
           <div class="viewer__headline">

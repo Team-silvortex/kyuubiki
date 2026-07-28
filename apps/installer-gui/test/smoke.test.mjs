@@ -149,6 +149,9 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(js, /getActiveCertificates,\s*showCompletion/);
   assert.match(regressionGatePanel, /renderRegressionGateReport/);
   assert.match(remotePanel, /mountRemotePanel/);
+  assert.match(read("ui/installer-panel-sections.js"), /mountInstallerPanelSections/);
+  assert.match(read("ui/update-panel.js"), /Update workflow sections/);
+  assert.match(remotePanel, /Remote deployment sections/);
   assert.match(remoteNodeActions, /createRemoteNodeActionCoordinator/);
   assert.match(remoteNodeActions, /runRecommendedAction/);
   assert.match(remoteNodeActions, /focusField/);

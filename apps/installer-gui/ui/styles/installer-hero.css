@@ -1,9 +1,10 @@
 .hero {
+  grid-area: hero;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(250px, 1fr) minmax(300px, 0.95fr);
-  gap: 20px;
-  margin-bottom: 18px;
-  padding: 26px 28px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(190px, 0.62fr) minmax(260px, 0.8fr);
+  gap: 14px;
+  margin-bottom: 0;
+  padding: 18px 20px;
   border-radius: var(--desktop-radius-shell);
 }
 
@@ -15,8 +16,8 @@
 }
 
 .hero-brand__icon {
-  width: 74px;
-  height: 74px;
+  width: 58px;
+  height: 58px;
   border-radius: var(--desktop-radius-card);
   border: 1px solid rgba(245, 166, 35, 0.24);
   background: linear-gradient(180deg, rgba(72, 77, 86, 0.96), rgba(43, 47, 54, 0.96));
@@ -31,7 +32,7 @@
 
 .hero-visual {
   position: relative;
-  min-height: 220px;
+  min-height: 158px;
   border: 1px solid var(--line);
   border-radius: calc(var(--desktop-radius-shell) - 2px);
   background:
@@ -51,17 +52,17 @@
 }
 
 .hero-visual__logo {
-  top: 26px;
-  right: 28px;
-  width: 104px;
-  height: 104px;
+  top: 18px;
+  right: 20px;
+  width: 76px;
+  height: 76px;
 }
 
 .hero-visual__dock {
-  left: 24px;
-  bottom: 26px;
-  width: 88px;
-  height: 88px;
+  left: 18px;
+  bottom: 18px;
+  width: 62px;
+  height: 62px;
   border-radius: 18px;
 }
 
@@ -74,18 +75,18 @@
 }
 
 .hero-orbit--large {
-  width: 220px;
-  height: 220px;
+  width: 156px;
+  height: 156px;
 }
 
 .hero-orbit--medium {
-  width: 150px;
-  height: 150px;
+  width: 108px;
+  height: 108px;
 }
 
 .hero-orbit--small {
-  width: 88px;
-  height: 88px;
+  width: 62px;
+  height: 62px;
 }
 
 .hero-node,
@@ -122,7 +123,7 @@
 }
 
 .hero-chip {
-  padding: 9px 12px;
+  padding: 6px 9px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(64, 69, 77, 0.92);
@@ -132,22 +133,22 @@
 }
 
 .hero-chip--sqlite {
-  top: 20px;
-  left: 18px;
+  top: 12px;
+  left: 12px;
 }
 
 .hero-chip--postgres {
-  top: 90px;
-  right: 18px;
+  top: 66px;
+  right: 12px;
 }
 
 .hero-chip--agents {
-  left: 24px;
-  bottom: 20px;
+  left: 14px;
+  bottom: 12px;
 }
 
 .hero-actions {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .hero-actions,
@@ -160,11 +161,13 @@
 
 .hero-meta {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
 }
 
 .meta-card {
-  padding: 14px 16px;
+  padding: 10px 12px;
   display: grid;
   gap: 6px;
 }
@@ -176,8 +179,64 @@
   letter-spacing: 0.08em;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1280px) {
   .hero {
+    grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+
+  .hero-brand {
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .hero-brand__icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hero-copy h1 {
+    font-size: 1.65rem;
+    line-height: 1;
+  }
+
+  .hero-copy .lede {
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  .hero-copy > .lede:not(.lede--subtle) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero-copy .lede--subtle {
+    display: none;
+  }
+
+  .hero-actions {
+    margin-top: 8px;
+    gap: 8px;
+  }
+
+  .hero-actions button {
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-meta {
     grid-template-columns: 1fr;
   }
 }

@@ -1,3 +1,5 @@
+import { mountInstallerPanelSections } from "./installer-panel-sections.js";
+
 export function mountRemotePanel() {
   const root = document.getElementById("remote-panel-root");
   if (!root) return;
@@ -159,4 +161,35 @@ export function mountRemotePanel() {
       </div>
     </div>
   `;
+  mountInstallerPanelSections(root, {
+    label: "Remote deployment sections",
+    defaultSection: "target",
+    sections: [
+      {
+        name: "target",
+        label: "Target & policy",
+        anchors: ["#remote-target-host", "#remote-policy-allowed-hosts"],
+      },
+      {
+        name: "authority",
+        label: "Authority",
+        anchors: ["#certificate-policy-storage-root"],
+      },
+      {
+        name: "certificates",
+        label: "Certificates",
+        anchors: ["#certificate-issue-label", "#certificate-inventory-summary"],
+      },
+      {
+        name: "fleet",
+        label: "Node fleet",
+        anchors: ["#remote-node-registry"],
+      },
+      {
+        name: "agent",
+        label: "Agent launch",
+        anchors: ["#remote-agent-id"],
+      },
+    ],
+  });
 }

@@ -53,6 +53,10 @@
   align-items: start;
 }
 
+.hub-start-layout--orientation {
+  grid-template-columns: 1fr;
+}
+
 .hub-primary-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -61,10 +65,25 @@
 }
 
 .hub-mainline-entry {
+  grid-area: mainline;
   border-color: rgba(94, 184, 255, 0.26);
   background:
     linear-gradient(135deg, rgba(94, 184, 255, 0.13), transparent 32%),
     linear-gradient(180deg, var(--panel-soft), rgba(35, 38, 44, 0.98));
+}
+
+.hub-mainline-entry .hub-card__intro {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.72fr) minmax(0, 1.28fr);
+  align-items: end;
+}
+
+.hub-mainline-entry .hub-card__intro > div {
+  min-width: 0;
+}
+
+.hub-mainline-entry .hub-card__intro h2 {
+  line-height: 1.12;
 }
 
 .hub-mainline-track {
@@ -74,15 +93,24 @@
 }
 
 .hub-mainline-step {
-  min-height: 150px;
+  min-height: 108px;
   text-align: left;
   justify-content: flex-start;
   align-items: flex-start;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.4rem;
   border-color: rgba(112, 176, 229, 0.22);
   background: linear-gradient(180deg, rgba(65, 70, 78, 0.95), rgba(45, 49, 56, 0.96));
+}
+
+.hub-mainline-step strong {
+  font-size: 0.92rem;
+}
+
+.hub-mainline-step .desktop-shell-note {
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .hub-mainline-step:first-child {
@@ -99,6 +127,7 @@
 
 .hub-action-clusters {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.55rem;
 }
 

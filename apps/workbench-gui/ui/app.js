@@ -32,6 +32,13 @@ const shellCopy = {
     openWorkbenchPage: "Open Workbench page",
     embeddedWorkbench: "Embedded workbench",
     back: "Back",
+    workflowEyebrow: "Primary flow",
+    workflowTitle: "From runtime to study in three steps",
+    workflowSteps: [
+      ["Start runtime", "Bring up the local execution stack."],
+      ["Verify health", "Confirm the control plane and agents."],
+      ["Enter Workbench", "Continue into the full analysis surface."],
+    ],
   },
   zh: {
     language: "语言",
@@ -51,6 +58,13 @@ const shellCopy = {
     openWorkbenchPage: "打开分析页",
     embeddedWorkbench: "内嵌 Workbench",
     back: "返回",
+    workflowEyebrow: "主线流程",
+    workflowTitle: "三步进入研究工作区",
+    workflowSteps: [
+      ["启动运行时", "拉起本地执行栈。"],
+      ["验证健康", "确认控制面与 Agent 状态。"],
+      ["进入 Workbench", "继续进入完整分析工作区。"],
+    ],
   },
   ja: {
     language: "言語",
@@ -70,6 +84,13 @@ const shellCopy = {
     openWorkbenchPage: "解析ページを開く",
     embeddedWorkbench: "埋め込み Workbench",
     back: "戻る",
+    workflowEyebrow: "メインフロー",
+    workflowTitle: "3 ステップで解析へ",
+    workflowSteps: [
+      ["ランタイム起動", "ローカル実行スタックを起動します。"],
+      ["状態確認", "制御プレーンと Agent を確認します。"],
+      ["Workbench へ", "解析ワークスペースへ進みます。"],
+    ],
   },
   es: {
     language: "Idioma",
@@ -89,6 +110,13 @@ const shellCopy = {
     openWorkbenchPage: "Abrir análisis",
     embeddedWorkbench: "Workbench incrustado",
     back: "Volver",
+    workflowEyebrow: "Flujo principal",
+    workflowTitle: "Del runtime al estudio en tres pasos",
+    workflowSteps: [
+      ["Iniciar runtime", "Inicia la pila de ejecución local."],
+      ["Verificar estado", "Confirma el plano de control y los agentes."],
+      ["Entrar en Workbench", "Continúa al espacio de análisis completo."],
+    ],
   },
 };
 
@@ -132,7 +160,7 @@ const workbenchShellLanguageOptions = [
 const state = {
   workbenchUrl: "http://127.0.0.1:3000",
   orchestratorUrl: "http://127.0.0.1:4000",
-  shellPage: "control",
+  shellPage: "workbench",
   consoleTab: "status",
   logService: "frontend",
   releaseVersion: "",
@@ -242,16 +270,23 @@ function renderLanguage() {
   document.querySelector(".panel:nth-of-type(3) .panel__title")?.replaceChildren(t.viewerControls);
   document.querySelector('[data-console-tab="status"]')?.replaceChildren(t.status);
   document.querySelector('[data-console-tab="logs"]')?.replaceChildren(t.logs);
-  document.querySelector('[data-action="start-local"]')?.replaceChildren(t.startLocal);
-  document.querySelector('[data-action="restart-local"]')?.replaceChildren(t.restartLocal);
-  document.querySelector('[data-action="refresh"]')?.replaceChildren(t.refresh);
-  document.querySelector('[data-action="stop"]')?.replaceChildren(t.stop);
+  document.querySelector('.panel--console [data-action="start-local"]')?.replaceChildren(t.startLocal);
+  document.querySelector('.panel--console [data-action="restart-local"]')?.replaceChildren(t.restartLocal);
+  document.querySelector('.panel--console [data-action="refresh"]')?.replaceChildren(t.refresh);
+  document.querySelector('.panel--console [data-action="stop"]')?.replaceChildren(t.stop);
   document.querySelector('[data-action="refresh-log"]')?.replaceChildren(t.refreshLog);
   document.querySelectorAll('[data-action="reload-frame"]').forEach((button) => button.replaceChildren(t.reloadFrame));
-  document.querySelector('[data-action="open-local"]')?.replaceChildren(t.loadLocalUi);
-  document.querySelector('[data-shell-target="workbench"]')?.replaceChildren(t.openWorkbenchPage);
+  document.querySelector('.panel--controls [data-action="open-local"]')?.replaceChildren(t.loadLocalUi);
+  document.querySelector('.panel--controls [data-shell-target="workbench"]')?.replaceChildren(t.openWorkbenchPage);
   document.querySelector(".viewer__headline strong")?.replaceChildren(t.embeddedWorkbench);
   document.querySelector(".viewer__back-button")?.replaceChildren(t.back);
+  setText("workflow-ribbon-eyebrow", t.workflowEyebrow);
+  setText("workflow-ribbon-title", t.workflowTitle);
+  const workflowStepIds = ["start", "verify", "enter"];
+  workflowStepIds.forEach((id, index) => {
+    setText(`workflow-step-${id}-title`, t.workflowSteps[index][0]);
+    setText(`workflow-step-${id}-copy`, t.workflowSteps[index][1]);
+  });
 
   for (const button of elements.shellTabs) {
     const page = button.dataset.shellPage;

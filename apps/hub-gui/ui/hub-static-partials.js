@@ -12,54 +12,7 @@
           </div>
 
           <div class="hub-projects-pane" data-projects-pane="start">
-            <div class="hub-overview-strip">
-              <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow" id="home-step1-label">Step 1</div>
-                <h2 id="home-step1-title">Bring work in</h2>
-                <p class="desktop-shell-note" id="home-step1-copy">Register the current bundle, sync the local control plane, or pull a remote catalog into one shelf.</p>
-              </article>
-              <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow" id="home-step2-label">Step 2</div>
-                <h2 id="home-step2-title">Inspect once</h2>
-                <p class="desktop-shell-note" id="home-step2-copy">Validate the bundle shape and analysis intent before you go deeper.</p>
-              </article>
-              <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow" id="home-step3-label">Step 3</div>
-                <h2 id="home-step3-title">Open Workbench</h2>
-                <p class="desktop-shell-note" id="home-step3-copy">Move into analysis only after the active bundle and runtime path look safe.</p>
-              </article>
-            </div>
-
-            <div class="hub-start-layout">
-              <article class="hub-card desktop-shell-surface-card">
-                <div class="hub-card__intro">
-                  <div>
-                    <div class="hub-card__eyebrow" id="home-path-label">Recommended path</div>
-                    <h2 id="home-path-title">Use Hub as a short runway</h2>
-                  </div>
-                  <p class="desktop-shell-note" id="home-path-copy">If this is a fresh session, follow one short path instead of bouncing across all sections.</p>
-                </div>
-                <ol class="hub-flow-list">
-                  <li class="hub-flow-step">
-                    <strong id="home-flow1-title">Start the local stack if needed</strong>
-                    <span class="desktop-shell-note" id="home-flow1-copy">Bring the local runtime online before you inspect or open anything that depends on it.</span>
-                  </li>
-                  <li class="hub-flow-step">
-                    <strong id="home-flow2-title">Sync or register work</strong>
-                    <span class="desktop-shell-note" id="home-flow2-copy">Pull from the local control plane, a remote catalog, or the current bundle path.</span>
-                  </li>
-                  <li class="hub-flow-step">
-                    <strong id="home-flow3-title">Inspect once, then open</strong>
-                    <span class="desktop-shell-note" id="home-flow3-copy">Run one quick bundle check, then move into Workbench with fewer surprises.</span>
-                  </li>
-                </ol>
-                <div class="hub-primary-actions">
-                  <button class="desktop-shell-button-primary" data-action="start-local" id="home-action-start">Start local stack</button>
-                  <button class="desktop-shell-button-primary" data-action="workload-sync-local" id="home-action-sync">Sync local control plane</button>
-                  <button class="desktop-shell-button-primary" data-action="open-workbench" id="home-action-open">Open workbench</button>
-                </div>
-              </article>
-
+            <div class="hub-start-layout hub-start-layout--orientation">
               <article class="hub-card desktop-shell-surface-card">
                 <div class="hub-card__intro">
                   <div>

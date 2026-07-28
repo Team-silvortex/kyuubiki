@@ -1,4 +1,5 @@
 import { applyDesktopState } from "./shared/tauri-bridge.js";
+import { mountInstallerPanelSections } from "./installer-panel-sections.js";
 
 export function mountUpdatePanel() {
   const root = document.getElementById("update-panel-root");
@@ -141,6 +142,37 @@ export function mountUpdatePanel() {
   const install = document.getElementById("install-runtime-payload-button");
   source?.addEventListener("input", () => {
     install.disabled = !source.value.trim();
+  });
+  mountInstallerPanelSections(root, {
+    label: "Update workflow sections",
+    defaultSection: "overview",
+    sections: [
+      {
+        name: "overview",
+        label: "Overview",
+        anchors: ["#update-state-headline", "#update-schema-version"],
+      },
+      {
+        name: "runtime",
+        label: "Managed runtime",
+        anchors: ["#runtime-payload-pill"],
+      },
+      {
+        name: "source",
+        label: "Source & artifacts",
+        anchors: ["#update-source-schema", "#update-rule-list"],
+      },
+      {
+        name: "delivery",
+        label: "Delivery records",
+        anchors: ["#downloaded-update-pill", "#applied-update-pill"],
+      },
+      {
+        name: "staging",
+        label: "Preview & staging",
+        anchors: ["#update-preview-pill", "#staged-update-pill"],
+      },
+    ],
   });
 }
 

@@ -3,12 +3,7 @@
     grid-template-columns: minmax(190px, var(--desktop-sidebar-width)) 1fr;
   }
 
-  .hub-head {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-overview-strip,
-  .hub-head__signals {
+  .hub-overview-strip {
     grid-template-columns: 1fr;
   }
 
@@ -70,6 +65,10 @@
     flex-direction: column;
   }
 
+  .hub-mainline-entry .hub-card__intro {
+    grid-template-columns: 1fr;
+  }
+
   .hub-head,
   .hub-card,
   .hub-rail {
@@ -77,12 +76,16 @@
   }
 
   .hub-head {
+    grid-template-areas:
+      "intro"
+      "aside"
+      "mainline";
+    grid-template-columns: 1fr;
     gap: 0.85rem;
     min-height: 0;
   }
 
   .hub-overview-strip,
-  .hub-head__signals,
   .hub-runtime-layout,
   .hub-observe-layout,
   .hub-projects-layout {
@@ -140,5 +143,32 @@
 
   .hub-assistant-doc-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 980px) and (min-width: 861px) {
+  .hub-nav {
+    margin-top: 0.45rem;
+  }
+
+  .hub-nav--grouped {
+    gap: 0.45rem;
+  }
+
+  .hub-nav-group {
+    gap: 0.3rem;
+    padding: 0.4rem;
+  }
+
+  .hub-nav-group__copy {
+    display: none;
+  }
+
+  .hub-nav-group__items {
+    gap: 0.3rem;
+  }
+
+  .hub-nav__item {
+    padding-block: 0.58rem;
   }
 }

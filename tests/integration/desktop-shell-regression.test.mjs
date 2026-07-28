@@ -1,10 +1,10 @@
 import test from "node:test";
 import {
-  assertHubRegression,
   assertInstallerRegression,
   chromium,
   createDesktopShellRegressionEnvironment,
 } from "./desktop-shell-regression.shared.mjs";
+import { assertHubRegression } from "./hub-shell-regression.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
 import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
@@ -22,6 +22,7 @@ test(
           for (const viewport of [
             { width: 1440, height: 1100 },
             { width: 1180, height: 920 },
+            { width: 1080, height: 760 },
           ]) {
             await page.goto(environment.hubUrl, { waitUntil: "networkidle", timeout: 60_000 });
             try {

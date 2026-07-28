@@ -224,12 +224,15 @@ button:focus-visible,
 }
 
 .hub-head {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.14fr) minmax(290px, 0.96fr);
+  grid-template-areas:
+    "intro aside"
+    "mainline mainline";
   gap: var(--desktop-content-gap);
   align-items: stretch;
-  /* The operator runway is the Hub's primary surface, not a summary strip. */
-  min-height: clamp(420px, 52vh, 620px);
+  min-height: 0;
   padding: var(--desktop-shell-rail-pad) var(--desktop-content-gutter-wide);
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-shell);
@@ -243,17 +246,19 @@ button:focus-visible,
 }
 
 .hub-head__main {
+  grid-area: intro;
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 0.8rem;
 }
 
 .hub-head__aside {
+  grid-area: aside;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 0.9rem;
-  padding: 1.15rem;
+  padding: 1rem;
   border: 1px solid rgba(112, 176, 229, 0.18);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(48, 52, 58, 0.98), rgba(39, 42, 48, 0.96));
@@ -278,30 +283,6 @@ button:focus-visible,
   max-width: 52rem;
 }
 
-.hub-head__signals {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--desktop-content-gap);
-}
-
-.hub-signal-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  min-width: 0;
-  min-height: 130px;
-  padding: 1.1rem 1.15rem;
-  border: 1px solid rgba(112, 176, 229, 0.16);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(58, 63, 70, 0.96), rgba(46, 49, 55, 0.96));
-  box-shadow: var(--panel-shadow-soft);
-}
-
-.hub-signal-card strong {
-  font-size: 0.96rem;
-}
-
-.hub-signal-card__label,
 .hub-card__eyebrow {
   color: var(--accent-strong);
   font-size: 0.75rem;
@@ -315,6 +296,17 @@ button:focus-visible,
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
+}
+
+.hub-head__aside .hub-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hub-head__aside .hub-actions button {
+  min-width: 0;
+  padding-inline: 0.65rem;
+  font-size: 0.88rem;
 }
 
 .hub-toolbar {

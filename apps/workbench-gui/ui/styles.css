@@ -172,9 +172,92 @@ kbd {
 
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.72fr);
+  grid-template-areas:
+    "console runtime"
+    "console controls";
   gap: var(--desktop-content-gap);
-  align-items: start;
+  align-items: stretch;
+}
+
+.workflow-ribbon {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.55fr) minmax(0, 2fr);
+  gap: var(--desktop-content-gap);
+  align-items: center;
+  margin-bottom: var(--desktop-content-gap);
+  padding: var(--desktop-pane-padding);
+  border: 1px solid rgba(94, 184, 255, 0.28);
+  border-radius: var(--desktop-radius-card);
+  background:
+    linear-gradient(110deg, rgba(94, 184, 255, 0.13), transparent 34%),
+    var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.workflow-ribbon__intro {
+  display: grid;
+  gap: 6px;
+}
+
+.workflow-ribbon__intro h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  line-height: 1.2;
+}
+
+.workflow-ribbon__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-step {
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 5px;
+  text-align: left;
+  background: linear-gradient(180deg, rgba(72, 78, 88, 0.96), rgba(48, 53, 61, 0.98));
+}
+
+.workflow-step__index {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.workflow-step strong {
+  font-size: 14px;
+}
+
+.workflow-step > span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.workflow-step--primary {
+  border-color: rgba(94, 184, 255, 0.46);
+  background:
+    linear-gradient(135deg, rgba(94, 184, 255, 0.22), transparent 56%),
+    linear-gradient(180deg, rgba(69, 79, 91, 0.98), rgba(45, 53, 63, 0.98));
+}
+
+.panel--runtime {
+  grid-area: runtime;
+}
+
+.panel--console {
+  grid-area: console;
+  min-height: clamp(470px, 58vh, 680px);
+}
+
+.panel--controls {
+  grid-area: controls;
 }
 
 .panel,
@@ -205,6 +288,13 @@ kbd {
 .status-grid__value {
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+#workbench-url {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .button-row {
@@ -367,7 +457,7 @@ button:hover {
 }
 
 .shell-shell--workbench .viewer {
-  min-height: calc(100dvh - 84px);
+  min-height: 100dvh;
   gap: 0;
 }
 
@@ -408,15 +498,26 @@ button:hover {
 }
 
 .shell-shell--workbench #workbench-frame {
-  min-height: max(360px, calc(100dvh - 86px));
+  min-height: 100dvh;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   .shell-head,
   .control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-grid {
+    grid-template-areas:
+      "console"
+      "runtime"
+      "controls";
+  }
+
+  .workflow-ribbon {
     grid-template-columns: 1fr;
   }
 
@@ -442,6 +543,14 @@ button:hover {
 
   #workbench-frame {
     min-height: max(300px, calc(100vh - 420px));
+  }
+
+  .workflow-ribbon__steps {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-step {
+    min-height: 88px;
   }
 
   .shell-shell--workbench .viewer__toolbar {

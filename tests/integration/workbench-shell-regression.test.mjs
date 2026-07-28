@@ -18,6 +18,7 @@ test(
       for (const viewport of [
         { width: 1440, height: 1100 },
         { width: 1180, height: 920 },
+        { width: 1080, height: 760 },
       ]) {
         const page = await browser.newPage();
         try {

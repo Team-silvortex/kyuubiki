@@ -426,7 +426,7 @@ async function serveDirectory(rootDir) {
   };
 }
 
-async function visibleRects(page, selectors) {
+export async function visibleRects(page, selectors) {
   return page.evaluate((passedSelectors) => {
     return passedSelectors.map((selector) => {
       const element = document.querySelector(selector);
@@ -446,7 +446,7 @@ async function visibleRects(page, selectors) {
   }, selectors);
 }
 
-function overlaps(left, right) {
+export function overlaps(left, right) {
   const x = Math.min(left.right, right.right) - Math.max(left.left, right.left);
   const y = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
   return x > 1 && y > 1;
@@ -478,7 +478,7 @@ export async function assertNoPageErrors(page) {
   assert.deepEqual(errors, []);
 }
 
-async function assertTauriInvocations(page, expectedCommands) {
+export async function assertTauriInvocations(page, expectedCommands) {
   const commands = await page.evaluate(() =>
     (window.__mockInvocations || []).map((entry) => entry.command),
   );
@@ -487,7 +487,7 @@ async function assertTauriInvocations(page, expectedCommands) {
   }
 }
 
-async function assertLanguageChange(page, language) {
+export async function assertLanguageChange(page, language) {
   const before = await page.evaluate(
     () =>
       (window.__mockInvocations || []).filter(
@@ -508,7 +508,7 @@ async function assertLanguageChange(page, language) {
   assert.equal(await page.locator("#shell-language-select").inputValue(), language);
 }
 
-async function assertActionInvokes(
+export async function assertActionInvokes(
   page,
   action,
   command,
@@ -569,119 +569,6 @@ async function assertActionInvokes(
   }
 }
 
-export async function assertHubRegression(page, viewport) {
-  await page.setViewportSize(viewport);
-  await page.goto(page.url(), { waitUntil: "networkidle", timeout: 60_000 });
-
-  const homeLayout = await page.evaluate(() => {
-    const header = document.querySelector(".hub-head")?.getBoundingClientRect();
-    return {
-      headerHeight: header?.height || 0,
-      viewportHeight: window.innerHeight,
-      assistantPromptCount: document.querySelectorAll("#assistant-local-prompt").length,
-      docsTitleCount: document.querySelectorAll("#assistant-docs-label").length,
-    };
-  });
-  assert.ok(
-    homeLayout.headerHeight >= homeLayout.viewportHeight * 0.45,
-    "Hub operator runway should keep priority over secondary guide content",
-  );
-  assert.equal(homeLayout.assistantPromptCount, 1, "Hub assistant prompt should mount once");
-  assert.equal(homeLayout.docsTitleCount, 1, "Hub assistant docs should mount once");
-
-  await page.locator("#projects-tab-guides").click();
-  await page.waitForSelector('[data-projects-pane="guides"]:not(.hidden) #guides-gate-status-value');
-
-  assert.equal(await page.locator("#guides-gate-status-value").textContent(), "warn");
-  assert.equal(await page.locator("#guides-gate-warning-count").textContent(), "1");
-  assert.equal(await page.locator("#guides-gate-failing-count").textContent(), "0");
-  assert.equal(await page.locator("#guides-gate-lane-count").textContent(), "3");
-
-  const reasons = await page.locator("#guides-gate-reasons").textContent();
-  assert.match(reasons, /Workflow catalog:/);
-  assert.match(reasons, /median regression 308%/);
-
-  const rects = await visibleRects(page, [
-    '[data-projects-pane="guides"]:not(.hidden) .hub-card:nth-of-type(1)',
-    '[data-projects-pane="guides"]:not(.hidden) .hub-card:nth-of-type(2)',
-  ]);
-  rects.forEach((rect) => {
-    assert.equal(rect.exists, true, `${rect.selector} should exist`);
-    assert.ok(rect.width > 40, `${rect.selector} should have width`);
-    assert.ok(rect.height > 40, `${rect.selector} should have height`);
-  });
-  assert.equal(overlaps(rects[0], rects[1]), false, "Hub guides cards should not overlap");
-  await assertLanguageChange(page, "zh");
-
-  await page.locator("#projects-tab-start").click();
-  await page.waitForSelector('[data-projects-pane="start"]:not(.hidden) #home-action-open');
-  await assertActionInvokes(
-    page,
-    "open-workbench",
-    "launch_workbench_gui",
-    undefined,
-    "#home-action-open",
-  );
-
-  await page.locator("#projects-tab-guides").click();
-  await page.waitForSelector('[data-projects-pane="guides"]:not(.hidden) #guides-gate-status-value');
-  await assertActionInvokes(page, "open-docs-index", "open_docs_index");
-
-  await page.locator("#projects-tab-bundles").click();
-  await page.waitForSelector('[data-projects-pane="bundles"]:not(.hidden) #project-bundle-path');
-  await page.locator("#project-bundle-path").fill("/tmp/ui-invocation.kyuubiki");
-  await assertActionInvokes(
-    page,
-    "project-inspect",
-    "project_bundle_inspect",
-    undefined,
-    "#bundles-action-inspect",
-  );
-  await assertActionInvokes(
-    page,
-    "project-validate",
-    "project_bundle_validate",
-    undefined,
-    "#bundles-action-validate",
-  );
-  await page.locator("#project-bundle-out-path").fill("/tmp/ui-output.kyuubiki");
-  await page.locator("#project-bundle-compare-path").fill("/tmp/ui-compare.kyuubiki");
-  await assertActionInvokes(
-    page,
-    "project-normalize",
-    "guarded_mutation_action",
-    "project_bundle_normalize",
-    "#bundles-action-normalize",
-    { acceptConfirmation: true },
-  );
-  await assertActionInvokes(
-    page,
-    "project-unpack",
-    "guarded_mutation_action",
-    "project_bundle_unpack",
-    "#bundles-action-unpack",
-    { acceptConfirmation: true },
-  );
-  await assertActionInvokes(
-    page,
-    "project-pack",
-    "guarded_mutation_action",
-    "project_bundle_pack",
-    "#bundles-action-pack",
-    { acceptConfirmation: true },
-  );
-  await assertActionInvokes(
-    page,
-    "project-diff",
-    "project_bundle_diff",
-    undefined,
-    "#bundles-action-diff",
-  );
-
-  await assertTauriInvocations(page, ["hub_environment", "hub_regression_gate_report"]);
-  await assertNoPageErrors(page);
-}
-
 export async function assertInstallerRegression(page, viewport) {
   await page.setViewportSize(viewport);
   await page.goto(page.url(), { waitUntil: "networkidle", timeout: 60_000 });
@@ -715,12 +602,6 @@ export async function assertInstallerRegression(page, viewport) {
   assert.equal(await page.locator("#update-source-output").textContent(), "local update source");
   await assertActionInvokes(page, "refresh-update-plan", "unified_update_plan");
   await assertActionInvokes(page, "refresh-update-preview", "unified_update_preview");
-  await assertActionInvokes(
-    page,
-    "save-update-source",
-    "guarded_mutation_action",
-    "write_update_source_config",
-  );
 
   const rects = await visibleRects(page, [
     '[data-panel="updates"].panel-visible .update-summary-card:nth-of-type(1)',
@@ -734,6 +615,13 @@ export async function assertInstallerRegression(page, viewport) {
   });
   assert.equal(overlaps(rects[0], rects[1]), false, "Installer update cards should not overlap");
   assert.equal(overlaps(rects[1], rects[2]), false, "Installer update cards should not overlap");
+  await page.locator('[data-panel="updates"] [data-installer-section-target="source"]').click();
+  await assertActionInvokes(
+    page,
+    "save-update-source",
+    "guarded_mutation_action",
+    "write_update_source_config",
+  );
 
   await page.locator('button.sidebar-tab[data-tab="services"]').click();
   await page.waitForSelector('[data-panel="services"].panel-visible #runtime-log');
@@ -757,12 +645,14 @@ export async function assertInstallerRegression(page, viewport) {
     "guarded_mutation_action",
     "write_remote_policy",
   );
+  await page.locator('[data-panel="remote"] [data-installer-section-target="authority"]').click();
   await assertActionInvokes(
     page,
     "initialize-certificate-authority",
     "guarded_mutation_action",
     "initialize_certificate_authority",
   );
+  await page.locator('[data-panel="remote"] [data-installer-section-target="fleet"]').click();
   await assertActionInvokes(page, "refresh-remote-nodes", "remote_node_registry");
   await assertActionInvokes(
     page,
@@ -770,6 +660,7 @@ export async function assertInstallerRegression(page, viewport) {
     "guarded_mutation_action",
     "probe_remote_node",
   );
+  await page.locator('[data-panel="remote"] [data-installer-section-target="agent"]').click();
   await assertActionInvokes(
     page,
     "remote-start-agent",

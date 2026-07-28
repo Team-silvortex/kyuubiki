@@ -59,6 +59,7 @@ pub(crate) fn run_node_command(
             &[
                 "tests/integration/desktop-gui-action-sweep.test.mjs",
                 "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+                "tests/integration/desktop-gui-layout-priority.test.mjs",
                 "tests/integration/desktop-gui-navigation-closure.test.mjs",
                 "tests/integration/desktop-shell-regression.test.mjs",
                 "tests/integration/workbench-shell-regression.test.mjs",

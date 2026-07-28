@@ -263,18 +263,51 @@ export async function assertWorkbenchShellRegression(page, viewport) {
     return Boolean(deploymentMode && deploymentMode !== "--" && workbenchUrl && workbenchUrl !== "--");
   });
 
+  await page.waitForSelector('[data-shell-pane="workbench"]:not(.hidden) #workbench-frame');
+  const initialWorkspace = await rectsFor(page, [
+    '[data-shell-pane="workbench"]:not(.hidden)',
+    '[data-shell-pane="workbench"]:not(.hidden) #workbench-frame',
+    ".viewer__back-button",
+  ]);
+  assert.ok(
+    initialWorkspace[0].height >= viewport.height * 0.94,
+    "Workbench analysis pane should own the initial viewport",
+  );
+  assert.ok(
+    initialWorkspace[1].height >= viewport.height * 0.94,
+    "Embedded analysis surface should not be compressed by shell chrome",
+  );
+  assert.ok(
+    initialWorkspace[2].bottom <= viewport.height - 4,
+    "Control return affordance should stay inside the viewport",
+  );
+  await page.locator(".viewer__back-button").click();
+  await page.waitForSelector('[data-shell-pane="control"]:not(.hidden) .control-grid');
+
   assert.equal(await page.locator("#deployment-mode").textContent(), "direct_mesh_gui");
   assert.match(await page.locator("#status-output").textContent(), /runtimes:\s*\d+/);
   assert.match(await page.locator("#viewer-caption").textContent(), /^data:text\/html/);
   await assertLanguageChange(page, "fr");
   await page.waitForFunction(() => document.getElementById("shell-language-label")?.textContent === "Langue");
   assert.equal(await page.locator('[data-console-tab="status"]').textContent(), "Statut");
-  assert.equal(await page.locator('[data-action="refresh"]').textContent(), "Rafraîchir");
+  assert.equal(
+    await page.locator('.panel--console [data-action="refresh"]').textContent(),
+    "Rafraîchir",
+  );
+  assert.equal(await page.locator("#workflow-ribbon-eyebrow").textContent(), "Primary flow");
+  assert.equal(await page.locator(".workflow-step").count(), 3);
+  for (const step of ["start", "verify", "enter"]) {
+    assert.equal(
+      await page.locator(`#workflow-step-${step}`).count(),
+      1,
+      `workflow step ${step} should retain its stable automation contract`,
+    );
+  }
 
   const panelRects = await rectsFor(page, [
-    '[data-shell-pane="control"]:not(.hidden) .panel:nth-of-type(1)',
-    '[data-shell-pane="control"]:not(.hidden) .panel:nth-of-type(2)',
-    '[data-shell-pane="control"]:not(.hidden) .panel:nth-of-type(3)',
+    '[data-shell-pane="control"]:not(.hidden) .panel--runtime',
+    '[data-shell-pane="control"]:not(.hidden) .panel--console',
+    '[data-shell-pane="control"]:not(.hidden) .panel--controls',
   ]);
   panelRects.forEach((rect) => {
     assert.equal(rect.exists, true, `${rect.selector} should exist`);
@@ -283,6 +316,10 @@ export async function assertWorkbenchShellRegression(page, viewport) {
   });
   assert.equal(overlaps(panelRects[0], panelRects[1]), false, "Workbench control panels should not overlap");
   assert.equal(overlaps(panelRects[1], panelRects[2]), false, "Workbench control panels should not overlap");
+  assert.ok(
+    panelRects[1].width >= panelRects[0].width * 1.7,
+    "Runtime console should remain the primary control surface",
+  );
 
   await page.locator('[data-console-tab="logs"]').click();
   await page.waitForSelector('#logs-panel:not(.is-hidden)');
@@ -296,7 +333,7 @@ export async function assertWorkbenchShellRegression(page, viewport) {
   await assertActionInvokes(page, "restart-local", "guarded_mutation_action", "service_restart");
   await assertActionInvokes(page, "stop", "guarded_mutation_action", "service_stop");
 
-  await page.locator('[data-shell-target="workbench"]').click();
+  await page.locator("#workflow-step-enter").click();
   await page.waitForSelector('[data-shell-pane="workbench"]:not(.hidden) #workbench-frame');
   const frameSrc = await page.locator("#workbench-frame").getAttribute("src");
   assert.match(frameSrc || "", /^data:text\/html/);

@@ -121,6 +121,7 @@ export async function runHubStartupPhases(context: HubStartupContext): Promise<v
   setSection(state.activeSection);
   setBusy(false, "idle");
   setEventMessage?.("Hub listeners are mounted.", "startup:ready");
+  document.documentElement.dataset.hubReady = "true";
   measureHubUiPerf("startup:interactive", "startup:interactive:start");
 
   void afterFirstPaint(() => runDeferredStartup(context));

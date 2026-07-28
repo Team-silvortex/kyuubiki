@@ -52,8 +52,8 @@ export function renderHubHomeCopy(params) {
 }
 
 function ensureMainlineEntry() {
-  const startPane = document.querySelector('[data-projects-pane="start"]');
-  if (!startPane || document.getElementById("home-mainline-entry")) {
+  const hubHead = document.querySelector(".hub-head");
+  if (!hubHead || document.getElementById("home-mainline-entry")) {
     return;
   }
 
@@ -70,7 +70,7 @@ function ensureMainlineEntry() {
     </div>
     <div class="hub-mainline-track" aria-label="Mainline workflow">
       ${[1, 2, 3, 4].map((step) => `
-        <button class="hub-mainline-step" data-mainline-step="${step}" type="button">
+        <button class="hub-mainline-step" data-mainline-step="${step}" id="home-mainline-step${step}" type="button">
           <span class="hub-mainline-step__index" id="home-mainline-step${step}-index">${step}</span>
           <strong id="home-mainline-step${step}-title"></strong>
           <span class="desktop-shell-note" id="home-mainline-step${step}-copy"></span>
@@ -78,7 +78,7 @@ function ensureMainlineEntry() {
       `).join("")}
     </div>
   `;
-  startPane.prepend(mainline);
+  hubHead.append(mainline);
 }
 
 function renderMainlineEntry(copy, setText) {

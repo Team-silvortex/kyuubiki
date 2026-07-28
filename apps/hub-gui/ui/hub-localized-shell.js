@@ -82,10 +82,8 @@ export function createHubLocalizedShell(context) {
         context.setText(context.elements.navTools, copy.nav.tools);
         renderHubWorkspaceGroups(copy);
         context.setText("brand-hub-focus", copy.shell.focus);
-        context.setText(context.elements.heroOpenWorkbench, copy.shell.openWorkbench);
         context.setText(context.elements.heroStartLocal, copy.shell.startLocal);
         context.setText(context.elements.heroValidateEnv, copy.shell.validateEnv);
-        renderSignalCopy(copy);
         if (!context.state.isBusy && context.elements.actionState) {
             context.elements.actionState.textContent = copy.shell.idle;
         }
@@ -128,17 +126,6 @@ export function createHubLocalizedShell(context) {
             context.elements.title.textContent = activeSectionCopy.title;
             context.elements.copy.textContent = activeSectionCopy.copy;
         }
-    }
-    function renderSignalCopy(copy) {
-        context.setText(context.elements.signalIntakeLabel, copy.signals.intakeLabel);
-        context.setText(context.elements.signalIntakeTitle, copy.signals.intakeTitle);
-        context.setText(context.elements.signalIntakeCopy, copy.signals.intakeCopy);
-        context.setText(context.elements.signalDomainsLabel, copy.signals.domainsLabel);
-        context.setText(context.elements.signalDomainsTitle, copy.signals.domainsTitle);
-        context.setText(context.elements.signalDomainsCopy, copy.signals.domainsCopy);
-        context.setText(context.elements.signalFirstMoveLabel, copy.signals.firstMoveLabel);
-        context.setText(context.elements.signalFirstMoveTitle, copy.signals.firstMoveTitle);
-        context.setText(context.elements.signalFirstMoveCopy, copy.signals.firstMoveCopy);
     }
     function rerenderLocalizedHubShell() {
         renderDesktopLanguagePreference();
