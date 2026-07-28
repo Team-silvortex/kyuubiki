@@ -19,9 +19,17 @@ fn runtime_command(binary: &Path, root: &Path, action: &str) -> std::process::Ou
     Command::new(binary)
         .arg(action)
         .env("KYUUBIKI_RUNTIME_ROOT", root)
+        .env("KYUUBIKI_RUNTIME_STATE_ROOT", state_root(root))
         .env("KYUUBIKI_AGENT_ENDPOINTS", "127.0.0.1:5001,127.0.0.1:5002")
         .output()
         .unwrap()
+}
+
+fn state_root(root: &Path) -> PathBuf {
+    root.with_file_name(format!(
+        "{}-state",
+        root.file_name().unwrap().to_string_lossy()
+    ))
 }
 
 #[test]
@@ -46,6 +54,14 @@ fn installed_runtime_starts_and_stops_without_source_toolchains() {
         }"#,
     )
     .unwrap();
+    fs::write(
+        root.join("manifests/runtime-payload.json"),
+        format!(
+            r#"{{"schema_version":"kyuubiki.runtime-payload/v1","version":"test","platform":"{}"}}"#,
+            kyuubiki_platform::Platform::current().as_str()
+        ),
+    )
+    .unwrap();
 
     let runtime = Path::new(env!("CARGO_BIN_EXE_kyuubiki-runtime"));
     let start = runtime_command(runtime, &root, "start-local");
@@ -66,9 +82,12 @@ fn installed_runtime_starts_and_stops_without_source_toolchains() {
     assert!(!rendered.contains("npm"));
     assert!(!rendered.contains("mix"));
     assert!(!rendered.contains("cargo"));
+    assert!(!root.join("run").exists());
+    assert!(!root.join("data").exists());
 
     let stop = runtime_command(runtime, &root, "stop");
     fs::remove_dir_all(&root).unwrap();
+    fs::remove_dir_all(state_root(&root)).unwrap();
     assert!(
         stop.status.success(),
         "{}",

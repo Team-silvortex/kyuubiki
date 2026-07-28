@@ -35,9 +35,7 @@ defmodule KyuubikiWeb.Application do
   end
 
   defp maybe_http_server do
-    if Mix.env() == :test do
-      []
-    else
+    if Application.get_env(:kyuubiki_web, :start_http_server, true) do
       [
         {Plug.Cowboy,
          scheme: :http,
@@ -48,6 +46,8 @@ defmodule KyuubikiWeb.Application do
            protocol_options: KyuubikiWeb.HttpTransportSecurity.protocol_options()
          ]}
       ]
+    else
+      []
     end
   end
 

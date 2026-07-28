@@ -20,6 +20,7 @@
     "allow-remote-deploy-policy",
     "allow-remote-node-registry",
     "allow-service-status",
+    "allow-runtime-payload-status",
     "allow-get-global-language-preference",
     "allow-set-global-language-preference",
     "allow-read-runtime-log",

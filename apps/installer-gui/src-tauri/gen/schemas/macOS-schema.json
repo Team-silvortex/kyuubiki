@@ -261,6 +261,12 @@
           "markdownDescription": "Enables the remote_node_registry command."
         },
         {
+          "description": "Enables the runtime_payload_status command.",
+          "type": "string",
+          "const": "allow-runtime-payload-status",
+          "markdownDescription": "Enables the runtime_payload_status command."
+        },
+        {
           "description": "Enables the service_status command.",
           "type": "string",
           "const": "allow-service-status",

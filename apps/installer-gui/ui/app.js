@@ -50,12 +50,14 @@ import {
 import { runInstallerStartup } from "./installer-startup.js";
 import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js";
 import {
+  currentRuntimePayloadSource,
   currentUpdateSourcePayload,
   hydrateUpdateSourceConfig,
   mountUpdatePanel,
   renderLatestAppliedUpdate,
   renderLatestDownloadedUpdate,
   renderLatestStagedUpdate,
+  renderRuntimePayloadStatus,
   renderUpdatePlan,
   renderUpdatePreview,
   selectedUpdateChannel,
@@ -194,6 +196,8 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     "write_update_source_config",
     "download_update",
     "apply_downloaded_update",
+    "install_runtime_payload",
+    "rollback_runtime_payload",
     "build_installer_bundle",
   ]);
 
@@ -279,6 +283,11 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderLatestAppliedUpdate(record);
     return record?.rendered || "no applied update record";
   };
+  const refreshRuntimePayloadStatus = async () => {
+    const status = await invoke("runtime_payload_status");
+    renderRuntimePayloadStatus(status);
+    return status.rendered;
+  };
   const refreshUpdateState = async () => {
     const values = await Promise.all([
       refreshUpdatePlan(),
@@ -286,6 +295,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       refreshLatestStagedUpdate(),
       refreshLatestDownloadedUpdate(),
       refreshLatestAppliedUpdate(),
+      refreshRuntimePayloadStatus(),
     ]);
     return values.filter(Boolean).join("\n\n");
   };
@@ -404,6 +414,21 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       return result;
     }),
     "refresh-applied-update": () => runAction("refresh-applied-update", refreshLatestAppliedUpdate),
+    "refresh-runtime-payload": () => runAction("refresh-runtime-payload", refreshRuntimePayloadStatus),
+    "install-runtime-payload": () => runAction("install-runtime-payload", async () => {
+      const result = await invokeGuardedMutation("install_runtime_payload", {
+        targetDir: currentRuntimePayloadSource(),
+      });
+      await refreshRuntimePayloadStatus();
+      showCompletion("Runtime payload verified and activated. Restart services to use the selected version.");
+      return result;
+    }),
+    "rollback-runtime-payload": () => runAction("rollback-runtime-payload", async () => {
+      const result = await invokeGuardedMutation("rollback_runtime_payload");
+      await refreshRuntimePayloadStatus();
+      showCompletion("Previous verified runtime activated. Restart services to complete rollback.");
+      return result;
+    }),
     "refresh-staged-update": () => runAction("refresh-staged-update", refreshLatestStagedUpdate),
     "prepare-update": () => runAction("prepare-update", async () => {
       const result = await invokeGuardedMutation("prepare_staged_update", {
@@ -560,6 +585,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderLatestDownloadedUpdate,
     renderLatestAppliedUpdate,
     renderLatestStagedUpdate,
+    renderRuntimePayloadStatus,
     hydrateEnv,
     applyPreset,
     defaultPreset: DEFAULT_PRESET,

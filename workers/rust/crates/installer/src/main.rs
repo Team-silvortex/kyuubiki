@@ -7,10 +7,12 @@ use kyuubiki_installer::{
     default_remote_deployment_journal, default_remote_deployment_plan,
     default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
     default_remote_ssh_fixture_report, embedded_runtime_report, exit_on_err, export_launch_config,
-    init_env, installation_integrity_report, linux_desktop_dependency_plan,
-    operator_package_preflight, parse_platform, prepare_layout, prepare_staged_update, print_help,
-    remote_deployment_roadmap, repair_installation, run_doctor, stage_release, unified_update_plan,
-    unified_update_preview, validate_env_file, write_operator_package_preflight_outcome,
+    init_env, install_runtime_payload, installation_integrity_report,
+    linux_desktop_dependency_plan, operator_package_preflight, parse_platform, prepare_layout,
+    prepare_staged_update, print_help, remote_deployment_roadmap, repair_installation,
+    rollback_runtime_payload, run_doctor, runtime_payload_status, seal_runtime_payload,
+    stage_release, unified_update_plan, unified_update_preview, validate_env_file,
+    write_operator_package_preflight_outcome,
 };
 
 fn main() {
@@ -25,6 +27,34 @@ fn main() {
         "cross-platform-audit" => println!("{}", cross_platform_audit_report().render()),
         "linux-desktop-deps" => println!("{}", linux_desktop_dependency_plan().render()),
         "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
+        "runtime-payload-status" => {
+            exit_on_err(runtime_payload_status().map(|report| report.render()))
+        }
+        "install-runtime-payload" => {
+            let Some(path) = args.next() else {
+                eprintln!("missing payload path for install-runtime-payload");
+                std::process::exit(1);
+            };
+            exit_on_err(install_runtime_payload(&PathBuf::from(path)).map(|record| record.render()))
+        }
+        "rollback-runtime-payload" => {
+            exit_on_err(rollback_runtime_payload().map(|record| record.render()))
+        }
+        "seal-runtime-payload" => {
+            let Some(path) = args.next() else {
+                eprintln!("missing payload path for seal-runtime-payload");
+                std::process::exit(1);
+            };
+            let Some(version) = args.next() else {
+                eprintln!("missing version for seal-runtime-payload");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                seal_runtime_payload(&PathBuf::from(path), &version, platform)
+                    .map(|manifest| format!("sealed runtime payload: {manifest}")),
+            )
+        }
         "operator-package-preflight" => {
             let Some(packages_root) = args.next() else {
                 eprintln!("missing packages root for operator-package-preflight");

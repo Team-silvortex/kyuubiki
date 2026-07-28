@@ -59,6 +59,10 @@ pub use crate::remote_ssh_fixture::{
     RemoteSshFixtureReport, default_remote_ssh_fixture_plan, default_remote_ssh_fixture_report,
     remote_ssh_fixture_report,
 };
+pub use crate::runtime_payload::{
+    RuntimeActivationRecord, RuntimePayloadStatus, install_runtime_payload,
+    rollback_runtime_payload, runtime_payload_status, seal_runtime_payload,
+};
 pub use crate::update_catalog::{
     StagedUpdateRecord, UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep,
     UpdateArtifactRef, latest_staged_update_record, prepare_staged_update, unified_update_plan,

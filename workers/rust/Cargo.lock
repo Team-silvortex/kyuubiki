@@ -164,6 +164,7 @@ dependencies = [
  "kyuubiki-platform",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
@@ -193,6 +194,7 @@ dependencies = [
 name = "kyuubiki-script-runner"
 version = "2.7.0"
 dependencies = [
+ "kyuubiki-installer",
  "serde",
  "serde_json",
  "sha2",

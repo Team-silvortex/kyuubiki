@@ -27,7 +27,7 @@ project macro build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
-desktop-release desktop-verify\n  \
+desktop-release desktop-verify desktop-runtime-payload\n  \
 desktop-linux-remote\n  \
 desktop-upload-remote desktop-release-upload-remote\n  \
 generate-desktop-icon-variants\n  \

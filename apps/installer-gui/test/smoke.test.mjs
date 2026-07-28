@@ -20,6 +20,7 @@ test("installer shell defines a least-privilege main-window capability", () => {
   assert.ok(capability.permissions.includes("core:default"));
   assert.ok(capability.permissions.includes("allow-guarded-mutation-action"));
   assert.ok(capability.permissions.includes("allow-service-status"));
+  assert.ok(capability.permissions.includes("allow-runtime-payload-status"));
   assert.ok(capability.permissions.includes("allow-read-env-file"));
   assert.ok(capability.permissions.includes("allow-certificate-authority-policy"));
   assert.ok(capability.permissions.includes("allow-regression-gate-report"));
@@ -29,6 +30,7 @@ test("installer shell defines a least-privilege main-window capability", () => {
   assert.match(permissions, /commands\.allow = \["certificate_authority_policy"\]/);
   assert.match(permissions, /identifier = "allow-regression-gate-report"/);
   assert.match(permissions, /commands\.allow = \["regression_gate_report"\]/);
+  assert.match(permissions, /commands\.allow = \["runtime_payload_status"\]/);
 });
 
 test("installer shell exposes setup, services, remote, and release surfaces", () => {

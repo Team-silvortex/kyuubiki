@@ -74,6 +74,11 @@ description = "Enables the service_status command."
 commands.allow = ["service_status"]
 
 [[permission]]
+identifier = "allow-runtime-payload-status"
+description = "Enables the runtime_payload_status command."
+commands.allow = ["runtime_payload_status"]
+
+[[permission]]
 identifier = "allow-get-global-language-preference"
 description = "Enables the get_global_language_preference command."
 commands.allow = ["get_global_language_preference"]

@@ -13,11 +13,11 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { INSTALLER_RUNTIME_PAYLOAD_STATUS } from "./desktop-shell-regression-fixtures.mjs";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-const requireFromFrontend = createRequire(`${ROOT}/apps/frontend/package.json`);
-export const { chromium } = requireFromFrontend("playwright");
+export const { chromium } = createRequire(`${ROOT}/apps/frontend/package.json`)("playwright");
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -324,6 +324,8 @@ function installerMockSource() {
               steps: [],
               rendered: "preview ready",
             };
+          case "runtime_payload_status":
+            return ${JSON.stringify(INSTALLER_RUNTIME_PAYLOAD_STATUS)};
           case "latest_downloaded_update_record":
           case "latest_applied_update_record":
           case "latest_staged_update_record":

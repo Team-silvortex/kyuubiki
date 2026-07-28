@@ -48,6 +48,7 @@ export async function runInstallerStartup({
   renderLatestDownloadedUpdate,
   renderLatestAppliedUpdate,
   renderLatestStagedUpdate,
+  renderRuntimePayloadStatus,
   hydrateEnv,
   applyPreset,
   defaultPreset,
@@ -140,14 +141,16 @@ export async function runInstallerStartup({
     );
     await duringIdle(() =>
       settleInstallerStartup("update-records", async () => {
-        const [downloadedUpdate, appliedUpdate, stagedUpdate] = await Promise.all([
+        const [downloadedUpdate, appliedUpdate, stagedUpdate, runtimePayload] = await Promise.all([
           invoke("latest_downloaded_update_record").catch(() => null),
           invoke("latest_applied_update_record").catch(() => null),
           invoke("latest_staged_update_record").catch(() => null),
+          invoke("runtime_payload_status").catch(() => null),
         ]);
         renderLatestDownloadedUpdate(downloadedUpdate);
         renderLatestAppliedUpdate(appliedUpdate);
         renderLatestStagedUpdate(stagedUpdate);
+        renderRuntimePayloadStatus(runtimePayload);
       }),
     );
     await duringIdle(() =>

@@ -42,6 +42,9 @@ use kyuubiki_installer::{
     prepare_staged_update as installer_prepare_staged_update,
     repair_installation as installer_repair_installation, stage_release as installer_stage_release,
     validate_env_file, write_update_source_config as installer_write_update_source_config,
+    install_runtime_payload as installer_install_runtime_payload,
+    rollback_runtime_payload as installer_rollback_runtime_payload,
+    runtime_payload_status as installer_runtime_payload_status,
 };
 use remote::{
     RemoteAgentPayload, RemoteBootstrapPayload, WriteRemoteDeployPolicyPayload, probe_remote_node,
@@ -109,6 +112,14 @@ struct ServiceStatusPayload {
 struct DesktopPreferencesPayload {
     language: String,
 }
+#[derive(Serialize)]
+struct RuntimePayloadStatusPayload {
+    store_root: String,
+    active_version: Option<String>,
+    previous_version: Option<String>,
+    installed_versions: Vec<String>,
+    rendered: String,
+}
 const INSTALLER_GUARDED_MUTATION_AUDIT_FILE: &str = "installer-guarded-mutations.jsonl";
 
 fn audit_timestamp() -> u64 {
@@ -153,6 +164,8 @@ fn high_impact_guarded_action(action: &str) -> bool {
             | "write_update_source_config"
             | "download_update"
             | "apply_downloaded_update"
+            | "install_runtime_payload"
+            | "rollback_runtime_payload"
             | "build_installer_bundle"
     )
 }
@@ -193,6 +206,18 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
     Ok(ServiceStatusPayload {
         summary: desktop_summarize_service_status(&rendered),
         rendered,
+    })
+}
+
+#[tauri::command]
+fn runtime_payload_status() -> Result<RuntimePayloadStatusPayload, String> {
+    let status = installer_runtime_payload_status()?;
+    Ok(RuntimePayloadStatusPayload {
+        rendered: status.render(),
+        store_root: status.store_root,
+        active_version: status.active_version,
+        previous_version: status.previous_version,
+        installed_versions: status.installed_versions,
     })
 }
 
@@ -354,6 +379,17 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
         "apply_downloaded_update" => {
             installer_apply_downloaded_update().map(|record| record.render())
         }
+        "install_runtime_payload" => {
+            let source = payload
+                .target_dir
+                .clone()
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| "runtime payload source path is required".to_string())?;
+            installer_install_runtime_payload(&PathBuf::from(source)).map(|record| record.render())
+        }
+        "rollback_runtime_payload" => {
+            installer_rollback_runtime_payload().map(|record| record.render())
+        }
         "build_installer_bundle" => build_installer_bundle(BuildPayload {
             bundle_mode: payload.bundle_mode.clone(),
         }),
@@ -382,6 +418,7 @@ fn main() {
             export_launch,
             read_env_file,
             service_status,
+            runtime_payload_status,
             get_global_language_preference,
             set_global_language_preference,
             read_runtime_log,

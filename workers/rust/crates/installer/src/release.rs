@@ -192,7 +192,7 @@ pub(crate) fn build_service_launch_manifest(platform: Platform) -> String {
             {
                 "id": "orchestrator",
                 "command": format!("services/orchestrator/bin/{orchestrator}"),
-                "args": ["foreground"],
+                "args": ["start"],
                 "cwd": "services/orchestrator"
             },
             {

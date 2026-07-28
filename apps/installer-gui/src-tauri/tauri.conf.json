@@ -31,6 +31,9 @@
       "icons/kyuubiki-app.png",
       "icons/kyuubiki-app.icns",
       "icons/kyuubiki-app.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

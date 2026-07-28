@@ -22,6 +22,7 @@ mod desktop_distribution;
 mod desktop_icon_variants;
 mod desktop_linux_remote;
 mod desktop_release_upload_remote;
+mod desktop_runtime_payload;
 mod desktop_shared_sync;
 mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
@@ -324,6 +325,9 @@ fn run() -> RunnerResult<u8> {
         "desktop-stage" => run_desktop_stage(&paths, rest),
         "desktop-build-host" => run_desktop_build_host(&paths),
         "desktop-release" => run_desktop_release(&paths, rest),
+        "desktop-runtime-payload" => {
+            desktop_runtime_payload::run_desktop_runtime_payload(&paths, rest)
+        }
         "desktop-verify" => run_desktop_verify(&paths, rest),
         "desktop-linux-remote" => desktop_linux_remote::run_desktop_linux_remote(&paths.root, rest),
         "desktop-upload-remote" | "desktop-release-upload-remote" => {

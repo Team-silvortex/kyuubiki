@@ -25,6 +25,7 @@ mod remote_deployment_journal;
 mod remote_deployment_plan;
 mod remote_host_trust;
 mod remote_ssh_fixture;
+mod runtime_payload;
 #[cfg(test)]
 mod tests;
 mod update_catalog;

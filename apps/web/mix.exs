@@ -4,11 +4,12 @@ defmodule KyuubikiWeb.MixProject do
   def project do
     [
       app: :kyuubiki_web,
-      version: "1.0.0",
+      version: System.get_env("KYUUBIKI_RELEASE_VERSION", "2.7.0"),
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      releases: releases()
     ]
   end
 
@@ -29,6 +30,14 @@ defmodule KyuubikiWeb.MixProject do
     [
       setup: ["compile"],
       ci: ["format --check-formatted", "test"]
+    ]
+  end
+
+  defp releases do
+    [
+      kyuubiki_web: [
+        include_executables_for: [:unix, :windows]
+      ]
     ]
   end
 

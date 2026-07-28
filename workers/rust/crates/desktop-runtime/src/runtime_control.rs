@@ -71,6 +71,7 @@ pub(super) fn service_status() -> Result<String, String> {
         }
     } else {
         lines.push(format!("runtime-root: {}", paths.root.display()));
+        lines.push(format!("runtime-state: {}", paths.state.display()));
         for service in ["agent", "orchestrator", "frontend"] {
             lines.push(
                 match paths.service(service, &[("port", "5001".to_string())]) {
@@ -263,6 +264,20 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     ensure_runtime_dirs(&paths)?;
     let mut env = runtime_env(&paths.root);
     let mode = resolve_mode(requested_mode, &env)?;
+    if mode == "local" {
+        env.entry("SQLITE_DATABASE_PATH".to_string())
+            .or_insert_with(|| {
+                paths
+                    .data
+                    .join(if paths.is_development() {
+                        "kyuubiki_dev.sqlite3"
+                    } else {
+                        "kyuubiki.sqlite3"
+                    })
+                    .display()
+                    .to_string()
+            });
+    }
     apply_mode_env(&mut env, &mode)?;
     let endpoints = agent_endpoints(&env);
     env.insert("KYUUBIKI_AGENT_ENDPOINTS".to_string(), endpoints.clone());
@@ -337,6 +352,7 @@ fn start_orchestrator(
     }
     let mut process_env = env.clone();
     process_env.insert("PORT".to_string(), ORCHESTRATOR_PORT.to_string());
+    process_env.insert("RELEASE_DISTRIBUTION".to_string(), "none".to_string());
     let (command, args, cwd) = if paths.is_development() {
         (
             resolve_development_command(&paths.root, "mix")?,
@@ -369,6 +385,9 @@ fn start_frontend(paths: &RuntimePaths, env: &HashMap<String, String>) -> Result
     if is_port_listening(FRONTEND_PORT) {
         return Ok("frontend already running at http://127.0.0.1:3000".to_string());
     }
+    let mut process_env = env.clone();
+    process_env.insert("HOSTNAME".to_string(), "127.0.0.1".to_string());
+    process_env.insert("PORT".to_string(), FRONTEND_PORT.to_string());
     let (command, args, cwd, label) = if paths.is_development() {
         (
             resolve_development_command(&paths.root, "npm")?,
@@ -393,7 +412,7 @@ fn start_frontend(paths: &RuntimePaths, env: &HashMap<String, String>) -> Result
         pid: paths.run.join("frontend.pid"),
         log: paths.run.join("frontend.log"),
         port: Some(FRONTEND_PORT),
-        env: env.clone(),
+        env: process_env,
     };
     spawn_managed(process, Duration::from_secs(60))?;
     Ok(format!("started {label} at http://127.0.0.1:3000"))
@@ -587,12 +606,19 @@ fn listening_line(label: &str, address: &str, port: u16) -> String {
 
 fn ensure_runtime_dirs(paths: &RuntimePaths) -> Result<(), String> {
     fs::create_dir_all(&paths.hot)
-        .map_err(|error| format!("failed to create {}: {error}", paths.hot.display()))
+        .map_err(|error| format!("failed to create {}: {error}", paths.hot.display()))?;
+    fs::create_dir_all(&paths.data)
+        .map_err(|error| format!("failed to create {}: {error}", paths.data.display()))
 }
 
 fn runtime_env(root: &Path) -> HashMap<String, String> {
     let mut values = HashMap::new();
-    for path in [root.join(".env.example"), root.join(".env.local")] {
+    for path in [
+        root.join("config/.env.example"),
+        root.join("config/.env.local"),
+        root.join(".env.example"),
+        root.join(".env.local"),
+    ] {
         load_env_file(&path, &mut values);
     }
     values.extend(env::vars());
@@ -691,6 +717,15 @@ fn manifest_agent_ports(root: &Path, env: &HashMap<String, String>) -> Vec<u16> 
 
 fn augment_path(paths: &RuntimePaths, env: &mut HashMap<String, String>) {
     let mut entries = runtime_bin_dirs(&paths.root);
+    if cfg!(windows) {
+        if let Some(system_root) = env.get("SystemRoot").or_else(|| env.get("SYSTEMROOT")) {
+            entries.push(PathBuf::from(system_root).join("System32"));
+        }
+    } else {
+        // Self-contained releases still use the OS command baseline from their
+        // generated launchers. Package-manager and language-tool paths stay out.
+        entries.extend([PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
+    }
     if paths.is_development() {
         if let Some(home) = env.get("HOME") {
             entries.push(PathBuf::from(home).join(".cargo/bin"));
@@ -730,51 +765,5 @@ fn remove_file_if_present(path: &Path) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        agent_ports, apply_mode_env, runtime_env, service_start, service_status, service_stop,
-    };
-    use crate::runtime_layout::resolve_development_command;
-    use crate::{ServiceMode, workspace_root};
-
-    #[test]
-    fn local_mode_has_native_storage_defaults() {
-        let mut env = std::collections::HashMap::new();
-        apply_mode_env(&mut env, "local").expect("local mode");
-        assert_eq!(env.get("KYUUBIKI_STORAGE_BACKEND").unwrap(), "sqlite");
-    }
-
-    #[test]
-    fn resolves_local_runtime_commands_without_node_launcher() {
-        let root = workspace_root();
-        for command in ["cargo", "mix", "npm"] {
-            assert!(
-                resolve_development_command(&root, command).is_ok(),
-                "{command}"
-            );
-        }
-    }
-
-    #[test]
-    fn parses_default_agent_endpoints() {
-        let root = workspace_root();
-        let env = runtime_env(&root);
-        assert!(!agent_ports(&root, &env).is_empty());
-    }
-
-    #[test]
-    #[ignore = "starts the real local control plane and agents"]
-    fn native_local_stack_round_trip() {
-        let start = service_start(ServiceMode::Local);
-        let status = service_status();
-        let stop = service_stop();
-        assert!(start.is_ok(), "start failed: {start:?}");
-        assert!(
-            status
-                .as_deref()
-                .is_ok_and(|text| text.contains("runtime-policy: development-source")),
-            "status failed: {status:?}"
-        );
-        assert!(stop.is_ok(), "stop failed: {stop:?}");
-    }
-}
+#[path = "runtime_control_tests.rs"]
+mod tests;

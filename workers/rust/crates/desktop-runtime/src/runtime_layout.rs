@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use kyuubiki_platform::desktop_preferences_dir;
+use kyuubiki_platform::{Platform, desktop_preferences_dir};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -11,7 +11,10 @@ use crate::workspace_root;
 
 const SOURCE_MODE_ENV: &str = "KYUUBIKI_DESKTOP_SOURCE_MODE";
 const RUNTIME_ROOT_ENV: &str = "KYUUBIKI_RUNTIME_ROOT";
+const RUNTIME_STATE_ROOT_ENV: &str = "KYUUBIKI_RUNTIME_STATE_ROOT";
 const SERVICE_MANIFEST: &str = "manifests/service-launch.json";
+const PAYLOAD_MANIFEST: &str = "manifests/runtime-payload.json";
+const ACTIVATION_SCHEMA: &str = "kyuubiki.runtime-activation/v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum RuntimeOrigin {
@@ -21,6 +24,8 @@ pub(crate) enum RuntimeOrigin {
 
 pub(crate) struct RuntimePaths {
     pub root: PathBuf,
+    pub state: PathBuf,
+    pub data: PathBuf,
     pub run: PathBuf,
     pub hot: PathBuf,
     pub origin: RuntimeOrigin,
@@ -47,6 +52,22 @@ struct ServiceLaunchEntry {
     #[serde(default)]
     args: Vec<String>,
     cwd: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct RuntimeActivationRecord {
+    schema_version: String,
+    generation: u64,
+    version: String,
+    relative_path: String,
+    platform: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct RuntimePayloadIdentity {
+    schema_version: String,
+    version: String,
+    platform: String,
 }
 
 pub(crate) fn runtime_paths() -> Result<RuntimePaths, String> {
@@ -166,15 +187,79 @@ fn source_mode_enabled() -> bool {
 }
 
 fn installed_runtime_root() -> Result<PathBuf, String> {
-    Ok(desktop_preferences_dir("kyuubiki")?
-        .join("runtime")
-        .join("current"))
+    resolve_active_runtime_root(&desktop_preferences_dir("kyuubiki")?.join("runtime"))
+}
+
+fn resolve_active_runtime_root(store: &Path) -> Result<PathBuf, String> {
+    let activations = store.join("activations");
+    if !activations.is_dir() {
+        return Ok(store.join("current"));
+    }
+    let mut records = fs::read_dir(&activations)
+        .map_err(|error| format!("failed to read {}: {error}", activations.display()))?
+        .filter_map(|entry| match entry {
+            Ok(entry)
+                if entry.path().extension().and_then(|value| value.to_str()) == Some("json") =>
+            {
+                Some(read_activation(&entry.path()))
+            }
+            Ok(_) => None,
+            Err(error) => Some(Err(error.to_string())),
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    records.sort_by_key(|record| record.generation);
+    let active = records.pop().ok_or_else(|| {
+        format!(
+            "installer runtime activation directory is empty: {}; open Kyuubiki Installer and repair the runtime",
+            activations.display()
+        )
+    })?;
+    if active.platform != Platform::current().as_str() {
+        return Err(format!(
+            "active runtime {} targets {}, not {}",
+            active.version,
+            active.platform,
+            Platform::current().as_str()
+        ));
+    }
+    let relative = checked_relative_path(store, &active.relative_path, "activation")?;
+    if !relative.is_dir() {
+        return Err(format!(
+            "active runtime version {} is missing at {}; open Kyuubiki Installer and roll back or repair",
+            active.version,
+            relative.display()
+        ));
+    }
+    Ok(relative)
+}
+
+fn read_activation(path: &Path) -> Result<RuntimeActivationRecord, String> {
+    let bytes =
+        fs::read(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let record: RuntimeActivationRecord = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    if record.schema_version != ACTIVATION_SCHEMA {
+        return Err(format!(
+            "unsupported runtime activation schema in {}",
+            path.display()
+        ));
+    }
+    if record.relative_path != format!("versions/{}", record.version) {
+        return Err(format!(
+            "runtime activation path/version mismatch in {}",
+            path.display()
+        ));
+    }
+    Ok(record)
 }
 
 fn development_paths(root: PathBuf) -> RuntimePaths {
-    let run = root.join("tmp").join("run");
+    let state = root.join("tmp");
+    let run = state.join("run");
     RuntimePaths {
         hot: run.join("hot"),
+        data: state.join("data"),
+        state,
         root,
         run,
         origin: RuntimeOrigin::Development,
@@ -216,14 +301,45 @@ fn installed_paths(root: PathBuf) -> Result<RuntimePaths, String> {
             ));
         }
     }
-    let run = root.join("run");
+    let identity_path = root.join(PAYLOAD_MANIFEST);
+    let identity: RuntimePayloadIdentity = read_json(&identity_path)?;
+    if identity.schema_version != "kyuubiki.runtime-payload/v1"
+        || identity.platform != Platform::current().as_str()
+        || identity.version.is_empty()
+        || !identity
+            .version
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return Err(format!(
+            "invalid runtime payload identity in {}",
+            identity_path.display()
+        ));
+    }
+    let state = env::var_os(RUNTIME_STATE_ROOT_ENV)
+        .map(PathBuf::from)
+        .unwrap_or(
+            desktop_preferences_dir("kyuubiki")?
+                .join("runtime/state")
+                .join(&identity.version),
+        );
+    let run = state.join("run");
     Ok(RuntimePaths {
         hot: run.join("hot"),
+        data: state.join("data"),
+        state,
         root,
         run,
         origin: RuntimeOrigin::Installed,
         services,
     })
+}
+
+fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, String> {
+    let bytes =
+        fs::read(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    serde_json::from_slice(&bytes)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))
 }
 
 fn checked_relative_path(root: &Path, relative: &str, kind: &str) -> Result<PathBuf, String> {
@@ -275,7 +391,7 @@ fn command_names(name: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{checked_relative_path, installed_paths};
+    use super::{Platform, checked_relative_path, installed_paths, resolve_active_runtime_root};
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -322,6 +438,14 @@ mod tests {
         }
         fs::write(root.join("bin/service"), "fixture").unwrap();
         fs::write(
+            root.join("manifests/runtime-payload.json"),
+            format!(
+                r#"{{"schema_version":"kyuubiki.runtime-payload/v1","version":"2.7.0","platform":"{}"}}"#,
+                Platform::current().as_str()
+            ),
+        )
+        .unwrap();
+        fs::write(
             root.join("manifests/service-launch.json"),
             r#"{
               "schema_version":"kyuubiki.service-launch/v1",
@@ -334,6 +458,7 @@ mod tests {
         )
         .unwrap();
         let paths = installed_paths(root.clone()).unwrap();
+        assert!(!paths.state.starts_with(&root));
         let agent = paths
             .service("agent", &[("port", "5001".to_string())])
             .unwrap();
@@ -343,5 +468,58 @@ mod tests {
         );
         assert_eq!(agent.args, ["agent", "5001"]);
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn activation_log_selects_the_latest_version_without_symlinks() {
+        let store = fixture_root("activation");
+        for version in ["2.7.0", "2.7.1"] {
+            fs::create_dir_all(store.join("versions").join(version)).unwrap();
+        }
+        fs::create_dir_all(store.join("activations")).unwrap();
+        fs::write(
+            store.join("activations/00000000000000000001.json"),
+            r#"{
+              "schema_version":"kyuubiki.runtime-activation/v1",
+              "generation":1,
+              "version":"2.7.0",
+              "relative_path":"versions/2.7.0",
+              "platform":"macos"
+            }"#,
+        )
+        .unwrap();
+        fs::write(
+            store.join("activations/00000000000000000002.json"),
+            format!(
+                r#"{{
+                  "schema_version":"kyuubiki.runtime-activation/v1",
+                  "generation":2,
+                  "version":"2.7.1",
+                  "relative_path":"versions/2.7.1",
+                  "platform":"{}"
+                }}"#,
+                kyuubiki_platform::Platform::current().as_str()
+            ),
+        )
+        .unwrap();
+        let resolved = resolve_active_runtime_root(&store).unwrap();
+        assert_eq!(
+            resolved,
+            store.join("versions/2.7.1").canonicalize().unwrap()
+        );
+        fs::remove_dir_all(store).unwrap();
+    }
+
+    #[test]
+    fn malformed_newest_activation_blocks_implicit_downgrade() {
+        let store = fixture_root("malformed-activation");
+        fs::create_dir_all(store.join("activations")).unwrap();
+        fs::write(
+            store.join("activations/00000000000000000001.json"),
+            "{not-json",
+        )
+        .unwrap();
+        assert!(resolve_active_runtime_root(&store).is_err());
+        fs::remove_dir_all(store).unwrap();
     }
 }

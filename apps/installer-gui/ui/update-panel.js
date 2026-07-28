@@ -42,6 +42,25 @@ export function mountUpdatePanel() {
     </div>
     <div class="integrity-policy-grid">
       <article class="integrity-policy-card desktop-shell-surface-card">
+        <div class="panel-header desktop-shell-section-header"><h3>Installer-managed runtime</h3><span class="integrity-pill" data-desktop-state="health" id="runtime-payload-pill">unknown</span></div>
+        <p>Verified Agent, Orchestra, frontend, and embedded runtime payload. Activation is versioned and rollback never mutates an older version.</p>
+        <label class="field field-span-2"><span>Sealed payload source</span><input id="runtime-payload-source" type="text" placeholder="dist/{platform}" /></label>
+        <div class="action-row desktop-shell-action-row">
+          <button data-action="refresh-runtime-payload">Refresh runtime status</button>
+          <button data-action="install-runtime-payload" id="install-runtime-payload-button" disabled>Verify and activate</button>
+          <button data-action="rollback-runtime-payload" id="rollback-runtime-payload-button">Roll back</button>
+        </div>
+        <div class="sidebar-list sidebar-list--metrics">
+          <div class="sidebar-list__row"><span>active</span><strong id="runtime-payload-active">--</strong></div>
+          <div class="sidebar-list__row"><span>previous</span><strong id="runtime-payload-previous">--</strong></div>
+          <div class="sidebar-list__row"><span>installed</span><strong id="runtime-payload-installed">--</strong></div>
+          <div class="sidebar-list__row"><span>store root</span><strong id="runtime-payload-store">--</strong></div>
+        </div>
+        <pre id="runtime-payload-output">Runtime payload status has not been loaded.</pre>
+      </article>
+    </div>
+    <div class="integrity-policy-grid">
+      <article class="integrity-policy-card desktop-shell-surface-card">
         <div class="panel-header desktop-shell-section-header"><h3>Update source</h3><span class="desktop-shell-chip" id="update-source-schema">kyuubiki.update-source/v1</span></div>
         <div class="field-grid">
           <label class="field field-span-2"><span>Catalog path</span><input id="update-source-catalog-path" type="text" placeholder="releases/update-catalog.json" /></label>
@@ -118,6 +137,11 @@ export function mountUpdatePanel() {
       </article>
     </div>
   `;
+  const source = document.getElementById("runtime-payload-source");
+  const install = document.getElementById("install-runtime-payload-button");
+  source?.addEventListener("input", () => {
+    install.disabled = !source.value.trim();
+  });
 }
 
 function renderRules(rules) {
@@ -246,6 +270,26 @@ export function currentUpdateSourcePayload() {
     artifactRoot: document.getElementById("update-source-artifact-root")?.value.trim() || "",
     downloadDir: document.getElementById("update-source-download-dir")?.value.trim() || "",
   };
+}
+
+export function currentRuntimePayloadSource() {
+  return document.getElementById("runtime-payload-source")?.value.trim() || "";
+}
+
+export function renderRuntimePayloadStatus(status) {
+  const active = status?.active_version || "--";
+  const previous = status?.previous_version || "--";
+  const installed = Array.isArray(status?.installed_versions) ? status.installed_versions : [];
+  const state = status?.active_version ? "ready" : "blocked";
+  document.getElementById("runtime-payload-active").textContent = active;
+  document.getElementById("runtime-payload-previous").textContent = previous;
+  document.getElementById("runtime-payload-installed").textContent = installed.join(", ") || "--";
+  document.getElementById("runtime-payload-store").textContent = status?.store_root || "--";
+  document.getElementById("runtime-payload-output").textContent =
+    status?.rendered || "Installer-managed runtime is not installed.";
+  document.getElementById("runtime-payload-pill").textContent = state;
+  document.getElementById("rollback-runtime-payload-button").disabled = !status?.previous_version;
+  applyDesktopState(document.getElementById("runtime-payload-pill"), state, { kind: "health" });
 }
 
 export function hydrateUpdateSourceConfig(config) {
