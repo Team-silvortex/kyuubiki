@@ -39,10 +39,11 @@ The repository now keeps validation split by responsibility.
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
   chain contract checks, retained material research bundle and bundle-index
-  contract checks, TaskIR mirror and digest contract checks, dependency audits,
-  external operator package preflight, external operator dynamic host smoke,
-  docs book manifest validation, focused Operator TaskIR control-plane tests,
-  and the Rust live operator task path.
+  contract checks, TaskIR mirror and digest contract checks, traditional
+  code-coverage posture checks, dependency audits, external operator package
+  preflight, external operator dynamic host smoke, docs book manifest
+  validation, focused Operator TaskIR control-plane tests, and the Rust live
+  operator task path.
 - `make check-materialization-plan-contract`
   Shared materialized-candidate contract guard. It checks the materialization
   plan schema, fixture, and SDK documentation links before agent/lab output is
@@ -79,6 +80,23 @@ The repository now keeps validation split by responsibility.
   limits. It also runs a checker self-test and enforces the manifest's
   `minimum_coverage_level`, currently `qualification` for the `moxi 2.x`
   physics-coverage gate.
+- `make check-test-coverage-posture`
+  Traditional code-coverage posture guard. It validates
+  `config/test-coverage-posture.json`, writes
+  `tmp/test-coverage-posture.json` and `tmp/test-coverage-posture.md`, and keeps
+  line/branch/function coverage separate from module-function tensors,
+  language-pack coverage, physics evidence coverage, and benchmark profile
+  coverage. Until every code surface has retained artifacts and enforced
+  thresholds, Kyuubiki must not claim `100%` traditional code coverage.
+- `make coverage`
+  Writes the same posture report without the checker self-test. This is the
+  stable entrypoint for gradually wiring `cargo llvm-cov`, `c8`, `coverage.py`,
+  and Elixir coverage tooling into the current test stack.
+- `make coverage-rust`
+  Runs the first instrumented traditional coverage lane through
+  `cargo llvm-cov` and writes `tmp/coverage/rust/lcov.info` by default. Use
+  `PACKAGE=<crate>` and `TEST_FILTER=<filter>` for small probes before running
+  the full Rust workspace lane.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
   audits for the frontend and desktop packages, then RustSec `cargo audit` for

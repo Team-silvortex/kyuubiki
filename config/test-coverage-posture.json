@@ -1,0 +1,150 @@
+{
+  "$schema": "../schemas/test-coverage-posture.schema.json",
+  "schema_version": "kyuubiki.test-coverage-posture/v1",
+  "release_line": "moxi 2.x",
+  "truthfulness_policy": {
+    "code_coverage_claim": "not-100-percent-until-artifacts-and-thresholds-exist",
+    "separate_from": [
+      "module-function coverage tensor",
+      "language-pack coverage",
+      "physics operator evidence coverage",
+      "benchmark profile coverage"
+    ]
+  },
+  "code_surfaces": [
+    {
+      "id": "rust-workspace",
+      "owner": "runtime-data-plane",
+      "language": "rust",
+      "root": "workers/rust",
+      "test_command": "make test-rust",
+      "planned_tool": "cargo llvm-cov",
+      "planned_command": "make coverage-rust",
+      "planned_artifact": "tmp/coverage/rust/lcov.info",
+      "status": "instrumented",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 55,
+        "functions": 65
+      }
+    },
+    {
+      "id": "rust-sdk",
+      "owner": "headless-sdk",
+      "language": "rust",
+      "root": "sdks/rust",
+      "test_command": "cargo test --manifest-path sdks/rust/Cargo.toml",
+      "planned_tool": "cargo llvm-cov",
+      "planned_command": "cargo llvm-cov --manifest-path sdks/rust/Cargo.toml --lcov --output-path tmp/coverage/rust-sdk/lcov.info",
+      "planned_artifact": "tmp/coverage/rust-sdk/lcov.info",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 55,
+        "functions": 65
+      }
+    },
+    {
+      "id": "frontend-node-tests",
+      "owner": "workbench-ui",
+      "language": "typescript",
+      "root": "apps/frontend",
+      "test_command": "npm --prefix apps/frontend run test:unit",
+      "planned_tool": "c8",
+      "planned_command": "cd apps/frontend && c8 --reporter=lcov --report-dir ../../tmp/coverage/frontend node --import ./test/support/register-alias-loader.mjs --test test/**/*.test.*",
+      "planned_artifact": "tmp/coverage/frontend/lcov.info",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 50,
+        "functions": 65
+      }
+    },
+    {
+      "id": "desktop-gui-smoke",
+      "owner": "desktop-shells",
+      "language": "javascript",
+      "root": "tests/integration",
+      "test_command": "make test-integration-desktop-gui",
+      "planned_tool": "node coverage hook or Playwright trace coverage",
+      "planned_command": "make test-integration-desktop-gui COVERAGE=1",
+      "planned_artifact": "tmp/coverage/desktop-gui/coverage.json",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 60,
+        "branches": 45,
+        "functions": 55
+      }
+    },
+    {
+      "id": "elixir-orchestra",
+      "owner": "control-plane",
+      "language": "elixir",
+      "root": "apps/web",
+      "test_command": "make test-web",
+      "planned_tool": "excoveralls",
+      "planned_command": "cd apps/web && mix coveralls.json",
+      "planned_artifact": "tmp/coverage/elixir/coveralls.json",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 50,
+        "functions": 65
+      }
+    },
+    {
+      "id": "python-headless-sdk",
+      "owner": "headless-sdk",
+      "language": "python",
+      "root": "sdks/python",
+      "test_command": "PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests",
+      "planned_tool": "coverage.py",
+      "planned_command": "PYTHONPATH=sdks/python coverage run -m unittest discover -s sdks/python/tests && coverage json -o tmp/coverage/python/coverage.json",
+      "planned_artifact": "tmp/coverage/python/coverage.json",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 50,
+        "functions": 60
+      }
+    },
+    {
+      "id": "elixir-headless-sdk",
+      "owner": "headless-sdk",
+      "language": "elixir",
+      "root": "sdks/elixir",
+      "test_command": "cd sdks/elixir && mix test",
+      "planned_tool": "excoveralls",
+      "planned_command": "cd sdks/elixir && mix coveralls.json",
+      "planned_artifact": "tmp/coverage/elixir-sdk/coveralls.json",
+      "status": "declared",
+      "minimum_next_threshold": {
+        "lines": 70,
+        "branches": 50,
+        "functions": 65
+      }
+    }
+  ],
+  "non_code_coverage_gates": [
+    {
+      "id": "module-function-coverage-tensor",
+      "kind": "architecture tensor",
+      "command": "make check-module-function-coverage-tensor"
+    },
+    {
+      "id": "operator-reliability",
+      "kind": "physics evidence",
+      "command": "make check-operator-reliability"
+    },
+    {
+      "id": "language-pack-coverage",
+      "kind": "localization coverage",
+      "command": "make check-full-language-pack-coverage"
+    },
+    {
+      "id": "benchmark-profile-coverage",
+      "kind": "scale benchmark matrix",
+      "command": "make benchmark-profile-index"
+    }
+  ]
+}

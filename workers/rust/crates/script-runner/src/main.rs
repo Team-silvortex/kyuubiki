@@ -96,6 +96,7 @@ mod rust_line_counts;
 mod standard_benchmark_index;
 mod standard_benchmark_remote;
 mod standard_benchmark_report;
+mod test_coverage_posture;
 mod toolchain_contract;
 mod ui_automation_contract;
 mod update_catalog_docs;
@@ -343,6 +344,7 @@ fn run() -> RunnerResult<u8> {
             }
             rust_line_counts::run_rust_line_audit(&paths.root, Vec::new())
         }
+        "rust-coverage" => test_coverage_posture::run_rust_coverage(&paths.root, &paths.rust, rest),
         "rust-line-audit" => rust_line_counts::run_rust_line_audit(&paths.root, rest),
         "frontend-test" => {
             let typecheck = node_tests::run_frontend_typecheck(&paths.frontend, Vec::new())?;

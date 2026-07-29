@@ -1,0 +1,62 @@
+"use client";
+
+export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
+# Available helpers:
+# - state: current frontend snapshot (dict)
+# - actions: action catalog (list[dict])
+# - macros: macro catalog (list[dict])
+# - recipes: runnable Pwdt recipe catalog (list[dict])
+# - ui_contract: stable built-in UI automation contract (dict)
+# - ky.log(*parts)
+# - ky.has_action("action/id"), ky.require_action("action/id")
+# - ky.actions_by_category("model"), ky.actions_matching(category="model", risk="normal")
+# - ky.has_macro("macro/id"), ky.require_macro("macro/id")
+# - ky.has_recipe("recipe/id"), ky.require_recipe("recipe/id")
+# - ky.recipes_matching(category="study", risk="normal")
+# - ky.automation_parity_report()
+# - await ky.ensure_project("Study name")
+# - await ky.build_parametric_truss_2d(...)
+# - await ky.prepare_electrostatic_plane_triangle_study(...)
+# - await ky.prepare_electrostatic_plane_quad_study(...)
+# - await ky.prepare_heat_plane_triangle_study(...)
+# - await ky.prepare_heat_plane_quad_study(...)
+# - await ky.save_model(name="model", save_as=True)
+# - await ky.run_current_study()
+# - await ky.project_electrostatic_to_heat_triangle_study()
+# - await ky.project_electrostatic_to_heat_quad_study()
+# - await ky.project_heat_to_thermo_triangle_study()
+# - await ky.project_heat_to_thermo_quad_study()
+# - await ky.open_results(project_id="...")
+# - await ky.run_recipe("recipe/truss2d/closed-loop", params_dict)
+# - await ky.run_recipe("recipe/heat-thermo/quad-closed-loop", params_dict)
+# - await ky.run_recipe("recipe/heat-thermo/triangle-closed-loop", params_dict)
+# - await ky.run_recipe("recipe/electrostatic-heat-thermo/quad-closed-loop", params_dict)
+# - await ky.run_recipe("recipe/electrostatic-heat-thermo/triangle-closed-loop", params_dict)
+# - await ky.invoke("action/id", payload_dict)
+# - await ky.run_macro("macro/id", payload_dict)
+# - await ky.run_macro_definition(macro_dict)
+# - ky.ui_selector("runtimeTab", "control")
+# - ky.query_selector("runtimePanel")
+# - ky.query_selector_all("runtimeTab", "overview")
+# - await ky.sleep(seconds)
+# - await ky.wait_until(...)
+# - await ky.wait_for_job_done()
+# - await ky.wait_for_message("completed")
+
+ky.log("Current study:", state["studyKind"])
+ky.log("Current sidebar:", state["sidebarSection"])
+ky.log("UI contract version:", ui_contract["contractVersion"])
+
+# Example: refresh runtime surfaces first.
+await ky.invoke("runtime/refreshAll")
+
+# Example: run a small GUI-equivalent study flow.
+project_id = await ky.ensure_project("Pwdt automation demo")
+await ky.build_parametric_truss_2d(bays=6, span=18, height=3.5, load_y=-1500)
+await ky.save_model(name="pwdt-truss-demo", save_as=True)
+
+ky.log("Submitting study...")
+run_state = await ky.run_current_study()
+await ky.open_results(project_id=project_id)
+ky.log("Study terminal state:", run_state["jobStatus"])
+`;

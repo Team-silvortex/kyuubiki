@@ -35,7 +35,8 @@ desktop-linux-remote\n  \
 desktop-upload-remote desktop-release-upload-remote\n  \
 generate-desktop-icon-variants\n  \
 lab remote-ssh-fixture\n  \
-web-test rust-test rust-line-audit frontend-test headless-test\n  \
+  web-test rust-test rust-line-audit frontend-test headless-test\n  \
+  rust-coverage\n  \
   headless-live-test headless-rust-live-test sdk-smoke workflow-preflight\n  \
   check-make-modules\n  \
   check-doc-book\n  \
@@ -51,6 +52,7 @@ web-test rust-test rust-line-audit frontend-test headless-test\n  \
   build-module-topology-report\n  \
   check-module-function-matrix\n  \
   check-module-function-coverage-tensor\n  \
+  check-test-coverage-posture\n  \
   check-module-extension-standard\n  \
   check-verification-evidence-surface\n  \
   check-central-store-contract\n  \

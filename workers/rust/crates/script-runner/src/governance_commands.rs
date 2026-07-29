@@ -7,8 +7,8 @@ use crate::{
     material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
-    operator_task_ir_contract, project_organization_audit, toolchain_contract,
-    ui_automation_contract, update_catalog_docs, usability_release_gate,
+    operator_task_ir_contract, project_organization_audit, test_coverage_posture,
+    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
 };
 use std::ffi::OsString;
@@ -48,6 +48,9 @@ pub(crate) fn run_governance_command(
         }
         "check-module-function-coverage-tensor" => {
             module_function_tensor::run_check_module_function_tensor(root, args)
+        }
+        "check-test-coverage-posture" => {
+            test_coverage_posture::run_check_test_coverage_posture(root, args)
         }
         "check-module-extension-standard" => {
             module_extension_standard::run_check_module_extension_standard(root, args)

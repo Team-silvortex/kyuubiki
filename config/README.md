@@ -87,11 +87,19 @@ the profile commands themselves should be executed.
   fixture or negative checks.
 - `benchmark-profile-coverage.json`
   Benchmark profile coverage map used by performance and coverage tooling.
+- `test-coverage-posture.json`
+  Traditional code-coverage posture contract. It lists code surfaces that need
+  line/branch/function coverage tooling, planned artifacts, and next threshold
+  targets, while explicitly keeping those claims separate from architecture
+  tensors, language-pack coverage, physics evidence, and benchmark profile
+  coverage.
 - `dependency-audit-lockfiles.json`
   Security-audit lane contract for npm and Rust lockfile checks.
 
 Run `make check-module-topology` after changing architecture topology. Run
 `make check-module-function-matrix` after changing module/function coverage.
+Run `make check-test-coverage-posture` after changing the traditional code
+coverage posture.
 Run `make check-module-extension-standard` after changing the extension flow.
 Run `make audit-dependencies` after changing dependency-audit lanes.
 

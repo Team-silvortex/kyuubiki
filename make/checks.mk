@@ -1,5 +1,5 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
-.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch draft-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-usability-release-gate build-usability-readiness-report check-version-line
 .PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
@@ -58,6 +58,16 @@ check-module-function-matrix:
 check-module-function-coverage-tensor:
 	@$(ENTRYPOINT) check-module-function-coverage-tensor --self-test
 	@$(ENTRYPOINT) check-module-function-coverage-tensor
+
+check-test-coverage-posture:
+	@$(ENTRYPOINT) check-test-coverage-posture --self-test
+	@$(ENTRYPOINT) check-test-coverage-posture --out $${OUT:-tmp/test-coverage-posture.json} --markdown-out $${MARKDOWN_OUT:-tmp/test-coverage-posture.md}
+
+coverage:
+	@$(ENTRYPOINT) check-test-coverage-posture --out $${OUT:-tmp/test-coverage-posture.json} --markdown-out $${MARKDOWN_OUT:-tmp/test-coverage-posture.md}
+
+coverage-rust:
+	@$(ENTRYPOINT) rust-coverage $${PACKAGE:+--package "$$PACKAGE"} $${TEST_FILTER:+--test-filter "$$TEST_FILTER"} --out $${OUT:-tmp/coverage/rust/lcov.info}
 
 check-module-extension-standard:
 	@$(ENTRYPOINT) check-module-extension-standard --self-test
@@ -467,6 +477,7 @@ architecture-check:
 	@$(MAKE) check-module-topology
 	@$(MAKE) check-module-function-matrix
 	@$(MAKE) check-module-function-coverage-tensor
+	@$(MAKE) check-test-coverage-posture
 	@$(MAKE) check-module-extension-standard
 	@$(MAKE) check-contracts-runtime-api-surface
 	@$(MAKE) check-verification-evidence-surface
