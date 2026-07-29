@@ -23,7 +23,8 @@ where:
 
 The retained regression
 `workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs` checks that the
-solver matches the scalar closed form at two frequencies. It also verifies:
+solver matches the scalar closed form across an octave frequency ladder. It
+also verifies:
 
 - angular frequency
 - speed of sound
@@ -33,6 +34,15 @@ solver matches the scalar closed form at two frequencies. It also verifies:
 - acoustic intensity
 - damping loss
 - zero loss for an undamped fixture
+- material wave-speed scaling
+- duct-length perturbation against the same dynamic-stiffness reference
+- pure-source amplitude scaling
+
+The retained refinement regression
+`workers/rust/crates/solver/tests/acoustic_bar_refinement.rs` runs a fixed
+linear pressure field over 1, 2, 4, 8, and 16 elements. It requires nodal
+pressure, element pressure gradient, particle velocity, and wave number to stay
+invariant under subdivision.
 
 Scope limits:
 

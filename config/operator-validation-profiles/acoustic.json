@@ -1,0 +1,60 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "acoustic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "acoustic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.acoustic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "frequency_scaling",
+        "damping_loss_invariant",
+        "linear_pressure_field_refinement"
+      ],
+      "formal_invariants": [
+        "positive_angular_frequency",
+        "positive_speed_of_sound",
+        "wave_number_scales_with_frequency",
+        "particle_velocity_matches_pressure_gradient",
+        "undamped_case_has_zero_loss",
+        "refinement_preserves_pressure_gradient_velocity_and_wave_number"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/acoustic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/acoustic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
+        "workers/rust/crates/solver/tests/acoustic_bar_refinement.rs"
+      ],
+      "commands": [
+        {
+          "id": "acoustic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "acoustic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "acoustic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_closed_form -- --nocapture"
+        },
+        {
+          "id": "acoustic-bar-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test acoustic_bar_refinement -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,13 @@ checks both diffusion-dominant and advection-dominant Peclet regimes. It also
 checks that the zero-velocity limit reports zero advective flux and that total
 flux equals diffusive flux in that limit.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs` runs
+a pure-diffusion manufactured linear concentration field over 1, 2, 4, 8, 16,
+and 32 elements. It requires nodal concentration, concentration gradient,
+diffusive flux, total flux, and zero Peclet number to stay invariant under
+subdivision.
+
 Scope limits:
 
 - This qualifies the current 1D steady constant-coefficient transport bar

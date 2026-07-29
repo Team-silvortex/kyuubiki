@@ -27,6 +27,12 @@ The regression checks displacement components, fixed support displacement,
 element extension sign, member force, and total strain energy. Total energy is
 retained as `0.5 * f dot u`, matching the assembled spring energy.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/spring_vector_refinement.rs` splits each
+orthogonal 2D and 3D axis spring into 1, 2, 4, 8, and 16 equal series elements.
+It preserves free-node displacement, member force, strain energy, and the
+axis-projected displacement line along each retained chain.
+
 ## Qualification Boundary
 
 This is a closed-form qualification for vector spring projection and assembly,

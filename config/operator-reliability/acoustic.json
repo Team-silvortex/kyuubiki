@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
-          "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs"
+          "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
+          "workers/rust/crates/solver/tests/acoustic_bar_refinement.rs"
         ],
         "reliability_suite": "acoustic_bar_reliability",
         "review": {
@@ -44,7 +45,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
-            "acoustic_bar_1d_tracks_material_wave_speed_scaling"
+            "workers/rust/crates/solver/tests/acoustic_bar_refinement.rs",
+            "acoustic_bar_1d_tracks_material_wave_speed_scaling",
+            "fixed_pressure_linear_field_is_refinement_invariant"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/acoustic-bar-closed-form-release-evidence.json",
@@ -56,7 +59,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/acoustic_bar_1d_review.rs",
             "workers/rust/crates/solver/tests/acoustic_bar_reliability.rs",
-            "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs"
+            "workers/rust/crates/solver/tests/acoustic_bar_closed_form.rs",
+            "workers/rust/crates/solver/tests/acoustic_bar_refinement.rs"
           ]
         }
       },

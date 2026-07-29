@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
-          "workers/rust/crates/solver/tests/bar_1d_closed_form.rs"
+          "workers/rust/crates/solver/tests/bar_1d_closed_form.rs",
+          "workers/rust/crates/solver/tests/line_field_convergence.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_axial_bar_1d_closed_form",
         "review": {
@@ -43,6 +44,8 @@
           "convergence_checks": [
             "evidence/operator-qualification/line-field-tolerance-policy.json",
             "workers/rust/crates/solver/tests/bar_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/line_field_convergence.rs",
+            "axial_bar_linear_field_is_refinement_invariant",
             "bar_1d_tracks_load_area_and_modulus_scaling"
           ],
           "provenance": [
@@ -55,7 +58,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
             "workers/rust/crates/solver/tests/bar_1d_review.rs",
-            "workers/rust/crates/solver/tests/bar_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/bar_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/line_field_convergence.rs"
           ]
         }
       },
@@ -138,7 +142,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
-          "workers/rust/crates/solver/tests/spring_1d_closed_form.rs"
+          "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+          "workers/rust/crates/solver/tests/spring_1d_refinement.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_spring_1d_chain_fixture",
         "review": {
@@ -168,7 +173,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
-            "spring_1d_tracks_load_and_stiffness_scaling"
+            "spring_1d_tracks_load_and_stiffness_scaling",
+            "workers/rust/crates/solver/tests/spring_1d_refinement.rs",
+            "equivalent_spring_chain_is_refinement_invariant"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json",
@@ -180,6 +187,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/spring_1d_review.rs",
             "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_1d_refinement.rs",
             "workers/rust/crates/solver/tests/spring_input_reliability.rs"
           ]
         }
@@ -199,7 +207,8 @@
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs",
+          "workers/rust/crates/solver/tests/spring_vector_refinement.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_spring_2d_grid_fixture",
         "review": {
@@ -229,7 +238,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
-            "spring_2d_tracks_load_and_stiffness_scaling"
+            "spring_2d_tracks_load_and_stiffness_scaling",
+            "workers/rust/crates/solver/tests/spring_vector_refinement.rs",
+            "orthogonal_2d_vector_springs_are_refinement_invariant"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
@@ -241,6 +252,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/spring_2d_review.rs",
             "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_vector_refinement.rs",
             "workers/rust/crates/solver/tests/spring_input_reliability.rs"
           ]
         }
@@ -260,7 +272,8 @@
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/spring_plane.rs",
+          "workers/rust/crates/solver/tests/spring_vector_refinement.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_spring_3d_cage_fixture",
         "review": {
@@ -290,7 +303,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
-            "spring_3d_tracks_load_and_stiffness_scaling"
+            "spring_3d_tracks_load_and_stiffness_scaling",
+            "workers/rust/crates/solver/tests/spring_vector_refinement.rs",
+            "orthogonal_3d_vector_springs_are_refinement_invariant"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json",
@@ -302,6 +317,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/spring_3d_review.rs",
             "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+            "workers/rust/crates/solver/tests/spring_vector_refinement.rs",
             "workers/rust/crates/solver/tests/spring_input_reliability.rs"
           ]
         }

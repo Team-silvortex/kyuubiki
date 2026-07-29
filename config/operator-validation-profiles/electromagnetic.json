@@ -1,0 +1,204 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "magnetostatic-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "magnetostatic-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.magnetostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_permeance_closed_form",
+        "material_scaling",
+        "zero_source_limit",
+        "linear_magnetic_potential_refinement"
+      ],
+      "formal_invariants": [
+        "grounded_magnetic_potential",
+        "magnetic_potential_matches_permeance_balance",
+        "magnetic_field_is_negative_gradient",
+        "flux_density_scales_with_permeability",
+        "zero_source_has_zero_stored_energy",
+        "refinement_preserves_magnetic_potential_gradient_field_flux_and_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/magnetostatic-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_closed_form.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_bar_refinement.rs"
+      ],
+      "commands": [
+        {
+          "id": "magnetostatic-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_closed_form -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-bar-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_bar_refinement -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "electrostatic-plane-patch",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "electromagnetic-plane-patch",
+      "trust_goal": "review_cross_check",
+      "operators": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "constant_gradient_patch",
+        "triangle_quad_cross_check",
+        "stored_energy_invariant",
+        "manufactured_linear_field_refinement"
+      ],
+      "formal_invariants": [
+        "fixed_nodal_potentials",
+        "uniform_x_potential_gradient",
+        "zero_y_potential_gradient",
+        "electric_field_equals_negative_potential_gradient",
+        "flux_density_scales_with_permittivity",
+        "stored_energy_scales_with_element_area",
+        "refinement_preserves_electric_field_flux_and_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "workers/rust/crates/solver/tests/accuracy_baselines/field_2d.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_mesh_refinement.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "field-2d-baseline",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test accuracy_baselines field_2d -- --nocapture"
+        },
+        {
+          "id": "electrostatic-plane-mesh-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_mesh_refinement -- --nocapture"
+        },
+        {
+          "id": "electrostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "electrostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "electromagnetic-plane-patch",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "electromagnetic-plane-patch",
+      "trust_goal": "qualification_collecting",
+      "operators": [
+        "solve.electrostatic_plane_triangle_2d",
+        "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d",
+        "solve.magnetostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "field_energy_cross_check",
+        "triangle_quad_patch_comparison",
+        "rotated_orientation_regression",
+        "material_parameter_provenance",
+        "manufactured_linear_field_refinement"
+      ],
+      "formal_invariants": [
+        "electric_field_equals_negative_potential_gradient",
+        "electric_flux_density_scales_with_permittivity",
+        "magnetic_flux_density_scales_with_permeability",
+        "field_components_rotate_without_energy_drift",
+        "stored_energy_scales_with_area_and_thickness",
+        "refinement_preserves_electromagnetic_plane_field_flux_and_energy"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md",
+        "evidence/operator-qualification/electromagnetic-plane-material-provenance.json",
+        "workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_mesh_refinement.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/electrostatic_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/field_plane_input_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_input_reliability.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs"
+      ],
+      "commands": [
+        {
+          "id": "electrostatic-plane-mesh-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_mesh_refinement -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-plane-mesh-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_reliability manufactured_linear_potential -- --nocapture"
+        },
+        {
+          "id": "electrostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "electrostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electrostatic_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-triangle-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_triangle_2d_review -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-quad-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "electromagnetic-orientation-regression",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electromagnetic_plane_orientation_regression -- --nocapture"
+        },
+        {
+          "id": "electrostatic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test field_plane_input_reliability electrostatic_plane -- --nocapture"
+        },
+        {
+          "id": "magnetostatic-plane-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_input_reliability -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

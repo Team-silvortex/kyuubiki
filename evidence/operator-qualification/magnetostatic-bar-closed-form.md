@@ -23,6 +23,12 @@ permeability, and source magnitudes. It also verifies that a zero-source
 fixture reports zero potential, field strength, flux density, and stored
 energy.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/magnetostatic_bar_refinement.rs` fixes the
+magnetic potential at every node for 1, 2, 4, 8, and 16 element chains. It
+preserves nodal potential, potential gradient, magnetic field strength, flux
+density, and stored energy for the manufactured linear field.
+
 Scope limits:
 
 - This qualifies the current 1D linear magnetostatic bar scope.

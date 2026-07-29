@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
-          "workers/rust/crates/solver/tests/heat_bar_closed_form.rs"
+          "workers/rust/crates/solver/tests/heat_bar_closed_form.rs",
+          "workers/rust/crates/solver/tests/line_field_convergence.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_heat_bar_1d_two_element_gradient",
         "review": {
@@ -44,6 +45,8 @@
           "convergence_checks": [
             "evidence/operator-qualification/line-field-tolerance-policy.json",
             "workers/rust/crates/solver/tests/heat_bar_closed_form.rs",
+            "workers/rust/crates/solver/tests/line_field_convergence.rs",
+            "heat_bar_linear_temperature_field_is_refinement_invariant",
             "heat_bar_1d_tracks_heat_load_and_conductivity_scaling"
           ],
           "provenance": [
@@ -56,7 +59,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
             "workers/rust/crates/solver/tests/heat_bar_1d_review.rs",
-            "workers/rust/crates/solver/tests/heat_bar_closed_form.rs"
+            "workers/rust/crates/solver/tests/heat_bar_closed_form.rs",
+            "workers/rust/crates/solver/tests/line_field_convergence.rs"
           ]
         }
       },

@@ -9,7 +9,12 @@ use std::time::Instant;
 
 const DEFAULT_INPUT: &str = "tmp/line-field-qualification-release-evidence.json";
 const DEFAULT_OUT: &str = "tmp/line-field-qualification-release-evidence.json";
-const REQUIRED_COMMAND_IDS: &[&str] = &["evidence_check", "solver_baseline"];
+const MINIMUM_COMMAND_IDS: &[&str] = &["evidence_check", "solver_baseline"];
+const ALLOWED_COMMAND_IDS: &[&str] = &[
+    "evidence_check",
+    "solver_baseline",
+    "line_field_convergence",
+];
 const REQUIRED_PROMOTED_OPERATOR_IDS: &[&str] = &[
     "solve.bar_1d",
     "solve.thermal_bar_1d",
@@ -21,11 +26,20 @@ const RETAINED_EVIDENCE_PATH: &str =
 const RELEASE_RECORD_PATH: &str = "releases/qualification-records/1.20.0.json";
 const REVIEW_DECISION_PATH: &str =
     "releases/qualification-review-decisions/2.0.0/line-field-closed-form-review-decision.json";
-const REQUIRED_TRACKED_INPUTS: &[&str] = &[
+const MINIMUM_TRACKED_INPUTS: &[&str] = &[
     "evidence/operator-qualification/line-field-closed-form-baseline.json",
     "evidence/operator-qualification/line-field-closed-form-derivation.md",
     "evidence/operator-qualification/line-field-tolerance-policy.json",
     "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+    "scripts/check-line-field-closed-form-baseline.mjs",
+];
+const ALLOWED_TRACKED_INPUTS: &[&str] = &[
+    "config/operator-validation-profiles/line-field.json",
+    "evidence/operator-qualification/line-field-closed-form-baseline.json",
+    "evidence/operator-qualification/line-field-closed-form-derivation.md",
+    "evidence/operator-qualification/line-field-tolerance-policy.json",
+    "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+    "workers/rust/crates/solver/tests/line_field_convergence.rs",
     "scripts/check-line-field-closed-form-baseline.mjs",
 ];
 
@@ -61,6 +75,18 @@ const EVIDENCE_COMMANDS: &[EvidenceCommand] = &[
             "--test",
             "accuracy_baselines",
             "line_1d",
+        ],
+    },
+    EvidenceCommand {
+        id: "line_field_convergence",
+        cwd: "workers/rust",
+        command: "cargo",
+        args: &[
+            "test",
+            "-p",
+            "kyuubiki-solver",
+            "--test",
+            "line_field_convergence",
         ],
     },
 ];
@@ -278,10 +304,10 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
         return Err("summary must report a passing release evidence run".to_string());
     }
     let commands = array(evidence, "commands");
-    if commands.len() != REQUIRED_COMMAND_IDS.len() {
+    if commands.len() < MINIMUM_COMMAND_IDS.len() {
         return Err(format!(
-            "commands must contain exactly {} entries",
-            REQUIRED_COMMAND_IDS.len()
+            "commands must contain at least {} entries",
+            MINIMUM_COMMAND_IDS.len()
         ));
     }
     let mut seen_commands = BTreeSet::new();
@@ -289,7 +315,7 @@ fn validate_evidence(root: &Path, evidence: &Value) -> RunnerResult<()> {
         validate_command(command)?;
         seen_commands.insert(field(command, "id").to_string());
     }
-    for expected in REQUIRED_COMMAND_IDS {
+    for expected in MINIMUM_COMMAND_IDS {
         if !seen_commands.contains(*expected) {
             return Err(format!("missing command {expected}"));
         }
@@ -413,7 +439,7 @@ fn validate_command(command: &Value) -> RunnerResult<()> {
     } else {
         field(command, "id")
     };
-    if !REQUIRED_COMMAND_IDS.contains(&context) {
+    if !ALLOWED_COMMAND_IDS.contains(&context) {
         return Err(format!("{context}: unexpected command id"));
     }
     if command.get("ok").and_then(Value::as_bool) != Some(true)
@@ -456,16 +482,16 @@ fn validate_provenance(provenance: &Value) -> RunnerResult<()> {
         "provenance: no_local_absolute_paths must be true",
     )?;
     let tracked = array(provenance, "tracked_inputs");
-    if tracked.len() != REQUIRED_TRACKED_INPUTS.len() {
+    if tracked.len() < MINIMUM_TRACKED_INPUTS.len() {
         return Err(format!(
-            "provenance: expected {} tracked inputs",
-            REQUIRED_TRACKED_INPUTS.len()
+            "provenance: expected at least {} tracked inputs",
+            MINIMUM_TRACKED_INPUTS.len()
         ));
     }
     let mut seen = BTreeSet::new();
     for input in tracked {
         let path = field(input, "path");
-        if !REQUIRED_TRACKED_INPUTS.contains(&path) {
+        if !ALLOWED_TRACKED_INPUTS.contains(&path) {
             return Err(format!("provenance: unexpected tracked input {path}"));
         }
         let sha = field(input, "sha256");
@@ -474,7 +500,7 @@ fn validate_provenance(provenance: &Value) -> RunnerResult<()> {
         }
         seen.insert(path.to_string());
     }
-    for expected in REQUIRED_TRACKED_INPUTS {
+    for expected in MINIMUM_TRACKED_INPUTS {
         if !seen.contains(*expected) {
             return Err(format!("provenance: missing tracked input {expected}"));
         }

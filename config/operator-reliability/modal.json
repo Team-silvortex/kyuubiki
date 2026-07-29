@@ -37,6 +37,7 @@
         },
         "qualification": {
           "validation_sources": [
+            "evidence/operator-qualification/modal-frame-reference-note.md",
             "evidence/operator-qualification/modal-frame-frequency-convergence.md",
             "evidence/operator-qualification/modal-frame-normalization-policy.md"
           ],
@@ -100,6 +101,7 @@
         },
         "qualification": {
           "validation_sources": [
+            "evidence/operator-qualification/modal-frame-reference-note.md",
             "evidence/operator-qualification/modal-frame-frequency-convergence.md",
             "evidence/operator-qualification/modal-frame-normalization-policy.md"
           ],

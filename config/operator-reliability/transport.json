@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
-          "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs"
         ],
         "reliability_suite": "advection_diffusion_bar_reliability",
         "review": {
@@ -42,7 +43,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
-            "advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling"
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs",
+            "advection_diffusion_bar_1d_tracks_diffusivity_and_velocity_scaling",
+            "pure_diffusion_linear_field_is_refinement_invariant_and_flux_conservative"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json",
@@ -54,7 +57,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
             "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
-            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs"
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+            "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs"
           ]
         }
       },

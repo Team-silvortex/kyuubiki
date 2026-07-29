@@ -195,6 +195,7 @@ Run them with:
 cd workers/rust
 cargo test -p kyuubiki-solver --test accuracy_baselines
 cargo test -p kyuubiki-solver --test mechanical_convergence
+cargo test -p kyuubiki-solver --test line_field_convergence
 ```
 
 For the qualification-oriented subset, retain a release evidence bundle with:
@@ -212,8 +213,11 @@ operator ids, so the four 1D closed-form line-field operators now carry
 focused heat and electrostatic bar regressions now also cover length scaling:
 temperature and potential scale with length under fixed sources, while
 gradient, heat flux, electric field, and electric flux density remain pinned
-to the same closed-form values. The heat bar regression also checks Fourier
-flux recovery and the end-load conservation balance
+to the same closed-form values. The retained line-field convergence regression now runs the
+promoted axial, thermal, heat, and electrostatic 1D operators across 1, 2, 4,
+8, and 16 element meshes and requires the closed-form field, force/flux, and
+energy quantities to stay refinement-invariant. The heat bar regression also
+checks Fourier flux recovery and the end-load conservation balance
 `heat_flux * area + heat_load = 0`, while re-deriving max temperature, max heat
 flux, element length, node coordinate/heat-load passthrough, average
 temperature, and temperature gradient from public node and element fields. The
@@ -262,18 +266,21 @@ The fifth approved qualification packet is
 [modal-frame-sanity-release-evidence.json](../releases/qualification-evidence/2.0.0/modal-frame-sanity-release-evidence.json).
 It promotes `solve.modal_frame_2d` and `solve.modal_frame_3d` after retained
 frequency scaling, mode ordering, restrained DOF, and mode-shape normalization
-checks pass, including short-versus-long cantilever period/frequency
-monotonicity.
+checks pass. The packet now also links the generalized eigenproblem reference
+note, so stiffness/density scaling is tied to the independent Rayleigh scaling
+contract rather than only to an implementation-to-implementation regression.
 
 The sixth approved qualification packet is
 [stokes-flow-screening-release-evidence.json](../releases/qualification-evidence/2.0.0/stokes-flow-screening-release-evidence.json).
 It promotes the Stokes quad and triangle screening operators only for the
 retained screening-boundary scope, after boundary, divergence, heterogeneous
-material, and 1x1/2x2/4x4/8x8 linear-field mesh-refinement checks pass. The retained
-quad and triangle screening regressions also cover total viscous-dissipation
-invariance under refinement and geometry-area scaling with fixed velocity
-boundary data. Every retained branch also re-derives summary maxima, pressure
-drop, node id/coordinate/body-force passthrough, element average
+material, and 1x1/2x2/4x4/8x8 linear-field mesh-refinement checks pass. The
+packet now also links the Stokes-only reference note for the manufactured
+`u = y`, `v = 0`, `p = 0` field. The retained quad and triangle screening
+regressions cover total viscous-dissipation invariance under refinement and
+geometry-area scaling with fixed velocity boundary data. Every retained branch
+also re-derives summary maxima, pressure drop, node id/coordinate/body-force
+passthrough, element average
 velocity/pressure, element area, velocity gradients, Reynolds number,
 divergence, shear, viscous stress, and dissipation diagnostics from public
 result fields.
@@ -287,10 +294,13 @@ pass across an octave frequency ladder. The focused closed-form regression now
 also checks duct-length perturbation against the same dynamic
 closed-form reference, plus pure-source amplitude scaling: pressure and
 particle velocity scale linearly, while acoustic intensity and damping loss
-scale quadratically. Every retained branch also rechecks summary maxima,
-sound-pressure level, speed of sound, wave number, particle velocity, acoustic
-intensity, damping loss, element length, node coordinate/source passthrough,
-and material echo fields from node/element/material fields.
+scale quadratically. The retained refinement regression now also preserves the
+linear fixed-pressure field across 1/2/4/8/16 elements, including pressure,
+pressure gradient, particle velocity, and wave number. Every retained branch
+also rechecks summary maxima, sound-pressure level, speed of sound, wave
+number, particle velocity, acoustic intensity, damping loss, element length,
+node coordinate/source passthrough, and material echo fields from
+node/element/material fields.
 
 The eighth approved qualification packet is
 [advection-diffusion-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/advection-diffusion-bar-closed-form-release-evidence.json).
@@ -302,10 +312,14 @@ inversely with length while Peclet scales linearly, plus a
 three-node internal-source fixture where source strength scales the free middle
 concentration linearly and cross-sectional area inversely scales the
 source-driven concentration increment while the left/right total-flux jump
-matches source per area. Every retained branch also checks summary maxima,
-element length, node coordinate/source passthrough, average concentration,
-concentration gradient, diffusive/advective/total-flux decomposition, and the
-Peclet formula directly from public node and element fields.
+matches source per area. The retained pure-diffusion refinement regression now
+also preserves the manufactured linear concentration field across
+1/2/4/8/16/32 elements, including concentration, gradient, diffusive flux,
+total flux, and zero Peclet number. Every retained branch also checks summary
+maxima, element length, node coordinate/source passthrough, average
+concentration, concentration gradient, diffusive/advective/total-flux
+decomposition, and the Peclet formula directly from public node and element
+fields.
 
 The ninth approved qualification packet is
 [magnetostatic-bar-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/magnetostatic-bar-closed-form-release-evidence.json).
@@ -322,7 +336,8 @@ element energy summation, magnetic field/flux recovery, and the source balance
 `magnetic_flux_density * area + magnetomotive_source = 0`. It also re-derives
 max magnetic potential, element length, node coordinate/source passthrough,
 average magnetic potential, and magnetic potential gradient from public node
-and element fields.
+and element fields. The retained refinement regression now also locks the
+fixed-potential manufactured linear field across 1, 2, 4, 8, and 16 elements.
 
 The tenth approved qualification packet is
 [spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-1d-closed-form-release-evidence.json).
@@ -334,7 +349,9 @@ discrete-stiffness response, while every retained branch checks total energy
 against element-energy summation and `0.5 * sum(F*u)`. It also re-derives
 node id/coordinate passthrough, element extension, member force, element strain
 energy, `max_displacement`, and `max_force` from public input, node, and element
-fields.
+fields. The retained refinement regression now splits the same equivalent
+spring chain into 1, 2, 4, 8, 16, and 32 equal elements and preserves the
+closed-form tip displacement, member force, and total strain energy.
 
 The eleventh approved qualification packet is
 [spring-vector-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/spring-vector-closed-form-release-evidence.json).
@@ -347,7 +364,9 @@ response, while every retained branch checks total energy against element-energy
 summation and `0.5 * sum(F*u)`. It also re-derives direction-cosine displacement
 projection, node id/coordinate passthrough, member force, element strain
 energy, `max_displacement`, and `max_force` from public input, node, and element
-fields.
+fields. The retained refinement regression now splits every orthogonal 2D and
+3D axis spring into 1, 2, 4, 8, and 16 equal series elements while preserving
+free-node displacement, member force, and total strain energy.
 
 The twelfth approved qualification packet is
 [thermal-beam-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json).

@@ -35,6 +35,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "line-field-refinement-convergence",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 element refinement invariance for axial, thermal, heat, and electrostatic 1D line fields",
+          "artifact_path": "workers/rust/crates/solver/tests/line_field_convergence.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-regression-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-line-field-qualification-release-evidence before promotion",
@@ -214,6 +221,16 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "manufactured-plane-field-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1x1/2x2/4x4/8x8 electrostatic and magnetostatic plane refinement invariance for manufactured linear fields",
+          "artifact_path": "workers/rust/crates/solver/tests/electrostatic_plane_mesh_refinement.rs",
+          "secondary_artifact_paths": [
+            "workers/rust/crates/solver/tests/magnetostatic_plane_reliability.rs"
+          ],
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "electromagnetic-plane-input-reliability",
           "kind": "boundary_regression",
           "gate": "retain bad-input rejection coverage for electrostatic and magnetostatic plane operators",
@@ -247,6 +264,13 @@
         "solve.modal_frame_3d"
       ],
       "artifact_requirements": [
+        {
+          "artifact_id": "linear-generalized-eigenproblem-reference",
+          "kind": "reference_note",
+          "gate": "document the independent Rayleigh scaling reference for the retained linear modal frame eigenproblem",
+          "artifact_path": "evidence/operator-qualification/modal-frame-reference-note.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
         {
           "artifact_id": "frequency-convergence",
           "kind": "convergence_report",
@@ -295,6 +319,13 @@
         "solve.stokes_flow_triangle_2d"
       ],
       "artifact_requirements": [
+        {
+          "artifact_id": "stokes-linear-field-reference",
+          "kind": "reference_note",
+          "gate": "document the retained steady Stokes linear-field reference and material-scaling boundary",
+          "artifact_path": "evidence/operator-qualification/stokes-flow-screening-reference-note.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
         {
           "artifact_id": "alternate-boundary-response",
           "kind": "boundary_regression",
@@ -371,6 +402,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "acoustic-linear-field-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 element acoustic pressure-field refinement invariance for pressure gradient, particle velocity, and wave number",
+          "artifact_path": "workers/rust/crates/solver/tests/acoustic_bar_refinement.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "acoustic-review-fixture",
           "kind": "boundary_regression",
           "gate": "retain review fixture coverage for frequency response diagnostics",
@@ -415,6 +453,13 @@
           "kind": "regression_test",
           "gate": "retain diffusion-dominant, advection-dominant, and zero-velocity checks",
           "artifact_path": "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "pure-diffusion-linear-field-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16/32 element pure-diffusion refinement invariance for concentration, flux, and zero Peclet number",
+          "artifact_path": "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -465,6 +510,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "magnetostatic-linear-field-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 element magnetostatic potential-field refinement invariance for field, flux density, and stored energy",
+          "artifact_path": "workers/rust/crates/solver/tests/magnetostatic_bar_refinement.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "magnetostatic-review-fixture",
           "kind": "boundary_regression",
           "gate": "retain review fixture coverage for permeance, field, flux, and energy diagnostics",
@@ -509,6 +561,13 @@
           "kind": "regression_test",
           "gate": "retain series stiffness, force continuity, and zero-load energy checks",
           "artifact_path": "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "equivalent-chain-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16/32 equivalent spring-chain refinement invariance for tip displacement, member force, and total strain energy",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_1d_refinement.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -557,6 +616,13 @@
           "kind": "regression_test",
           "gate": "retain 2D and 3D vector stiffness, force, extension, and energy checks",
           "artifact_path": "workers/rust/crates/solver/tests/spring_vector_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "orthogonal-axis-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 orthogonal axis refinement invariance for 2D and 3D vector springs",
+          "artifact_path": "workers/rust/crates/solver/tests/spring_vector_refinement.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

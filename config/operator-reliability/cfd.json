@@ -53,6 +53,7 @@
         },
         "qualification": {
           "validation_sources": [
+            "evidence/operator-qualification/stokes-flow-screening-reference-note.md",
             "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
             "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
             "linear-field-stokes-material-scaling-regression"
@@ -134,6 +135,7 @@
         },
         "qualification": {
           "validation_sources": [
+            "evidence/operator-qualification/stokes-flow-screening-reference-note.md",
             "evidence/operator-qualification/stokes-flow-mesh-convergence.md",
             "evidence/operator-qualification/stokes-flow-screening-tolerance-policy.json",
             "linear-field-stokes-material-scaling-regression"

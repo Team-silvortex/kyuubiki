@@ -20,6 +20,12 @@ three-element series chain against that closed form. It also checks the
 zero-load boundary where displacements, element forces, and strain energy must
 all remain zero.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/spring_1d_refinement.rs` splits the same
+equivalent spring chain into 1, 2, 4, 8, 16, and 32 equal series elements. It
+preserves the closed-form tip displacement, member force, element extension,
+node displacement line, and total strain energy.
+
 Scope limits:
 
 - This qualifies the current 1D linear static spring-chain scope.

@@ -8,10 +8,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const TRACKED_INPUTS: &[&str] = &[
+    "config/operator-validation-profiles/line-field.json",
     "evidence/operator-qualification/line-field-closed-form-baseline.json",
     "evidence/operator-qualification/line-field-closed-form-derivation.md",
     "evidence/operator-qualification/line-field-tolerance-policy.json",
     "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+    "workers/rust/crates/solver/tests/line_field_convergence.rs",
     "scripts/check-line-field-closed-form-baseline.mjs",
 ];
 
@@ -74,6 +76,7 @@ pub(crate) fn build_provenance(root: &Path) -> RunnerResult<Value> {
         "commands": {
             "evidence_check": "./scripts/kyuubiki check-line-field-closed-form-baseline",
             "solver_baseline": "cargo test -p kyuubiki-solver --test accuracy_baselines line_1d",
+            "line_field_convergence": "cargo test -p kyuubiki-solver --test line_field_convergence",
         },
         "source_revision": {
             "git_commit": run(root, "git", &["rev-parse", "HEAD"]),
@@ -167,6 +170,9 @@ mod tests {
         assert!(
             TRACKED_INPUTS
                 .contains(&"evidence/operator-qualification/line-field-closed-form-baseline.json")
+        );
+        assert!(
+            TRACKED_INPUTS.contains(&"workers/rust/crates/solver/tests/line_field_convergence.rs")
         );
         assert!(TRACKED_INPUTS.contains(&"scripts/check-line-field-closed-form-baseline.mjs"));
     }

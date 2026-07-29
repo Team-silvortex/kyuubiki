@@ -1,0 +1,60 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "advection-diffusion-bar-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "advection-diffusion-bar-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "scalar_closed_form",
+        "peclet_regime_cross_check",
+        "zero_velocity_limit",
+        "pure_diffusion_linear_field_refinement"
+      ],
+      "formal_invariants": [
+        "fixed_boundary_concentrations",
+        "diffusive_flux_matches_gradient",
+        "advective_flux_matches_average_concentration",
+        "total_flux_is_flux_sum",
+        "zero_velocity_has_zero_advective_flux",
+        "refinement_preserves_pure_diffusion_flux_and_peclet_zero"
+      ],
+      "evidence_paths": [
+        "config/operator-reliability/transport.json",
+        "docs/operator-reliability.md",
+        "evidence/operator-qualification/advection-diffusion-bar-closed-form.md",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs"
+      ],
+      "commands": [
+        {
+          "id": "advection-diffusion-bar-review",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_1d_review -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_reliability -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-closed-form",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_closed_form -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_refinement -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

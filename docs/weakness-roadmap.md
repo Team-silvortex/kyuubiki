@@ -54,7 +54,7 @@ Current weak point:
   qualifications are still scoped around compact retained fixtures
 - readiness v2 now separates reference, convergence, robustness, and retained
   release evidence for all 23 qualification candidates; the current measured
-  baseline is `6 complete / 17 partial / 0 thin`
+  baseline is `15 complete / 8 partial / 0 thin`
 - `beam-frame-classic` now links its independent canonical reference to the
   existing `1/2/4/8/16` beam/frame refinement regression, making it the first
   candidate combining complete four-dimensional evidence with an independent
@@ -62,6 +62,34 @@ Current weak point:
 - `solve.nonlinear_spring_1d` now retains convergence and robustness evidence
   for the current Cardano hardening scope, clearing the last thin
   release-gated operator candidate in readiness v2
+- `line-field-closed-form` now retains a 1, 2, 4, 8, and 16 element refinement
+  regression for axial, thermal, heat, and electrostatic 1D operators, clearing
+  its convergence evidence dimension
+- `electromagnetic-plane-patch` now ties its retained electrostatic and
+  magnetostatic triangle/quad patch evidence to manufactured linear-field
+  refinement tests, clearing the plane electromagnetic convergence dimension
+- `modal-frame-sanity` now retains an independent linear generalized
+  eigenproblem reference note for Rayleigh stiffness/density scaling, clearing
+  its reference evidence dimension
+- `screening-cfd-boundary` now retains a Stokes-only manufactured linear-field
+  reference note for divergence, shear, viscosity, density, and explicit
+  non-Navier-Stokes scope, clearing the final reference evidence gap in
+  readiness v2
+- `acoustic-bar-closed-form` now retains a 1, 2, 4, 8, and 16 element acoustic
+  pressure-field refinement regression for pressure, pressure-gradient,
+  particle velocity, and wave number, clearing its convergence dimension
+- `advection-diffusion-bar-closed-form` now retains a 1, 2, 4, 8, 16, and 32
+  element pure-diffusion refinement regression for concentration, diffusive
+  flux, total flux, and zero Peclet number, clearing its convergence dimension
+- `magnetostatic-bar-closed-form` now retains a 1, 2, 4, 8, and 16 element
+  magnetic-potential refinement regression for field strength, flux density,
+  stored energy, and nodal potential, clearing its convergence dimension
+- `spring-1d-closed-form` now retains a 1, 2, 4, 8, 16, and 32 element
+  equivalent-chain refinement regression for tip displacement, member force,
+  element extension, and total strain energy, clearing its convergence dimension
+- `spring-vector-closed-form` now retains 1, 2, 4, 8, and 16 element orthogonal
+  axis refinement regressions for 2D and 3D free-node displacement, member
+  force, strain energy, and axis-projected node displacement
 - benchmark-backed accuracy exists across the covered matrix, but the next
   trust jump depends on deeper convergence, perturbation, and reference-tool
   evidence

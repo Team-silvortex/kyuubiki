@@ -14,6 +14,7 @@ Automation:
 - `make capture-line-field-qualification-provenance`
 - `make capture-line-field-qualification-release-evidence`
 - `cargo test -p kyuubiki-solver --test accuracy_baselines line_1d`
+- `cargo test -p kyuubiki-solver --test line_field_convergence`
 
 Scope:
 
@@ -145,9 +146,23 @@ All numeric tolerances are absolute `1e-12`. This case validates the simple
 potential interpolation path, electric-field sign convention, and flux-density
 scaling in the 1D electrostatic operator.
 
-## Remaining Qualification Blockers
+## Mesh Refinement Evidence
 
-Before any of these operators should be promoted from `review` to
-`qualification`, the evidence packet still needs:
+`workers/rust/crates/solver/tests/line_field_convergence.rs` retains the
+refinement dimension for the four promoted line-field operators. It runs 1, 2,
+4, 8, and 16 element meshes and requires:
 
-- release-gated regression output retained as a release artifact
+- `solve.bar_1d`: exact linear displacement, constant strain, constant stress,
+  reaction force, axial force, energy density, and total strain energy
+- `solve.thermal_bar_1d`: exact fixed-end displacement, compressive thermal
+  stress, axial force, thermal/mechanical/total strain, and strain energy under
+  uniform restrained temperature rise
+- `solve.heat_bar_1d`: exact linear temperature field, constant temperature
+  gradient, Fourier heat flux, and element-average temperature
+- `solve.electrostatic_bar_1d`: exact linear potential field, electric field,
+  flux density, and total stored energy
+
+This clears the line-field convergence evidence dimension for the current
+qualification scope. It still does not claim nonlinear materials, transient
+fields, radiation, arbitrary source distributions, or multidimensional
+production validation.

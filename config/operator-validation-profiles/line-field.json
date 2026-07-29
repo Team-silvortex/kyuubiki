@@ -1,0 +1,56 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "moxi 2.0.x",
+  "profiles": [
+    {
+      "profile_id": "line-field-closed-form",
+      "profile_role": "release_candidate",
+      "qualification_candidate_id": "line-field-closed-form",
+      "trust_goal": "qualification_input",
+      "operators": [
+        "solve.bar_1d",
+        "solve.thermal_bar_1d",
+        "solve.heat_bar_1d",
+        "solve.electrostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "analytic_closed_form",
+        "local_formal_invariant",
+        "tolerance_policy_check",
+        "mesh_refinement_closed_form"
+      ],
+      "formal_invariants": [
+        "reaction_force_balance",
+        "linear_displacement_field",
+        "linear_temperature_gradient",
+        "linear_potential_gradient",
+        "sign_checked_restrained_thermal_stress",
+        "refinement_preserves_line_field_force_flux_energy"
+      ],
+      "evidence_paths": [
+        "evidence/operator-qualification/line-field-closed-form-baseline.json",
+        "evidence/operator-qualification/line-field-closed-form-derivation.md",
+        "evidence/operator-qualification/line-field-tolerance-policy.json",
+        "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+        "workers/rust/crates/solver/tests/line_field_convergence.rs"
+      ],
+      "commands": [
+        {
+          "id": "baseline-policy",
+          "kind": "analytic",
+          "command": "make check-line-field-closed-form-baseline"
+        },
+        {
+          "id": "solver-baseline",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test accuracy_baselines line_1d -- --nocapture"
+        },
+        {
+          "id": "line-field-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test line_field_convergence -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

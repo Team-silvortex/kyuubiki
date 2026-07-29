@@ -198,12 +198,14 @@ compressible-flow solver, or industrial CFD validation claim.
 The current qualification evidence covers compact quad and triangle fixtures:
 the quad lane checks body-force and lid-driven shear responses, while the
 triangle lane checks geometry rejection and heterogeneous viscosity response.
-The retained mesh-refinement regression uses a linear Stokes field on 1x1,
-2x2, 4x4, and 8x8 quad/triangle meshes to verify stable area, divergence, shear,
-velocity, pressure-drop, viscous-stress, and total viscous-dissipation
-diagnostics. That is enough to
-qualify the Stokes screening boundary, but not enough to claim general CFD,
-Navier-Stokes, turbulence, compressible-flow, or industrial design accuracy.
+The retained reference note derives the compact Stokes-only field `u = y`,
+`v = 0`, `p = 0`, with zero divergence and unit shear rate. The retained
+mesh-refinement regression uses that field on 1x1, 2x2, 4x4, and 8x8
+quad/triangle meshes to verify stable area, divergence, shear, velocity,
+pressure-drop, viscous-stress, and total viscous-dissipation diagnostics. That
+is enough to qualify the Stokes screening boundary, but not enough to claim
+general CFD, Navier-Stokes, turbulence, compressible-flow, or industrial
+design accuracy.
 The same retained regression now checks material-parameter scaling for the
 linear screening field: quad and triangle viscosity changes scale viscous
 stress and dissipation while leaving the prescribed velocity and shear rate
@@ -216,9 +218,6 @@ remains fixed under the same thickness. Every retained branch also re-derives
 element area from node coordinates, element velocity gradients, divergence,
 shear rate, viscous shear stress, Reynolds number, and viscous dissipation
 from public node, element, and material fields.
-summary maxima, pressure drop, element average velocity/pressure, Reynolds
-number, and nonnegative divergence, shear, stress, and dissipation diagnostics
-from node and element fields.
 
 ## CFD Stokes Divergence Tolerance
 
@@ -304,17 +303,16 @@ Electrostatic plane elements use permittivity; magnetostatic plane elements use
 permeability. The stored energy diagnostics are regression evidence for this
 linear material path, not a broad material-card validation claim.
 
-Before qualification, these operators need material-card provenance for the
-permittivity or permeability values and an energy-density tolerance derivation
-that explains where the stored-energy comparison is valid. The current
-evidence lives at
+The qualification packet retains material-card provenance for the permittivity
+or permeability values and an energy-density tolerance derivation that explains
+where the stored-energy comparison is valid. The current evidence lives at
 `evidence/operator-qualification/electromagnetic-plane-field-energy-derivation.md`
 and
 `evidence/operator-qualification/electromagnetic-plane-material-provenance.json`;
 the orientation regression lives at
 `workers/rust/crates/solver/tests/electromagnetic_plane_orientation_regression.rs`.
-It remains review evidence until the qualification promotion is explicitly
-signed off.
+The manufactured electrostatic and magnetostatic plane refinement tests now
+close the same packet's convergence dimension.
 
 ## Thermal Plane Review Scope
 
@@ -399,16 +397,18 @@ current shape normalization contract uses a unit Euclidean participation norm
 on the expanded shape vector.
 
 The `modal-frame-sanity` qualification packet is now approved: it has a
-normalization policy, a frequency-convergence note, and a regression that
-checks 2D and 3D cantilever mode ordering plus the expected frequency increase
-for shorter beams across eigenvalue, rad/s, Hz, and period. The retained
-regression also verifies that uniform stiffness and density scaling drive modal
-frequency by `sqrt(stiffness / density)`, eigenvalue by `stiffness / density`,
-and period by the inverse frequency factor while preserving free DOFs and
-normalized participation. Every retained branch also re-derives min/max
-frequency, total mass from element density, area, and node-coordinate length,
-eigenvalue/rad/s/Hz/period consistency, mode index order, expanded shape
-constraints, and participation norm from the retained mode fields.
+linear generalized eigenproblem reference note, a normalization policy, a
+frequency-convergence note, and a regression that checks 2D and 3D cantilever
+mode ordering plus the expected frequency increase for shorter beams across
+eigenvalue, rad/s, Hz, and period. The retained regression also verifies the
+Rayleigh scaling reference: uniform stiffness and density scaling drive modal
+frequency by `sqrt(stiffness / density)`, eigenvalue by
+`stiffness / density`, and period by the inverse frequency factor while
+preserving free DOFs and normalized participation. Every retained branch also
+re-derives min/max frequency, total mass from element density, area, and
+node-coordinate length, eigenvalue/rad/s/Hz/period consistency, mode index
+order, expanded shape constraints, and participation norm from the retained
+mode fields.
 Symmetric 3D bending
 modes may be near-degenerate, so the 3D ordering contract is non-decreasing
 rather than strictly increasing.
@@ -418,6 +418,7 @@ For the moxi 2.0.0 line, the retained validation report is attached at
 The retained review decision promotes `solve.modal_frame_2d` and
 `solve.modal_frame_3d` for the current linear modal cantilever scope. The
 current modal evidence lives at
+`evidence/operator-qualification/modal-frame-reference-note.md`,
 `evidence/operator-qualification/modal-frame-normalization-policy.md`,
 `evidence/operator-qualification/modal-frame-frequency-convergence.md`, and
 `workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs`.
@@ -491,12 +492,14 @@ requires the dynamic pressure, pressure gradient, particle velocity, and
 damping loss to keep matching the same closed-form dynamic-stiffness reference.
 The source-amplitude regression uses a pure-source fixture to verify linear
 pressure/particle-velocity scaling and quadratic acoustic-intensity/damping-loss
-scaling. Every retained branch also re-derives summary maxima, sound-pressure
-level, speed of sound, wave number, particle velocity, acoustic intensity,
-damping loss, element length, node coordinate/source passthrough, and material
-echo fields from node, element, and material fields. This does not claim
-branched duct networks, nonlinear acoustics, transient propagation, or 3D
-acoustic cavities.
+scaling. The retained refinement regression also runs a fixed-pressure linear
+field over 1, 2, 4, 8, and 16 elements, requiring pressure, pressure gradient,
+particle velocity, and wave number to stay invariant under subdivision. Every
+retained branch also re-derives summary maxima, sound-pressure level, speed of
+sound, wave number, particle velocity, acoustic intensity, damping loss,
+element length, node coordinate/source passthrough, and material echo fields
+from node, element, and material fields. This does not claim branched duct
+networks, nonlinear acoustics, transient propagation, or 3D acoustic cavities.
 The fixed-pressure linear manufactured field also runs through 1, 2, 4, 8, and
 16 duct elements, preserving nodal pressure, pressure gradient, particle
 velocity, and wave number. It is a one-dimensional field-recovery check, not a
@@ -548,7 +551,9 @@ element length, node coordinate/source passthrough, average magnetic potential,
 magnetic-potential-gradient recovery, and the source balance
 `magnetic_flux_density * area + magnetomotive_source = 0`. This does not claim
 nonlinear magnetic materials, hysteresis, saturation, eddy currents, or
-time-varying fields.
+time-varying fields. The fixed-potential manufactured linear field now runs
+through 1, 2, 4, 8, and 16 elements and preserves nodal magnetic potential,
+potential gradient, magnetic field strength, flux density, and stored energy.
 
 The spring 1D chain is now qualified for the retained linear static series
 scope. Its closed-form evidence checks equivalent series stiffness, member
@@ -563,8 +568,11 @@ also re-derives element extension, member force, element strain energy,
 node id/coordinate passthrough, `max_displacement`, `max_force`, and
 `total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)` from public
 input, node, and element fields.
-This does not claim nonlinear
-springs, transient dynamics, contact, or arbitrary vector spring networks.
+The equivalent-chain refinement ladder now splits the same retained spring into
+1, 2, 4, 8, 16, and 32 equal series elements while preserving tip displacement,
+member force, element extension, and total strain energy. This does not claim
+nonlinear springs, transient dynamics, contact, or arbitrary vector spring
+networks.
 
 The spring 2D and 3D operators are now qualified for the retained linear static
 orthogonal vector-spring scope. Their closed-form evidence checks inverse
@@ -582,6 +590,9 @@ node id/coordinate passthrough, direction-cosine displacement projection,
 `max_force`, and
 `total_strain_energy = sum(element.strain_energy) = 0.5 * sum(F*u)` from public
 input, node, and element fields.
+The retained orthogonal-axis refinement ladder now splits each 2D and 3D axis
+spring into 1, 2, 4, 8, and 16 equal series elements while preserving free-node
+displacement, member force, strain energy, and axis-projected node displacement.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
@@ -797,14 +808,19 @@ length, node coordinate/source passthrough, average-potential and
 potential-gradient recovery, the source balance `electric_flux_density * area +
 charge = 0`, and the electrostatic energy conjugacy `stored_energy = 0.5 *
 charge * potential`.
+`line_field_convergence.rs` now adds the convergence dimension for the same
+qualification scope: axial, thermal, heat, and electrostatic line fields are
+rerun on 1, 2, 4, 8, and 16 element meshes and must preserve the same closed
+form displacement, stress, force, temperature or potential gradient, flux, and
+energy quantities.
 `make capture-line-field-qualification-provenance` can emit the release-time
 revision, toolchain, platform, and input-hash envelope without adding local
 machine paths to Git. `make capture-line-field-qualification-release-evidence`
-runs the evidence checker and solver baseline and writes the release-retained
-regression bundle. The bundle now includes a `promotion_summary` tying the
-approved review decision, release record, and four promoted operator ids to the
-same retained evidence path. For the moxi 2.0.0 line, that retained bundle is
-attached at
+runs the evidence checker, solver baseline, and current convergence regression,
+then writes the release-retained regression bundle. The bundle now includes a
+`promotion_summary` tying the approved review decision, release record, and
+four promoted operator ids to the same retained evidence path. For the moxi
+2.0.0 line, that retained bundle is attached at
 `releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json`
 and referenced by `releases/qualification-records/1.20.0.json`. The retained
 review decision at
