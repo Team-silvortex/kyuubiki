@@ -1,8 +1,86 @@
 use crate::RunnerResult;
 use serde_json::Value;
+use std::collections::BTreeSet;
+use std::ffi::OsString;
 use std::path::Path;
 
-use super::{CandidateGate, assert_eq, field, read_json};
+use super::{CandidateGate, array, assert_eq, field, read_json};
+
+const RELEASE_RECORDS_PATH: &str = "releases/qualification-records/1.20.0.json";
+
+pub(crate) fn run_check_operator_qualification_review_decision(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let input = parse_args(args)?;
+    let records = read_json(root, RELEASE_RECORDS_PATH)?;
+    let release_version = field(&records, "release_version");
+    let records = array(&records, "records");
+    let selected = match input {
+        DecisionInput::All => records,
+        DecisionInput::One(input_path) => {
+            let matches = records
+                .into_iter()
+                .filter(|record| field(record, "review_decision_path") == input_path)
+                .collect::<Vec<_>>();
+            if matches.len() != 1 {
+                return Err(format!(
+                    "{input_path}: expected exactly one matching qualification release record, found {}",
+                    matches.len()
+                ));
+            }
+            matches
+        }
+    };
+    let mut decision_paths = BTreeSet::new();
+    for record in &selected {
+        let decision_path = field(record, "review_decision_path");
+        if decision_path.is_empty() {
+            return Err(format!(
+                "{}: review_decision_path must be non-empty",
+                field(record, "candidate_id")
+            ));
+        }
+        if !decision_paths.insert(decision_path.to_string()) {
+            return Err("release records must not reuse review_decision_path values".to_string());
+        }
+        validate_review_decision_path(root, release_version, record)?;
+    }
+    println!(
+        "operator qualification review decisions ok: {} decision(s)",
+        selected.len()
+    );
+    Ok(0)
+}
+
+enum DecisionInput {
+    All,
+    One(String),
+}
+
+fn parse_args(args: Vec<OsString>) -> RunnerResult<DecisionInput> {
+    let mut input = DecisionInput::All;
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.to_string_lossy().as_ref() {
+            "--all" => input = DecisionInput::All,
+            "--in" => {
+                let path = iter
+                    .next()
+                    .ok_or_else(|| "--in requires a repo-local path".to_string())?;
+                input = DecisionInput::One(path.to_string_lossy().to_string());
+            }
+            "--help" | "-h" => {
+                println!(
+                    "usage: kyuubiki-script-runner check-operator-qualification-review-decision [--all | --in <path>]"
+                );
+                return Ok(DecisionInput::All);
+            }
+            other => return Err(format!("unknown argument {other}")),
+        }
+    }
+    Ok(input)
+}
 
 pub(super) fn validate_review_status_transition(
     candidate_id: &str,
@@ -131,13 +209,43 @@ fn validate_review_decision_shape(candidate_id: &str, decision: &Value) -> Runne
 #[cfg(test)]
 mod tests {
     use super::{
-        validate_review_decision_path, validate_review_decision_shape,
+        parse_args, validate_review_decision_path, validate_review_decision_shape,
         validate_review_status_transition,
     };
     use crate::operator_qualification_release_records::CandidateGate;
     use serde_json::json;
     use std::fs;
+    use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn review_decision_command_defaults_to_all() {
+        assert!(matches!(
+            parse_args(Vec::new()).expect("default arguments should parse"),
+            super::DecisionInput::All
+        ));
+        assert!(matches!(
+            parse_args(vec!["--in".into(), "decision.json".into()])
+                .expect("single decision arguments should parse"),
+            super::DecisionInput::One(path) if path == "decision.json"
+        ));
+    }
+
+    #[test]
+    fn review_decision_make_path_stays_native() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+        let legacy_name = ["check-operator-qualification-review-decision", ".mjs"].concat();
+        assert!(
+            !root.join("scripts").join(&legacy_name).exists(),
+            "legacy Node review-decision checker must stay deleted"
+        );
+        let make_source =
+            fs::read_to_string(root.join("make/checks.mk")).expect("Make checks should load");
+        assert!(
+            !make_source.contains(&legacy_name),
+            "Make must use the native review-decision checker"
+        );
+    }
 
     #[test]
     fn review_only_candidate_cannot_be_approved() {

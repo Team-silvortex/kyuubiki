@@ -267,6 +267,12 @@ fn run() -> RunnerResult<u8> {
                 rest,
             )
         }
+        "check-operator-qualification-review-decision" => {
+            operator_qualification_release_records::run_check_operator_qualification_review_decision(
+                &paths.root,
+                rest,
+            )
+        }
         "install" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-installer", rest)),
         "package" | "package-runtime" => {
             let platform = host_platform().as_str();

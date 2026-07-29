@@ -171,7 +171,7 @@
     { "file": "scripts/check-contracts-runtime-api-surface.mjs", "text": "requireServiceSurface", "label": "central runtime API service surface checker" },
     { "file": "config/architecture/module-function-coverage-tensor.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
     { "file": "config/architecture/module-function-coverage-tensor.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
-    { "file": "scripts/build-module-function-coverage-tensor.mjs", "text": "contract_evidence_count", "label": "tensor contract evidence count" },
+    { "file": "workers/rust/crates/script-runner/src/module_function_tensor.rs", "text": "maturity_gap_count", "label": "scoped tensor maturity gap count" },
     { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" }
   ]
 }

@@ -27,13 +27,24 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `thin_evidence_count`: `0`
+- `maturity_gap_count`: `6`
+- `thin_evidence_count`: `6`
 
-This means required module/function coordinates are covered by benchmark,
-security, and contract evidence. It does not mean the physics and runtime
-claims are complete; it means the remaining work should move through concrete
-qualification, recovery, fuzz, and user-loop gates instead of architecture
-bookkeeping.
+This means no required module/function coordinate is structurally missing. It
+does not mean all coordinates are mature. Tensor v2 scopes contract evidence
+to the modules it actually covers and requires exact-coordinate evidence
+dimensions. The current six medium points are:
+
+- `runtime-engine-solver / solver_execution`: independent numerical validation
+- `runtime-engine-solver / validation`: independent numerical validation
+- `verification-evidence / validation`: independent numerical validation
+- `orchestra-control-plane / workflow_composition`: distributed recovery
+- `runtime-agent-cli / runtime_api`: agent/network recovery
+- `runtime-agent-cli / deployment_update`: deployment recovery
+
+These points intentionally remain visible until their `partial` or `open`
+claims become proven. Structural coverage stays green while qualification,
+recovery, fuzz, and user-loop gates deepen.
 
 ## 1. Numerical Trust
 

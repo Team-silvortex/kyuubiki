@@ -12,6 +12,8 @@ mod review_decision;
 
 use review_decision::{validate_review_decision_path, validate_review_status_transition};
 
+pub(crate) use review_decision::run_check_operator_qualification_review_decision;
+
 const DEFAULT_INPUT: &str = "releases/qualification-records/1.20.0.json";
 const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-release-records/v1";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
@@ -360,7 +362,7 @@ fn repo_local_path(
     Ok((absolute, relative))
 }
 
-fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
+pub(super) fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
     value
         .get(key)
         .and_then(Value::as_array)

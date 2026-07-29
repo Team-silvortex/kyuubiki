@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 mod markdown;
+mod maturity;
 mod self_test;
 
 type RunnerResult<T> = Result<T, String>;
@@ -13,8 +14,8 @@ pub(super) const TENSOR_PATH: &str = "config/architecture/module-function-covera
 pub(super) const TOPOLOGY_PATH: &str = "config/architecture/module-topology.json";
 pub(super) const MATRIX_PATH: &str = "config/architecture/module-function-coverage-matrix.json";
 const DEFAULT_OUT: &str = "tmp/module-function-coverage-tensor.json";
-pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v1";
-const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v1";
+pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v2";
+const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v2";
 const ALLOWED_STATUS: &[&str] = &["covered", "partial", "planned", "not_applicable"];
 const PARADIGM_ORDER: &[&str] = &[
     "product_surface",
@@ -66,7 +67,7 @@ pub(crate) fn run_check_module_function_tensor(
     write_report(root, &report, &options.out)?;
     let ok = report.get("ok").and_then(Value::as_bool).unwrap_or(false);
     println!(
-        "module function coverage tensor {}: {} module(s), {} paradigm(s), {} gap(s)",
+        "module function coverage tensor {}: {} module(s), {} paradigm(s), {} structural gap(s), {} maturity gap(s)",
         if ok { "passed" } else { "has gaps" },
         report
             .pointer("/axes/modules")
@@ -76,7 +77,11 @@ pub(crate) fn run_check_module_function_tensor(
             .pointer("/axes/paradigms")
             .and_then(Value::as_array)
             .map_or(0, Vec::len),
-        report.get("gap_count").and_then(Value::as_u64).unwrap_or(0)
+        report.get("gap_count").and_then(Value::as_u64).unwrap_or(0),
+        report
+            .get("maturity_gap_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
     );
     Ok(if ok { 0 } else { 1 })
 }
@@ -112,6 +117,11 @@ fn validate_tensor_config(
     let paradigms = object_keys(matrix, "paradigms");
     let benchmark_lanes = object_keys(topology, "benchmark_lanes");
     let security_lanes = object_keys(topology, "security_lanes");
+    let module_ids = modules(topology)
+        .into_iter()
+        .filter_map(|module| string_field(module, "id"))
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>();
     for paradigm in &paradigms {
         let mapping = tensor
             .pointer(&format!("/paradigm_lanes/{paradigm}"))
@@ -141,8 +151,9 @@ fn validate_tensor_config(
         if !paradigms.contains(paradigm) {
             return Err(format!("tensor evidence maps unknown paradigm {paradigm}"));
         }
-        validate_contract_evidence_entries(root, entries, paradigm)?;
+        validate_contract_evidence_entries(root, entries, paradigm, &module_ids)?;
     }
+    maturity::validate_config(root, tensor, &paradigms, &module_ids)?;
     Ok(())
 }
 
@@ -150,6 +161,7 @@ fn validate_contract_evidence_entries(
     root: &Path,
     entries: &Value,
     paradigm: &str,
+    module_ids: &BTreeSet<String>,
 ) -> RunnerResult<()> {
     let entries = entries
         .as_array()
@@ -160,6 +172,17 @@ fn validate_contract_evidence_entries(
             .ok_or_else(|| format!("{paradigm}.contract_evidence[{index}] must have id"))?;
         if !seen.insert(id.to_string()) {
             return Err(format!("{paradigm}.contract_evidence duplicate id {id}"));
+        }
+        let scoped_modules = string_array(entry, "modules");
+        if scoped_modules.is_empty() {
+            return Err(format!("{id}: contract evidence modules must not be empty"));
+        }
+        for module_id in scoped_modules {
+            if !module_ids.contains(&module_id) {
+                return Err(format!(
+                    "{id}: contract evidence maps unknown module {module_id}"
+                ));
+            }
         }
         let mut combined = String::new();
         for file in string_array(entry, "files") {
@@ -208,7 +231,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
             let mapping = tensor
                 .pointer(&format!("/paradigm_lanes/{paradigm}"))
                 .unwrap_or(&Value::Null);
-            let contract_evidence = contract_evidence_for(tensor, paradigm);
+            let contract_evidence = contract_evidence_for(tensor, module_id, paradigm);
             let benchmark_lanes = intersect(
                 &string_array(module, "benchmark_lanes"),
                 &string_array(mapping, "benchmark"),
@@ -219,14 +242,27 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
             );
             let benchmark_tests = get_lane_tests(topology, "benchmark", &benchmark_lanes);
             let security_tests = get_lane_tests(topology, "security", &security_lanes);
+            let maturity = maturity::evaluate(
+                tensor,
+                module_id,
+                paradigm,
+                status,
+                required,
+                &benchmark_tests,
+                &security_tests,
+                &contract_evidence,
+            );
             let evidence_depth = json!({
                 "benchmark_lane_count": benchmark_lanes.len(),
                 "security_lane_count": security_lanes.len(),
                 "contract_evidence_count": contract_evidence.len(),
-                "test_command_count": benchmark_tests.len() + security_tests.len()
+                "test_command_count": benchmark_tests.len() + security_tests.len(),
+                "required_dimension_count": maturity["required_dimensions"].as_array().map_or(0, Vec::len),
+                "present_dimension_count": maturity["present_dimensions"].as_array().map_or(0, Vec::len),
+                "missing_dimension_count": maturity["missing_dimensions"].as_array().map_or(0, Vec::len)
             });
             let gap = derive_evidence_aware_gap(status, required, &evidence_depth);
-            let maturity = derive_maturity(paradigm, status, required, &evidence_depth);
+            let maturity_level = string_field(&maturity, "level").unwrap_or("thin");
             increment(&mut module_counts, gap);
             if let Some(counts) = paradigm_summary.get_mut(paradigm) {
                 increment_value_counts(counts, gap);
@@ -242,15 +278,19 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                     "security_lanes": security_lanes
                 }));
             }
-            if required && status == "covered" && maturity != "strong" {
+            if required && status == "covered" && maturity_level != "strong" {
                 thin_points.push(json!({
-                    "maturity": maturity,
+                    "maturity": maturity_level,
                     "module_id": module_id,
                     "paradigm": paradigm,
                     "benchmark_lanes": benchmark_lanes,
                     "security_lanes": security_lanes,
                     "contract_evidence_count": contract_evidence.len(),
-                    "test_command_count": benchmark_tests.len() + security_tests.len()
+                    "test_command_count": benchmark_tests.len() + security_tests.len(),
+                    "required_dimensions": maturity["required_dimensions"],
+                    "present_dimensions": maturity["present_dimensions"],
+                    "missing_dimensions": maturity["missing_dimensions"],
+                    "claims": maturity["claims"]
                 }));
             }
             module_cells.insert(
@@ -259,7 +299,8 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                     "status": status,
                     "required": required,
                     "gap": gap,
-                    "maturity": maturity,
+                    "maturity": maturity_level,
+                    "maturity_evidence": maturity,
                     "benchmark_lanes": benchmark_lanes,
                     "security_lanes": security_lanes,
                     "benchmark_tests": benchmark_tests,
@@ -299,9 +340,14 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         "module_summary": module_summary,
         "paradigm_summary": paradigm_summary,
         "paradigm_contract_evidence": tensor.get("paradigm_contract_evidence").cloned().unwrap_or_else(|| json!({})),
+        "maturity_policy": tensor.get("maturity_policy").cloned().unwrap_or_else(|| json!({})),
+        "cell_requirements": tensor.get("cell_requirements").cloned().unwrap_or_else(|| json!([])),
+        "evidence_claims": tensor.get("evidence_claims").cloned().unwrap_or_else(|| json!([])),
         "gap_count": gaps.len(),
         "blocking_gap_count": blocking_gap_count,
         "gaps": gaps,
+        "maturity_ok": thin_points.is_empty(),
+        "maturity_gap_count": thin_points.len(),
         "thin_evidence_count": thin_points.len(),
         "thin_points": thin_points,
         "cells": cells
@@ -368,56 +414,6 @@ fn derive_evidence_aware_gap(status: &str, required: bool, evidence_depth: &Valu
     }
 }
 
-fn derive_maturity(
-    paradigm: &str,
-    status: &str,
-    required: bool,
-    evidence_depth: &Value,
-) -> &'static str {
-    if !required {
-        return "optional";
-    }
-    if status != "covered" {
-        return "not_ready";
-    }
-    let benchmark_count = evidence_depth
-        .get("benchmark_lane_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let security_count = evidence_depth
-        .get("security_lane_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let contract_count = evidence_depth
-        .get("contract_evidence_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let has_benchmark = benchmark_count > 0;
-    let has_security = security_count > 0;
-    let has_contract = contract_count > 0;
-    match paradigm {
-        "benchmark" => {
-            if has_benchmark && has_contract {
-                "strong"
-            } else {
-                "thin"
-            }
-        }
-        "security" => {
-            if has_security && has_contract {
-                "strong"
-            } else {
-                "thin"
-            }
-        }
-        _ => match (has_benchmark, has_security, has_contract) {
-            (true, true, true) => "strong",
-            (true, true, false) | (true, false, true) | (false, true, true) => "medium",
-            _ => "thin",
-        },
-    }
-}
-
 fn get_lane_tests(topology: &Value, lane_kind: &str, lanes: &[String]) -> Vec<Value> {
     let mut tests = Vec::new();
     for lane in lanes {
@@ -439,15 +435,21 @@ fn get_lane_tests(topology: &Value, lane_kind: &str, lanes: &[String]) -> Vec<Va
     tests
 }
 
-fn contract_evidence_for(tensor: &Value, paradigm: &str) -> Vec<Value> {
+fn contract_evidence_for(tensor: &Value, module_id: &str, paradigm: &str) -> Vec<Value> {
     tensor
         .pointer(&format!("/paradigm_contract_evidence/{paradigm}"))
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
+        .filter(|entry| {
+            string_array(entry, "modules")
+                .iter()
+                .any(|id| id == module_id)
+        })
         .map(|entry| {
             json!({
                 "id": string_field(entry, "id").unwrap_or_default(),
+                "modules": string_array(entry, "modules"),
                 "files": string_array(entry, "files"),
                 "required_text": string_array(entry, "required_text")
             })

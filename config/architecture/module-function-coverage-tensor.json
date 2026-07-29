@@ -1,5 +1,5 @@
 {
-  "schema_version": "kyuubiki.module-function-coverage-tensor/v1",
+  "schema_version": "kyuubiki.module-function-coverage-tensor/v2",
   "version_line": "moxi 2.0.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
@@ -9,12 +9,20 @@
     "benchmark_evidence": "Relevant benchmark lanes and lane test commands from the module topology.",
     "security_evidence": "Relevant security lanes and lane test commands from the module topology.",
     "contract_evidence": "Required schemas, config contracts, and text anchors that prove a paradigm has machine-readable release gates.",
+    "maturity_requirements": "Evidence dimensions required for this exact module and paradigm coordinate.",
+    "maturity_evidence": "Module-scoped proven, partial, and open claims rather than globally broadcast paradigm evidence.",
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "paradigm_contract_evidence": {
     "product_surface": [
       {
         "id": "gui-product-surface-automation-contract",
+        "modules": [
+          "hub-shell",
+          "desktop-shared-ui",
+          "workbench-shell",
+          "installer-shell"
+        ],
         "files": [
           "docs/ui-automation-contract.json",
           "schemas/gui-runtime-capability-manifest.schema.json",
@@ -34,6 +42,11 @@
       },
       {
         "id": "desktop-capability-closure-contract",
+        "modules": [
+          "hub-shell",
+          "workbench-shell",
+          "installer-shell"
+        ],
         "files": [
           "config/architecture/desktop-capability-closure.json",
           "tests/integration/desktop-gui-capability-closure.test.mjs",
@@ -54,6 +67,10 @@
     "validation": [
       {
         "id": "desktop-shared-asset-mirror-contract",
+        "modules": [
+          "desktop-shared-ui",
+          "workbench-shell"
+        ],
         "files": [
           "apps/desktop-shared/README.md",
           "workers/rust/crates/script-runner/src/desktop.rs",
@@ -73,6 +90,13 @@
       },
       {
         "id": "operator-qualification-readiness",
+        "modules": [
+          "contracts",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "sdk-headless",
+          "verification-evidence"
+        ],
         "files": [
           "config/operator-qualification-roadmap.json",
           "config/operator-qualification-evidence-kits.json",
@@ -98,6 +122,13 @@
       },
       {
         "id": "operator-qualification-release-review-gate",
+        "modules": [
+          "contracts",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "sdk-headless",
+          "verification-evidence"
+        ],
         "files": [
           "releases/qualification-records/1.20.0.json",
           "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
@@ -108,7 +139,7 @@
           "schemas/operator-qualification-review-decision.schema.json",
           "schemas/examples.operator-qualification-review-decision.json",
           "make/checks.mk",
-          "scripts/check-operator-qualification-review-decision.mjs",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records/review_decision.rs",
           "scripts/operator-reliability-rules.mjs",
           "workers/rust/crates/script-runner/src/operator_qualification_release_records.rs",
           "workers/rust/crates/script-runner/src/operator_qualification_release_records/review_decision.rs"
@@ -139,6 +170,9 @@
       },
       {
         "id": "install-update-validation-contract",
+        "modules": [
+          "runtime-installer"
+        ],
         "files": [
           "deploy/installation-integrity-contract.json",
           "deploy/install-update-disk-hygiene.json",
@@ -161,6 +195,13 @@
     "runtime_api": [
       {
         "id": "contracts-runtime-api-surface",
+        "modules": [
+          "contracts",
+          "orchestra-control-plane",
+          "runtime-protocol",
+          "runtime-agent-cli",
+          "sdk-headless"
+        ],
         "files": [
           "config/architecture/contracts-runtime-api-surface.json",
           "schemas/contracts-runtime-api-surface.schema.json",
@@ -175,6 +216,10 @@
       },
       {
         "id": "central-self-host-service-readiness",
+        "modules": [
+          "contracts",
+          "orchestra-control-plane"
+        ],
         "files": [
           "schemas/central-readiness-report.schema.json",
           "scripts/build-central-readiness-report.mjs",
@@ -190,6 +235,11 @@
     "solver_execution": [
       {
         "id": "operator-task-ir-execution-contract",
+        "modules": [
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "runtime-agent-cli"
+        ],
         "files": [
           "schemas/operator-task-ir.schema.json",
           "schemas/examples.operator-task-ir.json",
@@ -212,6 +262,11 @@
     "workflow_composition": [
       {
         "id": "workflow-graph-dataset-contract",
+        "modules": [
+          "workbench-shell",
+          "orchestra-control-plane",
+          "sdk-headless"
+        ],
         "files": [
           "schemas/workflow-graph.schema.json",
           "schemas/workflow-dataset.schema.json",
@@ -237,6 +292,10 @@
     "sdk_headless": [
       {
         "id": "headless-service-action-contract",
+        "modules": [
+          "workbench-shell",
+          "sdk-headless"
+        ],
         "files": [
           "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
           "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
@@ -261,6 +320,13 @@
     "persistence_provenance": [
       {
         "id": "persistence-provenance-contract",
+        "modules": [
+          "contracts",
+          "installer-shell",
+          "orchestra-control-plane",
+          "runtime-installer",
+          "verification-evidence"
+        ],
         "files": [
           "config/architecture/central-store-contract.json",
           "deploy/installation-integrity-contract.json",
@@ -292,6 +358,12 @@
     "deployment_update": [
       {
         "id": "install-update-integrity-contract",
+        "modules": [
+          "hub-shell",
+          "installer-shell",
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
         "files": [
           "deploy/installation-integrity-contract.json",
           "deploy/update-channels.json",
@@ -314,6 +386,11 @@
     "benchmark": [
       {
         "id": "benchmark-profile-coverage-contract",
+        "modules": [
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "verification-evidence"
+        ],
         "files": [
           "config/benchmark-profile-coverage.json",
           "workers/rust/crates/script-runner/src/benchmark_profile_index.rs",
@@ -333,6 +410,13 @@
     "security": [
       {
         "id": "gui-credential-boundary-contract",
+        "modules": [
+          "contracts",
+          "hub-shell",
+          "desktop-shared-ui",
+          "workbench-shell",
+          "installer-shell"
+        ],
         "files": [
           "docs/security.md",
           "schemas/gui-runtime-capability-manifest.schema.json",
@@ -348,9 +432,247 @@
           "Do not read or write token, password, credential, API key, or secret-shaped values through browser storage.",
           "GUI code should select bindings by declared capability"
         ]
+      },
+      {
+        "id": "runtime-security-boundary-contract",
+        "modules": [
+          "orchestra-control-plane",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "runtime-installer",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "schemas/agent-solver-qualification.schema.json",
+          "workers/rust/crates/engine/src/tests/workflow_security.rs"
+        ],
+        "required_text": [
+          "failure_receipt",
+          "safe_to_continue_other_tasks",
+          "unsupported recovery policy"
+        ]
       }
     ]
   },
+  "maturity_policy": {
+    "product_surface": [
+      "execution",
+      "contract",
+      "ux_closure"
+    ],
+    "runtime_api": [
+      "execution",
+      "contract"
+    ],
+    "solver_execution": [
+      "execution",
+      "contract"
+    ],
+    "workflow_composition": [
+      "execution",
+      "contract"
+    ],
+    "validation": [
+      "execution",
+      "contract"
+    ],
+    "benchmark": [
+      "benchmark",
+      "contract"
+    ],
+    "security": [
+      "security",
+      "contract"
+    ],
+    "persistence_provenance": [
+      "execution",
+      "contract"
+    ],
+    "deployment_update": [
+      "execution",
+      "security",
+      "contract"
+    ],
+    "sdk_headless": [
+      "execution",
+      "contract",
+      "sdk_parity"
+    ]
+  },
+  "cell_requirements": [
+    {
+      "module_id": "runtime-engine-solver",
+      "paradigm": "solver_execution",
+      "dimensions": ["numerical_validation"]
+    },
+    {
+      "module_id": "runtime-engine-solver",
+      "paradigm": "validation",
+      "dimensions": ["numerical_validation"]
+    },
+    {
+      "module_id": "verification-evidence",
+      "paradigm": "validation",
+      "dimensions": ["numerical_validation"]
+    },
+    {
+      "module_id": "orchestra-control-plane",
+      "paradigm": "workflow_composition",
+      "dimensions": ["recovery"]
+    },
+    {
+      "module_id": "runtime-agent-cli",
+      "paradigm": "runtime_api",
+      "dimensions": ["recovery"]
+    },
+    {
+      "module_id": "runtime-agent-cli",
+      "paradigm": "deployment_update",
+      "dimensions": ["recovery"]
+    },
+    {
+      "module_id": "runtime-installer",
+      "paradigm": "deployment_update",
+      "dimensions": ["recovery"]
+    }
+  ],
+  "evidence_claims": [
+    {
+      "id": "desktop-product-ux-closure",
+      "status": "proven",
+      "modules": [
+        "hub-shell",
+        "desktop-shared-ui",
+        "workbench-shell",
+        "installer-shell"
+      ],
+      "paradigms": [
+        "product_surface"
+      ],
+      "dimensions": [
+        "ux_closure"
+      ],
+      "files": [
+        "config/architecture/desktop-capability-closure.json",
+        "tests/integration/desktop-gui-capability-closure.test.mjs"
+      ],
+      "required_text": [
+        "kyuubiki.desktop-capability-closure/v1",
+        "every required desktop capability closes UI, route, native, and result layers"
+      ]
+    },
+    {
+      "id": "headless-cross-language-parity",
+      "status": "proven",
+      "modules": [
+        "workbench-shell",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "sdk_parity"
+      ],
+      "files": [
+        "sdks/README.md",
+        "sdks/rust/src/workflow_contracts.rs",
+        "sdks/python/kyuubiki_sdk/workflow_contracts.py",
+        "sdks/elixir/lib/kyuubiki_sdk/workflow_contracts.ex"
+      ],
+      "required_text": [
+        "Rust, Python, and Elixir remain peer official SDK families",
+        "kyuubiki.workflow-graph/v1"
+      ]
+    },
+    {
+      "id": "solver-independent-validation-depth",
+      "status": "partial",
+      "modules": [
+        "runtime-engine-solver",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "solver_execution",
+        "validation"
+      ],
+      "dimensions": [
+        "numerical_validation"
+      ],
+      "files": [
+        "docs/weakness-roadmap.md",
+        "config/operator-qualification-roadmap.json"
+      ],
+      "required_text": [
+        "independent structural correlation remain open",
+        "minimum_candidate_level"
+      ]
+    },
+    {
+      "id": "orchestra-distributed-recovery-depth",
+      "status": "open",
+      "modules": [
+        "orchestra-control-plane"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "docs/weakness-roadmap.md"
+      ],
+      "required_text": [
+        "add fault-injection tests for agent disconnect, package rejection, runtime"
+      ]
+    },
+    {
+      "id": "agent-watchdog-recovery",
+      "status": "partial",
+      "modules": [
+        "runtime-agent-cli"
+      ],
+      "paradigms": [
+        "runtime_api",
+        "deployment_update"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "docs/weakness-roadmap.md"
+      ],
+      "required_text": [
+        "recent_failure_count",
+        "scheduler retry"
+      ]
+    },
+    {
+      "id": "installer-retry-safe-recovery",
+      "status": "proven",
+      "modules": [
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "workers/rust/crates/installer/src/remote_deployment_plan.rs",
+        "workers/rust/crates/installer/src/tests/remote_deployment.rs"
+      ],
+      "required_text": [
+        "keep journal for retry",
+        "retry_safe_step_contract"
+      ]
+    }
+  ],
   "paradigm_lanes": {
     "product_surface": {
       "benchmark": [

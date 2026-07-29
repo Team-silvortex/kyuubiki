@@ -212,11 +212,7 @@ check-operator-qualification-release-records:
 	@$(ENTRYPOINT) check-operator-qualification-release-records --in $${IN:-releases/qualification-records/1.20.0.json}
 
 check-operator-qualification-review-decision:
-	@if [ -n "$$IN" ]; then \
-		node ./scripts/check-operator-qualification-review-decision.mjs --in "$$IN"; \
-	else \
-		node ./scripts/check-operator-qualification-review-decision.mjs --all; \
-	fi
+	@$(ENTRYPOINT) check-operator-qualification-review-decision $(if $(IN),--in "$(IN)",--all)
 
 capture-line-field-qualification-provenance:
 	@$(ENTRYPOINT) capture-line-field-qualification-provenance --out $${OUT:-tmp/line-field-qualification-provenance.json}

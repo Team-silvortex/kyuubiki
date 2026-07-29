@@ -8,7 +8,7 @@ pub(super) fn render_markdown(report: &Value) -> String {
         format!("- Source: `{TENSOR_PATH}`"),
         format!("- Topology: `{TOPOLOGY_PATH}`"),
         format!("- Matrix: `{MATRIX_PATH}`"),
-        "- Axes: `module x function_paradigm x evidence_depth`".to_string(),
+        "- Axes: `module x function_paradigm x scoped_evidence_depth`".to_string(),
         format!(
             "- Modules: `{}`",
             report
@@ -31,6 +31,13 @@ pub(super) fn render_markdown(report: &Value) -> String {
             "- Blocking gaps: `{}`",
             report
                 .get("blocking_gap_count")
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        ),
+        format!(
+            "- Maturity gaps: `{}`",
+            report
+                .get("maturity_gap_count")
                 .and_then(Value::as_u64)
                 .unwrap_or(0)
         ),
@@ -110,13 +117,14 @@ fn render_contract_evidence(report: &Value, lines: &mut Vec<String>) {
         lines.push("No contract evidence.".to_string());
         return;
     }
-    lines.push("| Paradigm | Evidence | Files | Required Text |".to_string());
-    lines.push("| --- | --- | --- | --- |".to_string());
+    lines.push("| Paradigm | Evidence | Modules | Files | Required Text |".to_string());
+    lines.push("| --- | --- | --- | --- | --- |".to_string());
     for (paradigm, list) in entries {
         for entry in list.as_array().into_iter().flatten() {
             lines.push(format!(
-                "| `{paradigm}` | `{}` | {} | {} |",
+                "| `{paradigm}` | `{}` | {} | {} | {} |",
                 string_field(entry, "id").unwrap_or_default(),
+                joined_or_dash(&string_array(entry, "modules")),
                 string_array(entry, "files")
                     .iter()
                     .map(|file| format!("`{file}`"))
@@ -180,7 +188,7 @@ fn render_thin_points(report: &Value, lines: &mut Vec<String>) {
         return;
     }
     lines.push(
-        "| Maturity | Module | Paradigm | Benchmark Lanes | Security Lanes | Contract Evidence | Test Commands |"
+        "| Maturity | Module | Paradigm | Missing Dimensions | Present Dimensions | Contract Evidence | Test Commands |"
             .to_string(),
     );
     lines.push("| --- | --- | --- | --- | --- | ---: | ---: |".to_string());
@@ -190,8 +198,8 @@ fn render_thin_points(report: &Value, lines: &mut Vec<String>) {
             string_field(&point, "maturity").unwrap_or_default(),
             string_field(&point, "module_id").unwrap_or_default(),
             string_field(&point, "paradigm").unwrap_or_default(),
-            joined_or_dash(&string_array(&point, "benchmark_lanes")),
-            joined_or_dash(&string_array(&point, "security_lanes")),
+            joined_or_dash(&string_array(&point, "missing_dimensions")),
+            joined_or_dash(&string_array(&point, "present_dimensions")),
             point
                 .get("contract_evidence_count")
                 .and_then(Value::as_u64)

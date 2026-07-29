@@ -77,6 +77,11 @@ fn fixture_tensor() -> Value {
         "topology": TOPOLOGY_PATH,
         "matrix": MATRIX_PATH,
         "depth_axes": { "required": "r", "status": "s" },
+        "maturity_policy": {
+            "solver_execution": ["execution", "contract"]
+        },
+        "cell_requirements": [],
+        "evidence_claims": [],
         "paradigm_lanes": {
             "solver_execution": {
                 "benchmark": ["runtime_solver"],
@@ -88,7 +93,7 @@ fn fixture_tensor() -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{derive_evidence_aware_gap, derive_gap};
+    use super::super::{contract_evidence_for, derive_evidence_aware_gap, derive_gap};
     use serde_json::json;
 
     #[test]
@@ -107,5 +112,23 @@ mod tests {
             ),
             "weak_evidence"
         );
+    }
+
+    #[test]
+    fn contract_evidence_is_scoped_to_the_exact_module() {
+        let tensor = json!({
+            "paradigm_contract_evidence": {
+                "validation": [{
+                    "id": "engine-validation",
+                    "modules": ["engine"],
+                    "files": ["docs/example.md"]
+                }]
+            }
+        });
+        assert_eq!(
+            contract_evidence_for(&tensor, "engine", "validation").len(),
+            1
+        );
+        assert!(contract_evidence_for(&tensor, "shell", "validation").is_empty());
     }
 }

@@ -334,10 +334,10 @@ This directory contains host-native operational entry points.
   `--self-test` when changing readiness sorting or action-kind requirements.
   The retained `.mjs` scripts are parity references.
 - `make check-operator-qualification-review-decision`
-  Validate retained operator qualification review decisions against the release
-  record, evidence path, review gate, reviewer identity, and allowed decision
-  transition rules. By default it checks every decision path declared by the
-  qualification release records; set `IN=<path>` to check one decision.
+  Run the native Rust validator for retained operator qualification review
+  decisions against the release record, evidence path, review gate, reviewer
+  identity, and allowed decision transition rules. By default it checks every
+  declared decision path; set `IN=<path>` to check one decision.
 - `kyuubiki-script-runner validate-commercial-readiness`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.

@@ -148,22 +148,36 @@ cannot appear mature only because release evidence exists. The default
 so approved promotion summaries are verified by the aggregate operator
 reliability gate instead of living only behind a specialist command.
 
-The generated tensor report also assigns a maturity label to every required
-covered coordinate:
+The v2 tensor does not broadcast one paradigm-level contract to every module.
+Every contract evidence entry declares the modules it actually covers. The
+report then evaluates required evidence dimensions for the exact
+`module/paradigm` coordinate. Built-in dimensions include execution,
+benchmark, security, contract, numerical validation, recovery, SDK parity, and
+product UX closure.
+
+Specialized evidence claims use one of three states:
+
+- `proven`
+  The claim satisfies its declared evidence dimensions.
+- `partial`
+  Evidence exists, but it does not satisfy the maturity requirement yet.
+- `open`
+  The required work is explicitly tracked and remains unsatisfied.
+
+The generated tensor report assigns a maturity label to every required covered
+coordinate:
 
 - `strong`
-  Benchmark lane, security lane, and contract evidence are all present.
+  Every dimension required by the paradigm and exact coordinate is proven.
 - `medium`
-  At least two evidence families are present, but one side still needs a
-  stronger anchor.
+  Exactly one required evidence dimension remains unsatisfied.
 - `thin`
-  The coordinate is covered, but its evidence is one-sided. These entries are
-  listed under `thin_points` and should be treated as the next mainline
-  hardening queue after blocking gaps are gone.
+  Two or more required dimensions remain unsatisfied.
 
 This distinction matters for moxi because a `0` gap count only means no
 required coordinate is missing. It does not mean the coordinate is mature
-enough for a stronger public claim.
+enough for a stronger public claim. `maturity_gap_count` and `thin_points`
+are the hardening queue; they do not make the structural tensor command fail.
 
 For contract-heavy paradigms, the tensor also carries `contract_evidence`.
 The `runtime_api` coordinate includes the contracts runtime API surface schema,
@@ -171,8 +185,8 @@ the central self-host service-surface binding, and the readiness-report service
 surface anchors. This makes `central-web-service` visible in the project tensor
 status instead of only in central-server docs.
 
-The moxi tensor now treats the following coordinates as contract-backed strong
-paths when their benchmark and security lanes are present:
+The moxi tensor treats the following coordinates as contract-backed paths only
+for the modules explicitly listed by each evidence bundle:
 
 - `benchmark`
   Benchmark profile coverage, profile index generation, and retained-run
