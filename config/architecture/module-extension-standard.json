@@ -86,6 +86,7 @@
         "Add repository-relative source files and client surfaces.",
         "Add schema or text anchors to the appropriate release contract.",
         "Attach contract evidence to the tensor when the family proves a required paradigm.",
+        "Use tensor evidence_includes for large scoped evidence bundles that would bloat the main tensor file.",
         "Run the family checker and the full architecture gate."
       ]
     }

@@ -163,6 +163,10 @@ README.
 - `module-extension-standard.schema.json` is for the architecture extension
   onboarding flow, covering new modules, function paradigms, service surfaces,
   evidence lanes, and contract families before they enter release gates.
+- `module-function-coverage-evidence.schema.json` is for shard files loaded by
+  the module-function coverage tensor through `evidence_includes`; shards keep
+  contract evidence, coordinate requirements, and maturity claims small enough
+  for the project file-size guard.
 - `deploy/installation-integrity-contract.json` is the shared installer and
   desktop-facing installation contract source that defines standard layout,
   protected paths, cleanup allowlists, and visible repair rules

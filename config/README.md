@@ -59,6 +59,14 @@ the profile commands themselves should be executed.
   module has explicit coverage status across product surface, runtime API,
   solver execution, workflow composition, validation, benchmark, security,
   persistence, deployment, and headless SDK paradigms.
+- `architecture/module-function-coverage-tensor.json`
+  Module x function-paradigm x evidence-depth tensor. It keeps the status
+  dashboard tied to topology lanes, maturity policy, and scoped evidence
+  shards instead of prose-only roadmap claims.
+- `architecture/module-function-coverage-evidence/*.json`
+  Evidence shards loaded by the tensor through `evidence_includes`. Use shards
+  for large contract bundles, maturity claims, and coordinate requirements so
+  the main tensor remains a small architecture spine.
 - `architecture/module-extension-standard.json`
   Machine-readable onboarding standard for new modules, function paradigms,
   service surfaces, evidence lanes, and contract families. It keeps future

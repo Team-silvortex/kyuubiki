@@ -6,7 +6,10 @@ import type {
   WorkbenchScriptSnippetParameterValue,
   WorkbenchScriptSnippetParameters,
 } from "./workbench-script-runtime-types.ts";
-import { CLOSED_LOOP_TRUSS_RECIPE_ID } from "./workbench-script-runtime-recipes.ts";
+import {
+  CLOSED_LOOP_TRUSS_RECIPE_ID,
+  HEAT_TO_THERMO_QUAD_RECIPE_ID,
+} from "./workbench-script-runtime-recipes.ts";
 
 export type WorkbenchScriptSnippetParameter = {
   key: string;
@@ -155,6 +158,42 @@ ky.log(
     "Pwdt truss closed loop ready:",
     result.get("projectId"),
     result.get("saveResult"),
+    result.get("resultCount"),
+)`,
+  },
+  {
+    id: "snippet/workflow/run-heat-to-thermo-quad",
+    category: "workflow",
+    title: {
+      en: "Run heat-to-thermo quad chain",
+      zh: "运行热场到热力四边形链",
+    },
+    summary: {
+      en: "Run a heat plane quad solve, project it into a thermo-mechanical quad model, save both stages, and open results.",
+      zh: "运行热场四边形求解，将结果投影为热-力四边形模型，保存两个阶段并打开结果。",
+    },
+    parameters: [
+      { key: "projectName", defaultValue: "Pwdt heat-to-thermo automation" },
+      { key: "projectDescription", defaultValue: "Created from wasm Python DSL." },
+      { key: "heatModelName", defaultValue: "pwdt-heat-plane-quad" },
+      { key: "thermoModelName", defaultValue: "pwdt-thermal-plane-quad" },
+      { key: "activeMaterial", defaultValue: "210" },
+      { key: "timeoutSeconds", defaultValue: 90 },
+    ],
+    code: `result = await ky.run_recipe("${HEAT_TO_THERMO_QUAD_RECIPE_ID}", snippet_params)
+if not result.get("ok"):
+    raise RuntimeError(
+        "Heat-to-thermo chain ended without completion: "
+        + str(result.get("heatJobStatus"))
+        + " -> "
+        + str(result.get("thermoJobStatus"))
+    )
+
+ky.log(
+    "Pwdt heat-to-thermo chain ready:",
+    result.get("projectId"),
+    result.get("heatSaveResult"),
+    result.get("thermoSaveResult"),
     result.get("resultCount"),
 )`,
   },

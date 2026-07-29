@@ -5,6 +5,7 @@ import {
   buildWorkbenchPythonPrelude,
   buildWorkbenchUiAutomationContractSnapshot,
   CLOSED_LOOP_TRUSS_RECIPE_ID,
+  HEAT_TO_THERMO_QUAD_RECIPE_ID,
   renderWorkbenchScriptSnippet,
   WORKBENCH_SCRIPT_ACTIONS,
   WORKBENCH_SCRIPT_RECIPES,
@@ -39,6 +40,25 @@ test("workbench Pwdt snippets expose a closed-loop study recipe", () => {
   assert.match(rendered, /await ky\.run_recipe/);
   assert.match(rendered, new RegExp(CLOSED_LOOP_TRUSS_RECIPE_ID.replaceAll("/", "\\/")));
   assert.match(rendered, /scripted-truss/);
+});
+
+test("workbench Pwdt snippets expose a heat-to-thermo composite recipe", () => {
+  const snippet = WORKBENCH_SCRIPT_SNIPPETS.find((entry) => entry.id === "snippet/workflow/run-heat-to-thermo-quad");
+  assert.ok(snippet);
+  assert.equal(snippet.category, "workflow");
+
+  const rendered = renderWorkbenchScriptSnippet(snippet, {
+    projectName: "scripted-thermal-lab",
+    projectDescription: "from test",
+    heatModelName: "scripted-heat",
+    thermoModelName: "scripted-thermo",
+    activeMaterial: "200",
+    timeoutSeconds: 30,
+  });
+
+  assert.match(rendered, /await ky\.run_recipe/);
+  assert.match(rendered, new RegExp(HEAT_TO_THERMO_QUAD_RECIPE_ID.replaceAll("/", "\\/")));
+  assert.match(rendered, /scripted-thermo/);
 });
 
 test("workbench Pwdt snippets only invoke catalogued actions", () => {
@@ -98,10 +118,13 @@ test("wasm Python facade includes GUI-equivalent workflow helpers", () => {
 
   assert.match(prelude, /async def ensure_project/);
   assert.match(prelude, /async def build_parametric_truss_2d/);
+  assert.match(prelude, /async def prepare_heat_plane_quad_study/);
   assert.match(prelude, /async def save_model/);
   assert.match(prelude, /async def run_current_study/);
+  assert.match(prelude, /async def project_heat_to_thermo_quad_study/);
   assert.match(prelude, /async def open_results/);
   assert.match(prelude, /"project\/create"/);
   assert.match(prelude, /"job\/run"/);
+  assert.match(prelude, /"state\/projectHeatToThermo"/);
   assert.match(prelude, /"data\/setFilters"/);
 });

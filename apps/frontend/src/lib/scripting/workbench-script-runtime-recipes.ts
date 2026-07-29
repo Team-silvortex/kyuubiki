@@ -22,6 +22,7 @@ export type WorkbenchScriptRecipeFilters = {
 };
 
 export const CLOSED_LOOP_TRUSS_RECIPE_ID = "recipe/truss2d/closed-loop";
+export const HEAT_TO_THERMO_QUAD_RECIPE_ID = "recipe/heat-thermo/quad-closed-loop";
 
 export const WORKBENCH_SCRIPT_RECIPES: WorkbenchScriptRecipeDefinition[] = [
   {
@@ -61,6 +62,50 @@ export const WORKBENCH_SCRIPT_RECIPES: WorkbenchScriptRecipeDefinition[] = [
         systemDataTab: "results",
       },
       resultKeys: ["ok", "projectId", "saveResult", "jobStatus", "resultCount"],
+    },
+  },
+  {
+    id: HEAT_TO_THERMO_QUAD_RECIPE_ID,
+    category: "workflow",
+    risk: "normal",
+    summary: {
+      en: "Run a 2D heat quad study, project the temperature field into a thermo-mechanical quad model, save it, run it, and open results.",
+      zh: "运行二维四边形热场研究，将温度场投影为热-力四边形模型，保存后继续求解并打开结果。",
+    },
+    payloadExample: {
+      activeMaterial: "210",
+      heatModelName: "pwdt-heat-plane-quad",
+      projectName: "Pwdt heat-to-thermo quad",
+      thermoModelName: "pwdt-thermal-plane-quad",
+      timeoutSeconds: 90,
+    },
+    requiredActions: [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectHeatToThermo",
+      "data/setFilters",
+    ],
+    success: {
+      expectedState: {
+        jobStatus: "completed",
+        studyKind: "thermal_plane_quad_2d",
+        systemDataTab: "results",
+      },
+      resultKeys: [
+        "ok",
+        "projectId",
+        "heatSaveResult",
+        "heatJobStatus",
+        "thermoProjection",
+        "thermoSaveResult",
+        "thermoJobStatus",
+        "resultCount",
+      ],
     },
   },
 ];

@@ -10,4 +10,5 @@ export * from "./workbench-script-ui-automation.ts";
 export * from "./workbench-script-runtime-snippets.ts";
 export * from "./workbench-script-runtime-snippet-presets.ts";
 export * from "./workbench-script-dsl.ts";
+export * from "./workbench-script-dsl-compiler.ts";
 export * from "./workbench-script-dsl-recipes.ts";

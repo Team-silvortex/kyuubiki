@@ -84,7 +84,9 @@ planning note, not evidence.
 3. Attach client surfaces and service surfaces when the contract crosses
    modules.
 4. Add tensor contract evidence if the contract proves a required paradigm.
-5. Run the family checker and `make architecture-check`.
+5. Use `evidence_includes` for large scoped evidence bundles so the main tensor
+   stays readable and under the project file-line guard.
+6. Run the family checker and `make architecture-check`.
 
 ## Required Gates
 

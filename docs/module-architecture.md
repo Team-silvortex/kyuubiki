@@ -185,6 +185,15 @@ the central self-host service-surface binding, and the readiness-report service
 surface anchors. This makes `central-web-service` visible in the project tensor
 status instead of only in central-server docs.
 
+Large evidence bundles may live in repository-relative files listed by
+`evidence_includes`. `core-contracts.json` carries the shared contract
+evidence, coordinate requirements, and maturity claims that used to live in the
+main tensor. The Workbench Pwdt frontend-control-plane bundle proves that the
+wasm Python DSL, recipe registry, browser bridge, and GUI parity tests are part
+of `workbench-shell` coverage. This keeps Pwdt visible in the tensor as
+product-owned programmable UI control rather than misclassifying it as the
+separate headless SDK family.
+
 The moxi tensor treats the following coordinates as contract-backed paths only
 for the modules explicitly listed by each evidence bundle:
 

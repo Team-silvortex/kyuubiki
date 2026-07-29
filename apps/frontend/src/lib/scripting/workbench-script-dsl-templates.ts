@@ -4,7 +4,10 @@ import {
   WORKBENCH_FRONTEND_DSL_REPORT_PREFIX,
   type WorkbenchFrontendDslDocument,
 } from "./workbench-script-dsl.ts";
-import { CLOSED_LOOP_TRUSS_RECIPE_ID } from "./workbench-script-runtime-recipes.ts";
+import {
+  CLOSED_LOOP_TRUSS_RECIPE_ID,
+  HEAT_TO_THERMO_QUAD_RECIPE_ID,
+} from "./workbench-script-runtime-recipes.ts";
 
 const DSL_VERSION = "kyuubiki.frontend-dsl/v1";
 
@@ -19,6 +22,11 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
       { kind: "expect_action", action: "state/replaceFrameModel", message: "Frame import must be scriptable." },
       { kind: "expect_macro", macroId: "macro/openDataResults", message: "Data review macro must be scriptable." },
       { kind: "expect_recipe", recipeId: CLOSED_LOOP_TRUSS_RECIPE_ID, message: "Closed-loop recipe must be registered." },
+      {
+        kind: "expect_recipe",
+        recipeId: HEAT_TO_THERMO_QUAD_RECIPE_ID,
+        message: "Heat-to-thermo composite recipe must be registered.",
+      },
       {
         kind: "capture_action_catalog",
         assign: "normal_actions",
@@ -172,6 +180,36 @@ export function buildClosedLoopTrussWorkbenchFrontendDslDocument(): WorkbenchFro
         },
         message: "Pwdt closed-loop truss recipe completed.",
       },
+      { kind: "expect_state", key: "systemDataTab", equals: "results", message: "Results data tab should be active after the recipe." },
+      { kind: "emit_parity_report", assign: "pwdt_parity", message: "Captured Pwdt recipe parity report." },
+    ],
+  };
+}
+
+export function buildHeatToThermoQuadWorkbenchFrontendDslDocument(): WorkbenchFrontendDslDocument {
+  return {
+    dsl_version: DSL_VERSION,
+    name: "heat-to-thermo-quad-study",
+    steps: [
+      { kind: "log", message: "Starting Pwdt heat-to-thermo quad recipe." },
+      { kind: "expect_action", action: "project/create", message: "Project creation must be scriptable." },
+      { kind: "expect_action", action: "state/projectHeatToThermo", message: "Heat result projection must be scriptable." },
+      { kind: "expect_action", action: "job/run", message: "Study submission must be scriptable." },
+      {
+        kind: "run_recipe",
+        recipeId: HEAT_TO_THERMO_QUAD_RECIPE_ID,
+        assign: "heat_to_thermo",
+        payload: {
+          activeMaterial: "210",
+          heatModelName: "pwdt-heat-plane-quad",
+          projectDescription: "Created from Pwdt frontend DSL.",
+          projectName: "Pwdt heat-to-thermo quad",
+          thermoModelName: "pwdt-thermal-plane-quad",
+          timeoutSeconds: 90,
+        },
+        message: "Pwdt heat-to-thermo quad recipe completed.",
+      },
+      { kind: "expect_state", key: "studyKind", equals: "thermal_plane_quad_2d", message: "Thermo-mechanical study should be active after projection." },
       { kind: "expect_state", key: "systemDataTab", equals: "results", message: "Results data tab should be active after the recipe." },
       { kind: "emit_parity_report", assign: "pwdt_parity", message: "Captured Pwdt recipe parity report." },
     ],

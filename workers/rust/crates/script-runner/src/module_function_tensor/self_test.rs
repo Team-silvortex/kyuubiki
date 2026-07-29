@@ -1,9 +1,9 @@
 use super::{
     MATRIX_PATH, RunnerResult, SCHEMA_VERSION, TOPOLOGY_PATH, build_tensor_report,
-    derive_evidence_aware_gap, derive_gap, validate_tensor_config,
+    derive_evidence_aware_gap, derive_gap, load_tensor_with_includes, validate_tensor_config,
 };
 use serde_json::{Value, json};
-use std::path::Path;
+use std::{fs, path::Path, path::PathBuf};
 
 pub(super) fn run_self_test() -> RunnerResult<()> {
     if derive_gap("covered", true) != "ok"
@@ -43,7 +43,61 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
     {
         return Err("self-test report derivation failed".to_string());
     }
+    self_test_evidence_include_loader()?;
     Ok(())
+}
+
+fn self_test_evidence_include_loader() -> RunnerResult<()> {
+    let root = temp_root("kyuubiki_tensor_include_self_test")?;
+    fs::write(root.join("evidence.txt"), "included_anchor\n")
+        .map_err(|error| format!("failed to write include evidence: {error}"))?;
+    fs::write(
+        root.join("include.json"),
+        serde_json::to_string_pretty(&json!({
+            "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+            "paradigm_contract_evidence": {
+                "solver_execution": [{
+                    "id": "included-contract",
+                    "modules": ["engine"],
+                    "files": ["evidence.txt"],
+                    "required_text": ["included_anchor"]
+                }]
+            },
+            "evidence_claims": [],
+            "cell_requirements": []
+        }))
+        .map_err(|error| format!("failed to render include fixture: {error}"))?,
+    )
+    .map_err(|error| format!("failed to write include fixture: {error}"))?;
+    let mut tensor = fixture_tensor();
+    tensor["evidence_includes"] = json!(["include.json"]);
+    let loaded = load_tensor_with_includes(&root, tensor)?;
+    validate_tensor_config(&root, &loaded, &fixture_topology(), &fixture_matrix())?;
+    let evidence = loaded
+        .pointer("/paradigm_contract_evidence/solver_execution/0/id")
+        .and_then(Value::as_str);
+    let result = if evidence == Some("included-contract") {
+        Ok(())
+    } else {
+        Err("self-test evidence include was not merged".to_string())
+    };
+    let _ = fs::remove_dir_all(root);
+    result
+}
+
+fn temp_root(prefix: &str) -> RunnerResult<PathBuf> {
+    let mut root = std::env::temp_dir();
+    root.push(format!(
+        "{}_{}_{}",
+        prefix,
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| format!("clock error: {error}"))?
+            .as_nanos()
+    ));
+    fs::create_dir_all(&root).map_err(|error| format!("failed to create temp root: {error}"))?;
+    Ok(root)
 }
 
 fn fixture_topology() -> Value {

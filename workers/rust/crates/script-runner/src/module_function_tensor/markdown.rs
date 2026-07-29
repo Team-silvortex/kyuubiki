@@ -8,6 +8,10 @@ pub(super) fn render_markdown(report: &Value) -> String {
         format!("- Source: `{TENSOR_PATH}`"),
         format!("- Topology: `{TOPOLOGY_PATH}`"),
         format!("- Matrix: `{MATRIX_PATH}`"),
+        format!(
+            "- Evidence includes: `{}`",
+            joined_or_dash(&string_array(report, "evidence_includes"))
+        ),
         "- Axes: `module x function_paradigm x scoped_evidence_depth`".to_string(),
         format!(
             "- Modules: `{}`",

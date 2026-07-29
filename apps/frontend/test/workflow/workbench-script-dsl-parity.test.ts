@@ -9,6 +9,8 @@ import {
   CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL,
   compileWorkbenchFrontendDslToPython,
   DEFAULT_WORKBENCH_FRONTEND_DSL,
+  HEAT_TO_THERMO_QUAD_RECIPE_ID,
+  HEAT_TO_THERMO_QUAD_WORKBENCH_FRONTEND_DSL,
   parseWorkbenchFrontendDslDocument,
   serializeWorkbenchFrontendDslDocument,
   WORKBENCH_SCRIPT_ACTIONS,
@@ -58,6 +60,7 @@ test("workbench Pwdt recipe catalog references only registered GUI script action
 
   assert.deepEqual(missing, []);
   assert.ok(WORKBENCH_SCRIPT_RECIPES.some((recipe) => recipe.id === "recipe/truss2d/closed-loop"));
+  assert.ok(WORKBENCH_SCRIPT_RECIPES.some((recipe) => recipe.id === HEAT_TO_THERMO_QUAD_RECIPE_ID));
   assert.deepEqual(WORKBENCH_SCRIPT_RECIPES[0].success?.expectedState, {
     jobStatus: "completed",
     studyKind: "truss_2d",
@@ -212,6 +215,17 @@ test("closed-loop truss Pwdt DSL template is runnable structured automation", ()
   assert.match(compiled, /systemDataTab/);
 });
 
+test("heat-to-thermo Pwdt DSL template is runnable structured automation", () => {
+  const document = parseWorkbenchFrontendDslDocument(HEAT_TO_THERMO_QUAD_WORKBENCH_FRONTEND_DSL);
+  const compiled = compileWorkbenchFrontendDslToPython(document);
+
+  assert.equal(document.name, "heat-to-thermo-quad-study");
+  assert.match(compiled, /ky\.run_recipe/);
+  assert.match(compiled, /recipe\/heat-thermo\/quad-closed-loop/);
+  assert.match(compiled, /state\/projectHeatToThermo/);
+  assert.match(compiled, /thermal_plane_quad_2d/);
+});
+
 test("wasm Python prelude exposes GUI-equivalent capability introspection helpers", () => {
   const prelude = buildWorkbenchPythonPrelude();
 
@@ -223,6 +237,8 @@ test("wasm Python prelude exposes GUI-equivalent capability introspection helper
   assert.match(prelude, /def automation_parity_report/);
   assert.match(prelude, /async def run_recipe/);
   assert.match(prelude, /async def run_closed_loop_truss_study/);
+  assert.match(prelude, /async def run_heat_to_thermo_quad_study/);
+  assert.match(prelude, /async def project_heat_to_thermo_quad_study/);
   assert.match(prelude, /self\.require_action\(action\)/);
   assert.match(prelude, /self\.require_macro\(macro\)/);
   assert.match(prelude, /self\.require_recipe\(recipe_id\)/);

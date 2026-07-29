@@ -8,6 +8,7 @@ import {
 } from "./workbench-script-runtime-catalog.ts";
 import {
   CLOSED_LOOP_TRUSS_RECIPE_ID,
+  HEAT_TO_THERMO_QUAD_RECIPE_ID,
   filterWorkbenchScriptRecipes,
   getWorkbenchScriptRecipeDefinition,
   type WorkbenchScriptRecipeFilters,
@@ -46,6 +47,18 @@ export type WorkbenchPwdtTrussStudyParams = {
   timeoutSeconds?: number;
 };
 
+export type WorkbenchPwdtHeatThermoQuadParams = {
+  projectName?: string;
+  projectDescription?: string;
+  heatModelName?: string;
+  thermoModelName?: string;
+  activeMaterial?: string | number;
+  timeoutMs?: number;
+  timeoutSeconds?: number;
+};
+
+export type WorkbenchPwdtRecipeParams = WorkbenchPwdtTrussStudyParams & WorkbenchPwdtHeatThermoQuadParams;
+
 export type WorkbenchPwdtBrowserBridge = {
   version: "kyuubiki.pwdt.browser-bridge/v1";
   invoke: (action: string, payload?: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -83,6 +96,7 @@ export type WorkbenchPwdtBrowserBridge = {
   refreshAll: () => Promise<Record<string, unknown>>;
   ensureProject: (name?: string, description?: string) => Promise<string | null>;
   buildParametricTruss2d: (params?: WorkbenchPwdtTrussStudyParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
+  prepareHeatPlaneQuadStudy: (params?: WorkbenchPwdtHeatThermoQuadParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   saveModel: (params?: {
     name?: string;
     material?: string | number;
@@ -90,8 +104,10 @@ export type WorkbenchPwdtBrowserBridge = {
   }) => Promise<Record<string, unknown>>;
   runCurrentStudy: (options?: WorkbenchPwdtWaitOptions) => Promise<Partial<WorkbenchScriptSnapshot>>;
   openResults: (filters?: { projectId?: string | null; modelVersionId?: string | null }) => Promise<Partial<WorkbenchScriptSnapshot>>;
-  runRecipe: (recipeId: string, params?: WorkbenchPwdtTrussStudyParams) => Promise<Record<string, unknown>>;
+  projectHeatToThermoQuadStudy: () => Promise<Record<string, unknown>>;
+  runRecipe: (recipeId: string, params?: WorkbenchPwdtRecipeParams) => Promise<Record<string, unknown>>;
   runClosedLoopTrussStudy: (params?: WorkbenchPwdtTrussStudyParams) => Promise<Record<string, unknown>>;
+  runHeatToThermoQuadStudy: (params?: WorkbenchPwdtHeatThermoQuadParams) => Promise<Record<string, unknown>>;
   sleep: (seconds?: number) => Promise<void>;
 };
 
@@ -164,6 +180,12 @@ function expectStateMatches(snapshot: Partial<WorkbenchScriptSnapshot>, expected
 
 function terminalJobStatus(status: unknown) {
   return status === "completed" || status === "failed" || status === "cancelled";
+}
+
+function recipeTimeoutOptions(params: { timeoutMs?: number; timeoutSeconds?: number }): WorkbenchPwdtWaitOptions {
+  return {
+    timeoutMs: params.timeoutMs ?? (params.timeoutSeconds === undefined ? undefined : params.timeoutSeconds * 1000),
+  };
 }
 
 export function createWorkbenchPwdtBrowserBridge({
@@ -279,6 +301,18 @@ export function createWorkbenchPwdtBrowserBridge({
       await bridge.invoke("model/generateTruss");
       return snapshotRecord(getSnapshot);
     },
+    async prepareHeatPlaneQuadStudy(params = {}) {
+      await bridge.invoke("nav/setStudyKind", { studyKind: "heat_plane_quad_2d" });
+      await bridge.openSidebar("model");
+      await bridge.openTabs({ modelTab: "tools", modelToolsPage: "study" });
+      if (params.heatModelName !== undefined || params.activeMaterial !== undefined) {
+        await bridge.invoke("model/setWorkspaceMeta", {
+          ...(params.heatModelName !== undefined ? { loadedModelName: params.heatModelName } : {}),
+          ...(params.activeMaterial !== undefined ? { activeMaterial: String(params.activeMaterial) } : {}),
+        });
+      }
+      return snapshotRecord(getSnapshot);
+    },
     async saveModel(params = {}) {
       if (params.name !== undefined || params.material !== undefined) {
         await bridge.invoke("model/setWorkspaceMeta", {
@@ -300,12 +334,16 @@ export function createWorkbenchPwdtBrowserBridge({
       });
       return snapshotRecord(getSnapshot);
     },
+    projectHeatToThermoQuadStudy: () => bridge.invoke("state/projectHeatToThermo"),
     async runRecipe(recipeId, params = {}) {
       if (!getWorkbenchScriptRecipeDefinition(recipeId)) {
         throw new Error(`Unknown Pwdt recipe: ${recipeId}`);
       }
       if (recipeId === CLOSED_LOOP_TRUSS_RECIPE_ID) {
         return bridge.runClosedLoopTrussStudy(params);
+      }
+      if (recipeId === HEAT_TO_THERMO_QUAD_RECIPE_ID) {
+        return bridge.runHeatToThermoQuadStudy(params);
       }
       throw new Error(`Pwdt recipe is registered but not executable yet: ${recipeId}`);
     },
@@ -318,7 +356,7 @@ export function createWorkbenchPwdtBrowserBridge({
         saveAs: true,
       });
       const runState = await bridge.runCurrentStudy({
-        timeoutMs: params.timeoutMs ?? (params.timeoutSeconds === undefined ? undefined : params.timeoutSeconds * 1000),
+        ...recipeTimeoutOptions(params),
       });
       await bridge.openResults({ projectId });
       return {
@@ -327,6 +365,37 @@ export function createWorkbenchPwdtBrowserBridge({
         saveResult,
         jobStatus: runState.jobStatus ?? null,
         resultCount: runState.resultCount ?? null,
+      };
+    },
+    async runHeatToThermoQuadStudy(params = {}) {
+      const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
+      await bridge.prepareHeatPlaneQuadStudy(params);
+      const heatSaveResult = await bridge.saveModel({
+        name: params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const thermoProjection = await bridge.projectHeatToThermoQuadStudy();
+      const thermoSaveResult = await bridge.saveModel({
+        name: params.thermoModelName ?? params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const thermoRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      await bridge.openResults({ projectId });
+      return {
+        ok:
+          heatRunState.jobStatus === "completed" &&
+          thermoProjection.studyKind === "thermal_plane_quad_2d" &&
+          thermoRunState.jobStatus === "completed",
+        projectId,
+        heatSaveResult,
+        heatJobStatus: heatRunState.jobStatus ?? null,
+        thermoProjection,
+        thermoSaveResult,
+        thermoJobStatus: thermoRunState.jobStatus ?? null,
+        resultCount: thermoRunState.resultCount ?? null,
       };
     },
     sleep: (seconds = 0) => delay(seconds * 1000),

@@ -102,10 +102,13 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - ky.automation_parity_report()
 # - await ky.ensure_project("Study name")
 # - await ky.build_parametric_truss_2d(...)
+# - await ky.prepare_heat_plane_quad_study(...)
 # - await ky.save_model(name="model", save_as=True)
 # - await ky.run_current_study()
+# - await ky.project_heat_to_thermo_quad_study()
 # - await ky.open_results(project_id="...")
 # - await ky.run_recipe("recipe/truss2d/closed-loop", params_dict)
+# - await ky.run_recipe("recipe/heat-thermo/quad-closed-loop", params_dict)
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.run_macro("macro/id", payload_dict)
 # - await ky.run_macro_definition(macro_dict)
@@ -281,6 +284,15 @@ class _KyuubikiBridge:
     def state_value(self, key, default=None):
         return self.state().get(key, default)
 
+    def timeout_seconds(self, params=None, default=90.0):
+        if params is None:
+            return float(default)
+        if params.get("timeoutSeconds") is not None:
+            return float(params.get("timeoutSeconds"))
+        if params.get("timeoutMs") is not None:
+            return float(params.get("timeoutMs")) / 1000.0
+        return float(default)
+
     def require_selector(self, key, value=None):
         node = self.query_selector(key, value)
         if node is None:
@@ -343,6 +355,19 @@ class _KyuubikiBridge:
         await self.invoke("model/generateTruss")
         return self.state()
 
+    async def prepare_heat_plane_quad_study(self, model_name=None, material=None):
+        await self.set_study_kind("heat_plane_quad_2d")
+        await self.open_sidebar("model")
+        await self.open_tabs(modelTab="tools", modelToolsPage="study")
+        if model_name is not None or material is not None:
+            meta = {}
+            if model_name is not None:
+                meta["loadedModelName"] = model_name
+            if material is not None:
+                meta["activeMaterial"] = str(material)
+            await self.invoke("model/setWorkspaceMeta", meta)
+        return self.state()
+
     async def save_model(self, name=None, material=None, save_as=False):
         if name is not None or material is not None:
             meta = {}
@@ -367,6 +392,9 @@ class _KyuubikiBridge:
         await self.invoke("data/setFilters", payload)
         return self.state()
 
+    async def project_heat_to_thermo_quad_study(self):
+        return await self.invoke("state/projectHeatToThermo")
+
     async def run_closed_loop_truss_study(self, params=None):
         if params is None:
             params = {}
@@ -387,7 +415,7 @@ class _KyuubikiBridge:
             material=params.get("activeMaterial"),
             save_as=True,
         )
-        run_state = await self.run_current_study(timeout=float(params.get("timeoutSeconds", 90)))
+        run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         await self.open_results(project_id=project_id)
         return {
             "ok": run_state.get("jobStatus") == "completed",
@@ -397,10 +425,52 @@ class _KyuubikiBridge:
             "resultCount": run_state.get("resultCount"),
         }
 
+    async def run_heat_to_thermo_quad_study(self, params=None):
+        if params is None:
+            params = {}
+        project_id = await self.ensure_project(
+            params.get("projectName", "Pwdt heat-to-thermo quad"),
+            params.get("projectDescription", "Created from Pwdt"),
+        )
+        await self.prepare_heat_plane_quad_study(
+            model_name=params.get("heatModelName"),
+            material=params.get("activeMaterial"),
+        )
+        heat_save_result = await self.save_model(
+            name=params.get("heatModelName"),
+            material=params.get("activeMaterial"),
+            save_as=True,
+        )
+        heat_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
+        thermo_projection = await self.project_heat_to_thermo_quad_study()
+        thermo_save_result = await self.save_model(
+            name=params.get("thermoModelName", params.get("heatModelName")),
+            material=params.get("activeMaterial"),
+            save_as=True,
+        )
+        thermo_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
+        await self.open_results(project_id=project_id)
+        return {
+            "ok": (
+                heat_run_state.get("jobStatus") == "completed"
+                and thermo_projection.get("studyKind") == "thermal_plane_quad_2d"
+                and thermo_run_state.get("jobStatus") == "completed"
+            ),
+            "projectId": project_id,
+            "heatSaveResult": heat_save_result,
+            "heatJobStatus": heat_run_state.get("jobStatus"),
+            "thermoProjection": thermo_projection,
+            "thermoSaveResult": thermo_save_result,
+            "thermoJobStatus": thermo_run_state.get("jobStatus"),
+            "resultCount": thermo_run_state.get("resultCount"),
+        }
+
     async def run_recipe(self, recipe_id, params=None):
         self.require_recipe(recipe_id)
         if recipe_id == "recipe/truss2d/closed-loop":
             return await self.run_closed_loop_truss_study(params)
+        if recipe_id == "recipe/heat-thermo/quad-closed-loop":
+            return await self.run_heat_to_thermo_quad_study(params)
         raise NotImplementedError(f"Pwdt recipe is registered but not executable yet: {recipe_id}")
 
     async def run_macro(self, macro, payload=None):

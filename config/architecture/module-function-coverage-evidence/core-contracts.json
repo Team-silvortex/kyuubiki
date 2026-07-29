@@ -1,0 +1,642 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Core scoped contract evidence, maturity claims, and coordinate requirements for the moxi module-function coverage tensor.",
+  "paradigm_contract_evidence": {
+    "product_surface": [
+      {
+        "id": "gui-product-surface-automation-contract",
+        "modules": [
+          "hub-shell",
+          "desktop-shared-ui",
+          "workbench-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "docs/ui-automation-contract.json",
+          "schemas/gui-runtime-capability-manifest.schema.json",
+          "schemas/examples.gui-runtime-capability-manifest.json",
+          "workers/rust/crates/script-runner/src/ui_automation_contract.rs",
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs"
+        ],
+        "required_text": [
+          "productOwned",
+          "userExtensible",
+          "product_owned_static_ui",
+          "wasm_python_stability_required",
+          "user_extensible_ui_allowed",
+          "headless_sdk_parity_required",
+          "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
+        ]
+      },
+      {
+        "id": "desktop-capability-closure-contract",
+        "modules": [
+          "hub-shell",
+          "workbench-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "config/architecture/desktop-capability-closure.json",
+          "tests/integration/desktop-gui-capability-closure.test.mjs",
+          "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+          "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/hub-shell-regression.shared.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-capability-closure/v1",
+          "hub.project.create",
+          "installer.environment.init",
+          "workbench.analysis.open-local",
+          "every required desktop capability closes UI, route, native, and result layers",
+          "created bundle must become the active path for the next operation"
+        ]
+      }
+    ],
+    "validation": [
+      {
+        "id": "desktop-shared-asset-mirror-contract",
+        "modules": [
+          "desktop-shared-ui",
+          "workbench-shell"
+        ],
+        "files": [
+          "apps/desktop-shared/README.md",
+          "workers/rust/crates/script-runner/src/desktop.rs",
+          "workers/rust/crates/script-runner/src/desktop_shared_sync.rs",
+          "make/build.mk",
+          "config/architecture/module-topology.json"
+        ],
+        "required_text": [
+          "source-of-truth frontend assets",
+          "prepare_desktop_assets",
+          "run_sync_desktop_shared",
+          "check-desktop-shared",
+          "desktop shared asset synchronization check passed",
+          "desktop-shared-ui",
+          "shared_asset_mirror_drift"
+        ]
+      },
+      {
+        "id": "operator-qualification-readiness",
+        "modules": [
+          "contracts",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/operator-qualification-roadmap.json",
+          "config/operator-qualification-evidence-kits.json",
+          "schemas/operator-qualification-readiness.schema.json",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness/numerical_depth.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness/operator_trust_summary.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_readiness/review_summary.rs"
+        ],
+        "required_text": [
+          "kyuubiki.operator-qualification-readiness/v2",
+          "numerical_validation_depth",
+          "target_levels",
+          "operator_trust_levels",
+          "operator_trust_level_counts",
+          "release_review_decisions",
+          "release_promotion_summaries",
+          "evidence_phases",
+          "release_gate_impacts",
+          "primary_blocker",
+          "preferred_validation_lane"
+        ]
+      },
+      {
+        "id": "operator-qualification-release-review-gate",
+        "modules": [
+          "contracts",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "releases/qualification-records/1.20.0.json",
+          "releases/qualification-evidence/2.0.0/line-field-closed-form-release-evidence.json",
+          "schemas/operator-qualification-release-records.schema.json",
+          "schemas/operator-qualification-release-evidence.schema.json",
+          "schemas/examples.operator-qualification-release-evidence.json",
+          "schemas/operator-validation-report.schema.json",
+          "schemas/operator-qualification-review-decision.schema.json",
+          "schemas/examples.operator-qualification-review-decision.json",
+          "make/checks.mk",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records/review_decision.rs",
+          "scripts/operator-reliability-rules.mjs",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records.rs",
+          "workers/rust/crates/script-runner/src/operator_qualification_release_records/review_decision.rs"
+        ],
+        "required_text": [
+          "review_status",
+          "review_gate",
+          "review_decision_path",
+          "promotion_summary",
+          "retained_evidence_path",
+          "promoted_operator_ids",
+          "kyuubiki.operator-qualification-release-evidence/v1",
+          "kyuubiki.operator-validation-report/v1",
+          "kyuubiki.operator-qualification-review-decision/v1",
+          "validate_approved_promotion_summary",
+          "validate_review_decision_path",
+          "validate_review_status_transition",
+          "check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision check-operator-qualification-release-records",
+          "check-operator-qualification-release-records",
+          "qualificationPromotionErrors",
+          "release record must be approved before qualification",
+          "review decision reviewer id and display_name must be non-empty",
+          "approve_promotion",
+          "request_changes",
+          "block_scope",
+          "operator qualification review decisions ok"
+        ]
+      },
+      {
+        "id": "install-update-validation-contract",
+        "modules": [
+          "runtime-installer"
+        ],
+        "files": [
+          "deploy/installation-integrity-contract.json",
+          "deploy/install-update-disk-hygiene.json",
+          "scripts/check-install-update-disk-hygiene.mjs",
+          "workers/rust/crates/script-runner/src/install_update_disk_hygiene.rs",
+          "workers/rust/crates/script-runner/src/installation_integrity_docs.rs"
+        ],
+        "required_text": [
+          "kyuubiki.installation-contract/v1",
+          "kyuubiki.install-update-disk-hygiene/v1",
+          "validate_contract",
+          "validate_remote_policy",
+          "validate_local_retention",
+          "validate_update_visibility",
+          "protected_paths",
+          "removable_roots"
+        ]
+      }
+    ],
+    "runtime_api": [
+      {
+        "id": "contracts-runtime-api-surface",
+        "modules": [
+          "contracts",
+          "orchestra-control-plane",
+          "runtime-protocol",
+          "runtime-agent-cli",
+          "sdk-headless"
+        ],
+        "files": [
+          "config/architecture/contracts-runtime-api-surface.json",
+          "schemas/contracts-runtime-api-surface.schema.json",
+          "scripts/check-contracts-runtime-api-surface.mjs"
+        ],
+        "required_text": [
+          "central-web-service",
+          "service_surfaces",
+          "self_host_web",
+          "kyuubiki.contracts-runtime-api-surface/v1"
+        ]
+      },
+      {
+        "id": "central-self-host-service-readiness",
+        "modules": [
+          "contracts",
+          "orchestra-control-plane"
+        ],
+        "files": [
+          "schemas/central-readiness-report.schema.json",
+          "scripts/build-central-readiness-report.mjs",
+          "scripts/check-central-readiness-report.mjs"
+        ],
+        "required_text": [
+          "service_surface",
+          "central-web-service",
+          "orchestra-control-plane"
+        ]
+      }
+    ],
+    "solver_execution": [
+      {
+        "id": "operator-task-ir-execution-contract",
+        "modules": [
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "runtime-agent-cli"
+        ],
+        "files": [
+          "schemas/operator-task-ir.schema.json",
+          "schemas/examples.operator-task-ir.json",
+          "workers/rust/crates/protocol/src/operator_task_ir.rs",
+          "workers/rust/crates/script-runner/src/operator_task_ir_contract.rs",
+          "scripts/check-operator-task-ir-contract.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.operator-task-ir/v1",
+          "x-kyuubiki-mirror_constraints",
+          "descriptor_authoring",
+          "execution_program",
+          "runtime_hints",
+          "integrity",
+          "OPERATOR_TASK_DIGEST_FIELDS",
+          "check-operator-task-ir-contract"
+        ]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "workflow-graph-dataset-contract",
+        "modules": [
+          "workbench-shell",
+          "orchestra-control-plane",
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/workflow-graph.schema.json",
+          "schemas/workflow-dataset.schema.json",
+          "schemas/examples.workflow-graph.json",
+          "schemas/examples.workflow-dataset.json",
+          "workers/rust/crates/script-runner/src/workflow_dataset_contract.rs",
+          "sdks/rust/src/workflow_contracts.rs",
+          "sdks/rust/src/workflow_contract_validation.rs",
+          "scripts/check-workflow-dataset-contract.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.workflow-graph/v1",
+          "kyuubiki.workflow-dataset/v1",
+          "dataset_contract",
+          "operator_fetch_plan",
+          "dispatch_policy",
+          "WORKFLOW_GRAPH_SCHEMA_VERSION",
+          "WORKFLOW_DATASET_SCHEMA_VERSION",
+          "check-workflow-dataset-contract"
+        ]
+      }
+    ],
+    "sdk_headless": [
+      {
+        "id": "headless-service-action-contract",
+        "modules": [
+          "workbench-shell",
+          "sdk-headless"
+        ],
+        "files": [
+          "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
+          "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
+          "apps/frontend/test/headless/kyuubiki-headless-cli.test.mjs",
+          "apps/frontend/test/headless/kyuubiki-headless-live.test.mjs",
+          "sdks/rust/src/workflow_contracts.rs",
+          "sdks/python/kyuubiki_sdk/workflow_contracts.py",
+          "sdks/elixir/lib/kyuubiki_sdk/workflow_contracts.ex"
+        ],
+        "required_text": [
+          "service_health",
+          "workflow_submit_graph",
+          "direct_mesh_solve",
+          "requiresConfirmation",
+          "HeadlessActionContract",
+          "kyuubiki.headless-workflow/v1",
+          "kyuubiki.workflow-graph/v1",
+          "kyuubiki.workflow-dataset/v1"
+        ]
+      }
+    ],
+    "persistence_provenance": [
+      {
+        "id": "persistence-provenance-contract",
+        "modules": [
+          "contracts",
+          "installer-shell",
+          "orchestra-control-plane",
+          "runtime-installer",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/architecture/central-store-contract.json",
+          "deploy/installation-integrity-contract.json",
+          "releases/index.json",
+          "releases/snapshots/2.0.0.json",
+          "workers/rust/crates/script-runner/src/central_store_contract.rs",
+          "workers/rust/crates/script-runner/src/release_snapshot.rs",
+          "workers/rust/crates/script-runner/src/install_update_disk_hygiene.rs",
+          "apps/frontend/src/components/workbench/system/workbench-system-storage-contract.ts",
+          "apps/frontend/test/workflow/workbench-system-storage.test.ts",
+          "scripts/check-central-store-contract.mjs",
+          "scripts/create-release-snapshot.mjs",
+          "scripts/check-install-update-disk-hygiene.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.central-store-contract-check/v1",
+          "kyuubiki.central-provenance-policy/v1",
+          "releases/snapshots",
+          "retentionPolicy",
+          "snapshotPayloadPrefix",
+          "source_of_truth",
+          "safe storage cleanup preserves careful source-of-truth buckets",
+          "check-central-store-contract",
+          "create-release-snapshot",
+          "check-install-update-disk-hygiene"
+        ]
+      }
+    ],
+    "deployment_update": [
+      {
+        "id": "install-update-integrity-contract",
+        "modules": [
+          "hub-shell",
+          "installer-shell",
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
+        "files": [
+          "deploy/installation-integrity-contract.json",
+          "deploy/update-channels.json",
+          "deploy/install-update-disk-hygiene.json",
+          "releases/update-catalog.json",
+          "scripts/check-install-update-disk-hygiene.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.installation-contract/v1",
+          "kyuubiki.update-channels/v1",
+          "kyuubiki.install-update-disk-hygiene/v1",
+          "requires_integrity_contract",
+          "allowlisted",
+          "same-channel reinstall",
+          "remote_artifact_policy",
+          "protected_roots"
+        ]
+      }
+    ],
+    "benchmark": [
+      {
+        "id": "benchmark-profile-coverage-contract",
+        "modules": [
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/benchmark-profile-coverage.json",
+          "workers/rust/crates/script-runner/src/benchmark_profile_index.rs",
+          "workers/rust/crates/script-runner/src/benchmark_profile_index/markdown.rs",
+          "tests/integration/benchmark-profile-index.test.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.benchmark-profile-coverage/v1",
+          "kyuubiki.benchmark-profile-index/v1",
+          "expected_cases",
+          "coverage_summaries",
+          "gate",
+          "no retained benchmark profile runs"
+        ]
+      }
+    ],
+    "security": [
+      {
+        "id": "gui-credential-boundary-contract",
+        "modules": [
+          "contracts",
+          "hub-shell",
+          "desktop-shared-ui",
+          "workbench-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "docs/security.md",
+          "schemas/gui-runtime-capability-manifest.schema.json",
+          "workers/rust/crates/script-runner/src/frontend_checks.rs",
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs",
+          "scripts/check-gui-runtime-capability-contract.mjs"
+        ],
+        "required_text": [
+          ".kyuubiki/credentials",
+          "credential_surface",
+          "product_owned_static_ui",
+          "user_extensible_ui_allowed",
+          "Do not read or write token, password, credential, API key, or secret-shaped values through browser storage.",
+          "GUI code should select bindings by declared capability"
+        ]
+      },
+      {
+        "id": "runtime-security-boundary-contract",
+        "modules": [
+          "orchestra-control-plane",
+          "runtime-protocol",
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "runtime-installer",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "schemas/agent-solver-qualification.schema.json",
+          "workers/rust/crates/engine/src/tests/workflow_security.rs"
+        ],
+        "required_text": [
+          "failure_receipt",
+          "safe_to_continue_other_tasks",
+          "unsupported recovery policy"
+        ]
+      }
+    ]
+  },
+  "cell_requirements": [
+    {
+      "module_id": "runtime-engine-solver",
+      "paradigm": "solver_execution",
+      "dimensions": [
+        "numerical_validation"
+      ]
+    },
+    {
+      "module_id": "runtime-engine-solver",
+      "paradigm": "validation",
+      "dimensions": [
+        "numerical_validation"
+      ]
+    },
+    {
+      "module_id": "verification-evidence",
+      "paradigm": "validation",
+      "dimensions": [
+        "numerical_validation"
+      ]
+    },
+    {
+      "module_id": "orchestra-control-plane",
+      "paradigm": "workflow_composition",
+      "dimensions": [
+        "recovery"
+      ]
+    },
+    {
+      "module_id": "runtime-agent-cli",
+      "paradigm": "runtime_api",
+      "dimensions": [
+        "recovery"
+      ]
+    },
+    {
+      "module_id": "runtime-agent-cli",
+      "paradigm": "deployment_update",
+      "dimensions": [
+        "recovery"
+      ]
+    },
+    {
+      "module_id": "runtime-installer",
+      "paradigm": "deployment_update",
+      "dimensions": [
+        "recovery"
+      ]
+    }
+  ],
+  "evidence_claims": [
+    {
+      "id": "desktop-product-ux-closure",
+      "status": "proven",
+      "modules": [
+        "hub-shell",
+        "desktop-shared-ui",
+        "workbench-shell",
+        "installer-shell"
+      ],
+      "paradigms": [
+        "product_surface"
+      ],
+      "dimensions": [
+        "ux_closure"
+      ],
+      "files": [
+        "config/architecture/desktop-capability-closure.json",
+        "tests/integration/desktop-gui-capability-closure.test.mjs"
+      ],
+      "required_text": [
+        "kyuubiki.desktop-capability-closure/v1",
+        "every required desktop capability closes UI, route, native, and result layers"
+      ]
+    },
+    {
+      "id": "headless-cross-language-parity",
+      "status": "proven",
+      "modules": [
+        "workbench-shell",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "sdk_parity"
+      ],
+      "files": [
+        "sdks/README.md",
+        "sdks/rust/src/workflow_contracts.rs",
+        "sdks/python/kyuubiki_sdk/workflow_contracts.py",
+        "sdks/elixir/lib/kyuubiki_sdk/workflow_contracts.ex"
+      ],
+      "required_text": [
+        "Rust, Python, and Elixir remain peer official SDK families",
+        "kyuubiki.workflow-graph/v1"
+      ]
+    },
+    {
+      "id": "solver-independent-validation-depth",
+      "status": "proven",
+      "modules": [
+        "runtime-engine-solver",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "solver_execution",
+        "validation"
+      ],
+      "dimensions": [
+        "numerical_validation"
+      ],
+      "files": [
+        "docs/weakness-roadmap.md",
+        "config/operator-qualification-roadmap.json",
+        "config/operator-qualification-evidence-kits/closed-form-promotions.json"
+      ],
+      "required_text": [
+        "baseline is `23 complete / 0 partial / 0 thin`",
+        "minimum_candidate_level",
+        "release-retained validation output"
+      ]
+    },
+    {
+      "id": "orchestra-distributed-recovery-depth",
+      "status": "proven",
+      "modules": [
+        "orchestra-control-plane"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "docs/weakness-roadmap.md"
+      ],
+      "required_text": [
+        "scheduler retry plan isolates package rejection without cascading failure",
+        "retry_failed_cases",
+        "safe_to_continue_other_tasks"
+      ]
+    },
+    {
+      "id": "agent-watchdog-recovery",
+      "status": "proven",
+      "modules": [
+        "runtime-agent-cli"
+      ],
+      "paradigms": [
+        "runtime_api",
+        "deployment_update"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
+        "docs/weakness-roadmap.md"
+      ],
+      "required_text": [
+        "recent_failure_count",
+        "scheduler retry",
+        "safe_to_continue_other_tasks"
+      ]
+    },
+    {
+      "id": "installer-retry-safe-recovery",
+      "status": "proven",
+      "modules": [
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "workers/rust/crates/installer/src/remote_deployment_plan.rs",
+        "workers/rust/crates/installer/src/tests/remote_deployment.rs"
+      ],
+      "required_text": [
+        "keep journal for retry",
+        "retry_safe_step_contract"
+      ]
+    }
+  ]
+}

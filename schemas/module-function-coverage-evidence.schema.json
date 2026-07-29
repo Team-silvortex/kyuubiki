@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/module-function-coverage-evidence.schema.json",
+  "title": "Kyuubiki Module Function Coverage Evidence Shard",
+  "type": "object",
+  "required": ["schema_version", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "enum": [
+        "../../schemas/module-function-coverage-evidence.schema.json",
+        "../../../schemas/module-function-coverage-evidence.schema.json"
+      ]
+    },
+    "schema_version": {
+      "const": "kyuubiki.module-function-coverage-evidence/v1"
+    },
+    "summary": { "type": "string", "minLength": 24 },
+    "paradigm_contract_evidence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/contractEvidence" }
+      }
+    },
+    "cell_requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cellRequirement" }
+    },
+    "evidence_claims": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidenceClaim" }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "moduleId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "paradigm": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "dimension": {
+      "enum": [
+        "execution",
+        "benchmark",
+        "security",
+        "contract",
+        "numerical_validation",
+        "recovery",
+        "sdk_parity",
+        "ux_closure"
+      ]
+    },
+    "contractEvidence": {
+      "type": "object",
+      "required": ["id", "modules", "files", "required_text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/moduleId" }
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "cellRequirement": {
+      "type": "object",
+      "required": ["module_id", "paradigm", "dimensions"],
+      "additionalProperties": false,
+      "properties": {
+        "module_id": { "$ref": "#/$defs/moduleId" },
+        "paradigm": { "$ref": "#/$defs/paradigm" },
+        "dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/dimension" }
+        }
+      }
+    },
+    "evidenceClaim": {
+      "type": "object",
+      "required": [
+        "id",
+        "status",
+        "modules",
+        "paradigms",
+        "dimensions",
+        "files",
+        "required_text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "enum": ["proven", "partial", "open"] },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/moduleId" }
+        },
+        "paradigms": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/paradigm" }
+        },
+        "dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/dimension" }
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

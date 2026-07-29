@@ -1,0 +1,110 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Scoped evidence that Pwdt is a product-owned programmable Workbench UI control plane, not a headless SDK surface.",
+  "paradigm_contract_evidence": {
+    "product_surface": [
+      {
+        "id": "workbench-pwdt-browser-bridge-contract",
+        "modules": [
+          "workbench-shell"
+        ],
+        "files": [
+          "apps/frontend/src/lib/scripting/workbench-script-browser-bridge.ts",
+          "apps/frontend/src/lib/scripting/workbench-script-runtime-pyodide.ts",
+          "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts"
+        ],
+        "required_text": [
+          "kyuubiki.pwdt.browser-bridge/v1",
+          "__kyuubikiPwdt",
+          "parityReport",
+          "product_owned_static_ui",
+          "runHeatToThermoQuadStudy",
+          "uiSelector",
+          "selectorExists",
+          "normal_recipe_count"
+        ]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "workbench-pwdt-recipe-workflow-contract",
+        "modules": [
+          "workbench-shell"
+        ],
+        "files": [
+          "apps/frontend/src/lib/scripting/workbench-script-runtime-recipes.ts",
+          "apps/frontend/src/lib/scripting/workbench-script-dsl-recipes.ts",
+          "apps/frontend/src/lib/scripting/workbench-script-dsl-compiler.ts",
+          "apps/frontend/src/lib/scripting/workbench-script-dsl-templates.ts",
+          "apps/frontend/src/components/workbench/workbench-script-catalog-panel.tsx"
+        ],
+        "required_text": [
+          "CLOSED_LOOP_TRUSS_RECIPE_ID",
+          "HEAT_TO_THERMO_QUAD_RECIPE_ID",
+          "WORKBENCH_SCRIPT_RECIPES",
+          "requiredActions",
+          "expectedState",
+          "resultKeys",
+          "state/projectHeatToThermo",
+          "expect_recipe",
+          "capture_recipe_catalog",
+          "run_recipe"
+        ]
+      }
+    ],
+    "validation": [
+      {
+        "id": "workbench-pwdt-parity-test-contract",
+        "modules": [
+          "workbench-shell"
+        ],
+        "files": [
+          "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
+          "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
+          "apps/frontend/test/workflow/workbench-script-snippets.test.ts"
+        ],
+        "required_text": [
+          "ky\\.run_recipe",
+          "ky.require_recipe",
+          "ky.recipes_matching",
+          "__kyuubikiPwdt.version",
+          "recipe_count",
+          "resultKeys",
+          "WORKBENCH_SCRIPT_RECIPES"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "workbench-pwdt-programmable-ui-closure",
+      "status": "proven",
+      "modules": [
+        "workbench-shell"
+      ],
+      "paradigms": [
+        "product_surface",
+        "workflow_composition",
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "ux_closure"
+      ],
+      "files": [
+        "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
+        "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
+        "apps/frontend/test/workflow/workbench-script-snippets.test.ts"
+      ],
+      "required_text": [
+        "run_recipe",
+        "expect_recipe",
+        "capture_recipe_catalog",
+        "installWorkbenchPwdtBrowserBridge",
+        "HEAT_TO_THERMO_QUAD_RECIPE_ID",
+        "WORKBENCH_SCRIPT_RECIPES"
+      ]
+    }
+  ]
+}

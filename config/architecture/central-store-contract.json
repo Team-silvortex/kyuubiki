@@ -169,8 +169,8 @@
     { "file": "config/architecture/contracts-runtime-api-surface.json", "text": "self-hosted website service surface", "label": "central runtime API self-host web surface contract" },
     { "file": "schemas/contracts-runtime-api-surface.schema.json", "text": "serviceSurface", "label": "central runtime API service surface schema" },
     { "file": "scripts/check-contracts-runtime-api-surface.mjs", "text": "requireServiceSurface", "label": "central runtime API service surface checker" },
-    { "file": "config/architecture/module-function-coverage-tensor.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
-    { "file": "config/architecture/module-function-coverage-tensor.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
+    { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
+    { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
     { "file": "workers/rust/crates/script-runner/src/module_function_tensor.rs", "text": "maturity_gap_count", "label": "scoped tensor maturity gap count" },
     { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" }
   ]
