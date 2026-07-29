@@ -52,6 +52,16 @@ Current weak point:
 
 - all release-gated solve operators are now `qualification` level, but several
   qualifications are still scoped around compact retained fixtures
+- readiness v2 now separates reference, convergence, robustness, and retained
+  release evidence for all 23 qualification candidates; the current measured
+  baseline is `6 complete / 17 partial / 0 thin`
+- `beam-frame-classic` now links its independent canonical reference to the
+  existing `1/2/4/8/16` beam/frame refinement regression, making it the first
+  candidate combining complete four-dimensional evidence with an independent
+  canonical reference
+- `solve.nonlinear_spring_1d` now retains convergence and robustness evidence
+  for the current Cardano hardening scope, clearing the last thin
+  release-gated operator candidate in readiness v2
 - benchmark-backed accuracy exists across the covered matrix, but the next
   trust jump depends on deeper convergence, perturbation, and reference-tool
   evidence
@@ -114,6 +124,10 @@ Current progress:
   objectivity checks in its active qualification profile; multi-element mesh
   convergence remains an explicit next-depth boundary rather than an implied
   capability
+- `solve.plane_quad_2d` now uses a native bilinear isoparametric Q4 kernel with
+  full `2x2` Gauss integration instead of two constant-strain triangles;
+  distorted `1x1`, `2x2`, and `4x4` affine patches remain exact, and inverted
+  connectivity is rejected by Gauss-point Jacobian guards
 - `solve.thermal_truss_2d` and `solve.thermal_truss_3d` now retain coupled
   thermal-mechanical rigid-rotation checks with free response degrees of
   freedom; arbitrary assemblies and nonlinear thermal mechanics remain outside
@@ -122,6 +136,10 @@ Current progress:
   loaded rigid-rotation check; `solve.thermal_frame_3d` now has an optional
   explicit `local_y_axis` contract plus arbitrary 3D rigid-rotation evidence,
   while omitted orientation retains the legacy global-reference behavior
+- `solve.frame_3d` now has the same optional `local_y_axis` contract for
+  asymmetric sections, with arbitrary rigid-rotation objectivity, cantilever
+  mesh-convergence, perturbation scaling, and invalid-axis rejection retained
+  in the active qualification evidence
 - both thermal frame operators now retain manufactured quadratic-field mesh
   convergence across 1, 2, 4, 8, and 16 elements; axial expansion and all
   represented bending directions demonstrate second-order error reduction

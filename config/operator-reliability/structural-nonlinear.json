@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs",
-          "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs"
+          "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs",
+          "workers/rust/crates/solver/tests/mechanical_convergence/nonlinear.rs"
         ],
         "reliability_suite": "nonlinear_spring_reliability",
         "review": {
@@ -24,7 +25,9 @@
           "boundary_checks": [
             "fixed_root_displacement",
             "loaded_tip_response",
-            "monotonic_load_factor_steps"
+            "monotonic_load_factor_steps",
+            "non_finite_input_rejection",
+            "zero_length_element_rejection"
           ],
           "diagnostics": [
             "convergence_status",
@@ -43,7 +46,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs",
-            "nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling"
+            "workers/rust/crates/solver/tests/mechanical_convergence/nonlinear.rs",
+            "nonlinear_spring_1d_preserves_displacement_under_law_and_load_scaling",
+            "nonlinear_spring_1d_matches_hardening_closed_form_under_perturbations"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json",
@@ -55,7 +60,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs",
             "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs",
-            "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs"
+            "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/mechanical_convergence/nonlinear.rs"
           ]
         }
       },

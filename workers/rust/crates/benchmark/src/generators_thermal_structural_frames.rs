@@ -56,6 +56,7 @@ pub(crate) fn generate_frame_3d_case(segments: usize, length: f64) -> SolveFrame
             id: format!("f3e{index}"),
             node_i: index,
             node_j: index + 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,

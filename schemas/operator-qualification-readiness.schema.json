@@ -13,7 +13,7 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v1" },
+    "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v2" },
     "version_line": { "type": "string", "pattern": "^moxi 2\\.0\\.x$" },
     "generated_at_utc": { "type": "string", "minLength": 10 },
     "summary": {
@@ -36,7 +36,8 @@
         "release_gate_impacts",
         "release_review_statuses",
         "release_review_decisions",
-        "release_promotion_summaries"
+        "release_promotion_summaries",
+        "numerical_validation_depth"
       ],
       "additionalProperties": false,
       "properties": {
@@ -57,7 +58,8 @@
         "release_gate_impacts": { "$ref": "#/$defs/releaseGateImpactCounts" },
         "release_review_statuses": { "$ref": "#/$defs/releaseReviewStatusCounts" },
         "release_review_decisions": { "$ref": "#/$defs/releaseReviewDecisionCounts" },
-        "release_promotion_summaries": { "$ref": "#/$defs/releasePromotionSummaryCounts" }
+        "release_promotion_summaries": { "$ref": "#/$defs/releasePromotionSummaryCounts" },
+        "numerical_validation_depth": { "$ref": "#/$defs/numericalValidationDepthSummary" }
       }
     },
     "next_actions": { "type": "array", "items": { "$ref": "#/$defs/nextAction" } },
@@ -141,6 +143,70 @@
         "missing": { "type": "integer", "minimum": 0 }
       }
     },
+    "numericalValidationDepthSummary": {
+      "type": "object",
+      "required": ["complete", "partial", "thin", "with_independent_reference", "missing_dimensions"],
+      "additionalProperties": false,
+      "properties": {
+        "complete": { "type": "integer", "minimum": 0 },
+        "partial": { "type": "integer", "minimum": 0 },
+        "thin": { "type": "integer", "minimum": 0 },
+        "with_independent_reference": { "type": "integer", "minimum": 0 },
+        "missing_dimensions": { "$ref": "#/$defs/numericalValidationDimensionCounts" }
+      }
+    },
+    "numericalValidationDimensionCounts": {
+      "type": "object",
+      "required": ["reference", "convergence", "robustness", "retained_release"],
+      "additionalProperties": false,
+      "properties": {
+        "reference": { "type": "integer", "minimum": 0 },
+        "convergence": { "type": "integer", "minimum": 0 },
+        "robustness": { "type": "integer", "minimum": 0 },
+        "retained_release": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "numericalValidationDepth": {
+      "type": "object",
+      "required": [
+        "level",
+        "required_dimensions",
+        "present_dimensions",
+        "missing_dimensions",
+        "independent_reference",
+        "artifact_kinds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": { "enum": ["complete", "partial", "thin"] },
+        "required_dimensions": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/numericalValidationDimension" }
+        },
+        "present_dimensions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/numericalValidationDimension" }
+        },
+        "missing_dimensions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/numericalValidationDimension" }
+        },
+        "independent_reference": { "type": "boolean" },
+        "artifact_kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "numericalValidationDimension": {
+      "enum": ["reference", "convergence", "robustness", "retained_release"]
+    },
     "readiness": { "enum": ["planned", "partially_collecting", "collecting_with_entries", "ready_for_review", "broken", "blocked"] },
     "artifactState": { "enum": ["present", "missing", "command_available", "not_started"] },
     "candidate": {
@@ -156,6 +222,7 @@
         "operator_ids",
         "artifact_counts",
         "artifacts",
+        "numerical_validation_depth",
         "validation_profiles",
         "primary_blocker",
         "evidence_gaps",
@@ -186,6 +253,7 @@
           }
         },
         "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "numerical_validation_depth": { "$ref": "#/$defs/numericalValidationDepth" },
         "validation_profiles": { "type": "array", "items": { "$ref": "#/$defs/validationProfile" } },
         "primary_blocker": { "type": "string", "minLength": 1 },
         "evidence_gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } },

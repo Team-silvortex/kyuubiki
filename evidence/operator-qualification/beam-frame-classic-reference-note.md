@@ -81,6 +81,7 @@ The `beam-frame-classic` candidate may only move beyond this reference-note
 stage when the evidence kit also contains:
 
 - a multi-case regression artifact that runs at least two independent cases
+- a `1/2/4/8/16` element beam and frame refinement regression against the
+  canonical closed forms
 - a force, moment, rotation, and torsion sign-convention note
 - retained release provenance for the regression output
-

@@ -178,6 +178,11 @@ It also reports `release_review_decisions`, which counts required, declared,
 retained, and missing review decision records for release-retained artifacts.
 The same summary includes `operator_trust_levels`, so UI and CI surfaces can
 show the current manifest distribution without reparsing reliability shards.
+Readiness v2 additionally emits `numerical_validation_depth` for every
+candidate. A complete candidate must retain reference, convergence,
+robustness, and release evidence; `reference_note` is counted separately as an
+independent reference signal. This prevents a compact closed-form fixture from
+silently standing in for convergence or external correlation.
 `make check-operator-reliability` builds and validates this readiness report
 before checking the release manifest, so the qualification queue stays visible
 without pretending that planning artifacts are qualification evidence.
@@ -327,6 +332,13 @@ boundary coverage, material-parameter provenance, and mesh/refinement
 equivalence. Its validation profile executes the heat and thermoelastic
 triangle/quad review fixtures together, then checks that a two-triangle split
 matches the quad patch response for heat flow and restrained thermal stress.
+On the current moxi 2.7 line, `solve.thermal_plane_quad_2d` is a native
+bilinear isoparametric Q4 rather than a pair of constant-strain triangles. It
+uses full 2x2 Gauss integration for stiffness, nodal-temperature interpolation,
+thermal equivalent loads, stress recovery, and strain-energy recovery.
+Distorted 1x1, 2x2, and 4x4 meshes retain exact free uniform thermal expansion;
+a restrained distorted patch integrates a linear temperature field over the
+physical element area; inverted Gauss-point Jacobians are rejected.
 The retained heat-plane mesh regression also carries a linear-field manufactured
 check: changing the triangle diagonal preserves nodal temperatures, gradients,
 heat flux, and total heat-flow rate, while a conductivity perturbation scales
@@ -357,6 +369,9 @@ thermoelastic proof point, not a claim for arbitrary coupled thermal boundary
 conditions.
 For the moxi 2.0.0 line, the retained validation report is attached at
 `releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json`.
+That report remains historical evidence for the earlier implementation. The
+native Q4 implementation is retained separately at
+`releases/qualification-evidence/2.7.9/thermal-plane-q4-isoparametric-evidence.json`.
 
 ## Thermal Plane Material And Boundary Notes
 
@@ -369,7 +384,9 @@ provenance.
 The thermal plane qualification scope is backed by retained boundary and
 material evidence at
 `evidence/operator-qualification/thermal-plane-boundary-coverage.md` and
-`evidence/operator-qualification/thermal-plane-material-provenance.json`; the
+`evidence/operator-qualification/thermal-plane-material-provenance.json`.
+The native thermoelastic Q4 formulas are retained at
+`evidence/operator-qualification/thermal-plane-q4-closed-form.md`; the
 mesh/refinement regression lives at
 `workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs`.
 
@@ -838,9 +855,11 @@ tangent stiffness independent of reported geometry length. Every retained
 branch also re-derives spring extension from node displacement, force,
 tangent stiffness, node id/coordinate passthrough, max displacement, max force,
 residual bounds, and monotone converged load-step metadata from public result
-fields. This is a monotone
-one-dimensional hardening qualification, not a hysteresis, softening,
-snap-through, or dynamics claim.
+fields. The active convergence lane also runs the Cardano comparison across
+load, linear-stiffness, and cubic-stiffness perturbations, while the boundary
+lane rejects non-finite node data and zero-length elements before Newton
+iteration. This is a monotone one-dimensional hardening qualification, not a
+hysteresis, softening, snap-through, or dynamics claim.
 
 `solve.cohesive_interface_1d` now has a retained component-level screening
 profile for a scalar Mode-I bilinear traction-separation history. The analytic

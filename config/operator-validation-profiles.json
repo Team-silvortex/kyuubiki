@@ -587,9 +587,7 @@
       "profile_role": "release_candidate",
       "qualification_candidate_id": "thermal-plane-patch",
       "trust_goal": "qualification_collecting",
-      "operators": [
-        "solve.thermal_plane_triangle_2d",
-        "solve.thermal_plane_quad_2d",
+      "operators": ["solve.thermal_plane_triangle_2d", "solve.thermal_plane_quad_2d",
         "solve.heat_plane_triangle_2d",
         "solve.heat_plane_quad_2d"
       ],
@@ -597,27 +595,35 @@
         "mesh_refinement_equivalence",
         "thermal_boundary_coverage",
         "thermoelastic_stress_cross_check",
-        "material_parameter_provenance"
+        "material_parameter_provenance",
+        "bilinear_isoparametric_thermoelastic_quad",
+        "distorted_free_expansion_invariance",
+        "gauss_point_temperature_interpolation"
       ],
       "formal_invariants": [
         "fixed_hot_and_cold_boundaries",
         "free_node_temperature_resolution",
         "temperature_gradient_drives_heat_flux",
-        "triangle_split_matches_quad_patch_response",
+        "triangle_and_quad_match_retained_uniform_patch_response",
         "restrained_thermal_strain_drives_compressive_stress",
-        "stored_strain_energy_is_non_negative"
+        "stored_strain_energy_is_non_negative",
+        "distorted_q4_mesh_preserves_free_uniform_thermal_expansion",
+        "linear_nodal_temperature_is_integrated_at_q4_gauss_points",
+        "inverted_thermal_q4_jacobian_is_rejected"
       ],
       "evidence_paths": [
         "config/operator-reliability/thermal.json",
         "docs/operator-reliability.md",
         "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+        "evidence/operator-qualification/thermal-plane-q4-closed-form.md",
         "evidence/operator-qualification/thermal-plane-material-provenance.json",
         "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
         "workers/rust/crates/solver/tests/heat_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/heat_plane_quad_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
-        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+        "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs"
       ],
       "commands": [
         {
@@ -639,6 +645,11 @@
           "id": "thermal-quad-review",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "thermal-quad-isoparametric",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_isoparametric -- --nocapture"
         },
         {
           "id": "thermal-plane-mesh-refinement-regression",
@@ -717,6 +728,7 @@
       "validation_methods": [
         "classic_closed_form",
         "beam_frame_cross_check",
+        "mesh_refinement_invariance",
         "torsion_closed_form",
         "sign_convention_scope"
       ],
@@ -724,6 +736,7 @@
         "cantilever_tip_displacement_matches_closed_form",
         "cantilever_tip_rotation_matches_closed_form",
         "frame_2d_matches_equivalent_beam_cantilever",
+        "beam_and_frame_refinement_preserve_closed_form_response",
         "torsion_twist_matches_t_l_over_gj",
         "sign_convention_documented_for_force_moment_rotation_and_torsion"
       ],
@@ -731,6 +744,7 @@
         "evidence/operator-qualification/beam-frame-classic-reference-note.md",
         "evidence/operator-qualification/beam-frame-force-sign-convention.md",
         "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+        "workers/rust/crates/solver/tests/mechanical_convergence/beam_frame.rs",
         "workers/rust/crates/solver/tests/beam_1d_review.rs",
         "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
         "workers/rust/crates/solver/tests/frame_input_reliability.rs",
@@ -743,6 +757,11 @@
           "id": "beam-frame-classic-regression",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_frame_classic_regression -- --nocapture"
+        },
+        {
+          "id": "beam-frame-mesh-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test mechanical_convergence beam_frame -- --nocapture"
         },
         {
           "id": "beam-review-fixture",

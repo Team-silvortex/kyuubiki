@@ -100,6 +100,7 @@ fn serializes_frame_3d_rpc_round_trip() {
                 id: "f0".to_string(),
                 node_i: 0,
                 node_j: 1,
+                local_y_axis: Some([0.0, 1.0, 0.0]),
                 area: 0.01,
                 youngs_modulus: 210.0e9,
                 shear_modulus: 80.0e9,
@@ -118,6 +119,18 @@ fn serializes_frame_3d_rpc_round_trip() {
 
     assert_eq!(decoded.method, RpcMethod::SolveFrame3d);
     assert_eq!(decoded.id, "rpc-frame-3d");
+    let params: SolveFrame3dRequest =
+        serde_json::from_value(decoded.params).expect("frame params should decode");
+    assert_eq!(params.elements[0].local_y_axis, Some([0.0, 1.0, 0.0]));
+
+    let mut legacy_params = serde_json::to_value(&params).expect("frame params should serialize");
+    legacy_params["elements"][0]
+        .as_object_mut()
+        .expect("element should serialize as an object")
+        .remove("local_y_axis");
+    let legacy: SolveFrame3dRequest =
+        serde_json::from_value(legacy_params).expect("legacy frame params should decode");
+    assert_eq!(legacy.elements[0].local_y_axis, None);
 }
 
 #[test]

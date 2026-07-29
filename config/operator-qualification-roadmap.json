@@ -548,7 +548,7 @@
         "solve.plane_triangle_2d",
         "solve.plane_quad_2d"
       ],
-      "rationale": "The plane triangle and split-triangle quad operators have retained small-patch direct-stiffness references with stress diagnostic and energy invariants.",
+      "rationale": "The plane triangle and native bilinear Q4 operators retain small-patch references, while Q4 adds full 2x2 Gauss integration, distorted-mesh affine invariance, and positive-Jacobian rejection.",
       "primary_blocker": "no blocker; reviewer approved the retained plane 2D patch validation bundle against the graduation gate",
       "evidence_gaps": [
         "none for the current plane-2d patch qualification scope"

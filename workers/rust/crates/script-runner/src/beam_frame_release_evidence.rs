@@ -12,6 +12,7 @@ const SOURCE: &str = "config/operator-validation-profiles.json";
 const EXPECTED_OPERATORS: &[&str] = &["solve.beam_1d", "solve.torsion_1d", "solve.frame_2d"];
 const EXPECTED_COMMANDS: &[&str] = &[
     "beam-frame-classic-regression",
+    "beam-frame-mesh-convergence",
     "beam-review-fixture",
     "torsion-review-fixture",
     "frame-review-fixture",
@@ -23,12 +24,28 @@ const EXPECTED_EVIDENCE_PATHS: &[&str] = &[
     "evidence/operator-qualification/beam-frame-classic-reference-note.md",
     "evidence/operator-qualification/beam-frame-force-sign-convention.md",
     "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
+    "workers/rust/crates/solver/tests/mechanical_convergence/beam_frame.rs",
     "workers/rust/crates/solver/tests/beam_1d_review.rs",
     "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
     "workers/rust/crates/solver/tests/torsion_1d_review.rs",
     "workers/rust/crates/solver/tests/torsion_input_reliability.rs",
     "workers/rust/crates/solver/tests/frame_input_reliability.rs",
     "workers/rust/crates/solver/tests/frame_2d_review.rs",
+];
+const EXPECTED_VALIDATION_METHODS: &[&str] = &[
+    "classic_closed_form",
+    "beam_frame_cross_check",
+    "mesh_refinement_invariance",
+    "torsion_closed_form",
+    "sign_convention_scope",
+];
+const EXPECTED_INVARIANTS: &[&str] = &[
+    "cantilever_tip_displacement_matches_closed_form",
+    "cantilever_tip_rotation_matches_closed_form",
+    "frame_2d_matches_equivalent_beam_cantilever",
+    "beam_and_frame_refinement_preserve_closed_form_response",
+    "torsion_twist_matches_t_l_over_gj",
+    "sign_convention_documented_for_force_moment_rotation_and_torsion",
 ];
 
 pub(crate) fn run_check_beam_frame_qualification_release_evidence(
@@ -105,6 +122,16 @@ fn validate_profile(root: &Path, profile: &Value) -> RunnerResult<()> {
     )?;
     assert_bool(profile.get("ok"), true, "profile.ok")?;
     assert_string_set(profile.get("operators"), EXPECTED_OPERATORS, "operators")?;
+    assert_string_set(
+        profile.get("validation_methods"),
+        EXPECTED_VALIDATION_METHODS,
+        "validation_methods",
+    )?;
+    assert_string_set(
+        profile.get("formal_invariants"),
+        EXPECTED_INVARIANTS,
+        "formal_invariants",
+    )?;
     assert_string_set(
         profile.get("evidence_paths"),
         EXPECTED_EVIDENCE_PATHS,

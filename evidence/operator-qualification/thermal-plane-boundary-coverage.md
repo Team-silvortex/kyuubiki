@@ -40,6 +40,19 @@ The thermoelastic-plane review fixtures cover:
 The current restrained fixtures are conservative: they catch sign, stress, and
 energy regressions, but they do not cover mixed displacement/load boundaries.
 
+For the current moxi 2.7 line, the thermoelastic quad fixture also covers a
+native bilinear isoparametric Q4 with full 2x2 Gauss integration. The retained
+regression exercises:
+
+- minimally restrained free thermal expansion over distorted 1x1, 2x2, and
+  4x4 meshes
+- physical-area integration of a linear nodal temperature field on a
+  restrained trapezoid
+- rejection of inverted node ordering through positive Gauss-point Jacobians
+
+The moxi 2.0.0 retained packet predates this native Q4 path and remains
+historical evidence for its own release line.
+
 ## Boundary Gap
 
 Before qualification, the group still needs a retained mixed-boundary fixture

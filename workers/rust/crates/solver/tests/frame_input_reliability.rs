@@ -54,6 +54,19 @@ fn frame_3d_rejects_non_finite_node_coordinates_loads_and_moments() {
 }
 
 #[test]
+fn frame_3d_rejects_invalid_local_section_axis() {
+    let mut request = frame_3d_request();
+    request.elements[0].local_y_axis = Some([f64::NAN, 1.0, 0.0]);
+    let error = solve_frame_3d(&request).expect_err("non-finite local axis should be rejected");
+    assert!(error.contains("local_y_axis must be finite"));
+
+    let mut request = frame_3d_request();
+    request.elements[0].local_y_axis = Some([1.0, 0.0, 0.0]);
+    let error = solve_frame_3d(&request).expect_err("parallel local axis should be rejected");
+    assert!(error.contains("local_y_axis must not be parallel"));
+}
+
+#[test]
 fn thermal_frame_3d_rejects_non_finite_node_coordinates_loads_moments_and_temperature() {
     let mut request = thermal_frame_3d_request();
     request.nodes[1].z = f64::NAN;
@@ -311,6 +324,7 @@ fn frame_3d_request() -> SolveFrame3dRequest {
             id: "beam".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,

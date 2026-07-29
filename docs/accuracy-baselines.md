@@ -26,9 +26,9 @@ mechanics.
 | `truss_2d` | three-bar triangular truss | max displacement `1.114463950892853e-6`, max stress `60092.52125773316`, tip `ux=2.380952380952381e-7`, tip `uy=-1.088733463909362e-6` | absolute tolerances from solver unit baseline | automated |
 | `truss_3d` | space-frame pyramid sample fixture | max displacement `0.0000015799074540869988`, max stress `74386.37868140468`, top-node `(ux, uy, uz)=(2.897530666749509e-7, 2.897530666749509e-7, -0.0000015258420246488773)`, stressed members `(-74386.37868140468, -63387.6959669619, -63387.6959669619)` | absolute tolerances from solver unit baseline | automated |
 | `plane_triangle_2d` | two-triangle square patch | max displacement `1.504347441414315e-6`, max stress `100000`, node-2 `ux=4.714285714285715e-7`, node-2 `uy=-1.428571428571429e-6` | absolute tolerances from solver unit baseline | automated |
-| `plane_quad_2d` | single quad plate patch sample fixture | max displacement `5.333507749004975e-7`, max stress `126981.38527836032`, node-2 `(ux, uy)=(2.576145151695419e-7, -4.6700943316053366e-7)`, stress `(12500, -120000)`, shear `3048.7804878048746` | absolute tolerances from solver unit baseline | automated |
+| `plane_quad_2d` | fully integrated bilinear Q4 plate patch | max displacement `5.788653902410632e-7`, max stress `126908.6417525364`, node-2 `(ux, uy)=(2.9330817937375316e-7, -4.990545580709515e-7)`, stress `(12500, -120000)`, shear `4064.2076502732207` | absolute tolerances plus distorted affine-patch invariance | automated |
 | `thermal_plane_triangle_2d` | fully restrained two-triangle thermoelastic patch | max displacement `0`, max stress `50149253.731343284`, max temperature delta `40`, element stress `-50149253.731343284` | absolute tolerances from solver unit baseline | automated |
-| `thermal_plane_quad_2d` | fully restrained quad thermoelastic patch | max displacement `0`, max stress `34477611.940298505`, max temperature delta `30`, element stress `-34477611.940298505`, mechanical strain `-3.3e-4` | absolute tolerances from solver unit baseline | automated |
+| `thermal_plane_quad_2d` | fully restrained bilinear isoparametric Q4 thermoelastic patch with 2x2 Gauss integration | max displacement `0`, max stress `34477611.940298505`, max temperature delta `30`, element stress `-34477611.940298505`, mechanical strain `-3.3e-4`; distorted free-expansion and linear-temperature integration regressions are retained separately | absolute tolerances from solver unit baseline | automated |
 | `thermal_frame_2d` | heated portal frame sample fixture | max displacement `0.0010408174194986581`, max rotation `0.0006805479452054797`, max axial force `24164.383561644005`, max moment `42915.94520547945`, max stress `36971506.84931508`, max temperature delta `35`, max temperature gradient `30` | absolute tolerances from solver unit baseline | automated |
 | `thermal_truss_2d` | heated triangular truss sample fixture | max displacement `4.801785714285713e-4`, max axial force `235.84952830143558`, max stress `23584.952830143557`, max temperature delta `40` | absolute tolerances from solver unit baseline | automated |
 | `thermal_truss_3d` | restrained uniform temperature rise in a 3D truss member | max displacement `0`, max stress magnitude `100800000`, max axial force magnitude `1008000`, max temperature delta `40` | relative tolerance `1e-9` on force/stress magnitudes | automated |
@@ -505,7 +505,7 @@ The twenty-third approved qualification packet is
 [plane-2d-patch-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json).
 It promotes `solve.plane_triangle_2d` and `solve.plane_quad_2d` for the
 retained small plane-stress patch scope after direct-stiffness displacement,
-stress diagnostic, split-triangle, and strain-energy checks pass. The focused
+stress diagnostic, isoparametric Q4, and strain-energy checks pass. The focused
 closed-form regression now covers load, thickness, and Young's-modulus scaling
 for both triangle and quad retained patch paths, plus similar-geometry scaling
 under fixed nodal loads. It also checks the global work-energy conjugacy
@@ -513,9 +513,10 @@ under fixed nodal loads. It also checks the global work-energy conjugacy
 regression also re-derives node id/coordinate passthrough, node displacement
 magnitudes, max displacement, triangle/quad element area from node coordinates,
 max stress, max strain-energy density, and total strain energy from public
-result fields, while preserving
-the quad split-triangle weighted-diagnostic contract for nonlinear stress
-summaries.
+result fields. The current Q4 path also retains full `2x2` Gauss integration,
+affine-field invariance over distorted `1x1`, `2x2`, and `4x4` meshes, and
+non-positive Jacobian rejection. The historical `2.0.0` evidence packet still
+records the earlier split-triangle implementation.
 
 ## Why these three first
 

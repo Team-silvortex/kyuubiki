@@ -44,6 +44,17 @@ closed-form displacement, then checks:
 - monotonic load-step factors
 - converged residual at every retained load step
 
+## Convergence And Robustness
+
+The active convergence evidence also reruns the Cardano comparison across load,
+linear-stiffness, and cubic-stiffness perturbations. Each retained branch checks
+the same root, force, tangent stiffness, and load-step convergence properties,
+so the qualification is not tied to a single lucky numeric fixture.
+
+The robustness evidence rejects non-finite node coordinates or loads and
+zero-length spring elements before Newton iteration starts. These boundaries
+keep invalid input from being misclassified as nonlinear nonconvergence.
+
 ## Scope
 
 This qualifies the current single hardening spring path for monotone

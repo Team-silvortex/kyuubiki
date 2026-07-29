@@ -9,6 +9,10 @@ use crate::plane_2d_math::{
 use crate::thermal_plane_2d_profile::{
     ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile, push_thermal_plane_stage,
 };
+use crate::thermal_plane_2d_quad::{
+    ThermalPlaneQuadComputed, assemble_thermal_plane_quad, build_thermal_plane_quad_element,
+    precompute_thermal_plane_quad_element,
+};
 use crate::thermal_plane_2d_results::{
     build_thermal_plane_nodes, max_temperature_delta, max_thermal_plane_displacement,
     max_thermal_quad_strain_energy_density, max_thermal_quad_stress,
@@ -27,7 +31,7 @@ use crate::thermal_plane_2d_validation::{
 use kyuubiki_protocol::{
     PlaneTriangleElementInput, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
     SolveThermalPlaneTriangle2dRequest, SolveThermalPlaneTriangle2dResult,
-    ThermalPlaneQuadElementInput, ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
+    ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
     ThermalPlaneTriangleElementResult,
 };
 
@@ -38,12 +42,6 @@ pub(crate) struct ThermalPlaneTriangleComputed {
     pub(crate) b_matrix: [[f64; 6]; 3],
     pub(crate) d_matrix: [[f64; 3]; 3],
     pub(crate) average_temperature_delta: f64,
-}
-
-#[derive(Debug, Clone)]
-struct ThermalPlaneQuadComputed {
-    first: ThermalPlaneTriangleComputed,
-    second: ThermalPlaneTriangleComputed,
 }
 
 pub fn solve_thermal_plane_triangle_2d(
@@ -171,13 +169,10 @@ fn solve_thermal_plane_quad_2d_internal(
     let mut stages = Vec::new();
     let mut stage_started = Instant::now();
     let triangle_request = to_triangle_request(request);
-    let plane_nodes = to_plane_nodes(&triangle_request);
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| {
-            precompute_thermal_plane_quad_element(&triangle_request, &plane_nodes, element)
-        })
+        .map(|element| precompute_thermal_plane_quad_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
     push_thermal_plane_stage(
         &mut stages,
@@ -188,25 +183,7 @@ fn solve_thermal_plane_quad_2d_internal(
 
     stage_started = Instant::now();
     for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
-        for (nodes, triangle) in [
-            (
-                [element.node_i, element.node_j, element.node_k],
-                &computed.first,
-            ),
-            (
-                [element.node_i, element.node_k, element.node_l],
-                &computed.second,
-            ),
-        ] {
-            assemble_thermal_triangle_nodes(
-                nodes,
-                triangle,
-                element.thickness,
-                element.thermal_expansion,
-                &mut global_stiffness,
-                &mut force_vector,
-            );
-        }
+        assemble_thermal_plane_quad(element, computed, &mut global_stiffness, &mut force_vector);
     }
     push_thermal_plane_stage(
         &mut stages,
@@ -371,76 +348,7 @@ fn build_thermal_quad_elements(
         .zip(computed_elements.iter())
         .enumerate()
         .map(|(index, (element, computed))| {
-            let first_state = thermal_plane_triangle_state(
-                &computed.first,
-                &triangle_displacements(
-                    displacements,
-                    element.node_i,
-                    element.node_j,
-                    element.node_k,
-                ),
-                element.thermal_expansion,
-            );
-            let second_state = thermal_plane_triangle_state(
-                &computed.second,
-                &triangle_displacements(
-                    displacements,
-                    element.node_i,
-                    element.node_k,
-                    element.node_l,
-                ),
-                element.thermal_expansion,
-            );
-            let total_area = computed.first.area + computed.second.area;
-            let weighted = |left: f64, right: f64| -> f64 {
-                ((left * computed.first.area) + (right * computed.second.area)) / total_area
-            };
-
-            ThermalPlaneQuadElementResult {
-                index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                node_l: element.node_l,
-                area: total_area,
-                average_temperature_delta: weighted(
-                    computed.first.average_temperature_delta,
-                    computed.second.average_temperature_delta,
-                ),
-                thermal_strain: weighted(first_state.thermal_strain, second_state.thermal_strain),
-                mechanical_strain_x: weighted(
-                    first_state.mechanical_strain[0],
-                    second_state.mechanical_strain[0],
-                ),
-                mechanical_strain_y: weighted(
-                    first_state.mechanical_strain[1],
-                    second_state.mechanical_strain[1],
-                ),
-                total_strain_x: weighted(first_state.total_strain[0], second_state.total_strain[0]),
-                total_strain_y: weighted(first_state.total_strain[1], second_state.total_strain[1]),
-                gamma_xy: weighted(first_state.total_strain[2], second_state.total_strain[2]),
-                stress_x: weighted(first_state.stress[0], second_state.stress[0]),
-                stress_y: weighted(first_state.stress[1], second_state.stress[1]),
-                tau_xy: weighted(first_state.stress[2], second_state.stress[2]),
-                principal_stress_1: weighted(
-                    first_state.principal_stress_1,
-                    second_state.principal_stress_1,
-                ),
-                principal_stress_2: weighted(
-                    first_state.principal_stress_2,
-                    second_state.principal_stress_2,
-                ),
-                max_in_plane_shear: weighted(
-                    first_state.max_in_plane_shear,
-                    second_state.max_in_plane_shear,
-                ),
-                von_mises: weighted(first_state.von_mises, second_state.von_mises),
-                strain_energy_density: weighted(
-                    first_state.strain_energy_density,
-                    second_state.strain_energy_density,
-                ),
-            }
+            build_thermal_plane_quad_element(index, element, computed, displacements)
         })
         .collect()
 }
@@ -476,36 +384,5 @@ fn precompute_thermal_plane_triangle_element(
         b_matrix,
         d_matrix,
         average_temperature_delta,
-    })
-}
-
-fn precompute_thermal_plane_quad_element(
-    triangle_request: &SolveThermalPlaneTriangle2dRequest,
-    plane_nodes: &[kyuubiki_protocol::PlaneNodeInput],
-    element: &ThermalPlaneQuadElementInput,
-) -> Result<ThermalPlaneQuadComputed, String> {
-    let first = ThermalPlaneTriangleElementInput {
-        id: format!("{}#0", element.id),
-        node_i: element.node_i,
-        node_j: element.node_j,
-        node_k: element.node_k,
-        thickness: element.thickness,
-        youngs_modulus: element.youngs_modulus,
-        poisson_ratio: element.poisson_ratio,
-        thermal_expansion: element.thermal_expansion,
-    };
-    let second = ThermalPlaneTriangleElementInput {
-        id: format!("{}#1", element.id),
-        node_i: element.node_i,
-        node_j: element.node_k,
-        node_k: element.node_l,
-        thickness: element.thickness,
-        youngs_modulus: element.youngs_modulus,
-        poisson_ratio: element.poisson_ratio,
-        thermal_expansion: element.thermal_expansion,
-    };
-    Ok(ThermalPlaneQuadComputed {
-        first: precompute_thermal_plane_triangle_element(plane_nodes, triangle_request, &first)?,
-        second: precompute_thermal_plane_triangle_element(plane_nodes, triangle_request, &second)?,
     })
 }

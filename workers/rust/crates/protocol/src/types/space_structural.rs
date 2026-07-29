@@ -150,6 +150,9 @@ pub struct Frame3dElementInput {
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
+    /// Optional global-space vector defining local section +Y.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_y_axis: Option<[f64; 3]>,
     pub area: f64,
     pub youngs_modulus: f64,
     pub shear_modulus: f64,

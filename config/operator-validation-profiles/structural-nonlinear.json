@@ -14,21 +14,26 @@
       "validation_methods": [
         "cardano_closed_form_root",
         "newton_convergence_cross_check",
-        "tangent_stiffness_invariant"
+        "tangent_stiffness_invariant",
+        "closed_form_perturbation_convergence",
+        "input_boundary_rejection"
       ],
       "formal_invariants": [
         "fixed_root_displacement_is_zero",
         "tip_displacement_matches_cubic_closed_form_root",
         "element_force_matches_external_load",
         "tangent_stiffness_matches_derivative_of_force_law",
-        "load_step_factors_are_monotonic"
+        "load_step_factors_are_monotonic",
+        "stiffness_load_and_cubic_perturbations_preserve_cardano_root",
+        "non_finite_nodes_and_zero_length_elements_are_rejected"
       ],
       "evidence_paths": [
         "docs/operator-reliability.md",
         "evidence/operator-qualification/nonlinear-spring-1d-closed-form.md",
         "workers/rust/crates/solver/tests/nonlinear_spring_1d_review.rs",
         "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs",
-        "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs"
+        "workers/rust/crates/solver/tests/nonlinear_spring_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/mechanical_convergence/nonlinear.rs"
       ],
       "commands": [
         {
@@ -45,6 +50,11 @@
           "id": "nonlinear-spring-1d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-1d-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test mechanical_convergence nonlinear_spring -- --nocapture"
         }
       ]
     },

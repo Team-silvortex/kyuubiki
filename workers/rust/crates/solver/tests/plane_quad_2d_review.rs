@@ -4,7 +4,7 @@ use kyuubiki_protocol::{
 use kyuubiki_solver::solve_plane_quad_2d;
 
 #[test]
-fn plane_quad_2d_review_bundle_checks_panel_boundaries_weighted_stress_and_strain_diagnostics() {
+fn plane_quad_2d_review_bundle_checks_isoparametric_stress_and_strain_diagnostics() {
     let result = solve_plane_quad_2d(&request()).expect("review plane quad should solve");
 
     assert_eq!(result.nodes.len(), 4);
@@ -13,13 +13,13 @@ fn plane_quad_2d_review_bundle_checks_panel_boundaries_weighted_stress_and_strai
     assert_close(result.nodes[0].uy, 0.0, 1.0e-12);
     assert_close(result.nodes[1].uy, 0.0, 1.0e-12);
     assert_close(result.nodes[3].ux, 0.0, 1.0e-12);
-    assert_close(result.nodes[2].ux, 2.576_145_151_695_419e-7, 1.0e-12);
-    assert_close(result.nodes[2].uy, -4.670_094_331_605_336_6e-7, 1.0e-12);
+    assert_close(result.nodes[2].ux, 2.933_081_793_737_531_6e-7, 1.0e-12);
+    assert_close(result.nodes[2].uy, -4.990_545_580_709_515e-7, 1.0e-12);
     assert!(result.nodes[2].ux > 0.0);
     assert!(result.nodes[2].uy < 0.0);
     assert!(result.nodes[3].uy < 0.0);
-    assert_close(result.max_displacement, 5.333_507_749_004_975e-7, 1.0e-12);
-    assert_close(result.max_stress, 126_981.385_278_360_32, 1.0e-10);
+    assert_close(result.max_displacement, 5.788_653_902_410_632e-7, 1.0e-12);
+    assert_close(result.max_stress, 126_908.641_752_536_4, 1.0e-10);
     assert!(result.total_strain_energy > 0.0);
     assert!(result.max_strain_energy_density > 0.0);
 
@@ -27,7 +27,7 @@ fn plane_quad_2d_review_bundle_checks_panel_boundaries_weighted_stress_and_strai
     assert_close(element.area, 0.8, 1.0e-12);
     assert_close(element.stress_x, 12_500.0, 1.0e-10);
     assert_close(element.stress_y, -120_000.0, 1.0e-10);
-    assert_close(element.tau_xy, 3_048.780_487_804_874_6, 1.0e-10);
+    assert_close(element.tau_xy, 4_064.207_650_273_220_7, 1.0e-10);
     assert_finite_plane_stress_state(element);
     assert!(element.von_mises >= 0.0);
     assert!(element.strain_energy_density >= 0.0);

@@ -1,5 +1,6 @@
 use super::{
-    array, compare_actions, operator_trust_summary::operator_trust_level_counts, readiness_errors,
+    array, compare_actions, numerical_depth, operator_trust_summary::operator_trust_level_counts,
+    readiness_errors,
 };
 use crate::RunnerResult;
 use serde_json::{Value, json};
@@ -51,7 +52,7 @@ pub(super) fn run_self_test(root: &Path) -> RunnerResult<()> {
 
 fn sample_report(root: &Path) -> RunnerResult<Value> {
     Ok(json!({
-        "schema_version": "kyuubiki.operator-qualification-readiness/v1",
+        "schema_version": "kyuubiki.operator-qualification-readiness/v2",
         "version_line": "moxi 2.0.x",
         "generated_at_utc": "2026-01-01T00:00:00.000Z",
         "summary": {
@@ -89,6 +90,18 @@ fn sample_report(root: &Path) -> RunnerResult<Value> {
                 "declared": 0,
                 "matched": 0,
                 "missing": 0
+            },
+            "numerical_validation_depth": {
+                "complete": 0,
+                "partial": 0,
+                "thin": 1,
+                "with_independent_reference": 0,
+                "missing_dimensions": {
+                    "reference": 1,
+                    "convergence": 1,
+                    "robustness": 1,
+                    "retained_release": 1
+                }
             }
         },
         "candidates": [{
@@ -102,6 +115,7 @@ fn sample_report(root: &Path) -> RunnerResult<Value> {
             "operator_ids": ["solve.sample"],
             "artifact_counts": { "total": 1, "present": 0, "command_available": 0, "missing": 0, "not_started": 1 },
             "artifacts": [],
+            "numerical_validation_depth": numerical_depth::assess(&[]),
             "validation_profiles": [{
                 "profile_id": "sample",
                 "profile_role": "release_candidate",

@@ -2,14 +2,12 @@ use std::time::Instant;
 
 use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::linear_solver_profile::SpdSolveOptions;
-use crate::plane_2d_math::{
-    PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element,
-    precompute_plane_triangle_element_from_nodes,
-};
+use crate::plane_2d_math::{plane_triangle_state, precompute_plane_triangle_element};
 use crate::plane_2d_profile::{
     PlaneProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
     profile_plane_displacements_with_options, push_plane_profile_stage,
 };
+use crate::plane_2d_quad::{PlaneQuadComputed, plane_quad_state, precompute_plane_quad_element};
 use crate::plane_2d_summary::{
     max_plane_displacement, max_quad_strain_energy_density, max_quad_stress,
     max_triangle_strain_energy_density, max_triangle_stress, quad_total_strain_energy,
@@ -17,16 +15,9 @@ use crate::plane_2d_summary::{
 };
 use crate::plane_2d_validation::{validate_plane_quad_request, validate_plane_request};
 use kyuubiki_protocol::{
-    PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
-    PlaneTriangleElementResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
-    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
+    PlaneNodeResult, PlaneQuadElementResult, PlaneTriangleElementResult, SolvePlaneQuad2dRequest,
+    SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
 };
-
-#[derive(Debug, Clone)]
-struct PlaneQuadComputed {
-    first: PlaneTriangleComputed,
-    second: PlaneTriangleComputed,
-}
 
 pub fn solve_plane_triangle_2d(
     request: &SolvePlaneTriangle2dRequest,
@@ -213,27 +204,20 @@ fn solve_plane_quad_2d_internal(
     }
 
     for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
-        let triangles = [
-            (
-                [element.node_i, element.node_j, element.node_k],
-                &computed.first,
-            ),
-            (
-                [element.node_i, element.node_k, element.node_l],
-                &computed.second,
-            ),
-        ];
-        for (nodes, triangle) in triangles {
-            let map = triangle_dof_map(nodes[0], nodes[1], nodes[2]);
-            for row in 0..6 {
-                for column in 0..6 {
-                    add_at(
-                        &mut global_stiffness,
-                        map[row],
-                        map[column],
-                        triangle.stiffness[row][column],
-                    );
-                }
+        let map = quad_dof_map(
+            element.node_i,
+            element.node_j,
+            element.node_k,
+            element.node_l,
+        );
+        for row in 0..8 {
+            for column in 0..8 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    computed.stiffness[row][column],
+                );
             }
         }
     }
@@ -302,28 +286,16 @@ fn build_plane_quad_elements(
         .zip(computed_elements.iter())
         .enumerate()
         .map(|(index, (element, computed))| {
-            let first_state = plane_triangle_state(
-                &computed.first,
-                &triangle_displacements(
+            let state = plane_quad_state(
+                computed,
+                &quad_displacements(
                     displacements,
                     element.node_i,
                     element.node_j,
                     element.node_k,
-                ),
-            );
-            let second_state = plane_triangle_state(
-                &computed.second,
-                &triangle_displacements(
-                    displacements,
-                    element.node_i,
-                    element.node_k,
                     element.node_l,
                 ),
             );
-            let total_area = computed.first.area + computed.second.area;
-            let weighted = |left: f64, right: f64| -> f64 {
-                ((left * computed.first.area) + (right * computed.second.area)) / total_area
-            };
 
             PlaneQuadElementResult {
                 index,
@@ -332,61 +304,21 @@ fn build_plane_quad_elements(
                 node_j: element.node_j,
                 node_k: element.node_k,
                 node_l: element.node_l,
-                area: total_area,
-                strain_x: weighted(first_state.strain[0], second_state.strain[0]),
-                strain_y: weighted(first_state.strain[1], second_state.strain[1]),
-                gamma_xy: weighted(first_state.strain[2], second_state.strain[2]),
-                stress_x: weighted(first_state.stress[0], second_state.stress[0]),
-                stress_y: weighted(first_state.stress[1], second_state.stress[1]),
-                tau_xy: weighted(first_state.stress[2], second_state.stress[2]),
-                principal_stress_1: weighted(
-                    first_state.principal_stress_1,
-                    second_state.principal_stress_1,
-                ),
-                principal_stress_2: weighted(
-                    first_state.principal_stress_2,
-                    second_state.principal_stress_2,
-                ),
-                max_in_plane_shear: weighted(
-                    first_state.max_in_plane_shear,
-                    second_state.max_in_plane_shear,
-                ),
-                von_mises: weighted(first_state.von_mises, second_state.von_mises),
-                strain_energy_density: weighted(
-                    first_state.strain_energy_density,
-                    second_state.strain_energy_density,
-                ),
+                area: computed.area,
+                strain_x: state.strain[0],
+                strain_y: state.strain[1],
+                gamma_xy: state.strain[2],
+                stress_x: state.stress[0],
+                stress_y: state.stress[1],
+                tau_xy: state.stress[2],
+                principal_stress_1: state.principal_stress_1,
+                principal_stress_2: state.principal_stress_2,
+                max_in_plane_shear: state.max_in_plane_shear,
+                von_mises: state.von_mises,
+                strain_energy_density: state.strain_energy_density,
             }
         })
         .collect()
-}
-
-fn precompute_plane_quad_element(
-    request: &SolvePlaneQuad2dRequest,
-    element: &PlaneQuadElementInput,
-) -> Result<PlaneQuadComputed, String> {
-    let first = PlaneTriangleElementInput {
-        id: format!("{}#0", element.id),
-        node_i: element.node_i,
-        node_j: element.node_j,
-        node_k: element.node_k,
-        thickness: element.thickness,
-        youngs_modulus: element.youngs_modulus,
-        poisson_ratio: element.poisson_ratio,
-    };
-    let second = PlaneTriangleElementInput {
-        id: format!("{}#1", element.id),
-        node_i: element.node_i,
-        node_j: element.node_k,
-        node_k: element.node_l,
-        thickness: element.thickness,
-        youngs_modulus: element.youngs_modulus,
-        poisson_ratio: element.poisson_ratio,
-    };
-    Ok(PlaneQuadComputed {
-        first: precompute_plane_triangle_element_from_nodes(&request.nodes, &first)?,
-        second: precompute_plane_triangle_element_from_nodes(&request.nodes, &second)?,
-    })
 }
 
 fn build_plane_nodes(
@@ -438,5 +370,29 @@ fn triangle_displacements(
     node_k: usize,
 ) -> [f64; 6] {
     let map = triangle_dof_map(node_i, node_j, node_k);
+    std::array::from_fn(|index| displacements[map[index]])
+}
+
+fn quad_dof_map(node_i: usize, node_j: usize, node_k: usize, node_l: usize) -> [usize; 8] {
+    [
+        node_i * 2,
+        node_i * 2 + 1,
+        node_j * 2,
+        node_j * 2 + 1,
+        node_k * 2,
+        node_k * 2 + 1,
+        node_l * 2,
+        node_l * 2 + 1,
+    ]
+}
+
+fn quad_displacements(
+    displacements: &[f64],
+    node_i: usize,
+    node_j: usize,
+    node_k: usize,
+    node_l: usize,
+) -> [f64; 8] {
+    let map = quad_dof_map(node_i, node_j, node_k, node_l);
     std::array::from_fn(|index| displacements[map[index]])
 }

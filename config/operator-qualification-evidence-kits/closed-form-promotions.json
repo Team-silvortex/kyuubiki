@@ -406,6 +406,20 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "hardening-perturbation-convergence",
+          "kind": "convergence_regression",
+          "gate": "retain Cardano root, tangent stiffness, force balance, and converged load steps across load and stiffness perturbations",
+          "artifact_path": "workers/rust/crates/solver/tests/mechanical_convergence/nonlinear.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "nonlinear-spring-input-boundaries",
+          "kind": "boundary_regression",
+          "gate": "reject non-finite node data and degenerate zero-length nonlinear spring elements",
+          "artifact_path": "workers/rust/crates/solver/tests/nonlinear_spring_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-nonlinear-spring-1d-qualification-release-evidence before promotion",
@@ -432,6 +446,36 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "cantilever-mesh-convergence",
+          "kind": "convergence_regression",
+          "gate": "retain exact cantilever response across 1, 2, 4, 8, and 16 frame elements plus load and section perturbations",
+          "artifact_path": "workers/rust/crates/solver/tests/mechanical_convergence/frame_3d.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "asymmetric-section-objectivity",
+          "kind": "orientation_regression",
+          "gate": "preserve nodal vectors, local forces, section stress, and strain energy for explicitly oriented asymmetric sections under arbitrary rigid rotations",
+          "artifact_path": "workers/rust/crates/solver/tests/frame_3d_objectivity.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "section-orientation-boundary",
+          "kind": "boundary_regression",
+          "gate": "reject non-finite and member-parallel local section axes",
+          "artifact_path": "workers/rust/crates/solver/tests/frame_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "frame-3d-current-release-output",
+          "kind": "release_retained_regression_output",
+          "gate": "retain the executed Frame3D qualification profile for the current 2.7 line",
+          "artifact_path": "releases/qualification-evidence/2.7.9/frame-3d-objectivity-evidence.json",
+          "artifact_command": "make capture-frame-3d-qualification-release-evidence",
+          "artifact_check_command": "make check-frame-3d-qualification-release-evidence",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-frame-3d-qualification-release-evidence before promotion",
@@ -454,8 +498,31 @@
         {
           "artifact_id": "closed-form-note",
           "kind": "derivation_note",
-          "gate": "retain plane triangle and split-triangle quad patch displacement, stress, and energy formulas",
+          "gate": "retain plane triangle and isoparametric Q4 patch displacement, stress, and energy formulas",
           "artifact_path": "evidence/operator-qualification/plane-2d-patch-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "isoparametric-quad-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain affine patch invariance across 1x1, 2x2, and 4x4 distorted Q4 meshes",
+          "artifact_path": "workers/rust/crates/solver/tests/plane_quad_isoparametric.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "isoparametric-quad-jacobian-guard",
+          "kind": "orientation_regression",
+          "gate": "reject inverted Q4 node ordering through positive Gauss-point Jacobian checks",
+          "artifact_path": "workers/rust/crates/solver/tests/plane_quad_isoparametric.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "isoparametric-q4-current-release-output",
+          "kind": "release_retained_regression_output",
+          "gate": "retain the executed native Q4 qualification profile for the current 2.7 line",
+          "artifact_path": "releases/qualification-evidence/2.7.9/plane-2d-patch-isoparametric-evidence.json",
+          "artifact_command": "make capture-plane-2d-qualification-release-evidence",
+          "artifact_check_command": "make check-plane-2d-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

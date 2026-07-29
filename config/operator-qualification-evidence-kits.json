@@ -70,6 +70,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "beam-frame-mesh-convergence",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 element beam and frame refinement against closed form",
+          "artifact_path": "workers/rust/crates/solver/tests/mechanical_convergence/beam_frame.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "force-sign-convention",
           "kind": "scope_note",
           "gate": "document force, moment, rotation, and torsion sign conventions",
@@ -113,10 +120,24 @@
       ],
       "artifact_requirements": [
         {
+          "artifact_id": "thermoelastic-q4-closed-form",
+          "kind": "derivation_note",
+          "gate": "derive native Q4 thermal load integration, free uniform expansion, and restrained linear-temperature stress references",
+          "artifact_path": "evidence/operator-qualification/thermal-plane-q4-closed-form.md",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "mesh-refinement-report",
           "kind": "convergence_report",
           "gate": "show stable thermal and thermoelastic response under refinement",
           "artifact_path": "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "isoparametric-thermoelastic-q4-regression",
+          "kind": "convergence_regression",
+          "gate": "retain distorted free-expansion invariance, Gauss-point temperature interpolation, and positive-Jacobian rejection",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -138,6 +159,15 @@
           "kind": "boundary_regression",
           "gate": "retain bad-input rejection coverage for thermal triangle and quad plane operators",
           "artifact_path": "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "isoparametric-q4-current-release-output",
+          "kind": "release_retained_regression_output",
+          "gate": "retain the executed native thermoelastic Q4 validation profile for the current 2.7 line",
+          "artifact_path": "releases/qualification-evidence/2.7.9/thermal-plane-q4-isoparametric-evidence.json",
+          "artifact_command": "make capture-thermal-plane-qualification-release-evidence",
+          "artifact_check_command": "make check-thermal-plane-qualification-release-evidence",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

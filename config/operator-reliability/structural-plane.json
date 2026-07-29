@@ -83,7 +83,8 @@
           "assumptions": [
             "linear_plane_stress",
             "small_strain",
-            "quad_split_into_constant_strain_triangles"
+            "bilinear_isoparametric_quad",
+            "full_2x2_gauss_integration"
           ],
           "boundary_checks": [
             "left_edge_x_constraint",
@@ -92,8 +93,8 @@
           ],
           "diagnostics": [
             "nodal_displacement",
-            "weighted_element_strain",
-            "weighted_element_stress",
+            "gauss_weighted_element_strain",
+            "gauss_weighted_element_stress",
             "principal_stress",
             "von_mises"
           ],
@@ -107,7 +108,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
-            "plane_quad_2d_tracks_load_and_modulus_scaling"
+            "plane_quad_2d_tracks_load_and_modulus_scaling",
+            "workers/rust/crates/solver/tests/plane_quad_isoparametric.rs",
+            "distorted_quad_mesh_preserves_the_affine_patch_across_refinement"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/plane-2d-patch-closed-form-release-evidence.json",
@@ -119,6 +122,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/plane_quad_2d_review.rs",
             "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
+            "workers/rust/crates/solver/tests/plane_quad_isoparametric.rs",
             "workers/rust/crates/solver/tests/plane_input_reliability.rs"
           ]
         }
@@ -126,7 +130,8 @@
       "limits": [
         "linear_plane_stress",
         "small_strain",
-        "quad_split_triangles",
+        "bilinear_q4",
+        "full_gauss_integration",
         "small_patch_reference_scope"
       ]
     }

@@ -111,6 +111,9 @@ README.
   get conflated in coverage/status reporting. Its summary also exposes release
   review decisions and approved promotion-summary matching counts so the
   qualification gate can be audited without opening every evidence bundle.
+  Readiness v2 also classifies every candidate across reference, convergence,
+  robustness, and retained-release dimensions and reports independent
+  reference coverage separately.
 - `operator-qualification-release-records.schema.json` is for release-bound
   qualification evidence records that bind snapshot metadata, candidate IDs,
   capture commands, check commands, retained evidence bundle paths, and the

@@ -446,6 +446,7 @@
         "qualification": {
           "validation_sources": [
             "evidence/operator-qualification/thermal-plane-boundary-coverage.md",
+            "evidence/operator-qualification/thermal-plane-q4-closed-form.md",
             "evidence/operator-qualification/thermal-plane-material-provenance.json"
           ],
           "convergence_checks": [
@@ -488,7 +489,10 @@
           "assumptions": [
             "linear_plane_stress",
             "uniform_temperature_delta",
-            "fully_restrained_patch"
+            "fully_restrained_patch",
+            "bilinear_isoparametric_quad",
+            "full_2x2_gauss_integration",
+            "nodal_temperature_interpolation"
           ],
           "boundary_checks": [
             "all_displacements_fixed",
@@ -502,7 +506,8 @@
             "von_mises"
           ],
           "tests": [
-            "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs"
+            "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs"
           ],
           "scope_notes": [
             "docs/operator-reliability.md#thermal-plane-review-scope"
@@ -517,9 +522,11 @@
             "evidence/operator-qualification/thermal-plane-material-provenance.json"
           ],
           "convergence_checks": [
-            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs"
+            "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
+            "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs"
           ],
           "provenance": [
+            "releases/qualification-evidence/2.7.9/thermal-plane-q4-isoparametric-evidence.json",
             "releases/qualification-evidence/2.0.0/thermal-plane-patch-release-evidence.json",
             "releases/qualification-review-decisions/2.0.0/thermal-plane-patch-review-decision.json"
           ],
@@ -529,6 +536,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs",
             "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
+            "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs",
             "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs"
           ]
         }

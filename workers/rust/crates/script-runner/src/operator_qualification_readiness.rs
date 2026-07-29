@@ -10,6 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 mod args;
+mod numerical_depth;
 mod operator_trust_summary;
 mod release_records;
 mod review_summary;
@@ -30,7 +31,7 @@ use validation_profiles::validation_profiles_by_candidate;
 const DEFAULT_OUT: &str = "tmp/operator-qualification-readiness.json";
 const SCHEMA_PATH: &str = "schemas/operator-qualification-readiness.schema.json";
 const ROADMAP_PATH: &str = "config/operator-qualification-roadmap.json";
-const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-readiness/v1";
+const SCHEMA_VERSION: &str = "kyuubiki.operator-qualification-readiness/v2";
 #[rustfmt::skip]
 const ALLOWED_ACTION_KINDS: &[&str] = &["collect_artifact", "restore_or_generate_artifact", "run_command", "review"];
 const TARGET_LEVELS: &[&str] = &["baseline", "review", "qualification"];
@@ -110,6 +111,7 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
         .flat_map(|candidate| array(candidate, "validation_profiles"))
         .filter(|profile| field(profile, "profile_role") == "release_candidate")
         .count();
+    let numerical_validation_depth = numerical_depth::summarize(&candidates);
     Ok(json!({
         "schema_version": SCHEMA_VERSION,
         "version_line": field(&roadmap, "version_line"),
@@ -136,6 +138,7 @@ fn build_report(root: &Path) -> RunnerResult<Value> {
             "release_review_statuses": count_release_review_statuses(&candidates),
             "release_review_decisions": count_release_review_decisions(root, &candidates),
             "release_promotion_summaries": count_release_promotion_summaries(root, &candidates),
+            "numerical_validation_depth": numerical_validation_depth,
         },
         "next_actions": next_actions,
         "candidates": candidates,
@@ -174,6 +177,7 @@ fn readiness_for(
     } else {
         "planned"
     };
+    let numerical_validation_depth = numerical_depth::assess(&artifacts);
     Ok(json!({
         "candidate_id": field(candidate, "candidate_id"),
         "priority": field(candidate, "priority"),
@@ -191,6 +195,7 @@ fn readiness_for(
             "not_started": not_started,
         },
         "artifacts": artifacts,
+        "numerical_validation_depth": numerical_validation_depth,
         "validation_profiles": validation_profiles,
         "primary_blocker": field(candidate, "primary_blocker"),
         "evidence_gaps": candidate.get("evidence_gaps").cloned().unwrap_or(Value::Array(Vec::new())),
@@ -332,6 +337,7 @@ pub(super) fn readiness_errors(
             ));
         }
     }
+    numerical_depth::validate_report(report, relative_input, &mut errors);
     Ok(errors)
 }
 

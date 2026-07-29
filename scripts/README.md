@@ -331,8 +331,9 @@ This directory contains host-native operational entry points.
   status, and review gate when a release record exists.
 - `kyuubiki-script-runner check-operator-qualification-readiness`
   Validate the generated readiness report and its `next_actions` queue. Use
-  `--self-test` when changing readiness sorting or action-kind requirements.
-  The retained `.mjs` scripts are parity references.
+  `--self-test` when changing readiness sorting, numerical-depth classification,
+  or action-kind requirements. The Rust runner is the sole readiness builder
+  and validator.
 - `make check-operator-qualification-review-decision`
   Run the native Rust validator for retained operator qualification review
   decisions against the release record, evidence path, review gate, reviewer

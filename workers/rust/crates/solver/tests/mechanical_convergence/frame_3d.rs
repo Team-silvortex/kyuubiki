@@ -192,6 +192,7 @@ fn frame_3d_cantilever_request(case: Frame3dCase, element_count: usize) -> Solve
             id: format!("e{index}"),
             node_i: index,
             node_j: index + 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: case.youngs_modulus,
             shear_modulus: 80.0e9,

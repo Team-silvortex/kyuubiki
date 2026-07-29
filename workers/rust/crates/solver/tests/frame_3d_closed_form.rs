@@ -192,6 +192,7 @@ fn cantilever(
             id: "beam".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus,
             shear_modulus: 80.0e9,

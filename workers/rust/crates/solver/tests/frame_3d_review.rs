@@ -20,6 +20,7 @@ fn frame_3d_review_bundle_checks_cantilever_boundaries_moment_and_stress_diagnos
             id: "beam".to_string(),
             node_i: 0,
             node_j: 1,
+            local_y_axis: None,
             area: 0.02,
             youngs_modulus: 210.0e9,
             shear_modulus: 80.0e9,

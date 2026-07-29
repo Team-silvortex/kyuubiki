@@ -416,25 +416,25 @@ fn accuracy_baseline_plane_quad_2d_sample_fixture() {
 
     assert_close_abs(
         result.max_displacement,
-        5.333507749004975e-7,
+        5.788653902410632e-7,
         1.0e-12,
         "plane_quad_2d max displacement",
     );
     assert_close_abs(
         result.max_stress,
-        126981.38527836032,
+        126908.6417525364,
         1.0e-6,
         "plane_quad_2d max stress",
     );
     assert_close_abs(
         result.nodes[2].ux,
-        2.576145151695419e-7,
+        2.9330817937375316e-7,
         1.0e-12,
         "plane_quad_2d node 2 ux",
     );
     assert_close_abs(
         result.nodes[2].uy,
-        -4.6700943316053366e-7,
+        -4.990545580709515e-7,
         1.0e-12,
         "plane_quad_2d node 2 uy",
     );
@@ -452,7 +452,7 @@ fn accuracy_baseline_plane_quad_2d_sample_fixture() {
     );
     assert_close_abs(
         result.elements[0].tau_xy,
-        3048.7804878048746,
+        4064.2076502732207,
         1.0e-9,
         "plane_quad_2d tau_xy",
     );

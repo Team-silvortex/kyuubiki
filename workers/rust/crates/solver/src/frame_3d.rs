@@ -1,5 +1,5 @@
 use crate::frame_3d_math::{
-    frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation, frame3d_transform,
+    frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y, frame3d_transform,
     multiply_matrix_vector_12x12, transform_frame3d_stiffness,
 };
 use crate::linear_algebra::{
@@ -40,7 +40,7 @@ pub fn solve_frame_3d_with_options(
         let dy = node_j.y - node_i.y;
         let dz = node_j.z - node_i.z;
         let length = (dx * dx + dy * dy + dz * dz).sqrt();
-        let rotation = frame3d_rotation(dx, dy, dz, length)?;
+        let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
         let local_stiffness = frame3d_local_stiffness(
             element.area,
             element.youngs_modulus,
@@ -119,7 +119,7 @@ pub fn solve_frame_3d_with_options(
             let dy = node_j.y - node_i.y;
             let dz = node_j.z - node_i.z;
             let length = (dx * dx + dy * dy + dz * dz).sqrt();
-            let rotation = frame3d_rotation(dx, dy, dz, length)
+            let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)
                 .expect("validated 3d frame element should define a stable local axis");
             let local_stiffness = frame3d_local_stiffness(
                 element.area,
@@ -302,7 +302,7 @@ fn validate_frame_3d_element(
     let dy = node_j.y - node_i.y;
     let dz = node_j.z - node_i.z;
     let length = (dx * dx + dy * dy + dz * dz).sqrt();
-    frame3d_rotation(dx, dy, dz, length)?;
+    frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
 
     Ok(())
 }

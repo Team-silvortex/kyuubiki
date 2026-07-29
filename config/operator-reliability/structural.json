@@ -506,20 +506,24 @@
       "evidence": {
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
-        "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs",
-          "workers/rust/crates/solver/tests/frame_3d_closed_form.rs"
+          "tests": [
+            "workers/rust/crates/solver/tests/accuracy_baselines/frame.rs",
+            "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/frame_3d_objectivity.rs",
+            "workers/rust/crates/solver/tests/mechanical_convergence/frame_3d.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_frame_3d_tip_loaded_cantilever",
         "review": {
-          "assumptions": [
-            "linear_frame",
-            "small_strain",
-            "single_member_3d_cantilever"
-          ],
-          "boundary_checks": [
-            "fixed_root_translation_rotation",
-            "tip_load_response"
+            "assumptions": [
+              "linear_frame",
+              "small_strain",
+              "single_member_3d_cantilever",
+              "explicit_section_orientation_for_asymmetric_sections"
+            ],
+            "boundary_checks": [
+              "fixed_root_translation_rotation",
+              "tip_load_response",
+              "finite_nonparallel_local_y_axis"
           ],
           "diagnostics": [
             "tip_displacement",
@@ -528,8 +532,10 @@
             "end_moment",
             "bending_stress"
           ],
-          "tests": [
-            "workers/rust/crates/solver/tests/frame_3d_review.rs"
+            "tests": [
+              "workers/rust/crates/solver/tests/frame_3d_review.rs",
+              "workers/rust/crates/solver/tests/frame_3d_objectivity.rs",
+              "workers/rust/crates/solver/tests/frame_input_reliability.rs"
           ]
         },
         "qualification": {
@@ -538,10 +544,13 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
-            "frame_3d_tracks_tip_load_and_bending_inertia_scaling"
+            "workers/rust/crates/solver/tests/mechanical_convergence/frame_3d.rs",
+            "frame_3d_cantilever_refinement_matches_closed_form",
+            "frame_3d_cantilever_perturbations_preserve_expected_scaling"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/frame-3d-closed-form-release-evidence.json",
+            "releases/qualification-evidence/2.7.9/frame-3d-objectivity-evidence.json",
             "releases/qualification-review-decisions/2.0.0/frame-3d-closed-form-review-decision.json"
           ],
           "release_gates": [
@@ -550,6 +559,8 @@
           "tests": [
             "workers/rust/crates/solver/tests/frame_3d_review.rs",
             "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
+            "workers/rust/crates/solver/tests/frame_3d_objectivity.rs",
+            "workers/rust/crates/solver/tests/mechanical_convergence/frame_3d.rs",
             "workers/rust/crates/solver/tests/frame_input_reliability.rs"
           ]
         }

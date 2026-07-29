@@ -14,14 +14,21 @@
       "validation_methods": [
         "cantilever_closed_form",
         "section_stress_balance",
-        "strain_energy_balance"
+        "strain_energy_balance",
+        "mesh_refinement_closed_form",
+        "rigid_rotation_objectivity",
+        "section_orientation_boundary_rejection"
       ],
       "formal_invariants": [
         "fixed_root_translation_rotation_are_zero",
         "tip_displacement_matches_euler_bernoulli_cantilever",
         "tip_rotation_matches_cantilever_slope",
         "end_moment_and_bending_stress_match_section_formula",
-        "strain_energy_matches_half_load_displacement_work"
+        "strain_energy_matches_half_load_displacement_work",
+        "mesh_refinement_preserves_cantilever_closed_form",
+        "explicit_local_y_axis_preserves_asymmetric_section_response",
+        "rigid_rotation_preserves_nodal_vectors_local_forces_stress_and_energy",
+        "non_finite_or_parallel_local_y_axis_is_rejected"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -29,6 +36,8 @@
         "evidence/operator-qualification/frame-3d-closed-form.md",
         "workers/rust/crates/solver/tests/frame_3d_review.rs",
         "workers/rust/crates/solver/tests/frame_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/frame_3d_objectivity.rs",
+        "workers/rust/crates/solver/tests/mechanical_convergence/frame_3d.rs",
         "workers/rust/crates/solver/tests/frame_input_reliability.rs"
       ],
       "commands": [
@@ -41,6 +50,16 @@
           "id": "frame-3d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-3d-objectivity",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_3d_objectivity -- --nocapture"
+        },
+        {
+          "id": "frame-3d-convergence",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test mechanical_convergence frame_3d -- --nocapture"
         },
         {
           "id": "frame-input-reliability",

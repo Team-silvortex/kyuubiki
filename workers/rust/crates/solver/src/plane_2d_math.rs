@@ -111,14 +111,7 @@ fn triangle_element_data(
         ],
     ];
 
-    let e = element.youngs_modulus;
-    let nu = element.poisson_ratio;
-    let coeff = e / (1.0 - nu * nu);
-    let d_matrix = [
-        [coeff, coeff * nu, 0.0],
-        [coeff * nu, coeff, 0.0],
-        [0.0, 0.0, coeff * (1.0 - nu) * 0.5],
-    ];
+    let d_matrix = plane_stress_d_matrix(element.youngs_modulus, element.poisson_ratio);
 
     let bt = transpose_3x6(&b_matrix);
     let bt_d = multiply_matrix_6x3_3x3(&bt, &d_matrix);
@@ -131,6 +124,15 @@ fn triangle_element_data(
     }
 
     Ok((stiffness, area, b_matrix, d_matrix))
+}
+
+pub(super) fn plane_stress_d_matrix(e: f64, nu: f64) -> [[f64; 3]; 3] {
+    let coeff = e / (1.0 - nu * nu);
+    [
+        [coeff, coeff * nu, 0.0],
+        [coeff * nu, coeff, 0.0],
+        [0.0, 0.0, coeff * (1.0 - nu) * 0.5],
+    ]
 }
 
 pub(super) fn derive_planar_stress_metrics(

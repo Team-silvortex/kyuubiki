@@ -57,23 +57,23 @@ fn plane_triangle_2d_matches_retained_patch_stiffness_reference() {
 }
 
 #[test]
-fn plane_quad_2d_matches_retained_split_triangle_patch_reference() {
+fn plane_quad_2d_matches_retained_isoparametric_patch_reference() {
     let result = solve_plane_quad_2d(&quad_patch()).expect("quad patch should solve");
 
     assert_close(result.nodes[0].ux, 0.0, 1.0e-12);
     assert_close(result.nodes[0].uy, 0.0, 1.0e-12);
     assert_close(result.nodes[1].uy, 0.0, 1.0e-12);
     assert_close(result.nodes[3].ux, 0.0, 1.0e-12);
-    assert_close(result.nodes[2].ux, 2.576_145_151_695_419e-7, 1.0e-12);
-    assert_close(result.nodes[2].uy, -4.670_094_331_605_336_6e-7, 1.0e-12);
-    assert_close(result.max_displacement, 5.333_507_749_004_975e-7, 1.0e-12);
-    assert_close(result.max_stress, 126_981.385_278_360_32, 1.0e-10);
+    assert_close(result.nodes[2].ux, 2.933_081_793_737_531_6e-7, 1.0e-12);
+    assert_close(result.nodes[2].uy, -4.990_545_580_709_515e-7, 1.0e-12);
+    assert_close(result.max_displacement, 5.788_653_902_410_632e-7, 1.0e-12);
+    assert_close(result.max_stress, 126_908.641_752_536_4, 1.0e-10);
 
     let element = &result.elements[0];
     assert_close(element.area, 0.8, 1.0e-12);
     assert_close(element.stress_x, 12_500.0, 1.0e-10);
     assert_close(element.stress_y, -120_000.0, 1.0e-10);
-    assert_close(element.tau_xy, 3_048.780_487_804_874_6, 1.0e-10);
+    assert_close(element.tau_xy, 4_064.207_650_273_220_7, 1.0e-10);
     assert!(element.principal_stress_1 >= element.principal_stress_2);
     assert!(element.max_in_plane_shear >= 0.0);
     assert_close(element.von_mises, result.max_stress, 1.0e-12);
