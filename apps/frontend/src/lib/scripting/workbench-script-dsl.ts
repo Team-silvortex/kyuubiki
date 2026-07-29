@@ -3,6 +3,10 @@
 import type { WorkbenchRecordedMacroDraft, WorkbenchScriptActionLogEntry } from "./workbench-script-runtime-types.ts";
 import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format.ts";
 import {
+  getWorkbenchScriptActionDefinition,
+  getWorkbenchScriptMacroDefinition,
+} from "./workbench-script-runtime-catalog.ts";
+import {
   buildPythonExpression,
   isVariableReference,
   VARIABLE_IDENTIFIER_RE,
@@ -13,6 +17,10 @@ import { buildDefaultWorkbenchFrontendDslDocument } from "./workbench-script-dsl
 export type WorkbenchFrontendDslStep =
   | { kind: "invoke"; action: string; payload?: Record<string, unknown> }
   | { kind: "macro"; macroId: string; payload?: Record<string, unknown> }
+  | { kind: "expect_action"; action: string; message?: string }
+  | { kind: "expect_macro"; macroId: string; message?: string }
+  | { kind: "capture_action_catalog"; assign: string; category?: string; risk?: string; message?: string }
+  | { kind: "emit_parity_report"; assign?: string; message?: string }
   | { kind: "log"; message: string }
   | { kind: "sleep"; seconds: number }
   | { kind: "capture_now"; assign: string; message?: string }
@@ -38,7 +46,10 @@ export type WorkbenchFrontendDslDocument = {
 const DSL_VERSION = "kyuubiki.frontend-dsl/v1";
 export const WORKBENCH_FRONTEND_DSL_REPORT_PREFIX = "[layout-report]";
 
-function buildDslFailureMessage(code: "selector_mismatch" | "state_mismatch" | "timeout", message: string) {
+function buildDslFailureMessage(
+  code: "capability_mismatch" | "selector_mismatch" | "state_mismatch" | "timeout",
+  message: string,
+) {
   return `[dsl-code=${code}] ${message}`;
 }
 
@@ -58,6 +69,37 @@ function parsePayload(value: unknown) {
   return value;
 }
 
+function parseAssign(value: unknown, context: string) {
+  if (typeof value !== "string" || !VARIABLE_IDENTIFIER_RE.test(value)) {
+    throw new Error(`${context} requires a valid assign identifier.`);
+  }
+  return value;
+}
+
+function parseOptionalMessage(value: unknown) {
+  return typeof value === "string" && value.trim() ? { message: value } : {};
+}
+
+function parseKnownAction(value: unknown, context: string) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${context} requires a non-empty action.`);
+  }
+  if (!getWorkbenchScriptActionDefinition(value)) {
+    throw new Error(`${context} references unknown Workbench action "${value}".`);
+  }
+  return value;
+}
+
+function parseKnownMacro(value: unknown, context: string) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${context} requires a non-empty macroId.`);
+  }
+  if (!getWorkbenchScriptMacroDefinition(value)) {
+    throw new Error(`${context} references unknown Workbench macro "${value}".`);
+  }
+  return value;
+}
+
 function parseStep(value: unknown): WorkbenchFrontendDslStep {
   if (!isPlainObject(value)) {
     throw new Error("DSL step must be an object.");
@@ -66,17 +108,57 @@ function parseStep(value: unknown): WorkbenchFrontendDslStep {
   const kind = typeof value.kind === "string" ? value.kind : "";
 
   if (kind === "invoke") {
-    if (typeof value.action !== "string" || !value.action.trim()) {
-      throw new Error("DSL invoke step requires a non-empty action.");
-    }
-    return { kind, action: value.action, ...(parsePayload(value.payload) ? { payload: parsePayload(value.payload) } : {}) };
+    const payload = parsePayload(value.payload);
+    return {
+      kind,
+      action: parseKnownAction(value.action, "DSL invoke step"),
+      ...(payload ? { payload } : {}),
+    };
   }
 
   if (kind === "macro") {
-    if (typeof value.macroId !== "string" || !value.macroId.trim()) {
-      throw new Error("DSL macro step requires a non-empty macroId.");
-    }
-    return { kind, macroId: value.macroId, ...(parsePayload(value.payload) ? { payload: parsePayload(value.payload) } : {}) };
+    const payload = parsePayload(value.payload);
+    return {
+      kind,
+      macroId: parseKnownMacro(value.macroId, "DSL macro step"),
+      ...(payload ? { payload } : {}),
+    };
+  }
+
+  if (kind === "expect_action") {
+    return {
+      kind,
+      action: parseKnownAction(value.action, "DSL expect_action step"),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
+  if (kind === "expect_macro") {
+    return {
+      kind,
+      macroId: parseKnownMacro(value.macroId, "DSL expect_macro step"),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
+  if (kind === "capture_action_catalog") {
+    return {
+      kind,
+      assign: parseAssign(value.assign, "DSL capture_action_catalog step"),
+      ...(typeof value.category === "string" && value.category.trim() ? { category: value.category } : {}),
+      ...(typeof value.risk === "string" && value.risk.trim() ? { risk: value.risk } : {}),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
+  if (kind === "emit_parity_report") {
+    return {
+      kind,
+      ...(value.assign === undefined
+        ? {}
+        : { assign: parseAssign(value.assign, "DSL emit_parity_report step") }),
+      ...parseOptionalMessage(value.message),
+    };
   }
 
   if (kind === "log") {
@@ -357,13 +439,48 @@ function compileStep(step: WorkbenchFrontendDslStep, stepLabel: string) {
 
   if (step.kind === "invoke") {
     return `${stepLabel}_payload = ${buildPythonExpression(step.payload ?? {})}
+ky.require_action(${JSON.stringify(step.action)})
 ${stepLabel}_result = await ky.invoke(${JSON.stringify(step.action)}, ${stepLabel}_payload)
 ky.log("DSL invoke:", ${JSON.stringify(step.action)}, ${stepLabel}_result)`;
   }
 
   if (step.kind === "macro") {
-    return `${stepLabel}_result = await ky.run_macro(${JSON.stringify(step.macroId)}, ${buildPythonExpression(step.payload ?? {})})
+    return `ky.require_macro(${JSON.stringify(step.macroId)})
+${stepLabel}_result = await ky.run_macro(${JSON.stringify(step.macroId)}, ${buildPythonExpression(step.payload ?? {})})
 ky.log("DSL macro:", ${JSON.stringify(step.macroId)}, ${stepLabel}_result)`;
+  }
+
+  if (step.kind === "expect_action") {
+    const message = step.message?.trim() || `Workbench action "${step.action}" is not available.`;
+    return `try:
+    ky.require_action(${JSON.stringify(step.action)})
+except Exception as error:
+    raise RuntimeError(${buildPythonExpression(buildDslFailureMessage("capability_mismatch", message))}) from error
+ky.log("DSL action available:", ${JSON.stringify(step.action)})`;
+  }
+
+  if (step.kind === "expect_macro") {
+    const message = step.message?.trim() || `Workbench macro "${step.macroId}" is not available.`;
+    return `try:
+    ky.require_macro(${JSON.stringify(step.macroId)})
+except Exception as error:
+    raise RuntimeError(${buildPythonExpression(buildDslFailureMessage("capability_mismatch", message))}) from error
+ky.log("DSL macro available:", ${JSON.stringify(step.macroId)})`;
+  }
+
+  if (step.kind === "capture_action_catalog") {
+    const filters = [
+      step.category ? `category=${JSON.stringify(step.category)}` : null,
+      step.risk ? `risk=${JSON.stringify(step.risk)}` : null,
+    ].filter(Boolean).join(", ");
+    return `${step.assign} = ky.actions_matching(${filters})
+ky.log(${buildPythonExpression(step.message?.trim() || "DSL captured Workbench action catalog.")}, len(${step.assign}))`;
+  }
+
+  if (step.kind === "emit_parity_report") {
+    const assign = step.assign ?? `${stepLabel}_parity_report`;
+    return `${assign} = ky.automation_parity_report()
+ky.log(${buildPythonExpression(step.message?.trim() || "DSL automation parity report.")}, json.dumps(${assign}, sort_keys=True))`;
   }
 
   if (step.kind === "log") {

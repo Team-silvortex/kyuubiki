@@ -46,5 +46,11 @@ The retained energy balance is:
 U = 3 * 0.5 * sigma * epsilon * A * L
 ```
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/truss_3d_refinement.rs` splits each physical
+tripod leg area into 1, 2, 4, 8, and 16 parallel partitions. It preserves apex
+displacement, stress, strain, axial-force summation across partitions, and
+total strain energy for the same symmetric tripod fixture.
+
 This evidence does not claim arbitrary 3D topology, member buckling, geometric
 nonlinearity, dynamic response, damaged members, or joint eccentricity.

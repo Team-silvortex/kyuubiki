@@ -42,6 +42,12 @@ axis. Apex displacement must rotate with the model while member lengths,
 temperatures, thermal and mechanical strains, stress, axial force, and energy
 remain invariant.
 
+The retained input reliability regression
+`workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs` rejects
+non-finite 3D node coordinates and degenerate thermal truss element topology, so
+the retained qualification includes explicit robustness evidence in addition to
+the objectivity regression.
+
 This evidence does not claim partial restraint, temperature gradients, buckling,
 plasticity, contact, dynamic response, or arbitrary thermal-structural
 assemblies.

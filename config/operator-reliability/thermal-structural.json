@@ -77,7 +77,8 @@
         "benchmark_matrix": "physics-coverage",
         "headless_workflow": true,
         "tests": [
-          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs"
+          "workers/rust/crates/solver/tests/accuracy_baselines/line_1d.rs",
+          "workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs"
         ],
         "accuracy_baseline": "accuracy_baseline_thermal_beam_1d_free_gradient_response",
         "review": {
@@ -108,7 +109,9 @@
           ],
           "convergence_checks": [
             "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
-            "thermal_beam_1d_tracks_gradient_and_section_depth_scaling"
+            "thermal_beam_1d_tracks_gradient_and_section_depth_scaling",
+            "workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs",
+            "free_curvature_field_is_refinement_invariant"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/thermal-beam-1d-closed-form-release-evidence.json",
@@ -120,6 +123,7 @@
           "tests": [
             "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
             "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+            "workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs",
             "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
           ]
         }

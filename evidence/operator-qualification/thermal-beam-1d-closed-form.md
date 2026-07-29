@@ -18,6 +18,12 @@ Because the beam is free to curve after the fixed root, the retained
 closed-form case expects near-zero internal shear, moment, stress, and strain
 energy apart from floating-point roundoff.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs` splits the
+same free-curvature beam into 1, 2, 4, 8, and 16 elements. It preserves the
+quadratic displacement field, linear rotation field, thermal curvature,
+near-zero internal force, and zero strain energy across the refined chain.
+
 ## Qualification Boundary
 
 The retained scope is intentionally narrow:

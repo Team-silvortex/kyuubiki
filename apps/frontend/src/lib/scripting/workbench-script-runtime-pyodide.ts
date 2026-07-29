@@ -92,6 +92,10 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - macros: macro catalog (list[dict])
 # - ui_contract: stable built-in UI automation contract (dict)
 # - ky.log(*parts)
+# - ky.has_action("action/id"), ky.require_action("action/id")
+# - ky.actions_by_category("model"), ky.actions_matching(category="model", risk="normal")
+# - ky.has_macro("macro/id"), ky.require_macro("macro/id")
+# - ky.automation_parity_report()
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.run_macro("macro/id", payload_dict)
 # - await ky.run_macro_definition(macro_dict)
@@ -141,6 +145,75 @@ class _KyuubikiBridge:
     def log(self, *parts):
         __kyuubikiBridge.log(" ".join(str(part) for part in parts))
 
+    def action(self, action_id):
+        for action in self.actions():
+            if action.get("id") == action_id:
+                return action
+        return None
+
+    def has_action(self, action_id):
+        return self.action(action_id) is not None
+
+    def require_action(self, action_id):
+        action = self.action(action_id)
+        if action is None:
+            raise KeyError(f"Unknown Workbench frontend action: {action_id}")
+        return action
+
+    def macro(self, macro_id):
+        for macro in self.macros():
+            if macro.get("id") == macro_id:
+                return macro
+        return None
+
+    def has_macro(self, macro_id):
+        return self.macro(macro_id) is not None
+
+    def require_macro(self, macro_id):
+        macro = self.macro(macro_id)
+        if macro is None:
+            raise KeyError(f"Unknown Workbench frontend macro: {macro_id}")
+        return macro
+
+    def actions_by_category(self, category):
+        return self.actions_matching(category=category)
+
+    def actions_matching(self, category=None, risk=None):
+        matches = []
+        for action in self.actions():
+            if category is not None and action.get("category") != category:
+                continue
+            if risk is not None and action.get("risk") != risk:
+                continue
+            matches.append(action)
+        return matches
+
+    def selector_keys(self):
+        contract = self.ui_contract()
+        direct = list(contract.get("selectors", {}).keys())
+        parameterized = [entry.get("key") for entry in contract.get("parameterizedSelectors", [])]
+        return [key for key in direct + parameterized if key]
+
+    def automation_parity_report(self):
+        action_categories = {}
+        for action in self.actions():
+            category = action.get("category", "unknown")
+            action_categories[category] = action_categories.get(category, 0) + 1
+        return {
+            "action_count": len(self.actions()),
+            "macro_count": len(self.macros()),
+            "selector_count": len(self.ui_contract().get("selectors", {})),
+            "parameterized_selector_count": len(self.ui_contract().get("parameterizedSelectors", [])),
+            "action_categories": action_categories,
+            "high_risk_actions": [
+                action.get("id")
+                for action in self.actions()
+                if action.get("requiresConfirmation")
+            ],
+            "selector_contract_version": self.ui_contract().get("contractVersion"),
+            "product_owned_static_ui": self.ui_contract().get("shellExtensible") is False,
+        }
+
     def ui_selector(self, key, value=None):
         contract = self.ui_contract()
         selectors = contract.get("selectors", {})
@@ -168,12 +241,14 @@ class _KyuubikiBridge:
     async def invoke(self, action, payload=None):
         if payload is None:
             payload = {}
+        self.require_action(action)
         result = await __kyuubikiBridge.invoke(action, json.dumps(payload))
         return json.loads(result)
 
     async def run_macro(self, macro, payload=None):
         if payload is None:
             payload = {}
+        self.require_macro(macro)
         return await self.invoke("macro/run", {"macroId": macro, **payload})
 
     async def run_steps(self, steps):
@@ -181,6 +256,7 @@ class _KyuubikiBridge:
         for step in steps:
             action = step.get("action")
             payload = step.get("payload", {})
+            self.require_action(action)
             results.append(await self.invoke(action, payload))
         return results
 

@@ -13,14 +13,16 @@
       "validation_methods": [
         "free_curvature_closed_form",
         "zero_gradient_limit",
-        "near_zero_internal_force"
+        "near_zero_internal_force",
+        "free_curvature_mesh_refinement"
       ],
       "formal_invariants": [
         "fixed_root_displacement_rotation",
         "tip_rotation_matches_curvature_times_length",
         "tip_displacement_matches_half_curvature_length_squared",
         "zero_gradient_has_zero_response",
-        "free_curvature_has_near_zero_internal_force"
+        "free_curvature_has_near_zero_internal_force",
+        "refinement_preserves_quadratic_displacement_rotation_and_zero_energy"
       ],
       "evidence_paths": [
         "config/operator-reliability/thermal-structural.json",
@@ -28,6 +30,7 @@
         "evidence/operator-qualification/thermal-beam-1d-closed-form.md",
         "workers/rust/crates/solver/tests/thermal_beam_1d_review.rs",
         "workers/rust/crates/solver/tests/thermal_beam_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs",
         "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs"
       ],
       "commands": [
@@ -40,6 +43,11 @@
           "id": "thermal-beam-1d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "thermal-beam-1d-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_beam_1d_refinement -- --nocapture"
         },
         {
           "id": "beam-torsion-input-reliability",

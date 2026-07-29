@@ -307,6 +307,45 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert plan["blocked_case_ids"] == []
   end
 
+  test "scheduler retry plan isolates package rejection without cascading failure" do
+    assert {:ok, good_task} = material_shock_task("case-good", 120.0)
+    assert {:ok, package_rejected_task} = material_shock_task("case-package", 160.0)
+
+    package_rejected_task =
+      package_rejected_task
+      |> put_in(["execution_program", "package_ref"], "orchestra://operator-package/wrong")
+      |> put_in(["runtime_hints", "package_ref"], "orchestra://operator-package/wrong")
+      |> refresh_task_digest()
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "case-good", "task_ir" => good_task},
+        %{"case_id" => "case-package", "task_ir" => package_rejected_task}
+      ]
+    }
+
+    assert {:ok, execution} = OperatorTaskExecutor.execute_batch(batch)
+    assert execution["ok_count"] == 1
+    assert execution["error_count"] == 1
+    assert execution["failed_case_ids"] == ["case-package"]
+    assert execution["error_codes"] == ["operator_task_mirror_mismatch"]
+
+    receipt = hd(execution["failure_receipts"])
+    assert receipt["case_id"] == "case-package"
+    assert receipt["failure_stage"] == "summarize_execution_program"
+    assert receipt["recovery"]["safe_to_continue_other_tasks"] == true
+    assert receipt["recovery"]["required_action"] == "fix_task_ir_contract_mirror_fields"
+
+    checkpoint = OperatorTaskBatchRun.checkpoint(batch, execution: execution)
+    assert checkpoint["resume_policy"]["next_action"] == "retry_failed_cases"
+
+    assert {:ok, retry_plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
+    assert retry_plan["target_case_ids"] == ["case-package"]
+    assert retry_plan["blocked_case_ids"] == []
+    assert retry_plan["recovery_actions"] == ["fix_task_ir_contract_mirror_fields"]
+  end
+
   test "records task batch failures without hiding the failed case" do
     assert {:ok, task_a} = material_shock_task("case-a", 120.0)
 
@@ -334,6 +373,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert List.last(result["results"])["status"] == "error"
     assert List.last(result["results"])["error"] =~ "operator_task_digest_mismatch"
     assert List.last(result["results"])["error_code"] == "operator_task_digest_mismatch"
+
     assert List.last(result["results"])["failure_receipt"]["schema_version"] ==
              "kyuubiki.control-plane-operator-task-failure/v1"
 

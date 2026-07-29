@@ -13,6 +13,21 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
     name: "frontend-layout-report",
     steps: [
       { kind: "log", message: "Starting built-in frontend layout report." },
+      { kind: "expect_action", action: "nav/setSidebarSection", message: "Navigation action must be scriptable." },
+      { kind: "expect_action", action: "job/run", message: "Study submission must be scriptable." },
+      { kind: "expect_action", action: "state/replaceFrameModel", message: "Frame import must be scriptable." },
+      { kind: "expect_macro", macroId: "macro/openDataResults", message: "Data review macro must be scriptable." },
+      {
+        kind: "capture_action_catalog",
+        assign: "normal_actions",
+        risk: "normal",
+        message: "Captured normal-risk GUI action count.",
+      },
+      {
+        kind: "emit_parity_report",
+        assign: "pwdt_parity",
+        message: "Captured Pwdt GUI parity report.",
+      },
       { kind: "capture_now", assign: "layout_report_at", message: "Captured layout report timestamp." },
       { kind: "invoke", action: "nav/setSidebarSection", payload: { section: "workflow" } },
       { kind: "expect_state", key: "sidebarSection", equals: "workflow", message: "Workflow sidebar should be active for layout inspection." },
@@ -93,6 +108,10 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
         item: "node_index",
         steps: [{ kind: "log", message: "Visible 3D node selection entry during layout check: ${node_index}" }],
         else: [{ kind: "log", message: "No active 3D node selection was present during layout capture." }],
+      },
+      {
+        kind: "log",
+        message: `${WORKBENCH_FRONTEND_DSL_REPORT_PREFIX} parity=\${pwdt_parity} normal_actions=\${normal_actions}`,
       },
       {
         kind: "log",

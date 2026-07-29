@@ -25,6 +25,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "free-curvature-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 thermal beam free-curvature refinement invariance for displacement, rotation, curvature, and zero energy",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_beam_1d_refinement.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "thermal-beam-review-fixture",
           "kind": "boundary_regression",
           "gate": "retain review fixture coverage for root constraints, tip response, and moment diagnostics",
@@ -69,6 +76,13 @@
           "kind": "regression_test",
           "gate": "retain inactive branch, active branch, penetration, and force-split checks",
           "artifact_path": "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "active-inactive-chain-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 inactive and active contact gap refinement invariance for displacement, spring force, penetration, and contact force",
+          "artifact_path": "workers/rust/crates/solver/tests/contact_gap_1d_refinement.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -119,6 +133,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "area-partition-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 member area partition invariance for 2D truss apex displacement, stress, strain, axial force sum, and total energy",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_2d_refinement.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "truss-review-fixture",
           "kind": "boundary_regression",
           "gate": "retain review fixture coverage for loaded node equilibrium and member diagnostics",
@@ -163,6 +184,13 @@
           "kind": "regression_test",
           "gate": "retain member force, apex displacement, support, and energy checks",
           "artifact_path": "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "area-partition-refinement",
+          "kind": "convergence_regression",
+          "gate": "retain 1/2/4/8/16 member area partition invariance for 3D tripod apex displacement, stress, strain, axial force sum, and total energy",
+          "artifact_path": "workers/rust/crates/solver/tests/truss_3d_refinement.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -213,6 +241,13 @@
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
+          "artifact_id": "thermal-truss-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for non-finite and degenerate thermal truss inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
           "artifact_id": "release-validation-output",
           "kind": "release_retained_regression_output",
           "gate": "review the retained output from make capture-thermal-truss-3d-qualification-release-evidence before promotion",
@@ -243,6 +278,13 @@
           "kind": "convergence_regression",
           "gate": "verify that a heated and mechanically loaded triangle preserves vector covariance and scalar response invariants under rigid rotation",
           "artifact_path": "workers/rust/crates/solver/tests/thermal_truss_2d_objectivity.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "thermal-truss-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for non-finite and degenerate thermal truss inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/thermal_truss_input_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -283,6 +325,13 @@
           "kind": "convergence_regression",
           "gate": "verify second-order axial and bending response convergence for a multi-element 2D frame under quadratic temperature and thermal-gradient fields",
           "artifact_path": "workers/rust/crates/solver/tests/thermal_frame_mesh_convergence.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "frame-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for non-finite and degenerate thermal frame inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/frame_input_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {
@@ -377,6 +426,13 @@
           "kind": "convergence_regression",
           "gate": "verify parameter perturbations against the closed form and preserve scalar response invariants under rigid rotation",
           "artifact_path": "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
+          "path_policy": "repo-relative-required-before-qualification"
+        },
+        {
+          "artifact_id": "solid-tetra-input-reliability",
+          "kind": "boundary_regression",
+          "gate": "retain bad-input rejection coverage for non-finite, invalid-topology, zero-volume, and material-bound solid tetra inputs",
+          "artifact_path": "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",
           "path_policy": "repo-relative-required-before-qualification"
         },
         {

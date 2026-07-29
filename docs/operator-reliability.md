@@ -612,8 +612,11 @@ levels. Every retained branch also re-derives node displacement magnitude,
 node id/coordinate passthrough, max displacement, max rotation, max moment, max
 stress, max temperature gradient, thermal curvature, and total strain energy
 from public node and element fields.
-This does not claim thermal frame assemblies, nonlinear material behavior,
-transient heat transfer, buckling, or plasticity.
+The retained free-curvature refinement ladder now splits the same thermal beam
+into 1, 2, 4, 8, and 16 elements while preserving the quadratic displacement
+field, linear rotation field, thermal curvature, near-zero internal force, and
+zero strain energy. This does not claim thermal frame assemblies, nonlinear
+material behavior, transient heat transfer, buckling, or plasticity.
 
 The thermal truss 3D operator is now qualified for the retained fully
 restrained uniform-temperature scope. Its closed-form evidence checks zero
@@ -667,7 +670,9 @@ node id/coordinate/temperature passthrough, max displacement, max rotation,
 average temperature delta, thermal strain, mechanical strain, thermal
 curvature, axial stress, axial force, combined stress, max temperature delta,
 max temperature gradient, max moment, max stress, and total strain energy from
-public node and element fields. This does not claim partial restraint,
+public node and element fields. The retained frame input reliability regression
+rejects non-finite thermal frame coordinates, loads, and nodal temperatures
+before release evidence is accepted. This does not claim partial restraint,
 temperature gradients, frame assemblies, geometric nonlinearity, buckling,
 plasticity, contact, or dynamic response.
 
@@ -716,8 +721,12 @@ retained branch also re-derives spring length from input coordinates, spring
 extension, spring force, tangent stiffness, node id/coordinate passthrough,
 max displacement, max spring force, nonlinear solve residual bounds, and
 monotone converged load-step metadata from
-public result fields. This does not claim multidimensional contact, friction,
-impact, large deformation, or industrial contact search.
+public result fields. The retained refinement ladder now splits the same
+linear spring path into 1, 2, 4, 8, and 16 elements for both inactive and active
+penalty-stop branches while preserving the displacement line, spring force,
+penetration, contact force, and active branch count. This does not claim
+multidimensional contact, friction, impact, large deformation, or industrial
+contact search.
 
 The truss 2D operator is now qualified for the retained symmetric two-bar
 scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
@@ -735,8 +744,11 @@ closed-form and scaling cases. Every retained branch also re-derives maximum
 nodal displacement, node id/coordinate passthrough, max stress, max
 strain-energy density, total strain energy, Hooke-law stress, axial force,
 element energy density, and global external work from public node and element
-fields. This does not claim arbitrary truss topology, geometric nonlinearity,
-buckling, dynamic response, damaged members, or 3D space truss behavior.
+fields. The retained area-partition refinement ladder now splits each physical
+member into 1, 2, 4, 8, and 16 parallel area partitions while preserving apex
+displacement, stress, strain, member axial-force sums, and total strain energy.
+This does not claim arbitrary truss topology, geometric nonlinearity, buckling,
+dynamic response, damaged members, or 3D space truss behavior.
 
 The truss 3D operator is now qualified for the retained symmetric tripod scope.
 Its closed-form evidence checks fixed base supports, zero lateral apex motion,
@@ -752,9 +764,11 @@ vertical load/displacement pair. Every retained branch also re-derives maximum
 3D nodal displacement, node id/coordinate passthrough, max stress, max
 strain-energy density, total strain energy, Hooke-law stress, axial force,
 element energy density, and global external work from public node and element
-fields. This does not claim arbitrary space-frame topology, geometric
-nonlinearity, buckling, damaged members, joint eccentricity, or dynamic
-response.
+fields. The retained tripod area-partition refinement ladder now splits each
+leg into 1, 2, 4, 8, and 16 parallel area partitions while preserving apex
+displacement, stress, strain, leg axial-force sums, and total strain energy.
+This does not claim arbitrary space-frame topology, geometric nonlinearity,
+buckling, damaged members, joint eccentricity, or dynamic response.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at
@@ -851,9 +865,12 @@ tip DOF. Every retained branch also re-derives node id/coordinate passthrough,
 node displacement magnitude, element volume from tetra coordinates, total
 volume, von Mises stress, `0.5 * stress dot strain` energy density,
 maximum summary fields, total strain energy, and external work-energy from the
-public node and element fields. This remains a single-element linear-elastic
-qualification, not a mesh-convergence,
-plasticity, contact, or large-deformation claim.
+public node and element fields. The retained solid tetra input reliability
+regression rejects non-finite coordinates and loads, missing or duplicate
+topology, zero-volume tetrahedra, invalid Young's modulus, and invalid Poisson
+ratio values before release evidence is accepted. This remains a single-element
+linear-elastic qualification, not a mesh-convergence, plasticity, contact, or
+large-deformation claim.
 
 `solve.nonlinear_spring_1d` is now qualified for the current single hardening
 spring scope. The retained evidence derives the Cardano root for

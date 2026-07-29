@@ -51,6 +51,14 @@ The displacement vector must rotate with the fixture while volume, displacement
 magnitude, von Mises stress, strain-energy density, and total strain energy
 remain invariant. The rotated force-displacement work is checked independently.
 
+## Input Reliability
+
+The retained input reliability regression
+`workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs` rejects
+non-finite node coordinates and loads, missing or duplicate topology,
+zero-volume tetrahedra, invalid Young's modulus, and invalid Poisson ratio
+values before qualification evidence is accepted.
+
 ## Scope
 
 This qualifies the current single constant-strain tetrahedron path for

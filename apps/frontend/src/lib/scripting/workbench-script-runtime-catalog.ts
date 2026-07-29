@@ -238,6 +238,24 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     },
   },
   {
+    id: "state/replaceFrameModel",
+    category: "state",
+    risk: "normal",
+    summary: {
+      en: "Replace the active 2D frame model payload.",
+      zh: "替换当前二维框架模型。",
+    },
+  },
+  {
+    id: "state/replaceBeamModel",
+    category: "state",
+    risk: "normal",
+    summary: {
+      en: "Replace the active 1D beam model payload.",
+      zh: "替换当前一维梁模型。",
+    },
+  },
+  {
     id: "state/projectHeatToThermo",
     category: "state",
     risk: "normal",
@@ -274,6 +292,16 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       en: "Submit the current study.",
       zh: "提交当前研究求解。",
     },
+  },
+  {
+    id: "macro/run",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Run a catalogued Workbench frontend macro.",
+      zh: "运行一个已登记的 Workbench 前端宏。",
+    },
+    payloadExample: { macroId: "macro/openDataResults" },
   },
   {
     id: "job/cancel",

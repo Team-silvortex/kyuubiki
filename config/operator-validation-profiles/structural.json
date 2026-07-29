@@ -13,14 +13,16 @@
       "validation_methods": [
         "inactive_gap_closed_form",
         "active_penalty_stop_closed_form",
-        "force_split_equilibrium"
+        "force_split_equilibrium",
+        "active_inactive_chain_refinement"
       ],
       "formal_invariants": [
         "fixed_root_displacement",
         "inactive_gap_has_zero_contact_force",
         "active_gap_penetration_matches_tip_displacement_minus_gap",
         "spring_force_plus_contact_force_matches_load",
-        "contact_activation_count_matches_branch"
+        "contact_activation_count_matches_branch",
+        "refinement_preserves_penalty_contact_branch_force_split_and_displacement_line"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -28,6 +30,7 @@
         "evidence/operator-qualification/contact-gap-1d-closed-form.md",
         "workers/rust/crates/solver/tests/contact_gap_1d_review.rs",
         "workers/rust/crates/solver/tests/contact_gap_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/contact_gap_1d_refinement.rs",
         "workers/rust/crates/solver/tests/contact_gap_reliability.rs"
       ],
       "commands": [
@@ -40,6 +43,11 @@
           "id": "contact-gap-1d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_closed_form -- --nocapture"
+        },
+        {
+          "id": "contact-gap-1d-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test contact_gap_1d_refinement -- --nocapture"
         },
         {
           "id": "contact-gap-reliability",
@@ -59,14 +67,16 @@
       "validation_methods": [
         "symmetric_two_bar_closed_form",
         "member_force_balance",
-        "strain_energy_balance"
+        "strain_energy_balance",
+        "member_area_partition_refinement"
       ],
       "formal_invariants": [
         "fixed_support_displacements_are_zero",
         "apex_horizontal_displacement_is_zero_by_symmetry",
         "member_axial_forces_match_vertical_equilibrium",
         "stress_and_strain_match_axial_force",
-        "total_strain_energy_matches_member_energy_sum"
+        "total_strain_energy_matches_member_energy_sum",
+        "area_partition_preserves_apex_displacement_stress_and_total_energy"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -74,6 +84,7 @@
         "evidence/operator-qualification/truss-2d-closed-form.md",
         "workers/rust/crates/solver/tests/truss_2d_review.rs",
         "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
+        "workers/rust/crates/solver/tests/truss_2d_refinement.rs",
         "workers/rust/crates/solver/tests/truss_input_reliability.rs"
       ],
       "commands": [
@@ -86,6 +97,11 @@
           "id": "truss-2d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_2d_closed_form -- --nocapture"
+        },
+        {
+          "id": "truss-2d-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_2d_refinement -- --nocapture"
         },
         {
           "id": "truss-input-reliability",
@@ -105,14 +121,16 @@
       "validation_methods": [
         "symmetric_tripod_closed_form",
         "member_force_balance_3d",
-        "strain_energy_balance"
+        "strain_energy_balance",
+        "member_area_partition_refinement"
       ],
       "formal_invariants": [
         "fixed_base_displacements_are_zero",
         "apex_lateral_displacements_are_zero_by_symmetry",
         "member_axial_forces_match_vertical_equilibrium",
         "stress_and_strain_match_axial_force",
-        "total_strain_energy_matches_three_member_energy_sum"
+        "total_strain_energy_matches_three_member_energy_sum",
+        "area_partition_preserves_apex_displacement_stress_and_total_energy"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -120,6 +138,7 @@
         "evidence/operator-qualification/truss-3d-closed-form.md",
         "workers/rust/crates/solver/tests/truss_3d_review.rs",
         "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/truss_3d_refinement.rs",
         "workers/rust/crates/solver/tests/truss_input_reliability.rs"
       ],
       "commands": [
@@ -132,6 +151,11 @@
           "id": "truss-3d-closed-form",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "truss-3d-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_3d_refinement -- --nocapture"
         },
         {
           "id": "truss-input-reliability",

@@ -589,66 +589,53 @@
     },
     {
       "id": "solver-independent-validation-depth",
-      "status": "partial",
-      "modules": [
-        "runtime-engine-solver",
-        "verification-evidence"
-      ],
-      "paradigms": [
-        "solver_execution",
-        "validation"
-      ],
-      "dimensions": [
-        "numerical_validation"
-      ],
+      "status": "proven",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
       "files": [
         "docs/weakness-roadmap.md",
-        "config/operator-qualification-roadmap.json"
+        "config/operator-qualification-roadmap.json",
+        "config/operator-qualification-evidence-kits/closed-form-promotions.json"
       ],
       "required_text": [
-        "independent structural correlation remain open",
-        "minimum_candidate_level"
+        "baseline is `23 complete / 0 partial / 0 thin`",
+        "minimum_candidate_level",
+        "release-retained validation output"
       ]
     },
     {
       "id": "orchestra-distributed-recovery-depth",
-      "status": "open",
-      "modules": [
-        "orchestra-control-plane"
-      ],
-      "paradigms": [
-        "workflow_composition"
-      ],
-      "dimensions": [
-        "recovery"
-      ],
+      "status": "proven",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition"],
+      "dimensions": ["recovery"],
       "files": [
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
         "docs/weakness-roadmap.md"
       ],
       "required_text": [
-        "add fault-injection tests for agent disconnect, package rejection, runtime"
+        "scheduler retry plan isolates package rejection without cascading failure",
+        "retry_failed_cases",
+        "safe_to_continue_other_tasks"
       ]
     },
     {
       "id": "agent-watchdog-recovery",
-      "status": "partial",
-      "modules": [
-        "runtime-agent-cli"
-      ],
-      "paradigms": [
-        "runtime_api",
-        "deployment_update"
-      ],
-      "dimensions": [
-        "recovery"
-      ],
+      "status": "proven",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "deployment_update"],
+      "dimensions": ["recovery"],
       "files": [
         "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
         "docs/weakness-roadmap.md"
       ],
       "required_text": [
         "recent_failure_count",
-        "scheduler retry"
+        "scheduler retry",
+        "safe_to_continue_other_tasks"
       ]
     },
     {

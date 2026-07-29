@@ -20,6 +20,12 @@ The regression checks support displacements, apex horizontal symmetry,
 closed-form apex vertical displacement, equal member axial force, stress,
 strain, strain-energy density, and total strain energy.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/truss_2d_refinement.rs` splits each physical
+member area into 1, 2, 4, 8, and 16 parallel partitions. It preserves apex
+displacement, stress, strain, axial-force summation across partitions, and
+total strain energy for the same symmetric two-bar fixture.
+
 ## Qualification Boundary
 
 This qualification is intentionally narrow:

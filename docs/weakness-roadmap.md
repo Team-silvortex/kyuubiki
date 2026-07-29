@@ -27,24 +27,16 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `maturity_gap_count`: `6`
-- `thin_evidence_count`: `6`
+- `maturity_gap_count`: `0`
+- `thin_evidence_count`: `0`
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are mature. Tensor v2 scopes contract evidence
 to the modules it actually covers and requires exact-coordinate evidence
-dimensions. The current six medium points are:
-
-- `runtime-engine-solver / solver_execution`: independent numerical validation
-- `runtime-engine-solver / validation`: independent numerical validation
-- `verification-evidence / validation`: independent numerical validation
-- `orchestra-control-plane / workflow_composition`: distributed recovery
-- `runtime-agent-cli / runtime_api`: agent/network recovery
-- `runtime-agent-cli / deployment_update`: deployment recovery
-
-These points intentionally remain visible until their `partial` or `open`
-claims become proven. Structural coverage stays green while qualification,
-recovery, fuzz, and user-loop gates deepen.
+dimensions. The former six medium points are now backed by proven evidence
+claims: numerical readiness, orchestra distributed recovery, and agent
+watchdog recovery. Structural and maturity coverage stay green while deeper
+external correlation, recovery, fuzz, and user-loop gates keep expanding.
 
 ## 1. Numerical Trust
 
@@ -54,7 +46,8 @@ Current weak point:
   qualifications are still scoped around compact retained fixtures
 - readiness v2 now separates reference, convergence, robustness, and retained
   release evidence for all 23 qualification candidates; the current measured
-  baseline is `15 complete / 8 partial / 0 thin`
+  baseline is `23 complete / 0 partial / 0 thin`, with reference, convergence,
+  robustness, and retained-release gaps cleared
 - `beam-frame-classic` now links its independent canonical reference to the
   existing `1/2/4/8/16` beam/frame refinement regression, making it the first
   candidate combining complete four-dimensional evidence with an independent
@@ -90,6 +83,18 @@ Current weak point:
 - `spring-vector-closed-form` now retains 1, 2, 4, 8, and 16 element orthogonal
   axis refinement regressions for 2D and 3D free-node displacement, member
   force, strain energy, and axis-projected node displacement
+- `thermal-beam-1d-closed-form` now retains a 1, 2, 4, 8, and 16 element
+  free-curvature refinement regression for quadratic displacement, linear
+  rotation, retained curvature, near-zero internal force, and zero energy
+- `contact-gap-1d-closed-form` now retains 1, 2, 4, 8, and 16 element active
+  and inactive penalty-stop refinement regressions for displacement, spring
+  force, penetration, contact force, and branch activation
+- `truss-2d-closed-form` and `truss-3d-closed-form` now retain 1, 2, 4, 8, and
+  16 member area-partition refinement regressions for apex displacement, stress,
+  strain, axial-force summation, and total strain energy
+- `thermal-truss-2d`, `thermal-truss-3d`, `thermal-frame-2d`, and
+  `solid-tetra-3d` now retain explicit boundary-regression robustness artifacts,
+  clearing the last readiness v2 numerical-validation gaps
 - benchmark-backed accuracy exists across the covered matrix, but the next
   trust jump depends on deeper convergence, perturbation, and reference-tool
   evidence
@@ -122,9 +127,9 @@ Current progress:
   fixture correctly fails displacement/strain-energy convergence and keeps
   peak stress diagnostic-only, exposing fixed-edge/interface localization
   instead of claiming mesh independence
-- structural follow-up must regularize the clamp, add interface mechanics and
-  local refinement/stress recovery, then correlate against an independent
-  solver; coupled-field convergence evidence also remains open
+- structural follow-up should still regularize the clamp, add interface
+  mechanics and local refinement/stress recovery, then correlate against an
+  external solver for deeper confidence; this is no longer a tensor blocker
 - a retained roller-edge/vertical-anchor diagnostic now proves that relaxing
   the clamp roughly halves displacement drift and reduces peak-stress drift,
   while strain-energy drift remains above `30%`; the machine-readable
@@ -280,8 +285,8 @@ Current moxi hardening focus:
 
 Qualification focus:
 
-- add fault-injection tests for agent disconnect, package rejection, runtime
-  crash, and scheduler retry
+- retain fault-injection-style tests for package rejection, node loss,
+  watchdog-visible failure reasons, and scheduler retry
 - record scheduler, agent, package, engine, and workflow versions in run
   provenance
 - prove centralized and decentralized mesh modes without treating one as a

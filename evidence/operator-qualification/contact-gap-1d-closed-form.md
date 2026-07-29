@@ -23,6 +23,12 @@ u = (F + kc * gap) / (k + kc)
 The retained regression checks both branches, contact activation count,
 penetration, spring force, contact force, and force-split equilibrium.
 
+The retained refinement regression
+`workers/rust/crates/solver/tests/contact_gap_1d_refinement.rs` splits the same
+equivalent spring path into 1, 2, 4, 8, and 16 linear elements. It preserves the
+inactive branch, active penalty branch, displacement line, spring force,
+penetration, contact force, and active contact count.
+
 ## Qualification Boundary
 
 This qualification is intentionally narrow:

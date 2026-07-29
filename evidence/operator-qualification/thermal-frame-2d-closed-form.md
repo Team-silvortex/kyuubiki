@@ -61,3 +61,12 @@ Refinement through 1, 2, 4, 8, and 16 elements must reduce all three errors at
 the expected second-order rate. This evidence still does not claim arbitrary
 temperature fields, geometric nonlinearity, buckling, plasticity, contact, or
 dynamic response.
+
+## Input Reliability
+
+The retained input reliability regression
+`workers/rust/crates/solver/tests/frame_input_reliability.rs` rejects
+non-finite thermal frame coordinates, loads, and nodal temperatures before
+qualification evidence is accepted. This gives the retained 2D thermal frame
+scope an explicit robustness artifact in addition to objectivity and mesh
+convergence.

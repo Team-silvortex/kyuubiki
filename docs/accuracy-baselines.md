@@ -382,7 +382,10 @@ displacement scales quadratically. Every retained branch also re-sums member
 at summary and element levels. The retained regression also re-derives node
 displacement magnitude, node id/coordinate passthrough, max displacement, max
 rotation, max moment, max stress, max temperature gradient, and thermal
-curvature from public result fields.
+curvature from public result fields. The retained refinement regression now
+splits the same free-curvature beam into 1, 2, 4, 8, and 16 elements while
+preserving the quadratic displacement field, linear rotation field, and
+near-zero internal-force response.
 
 The thirteenth approved qualification packet is
 [contact-gap-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/contact-gap-1d-closed-form-release-evidence.json).
@@ -396,7 +399,10 @@ active flags/count, `max_contact_force`, and spring/contact/external-load
 balance. The retained regression also re-derives spring length from input
 coordinates, spring extension, spring force, tangent stiffness, node
 id/coordinate passthrough, max displacement, max spring force, residual bounds,
-and converged load-step metadata from public result fields.
+and converged load-step metadata from public result fields. The retained
+refinement regression now splits the same equivalent spring/contact path into
+1, 2, 4, 8, and 16 elements for both inactive and active contact branches while
+preserving displacement, spring force, penetration, and contact force.
 
 The fourteenth approved qualification packet is
 [truss-2d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-2d-closed-form-release-evidence.json).
@@ -410,7 +416,10 @@ work-energy conjugacy `total_strain_energy = 0.5 * apex_load * apex_displacement
 The retained regression also re-derives max displacement, node id/coordinate
 passthrough, max stress, max strain-energy density, total strain energy,
 Hooke-law stress, axial force, element energy density, and global external work
-from public result fields.
+from public result fields. The retained area-partition refinement regression
+now splits each physical member into 1, 2, 4, 8, and 16 parallel area
+partitions while preserving apex displacement, stress, strain, axial-force
+summation, and total strain energy.
 
 The fifteenth approved qualification packet is
 [truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/truss-3d-closed-form-release-evidence.json).
@@ -425,7 +434,10 @@ load/displacement work-energy conjugacy
 regression also re-derives max 3D displacement, node id/coordinate passthrough,
 max stress, max strain-energy density, total strain energy, Hooke-law stress,
 axial force, element energy density, and global external work from public result
-fields.
+fields. The retained tripod area-partition refinement regression now splits
+each physical leg into 1, 2, 4, 8, and 16 parallel area partitions while
+preserving apex displacement, stress, strain, axial-force summation, and total
+strain energy.
 
 The sixteenth approved qualification packet is
 [thermal-truss-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-truss-3d-closed-form-release-evidence.json).
@@ -465,7 +477,9 @@ into total strain energy. The retained regression also re-derives displacement,
 node id/coordinate/temperature passthrough, rotation, average temperature
 delta, thermal strain, mechanical strain, thermal curvature, axial
 stress/force, combined stress, temperature summaries, moment summary, stress
-summary, and total strain energy from public result fields.
+summary, and total strain energy from public result fields. The retained input
+reliability regression also rejects non-finite thermal frame coordinates, loads,
+and nodal temperatures before release evidence is accepted.
 
 The nineteenth approved qualification packet is
 [thermal-frame-3d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/thermal-frame-3d-closed-form-release-evidence.json).
@@ -495,7 +509,10 @@ free-tip work-energy conjugacy
 regression now also re-derives node id/coordinate passthrough, node
 displacement magnitudes, element volume from tetra coordinates, total volume,
 von Mises stress, strain-energy density, max summaries, total strain energy,
-and external work-energy from public result fields.
+and external work-energy from public result fields. The retained input
+reliability regression also rejects non-finite coordinates and loads, invalid
+topology, zero-volume tetrahedra, and material-bound violations before release
+evidence is accepted.
 
 The twenty-first approved qualification packet is
 [nonlinear-spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json).
