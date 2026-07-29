@@ -8,6 +8,7 @@ type WorkbenchScriptDslCardProps = {
   language: string;
   onCompileDsl: () => void;
   onLoadDslTemplate: () => void;
+  onLoadRecipeTemplate: () => void;
   onRunDsl: () => void;
   onUseCurrentMacroDraft: () => void;
   setDslCode: (value: string) => void;
@@ -19,6 +20,7 @@ export function WorkbenchScriptDslCard({
   language,
   onCompileDsl,
   onLoadDslTemplate,
+  onLoadRecipeTemplate,
   onRunDsl,
   onUseCurrentMacroDraft,
   setDslCode,
@@ -45,6 +47,7 @@ export function WorkbenchScriptDslCard({
         <button className="ghost-button" onClick={onCompileDsl} type="button">{copy.compile}</button>
         <button className="ghost-button" onClick={onRunDsl} type="button">{copy.run}</button>
         <button className="ghost-button" onClick={onLoadDslTemplate} type="button">{copy.reset}</button>
+        <button className="ghost-button" onClick={onLoadRecipeTemplate} type="button">{copy.recipe}</button>
         <button className="ghost-button" onClick={onUseCurrentMacroDraft} type="button">{copy.macro}</button>
       </div>
     </section>

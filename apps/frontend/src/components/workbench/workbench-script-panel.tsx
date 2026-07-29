@@ -26,9 +26,11 @@ import {
   buildWorkbenchRecordedMacroDraft,
   buildWorkbenchRecordedMacroDraftFromEntries,
   buildWorkbenchUiAutomationContractSnapshot,
+  buildWorkbenchFrontendDslFromRecipe,
   buildWorkbenchPythonPrelude,
   buildWorkbenchFrontendDslFromMacroDraft,
   compileWorkbenchFrontendDslToPython,
+  CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL,
   DEFAULT_WORKBENCH_FRONTEND_DSL,
   DEFAULT_WORKBENCH_PYTHON,
   deleteWorkbenchMacroPreset,
@@ -46,6 +48,7 @@ import {
   serializeWorkbenchRecordedMacroDraft,
   serializeWorkbenchMacroPythonSnippet,
   WORKBENCH_SCRIPT_MACROS,
+  WORKBENCH_SCRIPT_RECIPES,
   WORKBENCH_SCRIPT_SNIPPETS,
   WORKBENCH_SCRIPT_ACTIONS,
   WORKBENCH_FRONTEND_DSL_REPORT_PREFIX,
@@ -53,6 +56,7 @@ import {
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptLanguage,
   type WorkbenchMacroPresetRecord,
+  type WorkbenchScriptRecipeDefinition,
   type WorkbenchScriptSnippetDefinition,
   type WorkbenchScriptSnippetParameters,
   type WorkbenchScriptSnippetPresetRecord,
@@ -227,6 +231,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const insertSnippet = (snippet: WorkbenchScriptSnippetDefinition, parameters?: WorkbenchScriptSnippetParameters) => {
     setScriptCode((current) => `${current.trimEnd()}\n\n${renderWorkbenchScriptSnippet(snippet, parameters)}`);
     appendOutput(`[snippet] ${snippet.id}`);
+  };
+  const loadRecipeDsl = (recipe: WorkbenchScriptRecipeDefinition) => {
+    const document = buildWorkbenchFrontendDslFromRecipe(recipe);
+    setDslCode(JSON.stringify(document, null, 2));
+    setDslError(null);
+    appendOutput(`[recipe] ${recipe.id}`);
   };
   const saveSnippetPreset = (snippet: WorkbenchScriptSnippetDefinition, parameters: WorkbenchScriptSnippetParameters) => {
     if (!snapshot.selectedProjectId) {
@@ -523,6 +533,10 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           setDslCode(DEFAULT_WORKBENCH_FRONTEND_DSL);
           setDslError(null);
         }}
+        onLoadRecipeTemplate={() => {
+          setDslCode(CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL);
+          setDslError(null);
+        }}
         onRunDsl={() => void runDsl()}
         onUseCurrentMacroDraft={useCurrentMacroDraftAsDsl}
         setDslCode={setDslCode}
@@ -554,6 +568,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         insertSnippetPreset={insertSnippetPreset}
         insertSnippet={insertSnippet}
         language={language}
+        loadRecipeDsl={loadRecipeDsl}
         macros={WORKBENCH_SCRIPT_MACROS}
         deleteSnippetPreset={deleteSnippetPreset}
         presetName={presetName}
@@ -562,6 +577,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         saveCurrentPreset={saveCurrentPreset}
         selectedProjectId={snapshot.selectedProjectId}
         setPresetName={setPresetName}
+        recipes={WORKBENCH_SCRIPT_RECIPES}
         snippets={WORKBENCH_SCRIPT_SNIPPETS}
         snippetPresetRecords={snippetPresetRecords}
       />

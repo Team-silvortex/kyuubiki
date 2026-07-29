@@ -1,11 +1,12 @@
 "use client";
 
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import {
   type WorkbenchUiChunkId,
 } from "@/components/workbench/workbench-ui-streaming";
 import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
+import { installWorkbenchPwdtBrowserBridge } from "@/lib/scripting/workbench-script-runtime";
 
 const WorkbenchAssistantFloat = lazy(() =>
   import("@/components/workbench/workbench-assistant-float").then((module) => ({
@@ -31,6 +32,14 @@ const WorkbenchMainViewportPanelMount = lazy(() =>
 type WorkbenchMainShellMountProps = Record<string, any>;
 
 export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
+  useEffect(() => {
+    if (!props.getScriptSnapshot || !props.invokeScriptAction) return undefined;
+    return installWorkbenchPwdtBrowserBridge({
+      getSnapshot: props.getScriptSnapshot,
+      invokeAction: props.invokeScriptAction,
+    });
+  }, [props.getScriptSnapshot, props.invokeScriptAction]);
+
   return (
     <>
       <span

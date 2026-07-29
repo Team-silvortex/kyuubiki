@@ -6,6 +6,7 @@ import type {
   WorkbenchScriptSnippetParameterValue,
   WorkbenchScriptSnippetParameters,
 } from "./workbench-script-runtime-types.ts";
+import { CLOSED_LOOP_TRUSS_RECIPE_ID } from "./workbench-script-runtime-recipes.ts";
 
 export type WorkbenchScriptSnippetParameter = {
   key: string;
@@ -123,6 +124,39 @@ if inspector_panel is None:
     raise RuntimeError("Inspector panel missing")
 
 ky.log("Workflow surface ready for scripted inspection")`,
+  },
+  {
+    id: "snippet/workflow/create-run-truss-study",
+    category: "workflow",
+    title: {
+      en: "Create and run a truss study",
+      zh: "新建并运行桁架研究",
+    },
+    summary: {
+      en: "Create or reuse the active project, generate a 2D truss, save it, run the solver, and open result history.",
+      zh: "创建或复用当前项目，生成二维桁架，保存模型，提交求解，并打开结果历史。",
+    },
+    parameters: [
+      { key: "projectName", defaultValue: "Pwdt truss automation" },
+      { key: "projectDescription", defaultValue: "Created from wasm Python DSL." },
+      { key: "modelName", defaultValue: "pwdt-truss-study" },
+      { key: "activeMaterial", defaultValue: "210" },
+      { key: "bays", defaultValue: 6 },
+      { key: "span", defaultValue: 18 },
+      { key: "height", defaultValue: 3.5 },
+      { key: "loadY", defaultValue: -1500 },
+      { key: "timeoutSeconds", defaultValue: 90 },
+    ],
+    code: `result = await ky.run_recipe("${CLOSED_LOOP_TRUSS_RECIPE_ID}", snippet_params)
+if not result.get("ok"):
+    raise RuntimeError(f"Study ended without completion: {result.get('jobStatus')}")
+
+ky.log(
+    "Pwdt truss closed loop ready:",
+    result.get("projectId"),
+    result.get("saveResult"),
+    result.get("resultCount"),
+)`,
   },
   {
     id: "snippet/inspection/assert-built-in-shell",

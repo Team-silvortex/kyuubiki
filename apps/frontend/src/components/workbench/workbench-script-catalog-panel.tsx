@@ -5,6 +5,8 @@ import {
   getWorkbenchScriptActionSummary,
   getWorkbenchScriptCatalogCopy,
   getWorkbenchScriptMacroSummary,
+  getWorkbenchScriptRecipeCategoryLabel,
+  getWorkbenchScriptRecipeSummary,
   getWorkbenchScriptSnippetCategoryLabel,
   getWorkbenchScriptSnippetSummary,
   getWorkbenchScriptSnippetTitle,
@@ -17,12 +19,13 @@ import {
   type WorkbenchScriptActionDefinition,
   type WorkbenchScriptLanguage,
   type WorkbenchScriptMacroDefinition,
+  type WorkbenchScriptRecipeDefinition,
   type WorkbenchScriptSnippetDefinition,
   type WorkbenchScriptSnippetParameters,
   type WorkbenchScriptSnippetPresetRecord,
 } from "@/lib/scripting/workbench-script-runtime";
 
-type CatalogMode = "presets" | "actions" | "macros" | "snippets";
+type CatalogMode = "presets" | "actions" | "macros" | "recipes" | "snippets";
 
 type WorkbenchScriptCatalogPanelProps = {
   actions: WorkbenchScriptActionDefinition[];
@@ -37,6 +40,7 @@ type WorkbenchScriptCatalogPanelProps = {
   insertSnippet: (snippet: WorkbenchScriptSnippetDefinition, parameters?: WorkbenchScriptSnippetParameters) => void;
   insertSnippetPreset: (preset: WorkbenchScriptSnippetPresetRecord) => void;
   language: WorkbenchScriptLanguage;
+  loadRecipeDsl: (recipe: WorkbenchScriptRecipeDefinition) => void;
   macros: WorkbenchScriptMacroDefinition[];
   deleteSnippetPreset: (preset: WorkbenchScriptSnippetPresetRecord) => void;
   presetName: string;
@@ -45,6 +49,7 @@ type WorkbenchScriptCatalogPanelProps = {
   saveCurrentPreset: () => void;
   selectedProjectId: string | null;
   setPresetName: (value: string) => void;
+  recipes: WorkbenchScriptRecipeDefinition[];
   snippets: WorkbenchScriptSnippetDefinition[];
   snippetPresetRecords: WorkbenchScriptSnippetPresetRecord[];
 };
@@ -66,6 +71,7 @@ export function WorkbenchScriptCatalogPanel({
   insertSnippetPreset,
   insertSnippet,
   language,
+  loadRecipeDsl,
   macros,
   deleteSnippetPreset,
   presetName,
@@ -74,6 +80,7 @@ export function WorkbenchScriptCatalogPanel({
   saveCurrentPreset,
   selectedProjectId,
   setPresetName,
+  recipes,
   snippets,
   snippetPresetRecords,
 }: WorkbenchScriptCatalogPanelProps) {
@@ -103,7 +110,7 @@ export function WorkbenchScriptCatalogPanel({
     <section className="sidebar-card sidebar-card--compact">
       <div className="card-head">
         <h2>{copy.catalog}</h2>
-        <span>{mode === "presets" ? presetRecords.length : mode === "actions" ? actions.length : mode === "macros" ? macros.length : snippets.length}</span>
+        <span>{mode === "presets" ? presetRecords.length : mode === "actions" ? actions.length : mode === "macros" ? macros.length : mode === "recipes" ? recipes.length : snippets.length}</span>
       </div>
       <p className="card-copy">{copy.catalogHint}</p>
       <div className="panel-tabs panel-tabs--wide">
@@ -115,6 +122,9 @@ export function WorkbenchScriptCatalogPanel({
         </button>
         <button className={`panel-tab${mode === "macros" ? " panel-tab--active" : ""}`} onClick={() => setMode("macros")} type="button">
           {copy.macrosMode}
+        </button>
+        <button className={`panel-tab${mode === "recipes" ? " panel-tab--active" : ""}`} onClick={() => setMode("recipes")} type="button">
+          {catalogCopy.recipesMode}
         </button>
         <button className={`panel-tab${mode === "snippets" ? " panel-tab--active" : ""}`} onClick={() => setMode("snippets")} type="button">
           {catalogCopy.snippetsMode}
@@ -227,6 +237,48 @@ export function WorkbenchScriptCatalogPanel({
               <div className="button-row">
                 <button className="ghost-button ghost-button--compact" onClick={() => insertMacro(macro.id, macro.payloadExample)} type="button">
                   {copy.insertLabel}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {mode === "recipes" ? (
+        <div className="script-panel__catalog">
+          {recipes.map((recipe) => (
+            <article className="script-panel__action" key={recipe.id}>
+              <div className="script-panel__action-head">
+                <strong>{recipe.id}</strong>
+                <span>
+                  {getWorkbenchScriptRecipeCategoryLabel(recipe.category, catalogCopy)}
+                  {recipe.risk === "destructive" ? ` · ${copy.riskDestructive}` : recipe.risk === "sensitive" ? ` · ${copy.riskSensitive}` : ` · ${copy.riskNormal}`}
+                </span>
+              </div>
+              <p className="card-copy">{getWorkbenchScriptRecipeSummary(recipe, language)}</p>
+              <div className="script-panel__payload">
+                <span>{catalogCopy.payloadExample}</span>
+                <code>{stringifyPayload(recipe.payloadExample)}</code>
+              </div>
+              <div className="script-panel__payload">
+                <span>{catalogCopy.requiredActions}</span>
+                <code>{recipe.requiredActions.join(" -> ")}</code>
+              </div>
+              {recipe.success?.expectedState ? (
+                <div className="script-panel__payload">
+                  <span>{catalogCopy.expectedState}</span>
+                  <code>{JSON.stringify(recipe.success.expectedState)}</code>
+                </div>
+              ) : null}
+              {recipe.success?.resultKeys ? (
+                <div className="script-panel__payload">
+                  <span>{catalogCopy.resultKeys}</span>
+                  <code>{recipe.success.resultKeys.join(", ")}</code>
+                </div>
+              ) : null}
+              <div className="button-row">
+                <button className="ghost-button ghost-button--compact" onClick={() => loadRecipeDsl(recipe)} type="button">
+                  {catalogCopy.loadRecipeDsl}
                 </button>
               </div>
             </article>

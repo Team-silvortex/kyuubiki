@@ -20,6 +20,7 @@ export function buildWorkbenchMainShellProps(props: Record<string, any>) {
     assistantTransactions: props.assistantTransactions,
     executeAssistantPlan: props.executeAssistantPlan,
     invokeScriptAction: props.invokeScriptAction,
+    getScriptSnapshot: props.getScriptSnapshot,
     setAssistantApiKey: props.setAssistantApiKey,
     setAssistantApiBaseUrl: props.setAssistantApiBaseUrl,
     setAssistantModel: props.setAssistantModel,

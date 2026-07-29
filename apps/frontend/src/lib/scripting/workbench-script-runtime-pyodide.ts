@@ -17,6 +17,7 @@ declare global {
       state_json: () => string;
       actions_json: () => string;
       macros_json: () => string;
+      recipes_json: () => string;
       ui_contract_json: () => string;
       log: (message: string) => void;
       sleep: (seconds?: number) => Promise<void>;
@@ -90,12 +91,21 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - state: current frontend snapshot (dict)
 # - actions: action catalog (list[dict])
 # - macros: macro catalog (list[dict])
+# - recipes: runnable Pwdt recipe catalog (list[dict])
 # - ui_contract: stable built-in UI automation contract (dict)
 # - ky.log(*parts)
 # - ky.has_action("action/id"), ky.require_action("action/id")
 # - ky.actions_by_category("model"), ky.actions_matching(category="model", risk="normal")
 # - ky.has_macro("macro/id"), ky.require_macro("macro/id")
+# - ky.has_recipe("recipe/id"), ky.require_recipe("recipe/id")
+# - ky.recipes_matching(category="study", risk="normal")
 # - ky.automation_parity_report()
+# - await ky.ensure_project("Study name")
+# - await ky.build_parametric_truss_2d(...)
+# - await ky.save_model(name="model", save_as=True)
+# - await ky.run_current_study()
+# - await ky.open_results(project_id="...")
+# - await ky.run_recipe("recipe/truss2d/closed-loop", params_dict)
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.run_macro("macro/id", payload_dict)
 # - await ky.run_macro_definition(macro_dict)
@@ -114,14 +124,15 @@ ky.log("UI contract version:", ui_contract["contractVersion"])
 # Example: refresh runtime surfaces first.
 await ky.invoke("runtime/refreshAll")
 
-# Example: branch your automation on the current study kind.
-if state["studyKind"] == "axial_bar_1d":
-    await ky.invoke("nav/setStudyKind", {"studyKind": "truss_2d"})
-    await ky.invoke("state/setParametric", {"bays": 6, "span": 18, "height": 3.5, "loadY": -1500})
-    await ky.invoke("model/generateTruss")
+# Example: run a small GUI-equivalent study flow.
+project_id = await ky.ensure_project("Pwdt automation demo")
+await ky.build_parametric_truss_2d(bays=6, span=18, height=3.5, load_y=-1500)
+await ky.save_model(name="pwdt-truss-demo", save_as=True)
 
 ky.log("Submitting study...")
-await ky.invoke("job/run")
+run_state = await ky.run_current_study()
+await ky.open_results(project_id=project_id)
+ky.log("Study terminal state:", run_state["jobStatus"])
 `;
 
 export function buildWorkbenchPythonPrelude(): string {
@@ -138,6 +149,9 @@ class _KyuubikiBridge:
 
     def macros(self):
         return json.loads(__kyuubikiBridge.macros_json())
+
+    def recipes(self):
+        return json.loads(__kyuubikiBridge.recipes_json())
 
     def ui_contract(self):
         return json.loads(__kyuubikiBridge.ui_contract_json())
@@ -175,6 +189,31 @@ class _KyuubikiBridge:
             raise KeyError(f"Unknown Workbench frontend macro: {macro_id}")
         return macro
 
+    def recipe(self, recipe_id):
+        for recipe in self.recipes():
+            if recipe.get("id") == recipe_id:
+                return recipe
+        return None
+
+    def has_recipe(self, recipe_id):
+        return self.recipe(recipe_id) is not None
+
+    def require_recipe(self, recipe_id):
+        recipe = self.recipe(recipe_id)
+        if recipe is None:
+            raise KeyError(f"Unknown Pwdt recipe: {recipe_id}")
+        return recipe
+
+    def recipes_matching(self, category=None, risk=None):
+        matches = []
+        for recipe in self.recipes():
+            if category is not None and recipe.get("category") != category:
+                continue
+            if risk is not None and recipe.get("risk") != risk:
+                continue
+            matches.append(recipe)
+        return matches
+
     def actions_by_category(self, category):
         return self.actions_matching(category=category)
 
@@ -202,6 +241,7 @@ class _KyuubikiBridge:
         return {
             "action_count": len(self.actions()),
             "macro_count": len(self.macros()),
+            "recipe_count": len(self.recipes()),
             "selector_count": len(self.ui_contract().get("selectors", {})),
             "parameterized_selector_count": len(self.ui_contract().get("parameterizedSelectors", [])),
             "action_categories": action_categories,
@@ -238,12 +278,130 @@ class _KyuubikiBridge:
     def selector_exists(self, key, value=None):
         return self.query_selector(key, value) is not None
 
+    def state_value(self, key, default=None):
+        return self.state().get(key, default)
+
+    def require_selector(self, key, value=None):
+        node = self.query_selector(key, value)
+        if node is None:
+            raise RuntimeError(f"UI selector not found: {key}")
+        return node
+
     async def invoke(self, action, payload=None):
         if payload is None:
             payload = {}
         self.require_action(action)
         result = await __kyuubikiBridge.invoke(action, json.dumps(payload))
         return json.loads(result)
+
+    async def open_sidebar(self, section):
+        return await self.invoke("nav/setSidebarSection", {"section": section})
+
+    async def open_tabs(self, **tabs):
+        return await self.invoke("nav/setTabs", tabs)
+
+    async def configure(self, **settings):
+        return await self.invoke("settings/patch", settings)
+
+    async def refresh_all(self):
+        return await self.invoke("runtime/refreshAll")
+
+    async def create_project(self, name, description=""):
+        result = await self.invoke("project/create", {"name": name, "description": description})
+        return result.get("projectId")
+
+    async def select_project(self, project_id):
+        return await self.invoke("project/select", {"projectId": project_id})
+
+    async def ensure_project(self, name="Pwdt automation study", description="Created from Pwdt"):
+        project_id = self.state().get("selectedProjectId")
+        if project_id:
+            return project_id
+        return await self.create_project(name, description)
+
+    async def set_study_kind(self, study_kind):
+        await self.invoke("nav/setStudyKind", {"studyKind": study_kind})
+        return self.state().get("studyKind")
+
+    async def build_parametric_truss_2d(self, bays=6, span=18, height=3.5, load_y=-1500, model_name=None, material=None):
+        await self.set_study_kind("truss_2d")
+        await self.open_sidebar("model")
+        await self.open_tabs(modelTab="tools", modelToolsPage="generate")
+        if model_name is not None or material is not None:
+            meta = {}
+            if model_name is not None:
+                meta["loadedModelName"] = model_name
+            if material is not None:
+                meta["activeMaterial"] = str(material)
+            await self.invoke("model/setWorkspaceMeta", meta)
+        await self.invoke("state/setParametric", {
+            "bays": bays,
+            "span": span,
+            "height": height,
+            "loadY": load_y,
+        })
+        await self.invoke("model/generateTruss")
+        return self.state()
+
+    async def save_model(self, name=None, material=None, save_as=False):
+        if name is not None or material is not None:
+            meta = {}
+            if name is not None:
+                meta["loadedModelName"] = name
+            if material is not None:
+                meta["activeMaterial"] = str(material)
+            await self.invoke("model/setWorkspaceMeta", meta)
+        action = "model/saveAs" if save_as else "model/save"
+        return await self.invoke(action)
+
+    async def run_current_study(self, timeout=90.0, interval=0.5):
+        await self.invoke("job/run")
+        return await self.wait_for_job_done(timeout=timeout, interval=interval)
+
+    async def open_results(self, project_id=None, model_version_id=None):
+        payload = {"activeTab": "results"}
+        if project_id is not None:
+            payload["projectId"] = project_id
+        if model_version_id is not None:
+            payload["modelVersionId"] = model_version_id
+        await self.invoke("data/setFilters", payload)
+        return self.state()
+
+    async def run_closed_loop_truss_study(self, params=None):
+        if params is None:
+            params = {}
+        project_id = await self.ensure_project(
+            params.get("projectName", "Pwdt automation study"),
+            params.get("projectDescription", "Created from Pwdt"),
+        )
+        await self.build_parametric_truss_2d(
+            bays=params.get("bays", 6),
+            span=params.get("span", 18),
+            height=params.get("height", 3.5),
+            load_y=params.get("loadY", -1500),
+            model_name=params.get("modelName"),
+            material=params.get("activeMaterial"),
+        )
+        save_result = await self.save_model(
+            name=params.get("modelName"),
+            material=params.get("activeMaterial"),
+            save_as=True,
+        )
+        run_state = await self.run_current_study(timeout=float(params.get("timeoutSeconds", 90)))
+        await self.open_results(project_id=project_id)
+        return {
+            "ok": run_state.get("jobStatus") == "completed",
+            "projectId": project_id,
+            "saveResult": save_result,
+            "jobStatus": run_state.get("jobStatus"),
+            "resultCount": run_state.get("resultCount"),
+        }
+
+    async def run_recipe(self, recipe_id, params=None):
+        self.require_recipe(recipe_id)
+        if recipe_id == "recipe/truss2d/closed-loop":
+            return await self.run_closed_loop_truss_study(params)
+        raise NotImplementedError(f"Pwdt recipe is registered but not executable yet: {recipe_id}")
 
     async def run_macro(self, macro, payload=None):
         if payload is None:
@@ -296,6 +454,7 @@ ky = _KyuubikiBridge()
 state = ky.state()
 actions = ky.actions()
 macros = ky.macros()
+recipes = ky.recipes()
 ui_contract = ky.ui_contract()
 `;
 }

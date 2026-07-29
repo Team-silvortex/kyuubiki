@@ -2,18 +2,26 @@ import type {
   WorkbenchScriptActionDefinition,
   WorkbenchScriptLanguage,
   WorkbenchScriptMacroDefinition,
+  WorkbenchScriptRecipeDefinition,
   WorkbenchScriptSnippetDefinition,
 } from "@/lib/scripting/workbench-script-runtime";
 
 export type WorkbenchScriptCatalogCopy = {
+  recipesMode: string;
   snippetsMode: string;
   categoryRuntime: string;
   categoryWorkflow: string;
   categoryInspection: string;
   categoryNavigation: string;
+  categoryStudy: string;
   snippetPreset: string;
   parameterJson: string;
+  payloadExample: string;
+  requiredActions: string;
+  expectedState: string;
+  resultKeys: string;
   insertConfigured: string;
+  loadRecipeDsl: string;
   savePreset: string;
   emptyPreset: string;
   jsonError: string;
@@ -24,18 +32,26 @@ type ScriptSummaryCopy = {
   action: string;
   macro: string;
   snippet: string;
+  recipe?: string;
   configuredRecipe: string;
 };
 
 const en: WorkbenchScriptCatalogCopy = {
+  recipesMode: "Recipes",
   snippetsMode: "Snippets",
   categoryRuntime: "Runtime",
   categoryWorkflow: "Workflow",
   categoryInspection: "Inspection",
   categoryNavigation: "Navigation",
+  categoryStudy: "Study",
   snippetPreset: "Snippet presets",
   parameterJson: "Parameter JSON",
+  payloadExample: "Payload example",
+  requiredActions: "Required actions",
+  expectedState: "Expected state",
+  resultKeys: "Result keys",
   insertConfigured: "Insert configured",
+  loadRecipeDsl: "Load DSL",
   savePreset: "Save preset",
   emptyPreset: "No presets saved for this snippet yet.",
   jsonError: "Parameter JSON is invalid.",
@@ -43,10 +59,10 @@ const en: WorkbenchScriptCatalogCopy = {
 };
 
 const summaryByLanguage: Record<string, ScriptSummaryCopy> = {
-  en: { action: "Action", macro: "Macro", snippet: "Snippet", configuredRecipe: "Runs the configured automation recipe." },
-  zh: { action: "动作", macro: "宏", snippet: "配方", configuredRecipe: "运行已配置的自动化配方。" },
-  ja: { action: "アクション", macro: "マクロ", snippet: "スニペット", configuredRecipe: "設定済みの自動化レシピを実行します。" },
-  es: { action: "Acción", macro: "Macro", snippet: "Receta", configuredRecipe: "Ejecuta la receta de automatización configurada." },
+  en: { action: "Action", macro: "Macro", snippet: "Snippet", recipe: "Recipe", configuredRecipe: "Runs the configured automation recipe." },
+  zh: { action: "动作", macro: "宏", snippet: "配方", recipe: "工作流配方", configuredRecipe: "运行已配置的自动化配方。" },
+  ja: { action: "アクション", macro: "マクロ", snippet: "スニペット", recipe: "レシピ", configuredRecipe: "設定済みの自動化レシピを実行します。" },
+  es: { action: "Acción", macro: "Macro", snippet: "Receta", recipe: "Receta", configuredRecipe: "Ejecuta la receta de automatización configurada." },
   ar: { action: "إجراء", macro: "ماكرو", snippet: "وصفة", configuredRecipe: "يشغّل وصفة الأتمتة المهيأة." },
   bn: { action: "অ্যাকশন", macro: "ম্যাক্রো", snippet: "স্নিপেট", configuredRecipe: "কনফিগার করা অটোমেশন রেসিপি চালায়।" },
   cs: { action: "Akce", macro: "Makro", snippet: "Snippet", configuredRecipe: "Spustí nastavený automatizační recept." },
@@ -93,42 +109,63 @@ const tokenLabelsByLanguage: Record<string, Record<string, string>> = {
 const copyByLanguage: Record<string, WorkbenchScriptCatalogCopy> = {
   en,
   zh: {
+    recipesMode: "工作流配方",
     snippetsMode: "配方",
     categoryRuntime: "运行时",
     categoryWorkflow: "工作流",
     categoryInspection: "检查",
     categoryNavigation: "导航",
+    categoryStudy: "研究",
     snippetPreset: "配方预设",
     parameterJson: "参数 JSON",
+    payloadExample: "参数示例",
+    requiredActions: "所需动作",
+    expectedState: "成功状态",
+    resultKeys: "结果字段",
     insertConfigured: "按当前参数插入",
+    loadRecipeDsl: "载入 DSL",
     savePreset: "存为预设",
     emptyPreset: "当前项目下还没有这条配方的预设。",
     jsonError: "参数 JSON 无效，无法插入或保存。",
     importPreset: "导入预设",
   },
   ja: {
+    recipesMode: "レシピ",
     snippetsMode: "スニペット",
     categoryRuntime: "ランタイム",
     categoryWorkflow: "ワークフロー",
     categoryInspection: "検査",
     categoryNavigation: "ナビゲーション",
+    categoryStudy: "スタディ",
     snippetPreset: "スニペットプリセット",
     parameterJson: "パラメータ JSON",
+    payloadExample: "ペイロード例",
+    requiredActions: "必要アクション",
+    expectedState: "期待状態",
+    resultKeys: "結果キー",
     insertConfigured: "現在の設定で挿入",
+    loadRecipeDsl: "DSL 読込",
     savePreset: "プリセット保存",
     emptyPreset: "このスニペットのプリセットはまだありません。",
     jsonError: "パラメータ JSON が無効です。",
     importPreset: "プリセット読込",
   },
   es: {
+    recipesMode: "Recetas",
     snippetsMode: "Recetas",
     categoryRuntime: "Runtime",
     categoryWorkflow: "Workflow",
     categoryInspection: "Inspección",
     categoryNavigation: "Navegación",
+    categoryStudy: "Estudio",
     snippetPreset: "Presets de receta",
     parameterJson: "JSON de parámetros",
+    payloadExample: "Ejemplo de payload",
+    requiredActions: "Acciones requeridas",
+    expectedState: "Estado esperado",
+    resultKeys: "Claves de resultado",
     insertConfigured: "Insertar configurado",
+    loadRecipeDsl: "Cargar DSL",
     savePreset: "Guardar preset",
     emptyPreset: "Todavía no hay presets para este snippet.",
     jsonError: "El JSON de parámetros no es válido.",
@@ -174,6 +211,7 @@ for (const [language, copy] of Object.entries(compactCopy)) {
     ...en,
     categoryRuntime: "Runtime",
     categoryWorkflow: "Workflow",
+    categoryStudy: "Study",
     snippetPreset: `${copy.snippetsMode ?? en.snippetsMode} preset`,
     parameterJson: "JSON",
     emptyPreset: "∅",
@@ -196,6 +234,15 @@ export function getWorkbenchScriptSnippetCategoryLabel(
   return copy.categoryNavigation;
 }
 
+export function getWorkbenchScriptRecipeCategoryLabel(
+  category: WorkbenchScriptRecipeDefinition["category"],
+  copy: WorkbenchScriptCatalogCopy,
+) {
+  if (category === "study") return copy.categoryStudy;
+  if (category === "workflow") return copy.categoryWorkflow;
+  return copy.categoryInspection;
+}
+
 function normalizeLanguage(language: WorkbenchScriptLanguage) {
   return language.toLowerCase();
 }
@@ -204,6 +251,7 @@ function splitScriptId(id: string) {
   return id
     .replace(/^snippet\//, "")
     .replace(/^macro\//, "")
+    .replace(/^recipe\//, "")
     .split(/[./-]/)
     .flatMap((part) => part.replace(/([a-z])([A-Z0-9])/g, "$1 $2").split(/\s+/))
     .filter(Boolean)
@@ -273,4 +321,15 @@ export function getWorkbenchScriptSnippetSummary(
   const summary = getSummaryCopy(language);
   const category = getWorkbenchScriptSnippetCategoryLabel(snippet.category, getWorkbenchScriptCatalogCopy(language));
   return `${summary.snippet}: ${category} — ${summary.configuredRecipe}`;
+}
+
+export function getWorkbenchScriptRecipeSummary(
+  recipe: WorkbenchScriptRecipeDefinition,
+  language: WorkbenchScriptLanguage,
+) {
+  if (language === "zh") return recipe.summary.zh;
+  if (language === "en") return recipe.summary.en;
+  const summary = getSummaryCopy(language);
+  const category = getWorkbenchScriptRecipeCategoryLabel(recipe.category, getWorkbenchScriptCatalogCopy(language));
+  return `${summary.recipe ?? summary.snippet}: ${category} — ${summary.configuredRecipe}`;
 }

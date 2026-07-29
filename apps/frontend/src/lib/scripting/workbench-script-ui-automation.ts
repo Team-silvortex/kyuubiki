@@ -33,6 +33,11 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       console: workbenchAutomationSelectors.console,
       viewportPanel: workbenchAutomationSelectors.viewportPanel,
       viewportStage: workbenchAutomationSelectors.viewportStage,
+      loadedModelState: workbenchAutomationSelectors.loadedModelState,
+      workflowSurface: workbenchAutomationSelectors.workflowSurface,
+      workflowCatalogSearch: workbenchAutomationSelectors.workflowCatalogSearch,
+      workflowBuilder: workbenchAutomationSelectors.workflowBuilder,
+      workflowOperatorSearch: workbenchAutomationSelectors.workflowOperatorSearch,
       runtimePanel: workbenchAutomationSelectors.runtimePanel,
       runtimeTabs: workbenchAutomationSelectors.runtimeTabs,
       controlWindow: workbenchAutomationSelectors.controlWindow,
@@ -54,6 +59,26 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         key: "runtimeTab",
         parameter: "page",
         template: workbenchAutomationSelectors.runtimeTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${page}"),
+      },
+      {
+        key: "workflowSurfaceTab",
+        parameter: "tab",
+        template: workbenchAutomationSelectors.workflowSurfaceTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${tab}"),
+      },
+      {
+        key: "workflowCatalogAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.workflowCatalogAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "workflowOperatorAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.workflowOperatorAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "workflowBuilderAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.workflowBuilderAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
       },
       {
         key: "controlWindowTab",

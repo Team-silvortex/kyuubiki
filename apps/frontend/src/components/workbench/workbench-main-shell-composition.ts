@@ -27,6 +27,7 @@ export function buildWorkbenchMainShellComposition(props: Record<string, any>) {
     assistantTransactions: assistantAudit.assistantTransactions,
     executeAssistantPlan: assistantAudit.executeAssistantPlan,
     invokeScriptAction,
+    getScriptSnapshot: assistantAudit.getScriptSnapshot,
     setAssistantApiKey: shellState.setAssistantApiKey,
     setAssistantApiBaseUrl: shellState.setAssistantApiBaseUrl,
     setAssistantModel: shellState.setAssistantModel,

@@ -6,20 +6,27 @@ import {
   getWorkbenchScriptActionDefinition,
   getWorkbenchScriptMacroDefinition,
 } from "./workbench-script-runtime-catalog.ts";
+import { getWorkbenchScriptRecipeDefinition } from "./workbench-script-runtime-recipes.ts";
 import {
   buildPythonExpression,
   isVariableReference,
   VARIABLE_IDENTIFIER_RE,
   type WorkbenchFrontendDslVarReference,
 } from "./workbench-script-dsl-expressions.ts";
-import { buildDefaultWorkbenchFrontendDslDocument } from "./workbench-script-dsl-templates.ts";
+import {
+  buildClosedLoopTrussWorkbenchFrontendDslDocument,
+  buildDefaultWorkbenchFrontendDslDocument,
+} from "./workbench-script-dsl-templates.ts";
 
 export type WorkbenchFrontendDslStep =
   | { kind: "invoke"; action: string; payload?: Record<string, unknown> }
   | { kind: "macro"; macroId: string; payload?: Record<string, unknown> }
+  | { kind: "run_recipe"; recipeId: string; payload?: Record<string, unknown>; assign?: string; message?: string }
   | { kind: "expect_action"; action: string; message?: string }
   | { kind: "expect_macro"; macroId: string; message?: string }
+  | { kind: "expect_recipe"; recipeId: string; message?: string }
   | { kind: "capture_action_catalog"; assign: string; category?: string; risk?: string; message?: string }
+  | { kind: "capture_recipe_catalog"; assign: string; category?: string; risk?: string; message?: string }
   | { kind: "emit_parity_report"; assign?: string; message?: string }
   | { kind: "log"; message: string }
   | { kind: "sleep"; seconds: number }
@@ -55,6 +62,9 @@ function buildDslFailureMessage(
 
 export const DEFAULT_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
   buildDefaultWorkbenchFrontendDslDocument(),
+);
+export const CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
+  buildClosedLoopTrussWorkbenchFrontendDslDocument(),
 );
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -100,6 +110,16 @@ function parseKnownMacro(value: unknown, context: string) {
   return value;
 }
 
+function parseKnownRecipe(value: unknown, context: string) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${context} requires a non-empty recipeId.`);
+  }
+  if (!getWorkbenchScriptRecipeDefinition(value)) {
+    throw new Error(`${context} references unknown Pwdt recipe "${value}".`);
+  }
+  return value;
+}
+
 function parseStep(value: unknown): WorkbenchFrontendDslStep {
   if (!isPlainObject(value)) {
     throw new Error("DSL step must be an object.");
@@ -125,6 +145,17 @@ function parseStep(value: unknown): WorkbenchFrontendDslStep {
     };
   }
 
+  if (kind === "run_recipe") {
+    const payload = parsePayload(value.payload);
+    return {
+      kind,
+      recipeId: parseKnownRecipe(value.recipeId, "DSL run_recipe step"),
+      ...(payload ? { payload } : {}),
+      ...(value.assign === undefined ? {} : { assign: parseAssign(value.assign, "DSL run_recipe step") }),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
   if (kind === "expect_action") {
     return {
       kind,
@@ -141,10 +172,28 @@ function parseStep(value: unknown): WorkbenchFrontendDslStep {
     };
   }
 
+  if (kind === "expect_recipe") {
+    return {
+      kind,
+      recipeId: parseKnownRecipe(value.recipeId, "DSL expect_recipe step"),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
   if (kind === "capture_action_catalog") {
     return {
       kind,
       assign: parseAssign(value.assign, "DSL capture_action_catalog step"),
+      ...(typeof value.category === "string" && value.category.trim() ? { category: value.category } : {}),
+      ...(typeof value.risk === "string" && value.risk.trim() ? { risk: value.risk } : {}),
+      ...parseOptionalMessage(value.message),
+    };
+  }
+
+  if (kind === "capture_recipe_catalog") {
+    return {
+      kind,
+      assign: parseAssign(value.assign, "DSL capture_recipe_catalog step"),
       ...(typeof value.category === "string" && value.category.trim() ? { category: value.category } : {}),
       ...(typeof value.risk === "string" && value.risk.trim() ? { risk: value.risk } : {}),
       ...parseOptionalMessage(value.message),
@@ -450,6 +499,22 @@ ${stepLabel}_result = await ky.run_macro(${JSON.stringify(step.macroId)}, ${buil
 ky.log("DSL macro:", ${JSON.stringify(step.macroId)}, ${stepLabel}_result)`;
   }
 
+  if (step.kind === "run_recipe") {
+    const assign = step.assign ?? `${stepLabel}_recipe_result`;
+    const resultKeys = getWorkbenchScriptRecipeDefinition(step.recipeId)?.success?.resultKeys ?? [];
+    const resultKeyCheck = resultKeys.length > 0
+      ? `
+if not isinstance(${assign}, dict):
+    raise RuntimeError(${buildPythonExpression(buildDslFailureMessage("state_mismatch", `Recipe ${step.recipeId} did not return a result object.`))})
+for key in ${buildPythonExpression(resultKeys)}:
+    if key not in ${assign}:
+        raise RuntimeError(${buildPythonExpression(buildDslFailureMessage("state_mismatch", `Recipe ${step.recipeId} result is missing a required key.`))} + " " + str(key))`
+      : "";
+    return `${assign} = await ky.run_recipe(${JSON.stringify(step.recipeId)}, ${buildPythonExpression(step.payload ?? {})})
+${resultKeyCheck}
+ky.log(${buildPythonExpression(step.message?.trim() || "DSL recipe completed.")}, ${assign})`;
+  }
+
   if (step.kind === "expect_action") {
     const message = step.message?.trim() || `Workbench action "${step.action}" is not available.`;
     return `try:
@@ -468,6 +533,15 @@ except Exception as error:
 ky.log("DSL macro available:", ${JSON.stringify(step.macroId)})`;
   }
 
+  if (step.kind === "expect_recipe") {
+    const message = step.message?.trim() || `Pwdt recipe "${step.recipeId}" is not available.`;
+    return `try:
+    ky.require_recipe(${JSON.stringify(step.recipeId)})
+except Exception as error:
+    raise RuntimeError(${buildPythonExpression(buildDslFailureMessage("capability_mismatch", message))}) from error
+ky.log("DSL recipe available:", ${JSON.stringify(step.recipeId)})`;
+  }
+
   if (step.kind === "capture_action_catalog") {
     const filters = [
       step.category ? `category=${JSON.stringify(step.category)}` : null,
@@ -475,6 +549,15 @@ ky.log("DSL macro available:", ${JSON.stringify(step.macroId)})`;
     ].filter(Boolean).join(", ");
     return `${step.assign} = ky.actions_matching(${filters})
 ky.log(${buildPythonExpression(step.message?.trim() || "DSL captured Workbench action catalog.")}, len(${step.assign}))`;
+  }
+
+  if (step.kind === "capture_recipe_catalog") {
+    const filters = [
+      step.category ? `category=${JSON.stringify(step.category)}` : null,
+      step.risk ? `risk=${JSON.stringify(step.risk)}` : null,
+    ].filter(Boolean).join(", ");
+    return `${step.assign} = ky.recipes_matching(${filters})
+ky.log(${buildPythonExpression(step.message?.trim() || "DSL captured Pwdt recipe catalog.")}, len(${step.assign}))`;
   }
 
   if (step.kind === "emit_parity_report") {

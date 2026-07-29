@@ -4,6 +4,7 @@ import {
   WORKBENCH_FRONTEND_DSL_REPORT_PREFIX,
   type WorkbenchFrontendDslDocument,
 } from "./workbench-script-dsl.ts";
+import { CLOSED_LOOP_TRUSS_RECIPE_ID } from "./workbench-script-runtime-recipes.ts";
 
 const DSL_VERSION = "kyuubiki.frontend-dsl/v1";
 
@@ -17,11 +18,18 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
       { kind: "expect_action", action: "job/run", message: "Study submission must be scriptable." },
       { kind: "expect_action", action: "state/replaceFrameModel", message: "Frame import must be scriptable." },
       { kind: "expect_macro", macroId: "macro/openDataResults", message: "Data review macro must be scriptable." },
+      { kind: "expect_recipe", recipeId: CLOSED_LOOP_TRUSS_RECIPE_ID, message: "Closed-loop recipe must be registered." },
       {
         kind: "capture_action_catalog",
         assign: "normal_actions",
         risk: "normal",
         message: "Captured normal-risk GUI action count.",
+      },
+      {
+        kind: "capture_recipe_catalog",
+        assign: "normal_recipes",
+        risk: "normal",
+        message: "Captured normal-risk recipe count.",
       },
       {
         kind: "emit_parity_report",
@@ -111,7 +119,7 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
       },
       {
         kind: "log",
-        message: `${WORKBENCH_FRONTEND_DSL_REPORT_PREFIX} parity=\${pwdt_parity} normal_actions=\${normal_actions}`,
+        message: `${WORKBENCH_FRONTEND_DSL_REPORT_PREFIX} parity=\${pwdt_parity} normal_actions=\${normal_actions} normal_recipes=\${normal_recipes}`,
       },
       {
         kind: "log",
@@ -134,6 +142,38 @@ export function buildDefaultWorkbenchFrontendDslDocument(): WorkbenchFrontendDsl
         message: `${WORKBENCH_FRONTEND_DSL_REPORT_PREFIX} reported_at=\${layout_report_at} status=passed`,
       },
       { kind: "log", message: "Frontend layout report completed." },
+    ],
+  };
+}
+
+export function buildClosedLoopTrussWorkbenchFrontendDslDocument(): WorkbenchFrontendDslDocument {
+  return {
+    dsl_version: DSL_VERSION,
+    name: "closed-loop-truss-study",
+    steps: [
+      { kind: "log", message: "Starting Pwdt closed-loop truss recipe." },
+      { kind: "expect_action", action: "project/create", message: "Project creation must be scriptable." },
+      { kind: "expect_action", action: "model/saveAs", message: "Model save-as must be scriptable." },
+      { kind: "expect_action", action: "job/run", message: "Study submission must be scriptable." },
+      {
+        kind: "run_recipe",
+        recipeId: CLOSED_LOOP_TRUSS_RECIPE_ID,
+        assign: "closed_loop",
+        payload: {
+          activeMaterial: "210",
+          bays: 6,
+          height: 3.5,
+          loadY: -1500,
+          modelName: "pwdt-truss-study",
+          projectDescription: "Created from Pwdt frontend DSL.",
+          projectName: "Pwdt closed-loop truss",
+          span: 18,
+          timeoutSeconds: 90,
+        },
+        message: "Pwdt closed-loop truss recipe completed.",
+      },
+      { kind: "expect_state", key: "systemDataTab", equals: "results", message: "Results data tab should be active after the recipe." },
+      { kind: "emit_parity_report", assign: "pwdt_parity", message: "Captured Pwdt recipe parity report." },
     ],
   };
 }
