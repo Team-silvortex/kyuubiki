@@ -39,6 +39,7 @@ type ScriptStateControllerDeps = {
   ensureBeamModelMaterials: (model: any, materialValue: string) => any;
   activeMaterial: string;
   resetActiveResult: () => void;
+  projectElectrostaticToHeatStudy: () => WorkbenchStudyKind | null;
   projectHeatToThermoStudy: () => WorkbenchStudyKind | null;
   toggleImmersiveViewport: () => Promise<void>;
   handleUndo: () => void;
@@ -86,6 +87,7 @@ export async function handleWorkbenchScriptStateAction({
   ensureBeamModelMaterials,
   activeMaterial,
   resetActiveResult,
+  projectElectrostaticToHeatStudy,
   projectHeatToThermoStudy,
   toggleImmersiveViewport,
   handleUndo,
@@ -142,6 +144,19 @@ export async function handleWorkbenchScriptStateAction({
             : language === "ja"
               ? "現在の study には投影できる熱結果がないか、この熱→熱応力マッピングはまだ未対応です。"
               : "The current study does not have a usable thermal result, or this thermo-mechanical projection is not supported yet.",
+        );
+      }
+      return { ok: true, action, studyKind: projectedStudyKind };
+    }
+    case "state/projectElectrostaticToHeat": {
+      const projectedStudyKind = projectElectrostaticToHeatStudy();
+      if (!projectedStudyKind) {
+        throw new Error(
+          language === "zh"
+            ? "当前研究没有可映射的电静场结果，或暂不支持映射到热传导研究。"
+            : language === "ja"
+              ? "現在の study には投影できる静電場結果がないか、この静電→熱伝導マッピングはまだ未対応です。"
+              : "The current study does not have a usable electrostatic result, or this electrostatic-to-heat projection is not supported yet.",
         );
       }
       return { ok: true, action, studyKind: projectedStudyKind };

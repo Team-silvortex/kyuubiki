@@ -8,7 +8,10 @@ import {
 } from "./workbench-script-runtime-catalog.ts";
 import {
   CLOSED_LOOP_TRUSS_RECIPE_ID,
+  ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID,
+  ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID,
   HEAT_TO_THERMO_QUAD_RECIPE_ID,
+  HEAT_TO_THERMO_TRIANGLE_RECIPE_ID,
   filterWorkbenchScriptRecipes,
   getWorkbenchScriptRecipeDefinition,
   type WorkbenchScriptRecipeFilters,
@@ -57,7 +60,22 @@ export type WorkbenchPwdtHeatThermoQuadParams = {
   timeoutSeconds?: number;
 };
 
-export type WorkbenchPwdtRecipeParams = WorkbenchPwdtTrussStudyParams & WorkbenchPwdtHeatThermoQuadParams;
+export type WorkbenchPwdtHeatThermoTriangleParams = WorkbenchPwdtHeatThermoQuadParams;
+
+export type WorkbenchPwdtElectrostaticHeatThermoQuadParams = WorkbenchPwdtHeatThermoQuadParams & {
+  electrostaticModelName?: string;
+};
+
+export type WorkbenchPwdtElectrostaticHeatThermoTriangleParams = WorkbenchPwdtHeatThermoTriangleParams & {
+  electrostaticModelName?: string;
+};
+
+export type WorkbenchPwdtRecipeParams =
+  WorkbenchPwdtTrussStudyParams &
+  WorkbenchPwdtHeatThermoQuadParams &
+  WorkbenchPwdtHeatThermoTriangleParams &
+  WorkbenchPwdtElectrostaticHeatThermoQuadParams &
+  WorkbenchPwdtElectrostaticHeatThermoTriangleParams;
 
 export type WorkbenchPwdtBrowserBridge = {
   version: "kyuubiki.pwdt.browser-bridge/v1";
@@ -96,6 +114,9 @@ export type WorkbenchPwdtBrowserBridge = {
   refreshAll: () => Promise<Record<string, unknown>>;
   ensureProject: (name?: string, description?: string) => Promise<string | null>;
   buildParametricTruss2d: (params?: WorkbenchPwdtTrussStudyParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
+  prepareElectrostaticPlaneTriangleStudy: (params?: WorkbenchPwdtElectrostaticHeatThermoTriangleParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
+  prepareElectrostaticPlaneQuadStudy: (params?: WorkbenchPwdtElectrostaticHeatThermoQuadParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
+  prepareHeatPlaneTriangleStudy: (params?: WorkbenchPwdtHeatThermoTriangleParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   prepareHeatPlaneQuadStudy: (params?: WorkbenchPwdtHeatThermoQuadParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   saveModel: (params?: {
     name?: string;
@@ -104,10 +125,16 @@ export type WorkbenchPwdtBrowserBridge = {
   }) => Promise<Record<string, unknown>>;
   runCurrentStudy: (options?: WorkbenchPwdtWaitOptions) => Promise<Partial<WorkbenchScriptSnapshot>>;
   openResults: (filters?: { projectId?: string | null; modelVersionId?: string | null }) => Promise<Partial<WorkbenchScriptSnapshot>>;
+  projectElectrostaticToHeatTriangleStudy: () => Promise<Record<string, unknown>>;
+  projectElectrostaticToHeatQuadStudy: () => Promise<Record<string, unknown>>;
+  projectHeatToThermoTriangleStudy: () => Promise<Record<string, unknown>>;
   projectHeatToThermoQuadStudy: () => Promise<Record<string, unknown>>;
   runRecipe: (recipeId: string, params?: WorkbenchPwdtRecipeParams) => Promise<Record<string, unknown>>;
   runClosedLoopTrussStudy: (params?: WorkbenchPwdtTrussStudyParams) => Promise<Record<string, unknown>>;
+  runHeatToThermoTriangleStudy: (params?: WorkbenchPwdtHeatThermoTriangleParams) => Promise<Record<string, unknown>>;
   runHeatToThermoQuadStudy: (params?: WorkbenchPwdtHeatThermoQuadParams) => Promise<Record<string, unknown>>;
+  runElectrostaticHeatThermoTriangleStudy: (params?: WorkbenchPwdtElectrostaticHeatThermoTriangleParams) => Promise<Record<string, unknown>>;
+  runElectrostaticHeatThermoQuadStudy: (params?: WorkbenchPwdtElectrostaticHeatThermoQuadParams) => Promise<Record<string, unknown>>;
   sleep: (seconds?: number) => Promise<void>;
 };
 
@@ -301,6 +328,42 @@ export function createWorkbenchPwdtBrowserBridge({
       await bridge.invoke("model/generateTruss");
       return snapshotRecord(getSnapshot);
     },
+    async prepareElectrostaticPlaneTriangleStudy(params = {}) {
+      await bridge.invoke("nav/setStudyKind", { studyKind: "electrostatic_plane_triangle_2d" });
+      await bridge.openSidebar("model");
+      await bridge.openTabs({ modelTab: "tools", modelToolsPage: "study" });
+      if (params.electrostaticModelName !== undefined || params.activeMaterial !== undefined) {
+        await bridge.invoke("model/setWorkspaceMeta", {
+          ...(params.electrostaticModelName !== undefined ? { loadedModelName: params.electrostaticModelName } : {}),
+          ...(params.activeMaterial !== undefined ? { activeMaterial: String(params.activeMaterial) } : {}),
+        });
+      }
+      return snapshotRecord(getSnapshot);
+    },
+    async prepareElectrostaticPlaneQuadStudy(params = {}) {
+      await bridge.invoke("nav/setStudyKind", { studyKind: "electrostatic_plane_quad_2d" });
+      await bridge.openSidebar("model");
+      await bridge.openTabs({ modelTab: "tools", modelToolsPage: "study" });
+      if (params.electrostaticModelName !== undefined || params.activeMaterial !== undefined) {
+        await bridge.invoke("model/setWorkspaceMeta", {
+          ...(params.electrostaticModelName !== undefined ? { loadedModelName: params.electrostaticModelName } : {}),
+          ...(params.activeMaterial !== undefined ? { activeMaterial: String(params.activeMaterial) } : {}),
+        });
+      }
+      return snapshotRecord(getSnapshot);
+    },
+    async prepareHeatPlaneTriangleStudy(params = {}) {
+      await bridge.invoke("nav/setStudyKind", { studyKind: "heat_plane_triangle_2d" });
+      await bridge.openSidebar("model");
+      await bridge.openTabs({ modelTab: "tools", modelToolsPage: "study" });
+      if (params.heatModelName !== undefined || params.activeMaterial !== undefined) {
+        await bridge.invoke("model/setWorkspaceMeta", {
+          ...(params.heatModelName !== undefined ? { loadedModelName: params.heatModelName } : {}),
+          ...(params.activeMaterial !== undefined ? { activeMaterial: String(params.activeMaterial) } : {}),
+        });
+      }
+      return snapshotRecord(getSnapshot);
+    },
     async prepareHeatPlaneQuadStudy(params = {}) {
       await bridge.invoke("nav/setStudyKind", { studyKind: "heat_plane_quad_2d" });
       await bridge.openSidebar("model");
@@ -334,6 +397,9 @@ export function createWorkbenchPwdtBrowserBridge({
       });
       return snapshotRecord(getSnapshot);
     },
+    projectElectrostaticToHeatTriangleStudy: () => bridge.invoke("state/projectElectrostaticToHeat"),
+    projectElectrostaticToHeatQuadStudy: () => bridge.invoke("state/projectElectrostaticToHeat"),
+    projectHeatToThermoTriangleStudy: () => bridge.invoke("state/projectHeatToThermo"),
     projectHeatToThermoQuadStudy: () => bridge.invoke("state/projectHeatToThermo"),
     async runRecipe(recipeId, params = {}) {
       if (!getWorkbenchScriptRecipeDefinition(recipeId)) {
@@ -344,6 +410,15 @@ export function createWorkbenchPwdtBrowserBridge({
       }
       if (recipeId === HEAT_TO_THERMO_QUAD_RECIPE_ID) {
         return bridge.runHeatToThermoQuadStudy(params);
+      }
+      if (recipeId === HEAT_TO_THERMO_TRIANGLE_RECIPE_ID) {
+        return bridge.runHeatToThermoTriangleStudy(params);
+      }
+      if (recipeId === ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID) {
+        return bridge.runElectrostaticHeatThermoQuadStudy(params);
+      }
+      if (recipeId === ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID) {
+        return bridge.runElectrostaticHeatThermoTriangleStudy(params);
       }
       throw new Error(`Pwdt recipe is registered but not executable yet: ${recipeId}`);
     },
@@ -365,6 +440,37 @@ export function createWorkbenchPwdtBrowserBridge({
         saveResult,
         jobStatus: runState.jobStatus ?? null,
         resultCount: runState.resultCount ?? null,
+      };
+    },
+    async runHeatToThermoTriangleStudy(params = {}) {
+      const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
+      await bridge.prepareHeatPlaneTriangleStudy(params);
+      const heatSaveResult = await bridge.saveModel({
+        name: params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const thermoProjection = await bridge.projectHeatToThermoTriangleStudy();
+      const thermoSaveResult = await bridge.saveModel({
+        name: params.thermoModelName ?? params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const thermoRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      await bridge.openResults({ projectId });
+      return {
+        ok:
+          heatRunState.jobStatus === "completed" &&
+          thermoProjection.studyKind === "thermal_plane_triangle_2d" &&
+          thermoRunState.jobStatus === "completed",
+        projectId,
+        heatSaveResult,
+        heatJobStatus: heatRunState.jobStatus ?? null,
+        thermoProjection,
+        thermoSaveResult,
+        thermoJobStatus: thermoRunState.jobStatus ?? null,
+        resultCount: thermoRunState.resultCount ?? null,
       };
     },
     async runHeatToThermoQuadStudy(params = {}) {
@@ -390,6 +496,92 @@ export function createWorkbenchPwdtBrowserBridge({
           thermoProjection.studyKind === "thermal_plane_quad_2d" &&
           thermoRunState.jobStatus === "completed",
         projectId,
+        heatSaveResult,
+        heatJobStatus: heatRunState.jobStatus ?? null,
+        thermoProjection,
+        thermoSaveResult,
+        thermoJobStatus: thermoRunState.jobStatus ?? null,
+        resultCount: thermoRunState.resultCount ?? null,
+      };
+    },
+    async runElectrostaticHeatThermoTriangleStudy(params = {}) {
+      const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
+      await bridge.prepareElectrostaticPlaneTriangleStudy(params);
+      const electrostaticSaveResult = await bridge.saveModel({
+        name: params.electrostaticModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const electrostaticRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const heatProjection = await bridge.projectElectrostaticToHeatTriangleStudy();
+      const heatSaveResult = await bridge.saveModel({
+        name: params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const thermoProjection = await bridge.projectHeatToThermoTriangleStudy();
+      const thermoSaveResult = await bridge.saveModel({
+        name: params.thermoModelName ?? params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const thermoRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      await bridge.openResults({ projectId });
+      return {
+        ok:
+          electrostaticRunState.jobStatus === "completed" &&
+          heatProjection.studyKind === "heat_plane_triangle_2d" &&
+          heatRunState.jobStatus === "completed" &&
+          thermoProjection.studyKind === "thermal_plane_triangle_2d" &&
+          thermoRunState.jobStatus === "completed",
+        projectId,
+        electrostaticSaveResult,
+        electrostaticJobStatus: electrostaticRunState.jobStatus ?? null,
+        heatProjection,
+        heatSaveResult,
+        heatJobStatus: heatRunState.jobStatus ?? null,
+        thermoProjection,
+        thermoSaveResult,
+        thermoJobStatus: thermoRunState.jobStatus ?? null,
+        resultCount: thermoRunState.resultCount ?? null,
+      };
+    },
+    async runElectrostaticHeatThermoQuadStudy(params = {}) {
+      const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
+      await bridge.prepareElectrostaticPlaneQuadStudy(params);
+      const electrostaticSaveResult = await bridge.saveModel({
+        name: params.electrostaticModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const electrostaticRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const heatProjection = await bridge.projectElectrostaticToHeatQuadStudy();
+      const heatSaveResult = await bridge.saveModel({
+        name: params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      const thermoProjection = await bridge.projectHeatToThermoQuadStudy();
+      const thermoSaveResult = await bridge.saveModel({
+        name: params.thermoModelName ?? params.heatModelName,
+        material: params.activeMaterial,
+        saveAs: true,
+      });
+      const thermoRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
+      await bridge.openResults({ projectId });
+      return {
+        ok:
+          electrostaticRunState.jobStatus === "completed" &&
+          heatProjection.studyKind === "heat_plane_quad_2d" &&
+          heatRunState.jobStatus === "completed" &&
+          thermoProjection.studyKind === "thermal_plane_quad_2d" &&
+          thermoRunState.jobStatus === "completed",
+        projectId,
+        electrostaticSaveResult,
+        electrostaticJobStatus: electrostaticRunState.jobStatus ?? null,
+        heatProjection,
         heatSaveResult,
         heatJobStatus: heatRunState.jobStatus ?? null,
         thermoProjection,

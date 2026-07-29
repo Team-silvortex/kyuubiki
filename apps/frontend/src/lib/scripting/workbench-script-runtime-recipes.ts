@@ -23,6 +23,11 @@ export type WorkbenchScriptRecipeFilters = {
 
 export const CLOSED_LOOP_TRUSS_RECIPE_ID = "recipe/truss2d/closed-loop";
 export const HEAT_TO_THERMO_QUAD_RECIPE_ID = "recipe/heat-thermo/quad-closed-loop";
+export const HEAT_TO_THERMO_TRIANGLE_RECIPE_ID = "recipe/heat-thermo/triangle-closed-loop";
+export const ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID =
+  "recipe/electrostatic-heat-thermo/quad-closed-loop";
+export const ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID =
+  "recipe/electrostatic-heat-thermo/triangle-closed-loop";
 
 export const WORKBENCH_SCRIPT_RECIPES: WorkbenchScriptRecipeDefinition[] = [
   {
@@ -99,6 +104,148 @@ export const WORKBENCH_SCRIPT_RECIPES: WorkbenchScriptRecipeDefinition[] = [
       resultKeys: [
         "ok",
         "projectId",
+        "heatSaveResult",
+        "heatJobStatus",
+        "thermoProjection",
+        "thermoSaveResult",
+        "thermoJobStatus",
+        "resultCount",
+      ],
+    },
+  },
+  {
+    id: HEAT_TO_THERMO_TRIANGLE_RECIPE_ID,
+    category: "workflow",
+    risk: "normal",
+    summary: {
+      en: "Run a 2D heat triangle study, project the temperature field into a thermo-mechanical triangle model, save it, run it, and open results.",
+      zh: "运行二维三角形热场研究，将温度场投影为热-力三角形模型，保存后继续求解并打开结果。",
+    },
+    payloadExample: {
+      activeMaterial: "210",
+      heatModelName: "pwdt-heat-plane-triangle",
+      projectName: "Pwdt heat-to-thermo triangle",
+      thermoModelName: "pwdt-thermal-plane-triangle",
+      timeoutSeconds: 90,
+    },
+    requiredActions: [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectHeatToThermo",
+      "data/setFilters",
+    ],
+    success: {
+      expectedState: {
+        jobStatus: "completed",
+        studyKind: "thermal_plane_triangle_2d",
+        systemDataTab: "results",
+      },
+      resultKeys: [
+        "ok",
+        "projectId",
+        "heatSaveResult",
+        "heatJobStatus",
+        "thermoProjection",
+        "thermoSaveResult",
+        "thermoJobStatus",
+        "resultCount",
+      ],
+    },
+  },
+  {
+    id: ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID,
+    category: "workflow",
+    risk: "normal",
+    summary: {
+      en: "Run a 2D electrostatic quad study, project the electric field into heat loading, run heat conduction, project into thermo-mechanics, and open results.",
+      zh: "运行二维四边形电静场研究，将电场投影为热载荷，继续热传导求解，再投影到热-力研究并打开结果。",
+    },
+    payloadExample: {
+      activeMaterial: "210",
+      electrostaticModelName: "pwdt-electrostatic-plane-quad",
+      heatModelName: "pwdt-joule-heat-plane-quad",
+      projectName: "Pwdt electrostatic-heat-thermo quad",
+      thermoModelName: "pwdt-joule-thermal-plane-quad",
+      timeoutSeconds: 90,
+    },
+    requiredActions: [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectElectrostaticToHeat",
+      "state/projectHeatToThermo",
+      "data/setFilters",
+    ],
+    success: {
+      expectedState: {
+        jobStatus: "completed",
+        studyKind: "thermal_plane_quad_2d",
+        systemDataTab: "results",
+      },
+      resultKeys: [
+        "ok",
+        "projectId",
+        "electrostaticSaveResult",
+        "electrostaticJobStatus",
+        "heatProjection",
+        "heatSaveResult",
+        "heatJobStatus",
+        "thermoProjection",
+        "thermoSaveResult",
+        "thermoJobStatus",
+        "resultCount",
+      ],
+    },
+  },
+  {
+    id: ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID,
+    category: "workflow",
+    risk: "normal",
+    summary: {
+      en: "Run a 2D electrostatic triangle study, project the electric field into heat loading, run heat conduction, project into thermo-mechanics, and open results.",
+      zh: "运行二维三角形电静场研究，将电场投影为热载荷，继续热传导求解，再投影到热-力研究并打开结果。",
+    },
+    payloadExample: {
+      activeMaterial: "210",
+      electrostaticModelName: "pwdt-electrostatic-plane-triangle",
+      heatModelName: "pwdt-joule-heat-plane-triangle",
+      projectName: "Pwdt electrostatic-heat-thermo triangle",
+      thermoModelName: "pwdt-joule-thermal-plane-triangle",
+      timeoutSeconds: 90,
+    },
+    requiredActions: [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectElectrostaticToHeat",
+      "state/projectHeatToThermo",
+      "data/setFilters",
+    ],
+    success: {
+      expectedState: {
+        jobStatus: "completed",
+        studyKind: "thermal_plane_triangle_2d",
+        systemDataTab: "results",
+      },
+      resultKeys: [
+        "ok",
+        "projectId",
+        "electrostaticSaveResult",
+        "electrostaticJobStatus",
+        "heatProjection",
         "heatSaveResult",
         "heatJobStatus",
         "thermoProjection",

@@ -5,6 +5,10 @@ import { useMemo } from "react";
 import { buildWorkbenchStudySidebarData } from "@/components/workbench/workbench-study-sidebar-data";
 import { createStudyKindResetHandlers } from "@/components/workbench/workbench-study-kind-controller";
 import {
+  projectElectrostaticPlaneQuadResultToHeatModel,
+  projectElectrostaticPlaneTriangleResultToHeatModel,
+} from "@/components/workbench/workbench-electrostatic-heat-projection";
+import {
   buildStudyDomainOptions,
   buildStudyKindOptionGroups,
   classifyStudyKindFamily,
@@ -132,6 +136,50 @@ export function useWorkbenchStudyShellController(props: Record<string, any>) {
       Boolean(props.studyResultDerived.heatPlaneTriangleResult)) ||
     (props.workspaceState.studyKind === "heat_plane_quad_2d" && Boolean(props.studyResultDerived.heatPlaneQuadResult));
 
+  const canProjectElectrostaticToHeat =
+    props.workspaceState.studyKind === "electrostatic_plane_triangle_2d" ||
+    props.workspaceState.studyKind === "electrostatic_plane_quad_2d"
+      ? Boolean(props.studyResultDerived.electrostaticPlaneResult)
+      : false;
+
+  const electrostaticHeatMessage =
+    props.shellState.language === "zh"
+      ? "已将电静场结果映射到热传导研究。求解前请检查热边界和热源量级。"
+      : props.shellState.language === "ja"
+        ? "静電場の結果を熱伝導 study に投影しました。求解前に熱境界と熱源スケールを確認してください。"
+        : "Mapped the electrostatic field result into a heat-conduction study. Review thermal boundaries and heat-load scale before solving.";
+
+  const projectElectrostaticToHeatStudy = () => {
+    const electrostaticResult = props.studyResultDerived.electrostaticPlaneResult;
+    if (props.workspaceState.studyKind === "electrostatic_plane_triangle_2d" && electrostaticResult) {
+      props.recordHistory("Mapped electrostatic result into heat study");
+      props.resetActiveResult();
+      props.workspaceState.setHeatPlaneModel(
+        projectElectrostaticPlaneTriangleResultToHeatModel(electrostaticResult, props.workspaceState.heatPlaneModel),
+      );
+      props.workspaceState.setPlaneResultField("average_temperature");
+      props.workspaceState.setStudyKind("heat_plane_triangle_2d");
+      props.openWorkspaceStudy("controls");
+      props.workspaceState.setMessage(electrostaticHeatMessage);
+      return "heat_plane_triangle_2d" as const;
+    }
+
+    if (props.workspaceState.studyKind === "electrostatic_plane_quad_2d" && electrostaticResult) {
+      props.recordHistory("Mapped electrostatic result into heat study");
+      props.resetActiveResult();
+      props.workspaceState.setHeatPlaneModel(
+        projectElectrostaticPlaneQuadResultToHeatModel(electrostaticResult, props.workspaceState.heatPlaneModel),
+      );
+      props.workspaceState.setPlaneResultField("average_temperature");
+      props.workspaceState.setStudyKind("heat_plane_quad_2d");
+      props.openWorkspaceStudy("controls");
+      props.workspaceState.setMessage(electrostaticHeatMessage);
+      return "heat_plane_quad_2d" as const;
+    }
+
+    return null;
+  };
+
   const projectHeatToThermoStudy = () => {
     if (props.workspaceState.studyKind === "heat_bar_1d" && props.studyResultDerived.heatBarResult) {
       props.recordHistory(props.t.projectHeatToThermoAction);
@@ -193,10 +241,12 @@ export function useWorkbenchStudyShellController(props: Record<string, any>) {
   };
 
   return {
+    canProjectElectrostaticToHeat,
     canProjectHeatToThermo,
     currentStudyFamilyHint,
     currentStudyFamilyLabel,
     handleLanguageChange,
+    projectElectrostaticToHeatStudy,
     projectHeatToThermoStudy,
     studyControlsRows,
     studyDomainOptions,

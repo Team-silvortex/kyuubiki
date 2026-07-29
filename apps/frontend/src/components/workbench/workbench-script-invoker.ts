@@ -133,6 +133,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         ensureBeamModelMaterials: options.ensureBeamModelMaterials,
         activeMaterial: options.activeMaterial,
         resetActiveResult: options.resetActiveResult,
+        projectElectrostaticToHeatStudy: options.projectElectrostaticToHeatStudy,
         projectHeatToThermoStudy: options.projectHeatToThermoStudy,
         toggleImmersiveViewport: options.toggleImmersiveViewport,
         handleUndo: options.handleUndo,

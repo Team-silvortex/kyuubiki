@@ -265,6 +265,15 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     },
   },
   {
+    id: "state/projectElectrostaticToHeat",
+    category: "state",
+    risk: "normal",
+    summary: {
+      en: "Map the current electrostatic result into the matching heat-conduction study.",
+      zh: "把当前电静场结果映射到对应的热传导研究。",
+    },
+  },
+  {
     id: "selection/set",
     category: "selection",
     risk: "normal",
@@ -440,6 +449,16 @@ export const WORKBENCH_SCRIPT_MACROS: WorkbenchScriptMacroDefinition[] = [
       zh: "将当前热结果映射到对应的力-热研究。",
     },
     steps: [{ action: "state/projectHeatToThermo" }],
+  },
+  {
+    id: "macro/projectElectrostaticToHeat",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Project the current electrostatic field result into the matching heat-conduction study.",
+      zh: "将当前电静场结果映射到对应的热传导研究。",
+    },
+    steps: [{ action: "state/projectElectrostaticToHeat" }],
   },
   {
     id: "macro/openDataResults",

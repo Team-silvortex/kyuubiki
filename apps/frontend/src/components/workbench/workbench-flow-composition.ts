@@ -157,6 +157,7 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     resolveTruss3dJobInput: props.resolveTruss3dJobInput,
     resolvePlaneQuad2dJobInput: props.resolvePlaneQuad2dJobInput,
     resolvePlaneTriangle2dJobInput: props.resolvePlaneTriangle2dJobInput,
+    projectElectrostaticToHeatStudy: props.projectElectrostaticToHeatStudy,
     projectHeatToThermoStudy: props.projectHeatToThermoStudy,
     handleUndo: topLevelActions.handleUndo,
     handleRedo: topLevelActions.handleRedo,

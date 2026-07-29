@@ -20,6 +20,11 @@
           "parityReport",
           "product_owned_static_ui",
           "runHeatToThermoQuadStudy",
+          "runHeatToThermoTriangleStudy",
+          "runElectrostaticHeatThermoQuadStudy",
+          "runElectrostaticHeatThermoTriangleStudy",
+          "projectElectrostaticToHeatQuadStudy",
+          "projectElectrostaticToHeatTriangleStudy",
           "uiSelector",
           "selectorExists",
           "normal_recipe_count"
@@ -42,10 +47,14 @@
         "required_text": [
           "CLOSED_LOOP_TRUSS_RECIPE_ID",
           "HEAT_TO_THERMO_QUAD_RECIPE_ID",
+          "HEAT_TO_THERMO_TRIANGLE_RECIPE_ID",
+          "ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID",
+          "ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID",
           "WORKBENCH_SCRIPT_RECIPES",
           "requiredActions",
           "expectedState",
           "resultKeys",
+          "state/projectElectrostaticToHeat",
           "state/projectHeatToThermo",
           "expect_recipe",
           "capture_recipe_catalog",
@@ -62,7 +71,8 @@
         "files": [
           "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
           "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
-          "apps/frontend/test/workflow/workbench-script-snippets.test.ts"
+          "apps/frontend/test/workflow/workbench-script-snippets.test.ts",
+          "apps/frontend/test/workflow/workbench-electrostatic-heat-projection.test.ts"
         ],
         "required_text": [
           "ky\\.run_recipe",
@@ -70,6 +80,10 @@
           "ky.recipes_matching",
           "__kyuubikiPwdt.version",
           "recipe_count",
+          "projectElectrostaticPlaneQuadResultToHeatModel",
+          "projectElectrostaticPlaneTriangleResultToHeatModel",
+          "ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID",
+          "ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID",
           "resultKeys",
           "WORKBENCH_SCRIPT_RECIPES"
         ]
@@ -95,7 +109,8 @@
       "files": [
         "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
         "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
-        "apps/frontend/test/workflow/workbench-script-snippets.test.ts"
+        "apps/frontend/test/workflow/workbench-script-snippets.test.ts",
+        "apps/frontend/test/workflow/workbench-electrostatic-heat-projection.test.ts"
       ],
       "required_text": [
         "run_recipe",
@@ -103,6 +118,9 @@
         "capture_recipe_catalog",
         "installWorkbenchPwdtBrowserBridge",
         "HEAT_TO_THERMO_QUAD_RECIPE_ID",
+        "HEAT_TO_THERMO_TRIANGLE_RECIPE_ID",
+        "ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID",
+        "ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID",
         "WORKBENCH_SCRIPT_RECIPES"
       ]
     }

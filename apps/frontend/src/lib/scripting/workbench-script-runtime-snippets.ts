@@ -8,7 +8,10 @@ import type {
 } from "./workbench-script-runtime-types.ts";
 import {
   CLOSED_LOOP_TRUSS_RECIPE_ID,
+  ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID,
+  ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID,
   HEAT_TO_THERMO_QUAD_RECIPE_ID,
+  HEAT_TO_THERMO_TRIANGLE_RECIPE_ID,
 } from "./workbench-script-runtime-recipes.ts";
 
 export type WorkbenchScriptSnippetParameter = {
@@ -192,6 +195,122 @@ if not result.get("ok"):
 ky.log(
     "Pwdt heat-to-thermo chain ready:",
     result.get("projectId"),
+    result.get("heatSaveResult"),
+    result.get("thermoSaveResult"),
+    result.get("resultCount"),
+)`,
+  },
+  {
+    id: "snippet/workflow/run-heat-to-thermo-triangle",
+    category: "workflow",
+    title: {
+      en: "Run heat-to-thermo triangle chain",
+      zh: "运行热场到热力三角形链",
+    },
+    summary: {
+      en: "Run a heat plane triangle solve, project it into a thermo-mechanical triangle model, save both stages, and open results.",
+      zh: "运行热场三角形求解，将结果投影为热-力三角形模型，保存两个阶段并打开结果。",
+    },
+    parameters: [
+      { key: "projectName", defaultValue: "Pwdt heat-to-thermo triangle automation" },
+      { key: "projectDescription", defaultValue: "Created from wasm Python DSL." },
+      { key: "heatModelName", defaultValue: "pwdt-heat-plane-triangle" },
+      { key: "thermoModelName", defaultValue: "pwdt-thermal-plane-triangle" },
+      { key: "activeMaterial", defaultValue: "210" },
+      { key: "timeoutSeconds", defaultValue: 90 },
+    ],
+    code: `result = await ky.run_recipe("${HEAT_TO_THERMO_TRIANGLE_RECIPE_ID}", snippet_params)
+if not result.get("ok"):
+    raise RuntimeError(
+        "Triangle heat-to-thermo chain ended without completion: "
+        + str(result.get("heatJobStatus"))
+        + " -> "
+        + str(result.get("thermoJobStatus"))
+    )
+
+ky.log(
+    "Pwdt heat-to-thermo triangle chain ready:",
+    result.get("projectId"),
+    result.get("heatSaveResult"),
+    result.get("thermoSaveResult"),
+    result.get("resultCount"),
+)`,
+  },
+  {
+    id: "snippet/workflow/run-electrostatic-heat-thermo-quad",
+    category: "workflow",
+    title: {
+      en: "Run electrostatic-to-heat-to-thermo chain",
+      zh: "运行电静场到热力链",
+    },
+    summary: {
+      en: "Run an electrostatic quad solve, project field intensity into heat loading, run heat conduction, then project into thermo-mechanics.",
+      zh: "运行电静场四边形求解，将场强投影成热载荷，继续热传导，再投影到热-力研究。",
+    },
+    parameters: [
+      { key: "projectName", defaultValue: "Pwdt electrostatic-heat-thermo automation" },
+      { key: "projectDescription", defaultValue: "Created from wasm Python DSL." },
+      { key: "electrostaticModelName", defaultValue: "pwdt-electrostatic-plane-quad" },
+      { key: "heatModelName", defaultValue: "pwdt-joule-heat-plane-quad" },
+      { key: "thermoModelName", defaultValue: "pwdt-joule-thermal-plane-quad" },
+      { key: "activeMaterial", defaultValue: "210" },
+      { key: "timeoutSeconds", defaultValue: 90 },
+    ],
+    code: `result = await ky.run_recipe("${ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID}", snippet_params)
+if not result.get("ok"):
+    raise RuntimeError(
+        "Electrostatic-to-heat-to-thermo chain ended without completion: "
+        + str(result.get("electrostaticJobStatus"))
+        + " -> "
+        + str(result.get("heatJobStatus"))
+        + " -> "
+        + str(result.get("thermoJobStatus"))
+    )
+
+ky.log(
+    "Pwdt electrostatic-to-heat-to-thermo chain ready:",
+    result.get("projectId"),
+    result.get("electrostaticSaveResult"),
+    result.get("heatSaveResult"),
+    result.get("thermoSaveResult"),
+    result.get("resultCount"),
+)`,
+  },
+  {
+    id: "snippet/workflow/run-electrostatic-heat-thermo-triangle",
+    category: "workflow",
+    title: {
+      en: "Run electrostatic-to-heat-to-thermo triangle chain",
+      zh: "运行电静场到热力三角形链",
+    },
+    summary: {
+      en: "Run an electrostatic triangle solve, project field intensity into heat loading, run heat conduction, then project into thermo-mechanics.",
+      zh: "运行电静场三角形求解，将场强投影成热载荷，继续热传导，再投影到热-力研究。",
+    },
+    parameters: [
+      { key: "projectName", defaultValue: "Pwdt electrostatic-heat-thermo triangle automation" },
+      { key: "projectDescription", defaultValue: "Created from wasm Python DSL." },
+      { key: "electrostaticModelName", defaultValue: "pwdt-electrostatic-plane-triangle" },
+      { key: "heatModelName", defaultValue: "pwdt-joule-heat-plane-triangle" },
+      { key: "thermoModelName", defaultValue: "pwdt-joule-thermal-plane-triangle" },
+      { key: "activeMaterial", defaultValue: "210" },
+      { key: "timeoutSeconds", defaultValue: 90 },
+    ],
+    code: `result = await ky.run_recipe("${ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID}", snippet_params)
+if not result.get("ok"):
+    raise RuntimeError(
+        "Triangle electrostatic-to-heat-to-thermo chain ended without completion: "
+        + str(result.get("electrostaticJobStatus"))
+        + " -> "
+        + str(result.get("heatJobStatus"))
+        + " -> "
+        + str(result.get("thermoJobStatus"))
+    )
+
+ky.log(
+    "Pwdt electrostatic-to-heat-to-thermo triangle chain ready:",
+    result.get("projectId"),
+    result.get("electrostaticSaveResult"),
     result.get("heatSaveResult"),
     result.get("thermoSaveResult"),
     result.get("resultCount"),

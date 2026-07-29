@@ -237,10 +237,12 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
   }
 
   const {
+    canProjectElectrostaticToHeat,
     canProjectHeatToThermo,
     currentStudyFamilyHint,
     currentStudyFamilyLabel,
     handleLanguageChange,
+    projectElectrostaticToHeatStudy,
     projectHeatToThermoStudy,
     studyControlsRows,
     studyDomainOptions,
@@ -325,6 +327,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
       resolveTruss3dJobInput: props.resolveTruss3dJobInput,
       resolvePlaneQuad2dJobInput: props.resolvePlaneQuad2dJobInput,
       resolvePlaneTriangle2dJobInput: props.resolvePlaneTriangle2dJobInput,
+      projectElectrostaticToHeatStudy,
       projectHeatToThermoStudy,
       setAdminFilterProjectId: props.setAdminFilterProjectId,
       setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
@@ -505,9 +508,11 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     selectStudyKind,
     handleLanguageChange,
     studyKindResetHandlers,
+    projectElectrostaticToHeatStudy,
     projectHeatToThermoStudy,
     currentStudyFamilyHint,
     currentStudyFamilyLabel,
+    canProjectElectrostaticToHeat,
     canProjectHeatToThermo,
     thermalBoundaryValue,
     thermalIntentValue,

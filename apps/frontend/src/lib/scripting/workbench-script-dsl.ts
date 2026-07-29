@@ -14,7 +14,10 @@ import {
 import {
   buildClosedLoopTrussWorkbenchFrontendDslDocument,
   buildDefaultWorkbenchFrontendDslDocument,
+  buildElectrostaticHeatThermoQuadWorkbenchFrontendDslDocument,
+  buildElectrostaticHeatThermoTriangleWorkbenchFrontendDslDocument,
   buildHeatToThermoQuadWorkbenchFrontendDslDocument,
+  buildHeatToThermoTriangleWorkbenchFrontendDslDocument,
 } from "./workbench-script-dsl-templates.ts";
 
 export type WorkbenchFrontendDslStep =
@@ -60,6 +63,15 @@ export const CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFronte
 );
 export const HEAT_TO_THERMO_QUAD_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
   buildHeatToThermoQuadWorkbenchFrontendDslDocument(),
+);
+export const HEAT_TO_THERMO_TRIANGLE_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
+  buildHeatToThermoTriangleWorkbenchFrontendDslDocument(),
+);
+export const ELECTROSTATIC_HEAT_THERMO_QUAD_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
+  buildElectrostaticHeatThermoQuadWorkbenchFrontendDslDocument(),
+);
+export const ELECTROSTATIC_HEAT_THERMO_TRIANGLE_WORKBENCH_FRONTEND_DSL = serializeWorkbenchFrontendDslDocument(
+  buildElectrostaticHeatThermoTriangleWorkbenchFrontendDslDocument(),
 );
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

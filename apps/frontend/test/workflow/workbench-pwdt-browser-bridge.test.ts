@@ -4,8 +4,11 @@ import assert from "node:assert/strict";
 import {
   CLOSED_LOOP_TRUSS_RECIPE_ID,
   createWorkbenchPwdtBrowserBridge,
+  ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID,
+  ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID,
   filterWorkbenchScriptRecipes,
   HEAT_TO_THERMO_QUAD_RECIPE_ID,
+  HEAT_TO_THERMO_TRIANGLE_RECIPE_ID,
   installWorkbenchPwdtBrowserBridge,
   WORKBENCH_SCRIPT_RECIPES,
 } from "../../src/lib/scripting/workbench-script-runtime.ts";
@@ -44,6 +47,9 @@ test("Pwdt browser bridge invokes registered Workbench actions without DOM click
   ]);
   assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === CLOSED_LOOP_TRUSS_RECIPE_ID));
   assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === HEAT_TO_THERMO_QUAD_RECIPE_ID));
+  assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === HEAT_TO_THERMO_TRIANGLE_RECIPE_ID));
+  assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID));
+  assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID));
 });
 
 test("Pwdt browser bridge runs macros and action steps through the same action bridge", async () => {
@@ -261,6 +267,257 @@ test("Pwdt browser bridge runs a heat-to-thermo quad composite recipe through ac
     ],
   );
   assert.equal(snapshot.studyKind, "thermal_plane_quad_2d");
+  assert.equal(snapshot.systemDataTab, "results");
+});
+
+test("Pwdt browser bridge runs a heat-to-thermo triangle composite recipe through action calls", async () => {
+  const calls: string[] = [];
+  const snapshot: Record<string, unknown> = {
+    jobStatus: null,
+    resultCount: 0,
+    selectedProjectId: null,
+    sidebarSection: "study",
+    studyKind: "axial_bar_1d",
+    systemDataTab: "jobs",
+  };
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => snapshot,
+    invokeAction: async (action, payload) => {
+      calls.push(action);
+      if (action === "project/create") {
+        snapshot.selectedProjectId = "project-created";
+        return { ok: true, action, projectId: "project-created" };
+      }
+      if (action === "nav/setSidebarSection") snapshot.sidebarSection = payload?.section;
+      if (action === "nav/setStudyKind") snapshot.studyKind = payload?.studyKind;
+      if (action === "job/run") {
+        snapshot.jobStatus = "completed";
+        snapshot.resultCount = snapshot.studyKind === "thermal_plane_triangle_2d" ? 2 : 1;
+      }
+      if (action === "state/projectHeatToThermo") {
+        snapshot.studyKind = "thermal_plane_triangle_2d";
+        snapshot.jobStatus = null;
+        return { ok: true, action, studyKind: "thermal_plane_triangle_2d" };
+      }
+      if (action === "data/setFilters") snapshot.systemDataTab = payload?.activeTab;
+      return { ok: true, action, payload };
+    },
+  });
+
+  const result = await bridge.runRecipe(HEAT_TO_THERMO_TRIANGLE_RECIPE_ID, {
+    activeMaterial: "210",
+    heatModelName: "pwdt-test-heat-triangle",
+    projectName: "Pwdt Test Project",
+    thermoModelName: "pwdt-test-thermo-triangle",
+    timeoutMs: 50,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.heatJobStatus, "completed");
+  assert.equal(result.thermoJobStatus, "completed");
+  assert.deepEqual(result.thermoProjection, {
+    ok: true,
+    action: "state/projectHeatToThermo",
+    studyKind: "thermal_plane_triangle_2d",
+  });
+  assert.deepEqual(
+    calls,
+    [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectHeatToThermo",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "data/setFilters",
+    ],
+  );
+  assert.equal(snapshot.studyKind, "thermal_plane_triangle_2d");
+  assert.equal(snapshot.systemDataTab, "results");
+});
+
+test("Pwdt browser bridge runs an electrostatic-to-heat-to-thermo quad recipe through action calls", async () => {
+  const calls: string[] = [];
+  const snapshot: Record<string, unknown> = {
+    jobStatus: null,
+    resultCount: 0,
+    selectedProjectId: null,
+    sidebarSection: "study",
+    studyKind: "axial_bar_1d",
+    systemDataTab: "jobs",
+  };
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => snapshot,
+    invokeAction: async (action, payload) => {
+      calls.push(action);
+      if (action === "project/create") {
+        snapshot.selectedProjectId = "project-created";
+        return { ok: true, action, projectId: "project-created" };
+      }
+      if (action === "nav/setSidebarSection") snapshot.sidebarSection = payload?.section;
+      if (action === "nav/setStudyKind") snapshot.studyKind = payload?.studyKind;
+      if (action === "job/run") {
+        snapshot.jobStatus = "completed";
+        snapshot.resultCount =
+          snapshot.studyKind === "thermal_plane_quad_2d" ? 3 : snapshot.studyKind === "heat_plane_quad_2d" ? 2 : 1;
+      }
+      if (action === "state/projectElectrostaticToHeat") {
+        snapshot.studyKind = "heat_plane_quad_2d";
+        snapshot.jobStatus = null;
+        return { ok: true, action, studyKind: "heat_plane_quad_2d" };
+      }
+      if (action === "state/projectHeatToThermo") {
+        snapshot.studyKind = "thermal_plane_quad_2d";
+        snapshot.jobStatus = null;
+        return { ok: true, action, studyKind: "thermal_plane_quad_2d" };
+      }
+      if (action === "data/setFilters") snapshot.systemDataTab = payload?.activeTab;
+      return { ok: true, action, payload };
+    },
+  });
+
+  const result = await bridge.runRecipe(ELECTROSTATIC_HEAT_THERMO_QUAD_RECIPE_ID, {
+    activeMaterial: "210",
+    electrostaticModelName: "pwdt-test-electrostatic",
+    heatModelName: "pwdt-test-heat",
+    projectName: "Pwdt Test Project",
+    thermoModelName: "pwdt-test-thermo",
+    timeoutMs: 50,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.projectId, "project-created");
+  assert.equal(result.electrostaticJobStatus, "completed");
+  assert.equal(result.heatJobStatus, "completed");
+  assert.equal(result.thermoJobStatus, "completed");
+  assert.deepEqual(result.heatProjection, {
+    ok: true,
+    action: "state/projectElectrostaticToHeat",
+    studyKind: "heat_plane_quad_2d",
+  });
+  assert.deepEqual(result.thermoProjection, {
+    ok: true,
+    action: "state/projectHeatToThermo",
+    studyKind: "thermal_plane_quad_2d",
+  });
+  assert.deepEqual(
+    calls,
+    [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectElectrostaticToHeat",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectHeatToThermo",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "data/setFilters",
+    ],
+  );
+  assert.equal(snapshot.studyKind, "thermal_plane_quad_2d");
+  assert.equal(snapshot.systemDataTab, "results");
+});
+
+test("Pwdt browser bridge runs an electrostatic-to-heat-to-thermo triangle recipe through action calls", async () => {
+  const calls: string[] = [];
+  const snapshot: Record<string, unknown> = {
+    jobStatus: null,
+    resultCount: 0,
+    selectedProjectId: null,
+    sidebarSection: "study",
+    studyKind: "axial_bar_1d",
+    systemDataTab: "jobs",
+  };
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => snapshot,
+    invokeAction: async (action, payload) => {
+      calls.push(action);
+      if (action === "project/create") {
+        snapshot.selectedProjectId = "project-created";
+        return { ok: true, action, projectId: "project-created" };
+      }
+      if (action === "nav/setSidebarSection") snapshot.sidebarSection = payload?.section;
+      if (action === "nav/setStudyKind") snapshot.studyKind = payload?.studyKind;
+      if (action === "job/run") {
+        snapshot.jobStatus = "completed";
+        snapshot.resultCount =
+          snapshot.studyKind === "thermal_plane_triangle_2d" ? 3 : snapshot.studyKind === "heat_plane_triangle_2d" ? 2 : 1;
+      }
+      if (action === "state/projectElectrostaticToHeat") {
+        snapshot.studyKind = "heat_plane_triangle_2d";
+        snapshot.jobStatus = null;
+        return { ok: true, action, studyKind: "heat_plane_triangle_2d" };
+      }
+      if (action === "state/projectHeatToThermo") {
+        snapshot.studyKind = "thermal_plane_triangle_2d";
+        snapshot.jobStatus = null;
+        return { ok: true, action, studyKind: "thermal_plane_triangle_2d" };
+      }
+      if (action === "data/setFilters") snapshot.systemDataTab = payload?.activeTab;
+      return { ok: true, action, payload };
+    },
+  });
+
+  const result = await bridge.runRecipe(ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID, {
+    activeMaterial: "210",
+    electrostaticModelName: "pwdt-test-electrostatic-triangle",
+    heatModelName: "pwdt-test-heat-triangle",
+    projectName: "Pwdt Test Project",
+    thermoModelName: "pwdt-test-thermo-triangle",
+    timeoutMs: 50,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.electrostaticJobStatus, "completed");
+  assert.equal(result.heatJobStatus, "completed");
+  assert.equal(result.thermoJobStatus, "completed");
+  assert.deepEqual(result.heatProjection, {
+    ok: true,
+    action: "state/projectElectrostaticToHeat",
+    studyKind: "heat_plane_triangle_2d",
+  });
+  assert.deepEqual(result.thermoProjection, {
+    ok: true,
+    action: "state/projectHeatToThermo",
+    studyKind: "thermal_plane_triangle_2d",
+  });
+  assert.deepEqual(
+    calls,
+    [
+      "project/create",
+      "nav/setStudyKind",
+      "nav/setSidebarSection",
+      "nav/setTabs",
+      "model/setWorkspaceMeta",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectElectrostaticToHeat",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "state/projectHeatToThermo",
+      "model/setWorkspaceMeta",
+      "model/saveAs",
+      "job/run",
+      "data/setFilters",
+    ],
+  );
+  assert.equal(snapshot.studyKind, "thermal_plane_triangle_2d");
   assert.equal(snapshot.systemDataTab, "results");
 });
 

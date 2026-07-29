@@ -265,6 +265,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     ensureFrameModelMaterials: props.ensureFrameModelMaterials,
     ensureBeamModelMaterials: props.ensureBeamModelMaterials,
     resetActiveResult: props.resetActiveResult,
+    projectElectrostaticToHeatStudy: props.projectElectrostaticToHeatStudy,
     projectHeatToThermoStudy: props.projectHeatToThermoStudy,
     toggleImmersiveViewport: props.toggleImmersiveViewport,
     handleUndo: props.handleUndo,
