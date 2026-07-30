@@ -1,14 +1,25 @@
+mod quality_domains;
+mod quality_payload;
 mod quality_terms;
+mod self_tests;
 
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
+use quality_domains::{
+    compare_quality_domain_metadata, compare_quality_operator_ids, rust_quality_domain_metadata,
+    rust_quality_operator_ids, web_quality_domain_metadata, web_quality_operator_ids,
+};
+use quality_payload::{
+    compare_quality_payload_keys, compare_quality_term_entry_schemas, rust_quality_payload_keys,
+    rust_quality_term_entry_schemas, web_quality_payload_keys, web_quality_term_entry_schema,
+};
 use quality_terms::{
     compare_quality_signature_coverage, compare_quality_term_signatures, compare_quality_terms,
-    rust_quality_term_signatures, rust_quality_term_signatures_from_source, rust_quality_terms,
-    rust_quality_terms_from_source, web_quality_term_signatures, web_quality_terms,
+    rust_quality_term_signatures, rust_quality_terms, web_quality_term_signatures,
+    web_quality_terms,
 };
 
 type RunnerResult<T> = Result<T, String>;
@@ -109,7 +120,7 @@ pub(crate) fn run_check_workflow_metric_resolver_contract(
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
     if args.iter().any(|arg| arg == "--self-test") {
-        run_self_test()?;
+        self_tests::run_self_test()?;
         println!("workflow metric resolver contract self-test passed");
         return Ok(0);
     }
@@ -123,11 +134,15 @@ pub(crate) fn run_check_workflow_metric_resolver_contract(
         return Ok(1);
     }
     println!(
-        "workflow metric resolver contract passed: {} shared field(s), {} quality mirror(s), {} quality term(s), {} quality signature(s)",
+        "workflow metric resolver contract passed: {} shared field(s), {} quality mirror(s), {} quality term(s), {} quality signature(s), {} quality payload key(s), {} term-entry schema(s), {} quality domain(s), {} quality operator(s)",
         summary.shared_field_count,
         summary.quality_mirror_count,
         summary.quality_term_count,
-        summary.quality_signature_count
+        summary.quality_signature_count,
+        summary.quality_payload_key_count,
+        summary.term_entry_schema_count,
+        summary.quality_domain_count,
+        summary.quality_operator_count
     );
     Ok(0)
 }
@@ -137,6 +152,10 @@ struct ContractSummary {
     quality_mirror_count: usize,
     quality_term_count: usize,
     quality_signature_count: usize,
+    quality_payload_key_count: usize,
+    term_entry_schema_count: usize,
+    quality_domain_count: usize,
+    quality_operator_count: usize,
     issues: Vec<String>,
 }
 
@@ -154,6 +173,30 @@ fn check_contract(root: &Path) -> RunnerResult<ContractSummary> {
     issues.extend(compare_quality_mirrors(
         &rust_quality_mirrors,
         &web_quality_mirrors,
+    ));
+    let rust_quality_domains = rust_quality_domain_metadata(root)?;
+    let web_quality_domains = web_quality_domain_metadata(&web_quality_source);
+    issues.extend(compare_quality_domain_metadata(
+        &rust_quality_domains,
+        &web_quality_domains,
+    ));
+    let rust_quality_operator_ids = rust_quality_operator_ids(root)?;
+    let web_quality_operator_ids = web_quality_operator_ids(&web_quality_source);
+    issues.extend(compare_quality_operator_ids(
+        &rust_quality_operator_ids,
+        &web_quality_operator_ids,
+    ));
+    let rust_quality_payload_keys = rust_quality_payload_keys(root)?;
+    let web_quality_payload_keys = web_quality_payload_keys(&web_quality_source);
+    issues.extend(compare_quality_payload_keys(
+        &rust_quality_payload_keys,
+        &web_quality_payload_keys,
+    ));
+    let rust_term_entry_schemas = rust_quality_term_entry_schemas(root)?;
+    let web_term_entry_schema = web_quality_term_entry_schema(&web_quality_source);
+    issues.extend(compare_quality_term_entry_schemas(
+        &rust_term_entry_schemas,
+        &web_term_entry_schema,
     ));
     let rust_quality_terms = rust_quality_terms(root)?;
     let web_quality_terms = web_quality_terms(&web_quality_source);
@@ -214,11 +257,29 @@ fn check_contract(root: &Path) -> RunnerResult<ContractSummary> {
         .keys()
         .filter(|key| web_quality_signatures.contains_key(*key))
         .count();
+    let quality_payload_key_count = rust_quality_payload_keys
+        .intersection(&web_quality_payload_keys)
+        .count();
+    let term_entry_schema_count = rust_term_entry_schemas
+        .keys()
+        .filter(|(_domain, variant)| web_term_entry_schema.contains_key(variant))
+        .count();
+    let quality_domain_count = rust_quality_domains
+        .keys()
+        .filter(|domain| web_quality_domains.contains_key(*domain))
+        .count();
+    let quality_operator_count = rust_quality_operator_ids
+        .intersection(&web_quality_operator_ids)
+        .count();
     Ok(ContractSummary {
         shared_field_count,
         quality_mirror_count,
         quality_term_count,
         quality_signature_count,
+        quality_payload_key_count,
+        term_entry_schema_count,
+        quality_domain_count,
+        quality_operator_count,
         issues,
     })
 }
@@ -404,176 +465,4 @@ fn tilde_word_list(line: &str) -> Vec<String> {
 
 fn read_text(root: &Path, relative: &str) -> RunnerResult<String> {
     fs::read_to_string(root.join(relative)).map_err(|error| format!("{relative}: {error}"))
-}
-
-fn run_self_test() -> RunnerResult<()> {
-    let rust = r#"
-fn domain_alias_field(field: &str) {
-    match field {
-        "max_stress" => Some(1.0),
-        "max_velocity" => Some(2.0),
-        "velocity_magnitude" => Some(3.0),
-        "frequency_span_hz" => Some(4.0),
-        _ => None,
-    }
-}
-"#;
-    let web = r#"
-@dynamic_amplitude_fields ~w(max_velocity)
-def metric_value(payload, "frequency_span_hz"), do: payload
-defp domain_alias_value(payload, "max_stress"), do: payload
-defp domain_alias_value(payload, "velocity_magnitude"), do: payload
-"#;
-    let rust_fields = rust_metric_fields(rust);
-    let web_fields = web_metric_fields(web);
-    let issues = compare_metric_fields(&rust_fields, &web_fields);
-    if !issues.is_empty() {
-        return Err(format!("self-test matching fixtures drifted: {issues:?}"));
-    }
-
-    let missing_web_fields = web.replace(
-        "defp domain_alias_value(payload, \"max_stress\"), do: payload",
-        "",
-    );
-    expect_issue(
-        compare_metric_fields(&rust_fields, &web_metric_fields(&missing_web_fields)),
-        "missing from Web resolver: max_stress",
-    )?;
-
-    let extra_web_field =
-        format!("{web}\ndefp domain_alias_value(payload, \"extra_metric\"), do: payload\n");
-    expect_issue(
-        compare_metric_fields(&rust_fields, &web_metric_fields(&extra_web_field)),
-        "missing from Rust resolver: extra_metric",
-    )?;
-
-    let rust_mirror = r#"
-        "thermal_quality_total_energy": numeric_field(object, "thermal_total_energy"),
-        "cfd_quality_velocity_span": metric_value(object, "cfd_velocity_span"),
-"#;
-    let web_mirror = r#"
-      {"thermal_quality_total_energy", "thermal_total_energy"},
-      {"cfd_quality_velocity_span", "cfd_velocity_span"}
-"#;
-    let rust_mirrors = rust_quality_mirrors_from_source(rust_mirror);
-    let web_mirrors = web_quality_mirrors(web_mirror);
-    let issues = compare_quality_mirrors(&rust_mirrors, &web_mirrors);
-    if !issues.is_empty() {
-        return Err(format!(
-            "self-test matching mirror fixtures drifted: {issues:?}"
-        ));
-    }
-
-    let missing_web_mirror = web_mirror.replace(
-        "{\"thermal_quality_total_energy\", \"thermal_total_energy\"},",
-        "",
-    );
-    expect_issue(
-        compare_quality_mirrors(&rust_mirrors, &web_quality_mirrors(&missing_web_mirror)),
-        "quality mirrors missing from Web runtime: thermal_quality_total_energy->thermal_total_energy",
-    )?;
-
-    let extra_web_mirror =
-        format!("{web_mirror}\n      {{\"extra_quality_metric\", \"extra_metric\"}}\n");
-    expect_issue(
-        compare_quality_mirrors(&rust_mirrors, &web_quality_mirrors(&extra_web_mirror)),
-        "quality mirrors missing from Rust engine: extra_quality_metric->extra_metric",
-    )?;
-
-    let rust_structural_term_source = r#"
-        QualityTerm {
-            field: "max_stress",
-            label: "Maximum stress",
-            target: 1.0,
-            weight: 1.0,
-            goal: QualityGoal::Min,
-        }
-"#;
-    let rust_thermal_term_source = r#"
-        "thermal_total_energy" => Some(QualityTerm {
-            field: "thermal_total_energy",
-            label: "Total thermal energy",
-            target: 1.0,
-            weight: 1.0,
-            goal: QualityGoal::Min,
-        }),
-"#;
-    let web_term_source = r#"
-@domains %{
-  "transform.score_structural_quality" => %{
-    id: "structural",
-    terms: [
-      {"max_stress", "Maximum stress", 1.0, 1.0, :min}
-    ]
-  }
-}
-def supported_operator_ids, do: Map.keys(@domains)
-defp extra_quality_term("thermal", "thermal_total_energy"),
-  do: {"thermal_total_energy", "Total thermal energy", 1.0, 1.0, :min}
-"#;
-    let mut rust_terms = rust_quality_terms_from_source("structural", rust_structural_term_source);
-    rust_terms.extend(rust_quality_terms_from_source(
-        "thermal",
-        rust_thermal_term_source,
-    ));
-    let web_terms = web_quality_terms(web_term_source);
-    let issues = compare_quality_terms(&rust_terms, &web_terms);
-    if !issues.is_empty() {
-        return Err(format!(
-            "self-test matching quality term fixtures drifted: {issues:?}"
-        ));
-    }
-
-    let missing_web_term = web_term_source.replace(
-        "defp extra_quality_term(\"thermal\", \"thermal_total_energy\"),",
-        "defp extra_quality_term(\"thermal\", \"unused_term\"),",
-    );
-    expect_issue(
-        compare_quality_terms(&rust_terms, &web_quality_terms(&missing_web_term)),
-        "quality score terms missing from Web runtime: thermal:thermal_total_energy",
-    )?;
-
-    let extra_web_term = format!(
-        "{web_term_source}\ndefp extra_quality_term(\"cfd\", \"cfd_extra_metric\"), do: {{\"cfd_extra_metric\", \"Extra\", 1.0, 1.0, :min}}\n"
-    );
-    expect_issue(
-        compare_quality_terms(&rust_terms, &web_quality_terms(&extra_web_term)),
-        "quality score terms missing from Rust engine: cfd:cfd_extra_metric",
-    )?;
-
-    let mut rust_signatures =
-        rust_quality_term_signatures_from_source("structural", rust_structural_term_source);
-    rust_signatures.extend(rust_quality_term_signatures_from_source(
-        "thermal",
-        rust_thermal_term_source,
-    ));
-    let web_signatures = web_quality_term_signatures(web_term_source);
-    let issues = compare_quality_term_signatures(&rust_signatures, &web_signatures);
-    if !issues.is_empty() {
-        return Err(format!(
-            "self-test matching quality signature fixtures drifted: {issues:?}"
-        ));
-    }
-
-    let drifted_web_signature = web_term_source.replace(
-        "{\"max_stress\", \"Maximum stress\", 1.0, 1.0, :min}",
-        "{\"max_stress\", \"Maximum stress\", 2.0, 1.0, :min}",
-    );
-    expect_issue(
-        compare_quality_term_signatures(
-            &rust_signatures,
-            &web_quality_term_signatures(&drifted_web_signature),
-        ),
-        "quality score term signature drift for structural:max_stress",
-    )
-}
-
-fn expect_issue(issues: Vec<String>, expected: &str) -> RunnerResult<()> {
-    if issues.iter().any(|issue| issue.contains(expected)) {
-        Ok(())
-    } else {
-        Err(format!(
-            "self-test expected issue containing {expected:?}, got {issues:?}"
-        ))
-    }
 }

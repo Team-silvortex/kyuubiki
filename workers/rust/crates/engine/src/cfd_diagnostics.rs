@@ -247,6 +247,7 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
                 "value": value,
                 "target": target,
                 "weight": weight,
+                "goal": "min",
                 "penalty": penalty,
                 "status": if value.abs() <= target { "ok" } else { "watch" },
             })

@@ -1,6 +1,7 @@
+use super::includes::load_tensor_with_includes;
 use super::{
     MATRIX_PATH, RunnerResult, SCHEMA_VERSION, TOPOLOGY_PATH, build_tensor_report,
-    derive_evidence_aware_gap, derive_gap, load_tensor_with_includes, validate_tensor_config,
+    derive_evidence_aware_gap, derive_gap, validate_tensor_config,
 };
 use serde_json::{Value, json};
 use std::{fs, path::Path, path::PathBuf};
