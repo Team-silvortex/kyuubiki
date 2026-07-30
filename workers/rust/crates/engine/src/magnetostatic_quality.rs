@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_magnetostatic_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -163,61 +164,7 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| magnetostatic_alias_field(object, field))
-}
-
-fn magnetostatic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "magnetostatic_field_peak_magnitude" => first_alias_number(
-            object,
-            &[
-                "max_magnetic_field_strength",
-                "peak_magnetic_field_strength",
-                "h_peak",
-            ],
-        ),
-        "magnetostatic_flux_peak_magnitude" => {
-            first_alias_number(object, &["max_flux_density", "peak_flux_density", "b_peak"])
-        }
-        "magnetostatic_energy_density_peak" => first_alias_number(
-            object,
-            &[
-                "max_energy_density",
-                "peak_energy_density",
-                "magnetic_energy_density_peak",
-            ],
-        ),
-        "magnetostatic_current_density_sum" => first_alias_number(
-            object,
-            &[
-                "total_current_density",
-                "current_density_total",
-                "sum_current_density",
-            ],
-        ),
-        "magnetostatic_total_stored_energy" => first_alias_number(
-            object,
-            &[
-                "total_stored_energy",
-                "stored_energy_total",
-                "magnetic_total_energy",
-            ],
-        ),
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn dominant_quality_term(terms: &[Value]) -> Value {

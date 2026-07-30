@@ -36,6 +36,7 @@ mod workflow_coupled_readiness;
 mod workflow_executor;
 mod workflow_focus_chain;
 mod workflow_guard_transforms;
+mod workflow_metric_resolver;
 mod workflow_parameter_sweep;
 mod workflow_parameter_sweep_results;
 mod workflow_quality_lineage;

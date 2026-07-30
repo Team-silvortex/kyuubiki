@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn extract_stokes_flow_result_diagnostics(
@@ -262,34 +263,7 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| derived_span(object, field))
-        .or_else(|| cfd_alias_field(object, field))
-}
-
-fn cfd_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "cfd_divergence_error_peak" => first_alias_number(
-            object,
-            &["max_divergence_error", "divergence_peak", "div_u_peak"],
-        ),
-        "cfd_reynolds_number_peak" => {
-            first_alias_number(object, &["max_reynolds_number", "reynolds_peak", "re_peak"])
-        }
-        "cfd_viscous_dissipation_total" => first_alias_number(
-            object,
-            &[
-                "total_viscous_dissipation",
-                "viscous_dissipation_sum",
-                "dissipation_total",
-            ],
-        ),
-        "cfd_velocity_span" => first_alias_number(object, &["velocity_span", "speed_span"]),
-        "cfd_pressure_span" => first_alias_number(object, &["pressure_span", "p_span"]),
-        _ => None,
-    }
+    metric_value(object, field)
 }
 
 fn dominant_quality_term(terms: &[Value]) -> Value {
@@ -368,43 +342,11 @@ fn numeric_values(
 }
 
 fn cfd_node_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| match field {
-            "velocity_magnitude" => first_alias_number(object, &["speed", "u_mag"])
-                .or_else(|| vector_magnitude(object, "vx", "vy")),
-            "pressure" => first_alias_number(object, &["p", "static_pressure"]),
-            _ => None,
-        })
+    metric_value(object, field)
 }
 
 fn cfd_element_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| match field {
-            "divergence_error" => first_alias_number(object, &["div_u", "divergence"]),
-            "reynolds_number" => first_alias_number(object, &["reynolds", "re"]),
-            "viscous_dissipation" => first_alias_number(object, &["dissipation", "nu_dissipation"]),
-            _ => None,
-        })
-}
-
-fn vector_magnitude(object: &Map<String, Value>, x: &str, y: &str) -> Option<f64> {
-    let x = object.get(x).and_then(finite_number)?;
-    let y = object.get(y).and_then(finite_number)?;
-    Some((x * x + y * y).sqrt())
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn mean_or_zero(values: &[f64]) -> f64 {
@@ -431,17 +373,6 @@ fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
         .and_then(Value::as_f64)
         .filter(|value| value.is_finite() && *value >= 0.0)
         .unwrap_or(default_value)
-}
-
-fn derived_span(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    let prefix = field.strip_suffix("_span")?;
-    let min = object
-        .get(&format!("{prefix}_min"))
-        .and_then(finite_number)?;
-    let max = object
-        .get(&format!("{prefix}_max"))
-        .and_then(finite_number)?;
-    Some((max - min).abs())
 }
 
 fn quality_grade(score: f64, missing_count: usize, max_ready_score: f64) -> &'static str {

@@ -22,8 +22,8 @@ fn approx_eq(left: Option<f64>, right: f64) {
 fn evaluates_electrostatic_guard_as_warn() {
     let guard = evaluate_electrostatic_guard(
         serde_json::json!({
-            "electrostatic_field_peak_magnitude": 12.5,
-            "electrostatic_peak_energy_density": 0.42
+            "peak_electric_field": 12.5,
+            "peak_energy_density": 0.42
         }),
         serde_json::json!({
             "rules": [
@@ -49,14 +49,14 @@ fn benchmarks_electrostatic_pair_by_field_and_energy() {
     let benchmark = benchmark_electrostatic_pair(
         serde_json::json!({
             "left": {
-                "electrostatic_field_peak_magnitude": 8.0,
-                "electrostatic_peak_energy_density": 0.31,
-                "electrostatic_potential_span": 4.4
+                "peak_electric_field": 8.0,
+                "peak_energy_density": 0.31,
+                "voltage_span": 4.4
             },
             "right": {
-                "electrostatic_field_peak_magnitude": 9.5,
-                "electrostatic_peak_energy_density": 0.27,
-                "electrostatic_potential_span": 5.1
+                "peak_electric_field": 9.5,
+                "peak_energy_density": 0.27,
+                "voltage_span": 5.1
             }
         }),
         serde_json::json!({

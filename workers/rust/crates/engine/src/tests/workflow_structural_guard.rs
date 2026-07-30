@@ -49,6 +49,31 @@ fn evaluates_structural_guard_with_contact_and_stress_rules() {
 }
 
 #[test]
+fn evaluates_structural_guard_with_standard_field_aliases() {
+    let guard = evaluate_structural_guard(
+        serde_json::json!({
+            "von_mises_peak": 320.0,
+            "peak_displacement": 0.018
+        }),
+        serde_json::json!({
+            "rules": [
+                { "field": "max_stress", "comparison": "gt", "threshold": 250.0, "severity": "block", "label": "stress_limit" },
+                { "field": "max_displacement", "comparison": "gt", "threshold": 0.02, "severity": "warn", "label": "serviceability" }
+            ]
+        }),
+    )
+    .expect("structural guard should resolve solver aliases");
+
+    assert_eq!(guard["guard_status"].as_str(), Some("block"));
+    assert_eq!(guard["guard_trigger_count"].as_u64(), Some(1));
+    assert_eq!(
+        guard["guard_triggers"][0]["field"].as_str(),
+        Some("max_stress")
+    );
+    approx_eq(guard["guard_triggers"][0]["value"].as_f64(), 320.0);
+}
+
+#[test]
 fn benchmarks_structural_pair_across_serviceability_and_mass() {
     let benchmark = benchmark_structural_pair(
         serde_json::json!({

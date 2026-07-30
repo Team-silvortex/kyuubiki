@@ -20,8 +20,8 @@ fn approx_eq(left: Option<f64>, right: f64) {
 fn evaluates_thermal_guard_as_pass() {
     let guard = evaluate_thermal_guard(
         serde_json::json!({
-            "thermal_temperature_max": 80.0,
-            "thermal_flux_peak_magnitude": 12.0
+            "temperature_max": 80.0,
+            "max_heat_flux": 12.0
         }),
         serde_json::json!({
             "rules": [
@@ -45,8 +45,9 @@ fn evaluates_thermal_guard_as_pass() {
 fn evaluates_thermal_guard_as_warn_and_block() {
     let guard = evaluate_thermal_guard(
         serde_json::json!({
-            "thermo_temperature_delta_max": 135.0,
-            "thermo_stress_peak": 260.0
+            "temperature_max": 155.0,
+            "temperature_min": 20.0,
+            "peak_stress": 260.0
         }),
         serde_json::json!({
             "rules": [

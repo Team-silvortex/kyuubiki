@@ -22,7 +22,7 @@ fn approx_eq(left: Option<f64>, right: f64) {
 fn evaluates_magnetostatic_guard_as_block() {
     let guard = evaluate_magnetostatic_guard(
         serde_json::json!({
-            "magnetostatic_field_peak_magnitude": 13.0,
+            "h_peak": 13.0,
             "total_stored_energy": 9.5
         }),
         serde_json::json!({
@@ -44,11 +44,11 @@ fn benchmarks_magnetostatic_pair_by_field_and_energy() {
     let benchmark = benchmark_magnetostatic_pair(
         serde_json::json!({
             "left": {
-                "magnetostatic_field_peak_magnitude": 11.0,
+                "h_peak": 11.0,
                 "total_stored_energy": 7.0
             },
             "right": {
-                "magnetostatic_field_peak_magnitude": 13.0,
+                "h_peak": 13.0,
                 "total_stored_energy": 9.5
             }
         }),

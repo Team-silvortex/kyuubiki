@@ -105,6 +105,14 @@ defmodule KyuubikiWeb.WorkflowDomainMetricResolver do
     first_number(payload, ["max_stress", "peak_stress", "thermal_stress_peak"])
   end
 
+  defp domain_alias_value(payload, "thermal_total_energy") do
+    first_number(payload, [
+      "total_thermal_energy",
+      "thermal_energy_total",
+      "total_heat_energy"
+    ])
+  end
+
   defp domain_alias_value(payload, "electrostatic_field_peak_magnitude") do
     first_number(payload, ["max_electric_field", "peak_electric_field", "electric_field_peak"])
   end
@@ -114,6 +122,18 @@ defmodule KyuubikiWeb.WorkflowDomainMetricResolver do
       "max_energy_density",
       "peak_energy_density",
       "electric_energy_density_peak"
+    ])
+  end
+
+  defp domain_alias_value(payload, "electrostatic_flux_peak_magnitude") do
+    first_number(payload, ["max_flux_density", "peak_flux_density"])
+  end
+
+  defp domain_alias_value(payload, "electrostatic_total_stored_energy") do
+    first_number(payload, [
+      "total_stored_energy",
+      "stored_energy_total",
+      "electric_total_energy"
     ])
   end
 
@@ -146,6 +166,14 @@ defmodule KyuubikiWeb.WorkflowDomainMetricResolver do
       "total_current_density",
       "current_density_total",
       "sum_current_density"
+    ])
+  end
+
+  defp domain_alias_value(payload, "magnetostatic_total_stored_energy") do
+    first_number(payload, [
+      "total_stored_energy",
+      "stored_energy_total",
+      "magnetic_total_energy"
     ])
   end
 

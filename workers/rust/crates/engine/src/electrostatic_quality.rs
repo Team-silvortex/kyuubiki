@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_electrostatic_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -197,63 +198,7 @@ fn compact_quality_term(term: &Value) -> Value {
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| electrostatic_alias_field(object, field))
-}
-
-fn electrostatic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "electrostatic_field_peak_magnitude" => first_alias_number(
-            object,
-            &[
-                "max_electric_field",
-                "peak_electric_field",
-                "electric_field_peak",
-            ],
-        ),
-        "electrostatic_peak_energy_density" => first_alias_number(
-            object,
-            &[
-                "max_energy_density",
-                "peak_energy_density",
-                "electric_energy_density_peak",
-            ],
-        ),
-        "electrostatic_flux_peak_magnitude" => {
-            first_alias_number(object, &["max_flux_density", "peak_flux_density"])
-        }
-        "electrostatic_total_stored_energy" => first_alias_number(
-            object,
-            &[
-                "total_stored_energy",
-                "stored_energy_total",
-                "electric_total_energy",
-            ],
-        ),
-        "electrostatic_potential_span" => {
-            first_alias_number(object, &["potential_span", "voltage_span", "max_potential"])
-                .or_else(|| potential_span_from_bounds(object))
-        }
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn potential_span_from_bounds(object: &Map<String, Value>) -> Option<f64> {
-    let max = first_alias_number(object, &["potential_max", "max_voltage", "voltage_max"])?;
-    let min = first_alias_number(object, &["potential_min", "min_voltage", "voltage_min"])?;
-    Some((max - min).abs())
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

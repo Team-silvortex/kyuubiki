@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::Value;
 
 pub fn evaluate_thermal_guard(payload: Value, config: Value) -> Result<Value, String> {
@@ -284,7 +285,7 @@ fn benchmark_pair(
 fn evaluate_guard_rule(payload: &serde_json::Map<String, Value>, rule: &Value) -> Option<Value> {
     let rule_object = rule.as_object()?;
     let field = rule_object.get("field")?.as_str()?;
-    let value = payload.get(field)?.as_f64()?;
+    let value = metric_value(payload, field)?;
     if !guard_triggered(value, rule_object) {
         return None;
     }
@@ -313,8 +314,8 @@ fn benchmark_criterion(
         .get("field")
         .and_then(Value::as_str)
         .unwrap_or(left_field);
-    let left_value = left.get(left_field)?.as_f64()?;
-    let right_value = right.get(right_field)?.as_f64()?;
+    let left_value = metric_value(left, left_field)?;
+    let right_value = metric_value(right, right_field)?;
     let weight = normalize_weight(criterion.get("weight").and_then(Value::as_f64));
     let goal = normalize_goal(criterion.get("goal").and_then(Value::as_str));
     let (left_score, right_score) = score_benchmark_pair(left_value, right_value, goal, weight);

@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_transport_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -184,52 +185,7 @@ fn compact_quality_term(term: &Value) -> Value {
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| transport_alias_field(object, field))
-}
-
-fn transport_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "transport_total_flux_peak_magnitude" => first_alias_number(
-            object,
-            &[
-                "max_transport_flux",
-                "peak_transport_flux",
-                "transport_flux_peak",
-            ],
-        ),
-        "transport_peclet_peak" => {
-            first_alias_number(object, &["max_peclet", "peclet_max", "peak_peclet"])
-        }
-        "transport_concentration_span" => first_alias_number(
-            object,
-            &["concentration_span", "concentration_range", "species_span"],
-        )
-        .or_else(|| concentration_span_from_bounds(object)),
-        "transport_source_sum" => first_alias_number(
-            object,
-            &["net_source", "source_balance", "total_source", "source_sum"],
-        ),
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn concentration_span_from_bounds(object: &Map<String, Value>) -> Option<f64> {
-    let max = first_alias_number(object, &["concentration_max", "max_concentration"])?;
-    let min = first_alias_number(object, &["concentration_min", "min_concentration"])?;
-    Some((max - min).abs())
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn meets_target(value: f64, target: f64, goal: QualityGoal) -> bool {

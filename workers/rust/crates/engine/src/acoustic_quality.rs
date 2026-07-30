@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_acoustic_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -168,50 +169,7 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| acoustic_alias_field(object, field))
-}
-
-fn acoustic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "max_sound_pressure_level_db" => first_alias_number(
-            object,
-            &["peak_spl_db", "spl_max_db", "sound_pressure_level_max_db"],
-        ),
-        "max_acoustic_intensity" => first_alias_number(
-            object,
-            &[
-                "peak_acoustic_intensity",
-                "acoustic_intensity_peak",
-                "intensity_max",
-            ],
-        ),
-        "max_pressure_amplitude" => first_alias_number(
-            object,
-            &["max_pressure", "peak_pressure", "pressure_amplitude_peak"],
-        ),
-        "total_damping_loss" => first_alias_number(
-            object,
-            &[
-                "damping_loss_total",
-                "total_acoustic_damping_loss",
-                "damping_energy_loss",
-            ],
-        ),
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn dominant_quality_term(terms: &[Value]) -> Value {

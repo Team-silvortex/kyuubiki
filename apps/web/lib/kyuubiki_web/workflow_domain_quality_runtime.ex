@@ -157,6 +157,17 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   defp extra_quality_term("dynamic", "max_velocity"),
     do: {"max_velocity", "Peak velocity amplitude", 2.0, 1.0, :min}
 
+  defp extra_quality_term("thermal", "thermal_total_energy"),
+    do: {"thermal_total_energy", "Total thermal energy", 5000.0, 1.0, :min}
+
+  defp extra_quality_term("electrostatic", "electrostatic_total_stored_energy"),
+    do:
+      {"electrostatic_total_stored_energy", "Total electrostatic stored energy", 10.0, 1.0, :min}
+
+  defp extra_quality_term("magnetostatic", "magnetostatic_total_stored_energy"),
+    do:
+      {"magnetostatic_total_stored_energy", "Total magnetostatic stored energy", 10.0, 1.0, :min}
+
   defp extra_quality_term(_domain_id, _field), do: nil
 
   defp score_term(payload, config, {field, label, default_target, default_weight, goal}) do
@@ -212,21 +223,97 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   end
 
   defp domain_metric_payload("dynamic", payload) do
-    %{
-      "dynamic_quality_peak_frequency_hz" =>
-        WorkflowDomainMetricResolver.metric_value(payload, "peak_frequency_hz"),
-      "dynamic_quality_max_displacement" =>
-        WorkflowDomainMetricResolver.metric_value(payload, "max_displacement"),
-      "dynamic_quality_max_velocity" =>
-        WorkflowDomainMetricResolver.metric_value(payload, "max_velocity"),
-      "dynamic_quality_max_acceleration" =>
-        WorkflowDomainMetricResolver.metric_value(payload, "max_acceleration"),
-      "dynamic_quality_max_force" =>
-        WorkflowDomainMetricResolver.metric_value(payload, "max_force")
-    }
+    metric_payload(payload, [
+      {"dynamic_quality_peak_frequency_hz", "peak_frequency_hz"},
+      {"dynamic_quality_max_displacement", "max_displacement"},
+      {"dynamic_quality_max_velocity", "max_velocity"},
+      {"dynamic_quality_max_acceleration", "max_acceleration"},
+      {"dynamic_quality_max_force", "max_force"}
+    ])
+  end
+
+  defp domain_metric_payload("structural", payload) do
+    metric_payload(payload, [
+      {"structural_quality_max_displacement", "max_displacement"},
+      {"structural_quality_max_stress", "max_stress"},
+      {"structural_quality_mass", "mass"},
+      {"structural_quality_stiffness_margin", "stiffness_margin"}
+    ])
+  end
+
+  defp domain_metric_payload("thermal", payload) do
+    metric_payload(payload, [
+      {"thermal_quality_max_temperature", "thermal_temperature_max"},
+      {"thermal_quality_temperature_delta", "thermo_temperature_delta_max"},
+      {"thermal_quality_peak_flux_magnitude", "thermal_flux_peak_magnitude"},
+      {"thermal_quality_peak_stress", "thermo_stress_peak"},
+      {"thermal_quality_total_energy", "thermal_total_energy"}
+    ])
+  end
+
+  defp domain_metric_payload("electrostatic", payload) do
+    metric_payload(payload, [
+      {"electrostatic_quality_peak_field", "electrostatic_field_peak_magnitude"},
+      {"electrostatic_quality_peak_energy_density", "electrostatic_peak_energy_density"},
+      {"electrostatic_quality_potential_span", "electrostatic_potential_span"},
+      {"electrostatic_quality_total_energy", "electrostatic_total_stored_energy"}
+    ])
+  end
+
+  defp domain_metric_payload("magnetostatic", payload) do
+    metric_payload(payload, [
+      {"magnetostatic_quality_peak_field", "magnetostatic_field_peak_magnitude"},
+      {"magnetostatic_quality_peak_flux", "magnetostatic_flux_peak_magnitude"},
+      {"magnetostatic_quality_peak_energy_density", "magnetostatic_energy_density_peak"},
+      {"magnetostatic_quality_current_density_sum", "magnetostatic_current_density_sum"},
+      {"magnetostatic_quality_total_energy", "magnetostatic_total_stored_energy"}
+    ])
+  end
+
+  defp domain_metric_payload("acoustic", payload) do
+    metric_payload(payload, [
+      {"acoustic_quality_max_spl_db", "max_sound_pressure_level_db"},
+      {"acoustic_quality_max_intensity", "max_acoustic_intensity"},
+      {"acoustic_quality_max_pressure", "max_pressure_amplitude"},
+      {"acoustic_quality_total_damping_loss", "total_damping_loss"}
+    ])
+  end
+
+  defp domain_metric_payload("modal", payload) do
+    metric_payload(payload, [
+      {"modal_quality_min_frequency_hz", "min_frequency_hz"},
+      {"modal_quality_total_mass", "total_mass"},
+      {"modal_quality_frequency_span_hz", "frequency_span_hz"},
+      {"modal_quality_mode_1_participation_norm", "mode_1_participation_norm"}
+    ])
+  end
+
+  defp domain_metric_payload("cfd", payload) do
+    metric_payload(payload, [
+      {"cfd_quality_divergence_error_peak", "cfd_divergence_error_peak"},
+      {"cfd_quality_reynolds_number_peak", "cfd_reynolds_number_peak"},
+      {"cfd_quality_viscous_dissipation_total", "cfd_viscous_dissipation_total"},
+      {"cfd_quality_velocity_span", "cfd_velocity_span"},
+      {"cfd_quality_pressure_span", "cfd_pressure_span"}
+    ])
+  end
+
+  defp domain_metric_payload("transport", payload) do
+    metric_payload(payload, [
+      {"transport_quality_peak_flux_magnitude", "transport_total_flux_peak_magnitude"},
+      {"transport_quality_peak_peclet", "transport_peclet_peak"},
+      {"transport_quality_concentration_span", "transport_concentration_span"},
+      {"transport_quality_source_sum", "transport_source_sum"}
+    ])
   end
 
   defp domain_metric_payload(_id, _payload), do: %{}
+
+  defp metric_payload(payload, pairs) do
+    Map.new(pairs, fn {output_field, metric_field} ->
+      {output_field, WorkflowDomainMetricResolver.metric_value(payload, metric_field)}
+    end)
+  end
 
   defp quality_ratio(value, target, :max), do: target / max(abs(value), 1.0e-12)
   defp quality_ratio(value, target, :min), do: abs(value) / target

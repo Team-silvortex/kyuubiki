@@ -275,6 +275,53 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
     end
   end
 
+  test "scores optional energy terms and emits domain metric mirrors" do
+    cases = [
+      {
+        "transform.score_thermal_quality",
+        "thermal",
+        "thermal_total_energy",
+        "thermal_quality_total_energy",
+        %{"total_thermal_energy" => 50.0},
+        50.0
+      },
+      {
+        "transform.score_electrostatic_quality",
+        "electrostatic",
+        "electrostatic_total_stored_energy",
+        "electrostatic_quality_total_energy",
+        %{"electric_total_energy" => 4.0},
+        4.0
+      },
+      {
+        "transform.score_magnetostatic_quality",
+        "magnetostatic",
+        "magnetostatic_total_stored_energy",
+        "magnetostatic_quality_total_energy",
+        %{"magnetic_total_energy" => 3.0},
+        3.0
+      }
+    ]
+
+    for {operator_id, domain, term, mirror_field, payload, expected} <- cases do
+      assert {:ok, quality} =
+               WorkflowOperatorRuntime.run_transform_operator(operator_id, payload, %{
+                 "enabled_terms" => [term],
+                 "targets" => %{term => 100.0},
+                 "max_ready_score" => 2.0
+               })
+
+      assert quality["#{domain}_quality_missing_metric_count"] == 0
+      assert quality["#{domain}_quality_term_count"] == 1
+      assert_in_delta quality[mirror_field], expected, 1.0e-9
+
+      assert %{"value" => value} =
+               Enum.find(quality["#{domain}_quality_terms"], &(&1["field"] == term))
+
+      assert_in_delta value, expected, 1.0e-9
+    end
+  end
+
   test "runs domain quality scores into a composite objective inside graph runner" do
     graph = %{
       "schema_version" => "kyuubiki.workflow-graph/v1",

@@ -33,7 +33,7 @@ fn runs_cfd_diagnostics_operator_through_sdk_registry() {
 fn runs_cfd_guard_operator_through_sdk_registry() {
     let guard = run_transform_operator(
         "transform.evaluate_cfd_guard",
-        serde_json::json!({ "cfd_divergence_error_peak": 0.08 }),
+        serde_json::json!({ "divergence_peak": 0.08 }),
         serde_json::json!({
             "rules": [
                 { "field": "cfd_divergence_error_peak", "threshold": 0.05, "severity": "block" }
@@ -51,8 +51,8 @@ fn runs_cfd_benchmark_operator_through_sdk_registry() {
     let benchmark = run_transform_operator(
         "transform.benchmark_cfd_pair",
         serde_json::json!({
-            "left": { "cfd_divergence_error_peak": 0.03, "cfd_reynolds_number_peak": 8.0 },
-            "right": { "cfd_divergence_error_peak": 0.08, "cfd_reynolds_number_peak": 12.0 }
+            "left": { "divergence_peak": 0.03, "re_peak": 8.0 },
+            "right": { "divergence_peak": 0.08, "re_peak": 12.0 }
         }),
         serde_json::json!({
             "left_label": "candidate_a",

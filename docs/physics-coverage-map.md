@@ -253,11 +253,11 @@ output next to the next-round cases.
 The Rust engine and Web/Elixir workflow runtime both expose these domain
 quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.
-Web workflow quality, guard, and benchmark paths now share a domain metric
-resolver for common solver aliases, derived spans, modal mode arrays, dynamic
-frequency responses, and transient node summaries. New physics runtimes should
-reuse that resolver instead of hand-parsing summary fields inside UI-facing
-operators.
+Rust engine and Web workflow quality, guard, and benchmark paths now share the
+same domain metric resolver contract for common solver aliases, derived spans,
+modal mode arrays, dynamic frequency responses, and transient node summaries.
+New physics runtimes should reuse that resolver shape instead of hand-parsing
+summary fields inside UI-facing or headless operators.
 
 That variety is what prevents operator SDK work from hard-coding a single
 physics family, and it prevents executable task files from becoming too narrow.

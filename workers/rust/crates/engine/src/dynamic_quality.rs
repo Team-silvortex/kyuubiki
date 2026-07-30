@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_dynamic_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -48,11 +49,11 @@ pub fn score_dynamic_quality(payload: Value, config: Value) -> Result<Value, Str
         "dynamic_quality_watch_count": watch_count,
         "dynamic_quality_term_count": score_terms.len(),
         "dynamic_quality_max_ready_score": max_ready_score,
-        "dynamic_quality_peak_frequency_hz": numeric_field(object, "peak_frequency_hz"),
-        "dynamic_quality_max_displacement": numeric_field(object, "max_displacement"),
-        "dynamic_quality_max_velocity": numeric_field(object, "max_velocity"),
-        "dynamic_quality_max_acceleration": numeric_field(object, "max_acceleration"),
-        "dynamic_quality_max_force": numeric_field(object, "max_force"),
+        "dynamic_quality_peak_frequency_hz": metric_value(object, "peak_frequency_hz"),
+        "dynamic_quality_max_displacement": metric_value(object, "max_displacement"),
+        "dynamic_quality_max_velocity": metric_value(object, "max_velocity"),
+        "dynamic_quality_max_acceleration": metric_value(object, "max_acceleration"),
+        "dynamic_quality_max_force": metric_value(object, "max_force"),
         "dynamic_quality_dominant_term": dominant_term,
         "dynamic_quality_blocking_terms": blocking_terms,
         "dynamic_quality_terms": score_terms,
@@ -148,7 +149,7 @@ fn quality_term_for(field: &str) -> Option<QualityTerm> {
 fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
     let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
     let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = numeric_field(object, term.field);
+    let value = metric_value(object, term.field);
 
     match value {
         Some(value) if value.is_finite() => {
@@ -180,136 +181,6 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
             "status": "missing",
         }),
     }
-}
-
-fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| dynamic_alias_field(object, field))
-        .or_else(|| derived_dynamic_field(object, field))
-}
-
-fn derived_dynamic_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "peak_frequency_hz" => object
-            .get("frequencies")
-            .and_then(Value::as_array)
-            .and_then(|frequencies| peak_frequency(frequencies)),
-        "max_displacement" | "max_velocity" | "max_acceleration" | "max_force" => object
-            .get("frequencies")
-            .and_then(Value::as_array)
-            .and_then(|frequencies| max_frequency_field(frequencies, field))
-            .or_else(|| max_transient_node_field(object, field)),
-        _ => None,
-    }
-}
-
-fn dynamic_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "peak_frequency_hz" => first_alias_number(
-            object,
-            &[
-                "response_peak_frequency_hz",
-                "dominant_frequency_hz",
-                "freq_peak_hz",
-            ],
-        ),
-        "max_displacement" => first_alias_number(
-            object,
-            &["peak_displacement", "displacement_amplitude_peak", "u_max"],
-        ),
-        "max_velocity" => first_alias_number(
-            object,
-            &["peak_velocity", "velocity_amplitude_peak", "v_max"],
-        ),
-        "max_acceleration" => first_alias_number(
-            object,
-            &["peak_acceleration", "acceleration_amplitude_peak", "a_max"],
-        ),
-        "max_force" => first_alias_number(
-            object,
-            &["peak_force", "force_amplitude_peak", "dynamic_force_peak"],
-        ),
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn peak_frequency(frequencies: &[Value]) -> Option<f64> {
-    frequencies
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|entry| {
-            Some((
-                frequency_entry_number(entry, "frequency_hz")?,
-                frequency_entry_number(entry, "max_displacement")?,
-            ))
-        })
-        .max_by(|left, right| left.1.total_cmp(&right.1))
-        .map(|(frequency, _)| frequency)
-}
-
-fn max_frequency_field(frequencies: &[Value], field: &str) -> Option<f64> {
-    frequencies
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|entry| frequency_entry_number(entry, field))
-        .max_by(f64::total_cmp)
-}
-
-fn frequency_entry_number(entry: &Map<String, Value>, field: &str) -> Option<f64> {
-    entry
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| match field {
-            "frequency_hz" => {
-                first_alias_number(entry, &["frequency", "freq_hz", "response_frequency_hz"])
-            }
-            "max_displacement" => first_alias_number(
-                entry,
-                &["peak_displacement", "displacement_amplitude", "u_peak"],
-            ),
-            "max_velocity" => {
-                first_alias_number(entry, &["peak_velocity", "velocity_amplitude", "v_peak"])
-            }
-            "max_acceleration" => first_alias_number(
-                entry,
-                &["peak_acceleration", "acceleration_amplitude", "a_peak"],
-            ),
-            "max_force" => first_alias_number(
-                entry,
-                &["peak_force", "force_amplitude", "dynamic_force_peak"],
-            ),
-            _ => None,
-        })
-}
-
-fn max_transient_node_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    let node_field = match field {
-        "max_displacement" => "ux",
-        "max_velocity" => "vx",
-        "max_acceleration" => "ax",
-        _ => return None,
-    };
-    object
-        .get("nodes")?
-        .as_array()?
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|node| node.get(node_field).and_then(Value::as_f64))
-        .map(f64::abs)
-        .filter(|value| value.is_finite())
-        .max_by(f64::total_cmp)
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
 }
 
 fn dominant_quality_term(terms: &[Value]) -> Value {

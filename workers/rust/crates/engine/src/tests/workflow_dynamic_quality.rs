@@ -79,6 +79,54 @@ fn benchmarks_dynamic_pair_by_frequency_displacement_and_force() {
 }
 
 #[test]
+fn derives_dynamic_guard_and_benchmark_metrics_from_alias_inputs() {
+    let guard = evaluate_dynamic_guard(
+        serde_json::json!({
+            "frequencies": [
+                { "freq_hz": 10.0, "displacement_amplitude": 0.01 },
+                { "freq_hz": 18.0, "displacement_amplitude": 0.04 }
+            ]
+        }),
+        serde_json::json!({
+            "rules": [
+                { "field": "max_displacement", "comparison": "gt", "threshold": 0.02, "severity": "block" },
+                { "field": "peak_frequency_hz", "comparison": "lt", "threshold": 20.0, "severity": "warn" }
+            ]
+        }),
+    )
+    .expect("dynamic guard should derive metrics from frequency responses");
+
+    assert_eq!(guard["guard_status"].as_str(), Some("block"));
+    assert_eq!(guard["guard_trigger_count"].as_u64(), Some(2));
+    approx_eq(guard["guard_triggers"][0]["value"].as_f64(), 0.04);
+
+    let benchmark = benchmark_dynamic_pair(
+        serde_json::json!({
+            "left": {
+                "frequencies": [
+                    { "freq_hz": 24.0, "displacement_amplitude": 0.02 },
+                    { "freq_hz": 42.0, "displacement_amplitude": 0.03 }
+                ]
+            },
+            "right": { "response_peak_frequency_hz": 35.0 }
+        }),
+        serde_json::json!({
+            "criteria": [
+                { "field": "peak_frequency_hz", "goal": "max", "weight": 2.0 }
+            ]
+        }),
+    )
+    .expect("dynamic benchmark should derive comparable metrics");
+
+    approx_eq(benchmark["left_score"].as_f64(), 2.0);
+    approx_eq(benchmark["right_score"].as_f64(), 0.0);
+    approx_eq(
+        benchmark["benchmark_breakdown"][0]["left_value"].as_f64(),
+        42.0,
+    );
+}
+
+#[test]
 fn scores_dynamic_quality_from_summary_fields() {
     let quality = score_dynamic_quality(
         serde_json::json!({

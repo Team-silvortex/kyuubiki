@@ -1,3 +1,4 @@
+use crate::workflow_metric_resolver::metric_value;
 use serde_json::{Map, Value};
 
 pub fn score_modal_quality(payload: Value, config: Value) -> Result<Value, String> {
@@ -168,96 +169,7 @@ fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &Qualit
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    object
-        .get(field)
-        .and_then(finite_number)
-        .or_else(|| modal_alias_field(object, field))
-        .or_else(|| derived_modal_field(object, field))
-}
-
-fn derived_modal_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "frequency_span_hz" => {
-            let min = numeric_field(object, "min_frequency_hz")?;
-            let max = modal_alias_field(object, "max_frequency_hz")
-                .or_else(|| object.get("max_frequency_hz").and_then(finite_number))
-                .or_else(|| mode_frequency_bounds(object).map(|(_, max)| max))?;
-            Some((max - min).abs())
-        }
-        "mode_1_participation_norm" => object
-            .get("modes")?
-            .as_array()?
-            .first()?
-            .as_object()?
-            .get("participation_norm")?
-            .as_f64()
-            .filter(|value| value.is_finite()),
-        _ => None,
-    }
-}
-
-fn modal_alias_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    match field {
-        "min_frequency_hz" => first_alias_number(
-            object,
-            &[
-                "first_frequency_hz",
-                "natural_frequency_min_hz",
-                "mode_1_frequency_hz",
-            ],
-        )
-        .or_else(|| mode_frequency_bounds(object).map(|(min, _)| min)),
-        "max_frequency_hz" => first_alias_number(
-            object,
-            &[
-                "last_frequency_hz",
-                "natural_frequency_max_hz",
-                "modal_frequency_max_hz",
-            ],
-        )
-        .or_else(|| mode_frequency_bounds(object).map(|(_, max)| max)),
-        "total_mass" => first_alias_number(
-            object,
-            &["modal_mass_total", "participating_mass_total", "mass_total"],
-        ),
-        "frequency_span_hz" => first_alias_number(
-            object,
-            &["modal_frequency_span_hz", "natural_frequency_span_hz"],
-        ),
-        "mode_1_participation_norm" => first_alias_number(
-            object,
-            &[
-                "first_mode_participation_norm",
-                "mode1_participation_norm",
-                "primary_mode_participation_norm",
-            ],
-        ),
-        _ => None,
-    }
-}
-
-fn first_alias_number(object: &Map<String, Value>, aliases: &[&str]) -> Option<f64> {
-    aliases
-        .iter()
-        .find_map(|alias| object.get(*alias).and_then(finite_number))
-}
-
-fn mode_frequency_bounds(object: &Map<String, Value>) -> Option<(f64, f64)> {
-    let mut frequencies = object
-        .get("modes")?
-        .as_array()?
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|mode| mode.get("frequency_hz").and_then(finite_number));
-    let first = frequencies.next()?;
-    let (min, max) = frequencies.fold((first, first), |(min, max), frequency| {
-        (min.min(frequency), max.max(frequency))
-    });
-    Some((min, max))
-}
-
-fn finite_number(value: &Value) -> Option<f64> {
-    value.as_f64().filter(|number| number.is_finite())
+    metric_value(object, field)
 }
 
 fn dominant_quality_term(terms: &[Value]) -> Value {
