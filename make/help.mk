@@ -86,6 +86,7 @@ help:
 	@echo "  make test-integration-ui-invocation Run end-to-end UI action, bridge, and visible-result checks"
 	@echo "  make test-integration-ui-workflow Run the Workbench workflow catalog-to-execution UI chain"
 	@echo "  make check-gui-runtime-capability-contract Verify GUI-to-runtime capability manifests stay decoupled from backend implementations"
+	@echo "  make check-desktop-usability-journeys Verify native user-journey closure for moxi usability gates"
 	@echo "  make check-usability-release-gate Validate the moxi 3.0 blocking user-journey contract"
 	@echo "  make build-usability-readiness-report Execute blocking journeys and write OUT=tmp/usability-readiness-report.json"
 	@echo "  make check-version-line Verify release, snapshot, package, docs, and language-pack version contracts"

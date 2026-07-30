@@ -241,7 +241,9 @@ export function syncCurrentReleaseContracts({ version, codename, line }) {
       ),
     })),
     visible_rules: (contract.visible_rules ?? []).map((rule) =>
-      rule.label === "required development version" || rule.label === "required shipping version"
+      rule.label === "required development version" ||
+      rule.label === "required packaged version" ||
+      rule.label === "required shipping version"
         ? { ...rule, value: version }
         : rule,
     ),

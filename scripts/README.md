@@ -157,6 +157,11 @@ This directory contains host-native operational entry points.
   frontend capability helpers, and Workbench backend-service indirection. Make
   now uses the native runner; the retained `.mjs` script is only a parity
   reference.
+- `kyuubiki-script-runner check-desktop-usability-journeys`
+  Verify the moxi usability release journeys against native probes,
+  GUI-to-native capability closure, and required project/workflow/execution
+  chains. This keeps `build-usability-readiness-report` from relying on legacy
+  Node integration shims as release evidence.
 - `kyuubiki-script-runner check-contracts-runtime-api-surface`
   Verify the contracts-owned runtime API surface, including required contract
   families, central self-host service surface binding, repo-relative evidence

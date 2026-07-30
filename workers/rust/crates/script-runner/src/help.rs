@@ -68,6 +68,7 @@ lab remote-ssh-fixture\n  \
   build-workbench-language-pack-catalog\n  \
   check-ui-automation-contract\n  \
   check-gui-runtime-capability-contract\n  \
+  check-desktop-usability-journeys\n  \
   check-usability-release-gate\n  \
   check-workflow-dataset-contract\n  \
   check-workflow-metric-resolver-contract\n  \

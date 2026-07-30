@@ -1,0 +1,402 @@
+use serde::Deserialize;
+use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+type RunnerResult<T> = Result<T, String>;
+
+const GATE_PATH: &str = "config/architecture/usability-release-gate.json";
+const GATE_SCHEMA: &str = "kyuubiki.usability-release-gate/v1";
+const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
+
+const NATIVE_PROBES: &[&str] = &[
+    "build-material-research-bundle",
+    "check-component-integrity-protocol",
+    "check-desktop-usability-journeys",
+    "check-gui-runtime-capability-contract",
+    "check-install-update-disk-hygiene",
+    "check-material-exploration-chain-contract",
+    "check-material-research-bundle",
+    "check-operator-task-ir-contract",
+    "check-operator-validation",
+    "check-ui-automation-contract",
+    "check-workflow-dataset-contract",
+    "validate-language-packs",
+];
+
+const REQUIRED_CHAINS: &[(&str, &[&str])] = &[
+    (
+        "create-open-project",
+        &[
+            "hub.project.create",
+            "hub.project.inspect",
+            "hub.project.validate",
+            "hub.project.open-workbench",
+        ],
+    ),
+    ("compose-workflow", &["workbench.analysis.open-local"]),
+    (
+        "execute-observe",
+        &[
+            "hub.runtime.start-local",
+            "workbench.runtime.start-local",
+            "workbench.runtime.inspect",
+        ],
+    ),
+];
+
+#[derive(Clone, Deserialize)]
+struct GateConfig {
+    schema_version: String,
+    capability_contract: String,
+    journeys: Vec<Journey>,
+}
+
+#[derive(Clone, Deserialize)]
+struct Journey {
+    id: String,
+    title: String,
+    blocking: bool,
+    capabilities: Vec<String>,
+    probes: Vec<Vec<String>>,
+}
+
+#[derive(Clone, Deserialize)]
+struct CapabilityContract {
+    schema_version: String,
+    capabilities: Vec<Capability>,
+}
+
+#[derive(Clone, Deserialize)]
+struct Capability {
+    id: String,
+    app: String,
+    ui_action: String,
+    route_file: String,
+    route_tokens: Vec<String>,
+    native_command: String,
+    native_action: Option<String>,
+    native_file: String,
+    native_tokens: Vec<String>,
+    automation_action: Option<String>,
+}
+
+#[derive(Default)]
+struct Options {
+    self_test: bool,
+    journey: Option<String>,
+}
+
+pub(crate) fn run_check_desktop_usability_journeys(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let options = parse_args(args)?;
+    if options.self_test {
+        run_self_test(root)?;
+        println!("desktop usability journey check self-test passed");
+        return Ok(0);
+    }
+
+    let issues = check_journeys(root, options.journey.as_deref())?;
+    if let Some(issue) = issues.first() {
+        eprintln!("desktop usability journey check failed: {issue}");
+        return Ok(1);
+    }
+
+    let suffix = options
+        .journey
+        .as_ref()
+        .map(|id| format!(" for {id}"))
+        .unwrap_or_default();
+    println!("desktop usability journey check passed{suffix}");
+    Ok(0)
+}
+
+fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
+    let mut options = Options::default();
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.to_string_lossy().as_ref() {
+            "--self-test" => options.self_test = true,
+            "--journey" => {
+                options.journey = Some(
+                    iter.next()
+                        .ok_or_else(|| "--journey requires an id".to_string())?
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            }
+            other => return Err(format!("unknown argument {other}")),
+        }
+    }
+    Ok(options)
+}
+
+fn check_journeys(root: &Path, selected: Option<&str>) -> RunnerResult<Vec<String>> {
+    let config: GateConfig = read_json(root, GATE_PATH)?;
+    let contract: CapabilityContract = read_json(root, &config.capability_contract)?;
+    let mut issues = validate_gate_shape(&config, &contract);
+    let capabilities = contract
+        .capabilities
+        .iter()
+        .map(|capability| (capability.id.as_str(), capability))
+        .collect::<BTreeMap<_, _>>();
+
+    let selected_journeys = config
+        .journeys
+        .iter()
+        .filter(|journey| selected.is_none_or(|id| journey.id == id))
+        .collect::<Vec<_>>();
+    if selected.is_some() && selected_journeys.is_empty() {
+        issues.push(format!(
+            "{GATE_PATH}: unknown journey {}",
+            selected.unwrap_or_default()
+        ));
+    }
+
+    for journey in selected_journeys {
+        validate_journey(root, journey, &capabilities, &mut issues);
+    }
+    validate_required_chains(&config, selected, &mut issues);
+    Ok(issues)
+}
+
+fn validate_gate_shape(config: &GateConfig, contract: &CapabilityContract) -> Vec<String> {
+    let mut issues = Vec::new();
+    if config.schema_version != GATE_SCHEMA {
+        issues.push(format!("{GATE_PATH}: schema_version must be {GATE_SCHEMA}"));
+    }
+    if contract.schema_version != CAPABILITY_SCHEMA {
+        issues.push(format!(
+            "{}: schema_version must be {CAPABILITY_SCHEMA}",
+            config.capability_contract
+        ));
+    }
+    let mut ids = BTreeSet::new();
+    for journey in &config.journeys {
+        if journey.id.trim().is_empty() || !ids.insert(journey.id.as_str()) {
+            issues.push(format!("{GATE_PATH}: missing or duplicate journey id"));
+        }
+        if journey.title.trim().is_empty() || !journey.blocking {
+            issues.push(format!(
+                "{}: journey {} must be titled and blocking",
+                GATE_PATH, journey.id
+            ));
+        }
+    }
+    issues
+}
+
+fn validate_journey(
+    root: &Path,
+    journey: &Journey,
+    capabilities: &BTreeMap<&str, &Capability>,
+    issues: &mut Vec<String>,
+) {
+    if journey.capabilities.is_empty() {
+        issues.push(format!("journey {} declares no capabilities", journey.id));
+    }
+    for capability_id in &journey.capabilities {
+        match capabilities.get(capability_id.as_str()) {
+            Some(capability) => validate_capability_closure(root, capability, issues),
+            None => issues.push(format!(
+                "journey {} references unknown capability {capability_id}",
+                journey.id
+            )),
+        }
+    }
+
+    if journey.probes.is_empty() {
+        issues.push(format!("journey {} declares no probes", journey.id));
+    }
+    for probe in &journey.probes {
+        validate_probe(&journey.id, probe, issues);
+    }
+}
+
+fn validate_capability_closure(root: &Path, capability: &Capability, issues: &mut Vec<String>) {
+    for (field, value) in [
+        ("app", &capability.app),
+        ("ui_action", &capability.ui_action),
+        ("route_file", &capability.route_file),
+        ("native_command", &capability.native_command),
+        ("native_file", &capability.native_file),
+    ] {
+        if value.trim().is_empty() {
+            issues.push(format!("capability {} misses {field}", capability.id));
+        }
+    }
+    if capability.native_command == "guarded_mutation_action"
+        && capability
+            .native_action
+            .as_deref()
+            .is_none_or(str::is_empty)
+    {
+        issues.push(format!(
+            "capability {} uses guarded_mutation_action without native_action",
+            capability.id
+        ));
+    }
+    if capability.app == "hub-gui"
+        && capability
+            .automation_action
+            .as_deref()
+            .is_none_or(str::is_empty)
+    {
+        issues.push(format!(
+            "capability {} must expose a Hub Pwdt automation action",
+            capability.id
+        ));
+    }
+    validate_file_tokens(
+        root,
+        &capability.route_file,
+        &capability.route_tokens,
+        issues,
+    );
+    validate_file_tokens(
+        root,
+        &capability.native_file,
+        &capability.native_tokens,
+        issues,
+    );
+}
+
+fn validate_file_tokens(root: &Path, relative: &str, tokens: &[String], issues: &mut Vec<String>) {
+    if tokens.is_empty() {
+        issues.push(format!("{relative}: expected at least one closure token"));
+        return;
+    }
+    let text = match fs::read_to_string(root.join(relative)) {
+        Ok(text) => text,
+        Err(error) => {
+            issues.push(format!("failed to read {relative}: {error}"));
+            return;
+        }
+    };
+    for token in tokens {
+        if !text.contains(token) {
+            issues.push(format!("{relative}: missing token {token}"));
+        }
+    }
+}
+
+fn validate_probe(journey_id: &str, probe: &[String], issues: &mut Vec<String>) {
+    let Some(command) = probe.first() else {
+        issues.push(format!("journey {journey_id} has an empty probe"));
+        return;
+    };
+    if command.contains("node")
+        || command.ends_with("-node-test")
+        || matches!(command.as_str(), "node" | "npm" | "pnpm" | "yarn")
+    {
+        issues.push(format!(
+            "journey {journey_id} uses non-native probe {command}"
+        ));
+    }
+    if !NATIVE_PROBES.contains(&command.as_str()) {
+        issues.push(format!(
+            "journey {journey_id} probe {command} is not in the native usability allowlist"
+        ));
+    }
+}
+
+fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues: &mut Vec<String>) {
+    for (journey_id, required) in REQUIRED_CHAINS {
+        if selected.is_some_and(|selected_id| selected_id != *journey_id) {
+            continue;
+        }
+        let Some(journey) = config
+            .journeys
+            .iter()
+            .find(|journey| journey.id == *journey_id)
+        else {
+            issues.push(format!(
+                "{GATE_PATH}: missing required journey {journey_id}"
+            ));
+            continue;
+        };
+        for capability in *required {
+            if !journey
+                .capabilities
+                .iter()
+                .any(|declared| declared == capability)
+            {
+                issues.push(format!(
+                    "journey {journey_id} misses required capability {capability}"
+                ));
+            }
+        }
+        if !journey.probes.iter().any(|probe| {
+            probe
+                .first()
+                .is_some_and(|cmd| cmd == "check-desktop-usability-journeys")
+        }) {
+            issues.push(format!(
+                "journey {journey_id} must include check-desktop-usability-journeys"
+            ));
+        }
+    }
+}
+
+fn read_json<T: serde::de::DeserializeOwned>(root: &Path, relative: &str) -> RunnerResult<T> {
+    let path = repo_path(root, relative)?;
+    let text =
+        fs::read_to_string(&path).map_err(|error| format!("failed to read {relative}: {error}"))?;
+    serde_json::from_str(&text).map_err(|error| format!("{relative}: invalid JSON: {error}"))
+}
+
+fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
+    let path = Path::new(relative);
+    if path.is_absolute()
+        || relative.is_empty()
+        || path.components().any(|part| part.as_os_str() == "..")
+    {
+        return Err(format!("path escapes repository: {relative}"));
+    }
+    Ok(root.join(path))
+}
+
+fn run_self_test(root: &Path) -> RunnerResult<()> {
+    let mut config: GateConfig = read_json(root, GATE_PATH)?;
+    let contract: CapabilityContract = read_json(root, &config.capability_contract)?;
+    if validate_gate_shape(&config, &contract)
+        .into_iter()
+        .any(|issue| issue.contains("schema_version"))
+    {
+        return Err("self-test expected repository usability schemas to load".to_string());
+    }
+
+    if let Some(journey) = config
+        .journeys
+        .iter_mut()
+        .find(|journey| journey.id == "create-open-project" && journey.probes.first().is_some())
+    {
+        journey.probes[0] = vec!["integration-desktop-gui-node-test".to_string()];
+    }
+    let capabilities = contract
+        .capabilities
+        .iter()
+        .map(|capability| (capability.id.as_str(), capability))
+        .collect::<BTreeMap<_, _>>();
+    let mut issues = Vec::new();
+    validate_journey(
+        root,
+        config
+            .journeys
+            .iter()
+            .find(|journey| journey.id == "create-open-project")
+            .ok_or_else(|| "self-test missing create-open-project journey".to_string())?,
+        &capabilities,
+        &mut issues,
+    );
+    if !issues
+        .iter()
+        .any(|issue| issue.contains("non-native probe"))
+    {
+        return Err("self-test expected non-native probe rejection".to_string());
+    }
+    Ok(())
+}

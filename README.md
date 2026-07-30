@@ -4,7 +4,7 @@ Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
 runtime control plane.
 
 The active repository line is `moxi 2.x`. The current development snapshot is
-`moxi 2.7.0`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
+`moxi 2.9.0`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
 industrialization bridge.
 
 ## What This Repo Contains
@@ -58,9 +58,9 @@ Start with:
 - [docs/app-runtime-boundaries.md](docs/app-runtime-boundaries.md)
 - [docs/agent-control-authority.md](docs/agent-control-authority.md)
 
-## Moxi 2.7 Posture
+## Moxi 2.9 Posture
 
-`moxi 2.0.0` established the product baseline. `moxi 2.7.0` keeps those
+`moxi 2.0.0` established the product baseline. `moxi 2.9.0` keeps those
 contracts and advances the calculation and workflow path rather than resetting
 the architecture.
 
@@ -69,19 +69,28 @@ The 2.x rule is:
 `preserve the engine contracts, prove the computations, and keep UI/runtime
 authority separated`.
 
-The current checkpoint adds a real heterogeneous cohesive-interface workflow:
+The current checkpoint moves from isolated feature growth toward usable,
+repeatable workflow control:
 
-- cohesive elements, connector springs, structural trusses, and plane-stress
-  triangles can contribute to one global equilibrium system
-- explicit displacement histories support cyclic and non-proportional control
-- converged history is committed transactionally and failed steps retain the
-  prior state with a machine-readable reason
-- solver, Agent RPC, workflow, reliability, and qualification paths share the
-  same protocol representation
+- GUI call chains are being treated as first-class product contracts rather
+  than incidental button wiring
+- the moxi usability release gate now has native journey probes for the
+  install, project, workflow, execution, recovery, localization, and update
+  paths; `make build-usability-readiness-report` records the executed
+  `baseline_pass` evidence
+- Pwdt, the frontend wasm Python DSL, is the target control surface for
+  deterministic UI automation inside product-owned shells
+- the coverage tensor is the planning gate for weak coordinates, not a
+  decorative progress table
+- workflow, material-study, operator-reliability, and component-integrity
+  checks are being kept observable from headless or native tooling
+- contract and checker files are being split into smaller modules so the 800
+  line source ceiling remains enforceable
 
-This remains a bounded small-displacement 2D capability. Plane quads, beams,
-frames, shells, 3D solids, sparse large-system assembly, and arc-length
-continuation are not implied by the current cohesive coassembly path.
+The 2.7 cohesive coassembly checkpoint remains part of the active baseline,
+but 2.9 is mainly a reliability and usability bridge. It does not imply that
+every GUI route is fully equivalent to Pwdt yet, nor that every physical solver
+family has independent industrial qualification.
 
 Use these gates when deciding whether a new 2.x change is safe to treat as
 part of the industrial baseline:

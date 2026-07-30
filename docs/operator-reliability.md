@@ -330,7 +330,7 @@ boundary coverage, material-parameter provenance, and mesh/refinement
 equivalence. Its validation profile executes the heat and thermoelastic
 triangle/quad review fixtures together, then checks that a two-triangle split
 matches the quad patch response for heat flow and restrained thermal stress.
-On the current moxi 2.7 line, `solve.thermal_plane_quad_2d` is a native
+On the current moxi 2.x line, `solve.thermal_plane_quad_2d` is a native
 bilinear isoparametric Q4 rather than a pair of constant-strain triangles. It
 uses full 2x2 Gauss integration for stiffness, nodal-temperature interpolation,
 thermal equivalent loads, stress recovery, and strain-energy recovery.

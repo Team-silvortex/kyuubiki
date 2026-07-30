@@ -17,7 +17,8 @@
           "schemas/gui-runtime-capability-manifest.schema.json",
           "schemas/examples.gui-runtime-capability-manifest.json",
           "workers/rust/crates/script-runner/src/ui_automation_contract.rs",
-          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs"
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs",
+          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
         ],
         "required_text": [
           "productOwned",
@@ -26,6 +27,7 @@
           "wasm_python_stability_required",
           "user_extensible_ui_allowed",
           "headless_sdk_parity_required",
+          "check-desktop-usability-journeys",
           "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
         ]
       },
@@ -41,13 +43,15 @@
           "tests/integration/desktop-gui-capability-closure.test.mjs",
           "tests/integration/desktop-gui-call-chain-contract.test.mjs",
           "tests/integration/desktop-shell-regression.test.mjs",
-          "tests/integration/hub-shell-regression.shared.mjs"
+          "tests/integration/hub-shell-regression.shared.mjs",
+          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
         ],
         "required_text": [
           "kyuubiki.desktop-capability-closure/v1",
           "hub.project.create",
           "installer.environment.init",
           "workbench.analysis.open-local",
+          "check-desktop-usability-journeys",
           "every required desktop capability closes UI, route, native, and result layers",
           "created bundle must become the active path for the next operation"
         ]
@@ -514,10 +518,12 @@
       ],
       "files": [
         "config/architecture/desktop-capability-closure.json",
-        "tests/integration/desktop-gui-capability-closure.test.mjs"
+        "tests/integration/desktop-gui-capability-closure.test.mjs",
+        "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
       ],
       "required_text": [
         "kyuubiki.desktop-capability-closure/v1",
+        "check-desktop-usability-journeys",
         "every required desktop capability closes UI, route, native, and result layers"
       ]
     },

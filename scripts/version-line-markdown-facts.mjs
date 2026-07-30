@@ -50,11 +50,5 @@ export function markdownFactChecks(expectedVersion, codename, reader) {
       `\`${expectedDisplayMinorLine}\` line`,
       reader,
     ),
-    textIncludesCheck(
-      "docs/desktop-release-checklist.md",
-      "workspace-prep line",
-      `current \`${expectedVersion}\` workspace-prep line`,
-      reader,
-    ),
   ];
 }

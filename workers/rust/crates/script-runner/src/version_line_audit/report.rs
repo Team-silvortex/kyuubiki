@@ -2,9 +2,10 @@ use serde_json::Value;
 
 pub(crate) fn print_human_report(report: &Value) {
     println!(
-        "Version line audit for {} {}",
+        "Version line audit for packaged {} {}; development {}",
         field(report, "codename"),
-        field(report, "expected")
+        field(report, "expected"),
+        field(report, "current_development_version")
     );
     println!();
     let exact = array(report, "exact_checks");
@@ -30,7 +31,7 @@ pub(crate) fn print_human_report(report: &Value) {
         .iter()
         .all(|check| check.get("ok").and_then(Value::as_bool) == Some(true))
     {
-        println!("- all exact version contracts match the expected development version");
+        println!("- all exact version contracts match the expected packaged version");
     }
     println!();
     let inventory = array(report, "reference_inventory");

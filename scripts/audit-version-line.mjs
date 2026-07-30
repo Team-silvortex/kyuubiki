@@ -134,9 +134,8 @@ function walk(relativePath, results = []) {
 }
 
 function exactChecks(expectedVersion, codename) {
-  const expectedMinorLine = versionMinorLine(expectedVersion);
-  const expectedDisplayVersion = versionDisplay(codename, expectedVersion);
-  const expectedDisplayMinorLine = versionDisplay(codename, expectedMinorLine);
+  const developmentVersion = readJson("docs/book-manifest.json").current_development_version;
+  const developmentMinorLine = versionMinorLine(developmentVersion);
   const files = [
     "apps/frontend/package.json",
     "apps/frontend/public/brand.json",
@@ -153,7 +152,6 @@ function exactChecks(expectedVersion, codename) {
     "apps/installer-gui/src-tauri/tauri.conf.json",
     "apps/installer-gui/ui/assets/brand.json",
     "workers/rust/Cargo.toml",
-    "docs/ui-automation-contract.json",
   ];
   const checks = [];
 
@@ -206,16 +204,6 @@ function exactChecks(expectedVersion, codename) {
       continue;
     }
 
-    if (relativePath.endsWith("ui-automation-contract.json")) {
-      const json = readJson(relativePath);
-      checks.push({
-        kind: "minor_line",
-        file: relativePath,
-        field: "version",
-        expected: expectedMinorLine,
-        actual: json.version ?? null,
-      });
-    }
   }
 
   const channels = readJson("deploy/update-channels.json");
@@ -251,12 +239,14 @@ function exactChecks(expectedVersion, codename) {
     actual: readJson("deploy/install-update-disk-hygiene.json").shipping_version ?? null,
   });
   const requiredVersionRule = (contract.visible_rules ?? []).find((rule) =>
-    rule.label === "required development version" || rule.label === "required shipping version"
+    rule.label === "required development version" ||
+    rule.label === "required packaged version" ||
+    rule.label === "required shipping version"
   );
   checks.push({
     kind: "required_version",
     file: "deploy/installation-integrity-contract.json",
-    field: "visible_rules[required development version].value",
+    field: "visible_rules[required packaged version].value",
     expected: expectedVersion,
     actual: requiredVersionRule?.value ?? null,
   });
@@ -266,6 +256,20 @@ function exactChecks(expectedVersion, codename) {
     field: "current_version",
     expected: expectedVersion,
     actual: releaseIndex.current_version ?? null,
+  });
+  checks.push({
+    kind: "current_development_version",
+    file: "docs/book-manifest.json",
+    field: "current_development_version",
+    expected: developmentVersion,
+    actual: readJson("docs/book-manifest.json").current_development_version ?? null,
+  });
+  checks.push({
+    kind: "current_minor_line",
+    file: "docs/ui-automation-contract.json",
+    field: "version",
+    expected: developmentMinorLine,
+    actual: readJson("docs/ui-automation-contract.json").version ?? null,
   });
   checks.push({
     kind: "shipping_version",
@@ -303,7 +307,7 @@ function exactChecks(expectedVersion, codename) {
     });
   }
 
-  checks.push(...markdownFactChecks(expectedVersion, codename, readText));
+  checks.push(...markdownFactChecks(developmentVersion, codename, readText));
 
   const currentSnapshots = (releaseIndex.snapshots ?? [])
     .filter((snapshot) => snapshot.status === "current")
@@ -461,7 +465,9 @@ function nextVersionCandidates(expectedVersion, nextVersion, codename) {
 }
 
 function printHumanReport(report) {
-  console.log(`Version line audit for ${report.codename} ${report.expected}`);
+  console.log(
+    `Version line audit for packaged ${report.codename} ${report.expected}; development ${report.current_development_version}`,
+  );
   console.log("");
 
   const failedChecks = report.exact_checks.filter((check) => !check.ok);
@@ -471,7 +477,7 @@ function printHumanReport(report) {
   }
 
   if (failedChecks.length === 0) {
-    console.log("- all exact version contracts match the expected development version");
+    console.log("- all exact version contracts match the expected packaged version");
   }
 
   console.log("");
@@ -509,9 +515,6 @@ function runSelfTest() {
     if (file === "docs/installer-remote-control.md") {
       return "remote runtime control surface in the `moxi 1.15.x` preparation line.";
     }
-    if (file === "docs/desktop-release-checklist.md") {
-      return "Examples for the current `1.15.0` workspace-prep line:";
-    }
     return "";
   });
   const failed = checks.filter((check) => check.actual !== check.expected);
@@ -532,6 +535,7 @@ function main() {
   const report = {
     codename: options.codename,
     expected: expectedVersion,
+    current_development_version: readJson("docs/book-manifest.json").current_development_version,
     next_version: options.next,
     exact_checks: exactChecks(expectedVersion, options.codename),
     reference_inventory: searchInventory(expectedVersion, options.codename),

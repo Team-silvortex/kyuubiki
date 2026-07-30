@@ -108,22 +108,30 @@ When in doubt, new `moxi 2.x` work should answer three questions:
 2. Is the contract visible to headless SDKs and not only to GUI code?
 3. Can the coverage tensor, benchmark lane, or integrity checker observe it?
 
-## Current checkpoint: `2.7.0`
+## Current checkpoint: `2.9.0`
 
-The repository is currently inside the `2.5` to `2.8` hardening window.
-Distributed reliability remains the line-level goal, while the calculation
-path has also gained a concrete heterogeneous workflow checkpoint:
+The repository has entered the `2.9` to `2.12` research-workflow maturity
+window. The previous distributed-reliability and cohesive-interface work stays
+in the baseline, but the current line-level question is whether a user,
+assistant, or SDK can move through an entire study without hidden UI-only
+meaning or dead-end controls.
 
-- a language-neutral cohesive-interface mesh request reaches solver, Agent
-  RPC, and workflow execution without UI-owned semantics
-- cohesive elements can share global assembly with connector springs, trusses,
-  and plane-stress triangles
-- explicit displacement histories cover cyclic and non-proportional control
-- convergence commits constitutive history transactionally and reports bounded
-  failure reasons
-- retained solver, protocol, engine, and workflow tests protect the same
-  contract
+- GUI actions, Hub/Workbench/Installer entrypoints, and backend calls must be
+  mapped as complete recoverable journeys
+- `check-desktop-usability-journeys` is the native guard for that mapping, so
+  the moxi usability gate can execute 8 blocking paths without relying on
+  legacy Node test shims as release evidence
+- Pwdt becomes the preferred frontend automation control plane for product-owned
+  shells, while headless SDKs stay focused on backend/runtime freedom
+- the coverage tensor is the first planning question for weak coordinates,
+  including UI/UX, runtime, SDK, benchmark, security, and persistence evidence
+- component integrity, language packs, update visibility, and documentation
+  mirrors must advance with the same current-line language
+- contract checkers and protocol files should continue being split into small
+  modules before they become new bottlenecks
 
-The next trust step is not another broad operator count increase. It is deeper
-host-element coverage, sparse assembly, adaptive continuation, larger retained
-fixtures, and independent correlation.
+The next trust step is not another broad operator count increase. It is
+repeatable research loops, deterministic automation, stronger live user-journey
+tests, and clearer separation between development checkpoint, packaged release,
+and historical evidence. The current native journey report is a baseline pass,
+not a claim that every GUI action has full Pwdt parity yet.

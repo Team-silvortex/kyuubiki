@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.7.0`.
+The current development point in this line is `moxi 2.9.0`.
 
 The 2.x line optimizes for:
 
@@ -51,26 +51,32 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.7 Checkpoint
+## Current 2.9 Checkpoint
 
-`moxi 2.7.0` turns the cohesive-interface path from an isolated kernel into a
-bounded heterogeneous structural workflow:
+`moxi 2.9.0` treats the next trust jump as product usability and automation
+closure rather than raw feature sprawl:
 
-- cohesive elements, connector springs, truss elements, and plane-stress
-  triangles contribute to one global equilibrium solve
-- proportional loading and explicit cyclic or non-proportional displacement
-  histories use the same control contract
-- Gauss-point history commits only after convergence; a rejected step retains
-  the prior state and exposes a failure reason
-- retained closed forms verify force balance, displacement partition, stress,
-  strain, and energy through solver, Agent RPC, and workflow paths
-- control, Newton iteration, truss assembly, and continuum assembly are split
-  into bounded modules rather than one oversized solver source
+- GUI navigation and backend calls must form complete, testable user journeys
+  instead of isolated panels that look finished but do not execute
+- the native `check-desktop-usability-journeys` probe now guards those journeys
+  against slipping back to Node integration shims; `make
+  build-usability-readiness-report` executes the 8 blocking paths and records
+  the current `baseline_pass` evidence
+- Pwdt should become the deterministic frontend automation surface for Hub,
+  Workbench, and Installer, while headless SDKs remain backend/control clients
+- the module-function coverage tensor is the shared map for deciding which
+  weak coordinate to harden next
+- component integrity, installation/update visibility, language packs, and
+  documentation entrypoints must keep moving with the active line
+- protocol and checker code should stay split into bounded modules so new
+  contracts can be extended without recreating large-file debt
 
-The boundary is explicit: this checkpoint does not yet coassemble plane quads,
-beams, frames, shells, or 3D solids, and it does not claim sparse large-system
-assembly, frictional contact, mixed-mode delamination qualification, or
-arc-length continuation.
+The 2.7 cohesive-interface coassembly checkpoint is still retained as a
+calculation baseline. The 2.9 boundary is also explicit: Pwdt parity is not yet
+complete, app shipping metadata is separate from this development checkpoint,
+and broader industrial solver qualification still needs deeper retained
+fixtures, external correlation, larger-scale evidence, and deeper live GUI/Pwdt
+round trips beyond the current native contract probes.
 
 ## Current Reading Path
 

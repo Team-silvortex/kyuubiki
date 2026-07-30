@@ -26,7 +26,6 @@ const EXACT_VERSION_FILES: &[&str] = &[
     "apps/installer-gui/src-tauri/tauri.conf.json",
     "apps/installer-gui/ui/assets/brand.json",
     "workers/rust/Cargo.toml",
-    "docs/ui-automation-contract.json",
 ];
 
 type RunnerResult<T> = Result<T, String>;
@@ -45,9 +44,11 @@ pub(crate) fn run_audit_version_line(root: &Path, args: Vec<OsString>) -> Runner
         return run_self_test();
     }
     let expected = options.expected.unwrap_or(current_release_version(root)?);
+    let development = current_development_version(root)?;
     let report = json!({
         "codename": options.codename,
         "expected": expected,
+        "current_development_version": development,
         "next_version": options.next,
         "exact_checks": exact_checks(root, &expected, &options.codename)?,
         "reference_inventory": search_inventory(root, &expected, &options.codename)?,
@@ -106,8 +107,8 @@ fn current_release_version(root: &Path) -> RunnerResult<String> {
 
 fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec<Value>> {
     let minor = version_minor_line(expected);
-    let display = version_display(codename, expected);
-    let display_minor = version_display(codename, &minor);
+    let development_version = current_development_version(root)?;
+    let development_minor = version_minor_line(&development_version);
     let mut checks = Vec::new();
     for file in EXACT_VERSION_FILES {
         if file.ends_with("package.json") || file.ends_with("tauri.conf.json") {
@@ -182,7 +183,7 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
     checks.push(check(
         "required_version",
         "deploy/installation-integrity-contract.json",
-        "visible_rules[required development version].value",
+        "visible_rules[required packaged version].value",
         expected,
         required_version_rule(&contract),
     ));
@@ -194,6 +195,24 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
         string_value(&release_index, "current_version"),
     ));
     checks.push(check(
+        "current_development_version",
+        "docs/book-manifest.json",
+        "current_development_version",
+        &development_version,
+        json_field(
+            root,
+            "docs/book-manifest.json",
+            "current_development_version",
+        )?,
+    ));
+    checks.push(check(
+        "current_minor_line",
+        "docs/ui-automation-contract.json",
+        "version",
+        &development_minor,
+        json_field(root, "docs/ui-automation-contract.json", "version")?,
+    ));
+    checks.push(check(
         "shipping_version",
         "releases/update-catalog.json",
         "shipping_version",
@@ -201,7 +220,7 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
         json_field(root, "releases/update-catalog.json", "shipping_version")?,
     ));
     add_language_pack_checks(root, expected, &mut checks)?;
-    checks.extend(markdown_fact_checks(root, expected, codename)?);
+    checks.extend(markdown_fact_checks(root, &development_version, codename)?);
     checks.push(check(
         "release_current_snapshot",
         "releases/index.json",
@@ -243,8 +262,15 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
                 .any(|item| contains_todo(item))
         ),
     ));
-    let _ = (display, display_minor);
     Ok(checks)
+}
+
+fn current_development_version(root: &Path) -> RunnerResult<String> {
+    Ok(field(
+        &read_json(root, "docs/book-manifest.json")?,
+        "current_development_version",
+    )
+    .to_string())
 }
 
 fn add_language_pack_checks(
@@ -306,11 +332,6 @@ fn markdown_fact_checks(root: &Path, expected: &str, codename: &str) -> RunnerRe
             "runtime control line",
             format!("`{display_minor}` line"),
         ),
-        (
-            "docs/desktop-release-checklist.md",
-            "workspace-prep line",
-            format!("current `{expected}` workspace-prep line"),
-        ),
     ];
     facts
         .into_iter()
@@ -354,7 +375,6 @@ fn self_test_markdown_checks(expected: &str, codename: &str) -> Vec<Value> {
         ("docs/version-line.md", "current documentation target", format!("current documentation target: `{display_minor}` line"), "current development point: `moxi 1.15.0`\ncurrent documentation target: `moxi 1.15.x` pre-`2.x` line"),
         ("docs/current-line.md", "current development point", format!("current development point in this line is `{display}`"), "The current development point in this line is `moxi 1.15.0`."),
         ("docs/installer-remote-control.md", "runtime control line", format!("`{display_minor}` line"), "remote runtime control surface in the `moxi 1.15.x` preparation line."),
-        ("docs/desktop-release-checklist.md", "workspace-prep line", format!("current `{expected}` workspace-prep line"), "Examples for the current `1.15.0` workspace-prep line:"),
     ]
     .into_iter()
     .map(|(file, field_name, expected_text, text)| {
@@ -428,7 +448,9 @@ fn required_version_rule(contract: &Value) -> Value {
         .find(|rule| {
             matches!(
                 field(rule, "label"),
-                "required development version" | "required shipping version"
+                "required development version"
+                    | "required packaged version"
+                    | "required shipping version"
             )
         })
         .and_then(|rule| rule.get("value").cloned())

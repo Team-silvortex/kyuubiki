@@ -33,16 +33,17 @@ Read these first, in order:
 14. `minimal-industrial-closure.md`
 15. `weakness-roadmap.md`
 
-For the current `2.7.x` hardening path, keep four threads mentally linked:
+For the current `2.9.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
+- native usability journey readiness reports
 - Installer-owned remote control
 - orchestrated and direct-mesh runtime posture
 
-`2.7.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
+`2.9.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
 in this window should connect each capability to its contract, evidence,
-runtime owner, and explicit limitation.
+runtime owner, automation surface, and explicit limitation.
 
 ## Central Book
 

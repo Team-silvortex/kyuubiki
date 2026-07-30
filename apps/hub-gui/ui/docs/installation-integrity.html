@@ -67,6 +67,13 @@
     <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
   </article>
 <article class="docs-card">
+    <div class="docs-kicker">runtime</div>
+    <h3>service launch manifest</h3>
+    <p class="docs-copy">Installed shells execute only Installer-owned relative service commands and fail closed when payloads are missing.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>dist/{platform}/manifests/service-launch.json</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
     <div class="docs-kicker">protection</div>
     <h3>protected paths</h3>
     <p class="docs-copy">Repair must not remove user environment, runtime data, release snapshots, or desktop shells.</p>
@@ -75,8 +82,8 @@
   </article>
 <article class="docs-card">
     <div class="docs-kicker">version</div>
-    <h3>required development version</h3>
-    <p class="docs-copy">Desktop shells, workspace packages, and local release descriptors are expected to align to this working version.</p>
+    <h3>required packaged version</h3>
+    <p class="docs-copy">Packaged desktop shells, workspace packages, and local release descriptors are expected to align to this shipped version.</p>
     <p class="docs-copy"><strong>Value:</strong> <code>2.7.0</code></p>
     <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
   </article>
@@ -100,6 +107,7 @@
 <li><strong>release staging root</strong>: <code>dist</code> (required)</li>
 <li><strong>installer-managed runtime payloads</strong>: <code>runtimes</code> (required)</li>
 <li><strong>platform release staging</strong>: <code>dist/{platform}</code> (required)</li>
+<li><strong>installed service launch contract</strong>: <code>dist/{platform}/manifests/service-launch.json</code> (required)</li>
 <li><strong>release snapshots</strong>: <code>releases/snapshots</code> (required)</li>
 <li><strong>shared brand metadata</strong>: <code>assets/brand/brand.json</code> (required)</li>
 <li><strong>desktop installer shell</strong>: <code>apps/installer-gui</code> (required)</li>

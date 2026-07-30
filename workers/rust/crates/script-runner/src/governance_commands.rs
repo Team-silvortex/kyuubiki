@@ -1,10 +1,10 @@
 use crate::{
     central_database_readiness, central_readiness_report, central_store_contract,
     commercial_readiness, component_integrity_protocol, contracts_runtime_api_surface,
-    dependency_audit, doc_inventory, docs_book, frontend_checks, gui_runtime_capability_contract,
-    install_update_disk_hygiene, installation_integrity_docs, language_packs, local_path_audit,
-    make_modules, material_exploration_chain_contract, material_score_contract,
-    material_study_execution_plan_contract, materialization_plan_contract,
+    dependency_audit, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
+    gui_runtime_capability_contract, install_update_disk_hygiene, installation_integrity_docs,
+    language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
+    material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, project_organization_audit, test_coverage_posture,
@@ -89,6 +89,9 @@ pub(crate) fn run_governance_command(
         }
         "check-gui-runtime-capability-contract" => {
             gui_runtime_capability_contract::run_check_gui_runtime_capability_contract(root, args)
+        }
+        "check-desktop-usability-journeys" => {
+            desktop_usability_journeys::run_check_desktop_usability_journeys(root, args)
         }
         "check-usability-release-gate" => {
             usability_release_gate::run_check_usability_release_gate(root, args)

@@ -28,14 +28,18 @@ const HTML_FILES: &[&str] = &[
     "apps/hub-gui/ui/docs/update-catalog.html",
 ];
 
-const VERSION_FILES: &[&str] = &[
+const CURRENT_VERSION_FILES: &[&str] = &[
     "docs/book.html",
     "docs/book-manifest.json",
     "docs/component-integrity-protocol.html",
-    "docs/installation-integrity-contract.html",
     "docs/navigation-matrix.html",
     "apps/hub-gui/ui/docs/index.html",
     "apps/hub-gui/ui/docs/current-line.html",
+];
+
+const SHIPPING_VERSION_FILES: &[&str] = &[
+    "docs/installation-integrity-contract.html",
+    "docs/update-catalog.html",
     "apps/hub-gui/ui/docs/installation-integrity.html",
     "apps/hub-gui/ui/docs/update-catalog.html",
 ];
@@ -78,7 +82,13 @@ pub(crate) fn run_check_doc_book(root: &Path, args: Vec<OsString>) -> RunnerResu
         return Ok(1);
     }
 
-    println!("docs-book check passed for version {shipping_version}");
+    let current_development_version = manifest
+        .get("current_development_version")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    println!(
+        "docs-book check passed for development {current_development_version}; shipping {shipping_version}"
+    );
     println!(
         "checked {} HTML files and docs/book-manifest.json",
         HTML_FILES.len()
@@ -186,7 +196,23 @@ fn validate_doc_book(
         }
     }
 
-    for relative_path in VERSION_FILES {
+    let current_development_version = manifest
+        .get("current_development_version")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            "docs/book-manifest.json must declare current_development_version".to_string()
+        })?;
+
+    for relative_path in CURRENT_VERSION_FILES {
+        let text = read_text(root, relative_path)?;
+        if !text.contains(current_development_version) {
+            issues.push(format!(
+                "{relative_path}: missing current development version {current_development_version}"
+            ));
+        }
+    }
+
+    for relative_path in SHIPPING_VERSION_FILES {
         let text = read_text(root, relative_path)?;
         if !text.contains(shipping_version) {
             issues.push(format!(

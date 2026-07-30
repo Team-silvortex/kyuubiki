@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.7.x",
+  "baseline_release": "moxi 2.9.x",
   "target_release": "moxi 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -70,7 +70,9 @@
         "hub.project.open-workbench"
       ],
       "probes": [
-        ["integration-desktop-gui-node-test"]
+        ["check-desktop-usability-journeys", "--journey", "create-open-project"],
+        ["check-gui-runtime-capability-contract"],
+        ["check-ui-automation-contract"]
       ]
     },
     {
@@ -82,7 +84,8 @@
       ],
       "probes": [
         ["check-workflow-dataset-contract"],
-        ["integration-ui-workflow-node-test"]
+        ["check-desktop-usability-journeys", "--journey", "compose-workflow"],
+        ["check-ui-automation-contract"]
       ]
     },
     {
@@ -95,6 +98,7 @@
         "workbench.runtime.inspect"
       ],
       "probes": [
+        ["check-desktop-usability-journeys", "--journey", "execute-observe"],
         ["check-operator-task-ir-contract"],
         [
           "check-operator-validation",
@@ -117,7 +121,8 @@
         "workbench.runtime.inspect"
       ],
       "probes": [
-        ["integration-desktop-gui-node-test"],
+        ["check-desktop-usability-journeys", "--journey", "diagnose-recover"],
+        ["check-gui-runtime-capability-contract"],
         ["check-component-integrity-protocol"]
       ]
     },
@@ -155,7 +160,8 @@
       ],
       "probes": [
         ["validate-language-packs"],
-        ["integration-desktop-gui-node-test"]
+        ["check-desktop-usability-journeys", "--journey", "localize-layout"],
+        ["check-ui-automation-contract"]
       ]
     },
     {

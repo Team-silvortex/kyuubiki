@@ -25,6 +25,7 @@ mod desktop_linux_remote;
 mod desktop_release_upload_remote;
 mod desktop_runtime_payload;
 mod desktop_shared_sync;
+mod desktop_usability_journeys;
 mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
 mod direct_mesh_remote;
