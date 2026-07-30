@@ -112,6 +112,7 @@ lab remote-ssh-fixture\n  \
   build-standard-benchmark-report\n  \
   compare-workflow-catalog-benchmark\n  \
   frontend-cli frontend-typecheck frontend-unit-test\n  \
+  frontend-unit-coverage-test\n  \
   frontend-unit-headless-test frontend-unit-headless-live-test\n  \
   frontend-unit-workflow-test frontend-ui-layout-check\n  \
   frontend-workflow-search-layout-check frontend-workflow-topology-check\n  \

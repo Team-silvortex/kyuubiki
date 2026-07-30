@@ -149,6 +149,11 @@ README.
   central store contract checker config. It keeps catalog, auth, publish,
   provenance, database, frontend client, docs, and readiness guard inputs
   project-relative and machine-checkable.
+- `central-session-policy.schema.json`, `central-publish-policy.schema.json`,
+  and `central-publisher-policy.schema.json` carry the Team Silvortex hosted
+  official website account integration, store commercial model, publisher
+  eligibility, and payout-policy preview contracts while preserving self-hosted
+  store independence from hosted account services.
 - `central-publish-pipeline.schema.json` is for the center-store write-side
   workflow contract that orders publisher identity, artifact envelope,
   signature attestation, review queue, catalog indexing, recall/yank, and

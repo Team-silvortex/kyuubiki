@@ -88,6 +88,10 @@ Then branch by intent:
 - `commercial-readiness-2.0.md`
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
+- `team-silvortex-store-model.md`
+  Open-source self-hosted store plus hosted Team Silvortex center-store
+  integration with the official website account system, quota, subscription,
+  publisher, and payout boundary.
 - `moxi-handoff.md`
   Historical gate that defined the transition into the `moxi 2.x` line.
 - `weakness-roadmap.md`
@@ -329,6 +333,10 @@ Then branch by intent:
 - `central-server-components.md`
   Preview contract for the future central server: operator store, template
   store, frontend DSL template store, language-pack delivery, and login policy.
+- `team-silvortex-store-model.md`
+  Team Silvortex official website account-system integration and hosted
+  center-store business boundary, while preserving open-source self-hosted
+  store support.
 - `fem-blender-roadmap.md`
   Long-range product shape for turning Kyuubiki into a full FEM creation platform.
 - `rendering-roadmap.html`

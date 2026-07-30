@@ -1,10 +1,13 @@
 defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowDomainMetricResolver
+
   @guard_domains %{
     "transform.evaluate_structural_guard" => "structural",
     "transform.evaluate_acoustic_guard" => "acoustic",
     "transform.evaluate_modal_guard" => "modal",
+    "transform.evaluate_dynamic_guard" => "dynamic",
     "transform.evaluate_transport_guard" => "transport"
   }
 
@@ -12,6 +15,7 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
     "transform.benchmark_structural_pair" => "structural",
     "transform.benchmark_acoustic_pair" => "acoustic",
     "transform.benchmark_modal_pair" => "modal",
+    "transform.benchmark_dynamic_pair" => "dynamic",
     "transform.benchmark_transport_pair" => "transport"
   }
 
@@ -89,7 +93,7 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
 
   defp evaluate_guard_rule(payload, rule) do
     with field when is_binary(field) <- Map.get(rule, "field"),
-         value when is_number(value) <- number(payload[field]),
+         value when is_number(value) <- WorkflowDomainMetricResolver.metric_value(payload, field),
          true <- guard_triggered?(value, rule) do
       [
         %{
@@ -112,8 +116,10 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
 
     with true <- is_binary(left_field),
          true <- is_binary(right_field),
-         left_value when is_number(left_value) <- number(left[left_field]),
-         right_value when is_number(right_value) <- number(right[right_field]) do
+         left_value when is_number(left_value) <-
+           WorkflowDomainMetricResolver.metric_value(left, left_field),
+         right_value when is_number(right_value) <-
+           WorkflowDomainMetricResolver.metric_value(right, right_field) do
       weight = normalize_weight(Map.get(criterion, "weight"))
       goal = normalize_goal(Map.get(criterion, "goal"))
       {left_score, right_score} = score_benchmark_pair(left_value, right_value, goal, weight)
@@ -251,6 +257,6 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
     "#{winner} across #{length(breakdown)} criteria (#{left_label}=#{left_score}, #{right_label}=#{right_score})."
   end
 
-  defp number(value) when is_number(value), do: value * 1.0
+  defp number(value) when is_number(value), do: if(value == value, do: value * 1.0)
   defp number(_value), do: nil
 end

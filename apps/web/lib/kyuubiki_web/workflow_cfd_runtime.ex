@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.WorkflowCfdRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowDomainMetricResolver
+
   def extract_stokes_flow_result_diagnostics(payload, config)
       when is_map(payload) and is_map(config) do
     nodes = Map.get(payload, "nodes", [])
@@ -145,7 +147,7 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
   defp numeric_values(values, field) do
     values
     |> Enum.filter(&is_map/1)
-    |> Enum.map(&Map.get(&1, field))
+    |> Enum.map(&WorkflowDomainMetricResolver.metric_value(&1, field))
     |> Enum.filter(&number?/1)
   end
 
@@ -157,7 +159,7 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
   defp guard_triggered?(payload, rule) do
     field = Map.get(rule, "field")
     threshold = Map.get(rule, "threshold", Map.get(rule, "value"))
-    value = Map.get(payload, field)
+    value = WorkflowDomainMetricResolver.metric_value(payload, field)
 
     number?(value) and number?(threshold) and
       compare_guard(value, threshold, Map.get(rule, "comparison", "gte"))
@@ -165,10 +167,11 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
 
   defp guard_trigger(payload, rule) do
     field = Map.fetch!(rule, "field")
+    value = WorkflowDomainMetricResolver.metric_value(payload, field)
 
     %{
       "field" => field,
-      "value" => Map.fetch!(payload, field),
+      "value" => value,
       "threshold" => Map.get(rule, "threshold", Map.get(rule, "value")),
       "comparison" => Map.get(rule, "comparison", "gte"),
       "severity" => normalize_severity(Map.get(rule, "severity")),
@@ -199,15 +202,22 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
     do: "#{String.upcase(status)}: #{length(triggers)} CFD guard trigger(s)."
 
   defp benchmarkable?(left, right, criterion) do
-    number?(Map.get(left, criterion_field(criterion, "left_field"))) and
-      number?(Map.get(right, criterion_field(criterion, "right_field")))
+    number?(
+      WorkflowDomainMetricResolver.metric_value(left, criterion_field(criterion, "left_field"))
+    ) and
+      number?(
+        WorkflowDomainMetricResolver.metric_value(
+          right,
+          criterion_field(criterion, "right_field")
+        )
+      )
   end
 
   defp benchmark_criterion(left, right, criterion, left_label, right_label) do
     left_field = criterion_field(criterion, "left_field")
     right_field = criterion_field(criterion, "right_field")
-    left_value = Map.fetch!(left, left_field)
-    right_value = Map.fetch!(right, right_field)
+    left_value = WorkflowDomainMetricResolver.metric_value(left, left_field)
+    right_value = WorkflowDomainMetricResolver.metric_value(right, right_field)
     weight = normalize_weight(Map.get(criterion, "weight"))
     goal = Map.get(criterion, "goal", "min")
     {left_score, right_score} = score_pair(left_value, right_value, goal, weight)

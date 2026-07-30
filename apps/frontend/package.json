@@ -16,6 +16,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "../../scripts/kyuubiki frontend-unit-test",
+    "test:unit:coverage": "../../scripts/kyuubiki frontend-unit-coverage-test",
     "test:unit:headless": "../../scripts/kyuubiki frontend-unit-headless-test",
     "test:unit:headless-live": "../../scripts/kyuubiki frontend-unit-headless-live-test",
     "test:unit:workflow": "../../scripts/kyuubiki frontend-unit-workflow-test",

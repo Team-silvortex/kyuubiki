@@ -8,6 +8,7 @@
     "status",
     "accepting_submissions",
     "reason",
+    "commercial_model",
     "resource_kinds",
     "review_stages",
     "publisher_requirements"
@@ -18,6 +19,7 @@
     "status": { "type": "string" },
     "accepting_submissions": { "type": "boolean" },
     "reason": { "type": "string" },
+    "commercial_model": { "$ref": "#/$defs/commercialModel" },
     "resource_kinds": {
       "type": "array",
       "items": { "$ref": "#/$defs/resourcePolicy" },
@@ -33,6 +35,8 @@
       "required": [
         "login_required",
         "publisher_account_required",
+        "team_silvortex_account_required",
+        "legal_payment_method_required",
         "personal_access_token_supported",
         "device_code_supported",
         "anonymous_publish_allowed"
@@ -41,6 +45,8 @@
       "properties": {
         "login_required": { "type": "boolean" },
         "publisher_account_required": { "type": "boolean" },
+        "team_silvortex_account_required": { "type": "boolean" },
+        "legal_payment_method_required": { "type": "boolean" },
         "personal_access_token_supported": { "type": "boolean" },
         "device_code_supported": { "type": "boolean" },
         "anonymous_publish_allowed": { "type": "boolean" }
@@ -51,6 +57,32 @@
     "kind": {
       "type": "string",
       "enum": ["operator", "workflow_template", "frontend_dsl_template", "language_pack"]
+    },
+    "commercialModel": {
+      "type": "object",
+      "required": [
+        "model",
+        "free_service_posture",
+        "metered_store_kinds",
+        "free_tier",
+        "subscription",
+        "self_hosted_store",
+        "hosted_store"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "free_service_posture": { "type": "string", "minLength": 1 },
+        "metered_store_kinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/kind" },
+          "minItems": 1
+        },
+        "free_tier": { "type": "string", "minLength": 1 },
+        "subscription": { "type": "string", "minLength": 1 },
+        "self_hosted_store": { "type": "string", "minLength": 1 },
+        "hosted_store": { "type": "string", "minLength": 1 }
+      }
     },
     "resourcePolicy": {
       "type": "object",

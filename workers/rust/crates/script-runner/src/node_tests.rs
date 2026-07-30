@@ -1,4 +1,5 @@
 use std::ffi::OsString;
+use std::fs;
 use std::path::Path;
 
 use crate::RunnerResult;
@@ -15,6 +16,9 @@ pub(crate) fn run_node_command(
         "frontend-cli" => run_frontend_cli(&paths.frontend, rest),
         "frontend-typecheck" => run_frontend_typecheck(&paths.frontend, rest),
         "frontend-unit-test" => run_frontend_unit_test(&paths.frontend, &[], rest),
+        "frontend-unit-coverage-test" => {
+            run_frontend_unit_coverage_test(&paths.root, &paths.frontend, rest)
+        }
         "frontend-unit-headless-test" => {
             run_frontend_unit_test(&paths.frontend, &["headless"], rest)
         }
@@ -146,6 +150,78 @@ pub(crate) fn run_frontend_unit_test(
     run_node_script(frontend, "./scripts/test-unit.mjs", fixed_args, rest)
 }
 
+pub(crate) fn run_frontend_unit_coverage_test(
+    root: &Path,
+    frontend: &Path,
+    rest: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let (out_dir, filters) = parse_frontend_coverage_args(rest)?;
+    validate_coverage_out_dir(&out_dir)?;
+    let absolute_out = root.join(&out_dir);
+    if absolute_out.exists() {
+        fs::remove_dir_all(&absolute_out)
+            .map_err(|error| format!("failed to clear {}: {error}", absolute_out.display()))?;
+    }
+    fs::create_dir_all(&absolute_out)
+        .map_err(|error| format!("failed to create {}: {error}", absolute_out.display()))?;
+    let out_string = absolute_out.to_string_lossy().into_owned();
+    crate::run_with_env(
+        frontend,
+        "node",
+        std::iter::once(OsString::from("./scripts/test-unit.mjs")).chain(filters),
+        &[("KYUUBIKI_FRONTEND_COVERAGE_DIR", out_string.as_str())],
+    )
+}
+
 pub(crate) fn run_frontend_check(frontend: &Path, script_path: &str) -> RunnerResult<u8> {
     run_node_script(frontend, script_path, &[], Vec::new())
+}
+
+fn parse_frontend_coverage_args(rest: Vec<OsString>) -> RunnerResult<(String, Vec<OsString>)> {
+    let mut out_dir = "tmp/coverage/frontend/v8".to_string();
+    let mut filters = Vec::new();
+    let mut iter = rest.into_iter();
+    while let Some(arg) = iter.next() {
+        if arg == "--out-dir" {
+            out_dir = iter
+                .next()
+                .ok_or_else(|| "--out-dir requires a value".to_string())?
+                .into_string()
+                .map_err(|_| "--out-dir value is not valid utf-8".to_string())?;
+        } else {
+            filters.push(arg);
+        }
+    }
+    Ok((out_dir, filters))
+}
+
+fn validate_coverage_out_dir(out_dir: &str) -> RunnerResult<()> {
+    if Path::new(out_dir).is_absolute()
+        || out_dir.split('/').any(|part| part == "..")
+        || !out_dir.starts_with("tmp/coverage/")
+    {
+        return Err("frontend coverage out dir must be under tmp/coverage/".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frontend_coverage_args_reject_unsafe_out_dir() {
+        assert!(parse_frontend_coverage_args(vec![OsString::from("workflow")]).is_ok());
+        let parsed = parse_frontend_coverage_args(vec![
+            OsString::from("--out-dir"),
+            OsString::from("tmp/coverage/frontend/v8"),
+            OsString::from("workflow"),
+        ])
+        .unwrap();
+        assert_eq!(parsed.0, "tmp/coverage/frontend/v8");
+        assert_eq!(parsed.1, vec![OsString::from("workflow")]);
+        assert!(validate_coverage_out_dir("/tmp/coverage").is_err());
+        assert!(validate_coverage_out_dir("tmp/../coverage").is_err());
+        assert!(validate_coverage_out_dir("dist/coverage").is_err());
+    }
 }

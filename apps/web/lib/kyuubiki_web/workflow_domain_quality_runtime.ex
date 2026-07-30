@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowDomainMetricResolver
+
   @domains %{
     "transform.score_acoustic_quality" => %{
       id: "acoustic",
@@ -22,6 +24,17 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
         {"total_mass", "Total modal mass", 25.0, 1.0, :min},
         {"mode_1_participation_norm", "Mode 1 participation", 2.0, 1.0, :min},
         {"frequency_span_hz", "Modal frequency spread", 250.0, 0.5, :min}
+      ]
+    },
+    "transform.score_dynamic_quality" => %{
+      id: "dynamic",
+      label: "Dynamic",
+      ready: 8.0,
+      terms: [
+        {"peak_frequency_hz", "Peak response frequency", 20.0, 3.0, :max},
+        {"max_displacement", "Peak displacement amplitude", 0.02, 3.0, :min},
+        {"max_acceleration", "Peak acceleration amplitude", 250.0, 1.5, :min},
+        {"max_force", "Peak dynamic force", 5000.0, 1.0, :min}
       ]
     },
     "transform.score_structural_quality" => %{
@@ -99,12 +112,13 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
 
   def score(operator_id, payload, config) when is_map(payload) and is_map(config) do
     with {:ok, domain} <- fetch_domain(operator_id) do
-      terms = Enum.map(domain.terms, &score_term(payload, config, &1))
+      terms = terms_for(domain, config) |> Enum.map(&score_term(payload, config, &1))
       missing = Enum.count(terms, &(Map.get(&1, "status") == "missing"))
+      watch = Enum.count(terms, &(Map.get(&1, "status") == "watch"))
       score = Enum.reduce(terms, 0.0, &(&2 + Map.get(&1, "penalty", 0.0)))
       max_ready = config_number(config, "max_ready_score", domain.ready)
       grade = quality_grade(score, missing, max_ready)
-      {:ok, quality_payload(domain, terms, score, missing, max_ready, grade)}
+      {:ok, quality_payload(domain, payload, terms, score, missing, watch, max_ready, grade)}
     end
   end
 
@@ -117,11 +131,39 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
     end
   end
 
+  defp terms_for(domain, config) do
+    case config["enabled_terms"] do
+      enabled_terms when is_list(enabled_terms) ->
+        enabled_terms
+        |> Enum.filter(&is_binary/1)
+        |> Enum.map(&quality_term_for(domain, &1))
+        |> Enum.reject(&is_nil/1)
+        |> case do
+          [] -> domain.terms
+          selected_terms -> selected_terms
+        end
+
+      _ ->
+        domain.terms
+    end
+  end
+
+  defp quality_term_for(domain, field) do
+    Enum.find(domain.terms, fn {candidate, _label, _target, _weight, _goal} ->
+      candidate == field
+    end) || extra_quality_term(domain.id, field)
+  end
+
+  defp extra_quality_term("dynamic", "max_velocity"),
+    do: {"max_velocity", "Peak velocity amplitude", 2.0, 1.0, :min}
+
+  defp extra_quality_term(_domain_id, _field), do: nil
+
   defp score_term(payload, config, {field, label, default_target, default_weight, goal}) do
     target = configured_number(config, "targets", field, default_target) |> max(1.0e-12)
     weight = configured_number(config, "weights", field, default_weight) |> max(0.0)
 
-    case metric_value(payload, field) do
+    case WorkflowDomainMetricResolver.metric_value(payload, field) do
       value when is_number(value) ->
         penalty = quality_ratio(value, target, goal) * weight
 
@@ -148,32 +190,7 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
     end
   end
 
-  defp metric_value(payload, "frequency_span_hz") do
-    number(payload["frequency_span_hz"]) ||
-      with min when is_number(min) <- number(payload["min_frequency_hz"]),
-           max when is_number(max) <- number(payload["max_frequency_hz"]) do
-        max - min
-      else
-        _ -> nil
-      end
-  end
-
-  defp metric_value(payload, field) do
-    number(payload[field]) || span_value(payload, field)
-  end
-
-  defp span_value(payload, field) do
-    with true <- String.ends_with?(field, "_span"),
-         prefix <- String.replace_suffix(field, "_span", ""),
-         min when is_number(min) <- number(payload["#{prefix}_min"]),
-         max when is_number(max) <- number(payload["#{prefix}_max"]) do
-      max - min
-    else
-      _ -> nil
-    end
-  end
-
-  defp quality_payload(domain, terms, score, missing, max_ready, grade) do
+  defp quality_payload(domain, payload, terms, score, missing, watch, max_ready, grade) do
     id = domain.id
 
     %{
@@ -182,19 +199,65 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
       "#{id}_quality_grade" => grade,
       "#{id}_quality_ready" => grade != "block",
       "#{id}_quality_missing_metric_count" => missing,
+      "#{id}_quality_watch_count" => watch,
       "#{id}_quality_term_count" => length(terms),
       "#{id}_quality_max_ready_score" => max_ready,
+      "#{id}_quality_dominant_term" => dominant_quality_term(terms),
+      "#{id}_quality_blocking_terms" => blocking_terms(terms, grade),
       "#{id}_quality_terms" => terms,
       "#{id}_quality_summary" =>
-        "#{domain.label} quality #{grade}: score=#{format_score(score)}, missing=#{missing}, ready_limit=#{format_score(max_ready)}."
+        "#{domain.label} quality #{grade}: score=#{format_score(score)}, missing=#{missing}, watch=#{watch}, ready_limit=#{format_score(max_ready)}."
+    }
+    |> Map.merge(domain_metric_payload(id, payload))
+  end
+
+  defp domain_metric_payload("dynamic", payload) do
+    %{
+      "dynamic_quality_peak_frequency_hz" =>
+        WorkflowDomainMetricResolver.metric_value(payload, "peak_frequency_hz"),
+      "dynamic_quality_max_displacement" =>
+        WorkflowDomainMetricResolver.metric_value(payload, "max_displacement"),
+      "dynamic_quality_max_velocity" =>
+        WorkflowDomainMetricResolver.metric_value(payload, "max_velocity"),
+      "dynamic_quality_max_acceleration" =>
+        WorkflowDomainMetricResolver.metric_value(payload, "max_acceleration"),
+      "dynamic_quality_max_force" =>
+        WorkflowDomainMetricResolver.metric_value(payload, "max_force")
     }
   end
+
+  defp domain_metric_payload(_id, _payload), do: %{}
 
   defp quality_ratio(value, target, :max), do: target / max(abs(value), 1.0e-12)
   defp quality_ratio(value, target, :min), do: abs(value) / target
 
   defp meets_target?(value, target, :max), do: value >= target
   defp meets_target?(value, target, :min), do: abs(value) <= target
+
+  defp dominant_quality_term(terms) do
+    terms
+    |> Enum.max_by(&Map.get(&1, "penalty", 0.0), fn -> nil end)
+    |> compact_quality_term()
+  end
+
+  defp blocking_terms(terms, "block") do
+    terms
+    |> Enum.filter(&(Map.get(&1, "status") in ["missing", "watch"]))
+    |> Enum.map(&compact_quality_term/1)
+  end
+
+  defp blocking_terms(_terms, _grade), do: []
+
+  defp compact_quality_term(nil), do: nil
+
+  defp compact_quality_term(term) do
+    %{
+      "field" => Map.get(term, "field"),
+      "label" => Map.get(term, "label"),
+      "status" => Map.get(term, "status"),
+      "penalty" => Map.get(term, "penalty")
+    }
+  end
 
   defp configured_number(config, group, field, default) do
     config

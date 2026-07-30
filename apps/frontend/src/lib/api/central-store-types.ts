@@ -46,10 +46,45 @@ export type CentralStoreCapabilities = {
   artifact_admission: { status: string; backing?: string };
   publish_pipeline: { status: string; backing?: string };
   publisher_accounts: { status: string; backing?: string };
+  commercial_store_model: { status: string; backing?: string };
   publish_policy: { status: string; backing?: string };
   publish_readiness: { status: string; backing?: string };
   database_policy: { status: string; backing?: string };
   provenance_policy: { status: string; backing?: string };
+};
+
+export type CentralTeamSilvortexAccountSystem = {
+  owner: "Team Silvortex";
+  provider_project: "official-website";
+  integration_role: string;
+  shared_across_team_silvortex_apps: boolean;
+  kyuubiki_product_scope: string;
+  hosted_center_store_account_plane: string;
+  kyuubiki_account_storage: string;
+  interactive_flow: string;
+  self_hosted_store_account_dependency: string;
+};
+
+export type CentralIdentityIntegration = {
+  provider_project: "official-website";
+  client_role: "kyuubiki_oidc_client";
+  issuer_discovery_path: "/.well-known/openid-configuration";
+  client_registration: "reviewed_static_registration";
+  interactive_flow: "authorization_code_pkce";
+  required_request_checks: string[];
+  allowed_scopes: string[];
+  token_storage: "platform_keychain_or_memory_only";
+  forbidden_flows: string[];
+};
+
+export type CentralStoreCommercialModel = {
+  model: string;
+  free_service_posture: string;
+  metered_store_kinds: CentralStoreEntryKind[];
+  free_tier: string;
+  subscription: string;
+  self_hosted_store: string;
+  hosted_store: string;
 };
 
 export type CentralStoreCatalogPayload = {
@@ -85,9 +120,13 @@ export type CentralSessionPolicyPayload = {
     mode: string;
     descriptor: Record<string, unknown>;
   };
+  account_system: CentralTeamSilvortexAccountSystem;
+  identity_integration: CentralIdentityIntegration;
   planned_auth: CentralAuthProvider[];
   session_rules: {
     store_download_requires_session: boolean;
+    hosted_store_download_requires_session: boolean;
+    self_hosted_store_requires_team_silvortex_account: boolean;
     publish_requires_session: boolean;
     agent_registration_requires_cluster_identity: boolean;
     credential_storage: string;
@@ -107,11 +146,14 @@ export type CentralPublishPolicyPayload = {
   status: string;
   accepting_submissions: boolean;
   reason: string;
+  commercial_model: CentralStoreCommercialModel;
   resource_kinds: CentralPublishResourcePolicy[];
   review_stages: string[];
   publisher_requirements: {
     login_required: boolean;
     publisher_account_required: boolean;
+    team_silvortex_account_required: boolean;
+    legal_payment_method_required: boolean;
     personal_access_token_supported: boolean;
     device_code_supported: boolean;
     anonymous_publish_allowed: boolean;
@@ -124,6 +166,7 @@ export type CentralPublisherPolicyPayload = {
   accounts_enabled: boolean;
   token_issuance_enabled: boolean;
   storage_tables: string[];
+  account_system: CentralTeamSilvortexAccountSystem;
   identity_modes: Array<{
     id: string;
     status: string;
@@ -142,6 +185,12 @@ export type CentralPublisherPolicyPayload = {
     rotation_required: boolean;
     revocation_supported: boolean;
     required_scopes: string[];
+  };
+  payout_policy: {
+    eligible_resource_kinds: Array<"operator" | "workflow_template">;
+    eligibility_requirements: string[];
+    payout_basis: string;
+    metered_downloads_only: boolean;
   };
   blocking_reasons: string[];
 };

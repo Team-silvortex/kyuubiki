@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.WorkflowThermalRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowDomainMetricResolver
   alias KyuubikiWeb.WorkflowThermalRuntimeStats, as: Stats
 
   def extract_thermal_result_diagnostics(payload, config)
@@ -411,10 +412,7 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
   end
 
   defp fetch_numeric_field(map, field) when is_map(map) and is_binary(field) do
-    case Map.get(map, field) do
-      value when is_number(value) -> {:ok, value * 1.0}
-      _ -> :error
-    end
+    WorkflowDomainMetricResolver.fetch_metric(map, field)
   end
 
   defp collect_numeric_entries(items, field) when is_list(items) and is_binary(field) do

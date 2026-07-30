@@ -26,6 +26,7 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert Enum.any?(payload["sources"], &(&1["id"] == "builtin.language-packs"))
     assert payload["capabilities"]["login_system"]["status"] == "preview_contract"
     assert payload["capabilities"]["publisher_accounts"]["status"] == "preview_contract"
+    assert payload["capabilities"]["commercial_store_model"]["status"] == "preview_contract"
     assert payload["capabilities"]["artifact_admission"]["status"] == "blocked_preview"
     assert payload["capabilities"]["publish_pipeline"]["status"] == "blocked_preview"
   end
@@ -64,7 +65,30 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
 
     assert payload["schema_version"] == "kyuubiki.central-session-policy/v1"
     assert payload["current_auth"]["mode"] == "local_orchestra_token"
+    assert payload["account_system"]["owner"] == "Team Silvortex"
+    assert payload["account_system"]["provider_project"] == "official-website"
+    assert payload["account_system"]["integration_role"] == "kyuubiki_oidc_client"
+    assert payload["account_system"]["shared_across_team_silvortex_apps"] == true
+
+    assert payload["account_system"]["hosted_center_store_account_plane"] ==
+             "external_official_website_oidc"
+
+    assert payload["account_system"]["kyuubiki_account_storage"] == "none"
+    assert payload["account_system"]["interactive_flow"] == "authorization_code_pkce"
+    assert payload["identity_integration"]["provider_project"] == "official-website"
+    assert payload["identity_integration"]["client_role"] == "kyuubiki_oidc_client"
+
+    assert payload["identity_integration"]["issuer_discovery_path"] ==
+             "/.well-known/openid-configuration"
+
+    assert payload["identity_integration"]["interactive_flow"] == "authorization_code_pkce"
+    assert "pkce_s256" in payload["identity_integration"]["required_request_checks"]
+    assert "kyuubiki.store" in payload["identity_integration"]["allowed_scopes"]
+    assert "password_grant" in payload["identity_integration"]["forbidden_flows"]
+    assert "dynamic_client_registration" in payload["identity_integration"]["forbidden_flows"]
     assert payload["session_rules"]["publish_requires_session"] == true
+    assert payload["session_rules"]["hosted_store_download_requires_session"] == true
+    assert payload["session_rules"]["self_hosted_store_requires_team_silvortex_account"] == false
 
     assert payload["session_rules"]["credential_storage"] ==
              "client_platform_keychain_or_memory_only"
@@ -86,6 +110,11 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["schema_version"] == "kyuubiki.central-publish-policy/v1"
     assert payload["accepting_submissions"] == false
     assert payload["publisher_requirements"]["anonymous_publish_allowed"] == false
+    assert payload["publisher_requirements"]["team_silvortex_account_required"] == true
+    assert payload["publisher_requirements"]["legal_payment_method_required"] == true
+    assert payload["commercial_model"]["model"] == "youtube_style_download_share"
+    assert payload["commercial_model"]["free_tier"] == "small_monthly_download_allowance"
+    assert payload["commercial_model"]["subscription"] == "unlimited_center_store_downloads"
     assert "security_scan" in payload["review_stages"]
 
     assert MapSet.subset?(
@@ -119,6 +148,9 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["schema_version"] == "kyuubiki.central-publisher-policy/v1"
     assert payload["accounts_enabled"] == false
     assert payload["token_issuance_enabled"] == false
+    assert payload["account_system"]["owner"] == "Team Silvortex"
+    assert payload["account_system"]["provider_project"] == "official-website"
+    assert payload["account_system"]["integration_role"] == "kyuubiki_oidc_client"
     assert "central_publishers" in payload["storage_tables"]
     assert "central_publisher_tokens" in payload["storage_tables"]
     assert payload["account_lifecycle"]["manual_review_required"] == true
@@ -127,6 +159,14 @@ defmodule KyuubikiWeb.Api.CentralStoreApiTest do
     assert payload["token_policy"]["stored_secret_material"] == "fingerprint_only"
     assert payload["token_policy"]["revocation_supported"] == true
     assert "central:security:recall" in payload["token_policy"]["required_scopes"]
+
+    assert payload["payout_policy"]["eligible_resource_kinds"] == [
+             "operator",
+             "workflow_template"
+           ]
+
+    assert payload["payout_policy"]["payout_basis"] == "proportional_download_share"
+    assert "legal_payment_method" in payload["payout_policy"]["eligibility_requirements"]
     assert "hosted_login_not_enabled" in payload["blocking_reasons"]
     assert MapSet.subset?(MapSet.new(["oidc", "device_code", "personal_access_token"]), modes)
   end

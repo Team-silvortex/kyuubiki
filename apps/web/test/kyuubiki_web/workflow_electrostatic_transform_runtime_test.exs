@@ -14,7 +14,7 @@ defmodule KyuubikiWeb.WorkflowElectrostaticTransformRuntimeTest do
   test "evaluates electrostatic guard thresholds into pass warn block states" do
     payload = %{
       "electrostatic_potential_max" => 220.0,
-      "electrostatic_field_peak_magnitude" => 14.0,
+      "peak_electric_field" => 14.0,
       "electrostatic_energy_density_peak" => 3.5
     }
 
@@ -60,13 +60,13 @@ defmodule KyuubikiWeb.WorkflowElectrostaticTransformRuntimeTest do
   test "benchmarks electrostatic pairs with weighted criteria" do
     payload = %{
       "left" => %{
-        "electrostatic_potential_span" => 55.0,
-        "electrostatic_field_peak_magnitude" => 9.0,
+        "voltage_span" => 55.0,
+        "peak_electric_field" => 9.0,
         "electrostatic_charge_density_sum" => 6.0
       },
       "right" => %{
-        "electrostatic_potential_span" => 52.0,
-        "electrostatic_field_peak_magnitude" => 12.0,
+        "voltage_span" => 52.0,
+        "peak_electric_field" => 12.0,
         "electrostatic_charge_density_sum" => 6.0
       }
     }

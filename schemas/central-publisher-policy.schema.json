@@ -9,9 +9,11 @@
     "accounts_enabled",
     "token_issuance_enabled",
     "storage_tables",
+    "account_system",
     "identity_modes",
     "account_lifecycle",
     "token_policy",
+    "payout_policy",
     "blocking_reasons"
   ],
   "additionalProperties": false,
@@ -21,6 +23,7 @@
     "accounts_enabled": { "type": "boolean" },
     "token_issuance_enabled": { "type": "boolean" },
     "storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "account_system": { "$ref": "#/$defs/accountSystem" },
     "identity_modes": {
       "type": "array",
       "items": { "$ref": "#/$defs/identityMode" },
@@ -62,9 +65,60 @@
         "required_scopes": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
       }
     },
+    "payout_policy": { "$ref": "#/$defs/payoutPolicy" },
     "blocking_reasons": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
   },
   "$defs": {
+    "accountSystem": {
+      "type": "object",
+      "required": [
+        "owner",
+        "provider_project",
+        "integration_role",
+        "shared_across_team_silvortex_apps",
+        "kyuubiki_product_scope",
+        "hosted_center_store_account_plane",
+        "kyuubiki_account_storage",
+        "interactive_flow",
+        "self_hosted_store_account_dependency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "owner": { "const": "Team Silvortex" },
+        "provider_project": { "const": "official-website" },
+        "integration_role": { "type": "string", "minLength": 1 },
+        "shared_across_team_silvortex_apps": { "type": "boolean" },
+        "kyuubiki_product_scope": { "type": "string", "minLength": 1 },
+        "hosted_center_store_account_plane": { "type": "string", "minLength": 1 },
+        "kyuubiki_account_storage": { "type": "string", "minLength": 1 },
+        "interactive_flow": { "type": "string", "minLength": 1 },
+        "self_hosted_store_account_dependency": { "type": "string", "minLength": 1 }
+      }
+    },
+    "payoutPolicy": {
+      "type": "object",
+      "required": [
+        "eligible_resource_kinds",
+        "eligibility_requirements",
+        "payout_basis",
+        "metered_downloads_only"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eligible_resource_kinds": {
+          "type": "array",
+          "items": { "enum": ["operator", "workflow_template"] },
+          "minItems": 1
+        },
+        "eligibility_requirements": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "payout_basis": { "type": "string", "minLength": 1 },
+        "metered_downloads_only": { "type": "boolean" }
+      }
+    },
     "identityMode": {
       "type": "object",
       "required": ["id", "status", "clients"],

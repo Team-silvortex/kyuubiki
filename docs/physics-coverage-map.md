@@ -192,11 +192,16 @@ provide `frequency_hz` and `participation_norm` directly, while aliases such as
 `modal_mass_total` are normalized into the same quality fields.
 
 The dynamic line extends that optimization path to harmonic and transient
-spring responses through `transform.score_dynamic_quality`. It reports peak
-frequency, velocity, acceleration, watch/missing counts, dominant terms, and
-blocking terms so automated sweeps can explain why a dynamic candidate is held.
-Harmonic response entries can use aliases such as `freq_hz`,
-`displacement_amplitude`, `acceleration_amplitude`, and `force_amplitude`.
+spring responses through `transform.evaluate_dynamic_guard`,
+`transform.benchmark_dynamic_pair`, and `transform.score_dynamic_quality`.
+Dynamic guards can hold a candidate by visible frequency, displacement,
+velocity, acceleration, or force rules; pairwise benchmarks can compare two
+dynamic candidates before the workflow commits to a next-round design; quality
+scoring reports peak frequency, velocity, acceleration, watch/missing counts,
+dominant terms, and blocking terms so automated sweeps can explain why a
+dynamic candidate is held. Harmonic response entries can use aliases such as
+`freq_hz`, `displacement_amplitude`, `acceleration_amplitude`, and
+`force_amplitude`.
 The solver-side `dynamic_spring_closed_form.rs` regression now keeps
 single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
 including load-scaling, near-resonance damping-scaling, and undamped
@@ -248,6 +253,11 @@ output next to the next-round cases.
 The Rust engine and Web/Elixir workflow runtime both expose these domain
 quality score transforms, so GUI-driven workflows and headless SDK paths can
 share the same optimization contract instead of depending on UI-only logic.
+Web workflow quality, guard, and benchmark paths now share a domain metric
+resolver for common solver aliases, derived spans, modal mode arrays, dynamic
+frequency responses, and transient node summaries. New physics runtimes should
+reuse that resolver instead of hand-parsing summary fields inside UI-facing
+operators.
 
 That variety is what prevents operator SDK work from hard-coding a single
 physics family, and it prevents executable task files from becoming too narrow.

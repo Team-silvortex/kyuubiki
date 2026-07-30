@@ -97,6 +97,10 @@ The repository now keeps validation split by responsibility.
   `cargo llvm-cov` and writes `tmp/coverage/rust/lcov.info` by default. Use
   `PACKAGE=<crate>` and `TEST_FILTER=<filter>` for small probes before running
   the full Rust workspace lane.
+- `make coverage-frontend`
+  Runs frontend unit tests through Node's built-in test coverage mode and
+  writes raw V8 coverage JSON under `tmp/coverage/frontend/v8` by default. Use
+  `FILTER=<domain>` for a smaller probe before running all frontend unit tests.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
   audits for the frontend and desktop packages, then RustSec `cargo audit` for

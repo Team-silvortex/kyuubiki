@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowDomainMetricResolver
+
   def extract_electrostatic_result_diagnostics(payload, config)
       when is_map(payload) and is_map(config) do
     with {:ok, nodes} <- fetch_list(payload, Map.get(config, "node_source", "nodes")),
@@ -501,10 +503,7 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
   end
 
   defp fetch_numeric_field(entry, field) when is_map(entry) and is_binary(field) do
-    case Map.get(entry, field) do
-      value when is_number(value) -> {:ok, value * 1.0}
-      _ -> :error
-    end
+    WorkflowDomainMetricResolver.fetch_metric(entry, field)
   end
 
   defp fetch_numeric_field(_entry, _field), do: :error

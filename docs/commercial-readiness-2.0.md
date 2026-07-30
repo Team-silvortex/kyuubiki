@@ -263,6 +263,41 @@ Evidence docs:
 - [navigation-matrix.html](navigation-matrix.html)
 - [troubleshooting.md](troubleshooting.md)
 
+## 9. Team Silvortex Store And Account Boundary
+
+Required:
+
+- Kyuubiki is documented as a Team Silvortex application with shared hosted
+  account identity across Team Silvortex apps
+- the Team Silvortex official website project owns the hosted account system,
+  and Kyuubiki only integrates as an OIDC client and policy consumer
+- open-source self-hosted store support remains available without requiring the
+  hosted Team Silvortex account plane
+- hosted center-store monetization is scoped to operators and workflow
+  templates unless policy explicitly changes
+- free monthly download allowance, subscription entitlement, publisher
+  eligibility, legal payment method, and proportional download-share payout are
+  represented as explicit contracts
+- account, billing, quota, fraud, tax, and payout internals stay outside the
+  Kyuubiki runtime repository
+
+Acceptable limitation:
+
+- the official-website-hosted Team Silvortex account and billing integration
+  can remain preview or planned while self-hosted store contracts are still
+  usable
+
+Blocker:
+
+- self-hosted research deployments require closed-source hosted billing or
+  account services to run local operator and workflow-template catalogs
+
+Evidence docs:
+
+- [team-silvortex-store-model.md](team-silvortex-store-model.md)
+- [central-server-components.md](central-server-components.md)
+- [operator-library-centralization.md](operator-library-centralization.md)
+
 ## 2.0 Exit Statement
 
 Kyuubiki can call `2.0` commercially ready only when this sentence is true:

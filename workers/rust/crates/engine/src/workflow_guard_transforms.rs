@@ -31,6 +31,15 @@ pub fn evaluate_modal_guard(payload: Value, config: Value) -> Result<Value, Stri
     evaluate_threshold_guard(payload, config, "transform.evaluate_modal_guard", "modal")
 }
 
+pub fn evaluate_dynamic_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_dynamic_guard",
+        "dynamic",
+    )
+}
+
 pub fn evaluate_electrostatic_guard(payload: Value, config: Value) -> Result<Value, String> {
     evaluate_threshold_guard(
         payload,
@@ -91,6 +100,15 @@ pub fn benchmark_acoustic_pair(payload: Value, config: Value) -> Result<Value, S
 
 pub fn benchmark_modal_pair(payload: Value, config: Value) -> Result<Value, String> {
     benchmark_pair(payload, config, "transform.benchmark_modal_pair", "modal")
+}
+
+pub fn benchmark_dynamic_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_dynamic_pair",
+        "dynamic",
+    )
 }
 
 pub fn benchmark_electrostatic_pair(payload: Value, config: Value) -> Result<Value, String> {

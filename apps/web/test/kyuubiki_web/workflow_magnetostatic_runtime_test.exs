@@ -90,7 +90,7 @@ defmodule KyuubikiWeb.WorkflowMagnetostaticRuntimeTest do
     assert {:ok, guard} =
              WorkflowOperatorRuntime.run_transform_operator(
                "transform.evaluate_magnetostatic_guard",
-               %{"magnetostatic_field_peak_magnitude" => 13.0, "total_stored_energy" => 9.5},
+               %{"h_peak" => 13.0, "total_stored_energy" => 9.5},
                %{
                  "rules" => [
                    %{
@@ -116,11 +116,11 @@ defmodule KyuubikiWeb.WorkflowMagnetostaticRuntimeTest do
                "transform.benchmark_magnetostatic_pair",
                %{
                  "left" => %{
-                   "magnetostatic_field_peak_magnitude" => 11.0,
+                   "h_peak" => 11.0,
                    "total_stored_energy" => 7.0
                  },
                  "right" => %{
-                   "magnetostatic_field_peak_magnitude" => 13.0,
+                   "h_peak" => 13.0,
                    "total_stored_energy" => 9.5
                  }
                },

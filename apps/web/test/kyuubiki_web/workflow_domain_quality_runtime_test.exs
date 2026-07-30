@@ -14,13 +14,121 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
           "transform.score_cfd_quality",
           "transform.score_transport_quality",
           "transform.score_acoustic_quality",
-          "transform.score_modal_quality"
+          "transform.score_modal_quality",
+          "transform.score_dynamic_quality"
         ] do
       assert {:ok, %{"operator" => operator}} = WorkflowOperatorCatalog.fetch(operator_id)
       assert operator["kind"] == "transform"
       assert "quality" in operator["capability_tags"]
       assert "headless_safe" in operator["capability_tags"]
     end
+  end
+
+  test "scores dynamic quality through web runtime" do
+    assert {:ok, quality} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_dynamic_quality",
+               %{
+                 "peak_frequency_hz" => 32.0,
+                 "max_displacement" => 0.012,
+                 "max_acceleration" => 180.0,
+                 "max_force" => 3200.0
+               },
+               %{
+                 "targets" => %{
+                   "peak_frequency_hz" => 25.0,
+                   "max_displacement" => 0.02,
+                   "max_acceleration" => 250.0,
+                   "max_force" => 5000.0
+                 },
+                 "max_ready_score" => 8.0
+               }
+             )
+
+    assert quality["dynamic_quality_contract"] == "kyuubiki.dynamic_quality_score/v1"
+    assert quality["dynamic_quality_ready"] == true
+    assert quality["dynamic_quality_missing_metric_count"] == 0
+    assert quality["dynamic_quality_watch_count"] == 0
+    assert quality["dynamic_quality_term_count"] == 4
+    assert quality["dynamic_quality_peak_frequency_hz"] == 32.0
+    assert quality["dynamic_quality_blocking_terms"] == []
+  end
+
+  test "derives dynamic quality from harmonic frequency aliases through web runtime" do
+    assert {:ok, quality} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_dynamic_quality",
+               %{
+                 "frequencies" => [
+                   %{
+                     "freq_hz" => 5.0,
+                     "displacement_amplitude" => 0.01,
+                     "acceleration_amplitude" => 25.0,
+                     "force_amplitude" => 100.0
+                   },
+                   %{
+                     "freq_hz" => 12.0,
+                     "displacement_amplitude" => 0.03,
+                     "acceleration_amplitude" => 180.0,
+                     "force_amplitude" => 450.0
+                   },
+                   %{
+                     "freq_hz" => 30.0,
+                     "displacement_amplitude" => 0.02,
+                     "acceleration_amplitude" => 220.0,
+                     "force_amplitude" => 390.0
+                   }
+                 ]
+               },
+               %{
+                 "targets" => %{
+                   "peak_frequency_hz" => 10.0,
+                   "max_displacement" => 0.05,
+                   "max_acceleration" => 300.0,
+                   "max_force" => 1000.0
+                 }
+               }
+             )
+
+    assert quality["dynamic_quality_ready"] == true
+    assert quality["dynamic_quality_missing_metric_count"] == 0
+    assert quality["dynamic_quality_peak_frequency_hz"] == 12.0
+    assert quality["dynamic_quality_max_displacement"] == 0.03
+    assert quality["dynamic_quality_max_force"] == 450.0
+  end
+
+  test "derives dynamic quality from transient node aliases and enabled terms" do
+    assert {:ok, quality} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_dynamic_quality",
+               %{
+                 "nodes" => [
+                   %{"id" => "fixed", "ux" => 0.0, "vx" => 0.0, "ax" => 0.0},
+                   %{"id" => "tip", "ux" => -0.012, "vx" => 0.8, "ax" => -12.0}
+                 ],
+                 "max_force" => 150.0
+               },
+               %{
+                 "enabled_terms" => [
+                   "max_displacement",
+                   "max_velocity",
+                   "max_acceleration",
+                   "max_force"
+                 ],
+                 "targets" => %{
+                   "max_displacement" => 0.02,
+                   "max_velocity" => 1.0,
+                   "max_acceleration" => 20.0,
+                   "max_force" => 300.0
+                 }
+               }
+             )
+
+    assert quality["dynamic_quality_ready"] == true
+    assert quality["dynamic_quality_missing_metric_count"] == 0
+    assert quality["dynamic_quality_term_count"] == 4
+    assert quality["dynamic_quality_max_velocity"] == 0.8
+    assert quality_term_value(quality, "max_velocity") == 0.8
   end
 
   test "scores thermal quality with configurable targets and weights" do
@@ -54,6 +162,8 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
     assert quality["structural_quality_ready"] == false
     assert quality["structural_quality_grade"] == "block"
     assert quality["structural_quality_missing_metric_count"] == 2
+    assert Enum.any?(quality["structural_quality_blocking_terms"], &(&1["field"] == "mass"))
+    assert is_map(quality["structural_quality_dominant_term"])
   end
 
   test "derives modal and cfd span fields when summaries expose min and max values" do
@@ -92,6 +202,77 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
     assert Enum.find(cfd_quality["cfd_quality_terms"], &(&1["field"] == "cfd_velocity_span"))[
              "value"
            ] == 1.0
+  end
+
+  test "scores domain quality aliases aligned with engine contracts" do
+    cases = [
+      {"structural", "transform.score_structural_quality",
+       %{
+         "peak_displacement" => 0.01,
+         "von_mises_peak" => 120.0,
+         "structure_mass" => 10.0,
+         "stability_margin" => 1.4
+       }},
+      {"thermal", "transform.score_thermal_quality",
+       %{
+         "temperature_max" => 70.0,
+         "temperature_min" => 20.0,
+         "max_heat_flux" => 10.0,
+         "thermal_stress_peak" => 120.0
+       }},
+      {"electrostatic", "transform.score_electrostatic_quality",
+       %{
+         "peak_electric_field" => 5.0,
+         "peak_energy_density" => 0.4,
+         "potential_max" => 4.0,
+         "potential_min" => 1.0
+       }},
+      {"magnetostatic", "transform.score_magnetostatic_quality",
+       %{
+         "h_peak" => 6.0,
+         "b_peak" => 8.0,
+         "magnetic_energy_density_peak" => 2.0,
+         "current_density_total" => 4.0
+       }},
+      {"acoustic", "transform.score_acoustic_quality",
+       %{
+         "peak_spl_db" => 70.0,
+         "peak_acoustic_intensity" => 0.1,
+         "peak_pressure" => 0.5,
+         "damping_loss_total" => 0.2
+       }},
+      {"modal", "transform.score_modal_quality",
+       %{
+         "modes" => [
+           %{"frequency_hz" => 40.0, "participation_norm" => 1.0},
+           %{"frequency_hz" => 140.0}
+         ],
+         "modal_mass_total" => 10.0
+       }},
+      {"cfd", "transform.score_cfd_quality",
+       %{
+         "max_divergence_error" => 0.02,
+         "re_peak" => 5.0,
+         "dissipation_total" => 0.5,
+         "velocity_span" => 1.0,
+         "pressure_span" => 2.0
+       }},
+      {"transport", "transform.score_transport_quality",
+       %{
+         "peak_transport_flux" => 0.75,
+         "peak_peclet" => 100.0,
+         "concentration_max" => 1.0,
+         "concentration_min" => 0.2,
+         "net_source" => 1.0
+       }}
+    ]
+
+    for {domain, operator_id, payload} <- cases do
+      assert {:ok, quality} =
+               WorkflowOperatorRuntime.run_transform_operator(operator_id, payload, %{})
+
+      assert quality["#{domain}_quality_missing_metric_count"] == 0
+    end
   end
 
   test "runs domain quality scores into a composite objective inside graph runner" do
@@ -231,5 +412,11 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
       "artifact_type" => "report/summary",
       "dataset_value" => dataset_value
     }
+  end
+
+  defp quality_term_value(quality, field) do
+    quality["dynamic_quality_terms"]
+    |> Enum.find(&(&1["field"] == field))
+    |> Map.fetch!("value")
   end
 end

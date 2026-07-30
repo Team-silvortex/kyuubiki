@@ -205,7 +205,7 @@ defmodule KyuubikiWeb.WorkflowOperatorSummaryRuntimeTest do
 
   test "evaluates thermal guard thresholds into pass warn block states" do
     payload = %{
-      "thermal_temperature_max" => 120.0,
+      "temperature_max" => 120.0,
       "thermal_peak_flux_magnitude" => 14.0,
       "thermo_peak_stress" => 210.0
     }
@@ -247,12 +247,12 @@ defmodule KyuubikiWeb.WorkflowOperatorSummaryRuntimeTest do
   test "benchmarks coupled heat pairs with weighted criteria" do
     payload = %{
       "left" => %{
-        "thermal_temperature_max" => 80.0,
+        "temperature_max" => 80.0,
         "thermal_peak_flux_magnitude" => 10.0,
         "thermal_loaded_node_count" => 3.0
       },
       "right" => %{
-        "thermo_temperature_delta_max" => 75.0,
+        "max_temperature_delta" => 75.0,
         "thermo_peak_stress" => 140.0,
         "thermo_heated_node_count" => 2.0
       }

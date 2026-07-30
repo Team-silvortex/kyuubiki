@@ -44,6 +44,8 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.evaluate_modal_guard",
     "transform.benchmark_modal_pair",
     "transform.score_modal_quality",
+    "transform.evaluate_dynamic_guard",
+    "transform.benchmark_dynamic_pair",
     "transform.score_dynamic_quality",
     "transform.evaluate_structural_guard",
     "transform.benchmark_structural_pair",
@@ -324,6 +326,8 @@ pub fn run_transform_operator(
         | "transform.evaluate_modal_guard"
         | "transform.benchmark_modal_pair"
         | "transform.score_modal_quality"
+        | "transform.evaluate_dynamic_guard"
+        | "transform.benchmark_dynamic_pair"
         | "transform.score_dynamic_quality"
         | "transform.evaluate_structural_guard"
         | "transform.benchmark_structural_pair"

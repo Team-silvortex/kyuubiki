@@ -3,7 +3,15 @@
   "$id": "https://kyuubiki.dev/schemas/central-session-policy.schema.json",
   "title": "Kyuubiki central session policy",
   "type": "object",
-  "required": ["schema_version", "status", "current_auth", "planned_auth", "session_rules"],
+  "required": [
+    "schema_version",
+    "status",
+    "current_auth",
+    "account_system",
+    "identity_integration",
+    "planned_auth",
+    "session_rules"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": "kyuubiki.central-session-policy/v1" },
@@ -17,6 +25,8 @@
         "descriptor": { "type": "object" }
       }
     },
+    "account_system": { "$ref": "#/$defs/accountSystem" },
+    "identity_integration": { "$ref": "#/$defs/identityIntegration" },
     "planned_auth": {
       "type": "array",
       "items": {
@@ -35,6 +45,8 @@
       "type": "object",
       "required": [
         "store_download_requires_session",
+        "hosted_store_download_requires_session",
+        "self_hosted_store_requires_team_silvortex_account",
         "publish_requires_session",
         "agent_registration_requires_cluster_identity",
         "credential_storage"
@@ -42,9 +54,80 @@
       "additionalProperties": false,
       "properties": {
         "store_download_requires_session": { "type": "boolean" },
+        "hosted_store_download_requires_session": { "type": "boolean" },
+        "self_hosted_store_requires_team_silvortex_account": { "type": "boolean" },
         "publish_requires_session": { "type": "boolean" },
         "agent_registration_requires_cluster_identity": { "type": "boolean" },
         "credential_storage": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "identityIntegration": {
+      "type": "object",
+      "required": [
+        "provider_project",
+        "client_role",
+        "issuer_discovery_path",
+        "client_registration",
+        "interactive_flow",
+        "required_request_checks",
+        "allowed_scopes",
+        "token_storage",
+        "forbidden_flows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider_project": { "const": "official-website" },
+        "client_role": { "const": "kyuubiki_oidc_client" },
+        "issuer_discovery_path": { "const": "/.well-known/openid-configuration" },
+        "client_registration": { "const": "reviewed_static_registration" },
+        "interactive_flow": { "const": "authorization_code_pkce" },
+        "required_request_checks": {
+          "type": "array",
+          "items": { "enum": ["exact_redirect_uri", "state", "nonce", "pkce_s256"] },
+          "minItems": 4,
+          "uniqueItems": true
+        },
+        "allowed_scopes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "token_storage": { "const": "platform_keychain_or_memory_only" },
+        "forbidden_flows": {
+          "type": "array",
+          "items": { "enum": ["password_grant", "dynamic_client_registration"] },
+          "minItems": 2,
+          "uniqueItems": true
+        }
+      }
+    },
+    "accountSystem": {
+      "type": "object",
+      "required": [
+        "owner",
+        "provider_project",
+        "integration_role",
+        "shared_across_team_silvortex_apps",
+        "kyuubiki_product_scope",
+        "hosted_center_store_account_plane",
+        "kyuubiki_account_storage",
+        "interactive_flow",
+        "self_hosted_store_account_dependency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "owner": { "const": "Team Silvortex" },
+        "provider_project": { "const": "official-website" },
+        "integration_role": { "type": "string", "minLength": 1 },
+        "shared_across_team_silvortex_apps": { "type": "boolean" },
+        "kyuubiki_product_scope": { "type": "string", "minLength": 1 },
+        "hosted_center_store_account_plane": { "type": "string", "minLength": 1 },
+        "kyuubiki_account_storage": { "type": "string", "minLength": 1 },
+        "interactive_flow": { "type": "string", "minLength": 1 },
+        "self_hosted_store_account_dependency": { "type": "string", "minLength": 1 }
       }
     }
   }

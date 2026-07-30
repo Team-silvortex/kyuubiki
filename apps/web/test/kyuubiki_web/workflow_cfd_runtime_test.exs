@@ -63,7 +63,7 @@ defmodule KyuubikiWeb.WorkflowCfdRuntimeTest do
     assert {:ok, guard} =
              WorkflowOperatorRuntime.run_transform_operator(
                "transform.evaluate_cfd_guard",
-               %{"cfd_divergence_error_peak" => 0.08, "cfd_reynolds_number_peak" => 12.0},
+               %{"divergence_peak" => 0.08, "re_peak" => 12.0},
                %{
                  "rules" => [
                    %{
@@ -87,12 +87,12 @@ defmodule KyuubikiWeb.WorkflowCfdRuntimeTest do
                "transform.benchmark_cfd_pair",
                %{
                  "left" => %{
-                   "cfd_divergence_error_peak" => 0.03,
-                   "cfd_reynolds_number_peak" => 8.0
+                   "divergence_peak" => 0.03,
+                   "re_peak" => 8.0
                  },
                  "right" => %{
-                   "cfd_divergence_error_peak" => 0.08,
-                   "cfd_reynolds_number_peak" => 12.0
+                   "divergence_peak" => 0.08,
+                   "re_peak" => 12.0
                  }
                },
                %{

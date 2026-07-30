@@ -89,7 +89,8 @@
     "config/architecture/module-function-coverage-tensor.json",
     "config/architecture/module-topology.json",
     "config/architecture/contracts-runtime-api-surface.json",
-    "docs/central-server-components.md"
+    "docs/central-server-components.md",
+    "docs/team-silvortex-store-model.md"
   ],
   "text_checks": [
     { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/catalog", "label": "router catalog route" },
@@ -172,6 +173,25 @@
     { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
     { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
     { "file": "workers/rust/crates/script-runner/src/module_function_tensor.rs", "text": "maturity_gap_count", "label": "scoped tensor maturity gap count" },
-    { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" }
+    { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "team_silvortex_account_system", "label": "central Team Silvortex shared account policy" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "proportional_download_share", "label": "central publisher download-share payout policy" },
+    { "file": "schemas/central-publish-policy.schema.json", "text": "commercialModel", "label": "central publish commercial model schema" },
+    { "file": "schemas/central-publisher-policy.schema.json", "text": "payoutPolicy", "label": "central publisher payout policy schema" },
+    { "file": "docs/team-silvortex-store-model.md", "text": "Team Silvortex account", "label": "Team Silvortex account model docs" },
+    { "file": "docs/team-silvortex-store-model.md", "text": "official website account project", "label": "Team Silvortex official website account owner docs" },
+    { "file": "docs/team-silvortex-store-model.md", "text": "open-source self-hosted store", "label": "Team Silvortex self-host store docs" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "official-website", "label": "central account provider project" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "kyuubiki_oidc_client", "label": "central account integration role" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "identity_integration", "label": "central identity integration policy" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "password_grant", "label": "central identity forbidden password grant" },
+    { "file": "schemas/central-session-policy.schema.json", "text": "official-website", "label": "central session account provider schema" },
+    { "file": "schemas/central-session-policy.schema.json", "text": "identityIntegration", "label": "central session identity integration schema" },
+    { "file": "schemas/central-session-policy.schema.json", "text": "authorization_code_pkce", "label": "central session PKCE flow schema" },
+    { "file": "schemas/central-publisher-policy.schema.json", "text": "official-website", "label": "central publisher account provider schema" },
+    { "file": "docs/team-silvortex-store-model.md", "text": "password grants", "label": "Team Silvortex forbidden password grant docs" },
+    { "file": "docs/central-server-components.md", "text": "official website project", "label": "central docs shared account boundary" },
+    { "file": "docs/central-server-components.md", "text": "identity_integration", "label": "central docs identity integration contract" },
+    { "file": "docs/operator-library-centralization.md", "text": "Team Silvortex center store", "label": "operator docs center store boundary" }
   ]
 }

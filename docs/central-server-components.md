@@ -5,6 +5,12 @@ server. The central server is not the solver engine and not the desktop Hub. It
 is the distribution and identity plane that can later back hosted stores,
 publisher accounts, language-pack delivery, and signed downloads.
 
+Kyuubiki is a Team Silvortex application. The hosted center store can integrate
+with the Team Silvortex official website account system for login, quota,
+billing, and publisher payouts, but Kyuubiki does not own that account system
+and that hosted account plane is not required for open-source self-hosted
+Kyuubiki store deployments.
+
 The website service belongs to this central-server surface. It is a deployable
 web/API face of the same `apps/web` control-plane workload, not a separate
 top-level module and not an independent product shell. Hosted Kyuubiki and
@@ -176,6 +182,21 @@ The current auth mode remains local orchestra token auth. The central session
 policy explicitly marks hosted login as preview/planned instead of pretending a
 real account system exists.
 
+The hosted account boundary is shared Team Silvortex account system territory
+owned by the official website project: account lifecycle, OIDC provider
+behavior, billing identity, subscription entitlement, legal payment method
+checks, fraud controls, tax, and payout execution belong to that hosted service
+plane. Kyuubiki consumes it as a reviewed OIDC client and policy consumer. The
+open-source self-hosted store surface keeps the same catalog, policy,
+provenance, and readiness contracts without requiring a Team Silvortex account.
+
+The central session policy also exposes Kyuubiki's own
+`identity_integration` contract for that client role: OIDC discovery through
+`/.well-known/openid-configuration`, authorization-code with PKCE, exact
+redirect URI enforcement, `state`, `nonce`, `pkce_s256`, platform keychain or
+memory-only token storage, and explicit rejection of password grants or dynamic
+client registration.
+
 Planned providers:
 
 - OIDC for Hub, Workbench, and SDK login.
@@ -191,3 +212,5 @@ memory-only for sensitive active-session material.
 - It does not replace agent-orchestra authority rules.
 - It does not make each agent mirror the whole operator library.
 - It does not introduce publisher trust without signatures and provenance.
+- It does not ship hosted Team Silvortex billing, quota, or payout internals in
+  the open-source runtime.

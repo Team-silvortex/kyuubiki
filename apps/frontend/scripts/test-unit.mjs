@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_ROOT = path.join(ROOT, "test");
+const COVERAGE_DIR = process.env.KYUUBIKI_FRONTEND_COVERAGE_DIR?.trim();
 const DOMAIN_FILTERS = process.argv
   .slice(2)
   .map((filter) => filter.trim().toLowerCase())
@@ -45,18 +46,31 @@ if (testFiles.length === 0) {
   process.exit(1);
 }
 
+const nodeArgs = [
+  "--import",
+  "./test/support/register-alias-loader.mjs",
+  ...(COVERAGE_DIR
+    ? [
+        "--experimental-test-coverage",
+        "--test-coverage-include=src/**/*.ts",
+        "--test-coverage-include=src/**/*.tsx",
+        "--test-coverage-exclude=src/**/*.d.ts",
+      ]
+    : []),
+  "--test",
+  ...testFiles,
+];
+
 const result = spawnSync(
   "node",
-  [
-    "--import",
-    "./test/support/register-alias-loader.mjs",
-    "--test",
-    ...testFiles,
-  ],
+  nodeArgs,
   {
     cwd: ROOT,
     stdio: "inherit",
-    env: process.env,
+    env: {
+      ...process.env,
+      ...(COVERAGE_DIR ? { NODE_V8_COVERAGE: path.resolve(ROOT, COVERAGE_DIR) } : {}),
+    },
   },
 );
 

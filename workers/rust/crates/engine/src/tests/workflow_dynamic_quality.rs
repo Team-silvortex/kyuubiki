@@ -1,6 +1,8 @@
 use crate::{
-    dynamic_quality::score_dynamic_quality, run_workflow_graph,
+    dynamic_quality::score_dynamic_quality,
+    run_workflow_graph,
     workflow_executor::run_transform_operator,
+    workflow_guard_transforms::{benchmark_dynamic_pair, evaluate_dynamic_guard},
 };
 use kyuubiki_protocol::{
     WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode,
@@ -14,6 +16,66 @@ fn approx_eq(left: Option<f64>, right: f64) {
         (value - right).abs() < 1.0e-9,
         "left={value}, right={right}"
     );
+}
+
+#[test]
+fn evaluates_dynamic_guard_with_response_threshold_rules() {
+    let guard = evaluate_dynamic_guard(
+        serde_json::json!({
+            "peak_frequency_hz": 18.0,
+            "max_displacement": 0.035,
+            "max_acceleration": 190.0,
+            "max_force": 1800.0
+        }),
+        serde_json::json!({
+            "rules": [
+                { "field": "peak_frequency_hz", "comparison": "lt", "threshold": 20.0, "severity": "warn", "label": "frequency_floor" },
+                { "field": "max_displacement", "comparison": "gt", "threshold": 0.02, "severity": "block", "label": "displacement_limit" }
+            ]
+        }),
+    )
+    .expect("dynamic guard should evaluate");
+
+    assert_eq!(guard["guard_status"].as_str(), Some("block"));
+    assert_eq!(guard["guard_passed"].as_bool(), Some(false));
+    assert_eq!(guard["guard_warn_count"].as_u64(), Some(1));
+    assert_eq!(guard["guard_block_count"].as_u64(), Some(1));
+}
+
+#[test]
+fn benchmarks_dynamic_pair_by_frequency_displacement_and_force() {
+    let benchmark = benchmark_dynamic_pair(
+        serde_json::json!({
+            "left": {
+                "peak_frequency_hz": 42.0,
+                "max_displacement": 0.014,
+                "max_force": 2400.0
+            },
+            "right": {
+                "peak_frequency_hz": 35.0,
+                "max_displacement": 0.010,
+                "max_force": 2600.0
+            }
+        }),
+        serde_json::json!({
+            "left_label": "stiff_dynamic_candidate",
+            "right_label": "light_dynamic_candidate",
+            "criteria": [
+                { "field": "peak_frequency_hz", "goal": "max", "weight": 2.0 },
+                { "field": "max_displacement", "goal": "min", "weight": 1.0 },
+                { "field": "max_force", "goal": "min", "weight": 1.0 }
+            ]
+        }),
+    )
+    .expect("dynamic benchmark should succeed");
+
+    approx_eq(benchmark["stiff_dynamic_candidate_score"].as_f64(), 3.0);
+    approx_eq(benchmark["light_dynamic_candidate_score"].as_f64(), 1.0);
+    assert_eq!(
+        benchmark["benchmark_winner"].as_str(),
+        Some("stiff_dynamic_candidate")
+    );
+    assert_eq!(benchmark["benchmark_criteria_count"].as_u64(), Some(3));
 }
 
 #[test]
@@ -136,6 +198,42 @@ fn blocks_dynamic_quality_when_required_metrics_are_missing() {
         3
     );
     assert_eq!(quality["dynamic_quality_grade"].as_str(), Some("block"));
+}
+
+#[test]
+fn runs_dynamic_guard_and_benchmark_through_transform_executor() {
+    let guard = run_transform_operator(
+        "transform.evaluate_dynamic_guard",
+        serde_json::json!({
+            "max_displacement": 0.012
+        }),
+        serde_json::json!({
+            "rules": [
+                { "field": "max_displacement", "comparison": "gt", "threshold": 0.02, "severity": "block" }
+            ]
+        }),
+    )
+    .expect("dynamic guard should run through executor");
+
+    assert_eq!(guard["guard_status"].as_str(), Some("pass"));
+    assert_eq!(guard["guard_passed"].as_bool(), Some(true));
+
+    let benchmark = run_transform_operator(
+        "transform.benchmark_dynamic_pair",
+        serde_json::json!({
+            "left": { "peak_frequency_hz": 40.0 },
+            "right": { "peak_frequency_hz": 32.0 }
+        }),
+        serde_json::json!({
+            "criteria": [
+                { "field": "peak_frequency_hz", "goal": "max", "weight": 2.0 }
+            ]
+        }),
+    )
+    .expect("dynamic benchmark should run through executor");
+
+    approx_eq(benchmark["left_score"].as_f64(), 2.0);
+    approx_eq(benchmark["right_score"].as_f64(), 0.0);
 }
 
 #[test]
