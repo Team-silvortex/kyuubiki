@@ -257,7 +257,10 @@ Rust engine and Web workflow quality, guard, and benchmark paths now share the
 same domain metric resolver contract for common solver aliases, derived spans,
 modal mode arrays, dynamic frequency responses, and transient node summaries.
 New physics runtimes should reuse that resolver shape instead of hand-parsing
-summary fields inside UI-facing or headless operators.
+summary fields inside UI-facing or headless operators. Run
+`make check-workflow-metric-resolver-contract` when adding a cross-domain
+metric field, a domain quality mirror, or a quality term signature; the check is
+also part of `make check-operator-reliability`.
 
 That variety is what prevents operator SDK work from hard-coding a single
 physics family, and it prevents executable task files from becoming too narrow.

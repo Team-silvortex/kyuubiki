@@ -111,6 +111,7 @@ mod workflow_mesh;
 mod workflow_mesh_index;
 mod workflow_mesh_remote;
 mod workflow_mesh_summary;
+mod workflow_metric_resolver_contract;
 
 type RunnerResult<T> = Result<T, String>;
 

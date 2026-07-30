@@ -10,6 +10,7 @@ use crate::{
     operator_task_ir_contract, project_organization_audit, test_coverage_posture,
     toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
+    workflow_metric_resolver_contract,
 };
 use std::ffi::OsString;
 use std::path::Path;
@@ -94,6 +95,11 @@ pub(crate) fn run_governance_command(
         }
         "check-workflow-dataset-contract" => {
             workflow_dataset_contract::run_check_workflow_dataset_contract(root, args)
+        }
+        "check-workflow-metric-resolver-contract" => {
+            workflow_metric_resolver_contract::run_check_workflow_metric_resolver_contract(
+                root, args,
+            )
         }
         "check-materialization-plan-contract" => {
             materialization_plan_contract::run_check_materialization_plan_contract(root, args)

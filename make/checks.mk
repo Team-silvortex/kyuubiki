@@ -1,7 +1,7 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust coverage-frontend check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch draft-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-usability-release-gate build-usability-readiness-report check-version-line
-.PHONY: check-workflow-dataset-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
+.PHONY: check-workflow-dataset-contract check-workflow-metric-resolver-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
 .PHONY: capture-line-field-qualification-provenance capture-line-field-qualification-release-evidence capture-beam-frame-qualification-release-evidence
@@ -163,6 +163,10 @@ check-version-line:
 check-workflow-dataset-contract:
 	@$(ENTRYPOINT) check-workflow-dataset-contract --self-test
 	@$(ENTRYPOINT) check-workflow-dataset-contract
+
+check-workflow-metric-resolver-contract:
+	@$(ENTRYPOINT) check-workflow-metric-resolver-contract --self-test
+	@$(ENTRYPOINT) check-workflow-metric-resolver-contract
 
 check-material-card-contract:
 	@$(ENTRYPOINT) check-material-card-contract --self-test
@@ -442,7 +446,7 @@ remote-material-research-summary:
 	@$(ENTRYPOINT) check-remote-material-stage-health --self-test
 	@$(ENTRYPOINT) check-remote-material-stage-health
 
-check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision check-operator-qualification-release-records
+check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-workflow-metric-resolver-contract check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision check-operator-qualification-release-records
 	@$(ENTRYPOINT) check-operator-reliability
 
 audit-rust-lines:

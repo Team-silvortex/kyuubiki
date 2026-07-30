@@ -146,7 +146,7 @@
           "validate_approved_promotion_summary",
           "validate_review_decision_path",
           "validate_review_status_transition",
-          "check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision check-operator-qualification-release-records",
+          "check-operator-reliability: check-operator-reliability-rules check-operator-reliability-schemas check-workflow-metric-resolver-contract check-line-field-closed-form-baseline build-operator-qualification-readiness check-operator-qualification-review-decision check-operator-qualification-release-records",
           "check-operator-qualification-release-records",
           "qualificationPromotionErrors",
           "release record must be approved before qualification",

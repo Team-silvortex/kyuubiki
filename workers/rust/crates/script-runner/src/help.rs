@@ -70,6 +70,7 @@ lab remote-ssh-fixture\n  \
   check-gui-runtime-capability-contract\n  \
   check-usability-release-gate\n  \
   check-workflow-dataset-contract\n  \
+  check-workflow-metric-resolver-contract\n  \
   check-material-card-contract\n  \
   check-materialization-plan-contract\n  \
   check-material-study-execution-plan-contract\n  \
