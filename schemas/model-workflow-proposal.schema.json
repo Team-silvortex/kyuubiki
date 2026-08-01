@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.dev/model-workflow-proposal.schema.json",
+  "title": "Kyuubiki Model Workflow Proposal",
+  "description": "An untrusted, provider-neutral workflow proposal produced by a model collaboration adapter. It must be compiled and validated before execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "summary", "calls"],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.model-workflow-proposal/v1"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string"
+    },
+    "calls": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/tool_call"
+      }
+    }
+  },
+  "$defs": {
+    "tool_call": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "payload"],
+      "properties": {
+        "id": {
+          "type": ["string", "null"]
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payload": {
+          "type": "object"
+        },
+        "reason": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

@@ -77,6 +77,8 @@
       "sources": [
         "docs/operator-sdk.md",
         "docs/headless-sdks.md",
+        "docs/model-collaboration-sdk.html",
+        "docs/model-collaboration-sdk.md",
         "docs/ui-automation-contract.html",
         "docs/headless-agent-contract.md"
       ]
@@ -181,6 +183,7 @@
       "docs/moxi-handoff.md",
       "docs/protocols.md",
       "docs/headless-sdks.md",
+      "docs/model-collaboration-sdk.md",
       "docs/operator-sdk.md"
     ]
   }

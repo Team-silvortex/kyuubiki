@@ -1,7 +1,7 @@
 use crate::{
-    action_capability_manifest, all_action_contracts, all_direct_fem_routes,
-    engine_solver_headless_bridge_manifest, list_template_categories, list_templates,
-    material_study_catalog, material_workflow_catalog,
+    ModelCollaborationPolicy, action_capability_manifest, all_action_contracts,
+    all_direct_fem_routes, engine_solver_headless_bridge_manifest, list_template_categories,
+    list_templates, material_study_catalog, material_workflow_catalog, model_collaboration_tools,
 };
 use serde::Serialize;
 
@@ -37,6 +37,7 @@ pub struct HeadlessSdkSurfaceCounts {
     pub template_categories: usize,
     pub material_studies: usize,
     pub material_workflows: usize,
+    pub model_collaboration_tools: usize,
 }
 
 pub fn headless_sdk_surface_manifest() -> HeadlessSdkSurfaceManifest {
@@ -62,6 +63,8 @@ pub fn headless_sdk_surface_counts() -> HeadlessSdkSurfaceCounts {
         template_categories: list_template_categories().len(),
         material_studies: material_study_catalog().len(),
         material_workflows: material_workflow_catalog().len(),
+        model_collaboration_tools: model_collaboration_tools(&ModelCollaborationPolicy::default())
+            .len(),
     }
 }
 
@@ -171,6 +174,17 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
             ],
         },
         HeadlessSdkSurfaceArea {
+            id: "model_collaboration",
+            title: "Model collaboration protocol",
+            role: "Provider-neutral tool projection, response normalization, policy filtering, and safe proposal compilation.",
+            modules: &["model_collaboration", "model_provider_adapters"],
+            anchor_exports: &[
+                "build_model_collaboration_request",
+                "normalize_model_response",
+                "compile_model_proposal",
+            ],
+        },
+        HeadlessSdkSurfaceArea {
             id: "workflow_data",
             title: "Workflow data contracts",
             role: "Batch normalization, dataset preflight, workflow descriptors, and reusable execution document shapes.",
@@ -196,9 +210,9 @@ mod tests {
         headless_sdk_surface_areas, headless_sdk_surface_manifest,
     };
     use crate::{
-        action_capability_manifest, all_action_contracts, all_direct_fem_routes,
-        engine_solver_headless_bridge_manifest, list_templates, material_study_catalog,
-        material_workflow_catalog,
+        ModelCollaborationPolicy, action_capability_manifest, all_action_contracts,
+        all_direct_fem_routes, engine_solver_headless_bridge_manifest, list_templates,
+        material_study_catalog, material_workflow_catalog, model_collaboration_tools,
     };
     use std::collections::BTreeSet;
 
@@ -237,6 +251,10 @@ mod tests {
             manifest.counts.material_workflows,
             material_workflow_catalog().len()
         );
+        assert_eq!(
+            manifest.counts.model_collaboration_tools,
+            model_collaboration_tools(&ModelCollaborationPolicy::default()).len()
+        );
         serde_json::to_value(&manifest).expect("surface manifest should serialize");
     }
 
@@ -250,6 +268,7 @@ mod tests {
         assert!(ids.contains("direct_fem"));
         assert!(ids.contains("operator_task"));
         assert!(ids.contains("material_research"));
+        assert!(ids.contains("model_collaboration"));
         assert!(ids.contains("workflow_data"));
 
         for area in areas {

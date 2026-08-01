@@ -18,6 +18,17 @@ README.
 - `agent-manifest.schema.json` is for local/distributed solver node manifests
 - `language-pack.schema.json` is for Workbench-local and future remotely
   downloadable UI language packs
+- `model-collaboration-session.schema.json` defines the cross-language
+  objective, workflow identity, action/category allow lists, context budget,
+  runtime boundary, and elevated-risk policy used before tools are projected.
+- `examples.model-collaboration-session.json` is a narrow service-only thermal
+  screening session shared by future Rust, Python, and Elixir adapters.
+- `model-workflow-proposal.schema.json` is the provider-neutral, untrusted
+  collaboration proposal emitted after OpenAI, Anthropic, Gemini, or canonical
+  tool calls are normalized. Its calls must pass Headless SDK policy,
+  contract, binding, compatibility, and confirmation planning before execution.
+- `examples.model-workflow-proposal.json` is a non-executing collaboration
+  fixture that checks service health before proposing a bounded thermal solve.
 - `workflow-graph.schema.json` is for headless-first multi-operator workflow
   definitions, including node/edge wiring, typed ports, and portable workflow
   entry/output layout

@@ -140,6 +140,13 @@ Then branch by intent:
   HTML mirror for the retained solver optimization pack.
 - `operator-sdk.md`
   Current extension-contract direction for new operator capabilities.
+- `model-collaboration-sdk.md`
+  Provider-neutral large-model tool projection, response normalization,
+  context redaction, policy filtering, and safe proposal-to-Headless-plan
+  compilation for OpenAI, Anthropic, Gemini, and canonical clients.
+- `model-collaboration-sdk.html`
+  WebView-readable presentation of the same model collaboration boundary and
+  portable session/proposal contracts.
 - `operator-reliability.md`
   Machine-readable reliability manifest policy for solve operators, including
   trust levels, evidence expectations, and the current release minimum coverage

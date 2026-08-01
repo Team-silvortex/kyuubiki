@@ -57,6 +57,10 @@ mod material_structural;
 mod material_study_execution_plan;
 mod material_thermo;
 mod material_workflows;
+mod model_collaboration;
+#[cfg(test)]
+mod model_collaboration_tests;
+mod model_provider_adapters;
 mod operator_task;
 mod operator_task_provenance;
 mod operator_task_readiness;
@@ -235,6 +239,15 @@ pub use material_workflows::{
     MaterialWorkflowCatalogEntry, MaterialWorkflowDescriptor, find_material_workflow,
     material_workflow_catalog, material_workflow_descriptors, search_material_workflow_templates,
 };
+pub use model_collaboration::{
+    MODEL_COLLABORATION_SCHEMA_VERSION, MODEL_PROPOSAL_COMPILATION_SCHEMA_VERSION,
+    MODEL_WORKFLOW_PROPOSAL_SCHEMA_VERSION, ModelCollaborationError, ModelCollaborationPolicy,
+    ModelCollaborationRequest, ModelCollaborationSession, ModelCollaborationTool,
+    ModelProposalCompilation, ModelProvider, ModelToolCall, ModelWorkflowProposal,
+    build_model_collaboration_request, compile_model_proposal, model_collaboration_tools,
+    sanitize_model_context,
+};
+pub use model_provider_adapters::{normalize_model_response, project_model_tools};
 pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
     is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,

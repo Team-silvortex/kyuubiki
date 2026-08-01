@@ -1,0 +1,28 @@
+{
+  "schema_version": "kyuubiki.model-workflow-proposal/v1",
+  "session_id": "session.material-screening.001",
+  "summary": "Check the service before submitting a bounded thermal study.",
+  "calls": [
+    {
+      "id": "model-call-001",
+      "action": "service_health",
+      "payload": {},
+      "reason": "Fail early when the selected control plane is unavailable."
+    },
+    {
+      "id": "model-call-002",
+      "action": "solve_thermal_frame_3d",
+      "payload": {
+        "model": {
+          "mesh": {
+            "source": "project://models/thermal-frame.mesh"
+          },
+          "materials": {
+            "source": "project://materials/screening-set.json"
+          }
+        }
+      },
+      "reason": "Run the requested bounded thermal comparison through a service-backed solver route."
+    }
+  ]
+}

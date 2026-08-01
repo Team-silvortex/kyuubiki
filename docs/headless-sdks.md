@@ -74,8 +74,12 @@ The Rust headless SDK now exposes a machine-readable surface index through
 Treat that manifest as the compact source-of-truth for headless capability
 families: contracts, execution planning, direct FEM routes, templates, Operator
 TaskIR, material research, retained research artifacts, and workflow dataset
-preflight. This is separate from the Rust-only operator SDK used to author and
-package new operators.
+preflight. The same manifest now includes a model-collaboration area that
+projects the authoritative action catalog into OpenAI, Anthropic, Gemini, and
+canonical tools, then compiles untrusted proposals back into the existing
+Headless execution plan. See [model-collaboration-sdk.md](./model-collaboration-sdk.md).
+This is separate from the Rust-only operator SDK used to author and package new
+operators.
 
 Minimal end-to-end examples:
 

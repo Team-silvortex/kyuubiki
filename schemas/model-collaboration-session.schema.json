@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.dev/model-collaboration-session.schema.json",
+  "title": "Kyuubiki Model Collaboration Session",
+  "description": "A provider-neutral planning session that limits which Headless actions a model may propose.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "workflow_id",
+    "objective",
+    "language",
+    "created_at",
+    "policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.model-collaboration/v1"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_actions",
+        "allowed_categories",
+        "max_steps",
+        "max_context_bytes",
+        "service_only",
+        "allow_sensitive",
+        "allow_destructive"
+      ],
+      "properties": {
+        "allowed_actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowed_categories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "max_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "max_context_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10485760
+        },
+        "service_only": {
+          "type": "boolean"
+        },
+        "allow_sensitive": {
+          "type": "boolean"
+        },
+        "allow_destructive": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

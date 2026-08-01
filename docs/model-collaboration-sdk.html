@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model Collaboration SDK</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">moxi 2.x · Model integration</div>
+        <h1>Model Collaboration SDK</h1>
+        <p class="docs-copy">
+          A provider-neutral planning layer that turns model tool calls into
+          untrusted Kyuubiki workflow proposals, then compiles them through the
+          existing Headless validation and confirmation gates.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">OpenAI Responses</span>
+          <span class="docs-chip">OpenAI-compatible Chat</span>
+          <span class="docs-chip">Anthropic</span>
+          <span class="docs-chip">Gemini</span>
+          <span class="docs-chip">Canonical JSON</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch06-sdk-surfaces.html">Back to SDK chapter</a>
+          <a class="docs-link" href="./model-collaboration-sdk.md">Open engineering source</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>One safe flow</h2>
+        <ul class="docs-list">
+          <li>Create a narrow session objective and action policy.</li>
+          <li>Redact context and project the authoritative Headless tools.</li>
+          <li>Send the request through a caller-owned model client.</li>
+          <li>Normalize provider calls into one portable proposal.</li>
+          <li>Compile the proposal into the existing Headless batch and plan.</li>
+          <li>Dispatch only after validation and explicit confirmation gates pass.</li>
+        </ul>
+      </section>
+
+      <section class="docs-grid">
+        <article class="docs-card docs-section">
+          <h2>Owned here</h2>
+          <ul class="docs-list">
+            <li>Tool catalog projection</li>
+            <li>Provider response normalization</li>
+            <li>Context redaction and size limits</li>
+            <li>Policy filtering and proposal compilation</li>
+          </ul>
+        </article>
+        <article class="docs-card docs-section">
+          <h2>Not owned here</h2>
+          <ul class="docs-list">
+            <li>Provider HTTP clients or API keys</li>
+            <li>Billing, model selection, or retention policy</li>
+            <li>Direct execution authority</li>
+            <li>Worker operator authoring or PWDT GUI automation</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Default posture</h2>
+        <p class="docs-copy">
+          The default session exposes only service-backed actions with normal
+          risk, limits proposals to 12 calls, and caps sanitized context at 64
+          KiB. Browser, sensitive, and destructive actions remain hidden until
+          explicitly enabled. Even when enabled, Headless confirmation gates
+          remain authoritative.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Portable contracts</h2>
+        <div class="docs-links">
+          <a class="docs-link" href="../schemas/model-collaboration-session.schema.json">Session schema</a>
+          <a class="docs-link" href="../schemas/model-workflow-proposal.schema.json">Proposal schema</a>
+          <a class="docs-link" href="../schemas/examples.model-collaboration-session.json">Session fixture</a>
+          <a class="docs-link" href="../schemas/examples.model-workflow-proposal.json">Proposal fixture</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
