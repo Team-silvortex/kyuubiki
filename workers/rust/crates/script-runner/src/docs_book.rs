@@ -289,6 +289,7 @@ fn required_snippets(relative_path: &str) -> &'static [&'static str] {
         "docs/model-research-onboarding.html" => &[
             "Open llms.txt",
             "Open machine bootstrap",
+            "Planning preflight",
             "First workflow",
             "Native execution bridge",
             "What counts as research",

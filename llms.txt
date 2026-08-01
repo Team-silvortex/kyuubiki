@@ -9,6 +9,9 @@ runtime behavior from UI text or isolated source files.
 - [Machine bootstrap](docs/model-research-bootstrap.json): authoritative model
   ingestion order, SDK entry points, first bounded study, hard rules, stop
   conditions, and completion contract.
+- [Planning readiness](schemas/model-research-readiness-report.schema.json):
+  fail-closed cross-SDK preflight; `ready_for_planning` never grants execution
+  authority.
 - [Research onboarding](docs/model-research-onboarding.html): readable startup
   sequence from environment discovery to retained research evidence.
 - [Model collaboration SDK](docs/model-collaboration-sdk.md): provider-neutral
@@ -22,6 +25,8 @@ runtime behavior from UI text or isolated source files.
 ## Non-Negotiable Rules
 
 - Model output is untrusted and never has direct execution authority.
+- Require a blocker-free bootstrap readiness report before planning; its fixed
+  authority is `none_preflight_only`.
 - Use only SDK-projected actions; normalize and plan every provider response.
 - Never issue or infer caller approval from model output; approvals are external
   authority bound to exact plan steps.

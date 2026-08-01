@@ -47,15 +47,17 @@ not gain Operator SDK authority or bypass PWDT and GUI ownership rules.
 ## Safe Flow
 
 1. Create a `ModelCollaborationSession` with a narrow objective and policy.
-2. Call `build_model_collaboration_request()` with sanitized project context.
-3. Send its instructions and provider-shaped tools through the caller's model
+2. Run the selected SDK's model research bootstrap preflight and stop unless
+   its report says `ready_for_planning: true`.
+3. Call `build_model_collaboration_request()` with sanitized project context.
+4. Send its instructions and provider-shaped tools through the caller's model
    client.
-4. Call `normalize_model_response()` on the complete provider response.
-5. Call `compile_model_proposal()` before considering execution.
-6. Reject compilations whose `ok` field is false.
-7. Present every confirmation in the compiled Headless plan to the controlling
+5. Call `normalize_model_response()` on the complete provider response.
+6. Call `compile_model_proposal()` before considering execution.
+7. Reject compilations whose `ok` field is false.
+8. Present every confirmation in the compiled Headless plan to the controlling
    policy or human operator.
-8. Dispatch only through an existing Headless executor after those gates pass.
+9. Dispatch only through an existing Headless executor after those gates pass.
 
 Model output is never executable authority. Tool calls are untrusted input.
 
@@ -146,6 +148,7 @@ format and updates adapters around it.
 The official integration surface lives in `sdks/rust` and exports:
 
 - `rust_headless_model_tools()`
+- `inspect_model_research_bootstrap()`
 - `build_model_collaboration_request()`
 - `project_model_tools()`
 - `normalize_model_response()`
@@ -181,6 +184,7 @@ code-generation pipeline implements and packages the Rust operator. See
 
 The Python SDK exports dictionary-first equivalents:
 
+- `inspect_model_research_bootstrap()`
 - `headless_model_tools()`
 - `build_model_collaboration_request()`
 - `normalize_model_response()`
@@ -191,7 +195,8 @@ The Elixir SDK exposes the same flow through
 `KyuubikiSdk.ModelCollaboration.tools/1`, `build_request/3`,
 `normalize_response/3`, `build_plan/2`, and `sanitize_context/1`. Its public
 root module also provides concise delegates for the request, normalization, and
-plan operations.
+plan operations. `KyuubikiSdk.ModelResearchBootstrap.inspect/3` provides the
+same fail-closed readiness report used by Rust and Python.
 
 Both adapters consume the same repository session/proposal fixtures and retain
 the Rust policy defaults. Dynamic-language type errors are converted into

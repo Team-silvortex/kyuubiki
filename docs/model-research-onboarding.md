@@ -11,6 +11,7 @@ A model is ready to begin research only when it can:
 
 - identify one configured Headless SDK and backend target
 - load the bootstrap hard rules and stop conditions
+- run the selected SDK preflight and receive `ready_for_planning: true`
 - build a constrained collaboration request without provider credentials in
   its context
 - normalize provider tool calls into
@@ -28,26 +29,30 @@ model enough contract knowledge to prepare safe, inspectable work.
 
 1. Read `llms.txt` and `docs/model-research-bootstrap.json`.
 2. Load every document listed under `required_documents`.
-3. Select Rust, Python, or Elixir from `sdk_surfaces`.
-4. Keep provider networking, credentials, billing, and retry policy in the
+3. Select Rust, Python, or Elixir and run its
+   `inspect_model_research_bootstrap` equivalent with a caller-owned resource
+   resolver. Stop if the readiness report contains a blocker or missing path.
+4. Retain the report as `kyuubiki.model-research-readiness-report/v1`; its
+   authority is always `none_preflight_only`.
+5. Keep provider networking, credentials, billing, and retry policy in the
    caller-owned integration layer.
-5. Call `service_health` and inspect protocol compatibility.
-6. Create the shared collaboration session fixture or a narrower derivative.
-7. Project tools for the selected provider and request one dependency frontier.
-8. Normalize the provider response and build a Headless plan.
-9. Reject an invalid plan; request approval for every confirmation-gated step.
-10. Have the caller issue a plan-bound approval using
+6. Call `service_health` and inspect protocol compatibility.
+7. Create the shared collaboration session fixture or a narrower derivative.
+8. Project tools for the selected provider and request one dependency frontier.
+9. Normalize the provider response and build a Headless plan.
+10. Reject an invalid plan; request approval for every confirmation-gated step.
+11. Have the caller issue a plan-bound approval using
     `schemas/model-plan-approval.schema.json`. The model may request this
     approval but may not create or infer it.
-11. Use the selected SDK execution surface and its Session dispatcher to route
+12. Use the selected SDK execution surface and its Session dispatcher to route
     through the ordinary Headless client and retain a
     `kyuubiki.model-research-execution-receipt/v1` receipt.
-12. Verify that receipt independently, then create or advance
+13. Verify that receipt independently, then create or advance
     `kyuubiki.model-research-frontier/v1`. Its generated proposal binds the
     exact returned `job_id`; the model does not supply that binding.
-13. Repeat receipt verification and frontier advancement for `job_wait` and
+14. Repeat receipt verification and frontier advancement for `job_wait` and
     `result_fetch`.
-14. Pass the authenticated `ready_to_validate` frontier, its bound result
+15. Pass the authenticated `ready_to_validate` frontier, its bound result
     receipt, and the resolved workflow graph through the SDK validation handoff.
     Retain `kyuubiki.model-research-validation-report/v1`; attach a validated
     material research bundle when available.
@@ -152,3 +157,15 @@ Stop and return a structured blocker when:
 
 The correct output in these cases is a repair or validation plan, not a
 fabricated result.
+
+## Readiness Is Not Execution
+
+Rust, Python, and Elixir expose the same preflight over a caller-provided
+resource resolver. It validates project-relative paths, required documents,
+the selected collaboration/execution/frontier/validation surfaces, shared
+fixtures, hard rules, stop conditions, and the completion contract. Missing or
+unsafe resources return a diagnostic report with `ready_for_planning: false`.
+
+The report cannot approve, dispatch, or validate a solve. Its fixed
+`execution_authority` is `none_preflight_only`; the ordinary approval, receipt,
+frontier, and validation gates remain mandatory.

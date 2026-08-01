@@ -11,6 +11,12 @@ wrappers without depending on Workbench or Rust reference CLIs.
 
 ## Model collaboration
 
+`inspect_model_research_bootstrap(...)` provides the shared planning preflight
+before tools are projected. A caller-owned resolver checks every required
+project-relative resource; missing or unsafe paths return blockers and
+`ready_for_planning: false`. The report always carries
+`execution_authority: none_preflight_only`.
+
 `kyuubiki_sdk.model_collaboration` exposes the same provider-neutral planning
 contract as the Rust and Elixir SDKs. Use
 `build_model_collaboration_request(...)` to project policy-filtered OpenAI,
@@ -268,3 +274,5 @@ Example:
   `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_frontier.py`
 - Model research validation test:
   `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_validation.py`
+- Model research bootstrap preflight test:
+  `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_bootstrap.py`

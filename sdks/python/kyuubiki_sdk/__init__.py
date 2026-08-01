@@ -9,6 +9,7 @@ from .errors import (
     KyuubikiTimeoutError,
     KyuubikiTransportError,
     ModelCollaborationValidationError,
+    ModelResearchBootstrapError,
     ModelResearchExecutionError,
     WorkflowContractValidationError,
     classify_error,
@@ -104,6 +105,11 @@ from .model_research_validation import (
     MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION,
     validate_model_research_frontier_result,
 )
+from .model_research_bootstrap import (
+    MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION,
+    MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION,
+    inspect_model_research_bootstrap,
+)
 
 __all__ = [
     "ControlPlaneClient",
@@ -141,6 +147,7 @@ __all__ = [
     "KyuubikiTimeoutError",
     "WorkflowContractValidationError",
     "ModelCollaborationValidationError",
+    "ModelResearchBootstrapError",
     "ModelResearchExecutionError",
     "MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION",
     "FrontierVerifier",
@@ -150,6 +157,9 @@ __all__ = [
     "start_model_research_frontier",
     "MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION",
     "validate_model_research_frontier_result",
+    "MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION",
+    "MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION",
+    "inspect_model_research_bootstrap",
     "classify_error",
     "build_workflow_axis",
     "build_workflow_dataset_contract",

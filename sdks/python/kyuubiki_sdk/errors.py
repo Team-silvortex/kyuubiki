@@ -45,6 +45,12 @@ class ModelResearchExecutionError(KyuubikiSdkError):
         super().__init__("model research execution failed:\n- " + "\n- ".join(errors))
 
 
+class ModelResearchBootstrapError(KyuubikiSdkError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("model research bootstrap failed:\n- " + "\n- ".join(errors))
+
+
 def classify_error(error: Exception) -> str:
     if isinstance(error, KyuubikiTimeoutError):
         return "timeout"

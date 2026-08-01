@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/model-research-readiness-report.schema.json",
+  "title": "Kyuubiki Model Research Readiness Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "selected_sdk",
+    "ready_for_planning",
+    "execution_authority",
+    "version_line",
+    "entrypoint",
+    "workflow_id",
+    "selected_surface",
+    "required_resources",
+    "missing_resources",
+    "blockers",
+    "hard_rules",
+    "stop_conditions",
+    "completion_contract"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.model-research-readiness-report/v1"
+    },
+    "selected_sdk": { "enum": ["rust", "python", "elixir"] },
+    "ready_for_planning": { "type": "boolean" },
+    "execution_authority": { "const": "none_preflight_only" },
+    "version_line": { "$ref": "#/$defs/nonEmptyString" },
+    "entrypoint": { "$ref": "#/$defs/nonEmptyString" },
+    "workflow_id": { "$ref": "#/$defs/nonEmptyString" },
+    "selected_surface": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/selectedSurface" }
+      ]
+    },
+    "required_resources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "missing_resources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "blockers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "hard_rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "completion_contract": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "ready_for_planning": { "const": true } },
+        "required": ["ready_for_planning"]
+      },
+      "then": {
+        "properties": {
+          "selected_surface": { "type": "object" },
+          "missing_resources": { "maxItems": 0 },
+          "blockers": { "maxItems": 0 },
+          "hard_rules": { "minItems": 8 },
+          "stop_conditions": { "minItems": 4 },
+          "completion_contract": { "type": "object" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "selectedSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collaboration_path",
+        "preflight_path",
+        "execution_path",
+        "frontier_path",
+        "validation_path",
+        "request",
+        "inspect",
+        "normalize",
+        "plan",
+        "executor",
+        "dispatcher",
+        "approval_verifier",
+        "frontier_start",
+        "frontier_advance",
+        "result_validator",
+        "receipt_verifier",
+        "frontier_verifier"
+      ],
+      "properties": {
+        "collaboration_path": { "$ref": "#/$defs/repoPath" },
+        "preflight_path": { "$ref": "#/$defs/repoPath" },
+        "execution_path": { "$ref": "#/$defs/repoPath" },
+        "frontier_path": { "$ref": "#/$defs/repoPath" },
+        "validation_path": { "$ref": "#/$defs/repoPath" },
+        "request": { "$ref": "#/$defs/nonEmptyString" },
+        "inspect": { "$ref": "#/$defs/nonEmptyString" },
+        "normalize": { "$ref": "#/$defs/nonEmptyString" },
+        "plan": { "$ref": "#/$defs/nonEmptyString" },
+        "executor": { "$ref": "#/$defs/nonEmptyString" },
+        "dispatcher": { "$ref": "#/$defs/nonEmptyString" },
+        "approval_verifier": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_start": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_advance": { "$ref": "#/$defs/nonEmptyString" },
+        "result_validator": { "$ref": "#/$defs/nonEmptyString" },
+        "receipt_verifier": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_verifier": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    }
+  }
+}

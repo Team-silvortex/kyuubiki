@@ -101,6 +101,25 @@
       }
     }
   },
+  "preflight": {
+    "report_schema": "schemas/model-research-readiness-report.schema.json",
+    "report_fixture": "schemas/examples.model-research-readiness-report.json",
+    "execution_authority": "none_preflight_only",
+    "surfaces": {
+      "rust": {
+        "path": "sdks/rust/src/model_research_bootstrap.rs",
+        "inspect": "inspect_model_research_bootstrap"
+      },
+      "python": {
+        "path": "sdks/python/kyuubiki_sdk/model_research_bootstrap.py",
+        "inspect": "inspect_model_research_bootstrap"
+      },
+      "elixir": {
+        "path": "sdks/elixir/lib/kyuubiki_sdk/model_research_bootstrap.ex",
+        "inspect": "KyuubikiSdk.ModelResearchBootstrap.inspect/3"
+      }
+    }
+  },
   "research_protocol": [
     {
       "id": "ingest",

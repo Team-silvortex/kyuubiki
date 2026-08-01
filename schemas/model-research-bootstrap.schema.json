@@ -10,6 +10,7 @@
     "required_documents",
     "sdk_surfaces",
     "execution_contract",
+    "preflight",
     "research_protocol",
     "first_research",
     "hard_rules",
@@ -70,6 +71,21 @@
         "surfaces": {
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/executionSurface" },
+          "required": ["rust", "python", "elixir"]
+        }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_fixture", "execution_authority", "surfaces"],
+      "properties": {
+        "report_schema": { "$ref": "#/$defs/repoPath" },
+        "report_fixture": { "$ref": "#/$defs/repoPath" },
+        "execution_authority": { "const": "none_preflight_only" },
+        "surfaces": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/preflightSurface" },
           "required": ["rust", "python", "elixir"]
         }
       }
@@ -187,6 +203,15 @@
         "result_validator": { "type": "string", "minLength": 1 },
         "receipt_verifier": { "type": "string", "minLength": 1 },
         "frontier_verifier": { "type": "string", "minLength": 1 }
+      }
+    },
+    "preflightSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "inspect"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "inspect": { "type": "string", "minLength": 1 }
       }
     },
     "stage": {

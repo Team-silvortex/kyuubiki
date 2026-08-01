@@ -11,6 +11,12 @@ packaged examples over those contracts rather than the only supported entry.
 
 ## Model collaboration
 
+Before projecting tools, `inspect_model_research_bootstrap(...)` checks the
+machine bootstrap through a caller-owned resource resolver. The report exposes
+the selected SDK entrypoints, missing project-relative resources, hard rules,
+stop conditions, and completion contract. `ready_for_planning` never grants
+execution authority; every report is fixed to `none_preflight_only`.
+
 The official Rust Headless SDK can expose a policy-filtered action catalog to
 OpenAI Responses, OpenAI-compatible Chat, Anthropic, Gemini, or a canonical
 JSON model gateway. Provider calls normalize into
@@ -253,3 +259,4 @@ Example:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_builders`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test model_collaboration`
+  `cargo test --manifest-path sdks/rust/Cargo.toml --test model_research_bootstrap`

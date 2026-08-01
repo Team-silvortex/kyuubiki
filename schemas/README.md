@@ -33,6 +33,12 @@ README.
 - `model-research-bootstrap.schema.json` defines the single machine-ingestion
   route from `llms.txt` through SDK selection, bounded research stages, hard
   rules, stop conditions, and retained-evidence completion requirements.
+- `model-research-readiness-report.schema.json` defines the cross-SDK,
+  resource-resolver-backed preflight that checks the selected planning surface
+  and required project-relative resources without granting execution authority.
+- `examples.model-research-readiness-report.json` is the blocker-free Rust
+  fixture shared by preflight conformance tests; its authority is permanently
+  `none_preflight_only`.
 - `model-plan-approval.schema.json` binds caller-issued approval to exact plan
   steps; model output cannot satisfy this authority boundary.
 - `model-research-execution-receipt.schema.json` retains completed or partially

@@ -58,6 +58,9 @@ closure rather than raw feature sprawl:
 
 - GUI navigation and backend calls must form complete, testable user journeys
   instead of isolated panels that look finished but do not execute
+- the model research bootstrap now has one fail-closed readiness preflight in
+  Rust, Python, and Elixir; it verifies selected SDK resources and active safety
+  rules while retaining `none_preflight_only` authority
 - the native `check-desktop-usability-journeys` probe now guards those journeys
   against slipping back to Node integration shims; `make
   build-usability-readiness-report` executes the 8 blocking paths and records

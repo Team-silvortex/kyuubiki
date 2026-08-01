@@ -85,6 +85,32 @@ pub(crate) fn validate_model_research_bootstrap(
     } else {
         issues.push(format!("{bootstrap_path}: missing execution_contract"));
     }
+    if let Some(preflight) = bootstrap.get("preflight").and_then(Value::as_object) {
+        if preflight.get("execution_authority").and_then(Value::as_str)
+            != Some("none_preflight_only")
+        {
+            issues.push(format!(
+                "{bootstrap_path}: preflight execution authority must be none_preflight_only"
+            ));
+        }
+        paths.extend(
+            ["report_schema", "report_fixture"]
+                .iter()
+                .filter_map(|key| preflight.get(*key).and_then(Value::as_str)),
+        );
+        if let Some(surfaces) = preflight.get("surfaces").and_then(Value::as_object) {
+            paths.extend(
+                surfaces
+                    .values()
+                    .filter_map(|surface| surface.get("path").and_then(Value::as_str)),
+            );
+        } else {
+            issues.push(format!("{bootstrap_path}: missing preflight.surfaces"));
+        }
+        validate_research_readiness_report(root, bootstrap_path, preflight, issues);
+    } else {
+        issues.push(format!("{bootstrap_path}: missing preflight"));
+    }
     if let Some(first_research) = bootstrap.get("first_research").and_then(Value::as_object) {
         paths.extend(
             [
@@ -107,6 +133,68 @@ pub(crate) fn validate_model_research_bootstrap(
         } else if !root.join(path).is_file() {
             issues.push(format!("{bootstrap_path}: missing referenced file {path}"));
         }
+    }
+}
+
+fn validate_research_readiness_report(
+    root: &Path,
+    bootstrap_path: &str,
+    preflight: &serde_json::Map<String, Value>,
+    issues: &mut Vec<String>,
+) {
+    let Some(schema_path) = preflight.get("report_schema").and_then(Value::as_str) else {
+        issues.push(format!("{bootstrap_path}: missing preflight.report_schema"));
+        return;
+    };
+    let Some(fixture_path) = preflight.get("report_fixture").and_then(Value::as_str) else {
+        issues.push(format!(
+            "{bootstrap_path}: missing preflight.report_fixture"
+        ));
+        return;
+    };
+    let Some(schema) = read_json(root, schema_path, issues) else {
+        return;
+    };
+    let expected = "kyuubiki.model-research-readiness-report/v1";
+    if schema
+        .pointer("/properties/schema_version/const")
+        .and_then(Value::as_str)
+        != Some(expected)
+    {
+        issues.push(format!(
+            "{schema_path}: readiness schema_version const is invalid"
+        ));
+    }
+    let Some(fixture) = read_json(root, fixture_path, issues) else {
+        return;
+    };
+    let valid = fixture.get("schema_version").and_then(Value::as_str) == Some(expected)
+        && fixture.get("ready_for_planning").and_then(Value::as_bool) == Some(true)
+        && fixture.get("execution_authority").and_then(Value::as_str)
+            == Some("none_preflight_only")
+        && fixture
+            .get("selected_surface")
+            .is_some_and(Value::is_object)
+        && fixture
+            .get("missing_resources")
+            .and_then(Value::as_array)
+            .is_some_and(Vec::is_empty)
+        && fixture
+            .get("blockers")
+            .and_then(Value::as_array)
+            .is_some_and(Vec::is_empty)
+        && fixture
+            .get("hard_rules")
+            .and_then(Value::as_array)
+            .is_some_and(|rules| rules.len() >= 8)
+        && fixture
+            .get("stop_conditions")
+            .and_then(Value::as_array)
+            .is_some_and(|conditions| conditions.len() >= 4);
+    if !valid {
+        issues.push(format!(
+            "{fixture_path}: readiness trust boundary is invalid"
+        ));
     }
 }
 

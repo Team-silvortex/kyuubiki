@@ -43,6 +43,13 @@ defmodule KyuubikiSdk.Error do
     }
   end
 
+  def model_research_bootstrap(errors) when is_list(errors) do
+    %__MODULE__{
+      type: :validation,
+      message: "model research bootstrap failed:\n- " <> Enum.join(errors, "\n- ")
+    }
+  end
+
   def transport(message), do: %__MODULE__{type: :transport, message: message}
   def timeout(message), do: %__MODULE__{type: :timeout, message: message}
 end

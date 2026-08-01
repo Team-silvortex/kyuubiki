@@ -11,6 +11,12 @@ so orchestration code stays protocol-driven rather than GUI-driven.
 
 ## Model collaboration
 
+`KyuubikiSdk.ModelResearchBootstrap.inspect/3` performs the shared planning
+preflight through a caller-owned resource resolver. It returns the selected SDK
+entrypoints, missing project-relative resources, active hard rules, and stop
+conditions. A passing report is still `none_preflight_only` and cannot approve
+or dispatch work.
+
 `KyuubikiSdk.ModelCollaboration` provides BEAM-native access to the shared
 model session and proposal contracts. `build_request/3` projects constrained
 OpenAI, OpenAI-compatible Chat, Anthropic, Gemini, or canonical tools;
@@ -190,3 +196,5 @@ Example:
   `cd sdks/elixir && mix test test/model_research_frontier_test.exs`
 - Model research validation test:
   `cd sdks/elixir && mix test test/model_research_validation_test.exs`
+- Model research bootstrap preflight test:
+  `cd sdks/elixir && mix test test/model_research_bootstrap_test.exs`

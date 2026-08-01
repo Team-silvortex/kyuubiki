@@ -7,6 +7,7 @@ mod material_research_bundle_validation;
 mod material_workflows;
 mod model_collaboration;
 mod model_provider_adapters;
+mod model_research_bootstrap;
 mod model_research_execution;
 mod model_research_frontier;
 mod model_research_validation;
@@ -44,6 +45,11 @@ pub use model_collaboration::{
 };
 pub use model_provider_adapters::{
     normalize_model_response, project_model_tools, sanitize_model_context,
+};
+pub use model_research_bootstrap::{
+    MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION, MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION,
+    ModelResearchReadinessReport, ModelResearchSdk, ModelResearchSelectedSurface,
+    inspect_model_research_bootstrap,
 };
 pub use model_research_execution::{
     ApprovedModelPlanStep, MODEL_PLAN_APPROVAL_SCHEMA_VERSION,
