@@ -16,10 +16,52 @@ pub struct AutomationPresetSummary {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AutomationSource {
     pub kind: String,
-    pub preset_id: String,
-    pub preset_name: String,
-    pub project_id: String,
-    pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preset_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preset_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_path: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MacroStep {
+    pub action: String,
+    #[serde(default = "empty_object", skip_serializing_if = "is_empty_object")]
+    pub payload: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MacroDraft {
+    pub id: String,
+    pub steps: Vec<MacroStep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroSummary {
+    pub id: String,
+    pub step_count: usize,
+    pub actions: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MacroValidationReport {
+    pub ok: bool,
+    pub issue_count: usize,
+    pub issues: Vec<String>,
+    pub summary: MacroSummary,
+}
+
+fn empty_object() -> Value {
+    Value::Object(Default::default())
+}
+
+fn is_empty_object(value: &Value) -> bool {
+    value.as_object().is_some_and(|object| object.is_empty())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

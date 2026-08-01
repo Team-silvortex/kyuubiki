@@ -1,3 +1,4 @@
+mod macro_file;
 mod model;
 mod templates;
 
@@ -8,9 +9,13 @@ use kyuubiki_headless_sdk::{
     run_batch_dry, validate_batch,
 };
 use kyuubiki_project_bundle::read_project_bundle;
+pub use macro_file::{
+    inspect_macro_file, list_automation_action_capabilities, normalize_macro_file,
+    render_macro_file, run_macro_file, validate_macro_file,
+};
 pub use model::{
     AutomationEnvelope, AutomationPresetSummary, AutomationRunOptions, AutomationRunReport,
-    AutomationStepReport,
+    AutomationStepReport, MacroDraft, MacroStep, MacroSummary, MacroValidationReport,
 };
 use model::{
     AutomationMetadata, AutomationPlan, AutomationPlanStep, AutomationRiskSummary,
@@ -38,7 +43,28 @@ pub fn render_project_automation_preset(
 ) -> AutomationResult<AutomationEnvelope> {
     let bundle = read_project_bundle(path)?;
     let preset = find_preset(&bundle, selector)?;
-    build_envelope(preset, payload, state)
+    let macro_value = preset
+        .get("macro")
+        .filter(|value| value.is_object())
+        .ok_or_else(|| "automation preset is missing macro".to_string())?;
+    let draft = macro_file::parse_macro_value(macro_value.clone())?;
+    build_envelope_from_macro(
+        AutomationSource {
+            kind: "project_automation_preset".to_string(),
+            preset_id: Some(required_string(preset, "presetId", "automation preset")?.to_string()),
+            preset_name: Some(required_string(preset, "name", "automation preset")?.to_string()),
+            project_id: Some(
+                required_string(preset, "projectId", "automation preset")?.to_string(),
+            ),
+            updated_at: Some(
+                required_string(preset, "updatedAt", "automation preset")?.to_string(),
+            ),
+            input_path: None,
+        },
+        &draft,
+        payload,
+        state,
+    )
 }
 
 pub fn run_project_automation_preset(
@@ -52,29 +78,21 @@ pub fn run_project_automation_preset(
     run_envelope(&envelope, options)
 }
 
-fn build_envelope(
-    preset: &Value,
+fn build_envelope_from_macro(
+    source: AutomationSource,
+    draft: &MacroDraft,
     payload: Value,
     state: Value,
 ) -> AutomationResult<AutomationEnvelope> {
-    let macro_value = preset
-        .get("macro")
-        .filter(|value| value.is_object())
-        .ok_or_else(|| "automation preset is missing macro".to_string())?;
-    let macro_id = required_string(macro_value, "id", "automation macro")?;
-    let raw_steps = macro_value
-        .get("steps")
-        .and_then(Value::as_array)
-        .filter(|steps| !steps.is_empty())
-        .ok_or_else(|| "automation macro does not contain any steps".to_string())?;
     let payload = object_or_empty(payload);
     let state = object_or_empty(state);
-    let steps = raw_steps
+    let steps = draft
+        .steps
         .iter()
         .enumerate()
         .map(|(index, step)| build_plan_step(index, step, &payload, &state))
         .collect::<AutomationResult<Vec<_>>>()?;
-    let batch = batch_from_steps(macro_id, &steps);
+    let batch = batch_from_steps(&draft.id, &steps);
     let validation = validate_batch(&batch);
     if !validation.ok {
         return Err(validation.issues.join("; "));
@@ -106,15 +124,9 @@ fn build_envelope(
     let generated_at = now();
     Ok(AutomationEnvelope {
         schema_version: "kyuubiki.headless-automation-plan/v1".to_string(),
-        source: AutomationSource {
-            kind: "project_automation_preset".to_string(),
-            preset_id: required_string(preset, "presetId", "automation preset")?.to_string(),
-            preset_name: required_string(preset, "name", "automation preset")?.to_string(),
-            project_id: required_string(preset, "projectId", "automation preset")?.to_string(),
-            updated_at: required_string(preset, "updatedAt", "automation preset")?.to_string(),
-        },
+        source,
         metadata: AutomationMetadata {
-            macro_id: macro_id.to_string(),
+            macro_id: draft.id.clone(),
             generated_at,
             step_count: steps.len(),
             action_count: steps.len(),
@@ -126,7 +138,7 @@ fn build_envelope(
         },
         required_confirmations,
         plan: AutomationPlan {
-            id: macro_id.to_string(),
+            id: draft.id.clone(),
             step_count: steps.len(),
             actions: steps.iter().map(|step| step.action.clone()).collect(),
             payload,
@@ -146,7 +158,7 @@ fn run_envelope(
         let compatibility = collect_executor_compatibility_issues(&batch, "service");
         if !compatibility.is_empty() {
             return Err(format!(
-                "native project automation live execution is service-only: {}",
+                "native automation live execution is service-only: {}",
                 compatibility.join("; ")
             ));
         }
@@ -206,20 +218,34 @@ fn run_envelope(
 
 fn build_plan_step(
     index: usize,
-    step: &Value,
+    step: &MacroStep,
     payload: &Value,
     state: &Value,
 ) -> AutomationResult<AutomationPlanStep> {
-    let action = required_string(step, "action", &format!("automation step {index}"))?;
+    let resolved = templates::resolve(step.payload.clone(), payload, state);
+    build_plan_step_with_payload(index, step, resolved)
+}
+
+fn build_unresolved_plan_step(
+    index: usize,
+    step: &MacroStep,
+) -> AutomationResult<AutomationPlanStep> {
+    build_plan_step_with_payload(index, step, step.payload.clone())
+}
+
+fn build_plan_step_with_payload(
+    index: usize,
+    step: &MacroStep,
+    payload: Value,
+) -> AutomationResult<AutomationPlanStep> {
+    let action = step.action.trim();
+    if action.is_empty() {
+        return Err(format!("automation step {index} is missing action"));
+    }
     let canonical = canonical_action(action);
     let contract = find_action_contract(canonical)
         .ok_or_else(|| format!("step {index} uses unsupported action \"{action}\""))?;
-    let resolved = templates::resolve(
-        step.get("payload").cloned().unwrap_or_else(|| json!({})),
-        payload,
-        state,
-    );
-    if !resolved.is_object() {
+    if !payload.is_object() {
         return Err(format!("step {index} has an invalid payload"));
     }
     Ok(AutomationPlanStep {
@@ -229,7 +255,7 @@ fn build_plan_step(
         engine: contract.engine,
         risk: contract.risk,
         requires_confirmation: contract.risk != HeadlessRisk::Normal,
-        payload: resolved,
+        payload,
     })
 }
 

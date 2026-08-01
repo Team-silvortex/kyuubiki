@@ -240,15 +240,20 @@
         "files": [
           "workers/rust/crates/project-bundle/src/lib.rs",
           "workers/rust/crates/project-automation/src/lib.rs",
+          "workers/rust/crates/project-automation/src/macro_file.rs",
           "workers/rust/crates/project-automation/src/model.rs",
           "workers/rust/crates/headless-sdk/src/executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
-          "workers/rust/crates/script-runner/src/project_cli.rs"
+          "workers/rust/crates/script-runner/src/project_cli.rs",
+          "workers/rust/crates/script-runner/src/macro_cli.rs"
         ],
         "required_text": [
           "read_project_bundle",
           "render_project_automation_preset",
           "run_project_automation_preset",
+          "list_automation_action_capabilities",
+          "validate_macro_file",
+          "run_macro_file",
           "kyuubiki.headless-automation-plan/v1",
           "service_executor_supports_action",
           "destructive_block_halts_before_later_side_effects",

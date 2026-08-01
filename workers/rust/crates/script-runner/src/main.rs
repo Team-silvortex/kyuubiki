@@ -44,6 +44,7 @@ mod line_field_baseline;
 mod line_field_provenance;
 mod line_field_release_evidence;
 mod local_path_audit;
+mod macro_cli;
 mod make_modules;
 mod material_card_contract;
 mod material_exploration_chain_contract;
@@ -283,16 +284,7 @@ fn run() -> RunnerResult<u8> {
             run_installer(&paths, "stage-release", prepend(platform, rest))
         }
         "project" => project_cli::run_project_command(rest),
-        "macro" => run_command(
-            &paths.frontend,
-            "node",
-            [
-                OsString::from("./scripts/kyuubiki-cli.mjs"),
-                OsString::from(&command),
-            ]
-            .into_iter()
-            .chain(rest),
-        ),
+        "macro" => macro_cli::run_macro_command(rest),
         "build-frontend" => run_command(
             &paths.frontend,
             "npm",

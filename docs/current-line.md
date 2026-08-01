@@ -70,6 +70,10 @@ closure rather than raw feature sprawl:
   flows through `workers/rust/crates/project-automation` and the Rust headless
   SDK. Dry runs are side-effect free, live execution is service-only, and an
   unconfirmed destructive step halts the remaining plan
+- `kyuubiki macro actions|inspect|validate|normalize|render|run` now shares that
+  native protocol instead of invoking the frontend Node CLI. Static macro
+  checks preserve payload/state templates, while render/run resolve them into
+  the executable plan
 - Pwdt should become the deterministic frontend automation surface for Hub,
   Workbench, and Installer, while headless SDKs remain backend/control clients
 - the module-function coverage tensor is the shared map for deciding which

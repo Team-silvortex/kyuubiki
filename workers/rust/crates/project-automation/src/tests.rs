@@ -51,6 +51,25 @@ fn fixture(name: &str, steps: Value) -> (PathBuf, PathBuf) {
     (root, bundle)
 }
 
+fn macro_fixture(name: &str, value: Value) -> (PathBuf, PathBuf) {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "kyuubiki-macro-{}-{name}-{unique}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).expect("macro fixture root");
+    let path = root.join("automation.json");
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&value).expect("serialize macro fixture"),
+    )
+    .expect("write macro fixture");
+    (root, path)
+}
+
 #[test]
 fn lists_and_renders_presets_from_native_bundle() {
     let (root, bundle) = fixture(
@@ -182,4 +201,105 @@ fn live_service_health_uses_native_http_executor() {
     assert_eq!(report.steps[0].result["service"], "test");
 
     fs::remove_dir_all(root).expect("clean fixture");
+}
+
+#[test]
+fn standalone_macro_pipeline_preserves_then_resolves_templates() {
+    let (root, input) = macro_fixture(
+        "pipeline",
+        json!({
+            "id": "macro/standalone",
+            "steps": [{
+                "action": "project_create",
+                "payload": {
+                    "name": "{{payload.name}}",
+                    "description": "round {{state.round}}"
+                }
+            }]
+        }),
+    );
+    let input = input.to_str().expect("macro path");
+
+    let summary = inspect_macro_file(input).expect("inspect macro");
+    assert_eq!(summary.step_count, 1);
+    assert_eq!(summary.actions, vec!["project_create"]);
+    assert!(validate_macro_file(input).expect("validate macro").ok);
+
+    let normalized = root.join("normalized/macro.json");
+    normalize_macro_file(input, normalized.to_str().expect("normalized path"))
+        .expect("normalize macro");
+    let normalized_value: Value =
+        serde_json::from_slice(&fs::read(&normalized).expect("read normalized"))
+            .expect("parse normalized");
+    assert_eq!(
+        normalized_value["steps"][0]["payload"]["name"],
+        "{{payload.name}}"
+    );
+
+    let envelope = render_macro_file(
+        input,
+        json!({ "name": "Alloy search" }),
+        json!({ "round": 9 }),
+    )
+    .expect("render macro");
+    assert_eq!(envelope.source.kind, "macro_file");
+    assert_eq!(envelope.plan.steps[0].payload["name"], "Alloy search");
+    assert_eq!(envelope.plan.steps[0].payload["description"], "round 9");
+
+    let report = run_macro_file(
+        input,
+        json!({ "name": "Alloy search" }),
+        json!({ "round": 9 }),
+        &AutomationRunOptions::default(),
+    )
+    .expect("dry-run macro");
+    assert_eq!(report.status, "simulated");
+    assert_eq!(report.executed_step_count, 1);
+
+    fs::remove_dir_all(root).expect("clean macro fixture");
+}
+
+#[test]
+fn standalone_macro_validation_reports_shape_and_contract_issues() {
+    let (root, path) = macro_fixture(
+        "invalid",
+        json!({
+            "steps": [
+                { "action": "not_a_real_action", "payload": {} },
+                { "payload": {} }
+            ]
+        }),
+    );
+    let report = validate_macro_file(path.to_str().expect("macro path")).expect("validation");
+
+    assert!(!report.ok);
+    assert_eq!(report.summary.step_count, 2);
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|issue| issue == "macro id is missing")
+    );
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|issue| issue.contains("unsupported action"))
+    );
+    assert!(
+        report
+            .issues
+            .iter()
+            .any(|issue| issue.contains("missing action"))
+    );
+
+    fs::remove_dir_all(root).expect("clean macro fixture");
+}
+
+#[test]
+fn automation_action_manifest_is_shared_with_native_macro_cli() {
+    let actions = list_automation_action_capabilities();
+    assert!(actions.iter().any(|entry| entry.action == "service_health"));
+    assert!(actions.iter().any(|entry| entry.action == "project_create"));
+    assert!(actions.iter().any(|entry| entry.action == "snapshot"));
 }

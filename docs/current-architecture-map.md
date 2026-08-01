@@ -136,8 +136,9 @@ Important contract families:
 - the native `.kyuubiki` project container implementation under
   `workers/rust/crates/project-bundle`, shared by Hub and native command tools
 - the native project automation adapter under
-  `workers/rust/crates/project-automation`, which compiles stored presets into
-  Rust headless SDK plans and fail-closed execution reports
+  `workers/rust/crates/project-automation`, which compiles stored presets and
+  standalone macro files into Rust headless SDK plans and fail-closed execution
+  reports
 - TaskIR and execution-program contracts
 - workflow graph and workflow dataset contracts
 - operator package manifests and reliability manifests
@@ -220,7 +221,8 @@ The tensor is the three-axis review map:
 - `workers/rust/crates/project-bundle`: shared native project container
   creation, inspection, validation, normalization, packing, unpacking, and diff
 - `workers/rust/crates/project-automation`: shared automation-preset lookup,
-  payload/state template binding, risk planning, and service execution adapter
+  standalone macro validation, payload/state template binding, risk planning,
+  and service execution adapter
 - `workers/rust/crates/cli`: Rust agent and CLI process
 - `workers/rust/crates/engine`: execution helpers and operator host logic
 - `workers/rust/crates/solver`: FEM kernels

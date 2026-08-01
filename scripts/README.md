@@ -175,6 +175,12 @@ This directory contains host-native operational entry points.
   templates, and run them through the Rust headless SDK. Live execution is
   service-only; browser actions remain owned by product UI/Pwdt instead of a
   hidden Node or Playwright fallback.
+- `kyuubiki-script-runner macro actions|inspect|validate|normalize|render|run`
+  Operate on standalone automation macro files through the same native Rust
+  protocol. Static inspection and normalization preserve runtime templates;
+  render/run bind payload and state. Live execution remains service-only, while
+  browser actions can be checked safely in dry-run mode without a hidden Node
+  fallback.
 - `kyuubiki-script-runner check-contracts-runtime-api-surface`
   Verify the contracts-owned runtime API surface, including required contract
   families, central self-host service surface binding, repo-relative evidence

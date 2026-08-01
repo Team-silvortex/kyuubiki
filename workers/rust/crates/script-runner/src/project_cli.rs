@@ -267,9 +267,13 @@ fn run_automation_render(options: Options) -> RunnerResult<u8> {
     } else {
         println!(
             "Automation preset: {} ({})",
-            envelope.source.preset_name, envelope.source.preset_id
+            envelope.source.preset_name.as_deref().unwrap_or("--"),
+            envelope.source.preset_id.as_deref().unwrap_or("--")
         );
-        println!("Project: {}", envelope.source.project_id);
+        println!(
+            "Project: {}",
+            envelope.source.project_id.as_deref().unwrap_or("--")
+        );
         println!("Steps: {}", envelope.plan.step_count);
         println!(
             "Highest risk: {}",

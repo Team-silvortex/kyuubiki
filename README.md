@@ -85,6 +85,10 @@ repeatable workflow control:
 - project automation preset listing, template rendering, risk planning, dry
   runs, and service-backed live execution now use the shared Rust headless SDK;
   the top-level `project automation-*` path no longer invokes Node
+- standalone macro discovery, inspection, validation, normalization, rendering,
+  and execution now use the same Rust automation protocol through `macro
+  actions|inspect|validate|normalize|render|run`; templates remain unresolved
+  during static validation and bind only when a plan is rendered
 - Pwdt, the frontend wasm Python DSL, is the target control surface for
   deterministic UI automation inside product-owned shells
 - the coverage tensor is the planning gate for weak coordinates, not a

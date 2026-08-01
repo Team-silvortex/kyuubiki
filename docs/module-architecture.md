@@ -542,8 +542,9 @@ When adding a capability:
 - Shared JSON contracts go to `schemas`.
 - Shared native project-container behavior goes to
   `workers/rust/crates/project-bundle`.
-- Project-stored automation lookup, rendering, risk planning, and execution
-  adaptation goes to `workers/rust/crates/project-automation`.
+- Project-stored automation lookup, standalone macro validation, rendering,
+  risk planning, and execution adaptation goes to
+  `workers/rust/crates/project-automation`.
 - Product and architecture source-of-truth prose goes to `docs`.
 - Release or validation gates go to `make`, `scripts`, `config`, and tests.
 

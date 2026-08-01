@@ -26,7 +26,8 @@ operator-package-dynamic-smoke\n  \
   check-operator-qualification-review-decision\n  \
 project create|inspect|validate|normalize|unpack|pack|diff\n  \
 project automation-presets|automation-render|automation-run\n  \
-macro build-frontend build-orchestrator build-agent\n  \
+macro actions|inspect|validate|normalize|render|run\n  \
+build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
