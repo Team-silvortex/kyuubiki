@@ -100,6 +100,10 @@ from .model_research_frontier import (
     build_model_research_frontier_proposal,
     start_model_research_frontier,
 )
+from .model_research_validation import (
+    MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION,
+    validate_model_research_frontier_result,
+)
 
 __all__ = [
     "ControlPlaneClient",
@@ -144,6 +148,8 @@ __all__ = [
     "advance_model_research_frontier",
     "build_model_research_frontier_proposal",
     "start_model_research_frontier",
+    "MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION",
+    "validate_model_research_frontier_result",
     "classify_error",
     "build_workflow_axis",
     "build_workflow_dataset_contract",

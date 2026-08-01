@@ -56,38 +56,46 @@
     "receipt_schema": "schemas/model-research-execution-receipt.schema.json",
     "frontier_schema": "schemas/model-research-frontier.schema.json",
     "frontier_fixture": "schemas/examples.model-research-frontier.json",
+    "validation_report_schema": "schemas/model-research-validation-report.schema.json",
+    "validation_report_fixture": "schemas/examples.model-research-validation-report.json",
     "approval_authority": "caller_only",
     "surfaces": {
       "rust": {
         "path": "sdks/rust/src/model_research_execution.rs",
         "frontier_path": "sdks/rust/src/model_research_frontier.rs",
+        "validation_path": "sdks/rust/src/model_research_validation.rs",
         "executor": "execute_model_headless_plan",
         "dispatcher": "SessionModelActionDispatcher",
         "approval_verifier": "ModelApprovalVerifier",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
+        "result_validator": "validate_model_research_frontier_result",
         "receipt_verifier": "ModelReceiptVerifier",
         "frontier_verifier": "ModelFrontierVerifier"
       },
       "python": {
         "path": "sdks/python/kyuubiki_sdk/model_research_execution.py",
         "frontier_path": "sdks/python/kyuubiki_sdk/model_research_frontier.py",
+        "validation_path": "sdks/python/kyuubiki_sdk/model_research_validation.py",
         "executor": "execute_model_headless_plan",
         "dispatcher": "SessionModelActionDispatcher",
         "approval_verifier": "ApprovalVerifier",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
+        "result_validator": "validate_model_research_frontier_result",
         "receipt_verifier": "ReceiptVerifier",
         "frontier_verifier": "FrontierVerifier"
       },
       "elixir": {
         "path": "sdks/elixir/lib/kyuubiki_sdk/model_research_execution.ex",
         "frontier_path": "sdks/elixir/lib/kyuubiki_sdk/model_research_frontier.ex",
+        "validation_path": "sdks/elixir/lib/kyuubiki_sdk/model_research_validation.ex",
         "executor": "ModelResearchExecution.execute/4",
         "dispatcher": "ModelResearchExecution.session_dispatcher/2",
         "approval_verifier": "caller-owned two-argument function",
         "frontier_start": "ModelResearchFrontier.start/2",
         "frontier_advance": "ModelResearchFrontier.advance/4",
+        "result_validator": "ModelResearchValidation.validate/6",
         "receipt_verifier": "caller-owned one-argument function",
         "frontier_verifier": "caller-owned one-argument function"
       }
@@ -125,7 +133,7 @@
     {
       "id": "validate",
       "objective": "Apply contract, baseline, convergence, cross-check, and quality-gate validation before interpreting ranking.",
-      "outputs": ["validation_evidence", "blocking_reasons", "next_validation_actions"]
+      "outputs": ["model_research_validation_report", "validation_evidence", "blocking_reasons", "next_validation_actions"]
     },
     {
       "id": "retain",
@@ -166,6 +174,7 @@
     "required_artifacts": [
       "model_research_execution_receipt",
       "model_research_frontier",
+      "model_research_validation_report",
       "terminal_job_state",
       "retained_result",
       "material_research_bundle"

@@ -46,7 +46,11 @@ model enough contract knowledge to prepare safe, inspectable work.
     `kyuubiki.model-research-frontier/v1`. Its generated proposal binds the
     exact returned `job_id`; the model does not supply that binding.
 13. Repeat receipt verification and frontier advancement for `job_wait` and
-    `result_fetch`, then validate evidence and produce a research bundle.
+    `result_fetch`.
+14. Pass the authenticated `ready_to_validate` frontier, its bound result
+    receipt, and the resolved workflow graph through the SDK validation handoff.
+    Retain `kyuubiki.model-research-validation-report/v1`; attach a validated
+    material research bundle when available.
 
 One dependency frontier per turn is important. A model must not propose
 `job_wait` with a guessed job id in the same turn that creates the job. It must
@@ -84,6 +88,12 @@ Use `schemas/model-research-frontier.schema.json` for persisted state and
 Python, and Elixir expose equivalent start, advance, and proposal helpers. They
 require caller-owned receipt and frontier verifiers for the cross-turn chain.
 
+Use `schemas/model-research-validation-report.schema.json` for the next handoff.
+The three SDKs reject a mismatched graph, receipt, workflow, job binding,
+unverified checkpoint, incomplete runtime, or invalid research bundle. A report
+with `screening_bundle_validated` still carries
+`screening_only_not_qualification` and `external_validation_required: true`.
+
 Every official execution bridge rejects the entire plan before network access if an
 exact gated step is not covered by a caller-issued approval. Runtime failures
 are returned as partial receipts with `status: failed`; they are evidence of an
@@ -113,6 +123,7 @@ A research turn is complete only when the retained output records:
 
 - terminal job state and real execution receipt
 - verified research frontier and exact bound job identity
+- verified model research validation report and workflow-result artifact keys
 - exact caller approval identity for every gated action
 - execution authority and provenance
 - input contracts and artifact identities

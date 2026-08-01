@@ -73,7 +73,9 @@
           caller-verified execution receipt. Their frontier helpers bind the
           returned job id across wait and result-fetch turns. Receipt and
           frontier verifiers remain caller-owned, along with provider clients
-          and credentials.
+          and credentials. Their validation handoff binds the completed result
+          to its graph and optional screening bundle without upgrading it to a
+          qualification claim.
         </p>
       </section>
 
@@ -120,6 +122,7 @@
           <a class="docs-link" href="../schemas/model-plan-approval.schema.json">Approval schema</a>
           <a class="docs-link" href="../schemas/model-research-execution-receipt.schema.json">Execution receipt schema</a>
           <a class="docs-link" href="../schemas/model-research-frontier.schema.json">Research frontier schema</a>
+          <a class="docs-link" href="../schemas/model-research-validation-report.schema.json">Validation report schema</a>
           <a class="docs-link" href="../schemas/examples.model-collaboration-session.json">Session fixture</a>
           <a class="docs-link" href="../schemas/examples.model-workflow-proposal.json">Proposal fixture</a>
         </div>

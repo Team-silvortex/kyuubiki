@@ -41,8 +41,15 @@ README.
 - `model-research-frontier.schema.json` defines the small persistent cross-turn
   state that binds follow-up proposals to a verified real `job_id` instead of
   allowing a model or caller to invent future task identifiers.
+- `model-research-validation-report.schema.json` defines the verified handoff
+  from a `ready_to_validate` frontier and bound result receipt into workflow
+  result evidence and, when supplied, a validated screening research bundle.
+  It permanently marks external validation as required and forbids qualification
+  claims from this automated path.
 - `examples.model-plan-approval.json` demonstrates the approval shape for the
   first bounded workflow but is never itself execution authority.
+- `examples.model-research-validation-report.json` is the portable workflow-only
+  handoff fixture before a material research bundle has been attached.
 - `operator-model-draft.schema.json` defines the non-executable Rust Operator
   SDK authoring draft: descriptor, JSON schemas, handler shape, and bounded
   algorithm outline. Host package admission and dynamic loading remain outside

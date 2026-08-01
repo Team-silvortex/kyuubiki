@@ -1,0 +1,21 @@
+{
+  "$schema": "./model-research-validation-report.schema.json",
+  "schema_version": "kyuubiki.model-research-validation-report/v1",
+  "session_id": "research-session-001",
+  "workflow_id": "workflow.heat-to-thermo-quad-2d",
+  "job_id": "job-material-envelope-001",
+  "stage": "workflow_result_validated",
+  "claim_boundary": "screening_only_not_qualification",
+  "external_validation_required": true,
+  "workflow_result": {
+    "graph_id": "workflow.heat-to-thermo-quad-2d",
+    "graph_version": "1.0.0",
+    "runtime_status": "completed",
+    "artifact_keys": ["thermo_summary.result"]
+  },
+  "material_bundle": null,
+  "next_actions": [
+    "build_or_attach_material_research_bundle",
+    "external_validation_required"
+  ]
+}

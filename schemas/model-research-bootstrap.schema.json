@@ -53,6 +53,8 @@
         "receipt_schema",
         "frontier_schema",
         "frontier_fixture",
+        "validation_report_schema",
+        "validation_report_fixture",
         "approval_authority",
         "surfaces"
       ],
@@ -62,6 +64,8 @@
         "receipt_schema": { "$ref": "#/$defs/repoPath" },
         "frontier_schema": { "$ref": "#/$defs/repoPath" },
         "frontier_fixture": { "$ref": "#/$defs/repoPath" },
+        "validation_report_schema": { "$ref": "#/$defs/repoPath" },
+        "validation_report_fixture": { "$ref": "#/$defs/repoPath" },
         "approval_authority": { "const": "caller_only" },
         "surfaces": {
           "type": "object",
@@ -161,22 +165,26 @@
       "required": [
         "path",
         "frontier_path",
+        "validation_path",
         "executor",
         "dispatcher",
         "approval_verifier",
         "frontier_start",
         "frontier_advance",
+        "result_validator",
         "receipt_verifier",
         "frontier_verifier"
       ],
       "properties": {
         "path": { "$ref": "#/$defs/repoPath" },
         "frontier_path": { "$ref": "#/$defs/repoPath" },
+        "validation_path": { "$ref": "#/$defs/repoPath" },
         "executor": { "type": "string", "minLength": 1 },
         "dispatcher": { "type": "string", "minLength": 1 },
         "approval_verifier": { "type": "string", "minLength": 1 },
         "frontier_start": { "type": "string", "minLength": 1 },
         "frontier_advance": { "type": "string", "minLength": 1 },
+        "result_validator": { "type": "string", "minLength": 1 },
         "receipt_verifier": { "type": "string", "minLength": 1 },
         "frontier_verifier": { "type": "string", "minLength": 1 }
       }

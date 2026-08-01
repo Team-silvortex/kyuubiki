@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/model-research-validation-report.schema.json",
+  "title": "Kyuubiki Model Research Validation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "workflow_id",
+    "job_id",
+    "stage",
+    "claim_boundary",
+    "external_validation_required",
+    "workflow_result",
+    "material_bundle",
+    "next_actions"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.model-research-validation-report/v1"
+    },
+    "session_id": { "$ref": "#/$defs/nonEmptyString" },
+    "workflow_id": { "$ref": "#/$defs/nonEmptyString" },
+    "job_id": { "$ref": "#/$defs/nonEmptyString" },
+    "stage": {
+      "enum": ["workflow_result_validated", "screening_bundle_validated"]
+    },
+    "claim_boundary": {
+      "const": "screening_only_not_qualification"
+    },
+    "external_validation_required": { "const": true },
+    "workflow_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph_id",
+        "graph_version",
+        "runtime_status",
+        "artifact_keys"
+      ],
+      "properties": {
+        "graph_id": { "$ref": "#/$defs/nonEmptyString" },
+        "graph_version": { "$ref": "#/$defs/nonEmptyString" },
+        "runtime_status": { "const": "completed" },
+        "artifact_keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    },
+    "material_bundle": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "bundle_id",
+            "study",
+            "reliability_decision",
+            "validation_readiness_score"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "kyuubiki.material-research-bundle/v1"
+            },
+            "bundle_id": { "$ref": "#/$defs/nonEmptyString" },
+            "study": { "$ref": "#/$defs/nonEmptyString" },
+            "reliability_decision": { "$ref": "#/$defs/nonEmptyString" },
+            "validation_readiness_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      ]
+    },
+    "next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "contains": { "const": "external_validation_required" },
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "stage": { "const": "workflow_result_validated" } },
+        "required": ["stage"]
+      },
+      "then": { "properties": { "material_bundle": { "type": "null" } } }
+    },
+    {
+      "if": {
+        "properties": { "stage": { "const": "screening_bundle_validated" } },
+        "required": ["stage"]
+      },
+      "then": { "properties": { "material_bundle": { "type": "object" } } }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 }
+  }
+}

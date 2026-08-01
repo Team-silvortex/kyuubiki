@@ -217,7 +217,8 @@ Highlights:
 - workflow output manifest and result validation helpers
 - material-study catalog, headless result extraction, and report ranking helpers
 - retained material research bundle validation for CI, notebooks, and agents,
-  including summary-to-artifact consistency checks
+  including real-solver authority, ranked evidence, quality-gate, confidence,
+  and screening-readiness consistency checks
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
 - advanced solver workflow templates for modal frame, nonlinear spring, and
@@ -231,6 +232,9 @@ Highlights:
 - provider-neutral model proposal normalization and confirmation-gated planning
 - verified cross-turn research frontiers that carry real submission job ids
   through wait and result-fetch proposals without copying full result payloads
+- verified frontier-to-result validation reports that enforce graph/job
+  identity, completed runtime state, optional screening-bundle evidence, and an
+  explicit external-validation boundary
 
 Example:
 
@@ -262,3 +266,5 @@ Example:
   `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_collaboration.py`
 - Model research frontier test:
   `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_frontier.py`
+- Model research validation test:
+  `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_validation.py`

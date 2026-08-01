@@ -136,6 +136,44 @@
           "research receipt job_id does not match frontier binding",
           "caller-owned receipt and frontier verifiers"
         ]
+      },
+      {
+        "id": "model-research-validation-handoff-contract",
+        "modules": [
+          "contracts",
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/model-research-validation-report.schema.json",
+          "schemas/examples.model-research-validation-report.json",
+          "schemas/material-research-bundle.schema.json",
+          "sdks/rust/src/model_research_validation.rs",
+          "sdks/rust/src/material_research_bundle.rs",
+          "sdks/rust/src/material_research_bundle_validation.rs",
+          "sdks/rust/tests/model_research_validation.rs",
+          "sdks/rust/tests/material_research_bundle.rs",
+          "sdks/python/kyuubiki_sdk/model_research_validation.py",
+          "sdks/python/kyuubiki_sdk/material_research_bundle.py",
+          "sdks/python/tests/test_model_research_validation.py",
+          "sdks/python/tests/test_material_research_bundle.py",
+          "sdks/elixir/lib/kyuubiki_sdk/model_research_validation.ex",
+          "sdks/elixir/lib/kyuubiki_sdk/material_research_bundle.ex",
+          "sdks/elixir/test/model_research_validation_test.exs",
+          "sdks/elixir/test/material_research_bundle_test.exs",
+          "docs/model-research-onboarding.md"
+        ],
+        "required_text": [
+          "kyuubiki.model-research-validation-report/v1",
+          "screening_only_not_qualification",
+          "validate_model_research_frontier_result",
+          "ModelResearchValidation.validate",
+          "validates_bound_workflow_result_without_overclaiming",
+          "test_validates_bound_result_without_overclaiming",
+          "validates a bound result without overclaiming",
+          "rejects_mock_execution_authority",
+          "test_rejects_mock_execution_authority",
+          "rejects mock execution authority"
+        ]
       }
     ],
     "validation": [
@@ -348,6 +386,44 @@
         "terminal_failure_and_execution_failure_block_progression",
         "test_failures_block_progression",
         "terminal and execution failures block progression"
+      ]
+    },
+    {
+      "id": "model-research-result-to-screening-evidence",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "sdk_parity"
+      ],
+      "files": [
+        "schemas/model-research-validation-report.schema.json",
+        "schemas/material-research-bundle.schema.json",
+        "sdks/rust/tests/model_research_validation.rs",
+        "sdks/rust/tests/material_research_bundle.rs",
+        "sdks/python/tests/test_model_research_validation.py",
+        "sdks/python/tests/test_material_research_bundle.py",
+        "sdks/elixir/test/model_research_validation_test.exs",
+        "sdks/elixir/test/material_research_bundle_test.exs"
+      ],
+      "required_text": [
+        "workflow_result_validated",
+        "screening_bundle_validated",
+        "external_validation_required",
+        "rejects_wrong_job_or_unverified_evidence",
+        "test_rejects_wrong_job_and_unverified_frontier",
+        "rejects wrong job and unverified frontier",
+        "rejects_validation_gate_drift",
+        "test_rejects_validation_gate_drift",
+        "rejects validation gate drift"
       ]
     }
   ]

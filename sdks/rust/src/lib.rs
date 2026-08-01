@@ -3,11 +3,13 @@ mod auth;
 mod control_plane;
 mod error;
 mod material_research_bundle;
+mod material_research_bundle_validation;
 mod material_workflows;
 mod model_collaboration;
 mod model_provider_adapters;
 mod model_research_execution;
 mod model_research_frontier;
+mod model_research_validation;
 mod operator_tasks;
 mod session;
 mod solver_rpc;
@@ -55,6 +57,11 @@ pub use model_research_frontier::{
     ModelResearchFrontier, ModelResearchFrontierEvidence, ModelResearchFrontierStage,
     advance_model_research_frontier, build_model_research_frontier_proposal,
     start_model_research_frontier,
+};
+pub use model_research_validation::{
+    MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION, ModelResearchBundleValidation,
+    ModelResearchValidationReport, ModelResearchValidationStage, ModelResearchWorkflowValidation,
+    validate_model_research_frontier_result,
 };
 pub use operator_tasks::{
     operator_task_failure_actions, operator_task_failure_receipts, operator_task_recovery_summary,

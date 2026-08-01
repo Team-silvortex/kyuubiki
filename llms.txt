@@ -29,6 +29,9 @@ runtime behavior from UI text or isolated source files.
 - Never invent job ids or cross-step bindings; advance one known dependency
   frontier per model turn using only a caller-verified execution receipt and
   `kyuubiki.model-research-frontier/v1`.
+- Validate a `ready_to_validate` frontier through
+  `kyuubiki.model-research-validation-report/v1`; workflow completion and a
+  screening bundle never imply external qualification.
 - A plan, dry run, mock, or fallback is not real execution.
 - Treat only a Headless execution receipt as evidence of dispatch.
 - Real execution is not numerical qualification. Retain provenance, validation,

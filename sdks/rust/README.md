@@ -208,7 +208,8 @@ Highlights:
 - material study execution plan contract fixture for schedulers that need to
   inspect `--plan-study`-style output before solver dispatch
 - retained material research bundle validation for native CI, agents, and CLIs,
-  including summary-to-artifact consistency checks
+  including real-solver authority, ranked evidence, quality-gate, confidence,
+  and screening-readiness consistency checks
 - expanded solve-kind coverage across structural, thermal,
   thermo-mechanical, and electrostatic study families
 - workflow graph and dataset contract typed structs with validation
@@ -224,6 +225,9 @@ Highlights:
 - embedding-friendly API for headless agents and CLIs
 - provider-neutral model collaboration with context redaction, constrained
   tool projection, response normalization, and confirmation-gated planning
+- caller-verified research result handoff that binds a `ready_to_validate`
+  frontier to its result receipt and workflow graph, with optional screening
+  bundle validation and no qualification overclaim
 
 Example:
 

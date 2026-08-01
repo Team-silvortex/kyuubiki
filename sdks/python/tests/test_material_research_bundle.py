@@ -51,6 +51,43 @@ class MaterialResearchBundleTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "next_round_execution_plan.decision"):
             validate_material_research_bundle(bundle)
 
+    def test_rejects_mock_execution_authority(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        bundle["execution_trace"]["authority"]["initial"]["mock_execution"] = True
+
+        with self.assertRaisesRegex(ValueError, "mock_execution"):
+            validate_material_research_bundle(bundle)
+
+    def test_rejects_inconsistent_research_ranking(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        bundle["research_evidence"]["candidate_count"] = 99
+
+        with self.assertRaisesRegex(ValueError, "candidate_count"):
+            validate_material_research_bundle(bundle)
+
+    def test_rejects_validation_gate_drift(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        bundle["validation_evidence"]["violated_quality_gate_ids"] = []
+
+        with self.assertRaisesRegex(ValueError, "violated_quality_gate_ids"):
+            validate_material_research_bundle(bundle)
+
+    def test_rejects_missing_screening_boundary(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        bundle["validation_evidence"]["validation_readiness"]["blocking_reasons"] = [
+            "violated_quality_gates"
+        ]
+
+        with self.assertRaisesRegex(ValueError, "external_validation_required"):
+            validate_material_research_bundle(bundle)
+
+    def test_rejects_missing_research_evidence(self) -> None:
+        bundle = json.loads(FIXTURE_PATH.read_text())
+        del bundle["research_evidence"]
+
+        with self.assertRaisesRegex(ValueError, "research_evidence"):
+            validate_material_research_bundle(bundle)
+
 
 if __name__ == "__main__":
     unittest.main()

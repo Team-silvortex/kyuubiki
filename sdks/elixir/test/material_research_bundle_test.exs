@@ -49,4 +49,62 @@ defmodule KyuubikiSdk.MaterialResearchBundleTest do
     assert {:error, error} = MaterialResearchBundle.validate(bundle)
     assert error.message =~ "next_round_execution_plan.decision"
   end
+
+  test "rejects mock execution authority" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["execution_trace", "authority", "initial", "mock_execution"], true)
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "mock_execution"
+  end
+
+  test "rejects inconsistent research ranking" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["research_evidence", "candidate_count"], 99)
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "candidate_count"
+  end
+
+  test "rejects validation gate drift" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(["validation_evidence", "violated_quality_gate_ids"], [])
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "violated_quality_gate_ids"
+  end
+
+  test "rejects missing screening boundary" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> put_in(
+        ["validation_evidence", "validation_readiness", "blocking_reasons"],
+        ["violated_quality_gates"]
+      )
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "external_validation_required"
+  end
+
+  test "rejects missing research evidence" do
+    bundle =
+      @fixture_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> Map.delete("research_evidence")
+
+    assert {:error, error} = MaterialResearchBundle.validate(bundle)
+    assert error.message =~ "research_evidence"
+  end
 end

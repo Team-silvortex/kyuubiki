@@ -76,6 +76,14 @@ still established by the existing validation and research-bundle contracts.
 Persisted frontier state is also untrusted, so a separate caller-owned frontier
 verifier gates proposal generation and every subsequent transition.
 
+The official SDKs close that handoff with
+`kyuubiki.model-research-validation-report/v1`. The validator authenticates the
+frontier and `result_fetch` receipt, enforces workflow/job identity, validates
+the result against the resolved graph, and optionally validates a retained
+material research bundle. Its strongest automated stage is
+`screening_bundle_validated`; the report always states
+`screening_only_not_qualification` and requires external validation.
+
 ## Default Policy
 
 `ModelCollaborationPolicy::default()` exposes only service-backed actions with
