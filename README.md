@@ -89,6 +89,10 @@ repeatable workflow control:
   and execution now use the same Rust automation protocol through `macro
   actions|inspect|validate|normalize|render|run`; templates remain unresolved
   during static validation and bind only when a plan is rendered
+- `headless templates|suggest|init|inspect|validate|render|plan|run` now enters
+  the official Rust `kyuubiki-headless` binary directly. Research execution
+  requires the service executor; mock-capable executors remain explicit preview
+  tools rather than hidden fallbacks
 - Pwdt, the frontend wasm Python DSL, is the target control surface for
   deterministic UI automation inside product-owned shells
 - the coverage tensor is the planning gate for weak coordinates, not a

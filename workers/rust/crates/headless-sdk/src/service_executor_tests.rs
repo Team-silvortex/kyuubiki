@@ -163,6 +163,123 @@ fn direct_fem_submit_sends_solid_tetra_model_to_route() {
 }
 
 #[test]
+fn service_executor_covers_every_service_action_contract() {
+    let missing = crate::all_action_contracts()
+        .iter()
+        .filter(|contract| contract.engine == crate::HeadlessEngine::Service)
+        .filter(|contract| !service_executor_supports_action(contract.id))
+        .map(|contract| contract.id)
+        .collect::<Vec<_>>();
+
+    assert!(
+        missing.is_empty(),
+        "service contracts without native executor support: {missing:?}"
+    );
+}
+
+#[test]
+fn direct_mesh_solve_posts_normalized_study_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept request");
+        let mut buffer = [0_u8; 8192];
+        let bytes_read = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("POST /api/direct-mesh/solve HTTP/1.1\r\n"));
+        assert!(request.contains("\"study_kind\":\"heat_bar_1d\""));
+        assert!(request.contains("\"endpoints\":[\"127.0.0.1:7001\"]"));
+        assert!(request.contains("\"nodes\":[{\"id\":\"n0\"}]"));
+        let body = r#"{"job":{"job_id":"mesh-job","status":"queued","progress":0.0},"direct_mesh":{"endpoint":"127.0.0.1:7001"}}"#;
+        write_test_response(&mut stream, "200 OK", body);
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step(
+            "direct_mesh_solve",
+            1,
+            &json!({
+                "study_kind": "heat_bar_1d",
+                "input": {
+                    "nodes": [{ "id": "n0" }],
+                    "elements": [{ "id": "e0" }]
+                },
+                "endpoints": ["127.0.0.1:7001"]
+            }),
+        )
+        .expect("direct mesh request should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.result["job_id"], "mesh-job");
+    assert_eq!(outcome.result["endpoint"], "127.0.0.1:7001");
+}
+
+#[test]
+fn solve_and_wait_from_model_version_runs_native_service_chain() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let responses = [
+            (
+                "GET /api/v1/model-versions/ver_native HTTP/1.1",
+                r#"{"version":{"version_id":"ver_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
+            ),
+            (
+                "POST /api/direct-mesh/solve HTTP/1.1",
+                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0}}"#,
+            ),
+            (
+                "GET /api/v1/jobs/job-native HTTP/1.1",
+                r#"{"job":{"job_id":"job-native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
+            ),
+            (
+                "GET /api/v1/jobs/job-native HTTP/1.1",
+                r#"{"job":{"job_id":"job-native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
+            ),
+        ];
+        for (expected, body) in responses {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut buffer = [0_u8; 8192];
+            let bytes_read = stream.read(&mut buffer).expect("read request");
+            let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+            assert!(request.starts_with(expected), "request: {request}");
+            write_test_response(&mut stream, "200 OK", body);
+        }
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step(
+            "solve_and_wait_from_model_version",
+            1,
+            &json!({
+                "model_version_id": "ver_native",
+                "endpoints": ["127.0.0.1:7001"],
+                "interval_ms": 1,
+                "timeout_ms": 1000
+            }),
+        )
+        .expect("model-version solve chain should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.result["job_id"], "job-native");
+    assert_eq!(outcome.result["status"], "completed");
+    assert_eq!(outcome.result["result"]["result"]["field"], "ready");
+}
+
+fn write_test_response(stream: &mut impl Write, status: &str, body: &str) {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    stream
+        .write_all(response.as_bytes())
+        .expect("write response");
+}
+
+#[test]
 fn operator_task_prepare_uses_control_plane_endpoint() {
     let payload = json!({
         "task": {

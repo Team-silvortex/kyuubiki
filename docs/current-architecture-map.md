@@ -228,6 +228,9 @@ The tensor is the three-axis review map:
 - `workers/rust/crates/solver`: FEM kernels
 - `workers/rust/crates/installer`: native install/update/integrity logic
 - `workers/rust/crates/headless-sdk`: Rust headless client SDK
+- `workers/rust/crates/cli/src/bin/kyuubiki-headless.rs`: official native
+  template discovery, workflow normalization, planning, validation, dry-run,
+  and service execution entrypoint
 - `sdks`: language SDKs
 - `schemas`: JSON contracts
 - `config`: topology, capability, reliability, and policy manifests

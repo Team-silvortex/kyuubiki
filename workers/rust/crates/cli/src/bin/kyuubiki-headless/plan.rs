@@ -1,5 +1,3 @@
-use std::fs;
-
 use kyuubiki_headless_sdk::{HeadlessExecutionPlan, build_execution_plan};
 
 pub(super) fn handle_plan(args: &[String]) -> Result<(), String> {
@@ -8,9 +6,7 @@ pub(super) fn handle_plan(args: &[String]) -> Result<(), String> {
     let batch = super::load_batch_from_path(&input_path)?;
     let plan = build_execution_plan(&batch);
     if let Some(output_path) = &flags.out {
-        let output_bytes = serde_json::to_vec_pretty(&plan).map_err(|error| error.to_string())?;
-        fs::write(output_path, output_bytes)
-            .map_err(|error| format!("failed to write {}: {error}", output_path))?;
+        super::write_json_file(output_path, &plan)?;
     }
     if flags.json {
         super::print_json(&plan)?;

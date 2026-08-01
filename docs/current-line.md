@@ -74,6 +74,13 @@ closure rather than raw feature sprawl:
   native protocol instead of invoking the frontend Node CLI. Static macro
   checks preserve payload/state templates, while render/run resolve them into
   the executable plan
+- `kyuubiki headless templates|suggest|init|inspect|validate|render|plan|run`
+  now dispatches to the official Rust binary. Its native contract covers the
+  complete template-to-plan-to-run journey, while research posture rejects
+  mock and hybrid executors instead of silently downgrading execution authority
+- native service execution now covers every action declared with the service
+  engine, including direct mesh and saved-model-version solve/wait/result
+  chains; the executor matrix is guarded against drifting from that contract
 - Pwdt should become the deterministic frontend automation surface for Hub,
   Workbench, and Installer, while headless SDKs remain backend/control clients
 - the module-function coverage tensor is the shared map for deciding which

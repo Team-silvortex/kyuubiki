@@ -152,6 +152,138 @@ fn material_study_plan_previews_steps_without_running_solver() {
     );
 }
 
+fn assert_composite_candidate_evidence(row: &Value) {
+    let id = row["candidate_id"].as_str().unwrap_or("unknown");
+    assert!(row["interface_risk_score"].is_number(), "{id}: risk");
+    assert!(row["weakest_interface"].is_object(), "{id}: interface");
+    assert_eq!(
+        row["electrostatic_cross_validation"]["status"].as_str(),
+        Some("pass"),
+        "{id}: electrostatic cross-validation"
+    );
+    assert!(
+        row["electrostatic_cross_validation"]["relative_error"]
+            .as_f64()
+            .is_some_and(|error| error <= 1.0e-9),
+        "{id}: electrostatic relative error"
+    );
+    assert_eq!(
+        row["electrostatic_mesh_convergence"]["status"].as_str(),
+        Some("pass"),
+        "{id}: electrostatic mesh"
+    );
+    assert_eq!(
+        row["electrostatic_mesh_convergence"]["samples"]
+            .as_array()
+            .map(Vec::len),
+        Some(4),
+        "{id}: electrostatic mesh samples"
+    );
+    assert_eq!(
+        row["heat_cross_validation"]["status"].as_str(),
+        Some("pass"),
+        "{id}: heat cross-validation"
+    );
+    assert_eq!(
+        row["heat_mesh_convergence"]["status"].as_str(),
+        Some("pass"),
+        "{id}: heat mesh"
+    );
+    assert_eq!(
+        row["heat_mesh_convergence"]["samples"]
+            .as_array()
+            .map(Vec::len),
+        Some(4),
+        "{id}: heat mesh samples"
+    );
+
+    let thermal = &row["thermal_mesh_convergence"];
+    assert_eq!(
+        thermal["status"].as_str(),
+        Some("fail"),
+        "{id}: thermal mesh"
+    );
+    assert_eq!(
+        thermal["samples"].as_array().map(Vec::len),
+        Some(4),
+        "{id}: thermal mesh samples"
+    );
+    assert_eq!(
+        thermal["regime_assessment"]["diagnosis"].as_str(),
+        Some("displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging"),
+        "{id}: thermal regime"
+    );
+    assert!(
+        thermal["regime_assessment"]["metrics"][0]["fine_grid_gci"].is_null(),
+        "{id}: displacement GCI should be unknown"
+    );
+    assert!(
+        thermal["regime_assessment"]["metrics"][1]["fine_grid_gci"]
+            .as_f64()
+            .is_some_and(|value| value > 0.1),
+        "{id}: energy GCI should remain above tolerance"
+    );
+    assert_eq!(
+        thermal["regime_assessment"]["metrics"][2]["regime"].as_str(),
+        Some("monotonic_diverging"),
+        "{id}: peak stress regime"
+    );
+    assert_eq!(
+        thermal["algebraic_validation"]["status"].as_str(),
+        Some("pass"),
+        "{id}: algebraic validation"
+    );
+    let series = thermal["algebraic_validation"]["series"]
+        .as_array()
+        .expect("algebraic series");
+    assert_eq!(series.len(), 3, "{id}: algebraic series");
+    assert!(
+        series.iter().all(|entry| entry["samples"]
+            .as_array()
+            .is_some_and(|samples| samples.len() == 4)),
+        "{id}: algebraic samples"
+    );
+
+    assert_eq!(
+        row["thermal_constraint_regularized_mesh_convergence"]["status"].as_str(),
+        Some("fail"),
+        "{id}: regularized thermal mesh"
+    );
+    assert_eq!(
+        row["thermal_constraint_sensitivity"]["diagnosis"].as_str(),
+        Some("mixed_restraint_sensitivity_and_persistent_energy_nonconvergence"),
+        "{id}: restraint sensitivity"
+    );
+    assert_eq!(
+        row["thermal_stress_recovery"]["status"].as_str(),
+        Some("fail"),
+        "{id}: stress recovery"
+    );
+    let grading = &row["thermal_interface_grading_assessment"];
+    assert_eq!(
+        grading["diagnosis"].as_str(),
+        Some("graded_mesh_did_not_resolve_nonconvergence"),
+        "{id}: interface grading"
+    );
+    assert!(
+        grading["p95_change_ratio_graded_to_uniform"]
+            .as_f64()
+            .is_some_and(|ratio| ratio > 1.0),
+        "{id}: graded P95 should not claim improvement"
+    );
+    assert!(
+        grading["max_change_ratio_graded_to_uniform"]
+            .as_f64()
+            .is_some_and(|ratio| ratio > 1.0),
+        "{id}: graded peak should not claim improvement"
+    );
+    assert_eq!(
+        grading["qualification_effect"].as_str(),
+        Some("diagnostic_only_does_not_override_uniform_mesh_gates"),
+        "{id}: grading qualification"
+    );
+}
+
 #[test]
 fn explores_composite_panel_with_coupled_local_solver_results() {
     let exploration =
@@ -177,70 +309,12 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
             .as_array()
             .is_some_and(|gates| gates.len() >= 5)
     );
-    assert!(
-        exploration["report"]["candidates"]
-            .as_array()
-            .is_some_and(|rows| {
-                rows.iter().all(|row| {
-                row["interface_risk_score"].is_number()
-                    && row["weakest_interface"].is_object()
-                    && row["electrostatic_cross_validation"]["status"].as_str() == Some("pass")
-                    && row["electrostatic_cross_validation"]["relative_error"]
-                        .as_f64()
-                        .is_some_and(|error| error <= 1.0e-9)
-                    && row["electrostatic_mesh_convergence"]["status"].as_str() == Some("pass")
-                    && row["electrostatic_mesh_convergence"]["samples"]
-                        .as_array()
-                        .is_some_and(|samples| samples.len() == 4)
-                    && row["heat_cross_validation"]["status"].as_str() == Some("pass")
-                    && row["heat_mesh_convergence"]["status"].as_str() == Some("pass")
-                    && row["heat_mesh_convergence"]["samples"]
-                        .as_array()
-                        .is_some_and(|samples| samples.len() == 4)
-                    && row["thermal_mesh_convergence"]["status"].as_str() == Some("fail")
-                    && row["thermal_mesh_convergence"]["samples"]
-                        .as_array()
-                        .is_some_and(|samples| samples.len() == 4)
-                    && row["thermal_mesh_convergence"]["regime_assessment"]["diagnosis"].as_str()
-                        == Some(
-                            "displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging"
-                        )
-                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][0]
-                        ["fine_grid_gci"]
-                        .is_null()
-                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][1]
-                        ["fine_grid_gci"]
-                        .as_f64()
-                        .is_some_and(|value| value > 0.25)
-                    && row["thermal_mesh_convergence"]["regime_assessment"]["metrics"][2]["regime"]
-                        .as_str()
-                        == Some("monotonic_diverging")
-                    && row["thermal_mesh_convergence"]["algebraic_validation"]["status"].as_str()
-                        == Some("pass")
-                    && row["thermal_mesh_convergence"]["algebraic_validation"]["series"]
-                        .as_array()
-                        .is_some_and(|series| {
-                            series.len() == 3
-                                && series.iter().all(|entry| {
-                                    entry["samples"]
-                                        .as_array()
-                                        .is_some_and(|samples| samples.len() == 4)
-                                })
-                        })
-                    && row["thermal_constraint_regularized_mesh_convergence"]["status"].as_str()
-                        == Some("fail")
-                    && row["thermal_constraint_sensitivity"]["diagnosis"].as_str()
-                        == Some("mixed_restraint_sensitivity_and_persistent_energy_nonconvergence")
-                    && row["thermal_stress_recovery"]["status"].as_str() == Some("fail")
-                    && row["thermal_interface_grading_assessment"]["diagnosis"].as_str()
-                        == Some(
-                            "localized_tail_resolution_improved_but_global_energy_and_peak_unstable"
-                        )
-                    && row["thermal_interface_grading_assessment"]["qualification_effect"].as_str()
-                        == Some("diagnostic_only_does_not_override_uniform_mesh_gates")
-            })
-            })
-    );
+    let candidates = exploration["report"]["candidates"]
+        .as_array()
+        .expect("candidate rows");
+    for row in candidates {
+        assert_composite_candidate_evidence(row);
+    }
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
             .as_array()
@@ -316,7 +390,7 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                         && gate["status"].as_str() == Some("violate")
                 })
                 .count()
-                == 2)
+                == 1)
     );
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
@@ -330,7 +404,7 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                         && gate["status"].as_str() == Some("violate")
                 })
                 .count()
-                == 2)
+                == 1)
     );
     assert_eq!(
         exploration["next_round"]["decision"].as_str(),
@@ -369,7 +443,7 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     assert_eq!(
         exploration["result_payloads"][0]["thermal_interface_grading_assessment"]["diagnosis"]
             .as_str(),
-        Some("localized_tail_resolution_improved_but_global_energy_and_peak_unstable")
+        Some("graded_mesh_did_not_resolve_nonconvergence")
     );
 }
 

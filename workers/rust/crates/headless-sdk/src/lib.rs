@@ -70,6 +70,7 @@ mod plan;
 mod run;
 mod service_executor;
 mod service_executor_library;
+mod service_executor_solve;
 mod surface;
 mod template_search;
 #[cfg(test)]

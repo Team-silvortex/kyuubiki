@@ -539,6 +539,9 @@ When adding a capability:
 - Agent execution, solver kernels, package preflight, or runtime protocol work
   goes to `workers/rust`.
 - Headless access goes to `sdks/*` or `workers/rust/crates/headless-sdk`.
+- The official native headless command surface goes through
+  `workers/rust/crates/cli/src/bin/kyuubiki-headless.rs`; frontend scripts may
+  test UI parity but must not become the production control implementation.
 - Shared JSON contracts go to `schemas`.
 - Shared native project-container behavior goes to
   `workers/rust/crates/project-bundle`.

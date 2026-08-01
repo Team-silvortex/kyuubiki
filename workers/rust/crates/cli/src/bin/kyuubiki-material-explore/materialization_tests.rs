@@ -85,7 +85,13 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
     assert_eq!(
         rerun["report"]["candidates"][0]["thermal_interface_grading_assessment"]["diagnosis"]
             .as_str(),
-        Some("localized_tail_resolution_improved_but_global_energy_and_peak_unstable")
+        Some("graded_mesh_did_not_resolve_nonconvergence")
+    );
+    assert!(
+        rerun["report"]["candidates"][0]["thermal_interface_grading_assessment"]
+            ["p95_change_ratio_graded_to_uniform"]
+            .as_f64()
+            .is_some_and(|ratio| ratio > 1.0)
     );
     assert!(
         rerun["report"]["reliability"]["quality_gates"]

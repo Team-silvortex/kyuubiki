@@ -27,6 +27,7 @@ operator-package-dynamic-smoke\n  \
 project create|inspect|validate|normalize|unpack|pack|diff\n  \
 project automation-presets|automation-render|automation-run\n  \
 macro actions|inspect|validate|normalize|render|run\n  \
+headless templates|suggest|init|inspect|validate|render|plan|run\n  \
 build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \

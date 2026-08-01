@@ -41,6 +41,7 @@ fn run() -> Result<(), String> {
         "init" => handle_init(&args[1..]),
         "inspect" => handle_inspect(&args[1..]),
         "validate" => handle_validate(&args[1..]),
+        "render" => handle_render(&args[1..]),
         "plan" => kyuubiki_headless_plan::handle_plan(&args[1..]),
         "run" => handle_run(&args[1..]),
         other => Err(format!("unknown command: {other}")),
@@ -131,16 +132,10 @@ fn handle_init(args: &[String]) -> Result<(), String> {
         .out
         .clone()
         .unwrap_or_else(|| format!("{}.headless-workflow.json", template.id));
-    let resolved_output_path = PathBuf::from(&output_path);
-    let output_bytes = serde_json::to_vec_pretty(&document).map_err(|error| error.to_string())?;
-    fs::write(&output_path, output_bytes)
-        .map_err(|error| format!("failed to write {}: {error}", output_path))?;
+    let resolved_output_path = write_json_file(&output_path, &document)?;
     println!(
         "initialized headless workflow -> {}",
-        resolved_output_path
-            .canonicalize()
-            .unwrap_or(resolved_output_path)
-            .display()
+        resolved_output_path.display()
     );
     Ok(())
 }
@@ -182,6 +177,29 @@ fn handle_validate(args: &[String]) -> Result<(), String> {
     } else {
         Err("validation failed".to_string())
     }
+}
+
+fn handle_render(args: &[String]) -> Result<(), String> {
+    let flags = Flags::parse(args)?;
+    let input_path = flags.input_path()?;
+    let batch = load_batch_from_path(&input_path)?;
+    let output_path = flags
+        .out
+        .as_deref()
+        .map(|path| write_json_file(path, &batch))
+        .transpose()?;
+    if flags.json {
+        print_json(&batch)?;
+        return Ok(());
+    }
+    if let Some(path) = output_path {
+        println!("rendered headless execution batch -> {}", path.display());
+    } else {
+        println!("Headless execution batch: {}", batch.workflow_id);
+        println!("Steps: {}", batch.steps.len());
+        println!("Warnings: {}", batch.warnings.len());
+    }
+    Ok(())
 }
 
 fn handle_run(args: &[String]) -> Result<(), String> {
@@ -258,9 +276,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         run_batch_dry(&batch, flags.allow_sensitive, flags.allow_destructive)
     };
     if let Some(report_out) = &flags.report_out {
-        let output_bytes = serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?;
-        fs::write(report_out, output_bytes)
-            .map_err(|error| format!("failed to write {}: {error}", report_out))?;
+        write_json_file(report_out, &report)?;
     }
     let material_report = flags
         .material_report
@@ -272,10 +288,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     }
     if let Some(material_report) = &material_report {
         if let Some(output_path) = &flags.material_report_out {
-            let output_bytes =
-                serde_json::to_vec_pretty(material_report).map_err(|error| error.to_string())?;
-            fs::write(output_path, output_bytes)
-                .map_err(|error| format!("failed to write {}: {error}", output_path))?;
+            write_json_file(output_path, material_report)?;
         }
     }
     if flags.json {
@@ -295,6 +308,21 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     } else {
         Err("run report generated from invalid batch".to_string())
     }
+}
+
+fn write_json_file<T: Serialize>(path: &str, value: &T) -> Result<PathBuf, String> {
+    let output_path = PathBuf::from(path);
+    if let Some(parent) = output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    let output_bytes = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
+    fs::write(&output_path, output_bytes)
+        .map_err(|error| format!("failed to write {}: {error}", output_path.display()))?;
+    Ok(output_path.canonicalize().unwrap_or(output_path))
 }
 
 fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {

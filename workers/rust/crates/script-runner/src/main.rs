@@ -285,6 +285,11 @@ fn run() -> RunnerResult<u8> {
         }
         "project" => project_cli::run_project_command(rest),
         "macro" => macro_cli::run_macro_command(rest),
+        "headless" => run_command(
+            &paths.rust,
+            "cargo",
+            cargo_run_bin("kyuubiki-cli", "kyuubiki-headless", rest),
+        ),
         "build-frontend" => run_command(
             &paths.frontend,
             "npm",
@@ -580,6 +585,14 @@ fn cargo_run(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsStrin
         .into_iter()
         .map(OsString::from)
         .chain(rest)
+}
+
+fn cargo_run_bin(package: &str, binary: &str, rest: Vec<OsString>) -> Vec<OsString> {
+    ["run", "-p", package, "--bin", binary, "--"]
+        .into_iter()
+        .map(OsString::from)
+        .chain(rest)
+        .collect()
 }
 
 fn prepend(value: &str, rest: Vec<OsString>) -> Vec<OsString> {

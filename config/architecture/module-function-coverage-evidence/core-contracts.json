@@ -325,13 +325,28 @@
         "id": "headless-service-action-contract",
         "modules": [
           "workbench-shell",
-          "sdk-headless"
+          "sdk-headless",
+          "runtime-agent-cli"
         ],
         "files": [
           "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
           "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
           "apps/frontend/test/headless/kyuubiki-headless-cli.test.mjs",
           "apps/frontend/test/headless/kyuubiki-headless-live.test.mjs",
+          "workers/rust/crates/headless-sdk/src/workflow_batch.rs",
+          "workers/rust/crates/headless-sdk/src/templates.rs",
+          "workers/rust/crates/headless-sdk/src/plan.rs",
+          "workers/rust/crates/headless-sdk/src/executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/flags.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/plan.rs",
+          "workers/rust/crates/cli/tests/headless_cli_surface.rs",
+          "workers/rust/crates/cli/tests/headless_execution_posture.rs",
+          "workers/rust/crates/script-runner/src/main.rs",
+          "workers/rust/crates/script-runner/src/help.rs",
           "sdks/rust/src/workflow_contracts.rs",
           "sdks/python/kyuubiki_sdk/workflow_contracts.py",
           "sdks/elixir/lib/kyuubiki_sdk/workflow_contracts.ex"
@@ -342,6 +357,13 @@
           "direct_mesh_solve",
           "requiresConfirmation",
           "HeadlessActionContract",
+          "build_execution_plan",
+          "ServiceHeadlessExecutor",
+          "service_executor_covers_every_service_action_contract",
+          "solve_and_wait_from_model_version",
+          "execution-posture",
+          "kyuubiki-headless",
+          "cargo_run_bin",
           "kyuubiki.headless-workflow/v1",
           "kyuubiki.workflow-graph/v1",
           "kyuubiki.workflow-dataset/v1"

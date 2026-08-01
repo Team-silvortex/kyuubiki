@@ -181,6 +181,12 @@ This directory contains host-native operational entry points.
   render/run bind payload and state. Live execution remains service-only, while
   browser actions can be checked safely in dry-run mode without a hidden Node
   fallback.
+- `./scripts/kyuubiki headless templates|suggest|init|inspect|validate|render|plan|run`
+  Enter the official Rust `kyuubiki-headless` binary from the shared project
+  launcher. The native journey covers template discovery through dry-run and
+  service-backed execution, including normalized batch rendering and explicit
+  preview/research execution posture. The frontend CLI remains a frontend
+  regression surface, not the production headless control entrypoint.
 - `kyuubiki-script-runner check-contracts-runtime-api-surface`
   Verify the contracts-owned runtime API surface, including required contract
   families, central self-host service surface binding, repo-relative evidence

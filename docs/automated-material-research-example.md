@@ -173,21 +173,21 @@ primary structural quality gates.
 The same retained meshes also feed an area-weighted stress-recovery check.
 It tracks von Mises RMS and P95 as pass metrics while keeping the raw maximum
 and `max/P95` concentration ratio diagnostic-only. The current candidates still
-fail: finest-pair RMS changes by about `12.1%`, P95 changes by about `26.65%`,
-and the finest-mesh maximum is about `2.23` times P95. Nonconvergence therefore
-extends beyond one isolated peak element. The result adds two blocking gates
-under `gate.thermal_stress_recovery.*` and points the next iteration toward
-local refinement, higher-order recovery, or an independently correlated
-structural formulation.
+fail: finest-pair RMS changes by about `1.07%`, P95 changes by about `24.4%`,
+and the finest-mesh maximum is about `1.97` times P95. Nonconvergence therefore
+extends beyond one isolated peak element. The result adds two stress-recovery
+gates under `gate.thermal_stress_recovery.*` and points the next iteration
+toward local refinement, higher-order recovery, or an independently correlated
+structural formulation. RMS clears its gate, while P95 remains blocking.
 
 An interface-graded companion run clusters the same element budgets at the
-clamp, material interfaces, and free edges. It cuts finest-pair P95 drift from
-about `26.65%` to `4.19%`, but RMS drift rises from about `12.1%` to `13.7%`,
-strain-energy drift remains near `28.4%`, and raw-maximum drift rises from
-about `21.5%` to `37.5%`. The machine-readable diagnosis is therefore
-`localized_tail_resolution_improved_but_global_energy_and_peak_unstable`.
-This is useful localization evidence, but remains diagnostic-only and cannot
-override the uniform-mesh gates.
+clamp, material interfaces, and free edges. In the current solver baseline it
+cuts finest-pair RMS drift from about `1.07%` to `0.16%`, but P95 drift rises
+from about `24.4%` to `32.5%`, strain-energy drift remains near `14.5%`, and
+raw-maximum drift rises from about `27.4%` to `43.9%`. The machine-readable
+diagnosis is therefore
+`graded_mesh_did_not_resolve_nonconvergence`. The graded run remains useful
+diagnostic evidence, but cannot override the uniform-mesh gates.
 
 The four-level histories now also receive an observed-order and Grid
 Convergence Index assessment. Displacement remains monotonic but

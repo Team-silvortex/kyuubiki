@@ -11,6 +11,10 @@ use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
 };
+use crate::service_executor_solve::{
+    execute_direct_mesh_solve, execute_solve_and_wait_from_model_version,
+    execute_solve_from_model_version,
+};
 
 const TERMINAL_JOB_STATUSES: &[&str] = &["completed", "failed", "cancelled"];
 
@@ -49,6 +53,9 @@ pub fn service_executor_supports_action(action: &str) -> bool {
             | "operator_task_execute"
             | "workflow_submit_catalog"
             | "workflow_submit_graph"
+            | "direct_mesh_solve"
+            | "solve_from_model_version"
+            | "solve_and_wait_from_model_version"
             | "job_fetch"
             | "job_wait"
             | "result_fetch"
@@ -105,6 +112,17 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             "workflow_submit_graph" => {
                 execute_workflow_submit_graph(&self.base_url, self.api_token.as_deref(), payload)
             }
+            "direct_mesh_solve" => {
+                execute_direct_mesh_solve(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "solve_from_model_version" => {
+                execute_solve_from_model_version(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "solve_and_wait_from_model_version" => execute_solve_and_wait_from_model_version(
+                &self.base_url,
+                self.api_token.as_deref(),
+                payload,
+            ),
             "job_fetch" => execute_job_fetch(&self.base_url, self.api_token.as_deref(), payload),
             "job_wait" => execute_job_wait(&self.base_url, self.api_token.as_deref(), payload),
             "result_fetch" => {
@@ -254,7 +272,7 @@ fn execute_job_fetch(
     })
 }
 
-fn execute_job_wait(
+pub(crate) fn execute_job_wait(
     base_url: &str,
     api_token: Option<&str>,
     payload: &Value,
@@ -291,7 +309,7 @@ fn execute_job_wait(
     }
 }
 
-fn execute_result_fetch(
+pub(crate) fn execute_result_fetch(
     base_url: &str,
     api_token: Option<&str>,
     payload: &Value,
@@ -330,7 +348,7 @@ fn execute_result_fetch(
     })
 }
 
-fn normalize_job_submission_result(result: Value) -> Value {
+pub(crate) fn normalize_job_submission_result(result: Value) -> Value {
     let Some(job) = result.get("job").and_then(Value::as_object) else {
         return result;
     };
