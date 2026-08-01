@@ -38,6 +38,9 @@ README.
 - `model-research-execution-receipt.schema.json` retains completed or partially
   failed model-driven Headless execution without upgrading an attempt into a
   completion claim.
+- `model-research-frontier.schema.json` defines the small persistent cross-turn
+  state that binds follow-up proposals to a verified real `job_id` instead of
+  allowing a model or caller to invent future task identifiers.
 - `examples.model-plan-approval.json` demonstrates the approval shape for the
   first bounded workflow but is never itself execution authority.
 - `operator-model-draft.schema.json` defines the non-executable Rust Operator

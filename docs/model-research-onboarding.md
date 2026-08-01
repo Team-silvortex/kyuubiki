@@ -16,6 +16,7 @@ A model is ready to begin research only when it can:
 - normalize provider tool calls into
   `kyuubiki.model-workflow-proposal/v1`
 - build and inspect a Headless plan before dispatch
+- advance cross-turn work only from caller-verified receipts and bound job ids
 - distinguish planning, real execution, numerical validation, and external
   qualification
 - retain the required research evidence after execution
@@ -38,18 +39,26 @@ model enough contract knowledge to prepare safe, inspectable work.
 10. Have the caller issue a plan-bound approval using
     `schemas/model-plan-approval.schema.json`. The model may request this
     approval but may not create or infer it.
-11. Use Rust `execute_model_headless_plan` with
-    `SessionModelActionDispatcher` to dispatch through the ordinary Headless
-    client and retain a
+11. Use the selected SDK execution surface and its Session dispatcher to route
+    through the ordinary Headless client and retain a
     `kyuubiki.model-research-execution-receipt/v1` receipt.
-12. Return that real receipt to the model, and only then plan the next
-    dependency frontier.
-13. Wait for terminal state, fetch retained results, validate evidence, and
-    produce a research bundle.
+12. Verify that receipt independently, then create or advance
+    `kyuubiki.model-research-frontier/v1`. Its generated proposal binds the
+    exact returned `job_id`; the model does not supply that binding.
+13. Repeat receipt verification and frontier advancement for `job_wait` and
+    `result_fetch`, then validate evidence and produce a research bundle.
 
 One dependency frontier per turn is important. A model must not propose
 `job_wait` with a guessed job id in the same turn that creates the job. It must
 consume the real submission receipt first.
+
+The frontier is deliberately a small checkpoint, not a result store. It retains
+the research stage, next allowed action, real job binding, and minimal receipt
+evidence. Full results remain in the ordinary result and artifact stores. A
+failed or cancelled execution moves the frontier to `blocked`; it never skips
+forward to validation. Persisted frontiers are also untrusted input: a
+caller-owned frontier verifier must authenticate them before proposal creation
+or state advancement.
 
 ## First Bounded Research
 
@@ -70,12 +79,17 @@ workflow. `workflow_submit_catalog` is confirmation-gated. After dispatch, use
 the returned `job_id` in a later `job_wait` proposal, then use the same real id
 for `result_fetch`.
 
-The Rust execution bridge rejects the entire plan before network access if an
+Use `schemas/model-research-frontier.schema.json` for persisted state and
+`schemas/examples.model-research-frontier.json` as the portable fixture. Rust,
+Python, and Elixir expose equivalent start, advance, and proposal helpers. They
+require caller-owned receipt and frontier verifiers for the cross-turn chain.
+
+Every official execution bridge rejects the entire plan before network access if an
 exact gated step is not covered by a caller-issued approval. Runtime failures
 are returned as partial receipts with `status: failed`; they are evidence of an
 attempt, never evidence of completed execution.
 
-The native reference entry is
+The native Rust reference entry is
 `sdks/rust/examples/execute_model_research_plan.rs`. From `sdks/rust`, provide
 the configured control-plane URL and run it with the repository fixtures:
 
@@ -98,6 +112,7 @@ that the input rows came from independently qualified simulation or experiment.
 A research turn is complete only when the retained output records:
 
 - terminal job state and real execution receipt
+- verified research frontier and exact bound job identity
 - exact caller approval identity for every gated action
 - execution authority and provenance
 - input contracts and artifact identities

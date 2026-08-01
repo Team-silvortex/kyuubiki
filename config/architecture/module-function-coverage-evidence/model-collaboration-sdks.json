@@ -83,6 +83,10 @@
           "sdks/rust/src/model_research_execution.rs",
           "sdks/rust/examples/execute_model_research_plan.rs",
           "sdks/rust/tests/model_research_execution.rs",
+          "sdks/python/kyuubiki_sdk/model_research_execution.py",
+          "sdks/python/tests/test_model_research_execution.py",
+          "sdks/elixir/lib/kyuubiki_sdk/model_research_execution.ex",
+          "sdks/elixir/test/model_research_execution_test.exs",
           "docs/model-research-bootstrap.json",
           "docs/model-research-onboarding.md"
         ],
@@ -95,7 +99,42 @@
           "rejects_unverified_approval_before_any_dispatch",
           "retains_partial_failure_instead_of_claiming_completion",
           "repository_bootstrap_fixtures_reach_approved_execution",
+          "test_repository_fixtures_reach_approved_execution",
+          "repository bootstrap fixtures reach approved execution",
           "A model response can request approval but can never issue"
+        ]
+      },
+      {
+        "id": "model-research-frontier-contract",
+        "modules": [
+          "contracts",
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/model-research-frontier.schema.json",
+          "schemas/examples.model-research-frontier.json",
+          "sdks/rust/src/model_research_frontier.rs",
+          "sdks/rust/tests/model_research_frontier.rs",
+          "sdks/python/kyuubiki_sdk/model_research_frontier.py",
+          "sdks/python/tests/test_model_research_frontier.py",
+          "sdks/elixir/lib/kyuubiki_sdk/model_research_frontier.ex",
+          "sdks/elixir/test/model_research_frontier_test.exs",
+          "docs/model-research-bootstrap.json",
+          "docs/model-research-onboarding.md"
+        ],
+        "required_text": [
+          "kyuubiki.model-research-frontier/v1",
+          "start_model_research_frontier",
+          "ModelReceiptVerifier",
+          "ModelFrontierVerifier",
+          "verified_submission_binds_real_job_id_into_next_proposal",
+          "test_verified_submission_binds_real_job_id_into_next_proposal",
+          "verified submission binds real job id into next proposal",
+          "unverified_frontier_cannot_generate_or_advance",
+          "test_unverified_frontier_cannot_generate_proposal",
+          "unverified frontier cannot generate proposal",
+          "research receipt job_id does not match frontier binding",
+          "caller-owned receipt and frontier verifiers"
         ]
       }
     ],
@@ -250,20 +289,65 @@
       "dimensions": [
         "execution",
         "contract",
-        "recovery"
+        "recovery",
+        "sdk_parity"
       ],
       "files": [
         "schemas/model-plan-approval.schema.json",
         "schemas/model-research-execution-receipt.schema.json",
         "sdks/rust/src/model_research_execution.rs",
-        "sdks/rust/tests/model_research_execution.rs"
+        "sdks/rust/tests/model_research_execution.rs",
+        "sdks/python/kyuubiki_sdk/model_research_execution.py",
+        "sdks/python/tests/test_model_research_execution.py",
+        "sdks/elixir/lib/kyuubiki_sdk/model_research_execution.ex",
+        "sdks/elixir/test/model_research_execution_test.exs"
       ],
       "required_text": [
         "rejects_unapproved_plan_before_any_dispatch",
         "rejects_unverified_approval_before_any_dispatch",
         "executes_exactly_approved_plan_and_retains_authority",
         "retains_partial_failure_instead_of_claiming_completion",
-        "session_dispatcher_reaches_real_control_plane_routes"
+        "session_dispatcher_reaches_real_control_plane_routes",
+        "test_session_dispatcher_uses_existing_client_routes",
+        "session dispatcher reaches existing control plane routes"
+      ]
+    },
+    {
+      "id": "model-research-cross-turn-frontier",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "sdk_parity"
+      ],
+      "files": [
+        "schemas/model-research-frontier.schema.json",
+        "schemas/model-research-execution-receipt.schema.json",
+        "sdks/rust/src/model_research_frontier.rs",
+        "sdks/rust/tests/model_research_frontier.rs",
+        "sdks/python/kyuubiki_sdk/model_research_frontier.py",
+        "sdks/python/tests/test_model_research_frontier.py",
+        "sdks/elixir/lib/kyuubiki_sdk/model_research_frontier.ex",
+        "sdks/elixir/test/model_research_frontier_test.exs"
+      ],
+      "required_text": [
+        "job_wait",
+        "result_fetch",
+        "ready_to_validate",
+        "mismatched_job_binding_is_rejected",
+        "test_mismatched_job_binding_is_rejected",
+        "mismatched job binding is rejected",
+        "terminal_failure_and_execution_failure_block_progression",
+        "test_failures_block_progression",
+        "terminal and execution failures block progression"
       ]
     }
   ]

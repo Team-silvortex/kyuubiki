@@ -51,14 +51,47 @@
     }
   },
   "execution_contract": {
-    "language": "rust",
-    "implementation": "sdks/rust/src/model_research_execution.rs",
-    "executor": "execute_model_headless_plan",
-    "approval_verifier": "ModelApprovalVerifier",
     "approval_schema": "schemas/model-plan-approval.schema.json",
     "approval_fixture": "schemas/examples.model-plan-approval.json",
     "receipt_schema": "schemas/model-research-execution-receipt.schema.json",
-    "approval_authority": "caller_only"
+    "frontier_schema": "schemas/model-research-frontier.schema.json",
+    "frontier_fixture": "schemas/examples.model-research-frontier.json",
+    "approval_authority": "caller_only",
+    "surfaces": {
+      "rust": {
+        "path": "sdks/rust/src/model_research_execution.rs",
+        "frontier_path": "sdks/rust/src/model_research_frontier.rs",
+        "executor": "execute_model_headless_plan",
+        "dispatcher": "SessionModelActionDispatcher",
+        "approval_verifier": "ModelApprovalVerifier",
+        "frontier_start": "start_model_research_frontier",
+        "frontier_advance": "advance_model_research_frontier",
+        "receipt_verifier": "ModelReceiptVerifier",
+        "frontier_verifier": "ModelFrontierVerifier"
+      },
+      "python": {
+        "path": "sdks/python/kyuubiki_sdk/model_research_execution.py",
+        "frontier_path": "sdks/python/kyuubiki_sdk/model_research_frontier.py",
+        "executor": "execute_model_headless_plan",
+        "dispatcher": "SessionModelActionDispatcher",
+        "approval_verifier": "ApprovalVerifier",
+        "frontier_start": "start_model_research_frontier",
+        "frontier_advance": "advance_model_research_frontier",
+        "receipt_verifier": "ReceiptVerifier",
+        "frontier_verifier": "FrontierVerifier"
+      },
+      "elixir": {
+        "path": "sdks/elixir/lib/kyuubiki_sdk/model_research_execution.ex",
+        "frontier_path": "sdks/elixir/lib/kyuubiki_sdk/model_research_frontier.ex",
+        "executor": "ModelResearchExecution.execute/4",
+        "dispatcher": "ModelResearchExecution.session_dispatcher/2",
+        "approval_verifier": "caller-owned two-argument function",
+        "frontier_start": "ModelResearchFrontier.start/2",
+        "frontier_advance": "ModelResearchFrontier.advance/4",
+        "receipt_verifier": "caller-owned one-argument function",
+        "frontier_verifier": "caller-owned one-argument function"
+      }
+    }
   },
   "research_protocol": [
     {
@@ -87,7 +120,7 @@
       "id": "observe",
       "objective": "Use the returned job identity to observe completion and fetch retained results without inventing bindings.",
       "actions": ["job_wait", "result_fetch"],
-      "outputs": ["terminal_job_state", "retained_result"]
+      "outputs": ["model_research_frontier", "terminal_job_state", "retained_result"]
     },
     {
       "id": "validate",
@@ -114,6 +147,7 @@
     "Normalize provider output and build a Headless plan before dispatching any action.",
     "Request explicit approval for every confirmation-gated step before dispatch.",
     "A model response can request approval but can never issue, infer, verify, or self-authorize a caller approval.",
+    "Advance cross-turn research only from a caller-verified execution receipt and its bound real job identifier.",
     "Process one known dependency frontier per model turn and never invent future job identifiers.",
     "Never claim execution from a request, proposal, dry run, plan, mock, or fallback result.",
     "Keep execution authority separate from numerical validation and experimental qualification.",
@@ -131,6 +165,7 @@
   "completion_contract": {
     "required_artifacts": [
       "model_research_execution_receipt",
+      "model_research_frontier",
       "terminal_job_state",
       "retained_result",
       "material_research_bundle"

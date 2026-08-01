@@ -48,24 +48,26 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "language",
-        "implementation",
-        "executor",
-        "approval_verifier",
         "approval_schema",
         "approval_fixture",
         "receipt_schema",
-        "approval_authority"
+        "frontier_schema",
+        "frontier_fixture",
+        "approval_authority",
+        "surfaces"
       ],
       "properties": {
-        "language": { "const": "rust" },
-        "implementation": { "$ref": "#/$defs/repoPath" },
-        "executor": { "const": "execute_model_headless_plan" },
-        "approval_verifier": { "const": "ModelApprovalVerifier" },
         "approval_schema": { "$ref": "#/$defs/repoPath" },
         "approval_fixture": { "$ref": "#/$defs/repoPath" },
         "receipt_schema": { "$ref": "#/$defs/repoPath" },
-        "approval_authority": { "const": "caller_only" }
+        "frontier_schema": { "$ref": "#/$defs/repoPath" },
+        "frontier_fixture": { "$ref": "#/$defs/repoPath" },
+        "approval_authority": { "const": "caller_only" },
+        "surfaces": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/executionSurface" },
+          "required": ["rust", "python", "elixir"]
+        }
       }
     },
     "research_protocol": {
@@ -151,6 +153,32 @@
         "request": { "type": "string", "minLength": 1 },
         "normalize": { "type": "string", "minLength": 1 },
         "plan": { "type": "string", "minLength": 1 }
+      }
+    },
+    "executionSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "frontier_path",
+        "executor",
+        "dispatcher",
+        "approval_verifier",
+        "frontier_start",
+        "frontier_advance",
+        "receipt_verifier",
+        "frontier_verifier"
+      ],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "frontier_path": { "$ref": "#/$defs/repoPath" },
+        "executor": { "type": "string", "minLength": 1 },
+        "dispatcher": { "type": "string", "minLength": 1 },
+        "approval_verifier": { "type": "string", "minLength": 1 },
+        "frontier_start": { "type": "string", "minLength": 1 },
+        "frontier_advance": { "type": "string", "minLength": 1 },
+        "receipt_verifier": { "type": "string", "minLength": 1 },
+        "frontier_verifier": { "type": "string", "minLength": 1 }
       }
     },
     "stage": {

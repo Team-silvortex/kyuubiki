@@ -48,14 +48,31 @@ pub(crate) fn validate_model_research_bootstrap(
     {
         paths.extend(
             [
-                "implementation",
                 "approval_schema",
                 "approval_fixture",
                 "receipt_schema",
+                "frontier_schema",
+                "frontier_fixture",
             ]
             .iter()
             .filter_map(|key| execution.get(*key).and_then(Value::as_str)),
         );
+        if let Some(surfaces) = execution.get("surfaces").and_then(Value::as_object) {
+            paths.extend(
+                surfaces
+                    .values()
+                    .filter_map(|surface| surface.get("path").and_then(Value::as_str)),
+            );
+            paths.extend(
+                surfaces
+                    .values()
+                    .filter_map(|surface| surface.get("frontier_path").and_then(Value::as_str)),
+            );
+        } else {
+            issues.push(format!(
+                "{bootstrap_path}: missing execution_contract.surfaces"
+            ));
+        }
     } else {
         issues.push(format!("{bootstrap_path}: missing execution_contract"));
     }

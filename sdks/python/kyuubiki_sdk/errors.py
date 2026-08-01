@@ -39,6 +39,12 @@ class ModelCollaborationValidationError(KyuubikiSdkError):
         super().__init__("model collaboration validation failed:\n- " + "\n- ".join(errors))
 
 
+class ModelResearchExecutionError(KyuubikiSdkError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("model research execution failed:\n- " + "\n- ".join(errors))
+
+
 def classify_error(error: Exception) -> str:
     if isinstance(error, KyuubikiTimeoutError):
         return "timeout"

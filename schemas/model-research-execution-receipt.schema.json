@@ -67,6 +67,11 @@
             "type": "string",
             "pattern": "^[a-z][a-z0-9_]*$"
           },
+          "job_id": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "description": "Narrow task binding for lifecycle and result actions; full payloads are never copied into receipts."
+          },
           "authority": {
             "type": ["string", "null"]
           },

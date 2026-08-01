@@ -61,6 +61,8 @@ pub enum ModelResearchExecutionStatus {
 pub struct ModelResearchExecutionRecord {
     pub index: usize,
     pub action: String,
+    #[serde(default)]
+    pub job_id: Option<String>,
     pub authority: Option<String>,
     pub output: Option<Value>,
     pub error: Option<String>,
@@ -93,10 +95,12 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
     let mut records = Vec::with_capacity(plan.steps.len());
 
     for step in &plan.steps {
+        let job_id = action_job_id(&step.action, &step.payload);
         match dispatcher.dispatch_model_action(&step.action, &step.payload) {
             Ok(dispatched) => records.push(ModelResearchExecutionRecord {
                 index: step.index,
                 action: step.action.clone(),
+                job_id,
                 authority: Some(dispatched.authority),
                 output: Some(dispatched.output),
                 error: None,
@@ -105,6 +109,7 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
                 records.push(ModelResearchExecutionRecord {
                     index: step.index,
                     action: step.action.clone(),
+                    job_id,
                     authority: None,
                     output: None,
                     error: Some(bounded_error(&error)),
@@ -127,6 +132,17 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
         None,
         records,
     ))
+}
+
+fn action_job_id(action: &str, payload: &Value) -> Option<String> {
+    if matches!(
+        action,
+        "job_wait" | "result_fetch" | "result_chunk_fetch" | "job_cancel"
+    ) {
+        payload.get("job_id")?.as_str().map(str::to_string)
+    } else {
+        None
+    }
 }
 
 pub struct SessionModelActionDispatcher<'a> {

@@ -180,6 +180,7 @@ defmodule KyuubikiSdk.ModelCollaboration do
         "step #{index} (#{action || ""}) payload must be a JSON object"
       )
       |> add_missing_payload_issues(index, action, payload, tool)
+      |> add_payload_shape_issues(index, action, payload, tool)
 
     risk = if tool, do: tool["risk"], else: "normal"
 
@@ -216,6 +217,70 @@ defmodule KyuubikiSdk.ModelCollaboration do
         "step #{index} (#{action}) is missing required payload key #{key}"
       )
     end)
+  end
+
+  defp add_payload_shape_issues(issues, _index, _action, _payload, nil), do: issues
+
+  defp add_payload_shape_issues(issues, index, action, payload, _tool) do
+    {string_keys, object_keys} =
+      case action do
+        action when action in ["fem_submit", "direct_solver_rpc"] ->
+          {["solve_kind"], ["payload"]}
+
+        "workflow_submit_catalog" ->
+          {["workflow_id"], ["input_artifacts"]}
+
+        "workflow_submit_graph" ->
+          {[], ["graph", "input_artifacts"]}
+
+        action when action in ["operator_task_prepare", "operator_task_execute"] ->
+          {[], ["task"]}
+
+        action when action in ["operator_task_batch_prepare", "operator_task_batch_execute"] ->
+          {[], ["batch"]}
+
+        action when action in ["job_wait", "result_fetch", "job_cancel"] ->
+          {["job_id"], []}
+
+        "result_chunk_fetch" ->
+          {["job_id", "kind"], []}
+
+        _ ->
+          {[], []}
+      end
+
+    issues =
+      Enum.reduce(string_keys, issues, fn key, current ->
+        add_issue(
+          current,
+          Map.has_key?(payload, key) and
+            (not is_binary(payload[key]) or String.trim(payload[key]) == ""),
+          "step #{index} (#{action}) payload key #{key} must be a non-empty string"
+        )
+      end)
+
+    issues =
+      Enum.reduce(object_keys, issues, fn key, current ->
+        add_issue(
+          current,
+          Map.has_key?(payload, key) and not is_map(payload[key]),
+          "step #{index} (#{action}) payload key #{key} must be a JSON object"
+        )
+      end)
+
+    if action == "result_chunk_fetch" do
+      Enum.reduce(["offset", "limit"], issues, fn key, current ->
+        value = payload[key]
+
+        add_issue(
+          current,
+          not is_nil(value) and (not is_integer(value) or value < 0),
+          "step #{index} (#{action}) payload key #{key} must be an unsigned integer"
+        )
+      end)
+    else
+      issues
+    end
   end
 
   defp policy_allows_tool?(policy, tool) do

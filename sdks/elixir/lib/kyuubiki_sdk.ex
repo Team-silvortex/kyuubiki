@@ -11,6 +11,8 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.OperatorTasks
   alias KyuubikiSdk.AdvancedSolverWorkflows
   alias KyuubikiSdk.ModelCollaboration
+  alias KyuubikiSdk.ModelResearchExecution
+  alias KyuubikiSdk.ModelResearchFrontier
 
   def new_session(opts \\ []), do: Session.new(opts)
   def material_study_catalog, do: MaterialReports.material_study_catalog()
@@ -27,6 +29,21 @@ defmodule KyuubikiSdk do
 
   def model_headless_plan(session, proposal),
     do: ModelCollaboration.build_plan(session, proposal)
+
+  def model_research_dispatcher(session, opts \\ []),
+    do: ModelResearchExecution.session_dispatcher(session, opts)
+
+  def execute_model_headless_plan(dispatcher, plan, approval, approval_verifier),
+    do: ModelResearchExecution.execute(dispatcher, plan, approval, approval_verifier)
+
+  def start_model_research_frontier(receipt, verifier),
+    do: ModelResearchFrontier.start(receipt, verifier)
+
+  def advance_model_research_frontier(frontier, receipt, frontier_verifier, receipt_verifier),
+    do: ModelResearchFrontier.advance(frontier, receipt, frontier_verifier, receipt_verifier)
+
+  def model_research_frontier_proposal(frontier, verifier),
+    do: ModelResearchFrontier.build_proposal(frontier, verifier)
 
   def material_study_execution_plan_schema_version,
     do: MaterialWorkflows.material_study_execution_plan_schema_version()

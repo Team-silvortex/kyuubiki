@@ -59,13 +59,22 @@ not gain Operator SDK authority or bypass PWDT and GUI ownership rules.
 
 Model output is never executable authority. Tool calls are untrusted input.
 
-The official Rust SDK provides the bounded execution bridge
-`execute_model_headless_plan` and `SessionModelActionDispatcher`. Every gated
-step must match an exact caller-issued `kyuubiki.model-plan-approval/v1` before
-any network access, and a caller-owned `ModelApprovalVerifier` must authenticate
-that approval independently of model output. Execution returns a
+All three official SDKs provide bounded execution bridges over their existing
+Headless Session clients. Every gated step must match an exact caller-issued
+`kyuubiki.model-plan-approval/v1` before any network access, and a caller-owned
+verifier must authenticate that approval independently of model output.
+Execution returns a
 `kyuubiki.model-research-execution-receipt/v1`; a failed receipt preserves
 completed steps and the failing step without claiming workflow completion.
+
+Cross-turn research uses `kyuubiki.model-research-frontier/v1`. A caller-owned
+receipt verifier must authenticate each execution receipt before the frontier
+can advance. The frontier-generated proposal carries the real submission
+`job_id` into `job_wait`, then carries the same binding into `result_fetch`.
+Completed result retrieval stops at `ready_to_validate`; numerical validity is
+still established by the existing validation and research-bundle contracts.
+Persisted frontier state is also untrusted, so a separate caller-owned frontier
+verifier gates proposal generation and every subsequent transition.
 
 ## Default Policy
 

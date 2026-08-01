@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/model-research-frontier.schema.json",
+  "title": "Kyuubiki Model Research Frontier",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "workflow_id",
+    "stage",
+    "job_id",
+    "next_action",
+    "transition_count",
+    "evidence",
+    "blocking_reason"
+  ],
+  "properties": {
+    "$schema": { "const": "../schemas/model-research-frontier.schema.json" },
+    "schema_version": { "const": "kyuubiki.model-research-frontier/v1" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "workflow_id": { "type": "string", "minLength": 1 },
+    "stage": {
+      "enum": [
+        "waiting_for_job",
+        "ready_to_fetch_result",
+        "ready_to_validate",
+        "blocked"
+      ]
+    },
+    "job_id": { "type": ["string", "null"], "minLength": 1 },
+    "next_action": { "enum": ["job_wait", "result_fetch", null] },
+    "transition_count": { "type": "integer", "minimum": 1 },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "action",
+        "record_index",
+        "authority",
+        "job_status"
+      ],
+      "properties": {
+        "approval_id": { "type": ["string", "null"] },
+        "action": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "record_index": { "type": "integer", "minimum": 1 },
+        "authority": { "type": ["string", "null"] },
+        "job_status": { "enum": ["completed", "failed", "cancelled", null] }
+      }
+    },
+    "blocking_reason": { "type": ["string", "null"], "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "stage": { "const": "waiting_for_job" } } },
+      "then": {
+        "properties": {
+          "job_id": { "type": "string", "minLength": 1 },
+          "next_action": { "const": "job_wait" },
+          "blocking_reason": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "stage": { "const": "ready_to_fetch_result" } } },
+      "then": {
+        "properties": {
+          "job_id": { "type": "string", "minLength": 1 },
+          "next_action": { "const": "result_fetch" },
+          "blocking_reason": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "stage": { "const": "ready_to_validate" } } },
+      "then": {
+        "properties": {
+          "job_id": { "type": "string", "minLength": 1 },
+          "next_action": { "type": "null" },
+          "blocking_reason": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "stage": { "const": "blocked" } } },
+      "then": {
+        "properties": {
+          "next_action": { "type": "null" },
+          "blocking_reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ]
+}

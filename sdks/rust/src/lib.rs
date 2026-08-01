@@ -7,6 +7,7 @@ mod material_workflows;
 mod model_collaboration;
 mod model_provider_adapters;
 mod model_research_execution;
+mod model_research_frontier;
 mod operator_tasks;
 mod session;
 mod solver_rpc;
@@ -48,6 +49,12 @@ pub use model_research_execution::{
     ModelApprovalVerifier, ModelPlanApproval, ModelResearchExecutionReceipt,
     ModelResearchExecutionRecord, ModelResearchExecutionStatus, SessionModelActionDispatcher,
     execute_model_headless_plan,
+};
+pub use model_research_frontier::{
+    MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION, ModelFrontierVerifier, ModelReceiptVerifier,
+    ModelResearchFrontier, ModelResearchFrontierEvidence, ModelResearchFrontierStage,
+    advance_model_research_frontier, build_model_research_frontier_proposal,
+    start_model_research_frontier,
 };
 pub use operator_tasks::{
     operator_task_failure_actions, operator_task_failure_receipts, operator_task_recovery_summary,

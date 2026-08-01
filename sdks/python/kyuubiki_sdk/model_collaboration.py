@@ -278,6 +278,7 @@ def _plan_step(
         for key in tool["required_payload_keys"]:
             if not _has_present_value(payload, key):
                 issues.append(f"step {index} ({action}) is missing required payload key {key}")
+        _validate_known_payload(index, action, payload, issues)
     risk = tool["risk"] if tool else "normal"
     return {
         "index": index,
@@ -392,6 +393,50 @@ def _policy_allows_tool(policy: Mapping[str, Any], tool: Mapping[str, Any]) -> b
 def _has_present_value(payload: Mapping[str, Any], key: str) -> bool:
     value = payload.get(key)
     return value is not None and (not isinstance(value, str) or bool(value.strip()))
+
+
+def _validate_known_payload(
+    index: int,
+    action: str,
+    payload: Mapping[str, Any],
+    issues: list[str],
+) -> None:
+    string_keys: tuple[str, ...] = ()
+    object_keys: tuple[str, ...] = ()
+    if action in ("fem_submit", "direct_solver_rpc"):
+        string_keys, object_keys = ("solve_kind",), ("payload",)
+    elif action == "workflow_submit_catalog":
+        string_keys, object_keys = ("workflow_id",), ("input_artifacts",)
+    elif action == "workflow_submit_graph":
+        object_keys = ("graph", "input_artifacts")
+    elif action in ("operator_task_prepare", "operator_task_execute"):
+        object_keys = ("task",)
+    elif action in ("operator_task_batch_prepare", "operator_task_batch_execute"):
+        object_keys = ("batch",)
+    elif action in ("job_wait", "result_fetch", "job_cancel"):
+        string_keys = ("job_id",)
+    elif action == "result_chunk_fetch":
+        string_keys = ("job_id", "kind")
+
+    for key in string_keys:
+        value = payload.get(key)
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            issues.append(
+                f"step {index} ({action}) payload key {key} must be a non-empty string"
+            )
+    for key in object_keys:
+        value = payload.get(key)
+        if value is not None and not isinstance(value, Mapping):
+            issues.append(f"step {index} ({action}) payload key {key} must be a JSON object")
+    if action == "result_chunk_fetch":
+        for key in ("offset", "limit"):
+            value = payload.get(key)
+            if value is not None and (
+                not isinstance(value, int) or isinstance(value, bool) or value < 0
+            ):
+                issues.append(
+                    f"step {index} ({action}) payload key {key} must be an unsigned integer"
+                )
 
 
 def _confirmation_reason(risk: str) -> str | None:

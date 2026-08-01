@@ -39,7 +39,8 @@
           <li>Normalize provider calls into one portable proposal.</li>
           <li>Compile the proposal into the existing Headless batch and plan.</li>
           <li>Obtain exact caller approval for every gated step.</li>
-          <li>Dispatch through the Rust bridge and retain its execution receipt.</li>
+          <li>Dispatch through the selected SDK bridge and retain its execution receipt.</li>
+          <li>Verify each receipt before advancing the real-job-bound research frontier.</li>
         </ul>
       </section>
 
@@ -68,8 +69,11 @@
         <h2>Three peer Headless adapters</h2>
         <p class="docs-copy">
           Rust, Python, and Elixir share one session policy, provider projection,
-          canonical proposal, service/direct boundary, and confirmation model.
-          Provider clients and credentials remain caller-owned.
+          canonical proposal, service/direct boundary, confirmation model, and
+          caller-verified execution receipt. Their frontier helpers bind the
+          returned job id across wait and result-fetch turns. Receipt and
+          frontier verifiers remain caller-owned, along with provider clients
+          and credentials.
         </p>
       </section>
 
@@ -115,6 +119,7 @@
           <a class="docs-link" href="../schemas/model-workflow-proposal.schema.json">Proposal schema</a>
           <a class="docs-link" href="../schemas/model-plan-approval.schema.json">Approval schema</a>
           <a class="docs-link" href="../schemas/model-research-execution-receipt.schema.json">Execution receipt schema</a>
+          <a class="docs-link" href="../schemas/model-research-frontier.schema.json">Research frontier schema</a>
           <a class="docs-link" href="../schemas/examples.model-collaboration-session.json">Session fixture</a>
           <a class="docs-link" href="../schemas/examples.model-workflow-proposal.json">Proposal fixture</a>
         </div>

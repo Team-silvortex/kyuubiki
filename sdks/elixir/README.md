@@ -22,6 +22,12 @@ Every entry point returns `{:ok, value}` or a structured
 `{:error, %KyuubikiSdk.Error{}}`. The module deliberately owns no provider
 client, model credentials, billing, or execution authority.
 
+`KyuubikiSdk.ModelResearchExecution` closes the approved execution path. Its
+`execute/4` function requires an exact plan-bound approval and a caller-owned
+two-argument verifier before dispatching through `session_dispatcher/2`. The
+result uses the same completed/failed receipt contract as Rust and Python and
+retains partial failure evidence.
+
 ```elixir
 auth = KyuubikiSdk.Auth.access_token("dev-token")
 client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)
@@ -145,6 +151,8 @@ Highlights:
 - shared material-study execution-plan contract helper for cross-SDK automation
 - BEAM-friendly thin wrapper over the public protocol
 - provider-neutral model proposal normalization and confirmation-gated planning
+- verified cross-turn research frontiers that carry real submission job ids
+  through wait and result-fetch proposals without copying full result payloads
 
 Example:
 
@@ -174,3 +182,5 @@ Example:
   `cd sdks/elixir && mix test`
 - Model collaboration test:
   `cd sdks/elixir && mix test test/model_collaboration_test.exs`
+- Model research frontier test:
+  `cd sdks/elixir && mix test test/model_research_frontier_test.exs`

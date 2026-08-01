@@ -9,6 +9,7 @@ from .errors import (
     KyuubikiTimeoutError,
     KyuubikiTransportError,
     ModelCollaborationValidationError,
+    ModelResearchExecutionError,
     WorkflowContractValidationError,
     classify_error,
 )
@@ -85,6 +86,20 @@ from .model_collaboration import (
     project_model_tools,
     sanitize_model_context,
 )
+from .model_research_execution import (
+    MODEL_PLAN_APPROVAL_SCHEMA_VERSION,
+    MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION,
+    SessionModelActionDispatcher,
+    execute_model_headless_plan,
+)
+from .model_research_frontier import (
+    MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
+    FrontierVerifier,
+    ReceiptVerifier,
+    advance_model_research_frontier,
+    build_model_research_frontier_proposal,
+    start_model_research_frontier,
+)
 
 __all__ = [
     "ControlPlaneClient",
@@ -122,6 +137,13 @@ __all__ = [
     "KyuubikiTimeoutError",
     "WorkflowContractValidationError",
     "ModelCollaborationValidationError",
+    "ModelResearchExecutionError",
+    "MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION",
+    "FrontierVerifier",
+    "ReceiptVerifier",
+    "advance_model_research_frontier",
+    "build_model_research_frontier_proposal",
+    "start_model_research_frontier",
     "classify_error",
     "build_workflow_axis",
     "build_workflow_dataset_contract",
@@ -155,4 +177,8 @@ __all__ = [
     "normalize_model_response",
     "project_model_tools",
     "sanitize_model_context",
+    "MODEL_PLAN_APPROVAL_SCHEMA_VERSION",
+    "MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION",
+    "SessionModelActionDispatcher",
+    "execute_model_headless_plan",
 ]

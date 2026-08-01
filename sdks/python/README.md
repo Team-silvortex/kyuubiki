@@ -24,6 +24,12 @@ redacted, malformed provider envelopes fail with
 confirmation-gated. The caller owns model HTTP clients, credentials, retries,
 billing, and final Headless execution.
 
+`execute_model_headless_plan(...)` now provides that bounded execution bridge
+through `SessionModelActionDispatcher`. It requires an exact plan-bound
+approval plus a caller-owned verifier callback before network access and emits
+the shared `kyuubiki.model-research-execution-receipt/v1`, including partial
+failure evidence.
+
 ```python
 from kyuubiki_sdk import (
     ControlPlaneClient,
@@ -223,6 +229,8 @@ Highlights:
 - reusable `KyuubikiAuth` header auth object
 - thin JSON-first payload shape for AI-generated requests
 - provider-neutral model proposal normalization and confirmation-gated planning
+- verified cross-turn research frontiers that carry real submission job ids
+  through wait and result-fetch proposals without copying full result payloads
 
 Example:
 
@@ -252,3 +260,5 @@ Example:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`
 - Model collaboration test:
   `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_collaboration.py`
+- Model research frontier test:
+  `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_research_frontier.py`
