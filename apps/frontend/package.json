@@ -3,14 +3,11 @@
   "version": "2.7.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "kyuubiki": "./scripts/kyuubiki-cli.mjs"
-  },
   "engines": {
     "node": ">=20.19.2 <25"
   },
   "scripts": {
-    "cli": "../../scripts/kyuubiki frontend-cli",
+    "cli": "../../scripts/kyuubiki",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

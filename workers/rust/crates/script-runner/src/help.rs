@@ -69,6 +69,8 @@ lab remote-ssh-fixture\n  \
   validate-minimal-industrial-closure\n  \
   check-contracts-runtime-api-surface\n  \
   validate-language-packs\n  \
+  report-full-language-pack-coverage\n  \
+  plan-workbench-language-translations\n  \
   build-workbench-language-pack-catalog\n  \
   check-ui-automation-contract\n  \
   check-gui-runtime-capability-contract\n  \
@@ -117,7 +119,7 @@ lab remote-ssh-fixture\n  \
   workflow-mesh-regression\n  \
   build-standard-benchmark-report\n  \
   compare-workflow-catalog-benchmark\n  \
-  frontend-cli frontend-typecheck frontend-unit-test\n  \
+  frontend-typecheck frontend-unit-test\n  \
   frontend-unit-coverage-test\n  \
   frontend-unit-headless-test frontend-unit-headless-live-test\n  \
   frontend-unit-workflow-test frontend-ui-layout-check\n  \

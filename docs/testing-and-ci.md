@@ -180,9 +180,9 @@ These tests use small local loopback fixtures and focus on:
 - `make test-integration`
   top-level cross-process smoke suite
 - `./scripts/kyuubiki headless-live-test`
-  frontend-owned live headless service-executor suite
+  native Rust live headless service-executor suite
 - `./scripts/kyuubiki headless-rust-live-test`
-  Rust `kyuubiki-headless` live service-executor suite
+  compatibility alias for the same Rust suite
 
 The current integration family covers:
 
@@ -212,6 +212,11 @@ The full integration entrypoint list stays in:
   toolchain, and docs-book checks without booting long-lived services. This
   lane is meant to catch contract drift early before heavier build or
   integration jobs spend time.
+
+The language-pack lane uses the native runner for full visible-copy reporting
+and strict coverage. The native script audit also rejects direct
+`node scripts/*.mjs` calls from Make and CI, so release checks cannot silently
+fall back to a second JavaScript implementation.
 
 ### Desktop shell checks
 
@@ -258,7 +263,8 @@ headless entrypoints before broader integration suites:
 - `./scripts/kyuubiki headless-live-test`
 - `./scripts/kyuubiki headless-rust-live-test`
 
-These boot the temporary local control plane under `apps/web/test/support` and
+These names boot the same temporary local control plane under
+`apps/web/test/support` and
 exercise real HTTP execution instead of dry-run-only fixtures.
 
 ## CI structure

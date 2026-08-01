@@ -81,6 +81,16 @@ closure rather than raw feature sprawl:
 - native service execution now covers every action declared with the service
   engine, including direct mesh and saved-model-version solve/wait/result
   chains; the executor matrix is guarded against drifting from that contract
+- direct mesh execution resolves inline payloads, saved models, and saved model
+  versions without a frontend bridge, and stable model-version/endpoint fields
+  remain visible in composite solve results
+- the former frontend Node project/macro/headless CLI graph has been removed;
+  npm compatibility commands and Headless CI names now dispatch to Rust, while
+  the native script audit rejects new non-UI Node scripts under the frontend
+- full Workbench language coverage, translation planning, batch export, and
+  reviewed batch application now run through Rust; Make/CI cannot directly
+  restore a `node scripts/*.mjs` operational path, and the obsolete network
+  machine-translation chain has been removed
 - Pwdt should become the deterministic frontend automation surface for Hub,
   Workbench, and Installer, while headless SDKs remain backend/control clients
 - the module-function coverage tensor is the shared map for deciding which

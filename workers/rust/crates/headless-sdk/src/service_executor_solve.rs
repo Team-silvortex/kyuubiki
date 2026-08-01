@@ -11,7 +11,8 @@ pub(crate) fn execute_direct_mesh_solve(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let body = direct_mesh_request(payload)?;
+    let resolved_payload = resolve_direct_mesh_source(base_url, api_token, payload)?;
+    let body = direct_mesh_request(&resolved_payload)?;
     let result = request_json(
         base_url,
         api_token,
@@ -32,6 +33,73 @@ pub(crate) fn execute_direct_mesh_solve(
             .insert("endpoint".to_string(), endpoint);
     }
     Ok(outcome(normalized))
+}
+
+fn resolve_direct_mesh_source(
+    base_url: &str,
+    api_token: Option<&str>,
+    payload: &Value,
+) -> Result<Value, HeadlessExecutorError> {
+    if payload.get("input").is_some_and(Value::is_object)
+        || payload.get("model_payload").is_some_and(Value::is_object)
+    {
+        return Ok(payload.clone());
+    }
+    if pick_string(payload, &["model_version_id", "modelVersionId"]).is_some() {
+        return load_model_reference(
+            base_url,
+            api_token,
+            payload,
+            &["model_version_id", "modelVersionId"],
+            "model_version_id",
+            "model-versions",
+            "version",
+        );
+    }
+    if pick_string(payload, &["model_id", "modelId"]).is_some() {
+        return load_model_reference(
+            base_url,
+            api_token,
+            payload,
+            &["model_id", "modelId"],
+            "model_id",
+            "models",
+            "model",
+        );
+    }
+    Ok(payload.clone())
+}
+
+fn load_model_reference(
+    base_url: &str,
+    api_token: Option<&str>,
+    payload: &Value,
+    id_keys: &[&str],
+    canonical_id_key: &str,
+    route: &str,
+    envelope_key: &str,
+) -> Result<Value, HeadlessExecutorError> {
+    let id = required_path_segment(payload, id_keys)?;
+    let envelope = request_json(
+        base_url,
+        api_token,
+        "GET",
+        &format!("/api/v1/{route}/{id}"),
+        None,
+    )?;
+    let model = envelope
+        .get(envelope_key)
+        .and_then(Value::as_object)
+        .ok_or_else(|| error(format!("could not load {envelope_key} {id}")))?;
+    let mut resolved = payload.as_object().cloned().unwrap_or_default();
+    resolved.insert(canonical_id_key.to_string(), Value::String(id.to_string()));
+    resolved.insert(
+        "model_payload".to_string(),
+        model.get("payload").cloned().unwrap_or(Value::Null),
+    );
+    copy_if_missing(&mut resolved, "study_kind", model.get("kind"));
+    copy_if_missing(&mut resolved, "project_id", model.get("project_id"));
+    Ok(Value::Object(resolved))
 }
 
 pub(crate) fn execute_solve_from_model_version(
@@ -62,7 +130,16 @@ pub(crate) fn execute_solve_from_model_version(
     );
     copy_if_missing(&mut resolved, "study_kind", version.get("kind"));
     copy_if_missing(&mut resolved, "project_id", version.get("project_id"));
-    execute_direct_mesh_solve(base_url, api_token, &Value::Object(resolved))
+    let mut outcome = execute_direct_mesh_solve(base_url, api_token, &Value::Object(resolved))?;
+    outcome
+        .result
+        .as_object_mut()
+        .ok_or_else(|| error("model-version solve returned a non-object result"))?
+        .insert(
+            "model_version_id".to_string(),
+            Value::String(model_version_id.to_string()),
+        );
+    Ok(outcome)
 }
 
 pub(crate) fn execute_solve_and_wait_from_model_version(
@@ -96,9 +173,21 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
         .get("status")
         .cloned()
         .unwrap_or_else(|| Value::String("completed".to_string()));
+    let model_version_id = solved
+        .result
+        .get("model_version_id")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let endpoint = solved
+        .result
+        .get("endpoint")
+        .cloned()
+        .unwrap_or(Value::Null);
     Ok(outcome(json!({
         "job_id": job_id,
         "status": status,
+        "model_version_id": model_version_id,
+        "endpoint": endpoint,
         "solve": solved.result,
         "wait": waited.result,
         "result": fetched.result,

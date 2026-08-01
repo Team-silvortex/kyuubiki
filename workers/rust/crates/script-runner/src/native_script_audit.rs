@@ -31,6 +31,12 @@ struct DesktopRuntimeNodeRecord {
     pattern: &'static str,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+struct NodeScriptInvocationRecord {
+    relative_path: String,
+    line_number: usize,
+}
+
 pub(crate) fn run_native_script_audit(
     root: &Path,
     host_label: &str,
@@ -47,12 +53,76 @@ pub(crate) fn run_native_script_audit(
     let records = collect_shell_script_records(root)?;
     let embedded = collect_embedded_shell_records(root)?;
     let desktop_node = collect_desktop_runtime_node_records(root)?;
-    print_report(root, host_label, &records, &embedded, &desktop_node);
-    Ok(if embedded.is_empty() && desktop_node.is_empty() {
-        0
-    } else {
-        1
-    })
+    let frontend_node = collect_unapproved_frontend_node_scripts(root)?;
+    let node_script_invocations = collect_node_script_invocations(root)?;
+    print_report(
+        root,
+        host_label,
+        &records,
+        &embedded,
+        &desktop_node,
+        &frontend_node,
+        &node_script_invocations,
+    );
+    Ok(
+        if embedded.is_empty()
+            && desktop_node.is_empty()
+            && frontend_node.is_empty()
+            && node_script_invocations.is_empty()
+        {
+            0
+        } else {
+            1
+        },
+    )
+}
+
+fn collect_node_script_invocations(root: &Path) -> RunnerResult<Vec<NodeScriptInvocationRecord>> {
+    let mut records = Vec::new();
+    for relative in ["Makefile", "make", ".github"] {
+        let path = root.join(relative);
+        if path.exists() {
+            collect_node_script_invocations_in(root, &path, &mut records)?;
+        }
+    }
+    records.sort_by(|left, right| {
+        left.relative_path
+            .cmp(&right.relative_path)
+            .then(left.line_number.cmp(&right.line_number))
+    });
+    Ok(records)
+}
+
+fn collect_node_script_invocations_in(
+    root: &Path,
+    path: &Path,
+    records: &mut Vec<NodeScriptInvocationRecord>,
+) -> RunnerResult<()> {
+    if path.is_dir() {
+        for entry in fs::read_dir(path)
+            .map_err(|error| format!("failed to scan {}: {error}", path.display()))?
+        {
+            collect_node_script_invocations_in(
+                root,
+                &entry
+                    .map_err(|error| format!("failed to read directory entry: {error}"))?
+                    .path(),
+                records,
+            )?;
+        }
+        return Ok(());
+    }
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    for (index, line) in content.lines().enumerate() {
+        if line.contains("node ") && line.contains("scripts/") && line.contains(".mjs") {
+            records.push(NodeScriptInvocationRecord {
+                relative_path: relative_path(root, path),
+                line_number: index + 1,
+            });
+        }
+    }
+    Ok(())
 }
 
 fn collect_shell_script_records(root: &Path) -> RunnerResult<Vec<ShellScriptRecord>> {
@@ -207,6 +277,46 @@ fn collect_desktop_runtime_node_records_in(
     Ok(())
 }
 
+fn collect_unapproved_frontend_node_scripts(root: &Path) -> RunnerResult<Vec<String>> {
+    let scripts_root = root.join("apps/frontend/scripts");
+    if !scripts_root.exists() {
+        return Ok(Vec::new());
+    }
+    let mut records = Vec::new();
+    collect_unapproved_frontend_node_scripts_in(root, &scripts_root, &mut records)?;
+    records.sort();
+    Ok(records)
+}
+
+fn collect_unapproved_frontend_node_scripts_in(
+    root: &Path,
+    dir: &Path,
+    records: &mut Vec<String>,
+) -> RunnerResult<()> {
+    for entry in
+        fs::read_dir(dir).map_err(|error| format!("failed to scan {}: {error}", dir.display()))?
+    {
+        let path = entry
+            .map_err(|error| format!("failed to read directory entry: {error}"))?
+            .path();
+        if path.is_dir() {
+            collect_unapproved_frontend_node_scripts_in(root, &path, records)?;
+            continue;
+        }
+        if !matches!(
+            path.extension().and_then(|value| value.to_str()),
+            Some("mjs" | "js")
+        ) {
+            continue;
+        }
+        let relative = relative_path(root, &path);
+        if !frontend_node_tool_allowlist().contains(&relative.as_str()) {
+            records.push(relative);
+        }
+    }
+    Ok(())
+}
+
 fn should_skip_embedded_shell_path(relative_path: &str) -> bool {
     relative_path == "workers/rust/crates/script-runner/src/native_script_audit.rs"
         || relative_path.contains("/target/")
@@ -303,6 +413,8 @@ fn print_report(
     records: &[ShellScriptRecord],
     embedded: &[EmbeddedShellRecord],
     desktop_node: &[DesktopRuntimeNodeRecord],
+    frontend_node: &[String],
+    node_script_invocations: &[NodeScriptInvocationRecord],
 ) {
     println!("native script migration audit");
     println!("  host: {host_label}");
@@ -347,6 +459,22 @@ fn print_report(
             );
         }
     }
+    println!("  frontend non-UI Node scripts:");
+    if frontend_node.is_empty() {
+        println!("  - none");
+    } else {
+        for path in frontend_node {
+            println!("  - {path}");
+        }
+    }
+    println!("  Make/CI direct Node script invocations:");
+    if node_script_invocations.is_empty() {
+        println!("  - none");
+    } else {
+        for record in node_script_invocations {
+            println!("  - {}:{}", record.relative_path, record.line_number);
+        }
+    }
     println!("  summary:");
     for kind in [
         ShellScriptKind::TinyLauncher,
@@ -361,6 +489,24 @@ fn print_report(
         "    desktop runtime Node/npm invocation: {}",
         desktop_node.len()
     );
+    println!("    frontend non-UI Node script: {}", frontend_node.len());
+    println!(
+        "    Make/CI direct Node script invocation: {}",
+        node_script_invocations.len()
+    );
+}
+
+fn frontend_node_tool_allowlist() -> &'static [&'static str] {
+    &[
+        "apps/frontend/scripts/check-ui-layout.mjs",
+        "apps/frontend/scripts/check-workflow-search-layout.mjs",
+        "apps/frontend/scripts/check-workflow-topology-regression.mjs",
+        "apps/frontend/scripts/playwright-runtime-guard.mjs",
+        "apps/frontend/scripts/test-unit.mjs",
+        "apps/frontend/scripts/typecheck.mjs",
+        "apps/frontend/scripts/workflow-benchmark.mjs",
+        "apps/frontend/scripts/workflow-browser-preflight.mjs",
+    ]
 }
 
 fn host_tool_boundary() -> &'static [&'static str] {
@@ -435,6 +581,7 @@ fn run_self_test() {
     assert!(host_tool_boundary().contains(&"sips"));
     assert!(embedded_shell_patterns().contains(&"sh -lc"));
     assert!(desktop_runtime_node_patterns().contains(&"Command::new(\"node\")"));
+    assert!(frontend_node_tool_allowlist().contains(&"apps/frontend/scripts/check-ui-layout.mjs"));
     assert!(embedded_shell_scan_roots().contains(&"apps"));
     assert!(embedded_shell_scan_roots().contains(&"workers"));
     assert!(embedded_shell_scan_roots().contains(&"deploy"));
@@ -550,6 +697,39 @@ mod tests {
         let records = collect_desktop_runtime_node_records(&root).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].pattern, "Command::new(\"node\")");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_non_ui_frontend_node_scripts() {
+        let root = unique_temp_dir();
+        let scripts = root.join("apps/frontend/scripts");
+        fs::create_dir_all(&scripts).unwrap();
+        fs::write(scripts.join("check-ui-layout.mjs"), "// UI guard\n").unwrap();
+        fs::write(scripts.join("kyuubiki-cli-headless.mjs"), "// legacy CLI\n").unwrap();
+
+        let records = collect_unapproved_frontend_node_scripts(&root).unwrap();
+        assert_eq!(
+            records,
+            vec!["apps/frontend/scripts/kyuubiki-cli-headless.mjs"]
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_direct_node_script_invocations_in_make_and_ci() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(root.join("make")).unwrap();
+        fs::write(
+            root.join("make/checks.mk"),
+            "legacy:\n\t@node ./scripts/legacy-check.mjs\n",
+        )
+        .unwrap();
+
+        let records = collect_node_script_invocations(&root).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].relative_path, "make/checks.mk");
+        assert_eq!(records[0].line_number, 2);
         fs::remove_dir_all(root).unwrap();
     }
 

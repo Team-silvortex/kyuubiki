@@ -216,6 +216,63 @@ fn direct_mesh_solve_posts_normalized_study_request() {
 }
 
 #[test]
+fn direct_mesh_solve_resolves_model_and_version_references() {
+    assert_direct_mesh_reference(
+        "model_id",
+        "model_native",
+        "GET /api/v1/models/model_native HTTP/1.1",
+        r#"{"model":{"model_id":"model_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
+    );
+    assert_direct_mesh_reference(
+        "model_version_id",
+        "version_native",
+        "GET /api/v1/model-versions/version_native HTTP/1.1",
+        r#"{"version":{"version_id":"version_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
+    );
+}
+
+fn assert_direct_mesh_reference(
+    reference_key: &str,
+    reference_id: &str,
+    expected_get: &'static str,
+    envelope: &'static str,
+) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept model request");
+        let mut buffer = [0_u8; 8192];
+        let bytes_read = stream.read(&mut buffer).expect("read model request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with(expected_get), "request: {request}");
+        write_test_response(&mut stream, "200 OK", envelope);
+        drop(stream);
+
+        let (mut stream, _) = listener.accept().expect("accept solve request");
+        let bytes_read = stream.read(&mut buffer).expect("read solve request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("POST /api/direct-mesh/solve HTTP/1.1\r\n"));
+        assert!(request.contains("\"study_kind\":\"heat_bar_1d\""));
+        assert!(request.contains("\"nodes\":[{\"id\":\"n0\"}]"));
+        write_test_response(
+            &mut stream,
+            "200 OK",
+            r#"{"job":{"job_id":"referenced-job","status":"queued","progress":0.0}}"#,
+        );
+    });
+
+    let mut payload = json!({ "endpoints": ["127.0.0.1:7001"] });
+    payload[reference_key] = Value::String(reference_id.to_string());
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step("direct_mesh_solve", 1, &payload)
+        .expect("referenced direct mesh request should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.result["job_id"], "referenced-job");
+}
+
+#[test]
 fn solve_and_wait_from_model_version_runs_native_service_chain() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
     let port = listener.local_addr().expect("local addr").port();
@@ -227,7 +284,7 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
             ),
             (
                 "POST /api/direct-mesh/solve HTTP/1.1",
-                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0}}"#,
+                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0},"direct_mesh":{"endpoint":"127.0.0.1:7001"}}"#,
             ),
             (
                 "GET /api/v1/jobs/job-native HTTP/1.1",
@@ -265,6 +322,9 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
     handle.join().expect("server thread should finish");
     assert_eq!(outcome.result["job_id"], "job-native");
     assert_eq!(outcome.result["status"], "completed");
+    assert_eq!(outcome.result["model_version_id"], "ver_native");
+    assert_eq!(outcome.result["endpoint"], "127.0.0.1:7001");
+    assert_eq!(outcome.result["solve"]["model_version_id"], "ver_native");
     assert_eq!(outcome.result["result"]["result"]["field"], "ready");
 }
 

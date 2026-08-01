@@ -331,8 +331,7 @@
         "files": [
           "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
           "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
-          "apps/frontend/test/headless/kyuubiki-headless-cli.test.mjs",
-          "apps/frontend/test/headless/kyuubiki-headless-live.test.mjs",
+          "apps/frontend/package.json",
           "workers/rust/crates/headless-sdk/src/workflow_batch.rs",
           "workers/rust/crates/headless-sdk/src/templates.rs",
           "workers/rust/crates/headless-sdk/src/plan.rs",
@@ -360,6 +359,7 @@
           "build_execution_plan",
           "ServiceHeadlessExecutor",
           "service_executor_covers_every_service_action_contract",
+          "direct_mesh_solve_resolves_model_and_version_references",
           "solve_and_wait_from_model_version",
           "execution-posture",
           "kyuubiki-headless",

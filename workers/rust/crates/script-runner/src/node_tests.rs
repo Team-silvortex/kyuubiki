@@ -13,17 +13,10 @@ pub(crate) fn run_node_command(
         "playground-fem-node-test" => {
             run_node_test(&paths.root, &["apps/web/playground/test/fem.test.mjs"])
         }
-        "frontend-cli" => run_frontend_cli(&paths.frontend, rest),
         "frontend-typecheck" => run_frontend_typecheck(&paths.frontend, rest),
         "frontend-unit-test" => run_frontend_unit_test(&paths.frontend, &[], rest),
         "frontend-unit-coverage-test" => {
             run_frontend_unit_coverage_test(&paths.root, &paths.frontend, rest)
-        }
-        "frontend-unit-headless-test" => {
-            run_frontend_unit_test(&paths.frontend, &["headless"], rest)
-        }
-        "frontend-unit-headless-live-test" => {
-            run_frontend_unit_test(&paths.frontend, &["kyuubiki-headless-live"], rest)
         }
         "frontend-unit-workflow-test" => {
             run_frontend_unit_test(&paths.frontend, &["workflow"], rest)
@@ -132,10 +125,6 @@ pub(crate) fn run_hub_gui_smoke(hub_gui: &Path) -> RunnerResult<u8> {
 
 pub(crate) fn run_app_smoke(app_dir: &Path) -> RunnerResult<u8> {
     run_node_test(app_dir, &["./test/smoke.test.mjs"])
-}
-
-pub(crate) fn run_frontend_cli(frontend: &Path, rest: Vec<OsString>) -> RunnerResult<u8> {
-    run_node_script(frontend, "./scripts/kyuubiki-cli.mjs", &[], rest)
 }
 
 pub(crate) fn run_frontend_typecheck(frontend: &Path, rest: Vec<OsString>) -> RunnerResult<u8> {

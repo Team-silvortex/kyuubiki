@@ -65,6 +65,25 @@ The retained Node entrypoint `node ./scripts/validate-language-packs.mjs` is
 kept for local compatibility, but the Make target is the release gate and uses
 the native script runner.
 
+Full visible-copy coverage and translation maintenance are native as well:
+
+```sh
+make report-full-language-pack-coverage
+make check-full-language-pack-coverage
+make plan-language-pack-translations
+make export-language-pack-translation-batch LANGUAGE=de BATCH=extended-01
+make apply-language-pack-translation-batch INPUT=tmp/reviewed-de-extended-01.json
+```
+
+The report reads the literal Workbench English copy contract, merges every
+shipped pack fragment, and retains JSON plus Markdown evidence under `tmp/`.
+The export/apply pair is deliberately review-oriented: applying a batch rejects
+unknown languages, changed source text, incomplete key sets, source-matched
+translations, and array-shape drift. The former network machine-translation
+scripts are not part of the product or maintenance runtime; teams may fill an
+exported batch with any external process, but only the native validator can
+merge it into a shipped pack.
+
 ## Hub alignment
 
 Hub is now wired to the same local-first copy philosophy through a lightweight

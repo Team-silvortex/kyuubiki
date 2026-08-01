@@ -106,6 +106,7 @@ mod update_catalog_docs;
 mod usability_release_gate;
 mod verification_evidence_surface;
 mod version_line_audit;
+mod workbench_language_coverage;
 mod workbench_language_pack_catalog;
 mod workflow_catalog_benchmark_compare;
 mod workflow_catalog_remote;
@@ -184,6 +185,12 @@ fn run() -> RunnerResult<u8> {
             host_platform().as_str(),
             rest,
         ),
+        "report-full-language-pack-coverage" => {
+            workbench_language_coverage::run_report_full_language_pack_coverage(&paths.root, rest)
+        }
+        "plan-workbench-language-translations" => {
+            workbench_language_coverage::run_plan_workbench_language_translations(&paths.root, rest)
+        }
         "audit-version-line" => version_line_audit::run_audit_version_line(&paths.root, rest),
         "create-release-snapshot" => release_snapshot::run_create_release_snapshot(rest),
         "doctor" => run_installer(&paths, "doctor", rest),
@@ -354,28 +361,18 @@ fn run() -> RunnerResult<u8> {
             }
             run_command(&paths.frontend, "npm", ["run", "build"].map(OsString::from))
         }
-        "headless-test" => {
-            node_tests::run_frontend_unit_test(&paths.frontend, &["headless"], Vec::new())
+        "headless-test" => run_command(&paths.rust, "cargo", headless_test_args(rest)),
+        "frontend-unit-headless-test" => {
+            let frontend =
+                node_tests::run_frontend_unit_test(&paths.frontend, &["headless"], Vec::new())?;
+            if frontend != 0 {
+                return Ok(frontend);
+            }
+            run_command(&paths.rust, "cargo", headless_test_args(rest))
         }
-        "headless-live-test" => node_tests::run_frontend_unit_test(
-            &paths.frontend,
-            &["kyuubiki-headless-live"],
-            Vec::new(),
-        ),
-        "headless-rust-live-test" => run_command(
-            &paths.rust,
-            "cargo",
-            [
-                "test",
-                "-p",
-                "kyuubiki-cli",
-                "--test",
-                "headless_live",
-                "--",
-                "--test-threads=1",
-            ]
-            .map(OsString::from),
-        ),
+        "headless-live-test" | "headless-rust-live-test" | "frontend-unit-headless-live-test" => {
+            run_command(&paths.rust, "cargo", headless_live_test_args(rest))
+        }
         "sdk-smoke" => run_sdk_smoke(&paths),
         "workflow-preflight" => {
             let unit =
@@ -592,6 +589,31 @@ fn cargo_run_bin(package: &str, binary: &str, rest: Vec<OsString>) -> Vec<OsStri
         .into_iter()
         .map(OsString::from)
         .chain(rest)
+        .collect()
+}
+
+fn headless_test_args(rest: Vec<OsString>) -> Vec<OsString> {
+    [
+        "test",
+        "-p",
+        "kyuubiki-cli",
+        "--test",
+        "headless_cli_surface",
+        "--test",
+        "headless_execution_posture",
+    ]
+    .into_iter()
+    .map(OsString::from)
+    .chain(rest)
+    .collect()
+}
+
+fn headless_live_test_args(rest: Vec<OsString>) -> Vec<OsString> {
+    ["test", "-p", "kyuubiki-cli", "--test", "headless_live"]
+        .into_iter()
+        .map(OsString::from)
+        .chain(rest)
+        .chain(["--", "--test-threads=1"].map(OsString::from))
         .collect()
 }
 

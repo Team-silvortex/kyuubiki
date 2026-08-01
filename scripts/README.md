@@ -146,6 +146,17 @@ This directory contains host-native operational entry points.
   Native deterministic generator for the built-in Workbench TypeScript catalog.
   It validates fragment identity, safe paths, timestamps, and unsafe text before
   merging overrides, and supports `--check` for release drift detection.
+- `kyuubiki-script-runner report-full-language-pack-coverage`
+  Native full-copy coverage report, strict language/all-language gate, reviewed
+  batch exporter, and validated batch apply path. It preserves the existing
+  report and batch schemas while removing the TypeScript-compiler and Node
+  maintenance dependency.
+- `kyuubiki-script-runner plan-workbench-language-translations`
+  Native deterministic queue for incomplete language/batch coordinates. The 30
+  shipped Workbench languages currently resolve to an empty queue at 998/998
+  visible-copy keys. Network machine-translation scripts have been removed;
+  future translation tools must fill exported review batches rather than edit
+  shipped packs directly.
 - `report-language-pack-coverage.mjs`
   Emit a JSON coverage report for shipped language packs. It summarizes
   language-count coverage and required override-key coverage by UI surface, then
@@ -185,8 +196,8 @@ This directory contains host-native operational entry points.
   Enter the official Rust `kyuubiki-headless` binary from the shared project
   launcher. The native journey covers template discovery through dry-run and
   service-backed execution, including normalized batch rendering and explicit
-  preview/research execution posture. The frontend CLI remains a frontend
-  regression surface, not the production headless control entrypoint.
+  preview/research execution posture. The former frontend Node CLI has been
+  removed rather than retained as a second production implementation.
 - `kyuubiki-script-runner check-contracts-runtime-api-surface`
   Verify the contracts-owned runtime API surface, including required contract
   families, central self-host service surface binding, repo-relative evidence
@@ -397,6 +408,9 @@ Shell migration rule:
 - Keep `scripts/kyuubiki` as a tiny launcher only.
 - Prefer Rust native commands for new cross-platform operations.
 - Use `./scripts/kyuubiki native-script-audit` to list remaining shell wrappers.
+- Keep `apps/frontend/scripts` limited to the audited UI build, layout,
+  browser-preflight, benchmark, typecheck, and test tools. Reintroducing a
+  project, macro, service-executor, or headless Node CLI fails the native audit.
 - Treat embedded `sh -lc`, `bash -lc`, or `ExecStart=/bin/sh` usage in runtime
   sources as a failing audit unless it is replaced by native argument vectors
   or an explicitly bounded host-tool boundary.
@@ -599,19 +613,16 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
 - `./scripts/kyuubiki headless-test`
-  Frontend-owned headless CLI regression suite covering template selection,
-  workflow export, validation, dry-run execution, and risk gating.
+  Native Rust headless CLI regression suite covering template selection,
+  workflow export, rendering, validation, dry-run execution, and risk gating.
 - `./scripts/kyuubiki headless-live-test`
-  Live headless smoke that boots a temporary local control plane with fake
+  Rust live headless smoke that boots a temporary local control plane with fake
   solver sessions, then drives real `headless run --execute` workflow jobs
   through the service executor over HTTP. The current suite covers
   `service_health`, catalog-backed workflow submission, and inline
   `workflow_submit_graph` submission with explicit agent-failure surfacing.
 - `./scripts/kyuubiki headless-rust-live-test`
-  Rust `kyuubiki-headless` live integration suite against the same temporary
-  local control plane, covering service-health, catalog-workflow execution,
-  and inline `workflow_submit_graph` execution through the Rust service
-  executor.
+  Compatibility alias for `headless-live-test`.
 - `./scripts/kyuubiki workflow-preflight`
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
