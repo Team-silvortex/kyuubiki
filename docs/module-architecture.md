@@ -374,12 +374,14 @@ Owned paths:
 - `sdks/python`
 - `sdks/elixir`
 - `workers/rust/crates/headless-sdk`
+- `workers/rust/crates/project-automation`
 
 Responsibilities:
 
 - protocol-first access to Kyuubiki capabilities
 - headless task preparation and execution
 - automation clients for AI and batch workflows
+- native compilation of project-stored automation presets into headless plans
 - language-specific convenience wrappers
 
 SDKs are clients of stable contracts. They should not become alternate engines
@@ -395,6 +397,7 @@ Owned paths:
 - `config/operator-reliability*.json`
 - `config/operator-qualification*.json`
 - `language-packs`
+- `workers/rust/crates/project-bundle`
 - `apps/web/lib/kyuubiki_web/central_store.ex`
 - `apps/web/lib/kyuubiki_web/central_store_router.ex`
 
@@ -406,6 +409,8 @@ Responsibilities:
 - material score contract and manifest
 - UI automation contract
 - language-pack contract
+- native `.kyuubiki` container creation, validation, and lossless archive
+  transformation shared by Hub and command tools
 - central-store catalog, session-policy, database-policy, and database-status contract
 - central-server JSON schemas
 - central readiness report schema and retained evidence check
@@ -535,6 +540,10 @@ When adding a capability:
   goes to `workers/rust`.
 - Headless access goes to `sdks/*` or `workers/rust/crates/headless-sdk`.
 - Shared JSON contracts go to `schemas`.
+- Shared native project-container behavior goes to
+  `workers/rust/crates/project-bundle`.
+- Project-stored automation lookup, rendering, risk planning, and execution
+  adaptation goes to `workers/rust/crates/project-automation`.
 - Product and architecture source-of-truth prose goes to `docs`.
 - Release or validation gates go to `make`, `scripts`, `config`, and tests.
 

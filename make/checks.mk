@@ -151,6 +151,7 @@ check-gui-runtime-capability-contract:
 check-desktop-usability-journeys:
 	@$(ENTRYPOINT) check-desktop-usability-journeys --self-test
 	@$(ENTRYPOINT) check-desktop-usability-journeys
+	@$(ENTRYPOINT) check-desktop-usability-journeys --journey create-open-project --execute
 
 check-usability-release-gate:
 	@$(ENTRYPOINT) check-usability-release-gate --self-test

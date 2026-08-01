@@ -133,6 +133,11 @@ SDKs, installer, and verification.
 Important contract families:
 
 - JSON schemas under `schemas/`
+- the native `.kyuubiki` project container implementation under
+  `workers/rust/crates/project-bundle`, shared by Hub and native command tools
+- the native project automation adapter under
+  `workers/rust/crates/project-automation`, which compiles stored presets into
+  Rust headless SDK plans and fail-closed execution reports
 - TaskIR and execution-program contracts
 - workflow graph and workflow dataset contracts
 - operator package manifests and reliability manifests
@@ -212,6 +217,10 @@ The tensor is the three-axis review map:
 - `apps/desktop-shared`: source-of-truth UI assets synchronized into the three independent desktop shells
 - `apps/web`: Orchestra control plane
 - `workers/rust/crates/protocol`: shared runtime contracts
+- `workers/rust/crates/project-bundle`: shared native project container
+  creation, inspection, validation, normalization, packing, unpacking, and diff
+- `workers/rust/crates/project-automation`: shared automation-preset lookup,
+  payload/state template binding, risk planning, and service execution adapter
 - `workers/rust/crates/cli`: Rust agent and CLI process
 - `workers/rust/crates/engine`: execution helpers and operator host logic
 - `workers/rust/crates/solver`: FEM kernels

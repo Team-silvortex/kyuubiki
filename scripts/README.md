@@ -4,7 +4,10 @@ This directory contains host-native operational entry points.
 
 - `kyuubiki`
   Thin compatibility shim for the native Rust `kyuubiki-script-runner`
-  binary. New operational command logic should land in
+  binary. Its freshness check covers workspace Rust sources, manifests, and
+  source-directory changes, so shared-crate edits or deletions cannot silently
+  execute an old runner.
+  New operational command logic should land in
   `workers/rust/crates/script-runner`, not in shell.
 - `kyuubiki-script-runner frontend-file-lines` and
   `kyuubiki-script-runner frontend-storage-security`
@@ -160,8 +163,18 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-desktop-usability-journeys`
   Verify the moxi usability release journeys against native probes,
   GUI-to-native capability closure, and required project/workflow/execution
-  chains. This keeps `build-usability-readiness-report` from relying on legacy
+  chains. The `create-open-project --execute` lane creates, inspects, and
+  validates a temporary project bundle through the shared Rust container
+  library. This keeps `build-usability-readiness-report` from relying on legacy
   Node integration shims as release evidence.
+- `kyuubiki-script-runner project create|inspect|validate|normalize|unpack|pack|diff`
+  Operate on project bundles through the native shared project-container crate
+  used by Hub.
+- `kyuubiki-script-runner project automation-presets|automation-render|automation-run`
+  Read stored presets through the native project container, bind payload/state
+  templates, and run them through the Rust headless SDK. Live execution is
+  service-only; browser actions remain owned by product UI/Pwdt instead of a
+  hidden Node or Playwright fallback.
 - `kyuubiki-script-runner check-contracts-runtime-api-surface`
   Verify the contracts-owned runtime API surface, including required contract
   families, central self-host service surface binding, repo-relative evidence

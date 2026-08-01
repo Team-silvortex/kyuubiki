@@ -9,6 +9,8 @@ members = [
   "crates/installer",
   "crates/operator-sdk",
   "crates/platform",
+  "crates/project-automation",
+  "crates/project-bundle",
   "crates/protocol",
   "crates/script-runner",
   "crates/solver",

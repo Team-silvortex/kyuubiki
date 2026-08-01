@@ -3,7 +3,8 @@ use crate::{
     HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
     HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport, find_action_contract,
     is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
-    prepare_operator_task_payload, preview_operator_task_execute_payload, validate_batch,
+    prepare_operator_task_payload, preview_operator_task_execute_payload,
+    service_executor_supports_action, validate_batch,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -91,9 +92,10 @@ pub fn collect_executor_compatibility_issues(
 pub fn executor_supports_action(executor_name: &str, action: &str) -> bool {
     match executor_name {
         "mock" => true,
-        "hybrid" => find_action_contract(action).is_some(),
-        "service" => find_action_contract(action)
-            .is_some_and(|contract| contract.engine == HeadlessEngine::Service),
+        "hybrid" => find_action_contract(action).is_some_and(|contract| {
+            contract.engine == HeadlessEngine::Browser || service_executor_supports_action(action)
+        }),
+        "service" => service_executor_supports_action(action),
         _ => false,
     }
 }
@@ -136,7 +138,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                 result_preview: build_result_preview(&step.action, step.index, &step.payload),
                 requires_confirmation,
             });
-            continue;
+            break;
         }
 
         if is_operator_task_prepare_action(&step.action) {
@@ -421,6 +423,39 @@ mod tests {
     use crate::{HeadlessExecutionBatch, HeadlessExecutionBatchStep, HeadlessRisk};
     use kyuubiki_protocol::compute_operator_task_digest;
     use serde_json::{Value, json};
+
+    #[test]
+    fn destructive_block_halts_before_later_side_effects() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "risk-stop-fixture".to_string(),
+            steps: vec![
+                HeadlessExecutionBatchStep {
+                    index: 1,
+                    action: "project_delete".to_string(),
+                    risk: HeadlessRisk::Destructive,
+                    payload: json!({ "project_id": "project-1" }),
+                },
+                HeadlessExecutionBatchStep {
+                    index: 2,
+                    action: "project_create".to_string(),
+                    risk: HeadlessRisk::Normal,
+                    payload: json!({ "name": "must-not-run" }),
+                },
+            ],
+            warnings: vec![],
+        };
+        let mut executor = MockHeadlessExecutor;
+
+        let report = execute_batch_with_executor(&batch, &mut executor, false, false);
+
+        assert_eq!(report.status, "blocked");
+        assert_eq!(report.executed_step_count, 0);
+        assert_eq!(report.steps.len(), 1);
+        assert_eq!(report.steps[0].action, "project_delete");
+    }
 
     #[test]
     fn mock_executor_reports_structured_operator_task_mirror_error() {

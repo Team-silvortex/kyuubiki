@@ -44,7 +44,9 @@
           "tests/integration/desktop-gui-call-chain-contract.test.mjs",
           "tests/integration/desktop-shell-regression.test.mjs",
           "tests/integration/hub-shell-regression.shared.mjs",
-          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
+          "workers/rust/crates/project-bundle/src/lib.rs",
+          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs",
+          "workers/rust/crates/script-runner/src/project_cli.rs"
         ],
         "required_text": [
           "kyuubiki.desktop-capability-closure/v1",
@@ -52,6 +54,10 @@
           "installer.environment.init",
           "workbench.analysis.open-local",
           "check-desktop-usability-journeys",
+          "create_project_bundle",
+          "inspect_project_bundle",
+          "validate_project_bundle",
+          "--execute",
           "every required desktop capability closes UI, route, native, and result layers",
           "created bundle must become the active path for the next operation"
         ]
@@ -222,6 +228,33 @@
           "service_surface",
           "central-web-service",
           "orchestra-control-plane"
+        ]
+      },
+      {
+        "id": "native-project-automation-contract",
+        "modules": [
+          "contracts",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "workers/rust/crates/project-bundle/src/lib.rs",
+          "workers/rust/crates/project-automation/src/lib.rs",
+          "workers/rust/crates/project-automation/src/model.rs",
+          "workers/rust/crates/headless-sdk/src/executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor.rs",
+          "workers/rust/crates/script-runner/src/project_cli.rs"
+        ],
+        "required_text": [
+          "read_project_bundle",
+          "render_project_automation_preset",
+          "run_project_automation_preset",
+          "kyuubiki.headless-automation-plan/v1",
+          "service_executor_supports_action",
+          "destructive_block_halts_before_later_side_effects",
+          "automation-presets",
+          "automation-render",
+          "automation-run"
         ]
       }
     ],

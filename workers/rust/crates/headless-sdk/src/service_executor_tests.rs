@@ -239,6 +239,48 @@ fn operator_task_prepare_round_trips_against_local_http_server() {
 }
 
 #[test]
+fn project_create_round_trips_against_local_http_server() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept request");
+        let mut buffer = [0_u8; 4096];
+        let bytes_read = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("POST /api/v1/projects HTTP/1.1\r\n"));
+        assert!(request.contains("\"name\":\"Native project\""));
+        assert!(!request.contains("\"project_id\""));
+        let body = r#"{"project":{"project_id":"project-native","name":"Native project"}}"#;
+        let response = format!(
+            "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step(
+            "project_create",
+            1,
+            &json!({
+                "project_id": "must-not-leak",
+                "name": "Native project",
+                "description": "created by Rust"
+            }),
+        )
+        .expect("project create request should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.status, "executed");
+    assert_eq!(outcome.result["project_id"], "project-native");
+    assert_eq!(outcome.result["project"]["project_id"], "project-native");
+}
+
+#[test]
 fn operator_task_execute_preserves_readiness_from_control_plane() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
     let port = listener.local_addr().expect("local addr").port();

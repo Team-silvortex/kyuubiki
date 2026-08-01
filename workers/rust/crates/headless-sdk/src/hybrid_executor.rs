@@ -1,6 +1,7 @@
 use crate::{
     HeadlessEngine, HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome,
     MockHeadlessExecutor, ServiceHeadlessExecutor, find_action_contract,
+    service_executor_supports_action,
 };
 use serde_json::Value;
 
@@ -35,7 +36,12 @@ impl HeadlessExecutor for HybridHeadlessExecutor {
         payload: &Value,
     ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
         match find_action_contract(action).map(|contract| contract.engine) {
-            Some(HeadlessEngine::Service) => self.service.execute_step(action, step_index, payload),
+            Some(HeadlessEngine::Service) if service_executor_supports_action(action) => {
+                self.service.execute_step(action, step_index, payload)
+            }
+            Some(HeadlessEngine::Service) => Err(HeadlessExecutorError {
+                message: format!("unsupported native service action: {action}"),
+            }),
             Some(HeadlessEngine::Browser) => {
                 let mut outcome = self.browser.execute_step(action, step_index, payload)?;
                 outcome.status = "executed_mock_browser".to_string();

@@ -3,11 +3,20 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 RUNNER="$ROOT_DIR/workers/rust/target/debug/kyuubiki-script-runner"
-RUNNER_SRC="$ROOT_DIR/workers/rust/crates/script-runner/src"
+RUST_ROOT="$ROOT_DIR/workers/rust"
 
-if [ -x "$RUNNER" ] && ! find "$RUNNER_SRC" -type f -newer "$RUNNER" | grep -q .; then
+runner_is_fresh() {
+  [ -x "$RUNNER" ] || return 1
+  [ "$RUST_ROOT/Cargo.toml" -nt "$RUNNER" ] && return 1
+  [ "$RUST_ROOT/Cargo.lock" -nt "$RUNNER" ] && return 1
+  find "$RUST_ROOT/crates" -type f \( -name '*.rs' -o -name Cargo.toml \) -newer "$RUNNER" -print -quit | grep -q . && return 1
+  find "$RUST_ROOT/crates" -type d -newer "$RUNNER" -print -quit | grep -q . && return 1
+  return 0
+}
+
+if runner_is_fresh; then
   exec "$RUNNER" "$@"
 fi
 
-cd "$ROOT_DIR/workers/rust"
+cd "$RUST_ROOT"
 exec cargo run -p kyuubiki-script-runner -- "$@"

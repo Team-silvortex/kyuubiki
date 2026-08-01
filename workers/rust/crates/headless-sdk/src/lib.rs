@@ -69,6 +69,7 @@ mod operator_task_validation_tests;
 mod plan;
 mod run;
 mod service_executor;
+mod service_executor_library;
 mod surface;
 mod template_search;
 #[cfg(test)]
@@ -255,7 +256,7 @@ pub use plan::{
 pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };
-pub use service_executor::ServiceHeadlessExecutor;
+pub use service_executor::{ServiceHeadlessExecutor, service_executor_supports_action};
 pub use surface::{
     HEADLESS_SDK_SURFACE_SCHEMA_VERSION, HeadlessSdkSurfaceArea, HeadlessSdkSurfaceCounts,
     HeadlessSdkSurfaceManifest, find_headless_sdk_surface_area, headless_sdk_surface_areas,

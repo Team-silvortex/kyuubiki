@@ -78,6 +78,13 @@ repeatable workflow control:
   install, project, workflow, execution, recovery, localization, and update
   paths; `make build-usability-readiness-report` records the executed
   `baseline_pass` evidence
+- project bundle creation, inspection, validation, normalization, packing,
+  unpacking, and diffing now share one native Rust implementation between Hub
+  and the top-level command surface; the project journey executes a real
+  temporary `.kyuubiki` round trip
+- project automation preset listing, template rendering, risk planning, dry
+  runs, and service-backed live execution now use the shared Rust headless SDK;
+  the top-level `project automation-*` path no longer invokes Node
 - Pwdt, the frontend wasm Python DSL, is the target control surface for
   deterministic UI automation inside product-owned shells
 - the coverage tensor is the planning gate for weak coordinates, not a

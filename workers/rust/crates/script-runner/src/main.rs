@@ -81,6 +81,7 @@ mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod packaged_desktop_smoke;
+mod project_cli;
 mod project_organization_audit;
 mod regression_gate_report;
 mod regression_lane_catalog;
@@ -281,7 +282,8 @@ fn run() -> RunnerResult<u8> {
             let platform = host_platform().as_str();
             run_installer(&paths, "stage-release", prepend(platform, rest))
         }
-        "project" | "macro" => run_command(
+        "project" => project_cli::run_project_command(rest),
+        "macro" => run_command(
             &paths.frontend,
             "node",
             [

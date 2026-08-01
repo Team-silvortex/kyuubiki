@@ -7,6 +7,11 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::service_executor_library::{
+    execute_model_create, execute_model_version_create, execute_project_create,
+    execute_project_delete, execute_project_update,
+};
+
 const TERMINAL_JOB_STATUSES: &[&str] = &["completed", "failed", "cancelled"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +36,25 @@ impl ServiceHeadlessExecutor {
     }
 }
 
+pub fn service_executor_supports_action(action: &str) -> bool {
+    matches!(
+        action,
+        "service_health"
+            | "project_create"
+            | "project_update"
+            | "project_delete"
+            | "model_create"
+            | "model_version_create"
+            | "operator_task_prepare"
+            | "operator_task_execute"
+            | "workflow_submit_catalog"
+            | "workflow_submit_graph"
+            | "job_fetch"
+            | "job_wait"
+            | "result_fetch"
+    ) || direct_fem_submit_route(action).is_some()
+}
+
 impl HeadlessExecutor for ServiceHeadlessExecutor {
     fn name(&self) -> &'static str {
         "service"
@@ -51,6 +75,21 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             }
             "operator_task_execute" => {
                 execute_operator_task_execute(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "project_create" => {
+                execute_project_create(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "project_update" => {
+                execute_project_update(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "project_delete" => {
+                execute_project_delete(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "model_create" => {
+                execute_model_create(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "model_version_create" => {
+                execute_model_version_create(&self.base_url, self.api_token.as_deref(), payload)
             }
             direct_fem_action if direct_fem_submit_route(direct_fem_action).is_some() => {
                 execute_direct_fem_submit(
@@ -326,7 +365,7 @@ fn normalize_result_fetch_result(job_id: &str, result: Value) -> Value {
     })
 }
 
-fn request_json(
+pub(crate) fn request_json(
     base_url: &str,
     api_token: Option<&str>,
     method: &str,
@@ -399,7 +438,7 @@ fn build_request(
     request
 }
 
-fn required_path_segment<'a>(
+pub(crate) fn required_path_segment<'a>(
     payload: &'a Value,
     keys: &[&str],
 ) -> Result<&'a str, HeadlessExecutorError> {

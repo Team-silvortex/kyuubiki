@@ -1,0 +1,11 @@
+[package]
+name = "kyuubiki-project-bundle"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono = "0.4"
+serde_json = { version = "1.0", features = ["preserve_order"] }
+uuid = { version = "1", features = ["v4"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }

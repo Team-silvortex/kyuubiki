@@ -70,7 +70,12 @@
         "hub.project.open-workbench"
       ],
       "probes": [
-        ["check-desktop-usability-journeys", "--journey", "create-open-project"],
+        [
+          "check-desktop-usability-journeys",
+          "--journey",
+          "create-open-project",
+          "--execute"
+        ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]
       ]

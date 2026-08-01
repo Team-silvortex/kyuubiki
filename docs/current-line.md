@@ -62,6 +62,14 @@ closure rather than raw feature sprawl:
   against slipping back to Node integration shims; `make
   build-usability-readiness-report` executes the 8 blocking paths and records
   the current `baseline_pass` evidence
+- `create-open-project` now executes a real native bundle round trip. Hub and
+  `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
+  `workers/rust/crates/project-bundle` instead of maintaining separate storage
+  implementations
+- `kyuubiki project automation-presets|automation-render|automation-run` now
+  flows through `workers/rust/crates/project-automation` and the Rust headless
+  SDK. Dry runs are side-effect free, live execution is service-only, and an
+  unconfirmed destructive step halts the remaining plan
 - Pwdt should become the deterministic frontend automation surface for Hub,
   Workbench, and Installer, while headless SDKs remain backend/control clients
 - the module-function coverage tensor is the shared map for deciding which
@@ -75,8 +83,8 @@ The 2.7 cohesive-interface coassembly checkpoint is still retained as a
 calculation baseline. The 2.9 boundary is also explicit: Pwdt parity is not yet
 complete, app shipping metadata is separate from this development checkpoint,
 and broader industrial solver qualification still needs deeper retained
-fixtures, external correlation, larger-scale evidence, and deeper live GUI/Pwdt
-round trips beyond the current native contract probes.
+fixtures, external correlation, larger-scale evidence, and packaged GUI/Pwdt
+round trips beyond the current native project-bundle and automation probes.
 
 ## Current Reading Path
 

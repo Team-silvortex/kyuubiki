@@ -297,11 +297,12 @@
     {
       "id": "contracts",
       "layer": "contract",
-      "summary": "Shared schemas, manifests, architecture docs, language packs, and machine-readable policy.",
+      "summary": "Shared schemas, manifests, native project-bundle contracts, architecture docs, language packs, and machine-readable policy.",
       "owned_paths": [
         "schemas",
         "config",
-        "docs"
+        "docs",
+        "workers/rust/crates/project-bundle"
       ],
       "depends_on": [],
       "benchmark_lanes": [
@@ -583,10 +584,11 @@
     {
       "id": "sdk-headless",
       "layer": "sdk",
-      "summary": "Rust/Python/Elixir headless SDK surfaces and examples for open-ended automation and research flows.",
+      "summary": "Rust/Python/Elixir headless SDK surfaces, native project-automation adaptation, and examples for open-ended automation and research flows.",
       "owned_paths": [
         "sdks",
-        "workers/rust/crates/headless-sdk"
+        "workers/rust/crates/headless-sdk",
+        "workers/rust/crates/project-automation"
       ],
       "depends_on": [
         "contracts",

@@ -85,6 +85,7 @@ struct Capability {
 #[derive(Default)]
 struct Options {
     self_test: bool,
+    execute: bool,
     journey: Option<String>,
 }
 
@@ -104,12 +105,18 @@ pub(crate) fn run_check_desktop_usability_journeys(
         eprintln!("desktop usability journey check failed: {issue}");
         return Ok(1);
     }
+    if options.execute {
+        execute_journeys(options.journey.as_deref())?;
+    }
 
-    let suffix = options
+    let mut suffix = options
         .journey
         .as_ref()
         .map(|id| format!(" for {id}"))
         .unwrap_or_default();
+    if options.execute {
+        suffix.push_str(" with native execution");
+    }
     println!("desktop usability journey check passed{suffix}");
     Ok(0)
 }
@@ -120,6 +127,7 @@ fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
     while let Some(arg) = iter.next() {
         match arg.to_string_lossy().as_ref() {
             "--self-test" => options.self_test = true,
+            "--execute" => options.execute = true,
             "--journey" => {
                 options.journey = Some(
                     iter.next()
@@ -338,6 +346,19 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
                 "journey {journey_id} must include check-desktop-usability-journeys"
             ));
         }
+        if *journey_id == "create-open-project"
+            && !journey.probes.iter().any(|probe| {
+                probe.first().is_some_and(|cmd| {
+                    cmd == "check-desktop-usability-journeys"
+                        && probe.iter().any(|argument| argument == "--execute")
+                })
+            })
+        {
+            issues.push(
+                "journey create-open-project must execute its native project round trip"
+                    .to_string(),
+            );
+        }
     }
 }
 
@@ -357,6 +378,67 @@ fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
         return Err(format!("path escapes repository: {relative}"));
     }
     Ok(root.join(path))
+}
+
+fn execute_journeys(selected: Option<&str>) -> RunnerResult<()> {
+    if selected.is_none_or(|id| id == "create-open-project") {
+        execute_project_bundle_roundtrip()?;
+    }
+    Ok(())
+}
+
+fn execute_project_bundle_roundtrip() -> RunnerResult<()> {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "kyuubiki-usability-project-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| format!("failed to build journey timestamp: {error}"))?
+            .as_nanos()
+    ));
+    let bundle_path = fixture_root.join("Usability Roundtrip.kyuubiki");
+    let result = (|| {
+        let path = bundle_path
+            .to_str()
+            .ok_or_else(|| "project journey fixture path is not UTF-8".to_string())?;
+        let created = kyuubiki_project_bundle::create_project_bundle(path)?;
+        let created: serde_json::Value = serde_json::from_str(&created)
+            .map_err(|error| format!("invalid project create report: {error}"))?;
+        if created.get("created").and_then(serde_json::Value::as_bool) != Some(true)
+            || !bundle_path.is_file()
+        {
+            return Err("project journey did not create a bundle".to_string());
+        }
+
+        let inspected = kyuubiki_project_bundle::inspect_project_bundle(path)?;
+        let inspected: serde_json::Value = serde_json::from_str(&inspected)
+            .map_err(|error| format!("invalid project inspect report: {error}"))?;
+        if inspected.get("schema").and_then(serde_json::Value::as_str)
+            != Some("kyuubiki.project/v2")
+            || inspected
+                .get("project_name")
+                .and_then(serde_json::Value::as_str)
+                != Some("Usability Roundtrip")
+        {
+            return Err("project journey inspect report lost bundle identity".to_string());
+        }
+
+        let validation = kyuubiki_project_bundle::validate_project_bundle(path)?;
+        if !kyuubiki_project_bundle::validation_passed(&validation)? {
+            return Err(format!("project journey validation failed: {validation}"));
+        }
+        Ok(())
+    })();
+    let cleanup = fs::remove_dir_all(&fixture_root);
+    if let Err(error) = cleanup
+        && fixture_root.exists()
+    {
+        return Err(format!(
+            "failed to clean project journey fixture {}: {error}",
+            fixture_root.display()
+        ));
+    }
+    result
 }
 
 fn run_self_test(root: &Path) -> RunnerResult<()> {
@@ -397,6 +479,31 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         .any(|issue| issue.contains("non-native probe"))
     {
         return Err("self-test expected non-native probe rejection".to_string());
+    }
+
+    let mut static_only: GateConfig = read_json(root, GATE_PATH)?;
+    let journey = static_only
+        .journeys
+        .iter_mut()
+        .find(|journey| journey.id == "create-open-project")
+        .ok_or_else(|| "self-test missing create-open-project journey".to_string())?;
+    let probe = journey
+        .probes
+        .iter_mut()
+        .find(|probe| {
+            probe
+                .first()
+                .is_some_and(|command| command == "check-desktop-usability-journeys")
+        })
+        .ok_or_else(|| "self-test missing native project journey probe".to_string())?;
+    probe.retain(|argument| argument != "--execute");
+    let mut issues = Vec::new();
+    validate_required_chains(&static_only, Some("create-open-project"), &mut issues);
+    if !issues
+        .iter()
+        .any(|issue| issue.contains("must execute its native project round trip"))
+    {
+        return Err("self-test expected static-only project journey rejection".to_string());
     }
     Ok(())
 }
