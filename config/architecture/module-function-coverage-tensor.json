@@ -5,6 +5,7 @@
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "evidence_includes": [
     "config/architecture/module-function-coverage-evidence/core-contracts.json",
+    "config/architecture/module-function-coverage-evidence/model-collaboration-sdks.json",
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json"
   ],
   "depth_axes": {

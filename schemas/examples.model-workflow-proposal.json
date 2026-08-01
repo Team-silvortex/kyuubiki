@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.model-workflow-proposal/v1",
   "session_id": "session.material-screening.001",
-  "summary": "Check the service before submitting a bounded thermal study.",
+  "summary": "Check the service before submitting the bounded material envelope workflow.",
   "calls": [
     {
       "id": "model-call-001",
@@ -11,18 +11,31 @@
     },
     {
       "id": "model-call-002",
-      "action": "solve_thermal_frame_3d",
+      "action": "workflow_submit_catalog",
       "payload": {
-        "model": {
-          "mesh": {
-            "source": "project://models/thermal-frame.mesh"
-          },
-          "materials": {
-            "source": "project://materials/screening-set.json"
+        "workflow_id": "workflow.material-study-envelope-ranking-json",
+        "input_artifacts": {
+          "material_rows": {
+            "rows": [
+              {
+                "case_id": "cool_stiff",
+                "summaries": {
+                  "thermal": { "max_temperature": 82.0 },
+                  "structural": { "max_stress": 100.0 }
+                }
+              },
+              {
+                "case_id": "warm_safe",
+                "summaries": {
+                  "thermal": { "max_temperature": 90.0 },
+                  "structural": { "max_stress": 120.0 }
+                }
+              }
+            ]
           }
         }
       },
-      "reason": "Run the requested bounded thermal comparison through a service-backed solver route."
+      "reason": "Start from a catalog-owned bounded workflow instead of inventing an inline graph."
     }
   ]
 }

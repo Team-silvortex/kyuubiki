@@ -17,21 +17,23 @@ boundaries, deployment modes, and engineering workflow.
 
 Read these first, in order:
 
-1. `book.html`
-2. `book-manifest.json`
-3. `navigation-matrix.html`
-4. `current-line.md`
-5. `current-architecture-map.md`
-6. `system-overview.md`
-7. `module-architecture.md`
-8. `project-architecture-organization.md`
-9. `protocols.md`
-10. `repository-structure.md`
-11. `testing-and-ci.md`
-12. `maintenance.md`
-13. `installer-remote-control.md`
-14. `minimal-industrial-closure.md`
-15. `weakness-roadmap.md`
+1. `../llms.txt` for model ingestion, or `book.html` for human reading
+2. `model-research-bootstrap.json` for a model preparing research
+3. `model-research-onboarding.html`
+4. `book-manifest.json`
+5. `navigation-matrix.html`
+6. `current-line.md`
+7. `current-architecture-map.md`
+8. `system-overview.md`
+9. `module-architecture.md`
+10. `project-architecture-organization.md`
+11. `protocols.md`
+12. `repository-structure.md`
+13. `testing-and-ci.md`
+14. `maintenance.md`
+15. `installer-remote-control.md`
+16. `minimal-industrial-closure.md`
+17. `weakness-roadmap.md`
 
 For the current `2.9.x` hardening path, keep four threads mentally linked:
 
@@ -50,6 +52,15 @@ runtime owner, automation surface, and explicit limitation.
 - `book.html`
   Single-entry HTML book for humans and assistants that need the whole project
   picture before diving into chapter-level documents.
+- `../llms.txt`
+  Minimal model-facing root entry that points to the authoritative bootstrap
+  and states the non-negotiable execution and evidence rules.
+- `model-research-bootstrap.json`
+  Machine-readable model ingestion order, SDK entrypoints, first bounded
+  workflow, stop conditions, and research completion contract.
+- `model-research-onboarding.html`
+  WebView-readable route from document ingestion to a retained screening
+  research artifact.
 - `book-manifest.json`
   Machine-readable chapter map and reading-path manifest for future large-model
   ingestion and tooling.
@@ -147,6 +158,9 @@ Then branch by intent:
 - `model-collaboration-sdk.html`
   WebView-readable presentation of the same model collaboration boundary and
   portable session/proposal contracts.
+- `model-research-onboarding.md`
+  Engineering source for models and integrators that need to turn the
+  collaboration contract into a bounded, dependency-aware research loop.
 - `operator-reliability.md`
   Machine-readable reliability manifest policy for solve operators, including
   trust levels, evidence expectations, and the current release minimum coverage

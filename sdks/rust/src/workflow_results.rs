@@ -243,7 +243,7 @@ fn manifest_outputs_for_node(node: &WorkflowGraphNode) -> Vec<WorkflowOutputArti
         .collect()
 }
 
-fn extract_artifacts<'a>(payload: &'a Value) -> SdkResult<&'a serde_json::Map<String, Value>> {
+fn extract_artifacts(payload: &Value) -> SdkResult<&serde_json::Map<String, Value>> {
     if let Some(artifacts) = payload.get("artifacts").and_then(Value::as_object) {
         return Ok(artifacts);
     }
@@ -260,9 +260,7 @@ fn extract_artifacts<'a>(payload: &'a Value) -> SdkResult<&'a serde_json::Map<St
     })
 }
 
-fn extract_runtime_payload<'a>(
-    payload: &'a Value,
-) -> SdkResult<&'a serde_json::Map<String, Value>> {
+fn extract_runtime_payload(payload: &Value) -> SdkResult<&serde_json::Map<String, Value>> {
     let object = payload.as_object().ok_or_else(|| SdkError::Validation {
         errors: vec!["workflow result payload must be an object".into()],
     })?;
@@ -289,11 +287,12 @@ fn find_artifact<'a>(
         Some(output.key.as_str()),
         output.dataset_value.as_deref(),
         Some(output.artifact_type.as_str()),
-    ] {
-        if let Some(key) = key {
-            if let Some(value) = artifacts.get(key) {
-                return Some(value);
-            }
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if let Some(value) = artifacts.get(key) {
+            return Some(value);
         }
     }
     None

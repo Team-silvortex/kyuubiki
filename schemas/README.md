@@ -28,7 +28,24 @@ README.
   tool calls are normalized. Its calls must pass Headless SDK policy,
   contract, binding, compatibility, and confirmation planning before execution.
 - `examples.model-workflow-proposal.json` is a non-executing collaboration
-  fixture that checks service health before proposing a bounded thermal solve.
+  fixture that checks service health before proposing a bounded catalog-owned
+  material envelope workflow.
+- `model-research-bootstrap.schema.json` defines the single machine-ingestion
+  route from `llms.txt` through SDK selection, bounded research stages, hard
+  rules, stop conditions, and retained-evidence completion requirements.
+- `model-plan-approval.schema.json` binds caller-issued approval to exact plan
+  steps; model output cannot satisfy this authority boundary.
+- `model-research-execution-receipt.schema.json` retains completed or partially
+  failed model-driven Headless execution without upgrading an attempt into a
+  completion claim.
+- `examples.model-plan-approval.json` demonstrates the approval shape for the
+  first bounded workflow but is never itself execution authority.
+- `operator-model-draft.schema.json` defines the non-executable Rust Operator
+  SDK authoring draft: descriptor, JSON schemas, handler shape, and bounded
+  algorithm outline. Host package admission and dynamic loading remain outside
+  this contract.
+- `examples.operator-model-draft.json` is a partial-validation thermal result
+  extraction draft used by the Rust Operator SDK conformance tests.
 - `workflow-graph.schema.json` is for headless-first multi-operator workflow
   definitions, including node/edge wiring, typed ports, and portable workflow
   entry/output layout

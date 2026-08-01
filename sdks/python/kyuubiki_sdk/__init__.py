@@ -8,6 +8,7 @@ from .errors import (
     KyuubikiSdkError,
     KyuubikiTimeoutError,
     KyuubikiTransportError,
+    ModelCollaborationValidationError,
     WorkflowContractValidationError,
     classify_error,
 )
@@ -72,6 +73,18 @@ from .operator_tasks import (
     operator_task_failure_actions,
     operator_task_recovery_summary,
 )
+from .model_collaboration import (
+    MODEL_COLLABORATION_SCHEMA_VERSION,
+    MODEL_HEADLESS_PLAN_SCHEMA_VERSION,
+    MODEL_WORKFLOW_PROPOSAL_SCHEMA_VERSION,
+    build_model_collaboration_request,
+    build_model_headless_plan,
+    default_model_collaboration_policy,
+    headless_model_tools,
+    normalize_model_response,
+    project_model_tools,
+    sanitize_model_context,
+)
 
 __all__ = [
     "ControlPlaneClient",
@@ -108,6 +121,7 @@ __all__ = [
     "KyuubikiRpcError",
     "KyuubikiTimeoutError",
     "WorkflowContractValidationError",
+    "ModelCollaborationValidationError",
     "classify_error",
     "build_workflow_axis",
     "build_workflow_dataset_contract",
@@ -131,4 +145,14 @@ __all__ = [
     "extract_operator_task_failure_receipts",
     "operator_task_failure_actions",
     "operator_task_recovery_summary",
+    "MODEL_COLLABORATION_SCHEMA_VERSION",
+    "MODEL_HEADLESS_PLAN_SCHEMA_VERSION",
+    "MODEL_WORKFLOW_PROPOSAL_SCHEMA_VERSION",
+    "build_model_collaboration_request",
+    "build_model_headless_plan",
+    "default_model_collaboration_policy",
+    "headless_model_tools",
+    "normalize_model_response",
+    "project_model_tools",
+    "sanitize_model_context",
 ]

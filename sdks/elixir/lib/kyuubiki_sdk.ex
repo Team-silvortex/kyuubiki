@@ -10,11 +10,23 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.MaterialWorkflows
   alias KyuubikiSdk.OperatorTasks
   alias KyuubikiSdk.AdvancedSolverWorkflows
+  alias KyuubikiSdk.ModelCollaboration
 
   def new_session(opts \\ []), do: Session.new(opts)
   def material_study_catalog, do: MaterialReports.material_study_catalog()
   def describe_material_study(study), do: MaterialReports.describe_material_study(study)
   def material_workflow_catalog, do: MaterialWorkflows.material_workflow_catalog()
+  def default_model_collaboration_policy, do: ModelCollaboration.default_policy()
+  def model_collaboration_tools(policy \\ %{}), do: ModelCollaboration.tools(policy)
+
+  def model_collaboration_request(provider, session, context),
+    do: ModelCollaboration.build_request(provider, session, context)
+
+  def normalize_model_response(provider, session_id, response),
+    do: ModelCollaboration.normalize_response(provider, session_id, response)
+
+  def model_headless_plan(session, proposal),
+    do: ModelCollaboration.build_plan(session, proposal)
 
   def material_study_execution_plan_schema_version,
     do: MaterialWorkflows.material_study_execution_plan_schema_version()

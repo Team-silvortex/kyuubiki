@@ -262,6 +262,7 @@ fn repository_proposal_fixture_deserializes_and_compiles() {
     .expect("repository collaboration fixture");
     let mut session = session();
     session.session_id = proposal.session_id.clone();
+    session.policy.allow_sensitive = true;
     let compilation = compile_model_proposal(&session, &proposal).expect("compile fixture");
     assert!(compilation.ok, "{:?}", compilation.issues);
     assert_eq!(compilation.batch.steps.len(), 2);
@@ -292,7 +293,7 @@ fn repository_session_fixture_builds_every_provider_request() {
             if provider == ModelProvider::Gemini {
                 1
             } else {
-                2
+                4
             }
         );
     }

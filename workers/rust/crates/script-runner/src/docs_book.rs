@@ -1,3 +1,4 @@
+use crate::docs_book_research::validate_model_research_bootstrap;
 use serde_json::Value;
 use std::ffi::OsString;
 use std::fs;
@@ -7,6 +8,7 @@ type RunnerResult<T> = Result<T, String>;
 
 const UPDATE_CHANNELS_PATH: &str = "deploy/update-channels.json";
 const BOOK_MANIFEST_PATH: &str = "docs/book-manifest.json";
+const MODEL_RESEARCH_BOOTSTRAP_PATH: &str = "docs/model-research-bootstrap.json";
 
 const HTML_FILES: &[&str] = &[
     "docs/book.html",
@@ -18,6 +20,7 @@ const HTML_FILES: &[&str] = &[
     "docs/book-ch06-sdk-surfaces.html",
     "docs/book-ch07-trust-and-safety.html",
     "docs/book-ch08-reading-paths.html",
+    "docs/model-research-onboarding.html",
     "docs/update-catalog.html",
     "docs/installation-integrity-contract.html",
     "apps/hub-gui/ui/docs/index.html",
@@ -90,7 +93,7 @@ pub(crate) fn run_check_doc_book(root: &Path, args: Vec<OsString>) -> RunnerResu
         "docs-book check passed for development {current_development_version}; shipping {shipping_version}"
     );
     println!(
-        "checked {} HTML files and docs/book-manifest.json",
+        "checked {} HTML files, docs/book-manifest.json, and {MODEL_RESEARCH_BOOTSTRAP_PATH}",
         HTML_FILES.len()
     );
     Ok(0)
@@ -263,13 +266,33 @@ fn validate_doc_book(
         }
     }
 
+    let research_bootstrap = read_json(root, MODEL_RESEARCH_BOOTSTRAP_PATH)?;
+    validate_model_research_bootstrap(
+        root,
+        MODEL_RESEARCH_BOOTSTRAP_PATH,
+        &research_bootstrap,
+        &mut issues,
+    );
+
     Ok(issues)
 }
 
 fn required_snippets(relative_path: &str) -> &'static [&'static str] {
     match relative_path {
         "docs/book.html" => &["Chapter 1: What Kyuubiki is", "Open chapter page"],
-        "docs/book-ch08-reading-paths.html" => &["book-manifest.json", "docs/README.md"],
+        "docs/book-ch08-reading-paths.html" => &[
+            "book-manifest.json",
+            "docs/README.md",
+            "llms.txt",
+            "Model research onboarding",
+        ],
+        "docs/model-research-onboarding.html" => &[
+            "Open llms.txt",
+            "Open machine bootstrap",
+            "First workflow",
+            "Native execution bridge",
+            "What counts as research",
+        ],
         "apps/hub-gui/ui/docs/index.html" => {
             &["Open central book", "Chapter entry", "Quick entry by role"]
         }

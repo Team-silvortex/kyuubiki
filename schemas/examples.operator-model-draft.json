@@ -1,0 +1,85 @@
+{
+  "schema_version": "kyuubiki.operator-model-draft/v1",
+  "descriptor": {
+    "id": "extract.temperature_extrema",
+    "version": "0.1.0",
+    "domain": "thermal",
+    "family": "temperature_extrema",
+    "kind": "extract",
+    "summary": "Extract minimum and maximum temperatures from a solved thermal field.",
+    "capability_tags": [
+      "thermal",
+      "postprocess",
+      "headless_safe"
+    ],
+    "origin": "external_local",
+    "input_schema": {
+      "schema": "kyuubiki.operator.temperature_extrema.input",
+      "version": "1"
+    },
+    "output_schema": {
+      "schema": "kyuubiki.operator.temperature_extrema.output",
+      "version": "1"
+    },
+    "inputs": [
+      {
+        "id": "field",
+        "artifact_type": "field/temperature",
+        "description": "Solved nodal temperature field.",
+        "dataset_value": "temperature_field",
+        "schema_ref": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "summary",
+        "artifact_type": "report/temperature_extrema",
+        "description": "Minimum and maximum temperature summary.",
+        "dataset_value": "temperature_extrema",
+        "schema_ref": null
+      }
+    ],
+    "validation": {
+      "baseline_status": "partial",
+      "baseline_cases": [
+        "uniform_temperature_field"
+      ],
+      "smoke_paths": [
+        "unit_test"
+      ]
+    }
+  },
+  "input_json_schema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 1
+      }
+    },
+    "required": ["values"],
+    "additionalProperties": false
+  },
+  "output_json_schema": {
+    "type": "object",
+    "properties": {
+      "minimum": { "type": "number" },
+      "maximum": { "type": "number" }
+    },
+    "required": ["minimum", "maximum"],
+    "additionalProperties": false
+  },
+  "implementation": {
+    "input_type": "TemperatureFieldInput",
+    "operator_type": "TemperatureExtremaOperator",
+    "handler_trait": "json_operator",
+    "algorithm_steps": [
+      "Reject an empty or non-finite temperature field.",
+      "Scan finite values once to compute minimum and maximum.",
+      "Return a summary-only OperatorRunResult with stable field names."
+    ],
+    "deterministic": true,
+    "side_effects": []
+  }
+}

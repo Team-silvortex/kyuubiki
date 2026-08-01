@@ -1,0 +1,270 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Evidence for provider-neutral model collaboration across the official Rust, Python, and Elixir Headless SDKs plus constrained model-assisted drafts in the Rust Operator SDK.",
+  "paradigm_contract_evidence": {
+    "sdk_headless": [
+      {
+        "id": "model-collaboration-proposal-contract",
+        "modules": [
+          "contracts",
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/model-collaboration-session.schema.json",
+          "schemas/model-workflow-proposal.schema.json",
+          "schemas/examples.model-collaboration-session.json",
+          "schemas/examples.model-workflow-proposal.json",
+          "workers/rust/crates/headless-sdk/src/model_collaboration.rs",
+          "workers/rust/crates/headless-sdk/src/model_provider_adapters.rs",
+          "workers/rust/crates/headless-sdk/src/model_collaboration_tests.rs",
+          "sdks/rust/src/model_collaboration.rs",
+          "sdks/rust/src/model_provider_adapters.rs",
+          "sdks/rust/tests/model_collaboration.rs",
+          "sdks/python/kyuubiki_sdk/model_collaboration.py",
+          "sdks/python/tests/test_model_collaboration.py",
+          "sdks/elixir/lib/kyuubiki_sdk/model_collaboration.ex",
+          "sdks/elixir/lib/kyuubiki_sdk/model_provider_adapters.ex",
+          "sdks/elixir/test/model_collaboration_test.exs",
+          "docs/model-collaboration-sdk.md"
+        ],
+        "required_text": [
+          "kyuubiki.model-collaboration/v1",
+          "kyuubiki.model-workflow-proposal/v1",
+          "OpenAiChat",
+          "normalize_model_response",
+          "compile_model_proposal",
+          "build_model_headless_plan",
+          "def build_model_collaboration_request",
+          "def build_request(provider, session, context)",
+          "Model output is never executable authority",
+          "context_too_large"
+        ]
+      },
+      {
+        "id": "model-research-document-bootstrap",
+        "modules": [
+          "contracts",
+          "sdk-headless"
+        ],
+        "files": [
+          "llms.txt",
+          "schemas/model-research-bootstrap.schema.json",
+          "docs/model-research-bootstrap.json",
+          "docs/model-research-onboarding.md",
+          "docs/model-research-onboarding.html",
+          "schemas/examples.model-collaboration-session.json",
+          "schemas/examples.model-workflow-proposal.json",
+          "schemas/examples.material-envelope-catalog-request.json",
+          "sdks/rust/tests/model_collaboration.rs",
+          "sdks/python/tests/test_model_collaboration.py",
+          "sdks/elixir/test/model_collaboration_test.exs"
+        ],
+        "required_text": [
+          "kyuubiki.model-research-bootstrap/v1",
+          "workflow.material-study-envelope-ranking-json",
+          "one known dependency frontier",
+          "Never invent future job ids",
+          "model_research_bootstrap_reaches_valid_first_plan",
+          "test_model_research_bootstrap_reaches_valid_first_plan",
+          "model research bootstrap reaches valid first plan"
+        ]
+      },
+      {
+        "id": "model-research-approved-execution-contract",
+        "modules": [
+          "contracts",
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/model-plan-approval.schema.json",
+          "schemas/model-research-execution-receipt.schema.json",
+          "schemas/examples.model-plan-approval.json",
+          "sdks/rust/src/model_research_execution.rs",
+          "sdks/rust/examples/execute_model_research_plan.rs",
+          "sdks/rust/tests/model_research_execution.rs",
+          "docs/model-research-bootstrap.json",
+          "docs/model-research-onboarding.md"
+        ],
+        "required_text": [
+          "kyuubiki.model-plan-approval/v1",
+          "kyuubiki.model-research-execution-receipt/v1",
+          "execute_model_headless_plan",
+          "ModelApprovalVerifier",
+          "rejects_unapproved_plan_before_any_dispatch",
+          "rejects_unverified_approval_before_any_dispatch",
+          "retains_partial_failure_instead_of_claiming_completion",
+          "repository_bootstrap_fixtures_reach_approved_execution",
+          "A model response can request approval but can never issue"
+        ]
+      }
+    ],
+    "validation": [
+      {
+        "id": "operator-model-authoring-draft-contract",
+        "modules": [
+          "contracts",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/operator-model-draft.schema.json",
+          "schemas/examples.operator-model-draft.json",
+          "workers/rust/crates/operator-sdk/src/model_authoring.rs",
+          "workers/rust/crates/operator-sdk/src/surface.rs",
+          "docs/operator-sdk.md"
+        ],
+        "required_text": [
+          "kyuubiki.operator-model-draft/v1",
+          "operator_model_authoring_manifest",
+          "validate_operator_model_draft",
+          "model_draft_is_not_executable_code",
+          "host_owns_package_admission_and_loading",
+          "Models cannot load dynamic libraries"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "rust-model-headless-collaboration",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract"
+      ],
+      "files": [
+        "sdks/rust/src/model_collaboration.rs",
+        "sdks/rust/src/model_provider_adapters.rs",
+        "sdks/rust/tests/model_collaboration.rs",
+        "schemas/model-workflow-proposal.schema.json"
+      ],
+      "required_text": [
+        "default_catalog_is_read_only_and_service_owned",
+        "service_only_policy_excludes_direct_solver_even_when_sensitive_is_allowed",
+        "sensitive_calls_remain_confirmation_gated",
+        "build_model_headless_plan"
+      ]
+    },
+    {
+      "id": "rust-operator-model-draft-validation",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract"
+      ],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/model_authoring.rs",
+        "schemas/operator-model-draft.schema.json",
+        "schemas/examples.operator-model-draft.json"
+      ],
+      "required_text": [
+        "repository_model_draft_passes_authoring_preflight",
+        "model_draft_blocks_side_effects_and_open_schema_root",
+        "model_authoring_manifest_keeps_model_out_of_runtime_authority"
+      ]
+    },
+    {
+      "id": "model-collaboration-cross-language-parity",
+      "status": "proven",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "sdk_parity"
+      ],
+      "files": [
+        "docs/model-collaboration-sdk.md",
+        "schemas/model-collaboration-session.schema.json",
+        "schemas/model-workflow-proposal.schema.json",
+        "sdks/rust/tests/model_collaboration.rs",
+        "sdks/python/tests/test_model_collaboration.py",
+        "sdks/elixir/lib/kyuubiki_sdk/model_provider_adapters.ex",
+        "sdks/elixir/test/model_collaboration_test.exs"
+      ],
+      "required_text": [
+        "all three official Headless adapters",
+        "service_only_policy_excludes_direct_solver_even_when_sensitive_is_allowed",
+        "test_service_only_excludes_direct_solver",
+        "service-only policy excludes direct solver",
+        "oversized_context_is_rejected_after_redaction",
+        "test_oversized_context_fails_closed",
+        "oversized context fails closed"
+      ]
+    },
+    {
+      "id": "model-document-to-research-plan",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "sdk_parity"
+      ],
+      "files": [
+        "docs/model-research-bootstrap.json",
+        "schemas/model-research-bootstrap.schema.json",
+        "sdks/rust/tests/model_collaboration.rs",
+        "sdks/python/tests/test_model_collaboration.py",
+        "sdks/elixir/test/model_collaboration_test.exs"
+      ],
+      "required_text": [
+        "model_research_bootstrap_reaches_valid_first_plan",
+        "test_model_research_bootstrap_reaches_valid_first_plan",
+        "model research bootstrap reaches valid first plan",
+        "ready_without_confirmation"
+      ]
+    },
+    {
+      "id": "model-plan-to-approved-headless-execution",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "schemas/model-plan-approval.schema.json",
+        "schemas/model-research-execution-receipt.schema.json",
+        "sdks/rust/src/model_research_execution.rs",
+        "sdks/rust/tests/model_research_execution.rs"
+      ],
+      "required_text": [
+        "rejects_unapproved_plan_before_any_dispatch",
+        "rejects_unverified_approval_before_any_dispatch",
+        "executes_exactly_approved_plan_and_retains_authority",
+        "retains_partial_failure_instead_of_claiming_completion",
+        "session_dispatcher_reaches_real_control_plane_routes"
+      ]
+    }
+  ]
+}

@@ -31,6 +31,7 @@ mod direct_mesh_container;
 mod direct_mesh_remote;
 mod doc_inventory;
 mod docs_book;
+mod docs_book_research;
 mod elixir_self_host;
 mod frontend_checks;
 mod governance_commands;

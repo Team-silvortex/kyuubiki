@@ -4,6 +4,9 @@ mod control_plane;
 mod error;
 mod material_research_bundle;
 mod material_workflows;
+mod model_collaboration;
+mod model_provider_adapters;
+mod model_research_execution;
 mod operator_tasks;
 mod session;
 mod solver_rpc;
@@ -28,6 +31,23 @@ pub use material_workflows::{
     MATERIAL_ENVELOPE_CATALOG_WORKFLOW_ID, MATERIAL_STUDY_EXECUTION_PLAN_SCHEMA_VERSION,
     material_study_envelope_catalog_request, material_study_envelope_input_artifacts,
     material_study_execution_plan_example, material_workflow_catalog,
+};
+pub use model_collaboration::{
+    HeadlessModelRisk, HeadlessModelRuntime, HeadlessModelTool, MODEL_COLLABORATION_SCHEMA_VERSION,
+    MODEL_HEADLESS_PLAN_SCHEMA_VERSION, MODEL_WORKFLOW_PROPOSAL_SCHEMA_VERSION,
+    ModelCollaborationPolicy, ModelCollaborationRequest, ModelCollaborationSession,
+    ModelHeadlessPlan, ModelHeadlessPlanStep, ModelProvider, ModelToolCall, ModelWorkflowProposal,
+    build_model_collaboration_request, build_model_headless_plan, rust_headless_model_tools,
+};
+pub use model_provider_adapters::{
+    normalize_model_response, project_model_tools, sanitize_model_context,
+};
+pub use model_research_execution::{
+    ApprovedModelPlanStep, MODEL_PLAN_APPROVAL_SCHEMA_VERSION,
+    MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION, ModelActionDispatch, ModelActionDispatcher,
+    ModelApprovalVerifier, ModelPlanApproval, ModelResearchExecutionReceipt,
+    ModelResearchExecutionRecord, ModelResearchExecutionStatus, SessionModelActionDispatcher,
+    execute_model_headless_plan,
 };
 pub use operator_tasks::{
     operator_task_failure_actions, operator_task_failure_receipts, operator_task_recovery_summary,

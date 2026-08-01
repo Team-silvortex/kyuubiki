@@ -9,6 +9,21 @@ pipelines, data analysis, and optimization loops. It consumes the same headless
 contracts as the Rust and Elixir SDKs, so Python users can build their own
 wrappers without depending on Workbench or Rust reference CLIs.
 
+## Model collaboration
+
+`kyuubiki_sdk.model_collaboration` exposes the same provider-neutral planning
+contract as the Rust and Elixir SDKs. Use
+`build_model_collaboration_request(...)` to project policy-filtered OpenAI,
+OpenAI-compatible Chat, Anthropic, Gemini, or canonical tools, then pass the
+complete provider response through `normalize_model_response(...)` and
+`build_model_headless_plan(...)` before dispatch.
+
+The default catalog is service-only and read-only. Context is recursively
+redacted, malformed provider envelopes fail with
+`ModelCollaborationValidationError`, and sensitive/destructive actions remain
+confirmation-gated. The caller owns model HTTP clients, credentials, retries,
+billing, and final Headless execution.
+
 ```python
 from kyuubiki_sdk import (
     ControlPlaneClient,
@@ -207,6 +222,7 @@ Highlights:
 - operator TaskIR failure receipt extraction for batch and agent recovery flows
 - reusable `KyuubikiAuth` header auth object
 - thin JSON-first payload shape for AI-generated requests
+- provider-neutral model proposal normalization and confirmation-gated planning
 
 Example:
 
@@ -234,3 +250,5 @@ Example:
   `PYTHONPATH=sdks/python python3 sdks/python/examples/validate_material_research_bundle.py tmp/material-research-bundle-composite.json`
 - Smoke test:
   `PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests`
+- Model collaboration test:
+  `PYTHONPATH=sdks/python python3 -m unittest sdks/python/tests/test_model_collaboration.py`

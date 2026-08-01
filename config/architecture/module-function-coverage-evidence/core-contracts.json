@@ -368,32 +368,6 @@
           "kyuubiki.workflow-graph/v1",
           "kyuubiki.workflow-dataset/v1"
         ]
-      },
-      {
-        "id": "model-collaboration-proposal-contract",
-        "modules": [
-          "contracts",
-          "sdk-headless"
-        ],
-        "files": [
-          "schemas/model-collaboration-session.schema.json",
-          "schemas/model-workflow-proposal.schema.json",
-          "schemas/examples.model-collaboration-session.json",
-          "schemas/examples.model-workflow-proposal.json",
-          "workers/rust/crates/headless-sdk/src/model_collaboration.rs",
-          "workers/rust/crates/headless-sdk/src/model_provider_adapters.rs",
-          "workers/rust/crates/headless-sdk/src/model_collaboration_tests.rs",
-          "docs/model-collaboration-sdk.md"
-        ],
-        "required_text": [
-          "kyuubiki.model-collaboration/v1",
-          "kyuubiki.model-workflow-proposal/v1",
-          "OpenAiChat",
-          "normalize_model_response",
-          "compile_model_proposal",
-          "Model output is never executable authority",
-          "context_too_large"
-        ]
       }
     ],
     "persistence_provenance": [
@@ -635,29 +609,6 @@
       "required_text": [
         "Rust, Python, and Elixir remain peer official SDK families",
         "kyuubiki.workflow-graph/v1"
-      ]
-    },
-    {
-      "id": "model-collaboration-cross-language-parity",
-      "status": "partial",
-      "modules": [
-        "sdk-headless"
-      ],
-      "paradigms": [
-        "sdk_headless"
-      ],
-      "dimensions": [
-        "sdk_parity"
-      ],
-      "files": [
-        "docs/model-collaboration-sdk.md",
-        "schemas/model-collaboration-session.schema.json",
-        "schemas/model-workflow-proposal.schema.json",
-        "workers/rust/crates/headless-sdk/src/model_collaboration_tests.rs"
-      ],
-      "required_text": [
-        "Python and Elixir provider adapters are not yet",
-        "repository_session_fixture_builds_every_provider_request"
       ]
     },
     {

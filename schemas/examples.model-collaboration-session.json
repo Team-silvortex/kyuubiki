@@ -2,19 +2,21 @@
   "schema_version": "kyuubiki.model-collaboration/v1",
   "session_id": "session.material-screening.001",
   "workflow_id": "workflow.material-screening.001",
-  "objective": "Check the control plane and plan a bounded thermal material screening run.",
+  "objective": "Check the control plane and start the bounded material envelope screening workflow.",
   "language": "en",
   "created_at": "2026-08-01T00:00:00Z",
   "policy": {
     "allowed_actions": [
       "service_health",
-      "solve_thermal_frame_3d"
+      "workflow_submit_catalog",
+      "job_wait",
+      "result_fetch"
     ],
     "allowed_categories": [],
     "max_steps": 4,
     "max_context_bytes": 65536,
     "service_only": true,
-    "allow_sensitive": false,
+    "allow_sensitive": true,
     "allow_destructive": false
   }
 }

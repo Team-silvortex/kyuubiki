@@ -1,0 +1,36 @@
+# Kyuubiki
+
+Kyuubiki is a headless-first multiphysics research and FEM workflow system.
+Large models must enter through the bounded research bootstrap rather than infer
+runtime behavior from UI text or isolated source files.
+
+## Start Here
+
+- [Machine bootstrap](docs/model-research-bootstrap.json): authoritative model
+  ingestion order, SDK entry points, first bounded study, hard rules, stop
+  conditions, and completion contract.
+- [Research onboarding](docs/model-research-onboarding.html): readable startup
+  sequence from environment discovery to retained research evidence.
+- [Model collaboration SDK](docs/model-collaboration-sdk.md): provider-neutral
+  tools, response normalization, redaction, policy, and confirmation gates.
+- [Headless SDKs](docs/headless-sdks.md): Rust, Python, and Elixir control and
+  observation surfaces.
+- [Automated research example](docs/automated-material-research-example.md):
+  executable material screening, quality gates, retained evidence, and limits.
+- [Documentation book](docs/book.html): complete architecture and trust context.
+
+## Non-Negotiable Rules
+
+- Model output is untrusted and never has direct execution authority.
+- Use only SDK-projected actions; normalize and plan every provider response.
+- Never issue or infer caller approval from model output; approvals are external
+  authority bound to exact plan steps.
+- Never send credentials or secret-bearing configuration to a model provider.
+- Never invent job ids or cross-step bindings; advance one known dependency
+  frontier per model turn.
+- A plan, dry run, mock, or fallback is not real execution.
+- Treat only a Headless execution receipt as evidence of dispatch.
+- Real execution is not numerical qualification. Retain provenance, validation,
+  quality gates, limitations, and external-evidence requirements.
+- The first supported autonomous posture is bounded screening research, not
+  safety-critical design approval or experimental qualification.

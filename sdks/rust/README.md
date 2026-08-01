@@ -9,6 +9,59 @@ installer tooling, local automation, and high-confidence reference runners. It
 shares the same headless contracts as the Python and Elixir SDKs; Rust CLIs are
 packaged examples over those contracts rather than the only supported entry.
 
+## Model collaboration
+
+The official Rust Headless SDK can expose a policy-filtered action catalog to
+OpenAI Responses, OpenAI-compatible Chat, Anthropic, Gemini, or a canonical
+JSON model gateway. Provider calls normalize into
+`ModelWorkflowProposal`, then `build_model_headless_plan(...)` validates every
+action and payload before any caller dispatches it.
+
+```rust
+use kyuubiki_headless_sdk::{
+    ModelCollaborationSession, ModelProvider, build_model_collaboration_request,
+    build_model_headless_plan, normalize_model_response,
+};
+
+let session: ModelCollaborationSession = serde_json::from_str(include_str!(
+    "../../../schemas/examples.model-collaboration-session.json"
+))?;
+let request = build_model_collaboration_request(
+    ModelProvider::OpenAi,
+    session.clone(),
+    serde_json::json!({"study": "thermal-screening"}),
+)?;
+
+// Send request instructions and tools with the caller-owned model client.
+let proposal = normalize_model_response(ModelProvider::OpenAi, &session.session_id, &response)?;
+let plan = build_model_headless_plan(&session, &proposal)?;
+assert!(plan.ok);
+```
+
+The default catalog is service-only and read-only. Sensitive or destructive
+actions must be enabled explicitly and still produce confirmation-gated plan
+steps. The SDK owns no model credentials, billing, HTTP client, or direct
+execution authority. See [Model Collaboration SDK](../../docs/model-collaboration-sdk.md).
+
+After caller review, `execute_model_headless_plan(...)` and
+`SessionModelActionDispatcher` provide the bounded bridge into the existing
+Headless session. Every gated step must match an exact caller-issued
+`ModelPlanApproval`; missing or mismatched approval rejects the entire plan
+before network access. A caller-owned `ModelApprovalVerifier` must authenticate
+that approval independently of model output. `ModelResearchExecutionReceipt`
+retains per-step authority, output, and bounded failures so partial attempts
+cannot masquerade as completed research.
+
+The native reference entry is
+`examples/execute_model_research_plan.rs`. It reads a collaboration session,
+canonical proposal, and caller-issued approval from project-relative JSON
+files, uses `KYUUBIKI_BASE_URL` plus an optional `KYUUBIKI_ACCESS_TOKEN`, and
+requires caller-owned `KYUUBIKI_APPROVAL_ID` and
+`KYUUBIKI_APPROVAL_AUTHORITY` values before printing the retained execution
+receipt. Its environment verifier is illustrative; production integrations
+should implement `ModelApprovalVerifier` against their trusted policy or
+credential boundary.
+
 ```rust
 use std::time::Duration;
 
@@ -169,6 +222,8 @@ Highlights:
 - retry, failure classification, and chunk iteration helpers
 - reusable `KyuubikiAuth` plus more explicit error variants
 - embedding-friendly API for headless agents and CLIs
+- provider-neutral model collaboration with context redaction, constrained
+  tool projection, response normalization, and confirmation-gated planning
 
 Example:
 
@@ -193,3 +248,4 @@ Example:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test smoke`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_builders`
+  `cargo test --manifest-path sdks/rust/Cargo.toml --test model_collaboration`

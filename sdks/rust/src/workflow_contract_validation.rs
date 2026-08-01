@@ -300,14 +300,14 @@ fn validate_edges<'a>(
             &path,
             "from",
             source_key,
-            *source.unwrap_or(&&DUMMY_PORT),
+            source.unwrap_or(&&DUMMY_PORT),
             errors,
         );
         validate_edge_endpoint(
             &path,
             "to",
             target_key,
-            *target.unwrap_or(&&DUMMY_PORT),
+            target.unwrap_or(&&DUMMY_PORT),
             errors,
         );
         if let Some(source_port) = source {
@@ -355,7 +355,7 @@ fn validate_edge_endpoint(
     errors: &mut Vec<String>,
 ) {
     if port.id.is_empty() {
-        errors.push(format!("{path}.{field} references unknown port {:?}", key));
+        errors.push(format!("{path}.{field} references unknown port {key:?}"));
     }
 }
 
@@ -412,8 +412,7 @@ fn validate_dataset_semantic(
     }
     match dataset_semantics.get(dataset_value) {
         Some(Some(semantic_type)) if *semantic_type != artifact_type => errors.push(format!(
-            "{path}.dataset_value {dataset_value:?} semantic_type {:?} does not match artifact_type {:?}",
-            semantic_type, artifact_type
+            "{path}.dataset_value {dataset_value:?} semantic_type {semantic_type:?} does not match artifact_type {artifact_type:?}"
         )),
         Some(_) => {}
         None => errors.push(format!(
@@ -450,8 +449,7 @@ fn validate_node_refs(
     for (index, node_id) in values.iter().enumerate() {
         if !node_ids.contains(node_id.as_str()) {
             errors.push(format!(
-                "{path}[{index}] references unknown node {:?}",
-                node_id
+                "{path}[{index}] references unknown node {node_id:?}"
             ));
         }
     }
@@ -482,8 +480,7 @@ fn validate_dispatch_policy(value: Option<&str>, path: &str, errors: &mut Vec<St
     if let Some(value) = value {
         if !WORKFLOW_DISPATCH_POLICIES.contains(&value) {
             errors.push(format!(
-                "{path} must be one of {:?}",
-                WORKFLOW_DISPATCH_POLICIES
+                "{path} must be one of {WORKFLOW_DISPATCH_POLICIES:?}"
             ));
         }
     }

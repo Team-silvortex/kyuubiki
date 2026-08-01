@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/model-research-bootstrap.schema.json",
+  "title": "Kyuubiki Model Research Bootstrap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "entrypoint",
+    "required_documents",
+    "sdk_surfaces",
+    "execution_contract",
+    "research_protocol",
+    "first_research",
+    "hard_rules",
+    "completion_contract"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/model-research-bootstrap.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.model-research-bootstrap/v1"
+    },
+    "entrypoint": {
+      "type": "string",
+      "const": "llms.txt"
+    },
+    "version_line": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 24
+    },
+    "required_documents": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/document" }
+    },
+    "sdk_surfaces": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/sdkSurface" },
+      "required": ["rust", "python", "elixir"]
+    },
+    "execution_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "language",
+        "implementation",
+        "executor",
+        "approval_verifier",
+        "approval_schema",
+        "approval_fixture",
+        "receipt_schema",
+        "approval_authority"
+      ],
+      "properties": {
+        "language": { "const": "rust" },
+        "implementation": { "$ref": "#/$defs/repoPath" },
+        "executor": { "const": "execute_model_headless_plan" },
+        "approval_verifier": { "const": "ModelApprovalVerifier" },
+        "approval_schema": { "$ref": "#/$defs/repoPath" },
+        "approval_fixture": { "$ref": "#/$defs/repoPath" },
+        "receipt_schema": { "$ref": "#/$defs/repoPath" },
+        "approval_authority": { "const": "caller_only" }
+      }
+    },
+    "research_protocol": {
+      "type": "array",
+      "minItems": 6,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "first_research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_fixture",
+        "proposal_fixture",
+        "catalog_request_fixture",
+        "workflow_id",
+        "reliability_posture"
+      ],
+      "properties": {
+        "session_fixture": { "$ref": "#/$defs/repoPath" },
+        "proposal_fixture": { "$ref": "#/$defs/repoPath" },
+        "catalog_request_fixture": { "$ref": "#/$defs/repoPath" },
+        "workflow_id": { "type": "string", "minLength": 1 },
+        "reliability_posture": {
+          "enum": ["screening_only"]
+        }
+      }
+    },
+    "hard_rules": {
+      "type": "array",
+      "minItems": 8,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 8 }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 8 }
+    },
+    "completion_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_artifacts", "required_claims", "forbidden_claims"],
+      "properties": {
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_claims": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "forbidden_claims": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "role": { "type": "string", "minLength": 8 }
+      }
+    },
+    "sdkSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "request", "normalize", "plan"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "request": { "type": "string", "minLength": 1 },
+        "normalize": { "type": "string", "minLength": 1 },
+        "plan": { "type": "string", "minLength": 1 }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "objective", "outputs"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "objective": { "type": "string", "minLength": 12 },
+        "actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

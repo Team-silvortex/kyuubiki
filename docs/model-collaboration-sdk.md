@@ -27,17 +27,22 @@ Applications can therefore use an official provider client, a self-hosted
 OpenAI-compatible service, or a private model gateway without changing the
 Kyuubiki execution contract.
 
+For a model starting from documentation rather than an existing integration,
+begin at [`../llms.txt`](../llms.txt) and
+[`model-research-bootstrap.json`](model-research-bootstrap.json), then follow
+[Model Research Onboarding](model-research-onboarding.html).
+
 ## Four Separate Surfaces
 
 | Surface | Primary role | Runtime owner |
 | --- | --- | --- |
 | Model collaboration | Translate model tools into an untrusted proposal | Integrator process |
 | Headless SDK | Control, validate, plan, submit, observe, and recover | Rust, Python, or Elixir client |
-| Worker SDK | Author and package executable operators | Rust agent/runtime |
+| Rust Operator SDK | Author and package executable operators | Rust agent/runtime |
 | PWDT | Automate product-owned GUI actions | WebView WASM Python runtime |
 
 A model can use the collaboration layer to prepare Headless work, but it does
-not gain Worker SDK authority or bypass PWDT and GUI ownership rules.
+not gain Operator SDK authority or bypass PWDT and GUI ownership rules.
 
 ## Safe Flow
 
@@ -53,6 +58,14 @@ not gain Worker SDK authority or bypass PWDT and GUI ownership rules.
 8. Dispatch only through an existing Headless executor after those gates pass.
 
 Model output is never executable authority. Tool calls are untrusted input.
+
+The official Rust SDK provides the bounded execution bridge
+`execute_model_headless_plan` and `SessionModelActionDispatcher`. Every gated
+step must match an exact caller-issued `kyuubiki.model-plan-approval/v1` before
+any network access, and a caller-owned `ModelApprovalVerifier` must authenticate
+that approval independently of model output. Execution returns a
+`kyuubiki.model-research-execution-receipt/v1`; a failed receipt preserves
+completed steps and the failing step without claiming workflow completion.
 
 ## Default Policy
 
@@ -111,10 +124,21 @@ The schema intentionally describes a proposal rather than a provider response.
 Provider envelopes change over time; Kyuubiki retains one stable internal file
 format and updates adapters around it.
 
-## Rust Entry Points
+## Rust Headless Entry Points
 
-The reference implementation lives in
-`workers/rust/crates/headless-sdk` and exports:
+The official integration surface lives in `sdks/rust` and exports:
+
+- `rust_headless_model_tools()`
+- `build_model_collaboration_request()`
+- `project_model_tools()`
+- `normalize_model_response()`
+- `build_model_headless_plan()`
+- `sanitize_model_context()`
+
+It builds an inspectable `ModelHeadlessPlan`; the embedding application remains
+responsible for confirmations and dispatch through ordinary Headless clients.
+
+The internal protocol reference in `workers/rust/crates/headless-sdk` exports:
 
 - `model_collaboration_tools()`
 - `build_model_collaboration_request()`
@@ -126,14 +150,44 @@ The reference implementation lives in
 The provider adapters are pure transformations and are suitable for fixture,
 fuzz, and cross-provider conformance testing without network access.
 
+## Rust Operator Authoring
+
+`workers/rust/crates/operator-sdk` exposes a separate model-readable authoring
+manifest and `kyuubiki.operator-model-draft/v1`. A draft may describe an
+operator descriptor, JSON schemas, Rust handler shape, and algorithm outline,
+but it cannot load a library, activate a package, or claim qualification.
+`validate_operator_model_draft()` must pass before a human or controlled
+code-generation pipeline implements and packages the Rust operator. See
+[Operator SDK](operator-sdk.md).
+
+## Python and Elixir Entry Points
+
+The Python SDK exports dictionary-first equivalents:
+
+- `headless_model_tools()`
+- `build_model_collaboration_request()`
+- `normalize_model_response()`
+- `build_model_headless_plan()`
+- `sanitize_model_context()`
+
+The Elixir SDK exposes the same flow through
+`KyuubikiSdk.ModelCollaboration.tools/1`, `build_request/3`,
+`normalize_response/3`, `build_plan/2`, and `sanitize_context/1`. Its public
+root module also provides concise delegates for the request, normalization, and
+plan operations.
+
+Both adapters consume the same repository session/proposal fixtures and retain
+the Rust policy defaults. Dynamic-language type errors are converted into
+structured SDK validation failures rather than escaping from the integration
+boundary.
+
 ## Current Maturity
 
-The Rust reference protocol and provider adapters are implemented and covered
-by offline conformance tests. Python and Elixir provider adapters are not yet
-implemented; they should consume the shared session and proposal schemas rather
-than fork provider-specific workflow semantics. Until that parity lands, model
-collaboration is a Rust-first SDK capability, while ordinary Headless control
-remains available in all three official SDK families.
+The Rust reference protocol, all three official Headless adapters, and the Rust
+Operator SDK draft validator are implemented and covered by offline conformance
+tests. Rust, Python, and Elixir consume the same session and proposal schemas,
+provider shapes, default policy, runtime boundary, and confirmation semantics.
+Provider networking remains intentionally outside every SDK adapter.
 
 ## Security Notes
 

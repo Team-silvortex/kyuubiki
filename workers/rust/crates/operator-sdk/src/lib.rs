@@ -3,6 +3,7 @@ mod loader;
 mod manifest;
 #[cfg(test)]
 mod manifest_fuzz;
+mod model_authoring;
 mod readiness;
 mod surface;
 use kyuubiki_protocol::{
@@ -31,6 +32,12 @@ pub use manifest::{
     DiscoveredOperatorPackage, OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION,
     OPERATOR_SDK_API_VERSION, OperatorManifestError, OperatorPackageManifest,
     OperatorPackageOperatorEntry, discover_operator_packages, read_operator_package_manifest,
+};
+pub use model_authoring::{
+    OPERATOR_MODEL_AUTHORING_MANIFEST_SCHEMA_VERSION, OPERATOR_MODEL_DRAFT_SCHEMA_VERSION,
+    OperatorModelAuthoringManifest, OperatorModelAuthoringPolicy, OperatorModelDraft,
+    OperatorModelDraftReport, OperatorModelHandlerTrait, OperatorModelImplementationDraft,
+    operator_model_authoring_manifest, validate_operator_model_draft,
 };
 pub use readiness::{
     OperatorSdkReadinessIssue, OperatorSdkReadinessReport, OperatorSdkReadinessSeverity,

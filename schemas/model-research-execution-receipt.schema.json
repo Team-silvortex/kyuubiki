@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/model-research-execution-receipt.schema.json",
+  "title": "Kyuubiki Model Research Execution Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_schema_version",
+    "session_id",
+    "workflow_id",
+    "status",
+    "execution_authority",
+    "approval_id",
+    "completed_steps",
+    "failed_step",
+    "records"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/model-research-execution-receipt.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.model-research-execution-receipt/v1"
+    },
+    "plan_schema_version": {
+      "const": "kyuubiki.model-headless-plan/v1"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["completed", "failed"]
+    },
+    "execution_authority": {
+      "const": "kyuubiki-headless-sdk"
+    },
+    "approval_id": {
+      "type": ["string", "null"]
+    },
+    "completed_steps": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failed_step": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "action", "authority", "output", "error"],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "authority": {
+            "type": ["string", "null"]
+          },
+          "output": {},
+          "error": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "completed" }
+        }
+      },
+      "then": {
+        "properties": {
+          "failed_step": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "failed" }
+        }
+      },
+      "then": {
+        "properties": {
+          "failed_step": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  ]
+}

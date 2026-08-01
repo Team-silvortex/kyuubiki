@@ -79,6 +79,9 @@
         "docs/headless-sdks.md",
         "docs/model-collaboration-sdk.html",
         "docs/model-collaboration-sdk.md",
+        "docs/model-research-onboarding.html",
+        "docs/model-research-onboarding.md",
+        "docs/model-research-bootstrap.json",
         "docs/ui-automation-contract.html",
         "docs/headless-agent-contract.md"
       ]
@@ -174,6 +177,9 @@
       "docs/update-catalog.html"
     ],
     "llm_integrator": [
+      "llms.txt",
+      "docs/model-research-bootstrap.json",
+      "docs/model-research-onboarding.html",
       "docs/book.html",
       "docs/book-manifest.json",
       "docs/current-architecture-map.md",
@@ -184,6 +190,8 @@
       "docs/protocols.md",
       "docs/headless-sdks.md",
       "docs/model-collaboration-sdk.md",
+      "docs/automated-material-research-example.md",
+      "docs/accuracy-baselines.md",
       "docs/operator-sdk.md"
     ]
   }

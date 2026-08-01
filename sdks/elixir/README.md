@@ -9,6 +9,19 @@ control-plane integrations, hot-iteration operator descriptions, and BEAM-side
 automation. It shares the same headless contracts as the Rust and Python SDKs,
 so orchestration code stays protocol-driven rather than GUI-driven.
 
+## Model collaboration
+
+`KyuubikiSdk.ModelCollaboration` provides BEAM-native access to the shared
+model session and proposal contracts. `build_request/3` projects constrained
+OpenAI, OpenAI-compatible Chat, Anthropic, Gemini, or canonical tools;
+`normalize_response/3` converts provider calls; and `build_plan/2` applies the
+same payload checks, service/direct boundary, and confirmation gates as Rust
+and Python.
+
+Every entry point returns `{:ok, value}` or a structured
+`{:error, %KyuubikiSdk.Error{}}`. The module deliberately owns no provider
+client, model credentials, billing, or execution authority.
+
 ```elixir
 auth = KyuubikiSdk.Auth.access_token("dev-token")
 client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)
@@ -131,6 +144,7 @@ Highlights:
   including summary-to-artifact consistency checks
 - shared material-study execution-plan contract helper for cross-SDK automation
 - BEAM-friendly thin wrapper over the public protocol
+- provider-neutral model proposal normalization and confirmation-gated planning
 
 Example:
 
@@ -158,3 +172,5 @@ Example:
   `cd sdks/elixir && mix run examples/validate_material_research_bundle.exs ../../tmp/material-research-bundle-composite.json`
 - Smoke test:
   `cd sdks/elixir && mix test`
+- Model collaboration test:
+  `cd sdks/elixir && mix test test/model_collaboration_test.exs`

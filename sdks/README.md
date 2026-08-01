@@ -21,6 +21,15 @@ Current language targets:
 - `python/`
 - `elixir/`
 
+Rust, Python, and Elixir now project the same constrained Headless tool catalog
+for major model-provider formats and normalize calls into the shared
+`kyuubiki.model-workflow-proposal/v1` contract. Each language preserves the
+same service/direct boundary, risk gates, context redaction, payload checks,
+and confirmation planning without owning a provider HTTP client or credentials.
+The Rust-only Operator SDK under `workers/rust/crates/operator-sdk` is a
+different surface for authoring executable operators; its model contract emits
+non-executable operator drafts rather than Headless control plans.
+
 Minimal runnable examples now live at:
 
 - [sdks/python/examples/run_study.py](python/examples/run_study.py)

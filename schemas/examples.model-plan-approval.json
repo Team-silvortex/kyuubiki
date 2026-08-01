@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/model-plan-approval.schema.json",
+  "schema_version": "kyuubiki.model-plan-approval/v1",
+  "approval_id": "approval.material-screening.example",
+  "session_id": "session.material-screening.001",
+  "workflow_id": "workflow.material-screening.001",
+  "authority": "caller:research-reviewer",
+  "issued_at": "2026-08-01T00:01:00Z",
+  "approved_steps": [
+    {
+      "index": 2,
+      "action": "workflow_submit_catalog"
+    }
+  ]
+}

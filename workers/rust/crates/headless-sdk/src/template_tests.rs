@@ -402,7 +402,12 @@ fn execution_plan_reports_runtime_and_confirmation_gates() {
     assert_eq!(service_plan.schema_version, "kyuubiki.headless-plan/v1");
     assert!(service_plan.ok);
     assert!(service_plan.compatibility.service_only_ok);
-    assert_eq!(service_plan.confirmation_count, 0);
+    assert_eq!(service_plan.confirmation_count, 1);
+    assert_eq!(
+        service_plan.confirmations[0].action,
+        "workflow_submit_catalog"
+    );
+    assert_eq!(service_plan.confirmations[0].flag, "--allow-sensitive");
     assert_eq!(service_plan.steps[1].bindings[0].source_step, 1);
     assert_eq!(service_plan.steps[1].bindings[0].output, "job_id");
 

@@ -58,7 +58,7 @@ fn control_plane_executes_operator_task_batch() {
             .expect("write response");
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
     let batch = serde_json::json!({
         "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
@@ -139,7 +139,7 @@ fn control_plane_prepares_operator_task_batch() {
             .expect("write response");
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
     let batch = serde_json::json!({
         "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
@@ -210,7 +210,7 @@ fn control_plane_checkpoints_operator_task_batch() {
             .expect("write response");
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
     let batch = serde_json::json!({
         "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
@@ -276,7 +276,7 @@ fn control_plane_verifies_operator_task_batch_checkpoint() {
             .expect("write response");
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
     let batch = serde_json::json!({
         "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",
@@ -342,7 +342,7 @@ fn control_plane_plans_operator_task_batch_resume() {
             .expect("write response");
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
     let batch = serde_json::json!({
         "quality_execution_batch_contract": "kyuubiki.quality_execution_batch/v1",

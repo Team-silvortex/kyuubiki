@@ -63,6 +63,17 @@ pub fn operator_sdk_surface_areas() -> Vec<OperatorSdkSurfaceArea> {
             ],
         },
         OperatorSdkSurfaceArea {
+            id: "model_authoring",
+            title: "Model-assisted operator authoring",
+            role: "Machine-readable Rust operator drafting and readiness preflight without code loading authority.",
+            modules: &["model_authoring", "readiness", "builder"],
+            anchor_exports: &[
+                "operator_model_authoring_manifest",
+                "validate_operator_model_draft",
+                "OperatorModelDraft",
+            ],
+        },
+        OperatorSdkSurfaceArea {
             id: "readiness",
             title: "Operator package readiness",
             role: "Pure manifest and descriptor preflight checks before any host loads dynamic code.",
@@ -154,6 +165,7 @@ mod tests {
         let ids = areas.iter().map(|area| area.id).collect::<BTreeSet<_>>();
         assert_eq!(ids.len(), areas.len());
         assert!(ids.contains("authoring"));
+        assert!(ids.contains("model_authoring"));
         assert!(ids.contains("readiness"));
         assert!(ids.contains("runtime"));
         assert!(ids.contains("package_manifest"));

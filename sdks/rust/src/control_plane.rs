@@ -126,7 +126,7 @@ impl ControlPlaneClient {
             SdkError::InvalidUrl("only http:// URLs are supported by the minimal Rust SDK".into())
         })?;
         let (host_port, base_path) = match without_scheme.split_once('/') {
-            Some((host_port, rest)) => (host_port, format!("/{}", rest)),
+            Some((host_port, rest)) => (host_port, format!("/{rest}")),
             None => (without_scheme, String::new()),
         };
         let (host, port) = match host_port.split_once(':') {

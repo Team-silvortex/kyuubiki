@@ -53,7 +53,7 @@ fn agent_client_runs_study_and_browses_chunks() {
         }
     });
 
-    let base_url = format!("http://{}", addr);
+    let base_url = format!("http://{addr}");
     let session = KyuubikiSession::from_control_plane(&base_url, None).expect("session");
     let agent = KyuubikiAgentClient::new(session);
 
@@ -137,7 +137,7 @@ fn control_plane_lists_and_fetches_workflow_operators() {
         }
     });
 
-    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr))
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{addr}"))
         .expect("control plane client");
 
     let workflow = client
@@ -227,7 +227,7 @@ fn agent_client_runs_workflow_jobs() {
         }
     });
 
-    let base_url = format!("http://{}", addr);
+    let base_url = format!("http://{addr}");
     let session = KyuubikiSession::from_control_plane(&base_url, None).expect("session");
     let agent = KyuubikiAgentClient::new(session);
 
@@ -390,7 +390,7 @@ fn session_supports_expanded_solve_kinds() {
     });
 
     let session =
-        KyuubikiSession::from_control_plane(&format!("http://{}", addr), None).expect("session");
+        KyuubikiSession::from_control_plane(&format!("http://{addr}"), None).expect("session");
     let axial = session
         .submit_job(
             "axial_bar_1d",

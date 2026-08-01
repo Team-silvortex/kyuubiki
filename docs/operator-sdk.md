@@ -437,6 +437,29 @@ The first runtime migration is also in place:
   package-id allowlists, runtime allowlists, absolute-entrypoint toggles, and
   package-root boundary checks are all evaluated before activation
 
+### Model-assisted Rust authoring
+
+The Rust Operator SDK exposes a machine-readable authoring surface for models
+without turning model output into executable authority:
+
+- `operator_model_authoring_manifest()` describes accepted operator kinds,
+  handler traits, workflow data classes, the required authoring sequence, and
+  hard trust boundaries.
+- `OperatorModelDraft` carries the descriptor, input/output JSON schemas, Rust
+  handler shape, and a bounded algorithm outline.
+- `validate_operator_model_draft(...)` reuses descriptor readiness and adds
+  model-specific limits for ports, tags, algorithm steps, side effects, and
+  validation posture.
+- [`operator-model-draft.schema.json`](../schemas/operator-model-draft.schema.json)
+  is the portable draft contract; the matching fixture is
+  [`examples.operator-model-draft.json`](../schemas/examples.operator-model-draft.json).
+
+The output is deliberately a draft, not Rust source, a package, or a loaded
+operator. An author or controlled code-generation pipeline must still implement
+the Rust handler, run descriptor and package preflight, build the package, pass
+dynamic smoke, and let the engine host apply trust policy before activation.
+Models cannot load dynamic libraries or grant their own qualification status.
+
 Built-in descriptors now carry:
 
 - typed input/output ports
