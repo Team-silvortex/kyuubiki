@@ -79,6 +79,22 @@ pub fn composite_heat_cross_validation_for_distributed_load(
     )
 }
 
+pub fn composite_heat_cross_validation_for_regional_loads(
+    conductivities_w_mk: [f64; 3],
+    regional_heat_loads_w: [f64; 3],
+    fem_max_temperature_c: Option<f64>,
+) -> CompositeHeatCrossValidation {
+    let expected_max_temperature_c =
+        expected_max_temperature_for_regional_loads(conductivities_w_mk, regional_heat_loads_w);
+    validation_from_expected(
+        conductivities_w_mk,
+        regional_heat_loads_w.iter().sum(),
+        fem_max_temperature_c,
+        expected_max_temperature_c,
+        "layered_thermal_resistance_with_regional_generation_closed_form",
+    )
+}
+
 fn build_cross_validation(
     conductivities_w_mk: [f64; 3],
     total_heat_load_w: f64,
@@ -90,6 +106,26 @@ fn build_cross_validation(
     } else {
         expected_max_temperature(conductivities_w_mk)
     };
+    validation_from_expected(
+        conductivities_w_mk,
+        total_heat_load_w,
+        fem_max_temperature_c,
+        expected_max_temperature_c,
+        if distributed_dielectric_load {
+            "layered_thermal_resistance_with_uniform_dielectric_generation_closed_form"
+        } else {
+            "layered_thermal_resistance_closed_form"
+        },
+    )
+}
+
+fn validation_from_expected(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+    fem_max_temperature_c: Option<f64>,
+    expected_max_temperature_c: f64,
+    method: &str,
+) -> CompositeHeatCrossValidation {
     let absolute_error_c =
         fem_max_temperature_c.map(|value| (value - expected_max_temperature_c).abs());
     let relative_error = absolute_error_c.map(|error| error / expected_max_temperature_c.abs());
@@ -100,12 +136,7 @@ fn build_cross_validation(
     };
     CompositeHeatCrossValidation {
         schema_version: COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION.to_string(),
-        method: if distributed_dielectric_load {
-            "layered_thermal_resistance_with_uniform_dielectric_generation_closed_form"
-        } else {
-            "layered_thermal_resistance_closed_form"
-        }
-        .to_string(),
+        method: method.to_string(),
         conductivities_w_mk: conductivities_w_mk.to_vec(),
         fixed_temperature_c: FIXED_TEMPERATURE_C,
         total_heat_load_w,
@@ -137,6 +168,24 @@ pub fn composite_heat_refinement_requests_for_distributed_load(
             let request = refined_heat_model_without_load(conductivities_w_mk, *level);
             crate::distribute_composite_dielectric_heat_load(&request, total_heat_load_w)
                 .map(|request| (*level, request))
+        })
+        .collect()
+}
+
+pub fn composite_heat_refinement_requests_for_regional_loads(
+    conductivities_w_mk: [f64; 3],
+    regional_heat_loads_w: [f64; 3],
+) -> Result<Vec<(usize, SolveHeatPlaneQuad2dRequest)>, String> {
+    validate_regional_loads(regional_heat_loads_w)?;
+    COMPOSITE_HEAT_REFINEMENT_LEVELS
+        .iter()
+        .map(|level| {
+            distribute_regional_loads(
+                refined_heat_model_without_load(conductivities_w_mk, *level),
+                *level,
+                regional_heat_loads_w,
+            )
+            .map(|request| (*level, request))
         })
         .collect()
 }
@@ -227,6 +276,17 @@ pub fn composite_heat_mesh_convergence_for_distributed_load(
     )
 }
 
+pub fn composite_heat_mesh_convergence_for_regional_loads(
+    conductivities_w_mk: [f64; 3],
+    regional_heat_loads_w: [f64; 3],
+    max_temperatures_by_level: &[(usize, f64)],
+) -> CompositeHeatMeshConvergence {
+    build_mesh_convergence(
+        expected_max_temperature_for_regional_loads(conductivities_w_mk, regional_heat_loads_w),
+        max_temperatures_by_level,
+    )
+}
+
 fn expected_max_temperature(conductivities_w_mk: [f64; 3]) -> f64 {
     let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
     let downstream_thermal_resistance_k_w = (LAYER_WIDTH_M / conductivities_w_mk[1]
@@ -243,6 +303,72 @@ fn expected_max_temperature_for_distributed_load(
     let dielectric_resistance = LAYER_WIDTH_M / (conductivities_w_mk[1] * cross_section_m2);
     let substrate_resistance = LAYER_WIDTH_M / (conductivities_w_mk[2] * cross_section_m2);
     FIXED_TEMPERATURE_C + total_heat_load_w * (0.5 * dielectric_resistance + substrate_resistance)
+}
+
+fn expected_max_temperature_for_regional_loads(
+    conductivities_w_mk: [f64; 3],
+    regional_heat_loads_w: [f64; 3],
+) -> f64 {
+    let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
+    let mut upstream_power_w = 0.0;
+    let temperature_rise_c = conductivities_w_mk
+        .iter()
+        .zip(regional_heat_loads_w)
+        .map(|(conductivity, regional_power_w)| {
+            let resistance_k_w = LAYER_WIDTH_M / (conductivity * cross_section_m2);
+            let contribution = resistance_k_w * (upstream_power_w + 0.5 * regional_power_w);
+            upstream_power_w += regional_power_w;
+            contribution
+        })
+        .sum::<f64>();
+    FIXED_TEMPERATURE_C + temperature_rise_c
+}
+
+fn validate_regional_loads(regional_heat_loads_w: [f64; 3]) -> Result<(), String> {
+    if regional_heat_loads_w
+        .iter()
+        .any(|load| !load.is_finite() || *load < 0.0)
+    {
+        return Err("regional composite heat loads must be finite and non-negative".to_string());
+    }
+    Ok(())
+}
+
+fn distribute_regional_loads(
+    mut request: SolveHeatPlaneQuad2dRequest,
+    elements_per_layer: usize,
+    regional_heat_loads_w: [f64; 3],
+) -> Result<SolveHeatPlaneQuad2dRequest, String> {
+    for node in &mut request.nodes {
+        node.heat_load = 0.0;
+    }
+    for (layer, regional_power_w) in regional_heat_loads_w.into_iter().enumerate() {
+        let nodal_load_w = regional_power_w / elements_per_layer as f64 / 4.0;
+        for element in request
+            .elements
+            .iter()
+            .filter(|element| element.id.starts_with(&format!("layer_{layer}_element_")))
+        {
+            for index in [
+                element.node_i,
+                element.node_j,
+                element.node_k,
+                element.node_l,
+            ] {
+                request
+                    .nodes
+                    .get_mut(index)
+                    .ok_or_else(|| format!("heat element {} has an unknown node", element.id))?
+                    .heat_load += nodal_load_w;
+            }
+        }
+    }
+    let expected = regional_heat_loads_w.iter().sum::<f64>();
+    let distributed = request.nodes.iter().map(|node| node.heat_load).sum::<f64>();
+    if (distributed - expected).abs() > 1.0e-12 * expected.abs().max(1.0) {
+        return Err("regional composite heat-load distribution lost energy".to_string());
+    }
+    Ok(request)
 }
 
 fn refined_heat_model(
@@ -305,8 +431,10 @@ fn build_refined_heat_model(
 mod tests {
     use super::{
         composite_heat_cross_validation, composite_heat_cross_validation_for_distributed_load,
-        composite_heat_mesh_convergence, composite_heat_refinement_requests,
+        composite_heat_cross_validation_for_regional_loads, composite_heat_mesh_convergence,
+        composite_heat_refinement_requests,
         composite_heat_refinement_requests_for_distributed_load,
+        composite_heat_refinement_requests_for_regional_loads,
     };
 
     const CONDUCTIVITIES: [f64; 3] = [390.0, 0.25, 160.0];
@@ -365,5 +493,26 @@ mod tests {
         assert_eq!(passed.status, "pass");
         assert_eq!(passed.finest_pair_relative_change, Some(0.0));
         assert_eq!(missing.status, "missing");
+    }
+
+    #[test]
+    fn regional_generation_preserves_layer_location_and_closed_form() {
+        let loads = [0.01, 0.02, 0.0];
+        let expected = 35.0
+            + 0.005 * 0.03 / (390.0 * 3.0e-5)
+            + 0.02 * 0.03 / (0.25 * 3.0e-5)
+            + 0.03 * 0.03 / (160.0 * 3.0e-5);
+        let validation = composite_heat_cross_validation_for_regional_loads(
+            CONDUCTIVITIES,
+            loads,
+            Some(expected),
+        );
+        let requests = composite_heat_refinement_requests_for_regional_loads(CONDUCTIVITIES, loads)
+            .expect("regional refinements");
+
+        assert_eq!(validation.status, "pass");
+        assert!(requests.iter().all(|(_, request)| {
+            (request.nodes.iter().map(|node| node.heat_load).sum::<f64>() - 0.03).abs() < 1.0e-15
+        }));
     }
 }

@@ -74,6 +74,18 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         rerun["report"]["candidates"][0]["electrothermal_feedback_convergence"]["status"].as_str(),
         Some("pass")
     );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["joule_heating_projection"]["status"].as_str(),
+        Some("pass")
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.joule_heating.energy_balance")
+                    && gate["status"].as_str() == Some("pass")
+            }))
+    );
     assert!(
         rerun["report"]["reliability"]["quality_gates"]
             .as_array()
@@ -92,6 +104,11 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         rerun["report"]["candidates"][0]["heat_to_thermal_projection"]["mapped_node_count"]
             .as_u64(),
         Some(8)
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["thermal_expansion_projection"]["coverage_fraction"]
+            .as_f64(),
+        Some(1.0)
     );
     assert_eq!(
         rerun["report"]["candidates"][0]["thermal_mesh_convergence"]["status"].as_str(),

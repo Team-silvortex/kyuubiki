@@ -142,25 +142,25 @@ contain all four solver runs and pass both the analytic-error and finest-pair
 stability gates. This closes the electrostatic subproblem convergence loop; by
 itself it does not qualify the remaining fields or their coupling.
 
-The heat subproblem now consumes the electrostatic result instead of a fixed
-screening load. For the dielectric element it evaluates the frequency-local
-harmonic loss `q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2`, multiplies by
-the solved element volume, and conservatively lumps that power to heat nodes.
-The retained candidates currently produce about `5.1 uW` to `451.8 uW`; an
-energy-balance gate requires the distributed nodal load to equal the projected
-loss. The independent thermal-resistance baseline includes uniform dielectric
-generation, and real `1/2/4/8` heat-quad refinements retain the same total power
-before the bundle emits heat `analytic_closed_form` and `mesh_convergence`
-baselines.
+The heat subproblem now consumes two independently auditable electrical-loss
+paths instead of a fixed screening load. The dielectric element evaluates the
+frequency-local harmonic loss
+`q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2`. The conductor element uses
+the prescribed-current screening path `P = I^2*rho(T)*L/A`. Both powers are
+conservatively lumped to their own regional heat nodes and carry independent
+energy-balance gates. The thermal-resistance baseline accepts an explicit
+three-region power vector, and real `1/2/4/8` heat-quad refinements preserve the
+conductor-versus-dielectric source location as well as total power before the
+bundle emits heat `analytic_closed_form` and `mesh_convergence` baselines.
 
-The dielectric parameters are no longer frozen after that first projection. A
-relaxed fixed-point loop updates scalar `epsilon_r(T)` and `tan_delta(T)`, reruns
-electrostatics and heat, and requires both the dielectric mean-temperature
-residual and successive loss change to converge. The three retained candidates
-finish in `8-11` iterations; the worst final residuals are `6.60e-8 C` and
-`2.42e-10`, below the `1e-7 C` and `1e-9` gates. Built-in coefficients carry the
-machine-readable source `screening_sensitivity_not_material_card`; qualification
-still requires validated temperature curves from material cards.
+The electrical and thermal parameters are no longer frozen after the first
+projection. A relaxed fixed-point loop updates scalar `epsilon_r(T)`,
+`tan_delta(T)`, conductor `rho(T)`, and every regional `k(T)`, then reruns the
+combined electrostatic-loss/Joule-heat solve. The retained candidates must
+finish within the visible 12-iteration bound and pass temperature, successive
+dielectric-loss, and conductivity-change gates. Built-in coefficients carry
+machine-readable screening sources; qualification still requires validated
+temperature curves and conductor path data from material cards or geometry.
 
 The thermal-structural subproblem now also runs real two-dimensional
 `1/2/4/8` structured-quad refinement while preserving the solved nodal heat
@@ -239,11 +239,16 @@ STUDY=composite-thermo-electric-panel OUT=tmp/material-research-bundle-composite
 ```
 
 The composite profile now retains a partitioned temperature-feedback trace for
-dielectric permittivity, loss tangent, and every declared thermal-region
-conductivity. Report gates reject incomplete traces or final temperature, loss,
-or conductivity changes above their configured tolerances. The built-in linear
-coefficients are screening sensitivities used to exercise this feedback path;
-they are not qualification-grade material curves.
+dielectric permittivity, loss tangent, conductor resistance, and every declared
+thermal-region conductivity. It then projects each solved regional mean
+temperature into the matching structural thermal-expansion coefficient. Report
+gates reject missing Joule or dielectric energy balance, incomplete traces,
+final temperature/loss/conductivity changes above tolerance, or incomplete
+expansion-region coverage. The built-in linear coefficients are screening
+sensitivities used to exercise this path; they are not qualification-grade
+material curves. Solved two-dimensional current crowding, contact resistance,
+terminal impedance, and broadband dielectric dispersion remain explicit future
+work rather than being inferred from the electrostatic field.
 
 To build both retained bundle profiles and a compact index for agents or CI:
 

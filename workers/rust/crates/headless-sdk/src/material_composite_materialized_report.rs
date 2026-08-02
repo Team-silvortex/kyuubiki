@@ -24,7 +24,7 @@ pub fn build_composite_materialized_candidate_report(
         "schema_version": "kyuubiki.composite-materialized-candidate-report/v1",
         "study": "material.composite_thermo_electric_panel.v1",
         "objective": "rank materialized mixed-material panel reruns",
-        "coupling": "iterative_temperature_dependent_electrostatic_loss_and_heat_conductivity_feedback_to_thermal_stress",
+        "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection",
         "candidate_count": rows.len(),
         "winner_candidate_id": rows
             .first()
@@ -74,8 +74,16 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         .get("electrothermal_feedback_convergence")
         .cloned()
         .unwrap_or(Value::Null);
+    let joule_heating_projection = result
+        .get("joule_heating_projection")
+        .cloned()
+        .unwrap_or(Value::Null);
     let heat_to_thermal_projection = result
         .get("heat_to_thermal_projection")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let thermal_expansion_projection = result
+        .get("thermal_expansion_projection")
         .cloned()
         .unwrap_or(Value::Null);
     let heat_mesh_convergence = result
@@ -135,8 +143,14 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
     if electrothermal_feedback_convergence.is_null() {
         missing.push("electrothermal_feedback_convergence".to_string());
     }
+    if joule_heating_projection.is_null() {
+        missing.push("joule_heating_projection".to_string());
+    }
     if heat_to_thermal_projection.is_null() {
         missing.push("heat_to_thermal_projection".to_string());
+    }
+    if thermal_expansion_projection.is_null() {
+        missing.push("thermal_expansion_projection".to_string());
     }
     Ok(json!({
         "candidate_id": candidate_id,
@@ -153,10 +167,12 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "electrothermal_loss_projection": electrothermal_loss_projection,
         "electrothermal_feedback_convergence": electrothermal_feedback_convergence,
+        "joule_heating_projection": joule_heating_projection,
         "max_temperature_c": max_temperature_c,
         "heat_cross_validation": heat_cross_validation,
         "heat_mesh_convergence": heat_mesh_convergence,
         "heat_to_thermal_projection": heat_to_thermal_projection,
+        "thermal_expansion_projection": thermal_expansion_projection,
         "max_thermal_stress_pa": max_thermal_stress_pa,
         "thermal_mesh_convergence": thermal_mesh_convergence,
         "thermal_constraint_regularized_mesh_convergence": thermal_constraint_regularized_mesh_convergence,
@@ -283,6 +299,16 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             ),
         ),
         gate(
+            "gate.joule_heating.energy_balance",
+            "joule_heating_energy_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_nested_value(
+                &rows,
+                &["joule_heating_projection", "energy_balance_relative_error"],
+            ),
+        ),
+        gate(
             "gate.electrothermal_feedback.temperature_residual",
             "electrothermal_feedback_temperature_residual_ratio",
             "<=",
@@ -368,6 +394,16 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             max_nested_value(
                 &rows,
                 &["heat_to_thermal_projection", "maximum_coordinate_error_m"],
+            ),
+        ),
+        gate(
+            "gate.thermal_expansion.coverage",
+            "thermal_expansion_projection_coverage_fraction",
+            ">=",
+            1.0,
+            min_nested_value(
+                &rows,
+                &["thermal_expansion_projection", "coverage_fraction"],
             ),
         ),
         gate(
@@ -492,6 +528,12 @@ fn max_nested_value(rows: &[Value], path: &[&str]) -> Option<f64> {
     rows.iter()
         .filter_map(|row| read_path_f64(row, path))
         .reduce(f64::max)
+}
+
+fn min_nested_value(rows: &[Value], path: &[&str]) -> Option<f64> {
+    rows.iter()
+        .filter_map(|row| read_path_f64(row, path))
+        .reduce(f64::min)
 }
 
 fn max_nested_ratio(

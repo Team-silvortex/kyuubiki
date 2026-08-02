@@ -14,7 +14,7 @@ pub(crate) fn composite_research_metadata(candidate: &CompositePanelCandidate) -
             "dielectric": candidate.dielectric,
             "substrate": candidate.substrate
         },
-        "coupling": "iterative_temperature_dependent_electrostatic_loss_and_heat_conductivity_feedback_to_thermal_stress"
+        "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection"
     })
 }
 
@@ -58,6 +58,25 @@ pub(crate) fn electrothermal_feedback_model() -> Value {
     })
 }
 
+pub(crate) fn joule_heating_model(candidate: &CompositePanelCandidate) -> Value {
+    let (resistivity, coefficient) = match candidate.conductor {
+        "aluminum" => (2.82e-8, 4.03e-3),
+        _ => (1.68e-8, 3.93e-3),
+    };
+    json!({
+        "regions": [{
+            "element_id": "conductor_left",
+            "current_a": 2.0,
+            "path_length_m": 0.03,
+            "cross_section_area_m2": 3.0e-5,
+            "reference_resistivity_ohm_m": resistivity,
+            "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+            "resistivity_temperature_coefficient_1_k": coefficient
+        }],
+        "parameter_source": "screening_reference_not_material_card"
+    })
+}
+
 pub(crate) fn electrostatic_model(candidate: &CompositePanelCandidate) -> Value {
     json!({
         "nodes": panel_nodes("potential"),
@@ -88,6 +107,29 @@ pub(crate) fn thermal_model(candidate: &CompositePanelCandidate) -> Value {
             thermal_quad("dielectric_core", 1, 2, 6, 5, 2.5e9, 45.0e-6),
             thermal_quad("substrate_right", 2, 3, 7, 6, candidate.substrate_youngs_modulus_pa, candidate.substrate_thermal_expansion_1_k)
         ]
+    })
+}
+
+pub(crate) fn thermal_expansion_feedback_model() -> Value {
+    json!({
+        "regions": [
+            {
+                "element_id": "conductor_left",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": 2.0e-4
+            },
+            {
+                "element_id": "dielectric_core",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": 8.0e-4
+            },
+            {
+                "element_id": "substrate_right",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": 3.0e-4
+            }
+        ],
+        "parameter_source": "screening_sensitivity_not_material_card"
     })
 }
 

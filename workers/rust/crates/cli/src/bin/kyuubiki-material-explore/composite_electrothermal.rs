@@ -1,12 +1,13 @@
 use kyuubiki_headless_sdk::{
     CompositeDielectricLossSpec, CompositeElectrothermalFeedbackConvergence,
     CompositeElectrothermalFeedbackIteration, CompositeElectrothermalFeedbackSpec,
-    CompositeElectrothermalLossProjection, CompositeThermalConductivityFeedbackIteration,
+    CompositeElectrothermalLossProjection, CompositeJouleHeatingProjection,
+    CompositeJouleHeatingSpec, CompositeThermalConductivityFeedbackIteration,
     apply_composite_dielectric_permittivity, assess_composite_electrothermal_feedback,
     composite_dielectric_mean_temperature, composite_feedback_iteration_converged,
     composite_feedback_relative_change, composite_heat_element_mean_temperature,
-    project_composite_dielectric_loss_to_heat, temperature_adjusted_composite_heat_request,
-    temperature_adjusted_composite_loss_spec,
+    project_composite_dielectric_loss_to_heat, project_composite_joule_heating_to_heat,
+    temperature_adjusted_composite_heat_request, temperature_adjusted_composite_loss_spec,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneQuad2dResult,
@@ -18,6 +19,7 @@ pub(crate) struct CompositeElectrothermalSolve {
     pub electrostatic: SolveElectrostaticPlaneQuad2dResult,
     pub heat: SolveHeatPlaneQuad2dResult,
     pub loss_projection: CompositeElectrothermalLossProjection,
+    pub joule_heating_projection: CompositeJouleHeatingProjection,
     pub feedback_convergence: CompositeElectrothermalFeedbackConvergence,
 }
 
@@ -25,6 +27,7 @@ pub(crate) fn solve_composite_electrothermal_feedback(
     electrostatic_seed: &SolveElectrostaticPlaneQuad2dRequest,
     heat_seed: &SolveHeatPlaneQuad2dRequest,
     base_loss_spec: &CompositeDielectricLossSpec,
+    joule_heating_spec: &CompositeJouleHeatingSpec,
     feedback_spec: &CompositeElectrothermalFeedbackSpec,
 ) -> Result<CompositeElectrothermalSolve, String> {
     let mut coupling_temperature_c = base_loss_spec.reference_temperature_c;
@@ -57,6 +60,11 @@ pub(crate) fn solve_composite_electrothermal_feedback(
             &electrostatic,
             &adjusted_heat_seed,
             &loss_spec,
+        )?;
+        let (heat_request, joule_heating_projection) = project_composite_joule_heating_to_heat(
+            &heat_request,
+            joule_heating_spec,
+            &conductivity_temperatures_c,
         )?;
         let heat = solve_heat_plane_quad_2d(&heat_request).map_err(|error| {
             format!("composite electrothermal iteration {iteration} failed heat solve: {error}")
@@ -134,6 +142,7 @@ pub(crate) fn solve_composite_electrothermal_feedback(
             relative_permittivity: loss_spec.relative_permittivity,
             loss_tangent: loss_spec.loss_tangent,
             total_loss_w: loss_projection.total_loss_w,
+            total_joule_loss_w: joule_heating_projection.total_joule_loss_w,
             max_temperature_c: heat.max_temperature,
             temperature_residual_c,
             loss_relative_change,
@@ -148,7 +157,12 @@ pub(crate) fn solve_composite_electrothermal_feedback(
                 .map(|update| (update.element_id.clone(), update.conductivity_w_mk))
                 .collect(),
         );
-        final_result = Some((electrostatic, heat, loss_projection));
+        final_result = Some((
+            electrostatic,
+            heat,
+            loss_projection,
+            joule_heating_projection,
+        ));
         if converged {
             break;
         }
@@ -165,12 +179,13 @@ pub(crate) fn solve_composite_electrothermal_feedback(
     }
 
     let feedback_convergence = assess_composite_electrothermal_feedback(feedback_spec, iterations)?;
-    let (electrostatic, heat, loss_projection) = final_result
+    let (electrostatic, heat, loss_projection, joule_heating_projection) = final_result
         .ok_or_else(|| "composite electrothermal feedback produced no iteration".to_string())?;
     Ok(CompositeElectrothermalSolve {
         electrostatic,
         heat,
         loss_projection,
+        joule_heating_projection,
         feedback_convergence,
     })
 }

@@ -1,7 +1,7 @@
 use crate::material_composite_interfaces::assess_composite_interfaces;
 use crate::material_composite_models::{
     electrostatic_model, electrothermal_feedback_model, electrothermal_loss_model, heat_model,
-    thermal_model,
+    joule_heating_model, thermal_expansion_feedback_model, thermal_model,
 };
 use crate::{CompositePanelCandidate, HeadlessWorkflowStep, composite_panel_candidates};
 use serde_json::{Value, json};
@@ -34,8 +34,10 @@ fn materialized_candidate_step(spec: &Value) -> Result<HeadlessWorkflowStep, Str
             "electrostatic_model": electrostatic_model(&candidate),
             "electrothermal_loss": electrothermal_loss_model(&candidate),
             "electrothermal_feedback": electrothermal_feedback_model(),
+            "joule_heating": joule_heating_model(&candidate),
             "heat_model": heat_model(&candidate),
             "thermal_model": thermal_model(&candidate),
+            "thermal_expansion_feedback": thermal_expansion_feedback_model(),
         }),
     ))
 }
@@ -105,7 +107,7 @@ fn materialized_research_metadata(
             "dielectric": candidate.dielectric,
             "substrate": candidate.substrate
         },
-        "coupling": "iterative_temperature_dependent_electrostatic_loss_and_heat_conductivity_feedback_to_thermal_stress",
+        "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection",
         "screening_parameters": screening_parameters(candidate),
         "materialization_status": "prototype_materialized_requires_solver_rerun"
     }))

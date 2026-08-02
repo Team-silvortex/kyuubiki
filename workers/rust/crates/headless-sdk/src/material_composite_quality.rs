@@ -18,6 +18,19 @@ pub(crate) fn composite_coupling_quality_gates(
             "Projected dielectric loss must equal the total heat load distributed to heat nodes.",
         ),
         material_quality_gate(
+            "gate.joule_heating.energy_balance",
+            "Conductor Joule heating projection energy balance",
+            "joule_heating_energy_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.joule_heating_projection
+                    .as_ref()
+                    .map(|projection| projection.energy_balance_relative_error)
+            })),
+            "Projected I-squared-R conductor loss must equal its added heat load.",
+        ),
+        material_quality_gate(
             "gate.electrothermal_feedback.temperature_residual",
             "Electrothermal feedback temperature residual",
             "electrothermal_feedback_temperature_residual_ratio",
@@ -82,6 +95,19 @@ pub(crate) fn composite_coupling_quality_gates(
                     .map(|projection| projection.maximum_coordinate_error_m)
             })),
             "Every projected temperature must target a structurally identical node coordinate.",
+        ),
+        material_quality_gate(
+            "gate.thermal_expansion.coverage",
+            "Temperature-dependent thermal-expansion region coverage",
+            "thermal_expansion_projection_coverage_fraction",
+            ">=",
+            1.0,
+            min_optional(rows.iter().filter_map(|row| {
+                row.thermal_expansion_projection
+                    .as_ref()
+                    .map(|projection| projection.coverage_fraction)
+            })),
+            "Every declared structural material region must receive its temperature-adjusted expansion coefficient.",
         ),
     ]
 }
@@ -157,5 +183,11 @@ fn metric_gci(row: &CompositePanelCandidateReport, metric: &str) -> Option<f64> 
 fn max_optional(values: impl Iterator<Item = f64>) -> Option<f64> {
     values.fold(None, |current: Option<f64>, value| {
         Some(current.map_or(value, |max| max.max(value)))
+    })
+}
+
+fn min_optional(values: impl Iterator<Item = f64>) -> Option<f64> {
+    values.fold(None, |current: Option<f64>, value| {
+        Some(current.map_or(value, |min| min.min(value)))
     })
 }

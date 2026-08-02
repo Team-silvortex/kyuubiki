@@ -129,20 +129,26 @@ Required work:
 
 - add anisotropic heat conduction for graphite-like heat-spreader studies
 - replace screening conductivity sensitivities with validated material-card curves
-- add temperature-dependent expansion coefficients
+- replace screening expansion sensitivities with validated material-card curves
 - deepen thermo-mechanical coupling with material curves
 - add yield, safety factor, fatigue, and damage-oriented structural metrics
 - improve dielectric studies with breakdown margin, field concentration, and
   loss models that can be traced to material cards
+- replace prescribed-current bulk conductor paths with solved current density,
+  contact resistance, and terminal-condition models where the study needs them
 - define when simplified CFD is acceptable as a screening model
 
 Current partial implementation: the composite panel path now iterates linear
-temperature sensitivities for dielectric permittivity, loss tangent, and every
-declared thermal-region conductivity to a bounded fixed point. The retained
-three candidates converge in 9-11 iterations while passing temperature, loss,
-and conductivity stability gates. Those built-in sensitivities exercise
-coupling robustness; validated material-card curves and temperature-dependent
-expansion remain required for this phase.
+temperature sensitivities for dielectric permittivity, loss tangent, prescribed
+conductor-path resistivity, and every declared thermal-region conductivity to a
+bounded fixed point. Dielectric and `I^2R` losses are projected independently
+into their physical regions before the combined heat field drives regional
+thermal expansion and structural stress. Regional closed-form and `1/2/4/8`
+mesh checks preserve both source location and total power. The retained three
+candidates pass temperature, loss, conductivity, dual energy-balance, and
+expansion-coverage gates. These built-in sensitivities exercise coupling
+robustness; validated material-card curves and a solved current-density path
+remain required for this phase.
 
 Exit criteria:
 

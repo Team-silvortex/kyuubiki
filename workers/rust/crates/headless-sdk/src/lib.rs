@@ -25,6 +25,7 @@ mod material_composite_evidence;
 mod material_composite_feedback;
 mod material_composite_heat_validation;
 mod material_composite_interfaces;
+mod material_composite_joule;
 mod material_composite_materialization;
 #[cfg(test)]
 mod material_composite_materialization_tests;
@@ -35,6 +36,7 @@ mod material_composite_stress_recovery;
 mod material_composite_structural_validation;
 #[cfg(test)]
 mod material_composite_tests;
+mod material_composite_thermal_expansion;
 mod material_composite_validation;
 mod material_dielectric;
 mod material_envelope_workflow;
@@ -152,12 +154,20 @@ pub use material_composite_heat_validation::{
     COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION, COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION,
     COMPOSITE_HEAT_REFINEMENT_LEVELS, CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
     CompositeHeatMeshConvergenceSample, composite_heat_cross_validation,
-    composite_heat_cross_validation_for_distributed_load, composite_heat_mesh_convergence,
-    composite_heat_mesh_convergence_for_distributed_load, composite_heat_refinement_requests,
+    composite_heat_cross_validation_for_distributed_load,
+    composite_heat_cross_validation_for_regional_loads, composite_heat_mesh_convergence,
+    composite_heat_mesh_convergence_for_distributed_load,
+    composite_heat_mesh_convergence_for_regional_loads, composite_heat_refinement_requests,
     composite_heat_refinement_requests_for_distributed_load,
+    composite_heat_refinement_requests_for_regional_loads,
 };
 pub use material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, composite_material_regions,
+};
+pub use material_composite_joule::{
+    COMPOSITE_JOULE_HEATING_PROJECTION_SCHEMA_VERSION, CompositeJouleHeatingProjection,
+    CompositeJouleHeatingRegionProjection, CompositeJouleHeatingRegionSpec,
+    CompositeJouleHeatingSpec, project_composite_joule_heating_to_heat,
 };
 pub use material_composite_materialization::build_composite_materialized_candidate_steps;
 pub use material_composite_materialized_report::build_composite_materialized_candidate_report;
@@ -178,6 +188,11 @@ pub use material_composite_structural_validation::{
     composite_thermal_interface_graded_refinement_requests, composite_thermal_mesh_convergence,
     composite_thermal_refinement_requests, composite_thermal_regularized_mesh_convergence,
     composite_thermal_regularized_refinement_requests,
+};
+pub use material_composite_thermal_expansion::{
+    COMPOSITE_THERMAL_EXPANSION_PROJECTION_SCHEMA_VERSION, CompositeThermalExpansionFeedbackSpec,
+    CompositeThermalExpansionProjection, CompositeThermalExpansionRegionSpec,
+    CompositeThermalExpansionRegionUpdate, project_composite_temperature_dependent_expansion,
 };
 pub use material_composite_validation::{
     COMPOSITE_ELECTROSTATIC_CROSS_VALIDATION_SCHEMA_VERSION,

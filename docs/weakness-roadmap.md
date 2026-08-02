@@ -131,6 +131,11 @@ Current progress:
   `9.79e-8 C`, loss change `1.83e-10`, and conductivity change `3.91e-10`, while
   the built-in coefficients remain explicitly labeled screening sensitivities
   rather than qualification-grade material curves
+- the converged heat field now projects local mean temperatures into all three
+  structural-region expansion coefficients before every main, regularized, and
+  interface-graded structural solve; retained coverage is `100%`, the largest
+  coefficient change is `3.64e-4`, and the largest resulting peak-stress change
+  is `1.65e-4`, while validated nonlinear expansion curves remain open
 - the composite thermal-structural subproblem now runs real two-dimensional
   `1/2/4/8` quad refinement for main and materialized candidates, preserving
   the solved heat profile and material parameters; node identity and coordinate
@@ -440,6 +445,9 @@ Current progress:
 - the composite thermo-electric panel bundle is still correctly classified as
   screening-only until external validation, failed quality gates, and
   low-confidence material cards are addressed
+- conductor bulk `I^2R` loss now participates in the temperature fixed point and
+  regional heat-mesh checks; solved current crowding, contact resistance, and
+  terminal impedance remain the next electrical-physics depth gap
 
 Moxi readiness standard:
 

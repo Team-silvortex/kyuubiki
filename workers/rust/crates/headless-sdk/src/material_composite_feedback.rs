@@ -45,6 +45,7 @@ pub struct CompositeElectrothermalFeedbackIteration {
     pub relative_permittivity: f64,
     pub loss_tangent: f64,
     pub total_loss_w: f64,
+    pub total_joule_loss_w: f64,
     pub max_temperature_c: f64,
     pub temperature_residual_c: f64,
     pub loss_relative_change: Option<f64>,
@@ -343,6 +344,8 @@ fn valid_iteration(
         && sample.loss_tangent >= 0.0
         && sample.total_loss_w.is_finite()
         && sample.total_loss_w >= 0.0
+        && sample.total_joule_loss_w.is_finite()
+        && sample.total_joule_loss_w >= 0.0
         && sample.max_temperature_c.is_finite()
         && sample.temperature_residual_c.is_finite()
         && sample.temperature_residual_c >= 0.0
@@ -495,6 +498,7 @@ mod tests {
             relative_permittivity: 3.4,
             loss_tangent: 0.008,
             total_loss_w: 1.0e-4,
+            total_joule_loss_w: 2.0e-4,
             max_temperature_c: 35.1,
             temperature_residual_c: 1.0,
             loss_relative_change: None,

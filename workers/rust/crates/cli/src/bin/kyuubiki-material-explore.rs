@@ -18,15 +18,15 @@ mod materialization_tests;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    CompositeDielectricLossSpec, CompositeElectrothermalFeedbackSpec,
-    CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
+    CompositeDielectricLossSpec, CompositeElectrothermalFeedbackSpec, CompositeJouleHeatingSpec,
+    CompositeThermalAlgebraicSample, CompositeThermalExpansionFeedbackSpec, HeadlessWorkflowStep,
     build_material_exploration_next_round_execution_plan, build_material_exploration_run,
     build_material_exploration_run_for_iteration, build_material_study_execution_plan,
     composite_electrostatic_mesh_convergence_for_dielectric,
     composite_electrostatic_refinement_requests_for_dielectric,
-    composite_heat_cross_validation_for_distributed_load,
-    composite_heat_mesh_convergence_for_distributed_load,
-    composite_heat_refinement_requests_for_distributed_load, composite_thermal_algebraic_series,
+    composite_heat_cross_validation_for_regional_loads,
+    composite_heat_mesh_convergence_for_regional_loads,
+    composite_heat_refinement_requests_for_regional_loads, composite_thermal_algebraic_series,
     composite_thermal_algebraic_validation, composite_thermal_constraint_sensitivity,
     composite_thermal_interface_graded_mesh_convergence,
     composite_thermal_interface_graded_refinement_requests,
@@ -36,7 +36,7 @@ use kyuubiki_headless_sdk::{
     composite_thermal_regularized_mesh_convergence,
     composite_thermal_regularized_refinement_requests, composite_thermal_stress_recovery,
     describe_material_study, material_exploration_steps, material_study_catalog,
-    project_composite_heat_to_thermal,
+    project_composite_heat_to_thermal, project_composite_temperature_dependent_expansion,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -444,15 +444,23 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     let feedback_spec: CompositeElectrothermalFeedbackSpec =
         serde_json::from_value(required_payload(step, "electrothermal_feedback")?)
             .map_err(|error| error.to_string())?;
+    let joule_heating_spec: CompositeJouleHeatingSpec =
+        serde_json::from_value(required_payload(step, "joule_heating")?)
+            .map_err(|error| error.to_string())?;
+    let expansion_spec: CompositeThermalExpansionFeedbackSpec =
+        serde_json::from_value(required_payload(step, "thermal_expansion_feedback")?)
+            .map_err(|error| error.to_string())?;
     let coupled = solve_composite_electrothermal_feedback(
         &electrostatic_request,
         &heat_seed,
         &loss_spec,
+        &joule_heating_spec,
         &feedback_spec,
     )?;
     let electrostatic = coupled.electrostatic;
     let heat = coupled.heat;
     let electrothermal_loss_projection = coupled.loss_projection;
+    let joule_heating_projection = coupled.joule_heating_projection;
     let electrothermal_feedback_convergence = coupled.feedback_convergence;
     let dielectric_relative_permittivity =
         composite_dielectric_relative_permittivity(&electrostatic.input)?;
@@ -472,16 +480,20 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         &mesh_fields,
     );
     let heat_conductivities = composite_heat_conductivities(&heat.input)?;
-    let total_heat_load_w = electrothermal_loss_projection.total_loss_w;
-    let heat_cross_validation = composite_heat_cross_validation_for_distributed_load(
+    let regional_heat_loads_w = [
+        joule_heating_projection.total_joule_loss_w,
+        electrothermal_loss_projection.total_loss_w,
+        0.0,
+    ];
+    let heat_cross_validation = composite_heat_cross_validation_for_regional_loads(
         heat_conductivities,
-        total_heat_load_w,
+        regional_heat_loads_w,
         Some(heat.max_temperature),
     );
     let mut heat_mesh_temperatures = vec![(1, heat.max_temperature)];
-    for (level, request) in composite_heat_refinement_requests_for_distributed_load(
+    for (level, request) in composite_heat_refinement_requests_for_regional_loads(
         heat_conductivities,
-        total_heat_load_w,
+        regional_heat_loads_w,
     )?
     .into_iter()
     .filter(|(level, _)| *level > 1)
@@ -490,13 +502,19 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
             .map_err(|error| format!("composite heat mesh level {level} solve failed: {error}"))?;
         heat_mesh_temperatures.push((level, result.max_temperature));
     }
-    let heat_mesh_convergence = composite_heat_mesh_convergence_for_distributed_load(
+    let heat_mesh_convergence = composite_heat_mesh_convergence_for_regional_loads(
         heat_conductivities,
-        total_heat_load_w,
+        regional_heat_loads_w,
         &heat_mesh_temperatures,
     );
     let (thermal_request, heat_to_thermal_projection) =
         project_composite_heat_to_thermal(&heat, &thermal_seed, loss_spec.reference_temperature_c)?;
+    let (thermal_request, thermal_expansion_projection) =
+        project_composite_temperature_dependent_expansion(
+            &heat,
+            &thermal_request,
+            &expansion_spec,
+        )?;
     let thermal_profile =
         profile_thermal_plane_quad_2d_with_options(&thermal_request, SpdSolveOptions::default())
             .map_err(|error| format!("composite thermal solve failed: {error}"))?;
@@ -613,11 +631,13 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         "electrostatic": electrostatic,
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "electrothermal_loss_projection": electrothermal_loss_projection,
+        "joule_heating_projection": joule_heating_projection,
         "electrothermal_feedback_convergence": electrothermal_feedback_convergence,
         "heat": heat,
         "heat_cross_validation": heat_cross_validation,
         "heat_mesh_convergence": heat_mesh_convergence,
         "heat_to_thermal_projection": heat_to_thermal_projection,
+        "thermal_expansion_projection": thermal_expansion_projection,
         "thermal": thermal,
         "thermal_mesh_convergence": thermal_mesh_convergence,
         "thermal_stress_recovery": thermal_stress_recovery,

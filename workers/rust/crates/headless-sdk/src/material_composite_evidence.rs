@@ -37,6 +37,14 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "Retains every relaxed electrostatic-loss-heat iteration and gates regional temperature residual, successive loss change, and thermal-conductivity stability.",
         ),
         material_evidence_ref(
+            "evidence.joule_heating_projection",
+            "Temperature-dependent conductor Joule heating",
+            "coupling_energy_balance",
+            "kyuubiki.composite-joule-heating-projection/v1",
+            "active_gate",
+            "Converts prescribed conductor current and temperature-dependent path resistance into conservative regional heat load.",
+        ),
+        material_evidence_ref(
             "evidence.layered_thermal_resistance_closed_form",
             "Layered thermal-resistance closed form",
             "analytic_cross_check",
@@ -59,6 +67,14 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "kyuubiki.composite-heat-to-thermal-projection/v1",
             "active_gate",
             "Maps solved nodal temperatures into structural temperature deltas after node identity and coordinate checks.",
+        ),
+        material_evidence_ref(
+            "evidence.thermal_expansion_projection",
+            "Temperature-dependent thermal-expansion projection",
+            "material_parameter_projection",
+            "kyuubiki.composite-thermal-expansion-projection/v1",
+            "active_gate",
+            "Updates every declared structural region from its solved local mean temperature and gates complete region coverage.",
         ),
         material_evidence_ref(
             "evidence.thermal_structural_mesh_convergence",
@@ -124,20 +140,26 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
         material_model_assumption(
             "assumption.sequential_coupling",
             "Partitioned electrothermal coupling",
-            "electrostatic RMS field <-> temperature-dependent dielectric loss and regional thermal conductivity -> heat -> thermal stress",
+            "electrostatic RMS field plus prescribed-current conductor loss <-> regional temperature feedback -> heat -> thermal stress",
             "Iterates dielectric parameters and heat to a fixed point, but is not a monolithic multiphysics Jacobian.",
         ),
         material_model_assumption(
             "assumption.screening_temperature_sensitivity",
             "Screening temperature sensitivity",
-            "linear epsilon_r(T), tan_delta(T), and regional k(T) coefficients",
+            "linear epsilon_r(T), tan_delta(T), regional k(T), and regional alpha(T) coefficients",
             "Built-in coefficients exercise feedback robustness and must be replaced by validated material-card curves for qualification.",
         ),
         material_model_assumption(
             "assumption.harmonic_dielectric_loss",
             "Frequency-local dielectric loss",
             "q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2",
-            "Represents dielectric heating at one screening frequency, not conductor Joule loss or broadband dispersion.",
+            "Represents dielectric heating at one screening frequency, not broadband dispersion.",
+        ),
+        material_model_assumption(
+            "assumption.prescribed_current_joule_loss",
+            "Prescribed-current conductor path",
+            "P = I^2*rho(T)*L/A",
+            "Captures temperature-dependent bulk conductor heating, but not solved current crowding, contact resistance, or terminal impedance.",
         ),
         material_model_assumption(
             "assumption.scalar_regions",

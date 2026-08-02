@@ -1,4 +1,6 @@
 use super::*;
+#[path = "tests/composite_joule_assertions.rs"]
+mod composite_joule_assertions;
 
 #[test]
 fn explores_heat_spreader_with_real_solver_results() {
@@ -154,6 +156,7 @@ fn material_study_plan_previews_steps_without_running_solver() {
 
 fn assert_composite_candidate_evidence(row: &Value) {
     let id = row["candidate_id"].as_str().unwrap_or("unknown");
+    composite_joule_assertions::assert_candidate(row, id);
     assert!(row["interface_risk_score"].is_number(), "{id}: risk");
     assert!(row["weakest_interface"].is_object(), "{id}: interface");
     assert_eq!(
@@ -253,6 +256,23 @@ fn assert_composite_candidate_evidence(row: &Value) {
         row["heat_to_thermal_projection"]["maximum_coordinate_error_m"].as_f64(),
         Some(0.0),
         "{id}: thermal projection coordinates"
+    );
+    assert_eq!(
+        row["thermal_expansion_projection"]["status"].as_str(),
+        Some("pass"),
+        "{id}: thermal expansion projection"
+    );
+    assert_eq!(
+        row["thermal_expansion_projection"]["updates"]
+            .as_array()
+            .map(Vec::len),
+        Some(3),
+        "{id}: thermal expansion region coverage"
+    );
+    assert_eq!(
+        row["thermal_expansion_projection"]["coverage_fraction"].as_f64(),
+        Some(1.0),
+        "{id}: thermal expansion coverage fraction"
     );
 
     let thermal = &row["thermal_mesh_convergence"];
@@ -370,6 +390,7 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     let candidates = exploration["report"]["candidates"]
         .as_array()
         .expect("candidate rows");
+    composite_joule_assertions::assert_quality_gate(&exploration["report"]);
     for row in candidates {
         assert_composite_candidate_evidence(row);
     }
@@ -397,6 +418,14 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                 })
                 .count()
                 == 3)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates.iter().any(|gate| {
+                gate["id"].as_str() == Some("gate.thermal_expansion.coverage")
+                    && gate["status"].as_str() == Some("pass")
+            }))
     );
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
