@@ -64,7 +64,10 @@ closure rather than raw feature sprawl:
   to the first side-effect-free Headless plan through one SDK-native helper
 - the three Headless SDKs now emit the same canonical SHA-256 plan digest,
   produce a zero-authority approval request, and reject stale or payload-mutated
-  approvals before dispatch; v2 receipts retain that digest
+  approvals before dispatch; v2 receipts retain that digest, v2 research
+  frontiers preserve origin and current-evidence digests, and v2 validation
+  reports reject result-receipt substitution; all three SDKs now also compute
+  one canonical frontier checkpoint digest for caller-owned recovery stores
 - the native `check-desktop-usability-journeys` probe now guards those journeys
   against slipping back to Node integration shims; `make
   build-usability-readiness-report` executes the 8 blocking paths and records

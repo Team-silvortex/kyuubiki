@@ -89,6 +89,7 @@ pub(crate) fn validate_model_research_bootstrap(
             ));
         }
         validate_model_plan_approval_contract(root, bootstrap_path, execution, issues);
+        validate_research_frontier_contract(root, bootstrap_path, execution, issues);
         validate_research_validation_report(root, bootstrap_path, execution, issues);
     } else {
         issues.push(format!("{bootstrap_path}: missing execution_contract"));
@@ -205,13 +206,7 @@ fn validate_model_plan_approval_contract(
         return;
     };
     let digest = request.get("plan_digest").and_then(Value::as_str);
-    let valid_digest = digest.is_some_and(|value| {
-        value.len() == 71
-            && value.starts_with("sha256:")
-            && value[7..]
-                .bytes()
-                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    });
+    let valid_digest = digest.is_some_and(valid_plan_digest);
     if request.get("execution_authority").and_then(Value::as_str)
         != Some("none_approval_request_only")
         || !valid_digest
@@ -219,6 +214,56 @@ fn validate_model_plan_approval_contract(
     {
         issues.push(format!(
             "{request_path}: digest-bound approval request trust boundary is invalid"
+        ));
+    }
+}
+
+fn validate_research_frontier_contract(
+    root: &Path,
+    bootstrap_path: &str,
+    execution: &serde_json::Map<String, Value>,
+    issues: &mut Vec<String>,
+) {
+    let Some(schema_path) = execution.get("frontier_schema").and_then(Value::as_str) else {
+        issues.push(format!("{bootstrap_path}: missing frontier_schema"));
+        return;
+    };
+    let Some(fixture_path) = execution.get("frontier_fixture").and_then(Value::as_str) else {
+        issues.push(format!("{bootstrap_path}: missing frontier_fixture"));
+        return;
+    };
+    let expected = "kyuubiki.model-research-frontier/v2";
+    let Some(schema) = read_json(root, schema_path, issues) else {
+        return;
+    };
+    if schema
+        .pointer("/properties/schema_version/const")
+        .and_then(Value::as_str)
+        != Some(expected)
+    {
+        issues.push(format!(
+            "{schema_path}: research frontier schema_version is invalid"
+        ));
+    }
+    let Some(fixture) = read_json(root, fixture_path, issues) else {
+        return;
+    };
+    let valid = fixture.get("schema_version").and_then(Value::as_str) == Some(expected)
+        && fixture
+            .get("origin_plan_digest")
+            .and_then(Value::as_str)
+            .is_some_and(valid_plan_digest)
+        && fixture
+            .pointer("/evidence/plan_digest")
+            .and_then(Value::as_str)
+            .is_some_and(valid_plan_digest)
+        && fixture
+            .get("job_id")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !value.is_empty());
+    if !valid {
+        issues.push(format!(
+            "{fixture_path}: research frontier digest binding is invalid"
         ));
     }
 }
@@ -264,6 +309,18 @@ fn validate_research_readiness_report(
             .is_some_and(Value::is_object)
         && fixture
             .pointer("/selected_surface/bootstrap_plan")
+            .and_then(Value::as_str)
+            .is_some_and(|entry| !entry.is_empty())
+        && fixture
+            .pointer("/selected_surface/frontier_digest")
+            .and_then(Value::as_str)
+            .is_some_and(|entry| !entry.is_empty())
+        && fixture
+            .pointer("/selected_surface/frontier_validator")
+            .and_then(Value::as_str)
+            .is_some_and(|entry| !entry.is_empty())
+        && fixture
+            .pointer("/selected_surface/frontier_digest_verifier")
             .and_then(Value::as_str)
             .is_some_and(|entry| !entry.is_empty())
         && fixture
@@ -316,7 +373,7 @@ fn validate_research_validation_report(
     let Some(schema) = read_json(root, schema_path, issues) else {
         return;
     };
-    let expected = "kyuubiki.model-research-validation-report/v1";
+    let expected = "kyuubiki.model-research-validation-report/v2";
     if schema
         .pointer("/properties/schema_version/const")
         .and_then(Value::as_str)
@@ -336,6 +393,14 @@ fn validate_research_validation_report(
             .get("external_validation_required")
             .and_then(Value::as_bool)
             != Some(true)
+        || !fixture
+            .get("origin_plan_digest")
+            .and_then(Value::as_str)
+            .is_some_and(valid_plan_digest)
+        || !fixture
+            .get("result_plan_digest")
+            .and_then(Value::as_str)
+            .is_some_and(valid_plan_digest)
     {
         issues.push(format!(
             "{fixture_path}: validation report trust boundary is invalid"
@@ -379,6 +444,14 @@ fn validate_research_validation_report(
             "{fixture_path}: validation report must retain external validation action"
         ));
     }
+}
+
+fn valid_plan_digest(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn read_json(root: &Path, path: &str, issues: &mut Vec<String>) -> Option<Value> {

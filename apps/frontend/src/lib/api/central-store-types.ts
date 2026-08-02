@@ -41,50 +41,29 @@ export type CentralStoreCapabilities = {
   workflow_template_store: { status: string; backing?: string };
   frontend_dsl_template_store: { status: string; backing?: string };
   language_pack_store: { status: string; backing?: string };
-  login_system: { status: string; backing?: string };
+  identity_provider: { status: string; backing?: string };
   signed_downloads: { status: string };
   artifact_admission: { status: string; backing?: string };
   publish_pipeline: { status: string; backing?: string };
   publisher_accounts: { status: string; backing?: string };
-  commercial_store_model: { status: string; backing?: string };
+  external_store_integration: { status: string; backing?: string };
   publish_policy: { status: string; backing?: string };
   publish_readiness: { status: string; backing?: string };
   database_policy: { status: string; backing?: string };
   provenance_policy: { status: string; backing?: string };
 };
 
-export type CentralTeamSilvortexAccountSystem = {
-  owner: "Team Silvortex";
-  provider_project: "official-website";
-  integration_role: string;
-  shared_across_team_silvortex_apps: boolean;
-  kyuubiki_product_scope: string;
-  hosted_center_store_account_plane: string;
-  kyuubiki_account_storage: string;
-  interactive_flow: string;
-  self_hosted_store_account_dependency: string;
-};
-
-export type CentralIdentityIntegration = {
-  provider_project: "official-website";
-  client_role: "kyuubiki_oidc_client";
-  issuer_discovery_path: "/.well-known/openid-configuration";
-  client_registration: "reviewed_static_registration";
+export type CentralIdentityProvider = {
+  status: "unconfigured" | "configured" | "disabled";
+  provider_id: string | null;
+  protocol: "oidc";
+  configuration_source: "deployment_environment";
   interactive_flow: "authorization_code_pkce";
   required_request_checks: string[];
   allowed_scopes: string[];
-  token_storage: "platform_keychain_or_memory_only";
+  subject_key: "issuer_and_subject";
+  credential_storage: "platform_keychain_server_session_or_memory_only";
   forbidden_flows: string[];
-};
-
-export type CentralStoreCommercialModel = {
-  model: string;
-  free_service_posture: string;
-  metered_store_kinds: CentralStoreEntryKind[];
-  free_tier: string;
-  subscription: string;
-  self_hosted_store: string;
-  hosted_store: string;
 };
 
 export type CentralStoreCatalogPayload = {
@@ -114,19 +93,18 @@ export type CentralAuthProvider = {
 };
 
 export type CentralSessionPolicyPayload = {
-  schema_version: "kyuubiki.central-session-policy/v1";
+  schema_version: "kyuubiki.central-session-policy/v2";
   status: string;
   current_auth: {
     mode: string;
     descriptor: Record<string, unknown>;
   };
-  account_system: CentralTeamSilvortexAccountSystem;
-  identity_integration: CentralIdentityIntegration;
+  identity_provider: CentralIdentityProvider;
   planned_auth: CentralAuthProvider[];
   session_rules: {
     store_download_requires_session: boolean;
-    hosted_store_download_requires_session: boolean;
-    self_hosted_store_requires_team_silvortex_account: boolean;
+    external_store_may_require_session: boolean;
+    self_hosted_store_requires_external_identity: boolean;
     publish_requires_session: boolean;
     agent_registration_requires_cluster_identity: boolean;
     credential_storage: string;
@@ -142,18 +120,16 @@ export type CentralPublishResourcePolicy = {
 };
 
 export type CentralPublishPolicyPayload = {
-  schema_version: "kyuubiki.central-publish-policy/v1";
+  schema_version: "kyuubiki.central-publish-policy/v2";
   status: string;
   accepting_submissions: boolean;
   reason: string;
-  commercial_model: CentralStoreCommercialModel;
   resource_kinds: CentralPublishResourcePolicy[];
   review_stages: string[];
   publisher_requirements: {
-    login_required: boolean;
-    publisher_account_required: boolean;
-    team_silvortex_account_required: boolean;
-    legal_payment_method_required: boolean;
+    authentication_required: boolean;
+    publisher_profile_required: boolean;
+    review_required: boolean;
     personal_access_token_supported: boolean;
     device_code_supported: boolean;
     anonymous_publish_allowed: boolean;
@@ -161,12 +137,17 @@ export type CentralPublishPolicyPayload = {
 };
 
 export type CentralPublisherPolicyPayload = {
-  schema_version: "kyuubiki.central-publisher-policy/v1";
+  schema_version: "kyuubiki.central-publisher-policy/v2";
   status: string;
   accounts_enabled: boolean;
   token_issuance_enabled: boolean;
   storage_tables: string[];
-  account_system: CentralTeamSilvortexAccountSystem;
+  identity_binding: {
+    provider: "deployment_defined";
+    subject_key: "issuer_and_subject";
+    password_storage_allowed: false;
+    email_as_primary_key_allowed: false;
+  };
   identity_modes: Array<{
     id: string;
     status: string;
@@ -185,12 +166,6 @@ export type CentralPublisherPolicyPayload = {
     rotation_required: boolean;
     revocation_supported: boolean;
     required_scopes: string[];
-  };
-  payout_policy: {
-    eligible_resource_kinds: Array<"operator" | "workflow_template">;
-    eligibility_requirements: string[];
-    payout_basis: string;
-    metered_downloads_only: boolean;
   };
   blocking_reasons: string[];
 };

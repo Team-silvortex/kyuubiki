@@ -1,6 +1,9 @@
 use crate::material_composite_candidates::CompositePanelCandidate;
 use serde_json::{Value, json};
 
+const DIELECTRIC_LOSS_SCREENING_FREQUENCY_HZ: f64 = 10.0e6;
+const REFERENCE_TEMPERATURE_C: f64 = 35.0;
+
 pub(crate) fn composite_research_metadata(candidate: &CompositePanelCandidate) -> Value {
     json!({
         "study": "material.composite_thermo_electric_panel.v1",
@@ -11,7 +14,17 @@ pub(crate) fn composite_research_metadata(candidate: &CompositePanelCandidate) -
             "dielectric": candidate.dielectric,
             "substrate": candidate.substrate
         },
-        "coupling": "electrostatic_to_heat_to_thermal_stress"
+        "coupling": "electrostatic_dielectric_loss_to_heat_to_thermal_stress"
+    })
+}
+
+pub(crate) fn electrothermal_loss_model(candidate: &CompositePanelCandidate) -> Value {
+    json!({
+        "source_element_id": "dielectric_core",
+        "frequency_hz": DIELECTRIC_LOSS_SCREENING_FREQUENCY_HZ,
+        "relative_permittivity": candidate.dielectric_relative_permittivity,
+        "loss_tangent": candidate.dielectric_loss_tangent,
+        "reference_temperature_c": REFERENCE_TEMPERATURE_C
     })
 }
 
@@ -76,8 +89,8 @@ fn panel_nodes(kind: &str) -> Vec<Value> {
                 "x": x,
                 "y": y,
                 "fix_temperature": matches!(index, 3 | 7),
-                "temperature": 35.0,
-                "heat_load": if matches!(index, 1 | 5) { 0.01 } else { 0.0 }
+                "temperature": REFERENCE_TEMPERATURE_C,
+                "heat_load": 0.0
             }),
             _ => json!({
                 "id": format!("n{index}"),
@@ -87,7 +100,7 @@ fn panel_nodes(kind: &str) -> Vec<Value> {
                 "fix_y": matches!(index, 0 | 4),
                 "load_x": 0.0,
                 "load_y": 0.0,
-                "temperature_delta": if matches!(index, 1 | 5) { 95.0 } else { 45.0 }
+                "temperature_delta": 0.0
             }),
         })
         .collect()

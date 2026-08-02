@@ -120,37 +120,39 @@ Current progress:
   every candidate
 - the composite heat subproblem now retains an independent layered
   thermal-resistance check plus real `1/2/4/8` heat-quad refinement for main
-  and materialized candidates
+  and materialized candidates; its source is no longer a fixed fixture:
+  solved RMS dielectric fields are converted through
+  `q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E^2`, volume-weighted onto heat
+  nodes, and guarded by an explicit energy-balance gate
 - the composite thermal-structural subproblem now runs real two-dimensional
   `1/2/4/8` quad refinement for main and materialized candidates, preserving
-  the source temperature interpolation and material parameters; the current
-  fixture correctly fails displacement/strain-energy convergence and keeps
-  peak stress diagnostic-only, exposing fixed-edge/interface localization
-  instead of claiming mesh independence
+  the solved heat profile and material parameters; node identity and coordinate
+  checks now guard the heat-to-thermal projection before structural execution
 - structural follow-up should still regularize the clamp, add interface
   mechanics and local refinement/stress recovery, then correlate against an
   external solver for deeper confidence; this is no longer a tensor blocker
-- a retained roller-edge/vertical-anchor diagnostic now proves that relaxing
-  the clamp roughly halves displacement drift and reduces peak-stress drift,
-  while strain-energy drift remains above `30%`; the machine-readable
+- a retained roller-edge/vertical-anchor diagnostic now proves that restraint
+  sensitivity is small for displacement while strain-energy drift remains above
+  `22%`; the machine-readable
   diagnosis is restraint-sensitive but persistently energy-nonconvergent and
   cannot override the primary gates
 - area-weighted von Mises RMS and P95 recovery now rejects the simpler
   explanation that only one peak element is unstable: finest-pair drift remains
-  about `12.1%` and `26.65%`, with `max/P95` near `2.23`; local refinement,
+  about `1.6%` and `29.8%`; local refinement,
   higher-order recovery, and independent structural correlation remain open
-- cosine grading at the clamp, layer interfaces, and free edges now reduces
-  P95 drift to about `4.19%`, while RMS and strain-energy drift remain about
-  `13.7%` and `28.4%` and raw-peak drift worsens to about `37.5%`; this narrows
+- cosine grading at the clamp, layer interfaces, and free edges remains
+  diagnostic: P95 drift is about `34.1%` and strain-energy drift about `11.9%`;
+  this narrows
   the localization diagnosis without promoting structural qualification
 - four-level observed-order analysis now refuses displacement extrapolation
-  because its coarse and fine orders are inconsistent, reports a
-  `29.4-29.7%` fine-grid GCI for asymptotically converging strain energy, and
+  because its sequence is oscillatory, reports about `12.7%` fine-grid GCI for
+  asymptotically converging strain energy, and
   classifies peak stress as monotonically divergent; independent correlation
   and a better structural formulation remain the qualification blockers
 - the SPD profile path now recomputes residuals against the original matrix
-  instead of reporting synthetic zero for dense solves; all `36` retained
-  composite thermal solves pass at or below `5.13e-14` relative residual, so
+  instead of reporting synthetic zero for dense solves; retained composite
+  thermal solves pass at or below `2.15e-14` relative residual in the current
+  three-candidate baseline, so
   the remaining failure is isolated to discretization or modeling rather than
   algebraic nonconvergence
 - `solve.solid_tetra_3d` now retains parameter-perturbation and rigid-rotation

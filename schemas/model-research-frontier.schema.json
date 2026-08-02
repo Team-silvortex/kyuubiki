@@ -8,6 +8,7 @@
     "schema_version",
     "session_id",
     "workflow_id",
+    "origin_plan_digest",
     "stage",
     "job_id",
     "next_action",
@@ -17,9 +18,13 @@
   ],
   "properties": {
     "$schema": { "const": "../schemas/model-research-frontier.schema.json" },
-    "schema_version": { "const": "kyuubiki.model-research-frontier/v1" },
+    "schema_version": { "const": "kyuubiki.model-research-frontier/v2" },
     "session_id": { "type": "string", "minLength": 1 },
     "workflow_id": { "type": "string", "minLength": 1 },
+    "origin_plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "stage": {
       "enum": [
         "waiting_for_job",
@@ -36,6 +41,7 @@
       "additionalProperties": false,
       "required": [
         "approval_id",
+        "plan_digest",
         "action",
         "record_index",
         "authority",
@@ -43,6 +49,10 @@
       ],
       "properties": {
         "approval_id": { "type": ["string", "null"] },
+        "plan_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
         "action": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
         "record_index": { "type": "integer", "minimum": 1 },
         "authority": { "type": ["string", "null"] },

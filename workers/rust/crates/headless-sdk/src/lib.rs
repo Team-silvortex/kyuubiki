@@ -20,6 +20,7 @@ mod material_composite;
 mod material_composite_algebraic_validation;
 mod material_composite_candidates;
 mod material_composite_convergence_regime;
+mod material_composite_electrothermal;
 mod material_composite_evidence;
 mod material_composite_heat_validation;
 mod material_composite_interfaces;
@@ -131,11 +132,19 @@ pub use material_composite_convergence_regime::{
     CompositeThermalConvergenceRegimeAssessment, composite_thermal_convergence_regime,
     missing_thermal_convergence_regime,
 };
+pub use material_composite_electrothermal::{
+    COMPOSITE_ELECTROTHERMAL_LOSS_SCHEMA_VERSION, COMPOSITE_HEAT_TO_THERMAL_SCHEMA_VERSION,
+    CompositeDielectricLossSpec, CompositeElectrothermalLossProjection,
+    CompositeHeatToThermalProjection, distribute_composite_dielectric_heat_load,
+    project_composite_dielectric_loss_to_heat, project_composite_heat_to_thermal,
+};
 pub use material_composite_heat_validation::{
     COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION, COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION,
     COMPOSITE_HEAT_REFINEMENT_LEVELS, CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
     CompositeHeatMeshConvergenceSample, composite_heat_cross_validation,
-    composite_heat_mesh_convergence, composite_heat_refinement_requests,
+    composite_heat_cross_validation_for_distributed_load, composite_heat_mesh_convergence,
+    composite_heat_mesh_convergence_for_distributed_load, composite_heat_refinement_requests,
+    composite_heat_refinement_requests_for_distributed_load,
 };
 pub use material_composite_interfaces::{
     CompositePanelInterfaceAssessment, CompositePanelMaterialRegion, composite_material_regions,

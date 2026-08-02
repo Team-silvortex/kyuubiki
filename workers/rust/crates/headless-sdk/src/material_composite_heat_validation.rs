@@ -58,7 +58,38 @@ pub fn composite_heat_cross_validation(
     conductivities_w_mk: [f64; 3],
     fem_max_temperature_c: Option<f64>,
 ) -> CompositeHeatCrossValidation {
-    let expected_max_temperature_c = expected_max_temperature(conductivities_w_mk);
+    build_cross_validation(
+        conductivities_w_mk,
+        2.0 * HEAT_LOAD_PER_INTERFACE_NODE_W,
+        fem_max_temperature_c,
+        false,
+    )
+}
+
+pub fn composite_heat_cross_validation_for_distributed_load(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+    fem_max_temperature_c: Option<f64>,
+) -> CompositeHeatCrossValidation {
+    build_cross_validation(
+        conductivities_w_mk,
+        total_heat_load_w,
+        fem_max_temperature_c,
+        true,
+    )
+}
+
+fn build_cross_validation(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+    fem_max_temperature_c: Option<f64>,
+    distributed_dielectric_load: bool,
+) -> CompositeHeatCrossValidation {
+    let expected_max_temperature_c = if distributed_dielectric_load {
+        expected_max_temperature_for_distributed_load(conductivities_w_mk, total_heat_load_w)
+    } else {
+        expected_max_temperature(conductivities_w_mk)
+    };
     let absolute_error_c =
         fem_max_temperature_c.map(|value| (value - expected_max_temperature_c).abs());
     let relative_error = absolute_error_c.map(|error| error / expected_max_temperature_c.abs());
@@ -69,10 +100,15 @@ pub fn composite_heat_cross_validation(
     };
     CompositeHeatCrossValidation {
         schema_version: COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION.to_string(),
-        method: "layered_thermal_resistance_closed_form".to_string(),
+        method: if distributed_dielectric_load {
+            "layered_thermal_resistance_with_uniform_dielectric_generation_closed_form"
+        } else {
+            "layered_thermal_resistance_closed_form"
+        }
+        .to_string(),
         conductivities_w_mk: conductivities_w_mk.to_vec(),
         fixed_temperature_c: FIXED_TEMPERATURE_C,
-        total_heat_load_w: 2.0 * HEAT_LOAD_PER_INTERFACE_NODE_W,
+        total_heat_load_w,
         expected_max_temperature_c,
         fem_max_temperature_c,
         absolute_error_c,
@@ -91,11 +127,34 @@ pub fn composite_heat_refinement_requests(
         .collect()
 }
 
+pub fn composite_heat_refinement_requests_for_distributed_load(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+) -> Result<Vec<(usize, SolveHeatPlaneQuad2dRequest)>, String> {
+    COMPOSITE_HEAT_REFINEMENT_LEVELS
+        .iter()
+        .map(|level| {
+            let request = refined_heat_model_without_load(conductivities_w_mk, *level);
+            crate::distribute_composite_dielectric_heat_load(&request, total_heat_load_w)
+                .map(|request| (*level, request))
+        })
+        .collect()
+}
+
 pub fn composite_heat_mesh_convergence(
     conductivities_w_mk: [f64; 3],
     max_temperatures_by_level: &[(usize, f64)],
 ) -> CompositeHeatMeshConvergence {
-    let expected = expected_max_temperature(conductivities_w_mk);
+    build_mesh_convergence(
+        expected_max_temperature(conductivities_w_mk),
+        max_temperatures_by_level,
+    )
+}
+
+fn build_mesh_convergence(
+    expected: f64,
+    max_temperatures_by_level: &[(usize, f64)],
+) -> CompositeHeatMeshConvergence {
     let mut previous = None;
     let samples = max_temperatures_by_level
         .iter()
@@ -157,6 +216,17 @@ pub fn composite_heat_mesh_convergence(
     }
 }
 
+pub fn composite_heat_mesh_convergence_for_distributed_load(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+    max_temperatures_by_level: &[(usize, f64)],
+) -> CompositeHeatMeshConvergence {
+    build_mesh_convergence(
+        expected_max_temperature_for_distributed_load(conductivities_w_mk, total_heat_load_w),
+        max_temperatures_by_level,
+    )
+}
+
 fn expected_max_temperature(conductivities_w_mk: [f64; 3]) -> f64 {
     let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
     let downstream_thermal_resistance_k_w = (LAYER_WIDTH_M / conductivities_w_mk[1]
@@ -165,9 +235,34 @@ fn expected_max_temperature(conductivities_w_mk: [f64; 3]) -> f64 {
     FIXED_TEMPERATURE_C + 2.0 * HEAT_LOAD_PER_INTERFACE_NODE_W * downstream_thermal_resistance_k_w
 }
 
+fn expected_max_temperature_for_distributed_load(
+    conductivities_w_mk: [f64; 3],
+    total_heat_load_w: f64,
+) -> f64 {
+    let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
+    let dielectric_resistance = LAYER_WIDTH_M / (conductivities_w_mk[1] * cross_section_m2);
+    let substrate_resistance = LAYER_WIDTH_M / (conductivities_w_mk[2] * cross_section_m2);
+    FIXED_TEMPERATURE_C + total_heat_load_w * (0.5 * dielectric_resistance + substrate_resistance)
+}
+
 fn refined_heat_model(
     conductivities_w_mk: [f64; 3],
     elements_per_layer: usize,
+) -> SolveHeatPlaneQuad2dRequest {
+    build_refined_heat_model(conductivities_w_mk, elements_per_layer, true)
+}
+
+fn refined_heat_model_without_load(
+    conductivities_w_mk: [f64; 3],
+    elements_per_layer: usize,
+) -> SolveHeatPlaneQuad2dRequest {
+    build_refined_heat_model(conductivities_w_mk, elements_per_layer, false)
+}
+
+fn build_refined_heat_model(
+    conductivities_w_mk: [f64; 3],
+    elements_per_layer: usize,
+    include_interface_load: bool,
 ) -> SolveHeatPlaneQuad2dRequest {
     let columns = 3 * elements_per_layer;
     let column_width = LAYER_WIDTH_M / elements_per_layer as f64;
@@ -182,7 +277,7 @@ fn refined_heat_model(
                     y,
                     fix_temperature: at_right,
                     temperature: FIXED_TEMPERATURE_C,
-                    heat_load: if column == elements_per_layer {
+                    heat_load: if include_interface_load && column == elements_per_layer {
                         HEAT_LOAD_PER_INTERFACE_NODE_W
                     } else {
                         0.0
@@ -209,8 +304,9 @@ fn refined_heat_model(
 #[cfg(test)]
 mod tests {
     use super::{
-        composite_heat_cross_validation, composite_heat_mesh_convergence,
-        composite_heat_refinement_requests,
+        composite_heat_cross_validation, composite_heat_cross_validation_for_distributed_load,
+        composite_heat_mesh_convergence, composite_heat_refinement_requests,
+        composite_heat_refinement_requests_for_distributed_load,
     };
 
     const CONDUCTIVITIES: [f64; 3] = [390.0, 0.25, 160.0];
@@ -240,6 +336,24 @@ mod tests {
         );
         assert_eq!(finest.elements[8].conductivity, 0.25);
         assert_eq!(finest.elements[16].conductivity, 160.0);
+    }
+
+    #[test]
+    fn distributed_dielectric_generation_matches_closed_form_and_conserves_load() {
+        let validation = composite_heat_cross_validation_for_distributed_load(
+            CONDUCTIVITIES,
+            0.02,
+            Some(75.125),
+        );
+        let requests =
+            composite_heat_refinement_requests_for_distributed_load(CONDUCTIVITIES, 0.02)
+                .expect("refinements");
+
+        assert_eq!(validation.status, "pass");
+        assert!((validation.expected_max_temperature_c - 75.125).abs() < 1.0e-12);
+        assert!(requests.iter().all(|(_, request)| {
+            (request.nodes.iter().map(|node| node.heat_load).sum::<f64>() - 0.02).abs() < 1.0e-15
+        }));
     }
 
     #[test]

@@ -49,6 +49,9 @@ pub struct ModelResearchSelectedSurface {
     pub approval_request: String,
     pub frontier_start: String,
     pub frontier_advance: String,
+    pub frontier_digest: String,
+    pub frontier_validator: String,
+    pub frontier_digest_verifier: String,
     pub result_validator: String,
     pub receipt_verifier: String,
     pub frontier_verifier: String,
@@ -364,6 +367,24 @@ fn build_selected_surface(
         ),
         field(
             execution,
+            "frontier_digest",
+            &format!("execution_contract.surfaces.{key}.frontier_digest"),
+            blockers,
+        ),
+        field(
+            execution,
+            "frontier_validator",
+            &format!("execution_contract.surfaces.{key}.frontier_validator"),
+            blockers,
+        ),
+        field(
+            execution,
+            "frontier_digest_verifier",
+            &format!("execution_contract.surfaces.{key}.frontier_digest_verifier"),
+            blockers,
+        ),
+        field(
+            execution,
             "result_validator",
             &format!("execution_contract.surfaces.{key}.result_validator"),
             blockers,
@@ -409,9 +430,12 @@ fn build_selected_surface(
         approval_request: values[15].clone(),
         frontier_start: values[16].clone(),
         frontier_advance: values[17].clone(),
-        result_validator: values[18].clone(),
-        receipt_verifier: values[19].clone(),
-        frontier_verifier: values[20].clone(),
+        frontier_digest: values[18].clone(),
+        frontier_validator: values[19].clone(),
+        frontier_digest_verifier: values[20].clone(),
+        result_validator: values[21].clone(),
+        receipt_verifier: values[22].clone(),
+        frontier_verifier: values[23].clone(),
     })
 }
 

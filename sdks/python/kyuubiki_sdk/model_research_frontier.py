@@ -5,13 +5,25 @@ from typing import Any
 
 from .errors import ModelResearchExecutionError
 from .model_collaboration import MODEL_WORKFLOW_PROPOSAL_SCHEMA_VERSION
+from .model_plan_approval import _compute_canonical_json_digest
 from .model_research_execution import MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION
 
 
-MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION = "kyuubiki.model-research-frontier/v1"
+MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION = "kyuubiki.model-research-frontier/v2"
 ReceiptVerifier = Callable[[Mapping[str, Any]], bool]
 FrontierVerifier = Callable[[Mapping[str, Any]], bool]
 _SUBMIT_ACTIONS = {"fem_submit", "workflow_submit_catalog", "workflow_submit_graph"}
+
+
+class ModelFrontierDigestVerifier:
+    def __init__(self, expected_digest: str) -> None:
+        if not _valid_plan_digest(expected_digest):
+            _fail("expected research frontier digest is invalid")
+        self.expected_digest = expected_digest
+
+    def __call__(self, current: Mapping[str, Any]) -> bool:
+        verify_model_research_frontier_digest(current, self.expected_digest)
+        return True
 
 
 def start_model_research_frontier(
@@ -21,7 +33,7 @@ def start_model_research_frontier(
     _verify_receipt(receipt, receipt_verifier)
     record = _last_record(receipt)
     if receipt["status"] == "failed":
-        return _blocked_frontier(receipt, record, None, 1)
+        return _blocked_frontier(receipt, record, receipt["plan_digest"], None, 1)
     if record.get("action") not in _SUBMIT_ACTIONS:
         _fail("initial research receipt must end with a supported job submission")
     job = record.get("output")
@@ -31,11 +43,26 @@ def start_model_research_frontier(
     return _frontier(
         receipt,
         record,
+        origin_plan_digest=receipt["plan_digest"],
         stage="waiting_for_job",
         job_id=job_id,
         next_action="job_wait",
         transition_count=1,
     )
+
+
+def compute_model_research_frontier_digest(current: Mapping[str, Any]) -> str:
+    validate_model_research_frontier(current)
+    return _compute_canonical_json_digest(_frontier_digest_projection(current))
+
+
+def verify_model_research_frontier_digest(
+    current: Mapping[str, Any], expected_digest: str
+) -> None:
+    if not _valid_plan_digest(expected_digest):
+        _fail("expected research frontier digest is invalid")
+    if compute_model_research_frontier_digest(current) != expected_digest:
+        _fail("persisted research frontier digest does not match trusted state")
 
 
 def advance_model_research_frontier(
@@ -44,7 +71,7 @@ def advance_model_research_frontier(
     frontier_verifier: FrontierVerifier,
     receipt_verifier: ReceiptVerifier,
 ) -> dict[str, Any]:
-    _validate_frontier(current)
+    validate_model_research_frontier(current)
     _verify_frontier(current, frontier_verifier)
     _validate_receipt(receipt)
     _verify_receipt(receipt, receipt_verifier)
@@ -59,7 +86,11 @@ def advance_model_research_frontier(
     record = _last_record(receipt)
     if receipt["status"] == "failed":
         return _blocked_frontier(
-            receipt, record, current.get("job_id"), current["transition_count"] + 1
+            receipt,
+            record,
+            current["origin_plan_digest"],
+            current.get("job_id"),
+            current["transition_count"] + 1,
         )
     if record.get("action") != expected:
         _fail(
@@ -75,6 +106,7 @@ def advance_model_research_frontier(
         return _frontier(
             receipt,
             record,
+            origin_plan_digest=current["origin_plan_digest"],
             stage="ready_to_validate",
             job_id=current["job_id"],
             next_action=None,
@@ -87,7 +119,7 @@ def build_model_research_frontier_proposal(
     current: Mapping[str, Any],
     frontier_verifier: FrontierVerifier,
 ) -> dict[str, Any]:
-    _validate_frontier(current)
+    validate_model_research_frontier(current)
     _verify_frontier(current, frontier_verifier)
     action = current.get("next_action")
     if not isinstance(action, str) or not action:
@@ -123,6 +155,7 @@ def _advance_wait(
         return _frontier(
             receipt,
             record,
+            origin_plan_digest=current["origin_plan_digest"],
             stage="ready_to_fetch_result",
             job_id=current["job_id"],
             next_action="result_fetch",
@@ -133,6 +166,7 @@ def _advance_wait(
         return _frontier(
             receipt,
             record,
+            origin_plan_digest=current["origin_plan_digest"],
             stage="blocked",
             job_id=current["job_id"],
             next_action=None,
@@ -149,6 +183,7 @@ def _frontier(
     receipt: Mapping[str, Any],
     record: Mapping[str, Any],
     *,
+    origin_plan_digest: str,
     stage: str,
     job_id: str | None,
     next_action: str | None,
@@ -160,12 +195,14 @@ def _frontier(
         "schema_version": MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
         "session_id": receipt["session_id"],
         "workflow_id": receipt["workflow_id"],
+        "origin_plan_digest": origin_plan_digest,
         "stage": stage,
         "job_id": job_id,
         "next_action": next_action,
         "transition_count": transition_count,
         "evidence": {
             "approval_id": receipt.get("approval_id"),
+            "plan_digest": receipt["plan_digest"],
             "action": record.get("action"),
             "record_index": record.get("index"),
             "authority": record.get("authority"),
@@ -178,6 +215,7 @@ def _frontier(
 def _blocked_frontier(
     receipt: Mapping[str, Any],
     record: Mapping[str, Any],
+    origin_plan_digest: str,
     job_id: str | None,
     transition_count: int,
 ) -> dict[str, Any]:
@@ -185,6 +223,7 @@ def _blocked_frontier(
     return _frontier(
         receipt,
         record,
+        origin_plan_digest=origin_plan_digest,
         stage="blocked",
         job_id=job_id,
         next_action=None,
@@ -204,7 +243,9 @@ def _validate_receipt(receipt: Mapping[str, Any]) -> None:
     if not all(
         isinstance(receipt.get(key), str) and receipt[key].strip()
         for key in ("session_id", "workflow_id")
-    ) or not isinstance(receipt.get("records"), list) or not receipt["records"]:
+    ) or not _valid_plan_digest(receipt.get("plan_digest")) or not isinstance(
+        receipt.get("records"), list
+    ) or not receipt["records"]:
         _fail("research execution receipt is incomplete")
     if receipt.get("status") not in {"completed", "failed"}:
         _fail("research execution receipt has an unsupported status")
@@ -221,7 +262,7 @@ def _validate_receipt(receipt: Mapping[str, Any]) -> None:
         _fail("failed research receipt has no final error")
 
 
-def _validate_frontier(current: Mapping[str, Any]) -> None:
+def validate_model_research_frontier(current: Mapping[str, Any]) -> None:
     if not isinstance(current, Mapping):
         _fail("research frontier must be a JSON object")
     if (
@@ -230,6 +271,10 @@ def _validate_frontier(current: Mapping[str, Any]) -> None:
         or not current["session_id"].strip()
         or not isinstance(current.get("workflow_id"), str)
         or not current["workflow_id"].strip()
+        or not _valid_plan_digest(current.get("origin_plan_digest"))
+        or not isinstance(current.get("evidence"), Mapping)
+        or not _valid_plan_digest(current["evidence"].get("plan_digest"))
+        or not _valid_evidence(current["evidence"])
         or not isinstance(current.get("transition_count"), int)
         or isinstance(current["transition_count"], bool)
         or current["transition_count"] < 1
@@ -268,6 +313,62 @@ def _validate_frontier(current: Mapping[str, Any]) -> None:
 def _verify_receipt(receipt: Mapping[str, Any], verifier: ReceiptVerifier) -> None:
     if not callable(verifier) or not verifier(receipt):
         _fail("caller receipt verifier rejected research execution receipt")
+
+
+def _valid_plan_digest(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 71
+        and value.startswith("sha256:")
+        and all(character in "0123456789abcdef" for character in value[7:])
+    )
+
+
+def _valid_evidence(evidence: Mapping[str, Any]) -> bool:
+    action = evidence.get("action")
+    record_index = evidence.get("record_index")
+    approval_id = evidence.get("approval_id")
+    authority = evidence.get("authority")
+    return (
+        isinstance(action, str)
+        and bool(action)
+        and action[0].islower()
+        and action[0].isascii()
+        and all(
+            character.isascii()
+            and (character.islower() or character.isdigit() or character == "_")
+            for character in action
+        )
+        and isinstance(record_index, int)
+        and not isinstance(record_index, bool)
+        and record_index > 0
+        and (approval_id is None or isinstance(approval_id, str))
+        and (authority is None or isinstance(authority, str))
+        and evidence.get("job_status") in {None, "completed", "failed", "cancelled"}
+    )
+
+
+def _frontier_digest_projection(current: Mapping[str, Any]) -> dict[str, Any]:
+    evidence = current["evidence"]
+    return {
+        "schema_version": current["schema_version"],
+        "session_id": current["session_id"],
+        "workflow_id": current["workflow_id"],
+        "origin_plan_digest": current["origin_plan_digest"],
+        "stage": current["stage"],
+        "job_id": current.get("job_id"),
+        "next_action": current.get("next_action"),
+        "transition_count": current["transition_count"],
+        "evidence": {
+            "approval_id": evidence.get("approval_id"),
+            "plan_digest": evidence["plan_digest"],
+            "action": evidence.get("action"),
+            "record_index": evidence.get("record_index"),
+            "authority": evidence.get("authority"),
+            "job_status": evidence.get("job_status"),
+        },
+        "blocking_reason": current.get("blocking_reason"),
+    }
 
 
 def _verify_frontier(current: Mapping[str, Any], verifier: FrontierVerifier) -> None:

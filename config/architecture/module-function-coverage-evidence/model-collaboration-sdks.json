@@ -156,8 +156,16 @@
           "docs/model-research-onboarding.md"
         ],
         "required_text": [
-          "kyuubiki.model-research-frontier/v1",
+          "kyuubiki.model-research-frontier/v2",
+          "origin_plan_digest",
+          "evidence.plan_digest",
           "start_model_research_frontier",
+          "compute_model_research_frontier_digest",
+          "validate_model_research_frontier",
+          "ModelResearchFrontier.validate",
+          "ModelResearchFrontier.compute_digest",
+          "ModelFrontierDigestVerifier",
+          "ModelResearchFrontier.digest_verifier",
           "ModelReceiptVerifier",
           "ModelFrontierVerifier",
           "verified_submission_binds_real_job_id_into_next_proposal",
@@ -166,6 +174,10 @@
           "unverified_frontier_cannot_generate_or_advance",
           "test_unverified_frontier_cannot_generate_proposal",
           "unverified frontier cannot generate proposal",
+          "malformed_plan_digest_cannot_enter_frontier_chain",
+          "test_malformed_plan_digest_cannot_enter_frontier_chain",
+          "malformed plan digest cannot enter frontier chain",
+          "aba8f2d4289d4385f07fcb065f65b26a71d7c606397dd9d20700d604b9b25902",
           "research receipt job_id does not match frontier binding",
           "caller-owned receipt and frontier verifiers"
         ]
@@ -196,13 +208,21 @@
           "docs/model-research-onboarding.md"
         ],
         "required_text": [
-          "kyuubiki.model-research-validation-report/v1",
+          "kyuubiki.model-research-validation-report/v2",
+          "origin_plan_digest",
+          "result_plan_digest",
           "screening_only_not_qualification",
           "validate_model_research_frontier_result",
           "ModelResearchValidation.validate",
           "validates_bound_workflow_result_without_overclaiming",
           "test_validates_bound_result_without_overclaiming",
           "validates a bound result without overclaiming",
+          "digest_verifier_reaches_result_validation",
+          "test_digest_verifier_reaches_result_validation",
+          "digest verifier reaches result validation",
+          "rejects_result_receipt_from_another_verified_plan",
+          "test_rejects_result_receipt_from_another_verified_plan",
+          "rejects result receipt from another verified plan",
           "rejects_mock_execution_authority",
           "test_rejects_mock_execution_authority",
           "rejects mock execution authority"

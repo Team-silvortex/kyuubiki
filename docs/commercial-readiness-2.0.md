@@ -263,38 +263,31 @@ Evidence docs:
 - [navigation-matrix.html](navigation-matrix.html)
 - [troubleshooting.md](troubleshooting.md)
 
-## 9. Team Silvortex Store And Account Boundary
+## 9. Open-Source Store Portability Boundary
 
 Required:
 
-- Kyuubiki is documented as a Team Silvortex application with shared hosted
-  account identity across Team Silvortex apps
-- the Team Silvortex official website project owns the hosted account system,
-  and Kyuubiki only integrates as an OIDC client and policy consumer
-- open-source self-hosted store support remains available without requiring the
-  hosted Team Silvortex account plane
-- hosted center-store monetization is scoped to operators and workflow
-  templates unless policy explicitly changes
-- free monthly download allowance, subscription entitlement, publisher
-  eligibility, legal payment method, and proportional download-share payout are
-  represented as explicit contracts
-- account, billing, quota, fraud, tax, and payout internals stay outside the
-  Kyuubiki runtime repository
+- local and self-hosted stores remain usable without an external account plane
+- external catalogs integrate through portable catalog, package, provenance,
+  signature, and optional identity-provider contracts
+- deployment-owned identity is keyed by issuer plus subject rather than email
+- hosted entitlement, pricing, payment, fraud, tax, and payout policy remain
+  outside the Kyuubiki core repository
+- external store state never grants solver, agent, or orchestra authority
 
 Acceptable limitation:
 
-- the official-website-hosted Team Silvortex account and billing integration
-  can remain preview or planned while self-hosted store contracts are still
-  usable
+- external identity and hosted-store adapters can remain unconfigured while
+  the self-hosted store contracts stay usable
 
 Blocker:
 
-- self-hosted research deployments require closed-source hosted billing or
-  account services to run local operator and workflow-template catalogs
+- self-hosted research deployments require a vendor account or hosted service
+  to run local operator and workflow-template catalogs
 
 Evidence docs:
 
-- [team-silvortex-store-model.md](team-silvortex-store-model.md)
+- [store-deployment-boundary.md](store-deployment-boundary.md)
 - [central-server-components.md](central-server-components.md)
 - [operator-library-centralization.md](operator-library-centralization.md)
 

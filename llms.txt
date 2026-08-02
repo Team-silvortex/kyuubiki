@@ -39,10 +39,17 @@ runtime behavior from UI text or isolated source files.
 - Never send credentials or secret-bearing configuration to a model provider.
 - Never invent job ids or cross-step bindings; advance one known dependency
   frontier per model turn using only a caller-verified execution receipt and
-  `kyuubiki.model-research-frontier/v1`.
+  `kyuubiki.model-research-frontier/v2`; retain the submission digest as
+  `origin_plan_digest` and the current receipt digest as `evidence.plan_digest`.
+- For persisted frontier recovery, compare the SDK canonical frontier digest
+  with an expected value from caller-owned trusted storage. A colocated digest
+  is not authentication and grants no execution authority. Prefer the official
+  digest-verifier adapter over an integration-specific comparison closure.
 - Validate a `ready_to_validate` frontier through
-  `kyuubiki.model-research-validation-report/v1`; workflow completion and a
-  screening bundle never imply external qualification.
+  `kyuubiki.model-research-validation-report/v2`; accept only the exact
+  `result_fetch` receipt named by frontier evidence, and retain both origin and
+  result plan digests. Workflow completion and a screening bundle never imply
+  external qualification.
 - A plan, dry run, mock, or fallback is not real execution.
 - Treat only a Headless execution receipt as evidence of dispatch.
 - Real execution is not numerical qualification. Retain provenance, validation,

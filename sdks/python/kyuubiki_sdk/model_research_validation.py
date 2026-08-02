@@ -6,12 +6,12 @@ from typing import Any
 from .errors import ModelResearchExecutionError
 from .material_research_bundle import validate_material_research_bundle
 from .model_research_execution import MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION
-from .model_research_frontier import MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION
+from .model_research_frontier import validate_model_research_frontier
 from .workflow_results import validate_workflow_result_against_graph
 
 
 MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION = (
-    "kyuubiki.model-research-validation-report/v1"
+    "kyuubiki.model-research-validation-report/v2"
 )
 _CLAIM_BOUNDARY = "screening_only_not_qualification"
 Verifier = Callable[[Mapping[str, Any]], bool]
@@ -70,6 +70,8 @@ def validate_model_research_frontier_result(
         "session_id": frontier["session_id"],
         "workflow_id": frontier["workflow_id"],
         "job_id": frontier["job_id"],
+        "origin_plan_digest": frontier["origin_plan_digest"],
+        "result_plan_digest": result_receipt["plan_digest"],
         "stage": stage,
         "claim_boundary": _CLAIM_BOUNDARY,
         "external_validation_required": True,
@@ -85,14 +87,12 @@ def validate_model_research_frontier_result(
 
 
 def _validate_frontier_binding(frontier: Mapping[str, Any]) -> None:
+    validate_model_research_frontier(frontier)
     job_id = frontier.get("job_id")
     if (
-        frontier.get("schema_version") != MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION
-        or frontier.get("stage") != "ready_to_validate"
+        frontier.get("stage") != "ready_to_validate"
         or frontier.get("next_action") is not None
         or frontier.get("blocking_reason") is not None
-        or not _present(frontier.get("session_id"))
-        or not _present(frontier.get("workflow_id"))
         or not _present(job_id)
     ):
         _fail("research frontier is not ready for result validation")
@@ -109,6 +109,7 @@ def _validate_result_receipt(
         or receipt.get("status") != "completed"
         or receipt.get("session_id") != frontier.get("session_id")
         or receipt.get("workflow_id") != frontier.get("workflow_id")
+        or receipt.get("plan_digest") != frontier.get("evidence", {}).get("plan_digest")
         or not isinstance(record, Mapping)
         or record.get("action") != "result_fetch"
         or record.get("job_id") != frontier.get("job_id")

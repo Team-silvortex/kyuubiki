@@ -49,14 +49,13 @@ defmodule KyuubikiWeb.CentralStore do
 
   def session_policy do
     %{
-      "schema_version" => "kyuubiki.central-session-policy/v1",
+      "schema_version" => "kyuubiki.central-session-policy/v2",
       "status" => "preview",
       "current_auth" => %{
         "mode" => "local_orchestra_token",
         "descriptor" => Security.descriptor()
       },
-      "account_system" => team_silvortex_account_system(),
-      "identity_integration" => team_silvortex_identity_integration(),
+      "identity_provider" => external_identity_provider(),
       "planned_auth" => [
         %{
           "id" => "oidc",
@@ -79,22 +78,21 @@ defmodule KyuubikiWeb.CentralStore do
       ],
       "session_rules" => %{
         "store_download_requires_session" => false,
-        "hosted_store_download_requires_session" => true,
-        "self_hosted_store_requires_team_silvortex_account" => false,
+        "external_store_may_require_session" => true,
+        "self_hosted_store_requires_external_identity" => false,
         "publish_requires_session" => true,
         "agent_registration_requires_cluster_identity" => true,
-        "credential_storage" => "client_platform_keychain_or_memory_only"
+        "credential_storage" => "platform_keychain_server_session_or_memory_only"
       }
     }
   end
 
   def publish_policy do
     %{
-      "schema_version" => "kyuubiki.central-publish-policy/v1",
+      "schema_version" => "kyuubiki.central-publish-policy/v2",
       "status" => "preview_contract",
       "accepting_submissions" => false,
-      "reason" => "publisher accounts, signing keys, and provenance checks are planned",
-      "commercial_model" => central_store_commercial_model(),
+      "reason" => "identity, signing, and write-side review are deployment-owned and disabled",
       "resource_kinds" => Enum.map(@store_kinds, &publish_resource_policy/1),
       "review_stages" => [
         "manifest_shape",
@@ -106,10 +104,9 @@ defmodule KyuubikiWeb.CentralStore do
         "catalog_indexing"
       ],
       "publisher_requirements" => %{
-        "login_required" => true,
-        "publisher_account_required" => true,
-        "team_silvortex_account_required" => true,
-        "legal_payment_method_required" => true,
+        "authentication_required" => true,
+        "publisher_profile_required" => true,
+        "review_required" => true,
         "personal_access_token_supported" => true,
         "device_code_supported" => true,
         "anonymous_publish_allowed" => false
@@ -119,12 +116,17 @@ defmodule KyuubikiWeb.CentralStore do
 
   def publisher_policy do
     %{
-      "schema_version" => "kyuubiki.central-publisher-policy/v1",
+      "schema_version" => "kyuubiki.central-publisher-policy/v2",
       "status" => "preview_contract",
       "accounts_enabled" => false,
       "token_issuance_enabled" => false,
       "storage_tables" => ["central_publishers", "central_publisher_tokens"],
-      "account_system" => team_silvortex_account_system(),
+      "identity_binding" => %{
+        "provider" => "deployment_defined",
+        "subject_key" => "issuer_and_subject",
+        "password_storage_allowed" => false,
+        "email_as_primary_key_allowed" => false
+      },
       "identity_modes" => [
         %{
           "id" => "oidc",
@@ -162,9 +164,8 @@ defmodule KyuubikiWeb.CentralStore do
           "central:security:recall"
         ]
       },
-      "payout_policy" => publisher_payout_policy(),
       "blocking_reasons" => [
-        "hosted_login_not_enabled",
+        "external_identity_not_configured",
         "publisher_review_queue_not_enabled",
         "token_issuer_not_configured"
       ]
@@ -331,7 +332,7 @@ defmodule KyuubikiWeb.CentralStore do
       "blocked_stage_count" => length(blocked),
       "stages" => stages,
       "handoff_contracts" => [
-        "kyuubiki.central-publisher-policy/v1",
+        "kyuubiki.central-publisher-policy/v2",
         "kyuubiki.central-artifact-admission-policy/v1",
         "kyuubiki.central-provenance-policy/v1",
         "kyuubiki.central-database-contract/v1",
@@ -465,7 +466,10 @@ defmodule KyuubikiWeb.CentralStore do
         "backing" => "AssetStore.frontend_dsl_template"
       },
       "language_pack_store" => %{"status" => "ready", "backing" => "language-packs/catalog.json"},
-      "login_system" => %{"status" => "preview_contract", "backing" => "Security.descriptor"},
+      "identity_provider" => %{
+        "status" => "unconfigured",
+        "backing" => "CentralStore.session_policy"
+      },
       "signed_downloads" => %{"status" => "planned"},
       "artifact_admission" => %{
         "status" => "blocked_preview",
@@ -479,9 +483,9 @@ defmodule KyuubikiWeb.CentralStore do
         "status" => "preview_contract",
         "backing" => "CentralStore.publisher_policy"
       },
-      "commercial_store_model" => %{
-        "status" => "preview_contract",
-        "backing" => "CentralStore.publish_policy"
+      "external_store_integration" => %{
+        "status" => "deployment_defined",
+        "backing" => "CentralStore.session_policy"
       },
       "publish_policy" => %{
         "status" => "preview_contract",
@@ -547,26 +551,12 @@ defmodule KyuubikiWeb.CentralStore do
     }
   end
 
-  defp team_silvortex_account_system do
+  defp external_identity_provider do
     %{
-      "owner" => "Team Silvortex",
-      "provider_project" => "official-website",
-      "integration_role" => "kyuubiki_oidc_client",
-      "shared_across_team_silvortex_apps" => true,
-      "kyuubiki_product_scope" => "team_silvortex_application",
-      "hosted_center_store_account_plane" => "external_official_website_oidc",
-      "kyuubiki_account_storage" => "none",
-      "interactive_flow" => "authorization_code_pkce",
-      "self_hosted_store_account_dependency" => "none"
-    }
-  end
-
-  defp team_silvortex_identity_integration do
-    %{
-      "provider_project" => "official-website",
-      "client_role" => "kyuubiki_oidc_client",
-      "issuer_discovery_path" => "/.well-known/openid-configuration",
-      "client_registration" => "reviewed_static_registration",
+      "status" => "unconfigured",
+      "provider_id" => nil,
+      "protocol" => "oidc",
+      "configuration_source" => "deployment_environment",
       "interactive_flow" => "authorization_code_pkce",
       "required_request_checks" => [
         "exact_redirect_uri",
@@ -574,34 +564,10 @@ defmodule KyuubikiWeb.CentralStore do
         "nonce",
         "pkce_s256"
       ],
-      "allowed_scopes" => ["openid", "profile", "email", "kyuubiki.store"],
-      "token_storage" => "platform_keychain_or_memory_only",
+      "allowed_scopes" => ["openid", "profile", "email", "offline_access"],
+      "subject_key" => "issuer_and_subject",
+      "credential_storage" => "platform_keychain_server_session_or_memory_only",
       "forbidden_flows" => ["password_grant", "dynamic_client_registration"]
-    }
-  end
-
-  defp central_store_commercial_model do
-    %{
-      "model" => "youtube_style_download_share",
-      "free_service_posture" => "all_non_center_store_services_free",
-      "metered_store_kinds" => ["operator", "workflow_template"],
-      "free_tier" => "small_monthly_download_allowance",
-      "subscription" => "unlimited_center_store_downloads",
-      "self_hosted_store" => "open_source_self_deploy_supported",
-      "hosted_store" => "closed_source_team_silvortex_account_and_billing_plane"
-    }
-  end
-
-  defp publisher_payout_policy do
-    %{
-      "eligible_resource_kinds" => ["operator", "workflow_template"],
-      "eligibility_requirements" => [
-        "team_silvortex_account",
-        "legal_payment_method",
-        "publisher_review"
-      ],
-      "payout_basis" => "proportional_download_share",
-      "metered_downloads_only" => true
     }
   end
 

@@ -9,21 +9,20 @@
     "accounts_enabled",
     "token_issuance_enabled",
     "storage_tables",
-    "account_system",
+    "identity_binding",
     "identity_modes",
     "account_lifecycle",
     "token_policy",
-    "payout_policy",
     "blocking_reasons"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "kyuubiki.central-publisher-policy/v1" },
+    "schema_version": { "const": "kyuubiki.central-publisher-policy/v2" },
     "status": { "type": "string" },
     "accounts_enabled": { "type": "boolean" },
     "token_issuance_enabled": { "type": "boolean" },
     "storage_tables": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-    "account_system": { "$ref": "#/$defs/accountSystem" },
+    "identity_binding": { "$ref": "#/$defs/identityBinding" },
     "identity_modes": {
       "type": "array",
       "items": { "$ref": "#/$defs/identityMode" },
@@ -65,58 +64,23 @@
         "required_scopes": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
       }
     },
-    "payout_policy": { "$ref": "#/$defs/payoutPolicy" },
     "blocking_reasons": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
   },
   "$defs": {
-    "accountSystem": {
+    "identityBinding": {
       "type": "object",
       "required": [
-        "owner",
-        "provider_project",
-        "integration_role",
-        "shared_across_team_silvortex_apps",
-        "kyuubiki_product_scope",
-        "hosted_center_store_account_plane",
-        "kyuubiki_account_storage",
-        "interactive_flow",
-        "self_hosted_store_account_dependency"
+        "provider",
+        "subject_key",
+        "password_storage_allowed",
+        "email_as_primary_key_allowed"
       ],
       "additionalProperties": false,
       "properties": {
-        "owner": { "const": "Team Silvortex" },
-        "provider_project": { "const": "official-website" },
-        "integration_role": { "type": "string", "minLength": 1 },
-        "shared_across_team_silvortex_apps": { "type": "boolean" },
-        "kyuubiki_product_scope": { "type": "string", "minLength": 1 },
-        "hosted_center_store_account_plane": { "type": "string", "minLength": 1 },
-        "kyuubiki_account_storage": { "type": "string", "minLength": 1 },
-        "interactive_flow": { "type": "string", "minLength": 1 },
-        "self_hosted_store_account_dependency": { "type": "string", "minLength": 1 }
-      }
-    },
-    "payoutPolicy": {
-      "type": "object",
-      "required": [
-        "eligible_resource_kinds",
-        "eligibility_requirements",
-        "payout_basis",
-        "metered_downloads_only"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "eligible_resource_kinds": {
-          "type": "array",
-          "items": { "enum": ["operator", "workflow_template"] },
-          "minItems": 1
-        },
-        "eligibility_requirements": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1
-        },
-        "payout_basis": { "type": "string", "minLength": 1 },
-        "metered_downloads_only": { "type": "boolean" }
+        "provider": { "const": "deployment_defined" },
+        "subject_key": { "const": "issuer_and_subject" },
+        "password_storage_allowed": { "const": false },
+        "email_as_primary_key_allowed": { "const": false }
       }
     },
     "identityMode": {

@@ -180,6 +180,16 @@ fn assert_composite_candidate_evidence(row: &Value) {
         "{id}: electrostatic mesh samples"
     );
     assert_eq!(
+        row["electrothermal_loss_projection"]["schema_version"].as_str(),
+        Some("kyuubiki.composite-electrothermal-loss-projection/v1"),
+        "{id}: electrothermal loss projection"
+    );
+    assert_eq!(
+        row["electrothermal_loss_projection"]["energy_balance_relative_error"].as_f64(),
+        Some(0.0),
+        "{id}: electrothermal energy balance"
+    );
+    assert_eq!(
         row["heat_cross_validation"]["status"].as_str(),
         Some("pass"),
         "{id}: heat cross-validation"
@@ -196,6 +206,16 @@ fn assert_composite_candidate_evidence(row: &Value) {
         Some(4),
         "{id}: heat mesh samples"
     );
+    assert_eq!(
+        row["heat_to_thermal_projection"]["mapped_node_count"].as_u64(),
+        Some(8),
+        "{id}: thermal projection nodes"
+    );
+    assert_eq!(
+        row["heat_to_thermal_projection"]["maximum_coordinate_error_m"].as_f64(),
+        Some(0.0),
+        "{id}: thermal projection coordinates"
+    );
 
     let thermal = &row["thermal_mesh_convergence"];
     assert_eq!(
@@ -210,7 +230,7 @@ fn assert_composite_candidate_evidence(row: &Value) {
     );
     assert_eq!(
         thermal["regime_assessment"]["diagnosis"].as_str(),
-        Some("displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging"),
+        Some("pass_metrics_lack_qualified_discretization_uncertainty"),
         "{id}: thermal regime"
     );
     assert!(
@@ -346,7 +366,7 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
                         && gate["status"].as_str() == Some("pass")
                 })
                 .count()
-                == 3)
+                == 4)
     );
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
@@ -416,6 +436,11 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     );
     assert!(exploration["result_payloads"][0]["electrostatic"].is_object());
     assert!(
+        exploration["result_payloads"][0]["electrothermal_loss_projection"]["total_loss_w"]
+            .as_f64()
+            .is_some_and(|value| value > 0.0)
+    );
+    assert!(
         exploration["result_payloads"][0]["electrostatic_mesh_convergence"]["samples"]
             .as_array()
             .is_some_and(|samples| samples.len() == 4)
@@ -431,6 +456,11 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
             .is_some_and(|samples| samples.len() == 4)
     );
     assert!(exploration["result_payloads"][0]["thermal"].is_object());
+    assert_eq!(
+        exploration["result_payloads"][0]["heat_to_thermal_projection"]["mapped_node_count"]
+            .as_u64(),
+        Some(8)
+    );
     assert_eq!(
         exploration["result_payloads"][0]["thermal_mesh_convergence"]["status"].as_str(),
         Some("fail")

@@ -1,10 +1,11 @@
 use kyuubiki_headless_sdk::{
     MODEL_HEADLESS_PLAN_SCHEMA_VERSION, MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
-    MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION, MaterialResearchBundle, ModelFrontierVerifier,
-    ModelReceiptVerifier, ModelResearchExecutionReceipt, ModelResearchExecutionRecord,
-    ModelResearchExecutionStatus, ModelResearchFrontier, ModelResearchFrontierEvidence,
-    ModelResearchFrontierStage, ModelResearchValidationStage, SdkError, SdkResult,
-    WorkflowGraphDefinition, validate_model_research_frontier_result,
+    MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION, MaterialResearchBundle, ModelFrontierDigestVerifier,
+    ModelFrontierVerifier, ModelReceiptVerifier, ModelResearchExecutionReceipt,
+    ModelResearchExecutionRecord, ModelResearchExecutionStatus, ModelResearchFrontier,
+    ModelResearchFrontierEvidence, ModelResearchFrontierStage, ModelResearchValidationStage,
+    SdkError, SdkResult, WorkflowGraphDefinition, compute_model_research_frontier_digest,
+    validate_model_research_frontier_result,
 };
 use serde_json::{Value, json};
 
@@ -40,6 +41,8 @@ fn validates_bound_workflow_result_without_overclaiming() {
     );
     assert_eq!(report.claim_boundary, "screening_only_not_qualification");
     assert!(report.external_validation_required);
+    assert_eq!(report.origin_plan_digest, digest('0'));
+    assert_eq!(report.result_plan_digest, digest('0'));
     assert_eq!(
         report.workflow_result.artifact_keys,
         ["thermo_summary.result"]
@@ -75,6 +78,24 @@ fn validates_retained_screening_bundle() {
             .next_actions
             .contains(&"external_validation_required".to_string())
     );
+}
+
+#[test]
+fn digest_verifier_reaches_result_validation() {
+    let frontier = frontier();
+    let frontier_digest =
+        compute_model_research_frontier_digest(&frontier).expect("frontier digest");
+    let verifier = ModelFrontierDigestVerifier::new(frontier_digest).expect("digest verifier");
+    let report = validate_model_research_frontier_result(
+        &frontier,
+        &receipt(result_payload("completed"), "job-validation-001"),
+        &graph(),
+        None,
+        &verifier,
+        &Verifier(true),
+    )
+    .expect("digest-verified validation report");
+    assert_eq!(report.origin_plan_digest, digest('0'));
 }
 
 #[test]
@@ -116,16 +137,34 @@ fn rejects_non_completed_runtime() {
     assert!(error.to_string().contains("status must be completed"));
 }
 
+#[test]
+fn rejects_result_receipt_from_another_verified_plan() {
+    let mut receipt = receipt(result_payload("completed"), "job-validation-001");
+    receipt.plan_digest = digest('1');
+    let error = validate_model_research_frontier_result(
+        &frontier(),
+        &receipt,
+        &graph(),
+        None,
+        &Verifier(true),
+        &Verifier(true),
+    )
+    .expect_err("plan digest mismatch");
+    assert!(error.to_string().contains("does not match"));
+}
+
 fn frontier() -> ModelResearchFrontier {
     ModelResearchFrontier {
         schema_version: MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION.to_string(),
         session_id: "research-session".to_string(),
         workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
+        origin_plan_digest: digest('0'),
         stage: ModelResearchFrontierStage::ReadyToValidate,
         job_id: Some("job-validation-001".to_string()),
         next_action: None,
         transition_count: 3,
         evidence: ModelResearchFrontierEvidence {
+            plan_digest: digest('0'),
             approval_id: Some("approval-test".to_string()),
             action: "result_fetch".to_string(),
             record_index: 1,
@@ -166,7 +205,7 @@ fn receipt(output: Value, job_id: &str) -> ModelResearchExecutionReceipt {
         plan_schema_version: MODEL_HEADLESS_PLAN_SCHEMA_VERSION.to_string(),
         session_id: "research-session".to_string(),
         workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
-        plan_digest: format!("sha256:{}", "0".repeat(64)),
+        plan_digest: digest('0'),
         status: ModelResearchExecutionStatus::Completed,
         execution_authority: "kyuubiki-headless-sdk".to_string(),
         approval_id: Some("approval-test".to_string()),
@@ -181,6 +220,10 @@ fn receipt(output: Value, job_id: &str) -> ModelResearchExecutionReceipt {
             error: None,
         }],
     }
+}
+
+fn digest(character: char) -> String {
+    format!("sha256:{}", character.to_string().repeat(64))
 }
 
 fn verdict(allow: bool) -> SdkResult<()> {

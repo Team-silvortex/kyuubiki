@@ -9,6 +9,8 @@
     "session_id",
     "workflow_id",
     "job_id",
+    "origin_plan_digest",
+    "result_plan_digest",
     "stage",
     "claim_boundary",
     "external_validation_required",
@@ -19,11 +21,13 @@
   "properties": {
     "$schema": { "type": "string" },
     "schema_version": {
-      "const": "kyuubiki.model-research-validation-report/v1"
+      "const": "kyuubiki.model-research-validation-report/v2"
     },
     "session_id": { "$ref": "#/$defs/nonEmptyString" },
     "workflow_id": { "$ref": "#/$defs/nonEmptyString" },
     "job_id": { "$ref": "#/$defs/nonEmptyString" },
+    "origin_plan_digest": { "$ref": "#/$defs/planDigest" },
+    "result_plan_digest": { "$ref": "#/$defs/planDigest" },
     "stage": {
       "enum": ["workflow_result_validated", "screening_bundle_validated"]
     },
@@ -106,6 +110,10 @@
     }
   ],
   "$defs": {
-    "nonEmptyString": { "type": "string", "minLength": 1 }
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "planDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
   }
 }

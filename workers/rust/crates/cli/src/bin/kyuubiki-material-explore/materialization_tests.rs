@@ -65,6 +65,17 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         Some("pass")
     );
     assert_eq!(
+        rerun["report"]["candidates"][0]["electrothermal_loss_projection"]
+            ["energy_balance_relative_error"]
+            .as_f64(),
+        Some(0.0)
+    );
+    assert_eq!(
+        rerun["report"]["candidates"][0]["heat_to_thermal_projection"]["mapped_node_count"]
+            .as_u64(),
+        Some(8)
+    );
+    assert_eq!(
         rerun["report"]["candidates"][0]["thermal_mesh_convergence"]["status"].as_str(),
         Some("fail")
     );
@@ -72,7 +83,7 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         rerun["report"]["candidates"][0]["thermal_mesh_convergence"]["regime_assessment"]
             ["diagnosis"]
             .as_str(),
-        Some("displacement_pre_asymptotic_energy_high_uncertainty_peak_stress_diverging")
+        Some("pass_metrics_lack_qualified_discretization_uncertainty")
     );
     assert_eq!(
         rerun["report"]["candidates"][0]["thermal_constraint_sensitivity"]["diagnosis"].as_str(),
@@ -119,7 +130,7 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
                         && gate["status"].as_str() == Some("pass")
                 })
                 .count()
-                == 3)
+                == 4)
     );
     assert!(
         rerun["report"]["reliability"]["quality_gates"]

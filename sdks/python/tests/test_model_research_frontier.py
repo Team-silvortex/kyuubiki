@@ -6,24 +6,29 @@ from pathlib import Path
 
 from kyuubiki_sdk import (
     MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
+    ModelFrontierDigestVerifier,
     ModelResearchExecutionError,
     advance_model_research_frontier,
     build_model_research_frontier_proposal,
+    compute_model_research_frontier_digest,
     start_model_research_frontier,
 )
 
 
 class ModelResearchFrontierTests(unittest.TestCase):
     def test_verified_submission_binds_real_job_id_into_next_proposal(self) -> None:
+        submitted = receipt(
+            "workflow_submit_catalog",
+            output={"job": {"job_id": "job-real-001", "status": "queued"}},
+        )
         frontier = start_model_research_frontier(
-            receipt(
-                "workflow_submit_catalog",
-                output={"job": {"job_id": "job-real-001", "status": "queued"}},
-            ),
+            submitted,
             lambda _receipt: True,
         )
         self.assertEqual(frontier["stage"], "waiting_for_job")
         self.assertEqual(frontier["job_id"], "job-real-001")
+        self.assertEqual(frontier["origin_plan_digest"], submitted["plan_digest"])
+        self.assertEqual(frontier["evidence"]["plan_digest"], submitted["plan_digest"])
         proposal = build_model_research_frontier_proposal(frontier, lambda _frontier: True)
         self.assertEqual(proposal["calls"][0]["action"], "job_wait")
         self.assertEqual(proposal["calls"][0]["payload"]["job_id"], "job-real-001")
@@ -45,6 +50,7 @@ class ModelResearchFrontierTests(unittest.TestCase):
             receipt(
                 "job_wait",
                 job_id="job-real-003",
+                plan_digest=digest("1"),
                 output={
                     "terminal": {
                         "job": {"job_id": "job-real-003", "status": "completed"}
@@ -56,6 +62,8 @@ class ModelResearchFrontierTests(unittest.TestCase):
             lambda _receipt: True,
         )
         self.assertEqual(fetch["stage"], "ready_to_fetch_result")
+        self.assertEqual(fetch["origin_plan_digest"], digest("0"))
+        self.assertEqual(fetch["evidence"]["plan_digest"], digest("1"))
         proposal = build_model_research_frontier_proposal(fetch, lambda _frontier: True)
         self.assertEqual(proposal["calls"][0]["action"], "result_fetch")
         self.assertEqual(proposal["calls"][0]["payload"]["job_id"], "job-real-003")
@@ -65,6 +73,7 @@ class ModelResearchFrontierTests(unittest.TestCase):
             receipt(
                 "result_fetch",
                 job_id="job-real-003",
+                plan_digest=digest("2"),
                 output={"result": {"artifacts": []}},
             ),
             lambda _frontier: True,
@@ -72,6 +81,19 @@ class ModelResearchFrontierTests(unittest.TestCase):
         )
         self.assertEqual(validate["stage"], "ready_to_validate")
         self.assertIsNone(validate["next_action"])
+        self.assertEqual(validate["origin_plan_digest"], digest("0"))
+        self.assertEqual(validate["evidence"]["plan_digest"], digest("2"))
+
+    def test_malformed_plan_digest_cannot_enter_frontier_chain(self) -> None:
+        with self.assertRaisesRegex(ModelResearchExecutionError, "receipt"):
+            start_model_research_frontier(
+                receipt(
+                    "workflow_submit_catalog",
+                    output={"job": {"job_id": "job-real-008"}},
+                    plan_digest="sha256:NOT-A-DIGEST",
+                ),
+                lambda _receipt: True,
+            )
 
     def test_mismatched_job_binding_is_rejected(self) -> None:
         waiting = start_model_research_frontier(
@@ -137,7 +159,22 @@ class ModelResearchFrontierTests(unittest.TestCase):
         self.assertEqual(
             frontier["schema_version"], MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION
         )
-        proposal = build_model_research_frontier_proposal(frontier, lambda _frontier: True)
+        expected_digest = (
+            "sha256:aba8f2d4289d4385f07fcb065f65b26a71d7c606397dd9d20700d604b9b25902"
+        )
+        self.assertEqual(compute_model_research_frontier_digest(frontier), expected_digest)
+        verifier = ModelFrontierDigestVerifier(expected_digest)
+        proposal = build_model_research_frontier_proposal(frontier, verifier)
+        changed = dict(frontier, transition_count=frontier["transition_count"] + 1)
+        self.assertNotEqual(compute_model_research_frontier_digest(changed), expected_digest)
+        with self.assertRaisesRegex(ModelResearchExecutionError, "trusted state"):
+            build_model_research_frontier_proposal(changed, verifier)
+        invalid = json.loads(json.dumps(frontier))
+        invalid["evidence"]["action"] = "ResultFetch"
+        with self.assertRaisesRegex(ModelResearchExecutionError, "incomplete"):
+            compute_model_research_frontier_digest(invalid)
+        with self.assertRaisesRegex(ModelResearchExecutionError, "digest is invalid"):
+            ModelFrontierDigestVerifier("sha256:not-valid")
         self.assertEqual(
             proposal["calls"][0]["payload"]["job_id"],
             "job-material-envelope-001",
@@ -174,13 +211,14 @@ def receipt(
     job_id: str | None = None,
     status: str = "completed",
     error: str | None = None,
+    plan_digest: str | None = None,
 ) -> dict[str, object]:
     return {
         "schema_version": "kyuubiki.model-research-execution-receipt/v2",
         "plan_schema_version": "kyuubiki.model-headless-plan/v1",
         "session_id": "research-session",
         "workflow_id": "workflow.material",
-        "plan_digest": "sha256:" + "0" * 64,
+        "plan_digest": plan_digest or digest("0"),
         "status": status,
         "execution_authority": "kyuubiki-headless-sdk",
         "approval_id": "approval-test",
@@ -197,6 +235,10 @@ def receipt(
             }
         ],
     }
+
+
+def digest(character: str) -> str:
+    return "sha256:" + character * 64
 
 
 if __name__ == "__main__":

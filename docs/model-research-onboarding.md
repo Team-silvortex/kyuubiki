@@ -52,13 +52,13 @@ model enough contract knowledge to prepare safe, inspectable work.
     through the ordinary Headless client and retain a
     `kyuubiki.model-research-execution-receipt/v2` receipt.
 13. Verify that receipt independently, then create or advance
-    `kyuubiki.model-research-frontier/v1`. Its generated proposal binds the
+    `kyuubiki.model-research-frontier/v2`. Its generated proposal binds the
     exact returned `job_id`; the model does not supply that binding.
 14. Repeat receipt verification and frontier advancement for `job_wait` and
     `result_fetch`.
 15. Pass the authenticated `ready_to_validate` frontier, its bound result
     receipt, and the resolved workflow graph through the SDK validation handoff.
-    Retain `kyuubiki.model-research-validation-report/v1`; attach a validated
+    Retain `kyuubiki.model-research-validation-report/v2`; attach a validated
     material research bundle when available.
 
 One dependency frontier per turn is important. A model must not propose
@@ -67,11 +67,20 @@ consume the real submission receipt first.
 
 The frontier is deliberately a small checkpoint, not a result store. It retains
 the research stage, next allowed action, real job binding, and minimal receipt
-evidence. Full results remain in the ordinary result and artifact stores. A
+evidence. `origin_plan_digest` remains fixed to the submission plan while
+`evidence.plan_digest` advances to the receipt that produced the current state.
+Full results remain in the ordinary result and artifact stores. A
 failed or cancelled execution moves the frontier to `blocked`; it never skips
 forward to validation. Persisted frontiers are also untrusted input: a
 caller-owned frontier verifier must authenticate them before proposal creation
-or state advancement.
+or state advancement. The three SDKs expose the same canonical frontier digest
+helper for trusted checkpoint comparison. It excludes the optional `$schema`
+annotation, covers every contract field, and must be compared with an expected
+digest retained outside the untrusted frontier document. Use the official
+digest-verifier adapter when restoring the checkpoint so proposal generation,
+advancement, and result validation retain the same caller-owned gate. Structural
+frontier validation is necessary before digest comparison but is not itself
+authentication.
 
 ## First Bounded Research
 
@@ -103,8 +112,10 @@ require caller-owned receipt and frontier verifiers for the cross-turn chain.
 
 Use `schemas/model-research-validation-report.schema.json` for the next handoff.
 The three SDKs reject a mismatched graph, receipt, workflow, job binding,
-unverified checkpoint, incomplete runtime, or invalid research bundle. A report
-with `screening_bundle_validated` still carries
+plan digest, unverified checkpoint, incomplete runtime, or invalid research
+bundle. The report preserves `origin_plan_digest` and binds
+`result_plan_digest` to the ready frontier's evidence. A report with
+`screening_bundle_validated` still carries
 `screening_only_not_qualification` and `external_validation_required: true`.
 
 Every official execution bridge rejects the entire plan before network access if an

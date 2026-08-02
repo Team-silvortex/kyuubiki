@@ -24,7 +24,7 @@ pub fn build_composite_materialized_candidate_report(
         "schema_version": "kyuubiki.composite-materialized-candidate-report/v1",
         "study": "material.composite_thermo_electric_panel.v1",
         "objective": "rank materialized mixed-material panel reruns",
-        "coupling": "sequential_electrostatic_to_heat_to_thermal_stress",
+        "coupling": "sequential_electrostatic_dielectric_loss_to_heat_to_thermal_stress",
         "candidate_count": rows.len(),
         "winner_candidate_id": rows
             .first()
@@ -64,6 +64,14 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         .unwrap_or(Value::Null);
     let heat_cross_validation = result
         .get("heat_cross_validation")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let electrothermal_loss_projection = result
+        .get("electrothermal_loss_projection")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let heat_to_thermal_projection = result
+        .get("heat_to_thermal_projection")
         .cloned()
         .unwrap_or(Value::Null);
     let heat_mesh_convergence = result
@@ -117,6 +125,12 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
     if heat_mesh_convergence.get("status").and_then(Value::as_str) != Some("pass") {
         missing.push("heat_mesh_convergence".to_string());
     }
+    if electrothermal_loss_projection.is_null() {
+        missing.push("electrothermal_loss_projection".to_string());
+    }
+    if heat_to_thermal_projection.is_null() {
+        missing.push("heat_to_thermal_projection".to_string());
+    }
     Ok(json!({
         "candidate_id": candidate_id,
         "candidate_label": research
@@ -130,9 +144,11 @@ fn materialized_candidate_row(payload: &Value) -> Result<Value, String> {
         "score": 0.0,
         "max_electric_field_v_m": max_electric_field_v_m,
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
+        "electrothermal_loss_projection": electrothermal_loss_projection,
         "max_temperature_c": max_temperature_c,
         "heat_cross_validation": heat_cross_validation,
         "heat_mesh_convergence": heat_mesh_convergence,
+        "heat_to_thermal_projection": heat_to_thermal_projection,
         "max_thermal_stress_pa": max_thermal_stress_pa,
         "thermal_mesh_convergence": thermal_mesh_convergence,
         "thermal_constraint_regularized_mesh_convergence": thermal_constraint_regularized_mesh_convergence,
@@ -246,6 +262,19 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             ),
         ),
         gate(
+            "gate.electrothermal_loss.energy_balance",
+            "electrothermal_loss_energy_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_nested_value(
+                &rows,
+                &[
+                    "electrothermal_loss_projection",
+                    "energy_balance_relative_error",
+                ],
+            ),
+        ),
+        gate(
             "gate.heat_closed_form.relative_error",
             "heat_closed_form_relative_error",
             "<=",
@@ -270,6 +299,16 @@ fn materialized_quality_gates(result_payloads: &[Value]) -> Vec<Value> {
             max_nested_value(
                 &rows,
                 &["heat_mesh_convergence", "max_analytic_relative_error"],
+            ),
+        ),
+        gate(
+            "gate.heat_to_thermal.coordinate_alignment",
+            "heat_to_thermal_maximum_coordinate_error_m",
+            "<=",
+            1.0e-12,
+            max_nested_value(
+                &rows,
+                &["heat_to_thermal_projection", "maximum_coordinate_error_m"],
             ),
         ),
         gate(

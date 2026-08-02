@@ -21,12 +21,20 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "Real Rust solver runs at one, two, four, and eight quad elements per material layer.",
         ),
         material_evidence_ref(
+            "evidence.electrothermal_loss_projection",
+            "Harmonic dielectric-loss projection",
+            "coupling_energy_balance",
+            "kyuubiki.composite-electrothermal-loss-projection/v1",
+            "active_gate",
+            "Converts solved RMS dielectric fields into frequency-local volumetric loss and conservatively lumps the power to heat nodes.",
+        ),
+        material_evidence_ref(
             "evidence.layered_thermal_resistance_closed_form",
             "Layered thermal-resistance closed form",
             "analytic_cross_check",
             "kyuubiki.composite-heat-cross-validation/v1",
             "retained",
-            "Independent downstream thermal-resistance solution for interface heating and fixed right-edge temperature.",
+            "Independent downstream thermal-resistance solution for uniform dielectric generation and fixed right-edge temperature.",
         ),
         material_evidence_ref(
             "evidence.heat_mesh_convergence",
@@ -35,6 +43,14 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "kyuubiki.composite-heat-mesh-convergence/v1",
             "retained",
             "Real Rust solver runs at one, two, four, and eight heat quads per material layer.",
+        ),
+        material_evidence_ref(
+            "evidence.heat_to_thermal_projection",
+            "Heat-field to thermal-strain projection",
+            "coupling_topology_validation",
+            "kyuubiki.composite-heat-to-thermal-projection/v1",
+            "active_gate",
+            "Maps solved nodal temperatures into structural temperature deltas after node identity and coordinate checks.",
         ),
         material_evidence_ref(
             "evidence.thermal_structural_mesh_convergence",
@@ -100,8 +116,14 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
         material_model_assumption(
             "assumption.sequential_coupling",
             "Sequential coupling",
-            "electrostatic -> heat -> thermal stress",
+            "electrostatic RMS field -> dielectric loss -> heat -> thermal stress",
             "Good for workflow validation, but misses strong bidirectional coupling.",
+        ),
+        material_model_assumption(
+            "assumption.harmonic_dielectric_loss",
+            "Frequency-local dielectric loss",
+            "q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2",
+            "Represents dielectric heating at one screening frequency, not conductor Joule loss or broadband dispersion.",
         ),
         material_model_assumption(
             "assumption.scalar_regions",

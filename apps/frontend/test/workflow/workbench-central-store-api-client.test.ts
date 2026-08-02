@@ -116,19 +116,10 @@ test("central store requests reuse workbench API auth context", async () => {
 test("central store language-pack policy carries unsafe text evidence", async () => {
   const responses: Record<string, unknown> = {
     "/api/v1/central/publish-policy": {
-      schema_version: "kyuubiki.central-publish-policy/v1",
+      schema_version: "kyuubiki.central-publish-policy/v2",
       status: "blocked_preview",
       accepting_submissions: false,
       reason: "preview",
-      commercial_model: {
-        model: "youtube_style_download_share",
-        free_service_posture: "all_non_center_store_services_free",
-        metered_store_kinds: ["operator", "workflow_template"],
-        free_tier: "small_monthly_download_allowance",
-        subscription: "unlimited_center_store_downloads",
-        self_hosted_store: "open_source_self_deploy_supported",
-        hosted_store: "closed_source_team_silvortex_account_and_billing_plane",
-      },
       resource_kinds: [
         {
           kind: "language_pack",
@@ -140,10 +131,9 @@ test("central store language-pack policy carries unsafe text evidence", async ()
       ],
       review_stages: [],
       publisher_requirements: {
-        login_required: true,
-        publisher_account_required: true,
-        team_silvortex_account_required: true,
-        legal_payment_method_required: true,
+        authentication_required: true,
+        publisher_profile_required: true,
+        review_required: true,
         personal_access_token_supported: false,
         device_code_supported: false,
         anonymous_publish_allowed: false,

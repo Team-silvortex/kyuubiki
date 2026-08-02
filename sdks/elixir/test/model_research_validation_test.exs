@@ -2,6 +2,7 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
   use ExUnit.Case, async: true
 
   alias KyuubikiSdk.ModelResearchValidation
+  alias KyuubikiSdk.ModelResearchFrontier
 
   @schemas Path.expand("../../../schemas", __DIR__)
 
@@ -19,6 +20,8 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
     assert report["stage"] == "workflow_result_validated"
     assert report["claim_boundary"] == "screening_only_not_qualification"
     assert report["external_validation_required"]
+    assert report["origin_plan_digest"] == digest("0")
+    assert report["result_plan_digest"] == digest("0")
     assert report["workflow_result"]["artifact_keys"] == ["thermo_summary.result"]
   end
 
@@ -38,6 +41,24 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
     assert report["stage"] == "screening_bundle_validated"
     assert report["material_bundle"]["bundle_id"] == bundle["bundle_id"]
     assert "external_validation_required" in report["next_actions"]
+  end
+
+  test "digest verifier reaches result validation" do
+    checkpoint = frontier()
+    assert {:ok, frontier_digest} = ModelResearchFrontier.compute_digest(checkpoint)
+    assert {:ok, verifier} = ModelResearchFrontier.digest_verifier(frontier_digest)
+
+    assert {:ok, report} =
+             ModelResearchValidation.validate(
+               checkpoint,
+               receipt(result_payload()),
+               graph(),
+               nil,
+               verifier,
+               &allow/1
+             )
+
+    assert report["origin_plan_digest"] == digest("0")
   end
 
   test "rejects wrong job and unverified frontier" do
@@ -80,6 +101,22 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
     assert error.message =~ "status must be completed"
   end
 
+  test "rejects result receipt from another verified plan" do
+    result_receipt = %{receipt(result_payload()) | "plan_digest" => digest("1")}
+
+    assert {:error, error} =
+             ModelResearchValidation.validate(
+               frontier(),
+               result_receipt,
+               graph(),
+               nil,
+               &allow/1,
+               &allow/1
+             )
+
+    assert error.message =~ "does not match"
+  end
+
   defp graph, do: load("examples.workflow-graph.json")
 
   defp load(name) do
@@ -91,14 +128,22 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
 
   defp frontier do
     %{
-      "schema_version" => "kyuubiki.model-research-frontier/v1",
+      "schema_version" => "kyuubiki.model-research-frontier/v2",
       "session_id" => "research-session",
       "workflow_id" => "workflow.heat-to-thermo-quad-2d",
+      "origin_plan_digest" => digest("0"),
       "stage" => "ready_to_validate",
       "job_id" => "job-validation-001",
       "next_action" => nil,
       "transition_count" => 3,
-      "evidence" => %{},
+      "evidence" => %{
+        "approval_id" => "approval-test",
+        "plan_digest" => digest("0"),
+        "action" => "result_fetch",
+        "record_index" => 1,
+        "authority" => "control_plane",
+        "job_status" => nil
+      },
       "blocking_reason" => nil
     }
   end
@@ -126,7 +171,7 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
       "plan_schema_version" => "kyuubiki.model-headless-plan/v1",
       "session_id" => "research-session",
       "workflow_id" => "workflow.heat-to-thermo-quad-2d",
-      "plan_digest" => "sha256:" <> String.duplicate("0", 64),
+      "plan_digest" => digest("0"),
       "status" => "completed",
       "execution_authority" => "kyuubiki-headless-sdk",
       "approval_id" => "approval-test",
@@ -144,6 +189,8 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
       ]
     }
   end
+
+  defp digest(character), do: "sha256:" <> String.duplicate(character, 64)
 
   defp allow(_value), do: true
   defp deny(_value), do: false

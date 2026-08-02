@@ -1,12 +1,12 @@
 use kyuubiki_headless_sdk::{
     HeadlessModelRisk, MODEL_HEADLESS_PLAN_SCHEMA_VERSION, MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
     MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION, ModelActionDispatch, ModelActionDispatcher,
-    ModelApprovalVerifier, ModelFrontierVerifier, ModelHeadlessPlan, ModelHeadlessPlanStep,
-    ModelPlanApproval, ModelReceiptVerifier, ModelResearchExecutionReceipt,
+    ModelApprovalVerifier, ModelFrontierDigestVerifier, ModelFrontierVerifier, ModelHeadlessPlan,
+    ModelHeadlessPlanStep, ModelPlanApproval, ModelReceiptVerifier, ModelResearchExecutionReceipt,
     ModelResearchExecutionRecord, ModelResearchExecutionStatus, ModelResearchFrontier,
     ModelResearchFrontierStage, SdkError, SdkResult, advance_model_research_frontier,
-    build_model_research_frontier_proposal, execute_model_headless_plan,
-    start_model_research_frontier,
+    build_model_research_frontier_proposal, compute_model_research_frontier_digest,
+    execute_model_headless_plan, start_model_research_frontier,
 };
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -78,6 +78,8 @@ fn verified_submission_binds_real_job_id_into_next_proposal() {
         start_model_research_frontier(&receipt, &TestReceiptVerifier(true)).expect("frontier");
     assert_eq!(frontier.stage, ModelResearchFrontierStage::WaitingForJob);
     assert_eq!(frontier.job_id.as_deref(), Some("job-real-001"));
+    assert_eq!(frontier.origin_plan_digest, receipt.plan_digest);
+    assert_eq!(frontier.evidence.plan_digest, receipt.plan_digest);
 
     let proposal = build_model_research_frontier_proposal(&frontier, &TestFrontierVerifier(true))
         .expect("proposal");
@@ -110,13 +112,14 @@ fn wait_and_fetch_advance_to_validation_without_guessing_ids() {
     );
     let waiting =
         start_model_research_frontier(&submitted, &TestReceiptVerifier(true)).expect("waiting");
-    let waited = receipt(
+    let mut waited = receipt(
         "job_wait",
         Some("job-real-002"),
         json!({"terminal": {"job": {"job_id": "job-real-002", "status": "completed"}}, "history": []}),
         ModelResearchExecutionStatus::Completed,
         None,
     );
+    waited.plan_digest = digest('1');
     let fetch = advance_model_research_frontier(
         &waiting,
         &waited,
@@ -125,18 +128,21 @@ fn wait_and_fetch_advance_to_validation_without_guessing_ids() {
     )
     .expect("fetch frontier");
     assert_eq!(fetch.stage, ModelResearchFrontierStage::ReadyToFetchResult);
+    assert_eq!(fetch.origin_plan_digest, digest('0'));
+    assert_eq!(fetch.evidence.plan_digest, digest('1'));
     let proposal = build_model_research_frontier_proposal(&fetch, &TestFrontierVerifier(true))
         .expect("fetch proposal");
     assert_eq!(proposal.calls[0].action, "result_fetch");
     assert_eq!(proposal.calls[0].payload["job_id"], "job-real-002");
 
-    let result = receipt(
+    let mut result = receipt(
         "result_fetch",
         Some("job-real-002"),
         json!({"result": {"artifacts": []}}),
         ModelResearchExecutionStatus::Completed,
         None,
     );
+    result.plan_digest = digest('2');
     let validate = advance_model_research_frontier(
         &fetch,
         &result,
@@ -146,6 +152,23 @@ fn wait_and_fetch_advance_to_validation_without_guessing_ids() {
     .expect("validation frontier");
     assert_eq!(validate.stage, ModelResearchFrontierStage::ReadyToValidate);
     assert!(validate.next_action.is_none());
+    assert_eq!(validate.origin_plan_digest, digest('0'));
+    assert_eq!(validate.evidence.plan_digest, digest('2'));
+}
+
+#[test]
+fn malformed_plan_digest_cannot_enter_frontier_chain() {
+    let mut submitted = receipt(
+        "workflow_submit_catalog",
+        None,
+        json!({"job": {"job_id": "job-real-005"}}),
+        ModelResearchExecutionStatus::Completed,
+        None,
+    );
+    submitted.plan_digest = "sha256:NOT-A-DIGEST".to_string();
+    let error = start_model_research_frontier(&submitted, &TestReceiptVerifier(true))
+        .expect_err("digest shape");
+    assert!(error.to_string().contains("receipt"));
 }
 
 #[test]
@@ -234,8 +257,24 @@ fn repository_frontier_fixture_matches_sdk_contract() {
         frontier.schema_version,
         MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION
     );
-    let proposal = build_model_research_frontier_proposal(&frontier, &TestFrontierVerifier(true))
-        .expect("proposal");
+    let expected_digest = "sha256:aba8f2d4289d4385f07fcb065f65b26a71d7c606397dd9d20700d604b9b25902";
+    assert_eq!(
+        compute_model_research_frontier_digest(&frontier).expect("frontier digest"),
+        expected_digest
+    );
+    let verifier = ModelFrontierDigestVerifier::new(expected_digest).expect("digest verifier");
+    let proposal =
+        build_model_research_frontier_proposal(&frontier, &verifier).expect("verified proposal");
+    let mut changed = frontier.clone();
+    changed.transition_count += 1;
+    assert_ne!(
+        compute_model_research_frontier_digest(&changed).expect("changed digest"),
+        expected_digest
+    );
+    assert!(build_model_research_frontier_proposal(&changed, &verifier).is_err());
+    changed.evidence.action = "ResultFetch".to_string();
+    assert!(compute_model_research_frontier_digest(&changed).is_err());
+    assert!(ModelFrontierDigestVerifier::new("sha256:not-valid").is_err());
     assert_eq!(
         proposal.calls[0].payload["job_id"],
         "job-material-envelope-001"
@@ -312,7 +351,7 @@ fn receipt(
         plan_schema_version: MODEL_HEADLESS_PLAN_SCHEMA_VERSION.to_string(),
         session_id: "research-session".to_string(),
         workflow_id: "workflow.material".to_string(),
-        plan_digest: format!("sha256:{}", "0".repeat(64)),
+        plan_digest: digest('0'),
         status,
         execution_authority: "kyuubiki-headless-sdk".to_string(),
         approval_id: Some("approval-test".to_string()),
@@ -327,4 +366,8 @@ fn receipt(
             error: error.map(str::to_string),
         }],
     }
+}
+
+fn digest(character: char) -> String {
+    format!("sha256:{}", character.to_string().repeat(64))
 }

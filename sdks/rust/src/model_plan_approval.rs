@@ -32,8 +32,12 @@ pub struct ModelPlanApprovalRequest {
 
 pub fn compute_model_headless_plan_digest(plan: &ModelHeadlessPlan) -> SdkResult<String> {
     let value = serde_json::to_value(plan)?;
-    let digest = Sha256::digest(canonical_json(&value).as_bytes());
-    Ok(format!("sha256:{digest:x}"))
+    Ok(compute_canonical_json_digest(&value))
+}
+
+pub(crate) fn compute_canonical_json_digest(value: &Value) -> String {
+    let digest = Sha256::digest(canonical_json(value).as_bytes());
+    format!("sha256:{digest:x}")
 }
 
 pub fn build_model_plan_approval_request(

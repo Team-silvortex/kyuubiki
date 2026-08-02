@@ -16,14 +16,16 @@ mod materialization_tests;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
+    CompositeDielectricLossSpec, CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
     build_material_exploration_next_round_execution_plan, build_material_exploration_run,
     build_material_exploration_run_for_iteration, build_material_study_execution_plan,
     composite_electrostatic_mesh_convergence_for_dielectric,
-    composite_electrostatic_refinement_requests_for_dielectric, composite_heat_cross_validation,
-    composite_heat_mesh_convergence, composite_heat_refinement_requests,
-    composite_thermal_algebraic_series, composite_thermal_algebraic_validation,
-    composite_thermal_constraint_sensitivity, composite_thermal_interface_graded_mesh_convergence,
+    composite_electrostatic_refinement_requests_for_dielectric,
+    composite_heat_cross_validation_for_distributed_load,
+    composite_heat_mesh_convergence_for_distributed_load,
+    composite_heat_refinement_requests_for_distributed_load, composite_thermal_algebraic_series,
+    composite_thermal_algebraic_validation, composite_thermal_constraint_sensitivity,
+    composite_thermal_interface_graded_mesh_convergence,
     composite_thermal_interface_graded_refinement_requests,
     composite_thermal_interface_graded_stress_recovery,
     composite_thermal_interface_grading_assessment, composite_thermal_mesh_convergence,
@@ -31,6 +33,7 @@ use kyuubiki_headless_sdk::{
     composite_thermal_regularized_mesh_convergence,
     composite_thermal_regularized_refinement_requests, composite_thermal_stress_recovery,
     describe_material_study, material_exploration_steps, material_study_catalog,
+    project_composite_dielectric_loss_to_heat, project_composite_heat_to_thermal,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -425,11 +428,14 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     let electrostatic_request: SolveElectrostaticPlaneQuad2dRequest =
         serde_json::from_value(required_payload(step, "electrostatic_model")?)
             .map_err(|error| error.to_string())?;
-    let heat_request: SolveHeatPlaneQuad2dRequest =
+    let heat_seed: SolveHeatPlaneQuad2dRequest =
         serde_json::from_value(required_payload(step, "heat_model")?)
             .map_err(|error| error.to_string())?;
-    let thermal_request: SolveThermalPlaneQuad2dRequest =
+    let thermal_seed: SolveThermalPlaneQuad2dRequest =
         serde_json::from_value(required_payload(step, "thermal_model")?)
+            .map_err(|error| error.to_string())?;
+    let loss_spec: CompositeDielectricLossSpec =
+        serde_json::from_value(required_payload(step, "electrothermal_loss")?)
             .map_err(|error| error.to_string())?;
     let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request)
         .map_err(|error| format!("composite electrostatic solve failed: {error}"))?;
@@ -450,22 +456,36 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         dielectric_relative_permittivity,
         &mesh_fields,
     );
+    let (heat_request, electrothermal_loss_projection) =
+        project_composite_dielectric_loss_to_heat(&electrostatic, &heat_seed, &loss_spec)?;
     let heat = solve_heat_plane_quad_2d(&heat_request)
         .map_err(|error| format!("composite heat solve failed: {error}"))?;
     let heat_conductivities = composite_heat_conductivities(&heat_request)?;
-    let heat_cross_validation =
-        composite_heat_cross_validation(heat_conductivities, Some(heat.max_temperature));
+    let total_heat_load_w = electrothermal_loss_projection.total_loss_w;
+    let heat_cross_validation = composite_heat_cross_validation_for_distributed_load(
+        heat_conductivities,
+        total_heat_load_w,
+        Some(heat.max_temperature),
+    );
     let mut heat_mesh_temperatures = vec![(1, heat.max_temperature)];
-    for (level, request) in composite_heat_refinement_requests(heat_conductivities)
-        .into_iter()
-        .filter(|(level, _)| *level > 1)
+    for (level, request) in composite_heat_refinement_requests_for_distributed_load(
+        heat_conductivities,
+        total_heat_load_w,
+    )?
+    .into_iter()
+    .filter(|(level, _)| *level > 1)
     {
         let result = solve_heat_plane_quad_2d(&request)
             .map_err(|error| format!("composite heat mesh level {level} solve failed: {error}"))?;
         heat_mesh_temperatures.push((level, result.max_temperature));
     }
-    let heat_mesh_convergence =
-        composite_heat_mesh_convergence(heat_conductivities, &heat_mesh_temperatures);
+    let heat_mesh_convergence = composite_heat_mesh_convergence_for_distributed_load(
+        heat_conductivities,
+        total_heat_load_w,
+        &heat_mesh_temperatures,
+    );
+    let (thermal_request, heat_to_thermal_projection) =
+        project_composite_heat_to_thermal(&heat, &thermal_seed, loss_spec.reference_temperature_c)?;
     let thermal_profile =
         profile_thermal_plane_quad_2d_with_options(&thermal_request, SpdSolveOptions::default())
             .map_err(|error| format!("composite thermal solve failed: {error}"))?;
@@ -581,9 +601,11 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         "research": step.payload.get("research").cloned().unwrap_or(Value::Null),
         "electrostatic": electrostatic,
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
+        "electrothermal_loss_projection": electrothermal_loss_projection,
         "heat": heat,
         "heat_cross_validation": heat_cross_validation,
         "heat_mesh_convergence": heat_mesh_convergence,
+        "heat_to_thermal_projection": heat_to_thermal_projection,
         "thermal": thermal,
         "thermal_mesh_convergence": thermal_mesh_convergence,
         "thermal_stress_recovery": thermal_stress_recovery,

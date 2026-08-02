@@ -17,7 +17,11 @@ MODEL_PLAN_APPROVAL_SCHEMA_VERSION = "kyuubiki.model-plan-approval/v2"
 def compute_model_headless_plan_digest(plan: Mapping[str, Any]) -> str:
     if not isinstance(plan, Mapping):
         _fail("model plan must be a JSON object")
-    canonical = _canonical_json(plan)
+    return _compute_canonical_json_digest(plan)
+
+
+def _compute_canonical_json_digest(value: Any) -> str:
+    canonical = _canonical_json(value)
     return f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"
 
 

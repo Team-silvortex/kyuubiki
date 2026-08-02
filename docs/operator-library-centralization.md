@@ -168,15 +168,14 @@ That does not require every field to be enforced immediately.
 It does require the central-library model to be reflected in the descriptor
 shape from now on.
 
-## Interaction With Team Silvortex Center Store
+## Interaction With External Stores
 
-The Team Silvortex hosted center store is an upstream distribution and business
-surface. It is not the agent-side operator-library authority.
+An external store is an upstream distribution surface. It is not the agent-side
+operator-library authority.
 
 The intended chain is:
 
-- Team Silvortex center store can host reviewed operator packages and workflow
-  templates.
+- An external store can host reviewed operator packages and workflow templates.
 - A self-hosted or hosted Kyuubiki control plane can sync, mirror, or select
   approved resources from that upstream source.
 - The bound `orchestra` remains the local authority that resolves the operator
@@ -184,11 +183,9 @@ The intended chain is:
 - Agents still fetch on demand from their bound `orchestra`, not directly from
   a marketplace account session.
 
-This keeps marketplace concerns separate from runtime authority. Billing,
-subscription, download quotas, publisher eligibility, and revenue sharing belong
-to the hosted Team Silvortex store plane. Operator identity, version selection,
-dispatch manifests, cache policy, and execution verification remain local
-runtime contracts.
+This keeps deployment-owned distribution and access policy separate from runtime
+authority. Operator identity, version selection, dispatch manifests, cache
+policy, provenance, and execution verification remain local runtime contracts.
 
 ## Managed operator modules
 

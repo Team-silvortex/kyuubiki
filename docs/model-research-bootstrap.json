@@ -74,6 +74,9 @@
         "approval_request": "build_model_plan_approval_request",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
+        "frontier_digest": "compute_model_research_frontier_digest",
+        "frontier_validator": "validate_model_research_frontier",
+        "frontier_digest_verifier": "ModelFrontierDigestVerifier",
         "result_validator": "validate_model_research_frontier_result",
         "receipt_verifier": "ModelReceiptVerifier",
         "frontier_verifier": "ModelFrontierVerifier"
@@ -90,6 +93,9 @@
         "approval_request": "build_model_plan_approval_request",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
+        "frontier_digest": "compute_model_research_frontier_digest",
+        "frontier_validator": "validate_model_research_frontier",
+        "frontier_digest_verifier": "ModelFrontierDigestVerifier",
         "result_validator": "validate_model_research_frontier_result",
         "receipt_verifier": "ReceiptVerifier",
         "frontier_verifier": "FrontierVerifier"
@@ -106,6 +112,9 @@
         "approval_request": "ModelPlanApproval.build_request/1",
         "frontier_start": "ModelResearchFrontier.start/2",
         "frontier_advance": "ModelResearchFrontier.advance/4",
+        "frontier_digest": "ModelResearchFrontier.compute_digest/1",
+        "frontier_validator": "ModelResearchFrontier.validate/1",
+        "frontier_digest_verifier": "ModelResearchFrontier.digest_verifier/1",
         "result_validator": "ModelResearchValidation.validate/6",
         "receipt_verifier": "caller-owned one-argument function",
         "frontier_verifier": "caller-owned one-argument function"
@@ -190,6 +199,7 @@
     "Reject an approval whenever its plan_digest differs from the complete plan presented for dispatch.",
     "A model response can request approval but can never issue, infer, verify, or self-authorize a caller approval.",
     "Advance cross-turn research only from a caller-verified execution receipt and its bound real job identifier.",
+    "Preserve origin_plan_digest across the research frontier, bind each state and final result to its producing plan digest, and compare persisted frontier digests against caller-owned trusted state.",
     "Process one known dependency frontier per model turn and never invent future job identifiers.",
     "Never claim execution from a request, proposal, dry run, plan, mock, or fallback result.",
     "Keep execution authority separate from numerical validation and experimental qualification.",
@@ -215,6 +225,7 @@
     ],
     "required_claims": [
       "execution_authority",
+      "origin_and_result_plan_digests",
       "reliability_posture",
       "limitations_and_blocking_reasons",
       "reproduction_path",

@@ -74,20 +74,33 @@ completed steps and the failing step without claiming workflow completion.
 Changing any nested payload after approval invalidates the digest and rejects
 the whole plan before dispatch.
 
-Cross-turn research uses `kyuubiki.model-research-frontier/v1`. A caller-owned
+Cross-turn research uses `kyuubiki.model-research-frontier/v2`. A caller-owned
 receipt verifier must authenticate each execution receipt before the frontier
 can advance. The frontier-generated proposal carries the real submission
 `job_id` into `job_wait`, then carries the same binding into `result_fetch`.
 Completed result retrieval stops at `ready_to_validate`; numerical validity is
 still established by the existing validation and research-bundle contracts.
 Persisted frontier state is also untrusted, so a separate caller-owned frontier
-verifier gates proposal generation and every subsequent transition.
+verifier gates proposal generation and every subsequent transition. The
+frontier preserves the submission plan as `origin_plan_digest` and replaces
+`evidence.plan_digest` with the receipt digest that produced each new state.
+Before persistence, integrations can compute the contract-field-only canonical
+digest with `compute_model_research_frontier_digest` in Rust/Python or
+`ModelResearchFrontier.compute_digest/1` in Elixir. Store the expected digest
+in caller-owned trusted state; a digest carried beside its own frontier is not
+authentication and grants no authority. `ModelFrontierDigestVerifier` in
+Rust/Python and `ModelResearchFrontier.digest_verifier/1` in Elixir adapt that
+trusted value directly to the existing frontier-verifier gate. The shared
+frontier validator checks only contract structure; it never replaces caller
+authentication or grants execution authority.
 
 The official SDKs close that handoff with
-`kyuubiki.model-research-validation-report/v1`. The validator authenticates the
+`kyuubiki.model-research-validation-report/v2`. The validator authenticates the
 frontier and `result_fetch` receipt, enforces workflow/job identity, validates
-the result against the resolved graph, and optionally validates a retained
-material research bundle. Its strongest automated stage is
+the exact result plan digest against the frontier evidence, validates the
+result against the resolved graph, and optionally validates a retained material
+research bundle. The report retains both `origin_plan_digest` and
+`result_plan_digest`. Its strongest automated stage is
 `screening_bundle_validated`; the report always states
 `screening_only_not_qualification` and requires external validation.
 

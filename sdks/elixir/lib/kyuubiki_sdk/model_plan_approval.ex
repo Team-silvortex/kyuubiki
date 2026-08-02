@@ -11,13 +11,20 @@ defmodule KyuubikiSdk.ModelPlanApproval do
   def approval_schema_version, do: @approval_schema
 
   def compute_digest(plan) when is_map(plan) do
-    with {:ok, canonical} <- canonical_json(plan) do
+    compute_canonical_digest(plan)
+  end
+
+  def compute_digest(_plan), do: validation_error("model plan must be a JSON object")
+
+  def compute_canonical_digest(value) when is_map(value) do
+    with {:ok, canonical} <- canonical_json(value) do
       digest = :crypto.hash(:sha256, canonical) |> Base.encode16(case: :lower)
       {:ok, "sha256:" <> digest}
     end
   end
 
-  def compute_digest(_plan), do: validation_error("model plan must be a JSON object")
+  def compute_canonical_digest(_value),
+    do: validation_error("canonical digest value must be a JSON object")
 
   def build_request(plan) when is_map(plan) do
     with :ok <- validate_plan(plan),

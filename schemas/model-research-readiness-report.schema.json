@@ -113,6 +113,9 @@
         "approval_request",
         "frontier_start",
         "frontier_advance",
+        "frontier_digest",
+        "frontier_validator",
+        "frontier_digest_verifier",
         "result_validator",
         "receipt_verifier",
         "frontier_verifier"
@@ -136,6 +139,9 @@
         "approval_request": { "$ref": "#/$defs/nonEmptyString" },
         "frontier_start": { "$ref": "#/$defs/nonEmptyString" },
         "frontier_advance": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_digest": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_validator": { "$ref": "#/$defs/nonEmptyString" },
+        "frontier_digest_verifier": { "$ref": "#/$defs/nonEmptyString" },
         "result_validator": { "$ref": "#/$defs/nonEmptyString" },
         "receipt_verifier": { "$ref": "#/$defs/nonEmptyString" },
         "frontier_verifier": { "$ref": "#/$defs/nonEmptyString" }

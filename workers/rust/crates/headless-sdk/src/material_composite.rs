@@ -6,18 +6,21 @@ use crate::material_composite_interfaces::{
     composite_material_regions,
 };
 use crate::material_composite_models::{
-    composite_research_metadata, electrostatic_model, heat_model, thermal_model,
+    composite_research_metadata, electrostatic_model, electrothermal_loss_model, heat_model,
+    thermal_model,
 };
 use crate::material_composite_quality::composite_structural_quality_gates;
 use crate::{
     CompositeElectrostaticCrossValidation, CompositeElectrostaticMeshConvergence,
-    CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
+    CompositeElectrothermalLossProjection, CompositeHeatCrossValidation,
+    CompositeHeatMeshConvergence, CompositeHeatToThermalProjection,
     CompositeThermalConstraintSensitivity, CompositeThermalInterfaceGradingAssessment,
     CompositeThermalMeshConvergence, CompositeThermalStressRecovery, HeadlessWorkflowStep,
     MaterialCardReference, MaterialOptimizationProfile, MaterialOptimizationTerm,
     MaterialQualityGate, MaterialReliabilityEnvelope, MaterialResearchMetricSpec,
     composite_electrostatic_cross_validation, composite_electrostatic_mesh_convergence,
-    composite_heat_cross_validation, composite_heat_mesh_convergence,
+    composite_heat_cross_validation, composite_heat_cross_validation_for_distributed_load,
+    composite_heat_mesh_convergence, composite_heat_mesh_convergence_for_distributed_load,
     composite_thermal_constraint_sensitivity, composite_thermal_interface_grading_assessment,
     composite_thermal_mesh_convergence, composite_thermal_stress_recovery,
     material_optimization_constraint, material_optimization_profile, material_optimization_term,
@@ -36,9 +39,11 @@ pub struct CompositePanelCandidateReport {
     pub max_electric_field_v_m: Option<f64>,
     pub electrostatic_cross_validation: CompositeElectrostaticCrossValidation,
     pub electrostatic_mesh_convergence: CompositeElectrostaticMeshConvergence,
+    pub electrothermal_loss_projection: Option<CompositeElectrothermalLossProjection>,
     pub max_temperature_c: Option<f64>,
     pub heat_cross_validation: CompositeHeatCrossValidation,
     pub heat_mesh_convergence: CompositeHeatMeshConvergence,
+    pub heat_to_thermal_projection: Option<CompositeHeatToThermalProjection>,
     pub max_thermal_stress_pa: Option<f64>,
     pub thermal_mesh_convergence: CompositeThermalMeshConvergence,
     pub thermal_constraint_regularized_mesh_convergence: CompositeThermalMeshConvergence,
@@ -88,6 +93,14 @@ pub fn composite_panel_metric_specs() -> Vec<MaterialResearchMetricSpec> {
             "heat.max_temperature",
         ),
         metric(
+            "dielectric_loss_power_w",
+            "Dielectric loss power",
+            "W",
+            "minimize",
+            0.0,
+            "electrothermal_loss_projection.total_loss_w",
+        ),
+        metric(
             "max_thermal_stress_pa",
             "Max thermal stress",
             "Pa",
@@ -131,6 +144,7 @@ pub fn build_composite_panel_steps() -> Vec<HeadlessWorkflowStep> {
                 json!({
                     "research": composite_research_metadata(&candidate),
                     "electrostatic_model": electrostatic_model(&candidate),
+                    "electrothermal_loss": electrothermal_loss_model(&candidate),
                     "heat_model": heat_model(&candidate),
                     "thermal_model": thermal_model(&candidate),
                 }),
@@ -182,7 +196,7 @@ pub fn build_composite_panel_report(
         schema_version: "kyuubiki.composite-panel-report/v1".to_string(),
         study: "material.composite_thermo_electric_panel.v1".to_string(),
         objective: "rank mixed-material electro-thermal-structural panel stacks".to_string(),
-        coupling: "sequential_electrostatic_to_heat_to_thermal_stress".to_string(),
+        coupling: "sequential_electrostatic_dielectric_loss_to_heat_to_thermal_stress".to_string(),
         material_regions: composite_material_regions(),
         optimization,
         reliability: composite_reliability_envelope(&rows),
@@ -214,6 +228,10 @@ fn composite_candidate_report(
 ) -> CompositePanelCandidateReport {
     let result = descend_result_payload(payload);
     let max_electric_field_v_m = read_path_f64(result, &["electrostatic", "max_electric_field"]);
+    let electrothermal_loss_projection: Option<CompositeElectrothermalLossProjection> = result
+        .get("electrothermal_loss_projection")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok());
     let max_temperature_c = read_path_f64(result, &["heat", "max_temperature"]);
     let max_thermal_stress_pa = read_path_f64(result, &["thermal", "max_stress"]);
     let thermal_mesh_convergence = result
@@ -268,12 +286,38 @@ fn composite_candidate_report(
         .get("heat_cross_validation")
         .cloned()
         .and_then(|value| serde_json::from_value(value).ok())
-        .unwrap_or_else(|| composite_heat_cross_validation(heat_conductivities, max_temperature_c));
+        .unwrap_or_else(|| {
+            electrothermal_loss_projection.as_ref().map_or_else(
+                || composite_heat_cross_validation(heat_conductivities, max_temperature_c),
+                |projection| {
+                    composite_heat_cross_validation_for_distributed_load(
+                        heat_conductivities,
+                        projection.total_loss_w,
+                        max_temperature_c,
+                    )
+                },
+            )
+        });
     let heat_mesh_convergence = result
         .get("heat_mesh_convergence")
         .cloned()
         .and_then(|value| serde_json::from_value(value).ok())
-        .unwrap_or_else(|| composite_heat_mesh_convergence(heat_conductivities, &[]));
+        .unwrap_or_else(|| {
+            electrothermal_loss_projection.as_ref().map_or_else(
+                || composite_heat_mesh_convergence(heat_conductivities, &[]),
+                |projection| {
+                    composite_heat_mesh_convergence_for_distributed_load(
+                        heat_conductivities,
+                        projection.total_loss_w,
+                        &[],
+                    )
+                },
+            )
+        });
+    let heat_to_thermal_projection = result
+        .get("heat_to_thermal_projection")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok());
     let interfaces = assess_composite_interfaces(candidate);
     let weakest_interface = interfaces
         .iter()
@@ -298,6 +342,12 @@ fn composite_candidate_report(
             missing_metrics.push(metric.to_string());
         }
     }
+    if electrothermal_loss_projection.is_none() {
+        missing_metrics.push("electrothermal_loss_projection".to_string());
+    }
+    if heat_to_thermal_projection.is_none() {
+        missing_metrics.push("heat_to_thermal_projection".to_string());
+    }
     CompositePanelCandidateReport {
         candidate_id: candidate.id.to_string(),
         candidate_label: candidate.label.to_string(),
@@ -306,9 +356,11 @@ fn composite_candidate_report(
         max_electric_field_v_m,
         electrostatic_cross_validation,
         electrostatic_mesh_convergence,
+        electrothermal_loss_projection,
         max_temperature_c,
         heat_cross_validation,
         heat_mesh_convergence,
+        heat_to_thermal_projection,
         max_thermal_stress_pa,
         thermal_mesh_convergence,
         thermal_constraint_regularized_mesh_convergence,
@@ -443,9 +495,9 @@ fn composite_reliability_envelope(
         summary: material_reliability_summary(&quality_gates),
         quality_gates,
         limitations: vec![
-            "Sequential coupling maps electrostatic, heat, and thermal stress through fixed synthetic fixtures rather than a monolithic coupled matrix.".to_string(),
+            "Sequential coupling is one-way and weakly coupled; temperature-dependent electrical feedback and a monolithic coupled Jacobian are not modeled yet.".to_string(),
             "Material regions are scalar and isotropic; anisotropy, temperature-dependent curves, and delamination propagation are not modeled yet.".to_string(),
-            "Electrical heating is represented by a screening heat fixture, not a Joule-loss field projection from electrostatic energy density.".to_string(),
+            "Electrical heating projects harmonic dielectric loss from solved RMS fields; conductor current flow, contact resistance, and broadband dielectric curves remain outside this screening model.".to_string(),
             "Interface risk is a screening heuristic over CTE mismatch and stiffness contrast, not an adhesive fracture mechanics model.".to_string(),
             "The regularized restraint solve is diagnostic only; persistent strain-energy nonconvergence remains a qualification blocker.".to_string(),
             "Use this prototype for architecture validation and candidate ordering only, not qualification claims.".to_string(),
@@ -492,6 +544,19 @@ fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<Materi
             "Every retained mesh level must remain consistent with the layered-dielectric closed form.",
         ),
         material_quality_gate(
+            "gate.electrothermal_loss.energy_balance",
+            "Electrothermal loss projection energy balance",
+            "electrothermal_loss_energy_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrothermal_loss_projection
+                    .as_ref()
+                    .map(|projection| projection.energy_balance_relative_error)
+            })),
+            "Projected dielectric loss must equal the total heat load distributed to heat nodes.",
+        ),
+        material_quality_gate(
             "gate.heat_closed_form.relative_error",
             "Layered thermal-resistance cross-validation",
             "heat_closed_form_relative_error",
@@ -526,6 +591,19 @@ fn composite_quality_gates(rows: &[CompositePanelCandidateReport]) -> Vec<Materi
                     .filter_map(|row| row.heat_mesh_convergence.max_analytic_relative_error),
             ),
             "Every retained heat mesh must remain consistent with the layered thermal-resistance solution.",
+        ),
+        material_quality_gate(
+            "gate.heat_to_thermal.coordinate_alignment",
+            "Heat-to-thermal node coordinate alignment",
+            "heat_to_thermal_maximum_coordinate_error_m",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.heat_to_thermal_projection
+                    .as_ref()
+                    .map(|projection| projection.maximum_coordinate_error_m)
+            })),
+            "Every projected temperature must target a structurally identical node coordinate.",
         ),
         material_quality_gate(
             "gate.breakdown_margin.prototype",

@@ -7,7 +7,7 @@ defmodule KyuubikiSdk.ModelResearchValidation do
   alias KyuubikiSdk.ModelResearchFrontier
   alias KyuubikiSdk.WorkflowResults
 
-  @schema_version "kyuubiki.model-research-validation-report/v1"
+  @schema_version "kyuubiki.model-research-validation-report/v2"
   @claim_boundary "screening_only_not_qualification"
 
   def schema_version, do: @schema_version
@@ -30,6 +30,8 @@ defmodule KyuubikiSdk.ModelResearchValidation do
          "session_id" => frontier["session_id"],
          "workflow_id" => frontier["workflow_id"],
          "job_id" => frontier["job_id"],
+         "origin_plan_digest" => frontier["origin_plan_digest"],
+         "result_plan_digest" => result_receipt["plan_digest"],
          "stage" => stage,
          "claim_boundary" => @claim_boundary,
          "external_validation_required" => true,
@@ -49,15 +51,15 @@ defmodule KyuubikiSdk.ModelResearchValidation do
     do: validation_error("frontier and receipt verifiers must be one-argument functions")
 
   defp validate_frontier_binding(%{} = frontier) do
-    valid =
-      frontier["schema_version"] == ModelResearchFrontier.schema_version() and
+    with :ok <- ModelResearchFrontier.validate(frontier) do
+      valid =
         frontier["stage"] == "ready_to_validate" and is_nil(frontier["next_action"]) and
-        is_nil(frontier["blocking_reason"]) and present?(frontier["session_id"]) and
-        present?(frontier["workflow_id"]) and present?(frontier["job_id"])
+          is_nil(frontier["blocking_reason"]) and present?(frontier["job_id"])
 
-    if valid,
-      do: :ok,
-      else: validation_error("research frontier is not ready for result validation")
+      if valid,
+        do: :ok,
+        else: validation_error("research frontier is not ready for result validation")
+    end
   end
 
   defp validate_frontier_binding(_frontier),
@@ -72,6 +74,7 @@ defmodule KyuubikiSdk.ModelResearchValidation do
         receipt["status"] == "completed" and
         receipt["session_id"] == frontier["session_id"] and
         receipt["workflow_id"] == frontier["workflow_id"] and is_map(record) and
+        receipt["plan_digest"] == get_in(frontier, ["evidence", "plan_digest"]) and
         record["action"] == "result_fetch" and record["job_id"] == frontier["job_id"] and
         present?(record["authority"]) and not is_nil(record["output"]) and
         is_nil(record["error"])
@@ -156,5 +159,6 @@ defmodule KyuubikiSdk.ModelResearchValidation do
   end
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""
+
   defp validation_error(message), do: {:error, Error.model_research_execution([message])}
 end

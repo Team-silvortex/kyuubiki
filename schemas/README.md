@@ -50,10 +50,16 @@ README.
   upgrading an attempt into a completion claim.
 - `model-research-frontier.schema.json` defines the small persistent cross-turn
   state that binds follow-up proposals to a verified real `job_id` instead of
-  allowing a model or caller to invent future task identifiers.
+  allowing a model or caller to invent future task identifiers. It preserves
+  the submission `origin_plan_digest` while binding each new state to the
+  producing receipt through `evidence.plan_digest`. Official SDK digest helpers
+  canonicalize only these contract fields, excluding the optional `$schema`
+  annotation, so trusted checkpoint comparisons remain cross-language stable.
 - `model-research-validation-report.schema.json` defines the verified handoff
   from a `ready_to_validate` frontier and bound result receipt into workflow
   result evidence and, when supplied, a validated screening research bundle.
+  Its origin/result digest pair prevents substitution by another authenticated
+  receipt for the same workflow and job.
   It permanently marks external validation as required and forbids qualification
   claims from this automated path.
 - `examples.model-plan-approval.json` demonstrates the approval shape for the
@@ -211,10 +217,9 @@ The shared approval-request fixture is the parity vector for all SDKs.
   provenance, database, frontend client, docs, and readiness guard inputs
   project-relative and machine-checkable.
 - `central-session-policy.schema.json`, `central-publish-policy.schema.json`,
-  and `central-publisher-policy.schema.json` carry the Team Silvortex hosted
-  official website account integration, store commercial model, publisher
-  eligibility, and payout-policy preview contracts while preserving self-hosted
-  store independence from hosted account services.
+  and `central-publisher-policy.schema.json` define the deployment-owned
+  identity-provider adapter, portable publishing requirements, and generic
+  publisher identity/token boundary while preserving self-hosted independence.
 - `central-publish-pipeline.schema.json` is for the center-store write-side
   workflow contract that orders publisher identity, artifact envelope,
   signature attestation, review queue, catalog indexing, recall/yank, and

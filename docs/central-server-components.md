@@ -2,14 +2,9 @@
 
 `moxi 2.x` now has a preview contract for the future Kyuubiki central
 server. The central server is not the solver engine and not the desktop Hub. It
-is the distribution and identity plane that can later back hosted stores,
-publisher accounts, language-pack delivery, and signed downloads.
-
-Kyuubiki is a Team Silvortex application. The hosted center store can integrate
-with the Team Silvortex official website account system for login, quota,
-billing, and publisher payouts, but Kyuubiki does not own that account system
-and that hosted account plane is not required for open-source self-hosted
-Kyuubiki store deployments.
+is the distribution plane that can back self-hosted stores, publisher profiles,
+language-pack delivery, signed downloads, and optional external identity
+providers.
 
 The website service belongs to this central-server surface. It is a deployable
 web/API face of the same `apps/web` control-plane workload, not a separate
@@ -179,27 +174,20 @@ database connection strings. Its schema is
 ## Auth Boundary
 
 The current auth mode remains local orchestra token auth. The central session
-policy explicitly marks hosted login as preview/planned instead of pretending a
-real account system exists.
+policy exposes an unconfigured, deployment-owned `identity_provider` adapter
+instead of pretending a hosted account system exists. Its portable contract is
+OIDC authorization code with PKCE, exact redirect URI enforcement, `state`,
+`nonce`, `pkce_s256`, issuer-plus-subject identity, bounded credential storage,
+and explicit rejection of password grants or dynamic client registration.
 
-The hosted account boundary is shared Team Silvortex account system territory
-owned by the official website project: account lifecycle, OIDC provider
-behavior, billing identity, subscription entitlement, legal payment method
-checks, fraud controls, tax, and payout execution belong to that hosted service
-plane. Kyuubiki consumes it as a reviewed OIDC client and policy consumer. The
-open-source self-hosted store surface keeps the same catalog, policy,
-provenance, and readiness contracts without requiring a Team Silvortex account.
-
-The central session policy also exposes Kyuubiki's own
-`identity_integration` contract for that client role: OIDC discovery through
-`/.well-known/openid-configuration`, authorization-code with PKCE, exact
-redirect URI enforcement, `state`, `nonce`, `pkce_s256`, platform keychain or
-memory-only token storage, and explicit rejection of password grants or dynamic
-client registration.
+Provider identity, issuer, client registration, entitlement, and any business
+policy are deployment configuration owned outside Kyuubiki core. The
+open-source self-hosted store keeps its catalog, policy, provenance, and
+readiness contracts with no external identity requirement.
 
 Planned providers:
 
-- OIDC for Hub, Workbench, and SDK login.
+- Deployment-configured OIDC for Hub, Workbench, and SDK login.
 - Device-code login for CLI, remote agents, and headless SDK flows.
 - Personal access tokens for CI, installer, and automation.
 
@@ -212,5 +200,5 @@ memory-only for sensitive active-session material.
 - It does not replace agent-orchestra authority rules.
 - It does not make each agent mirror the whole operator library.
 - It does not introduce publisher trust without signatures and provenance.
-- It does not ship hosted Team Silvortex billing, quota, or payout internals in
-  the open-source runtime.
+- It does not ship vendor-specific identity, entitlement, payment, or payout
+  policy in the open-source runtime.

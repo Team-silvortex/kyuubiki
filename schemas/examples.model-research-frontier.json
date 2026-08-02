@@ -1,14 +1,16 @@
 {
   "$schema": "../schemas/model-research-frontier.schema.json",
-  "schema_version": "kyuubiki.model-research-frontier/v1",
+  "schema_version": "kyuubiki.model-research-frontier/v2",
   "session_id": "session.material-screening.001",
   "workflow_id": "workflow.material-study-envelope-ranking-json",
+  "origin_plan_digest": "sha256:22e040653a1fc2274201a86f3ffaff67e896cedb5754e6fee01fb0528704d18d",
   "stage": "waiting_for_job",
   "job_id": "job-material-envelope-001",
   "next_action": "job_wait",
   "transition_count": 1,
   "evidence": {
     "approval_id": "approval.material-screening.example",
+    "plan_digest": "sha256:22e040653a1fc2274201a86f3ffaff67e896cedb5754e6fee01fb0528704d18d",
     "action": "workflow_submit_catalog",
     "record_index": 2,
     "authority": "control_plane",

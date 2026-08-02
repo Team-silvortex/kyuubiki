@@ -3,12 +3,46 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
 
   alias KyuubikiSdk.Error
   alias KyuubikiSdk.ModelCollaboration
+  alias KyuubikiSdk.ModelPlanApproval
   alias KyuubikiSdk.ModelResearchExecution
 
-  @frontier_schema "kyuubiki.model-research-frontier/v1"
+  @frontier_schema "kyuubiki.model-research-frontier/v2"
   @submit_actions ["fem_submit", "workflow_submit_catalog", "workflow_submit_graph"]
 
   def schema_version, do: @frontier_schema
+
+  def compute_digest(current) when is_map(current) do
+    with :ok <- validate(current) do
+      current
+      |> digest_projection()
+      |> ModelPlanApproval.compute_canonical_digest()
+    end
+  end
+
+  def compute_digest(_current), do: validation_error("research frontier must be a JSON object")
+
+  def verify_digest(current, expected_digest) do
+    cond do
+      not valid_plan_digest?(expected_digest) ->
+        validation_error("expected research frontier digest is invalid")
+
+      true ->
+        with {:ok, actual_digest} <- compute_digest(current) do
+          if actual_digest == expected_digest,
+            do: :ok,
+            else:
+              validation_error("persisted research frontier digest does not match trusted state")
+        end
+    end
+  end
+
+  def digest_verifier(expected_digest) do
+    if valid_plan_digest?(expected_digest) do
+      {:ok, fn current -> verify_digest(current, expected_digest) end}
+    else
+      validation_error("expected research frontier digest is invalid")
+    end
+  end
 
   def start(receipt, receipt_verifier) when is_function(receipt_verifier, 1) do
     with :ok <- validate_receipt(receipt),
@@ -23,7 +57,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
 
   def advance(current, receipt, frontier_verifier, receipt_verifier)
       when is_function(frontier_verifier, 1) and is_function(receipt_verifier, 1) do
-    with :ok <- validate_frontier(current),
+    with :ok <- validate(current),
          :ok <- verify_frontier(current, frontier_verifier),
          :ok <- validate_receipt(receipt),
          :ok <- verify_receipt(receipt, receipt_verifier),
@@ -38,7 +72,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
     do: validation_error("frontier and receipt verifiers must be one-argument functions")
 
   def build_proposal(current, frontier_verifier) when is_function(frontier_verifier, 1) do
-    with :ok <- validate_frontier(current),
+    with :ok <- validate(current),
          :ok <- verify_frontier(current, frontier_verifier),
          {:ok, action} <- next_action(current),
          {:ok, job_id} <- required_string(current, "job_id") do
@@ -63,7 +97,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
     do: validation_error("frontier verifier must be a one-argument function")
 
   defp start_from_record(%{"status" => "failed"} = receipt, record),
-    do: {:ok, blocked_frontier(receipt, record, nil, 1)}
+    do: {:ok, blocked_frontier(receipt, record, receipt["plan_digest"], nil, 1)}
 
   defp start_from_record(%{"status" => "completed"} = receipt, record) do
     cond do
@@ -75,6 +109,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
           job_id when is_binary(job_id) and job_id != "" ->
             {:ok,
              frontier(receipt, record,
+               origin_plan_digest: receipt["plan_digest"],
                stage: "waiting_for_job",
                job_id: job_id,
                next_action: "job_wait",
@@ -92,6 +127,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
      blocked_frontier(
        receipt,
        record,
+       current["origin_plan_digest"],
        current["job_id"],
        current["transition_count"] + 1
      )}
@@ -113,6 +149,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
       expected == "result_fetch" ->
         {:ok,
          frontier(receipt, record,
+           origin_plan_digest: current["origin_plan_digest"],
            stage: "ready_to_validate",
            job_id: current["job_id"],
            next_action: nil,
@@ -129,6 +166,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
       "completed" = status ->
         {:ok,
          frontier(receipt, record,
+           origin_plan_digest: current["origin_plan_digest"],
            stage: "ready_to_fetch_result",
            job_id: current["job_id"],
            next_action: "result_fetch",
@@ -139,6 +177,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
       status when status in ["failed", "cancelled"] ->
         {:ok,
          frontier(receipt, record,
+           origin_plan_digest: current["origin_plan_digest"],
            stage: "blocked",
            job_id: current["job_id"],
            next_action: nil,
@@ -160,12 +199,14 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
       "schema_version" => @frontier_schema,
       "session_id" => receipt["session_id"],
       "workflow_id" => receipt["workflow_id"],
+      "origin_plan_digest" => Keyword.fetch!(opts, :origin_plan_digest),
       "stage" => Keyword.fetch!(opts, :stage),
       "job_id" => Keyword.get(opts, :job_id),
       "next_action" => Keyword.get(opts, :next_action),
       "transition_count" => Keyword.fetch!(opts, :transition_count),
       "evidence" => %{
         "approval_id" => receipt["approval_id"],
+        "plan_digest" => receipt["plan_digest"],
         "action" => record["action"],
         "record_index" => record["index"],
         "authority" => record["authority"],
@@ -175,8 +216,9 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
     }
   end
 
-  defp blocked_frontier(receipt, record, job_id, transition_count) do
+  defp blocked_frontier(receipt, record, origin_plan_digest, job_id, transition_count) do
     frontier(receipt, record,
+      origin_plan_digest: origin_plan_digest,
       stage: "blocked",
       job_id: job_id,
       next_action: nil,
@@ -193,6 +235,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
 
       not present_string?(receipt["session_id"]) or
         not present_string?(receipt["workflow_id"]) or
+        not valid_plan_digest?(receipt["plan_digest"]) or
         not is_list(receipt["records"]) or receipt["records"] == [] ->
         validation_error("research execution receipt is incomplete")
 
@@ -210,11 +253,15 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
   defp validate_receipt(_receipt),
     do: validation_error("research execution receipt must be a JSON object")
 
-  defp validate_frontier(current) when is_map(current) do
+  def validate(current) when is_map(current) do
     cond do
       current["schema_version"] != @frontier_schema or
         not present_string?(current["session_id"]) or
         not present_string?(current["workflow_id"]) or
+        not valid_plan_digest?(current["origin_plan_digest"]) or
+        not is_map(current["evidence"]) or
+        not valid_plan_digest?(current["evidence"]["plan_digest"]) or
+        not valid_evidence?(current["evidence"]) or
         not is_integer(current["transition_count"]) or current["transition_count"] <= 0 ->
         validation_error("research frontier is incomplete or uses an unsupported schema")
 
@@ -226,7 +273,7 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
     end
   end
 
-  defp validate_frontier(_current),
+  def validate(_current),
     do: validation_error("research frontier must be a JSON object")
 
   defp verify_receipt(receipt, verifier) do
@@ -296,6 +343,44 @@ defmodule KyuubikiSdk.ModelResearchFrontier do
   end
 
   defp present_string?(value), do: is_binary(value) and String.trim(value) != ""
+
+  defp valid_plan_digest?("sha256:" <> digest) when byte_size(digest) == 64,
+    do: String.match?(digest, ~r/\A[0-9a-f]{64}\z/)
+
+  defp valid_plan_digest?(_value), do: false
+
+  defp valid_evidence?(evidence) do
+    is_binary(evidence["action"]) and
+      Regex.match?(~r/\A[a-z][a-z0-9_]*\z/, evidence["action"]) and
+      is_integer(evidence["record_index"]) and evidence["record_index"] > 0 and
+      (is_nil(evidence["approval_id"]) or is_binary(evidence["approval_id"])) and
+      (is_nil(evidence["authority"]) or is_binary(evidence["authority"])) and
+      evidence["job_status"] in [nil, "completed", "failed", "cancelled"]
+  end
+
+  defp digest_projection(current) do
+    evidence = current["evidence"]
+
+    %{
+      "schema_version" => current["schema_version"],
+      "session_id" => current["session_id"],
+      "workflow_id" => current["workflow_id"],
+      "origin_plan_digest" => current["origin_plan_digest"],
+      "stage" => current["stage"],
+      "job_id" => current["job_id"],
+      "next_action" => current["next_action"],
+      "transition_count" => current["transition_count"],
+      "evidence" => %{
+        "approval_id" => evidence["approval_id"],
+        "plan_digest" => evidence["plan_digest"],
+        "action" => evidence["action"],
+        "record_index" => evidence["record_index"],
+        "authority" => evidence["authority"],
+        "job_status" => evidence["job_status"]
+      },
+      "blocking_reason" => current["blocking_reason"]
+    }
+  end
 
   defp valid_final_record?("completed", record) when is_map(record),
     do:

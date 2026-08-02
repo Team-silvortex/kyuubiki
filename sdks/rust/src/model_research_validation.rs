@@ -1,9 +1,9 @@
 use crate::{
-    MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
-    MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION, MaterialResearchBundle, ModelFrontierVerifier,
-    ModelReceiptVerifier, ModelResearchExecutionReceipt, ModelResearchExecutionStatus,
-    ModelResearchFrontier, ModelResearchFrontierStage, SdkError, SdkResult,
-    WorkflowGraphDefinition, validate_material_research_bundle,
+    MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION,
+    MaterialResearchBundle, ModelFrontierVerifier, ModelReceiptVerifier,
+    ModelResearchExecutionReceipt, ModelResearchExecutionStatus, ModelResearchFrontier,
+    ModelResearchFrontierStage, SdkError, SdkResult, WorkflowGraphDefinition,
+    validate_material_research_bundle, validate_model_research_frontier,
     validate_workflow_result_against_graph,
 };
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 pub const MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION: &str =
-    "kyuubiki.model-research-validation-report/v1";
+    "kyuubiki.model-research-validation-report/v2";
 
 const CLAIM_BOUNDARY: &str = "screening_only_not_qualification";
 
@@ -45,6 +45,8 @@ pub struct ModelResearchValidationReport {
     pub session_id: String,
     pub workflow_id: String,
     pub job_id: String,
+    pub origin_plan_digest: String,
+    pub result_plan_digest: String,
     pub stage: ModelResearchValidationStage,
     pub claim_boundary: String,
     pub external_validation_required: bool,
@@ -150,6 +152,8 @@ pub fn validate_model_research_frontier_result<
         session_id: frontier.session_id.clone(),
         workflow_id: frontier.workflow_id.clone(),
         job_id: frontier.job_id.clone().expect("frontier binding validated"),
+        origin_plan_digest: frontier.origin_plan_digest.clone(),
+        result_plan_digest: result_receipt.plan_digest.clone(),
         stage,
         claim_boundary: CLAIM_BOUNDARY.to_string(),
         external_validation_required: true,
@@ -165,12 +169,10 @@ pub fn validate_model_research_frontier_result<
 }
 
 fn validate_frontier_binding(frontier: &ModelResearchFrontier) -> SdkResult<()> {
-    if frontier.schema_version != MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION
-        || frontier.stage != ModelResearchFrontierStage::ReadyToValidate
+    validate_model_research_frontier(frontier)?;
+    if frontier.stage != ModelResearchFrontierStage::ReadyToValidate
         || frontier.next_action.is_some()
         || frontier.blocking_reason.is_some()
-        || frontier.session_id.trim().is_empty()
-        || frontier.workflow_id.trim().is_empty()
         || frontier
             .job_id
             .as_deref()
@@ -194,6 +196,8 @@ fn validate_result_receipt(
         || receipt.status != ModelResearchExecutionStatus::Completed
         || receipt.session_id != frontier.session_id
         || receipt.workflow_id != frontier.workflow_id
+        || !valid_plan_digest(&receipt.plan_digest)
+        || receipt.plan_digest != frontier.evidence.plan_digest
         || record.action != "result_fetch"
         || record.job_id.as_deref() != frontier.job_id.as_deref()
         || record.authority.as_deref().is_none_or(str::is_empty)
@@ -218,6 +222,15 @@ fn string_array(value: Option<&Value>) -> SdkResult<Vec<String>> {
             validation("material bundle next validation actions must be non-empty strings")
         })?;
     Ok(actions.into_iter().map(str::to_string).collect())
+}
+
+fn valid_plan_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|digest| {
+        digest.len() == 64
+            && digest
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    })
 }
 
 fn validation(message: impl Into<String>) -> SdkError {

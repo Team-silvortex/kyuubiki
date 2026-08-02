@@ -65,10 +65,12 @@ pub use model_research_execution::{
     execute_model_headless_plan,
 };
 pub use model_research_frontier::{
-    MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION, ModelFrontierVerifier, ModelReceiptVerifier,
-    ModelResearchFrontier, ModelResearchFrontierEvidence, ModelResearchFrontierStage,
-    advance_model_research_frontier, build_model_research_frontier_proposal,
-    start_model_research_frontier,
+    MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION, ModelFrontierDigestVerifier, ModelFrontierVerifier,
+    ModelReceiptVerifier, ModelResearchFrontier, ModelResearchFrontierEvidence,
+    ModelResearchFrontierStage, advance_model_research_frontier,
+    build_model_research_frontier_proposal, compute_model_research_frontier_digest,
+    start_model_research_frontier, validate_model_research_frontier,
+    verify_model_research_frontier_digest,
 };
 pub use model_research_validation::{
     MODEL_RESEARCH_VALIDATION_REPORT_SCHEMA_VERSION, ModelResearchBundleValidation,

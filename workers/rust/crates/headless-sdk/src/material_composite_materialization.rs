@@ -1,5 +1,7 @@
 use crate::material_composite_interfaces::assess_composite_interfaces;
-use crate::material_composite_models::{electrostatic_model, heat_model, thermal_model};
+use crate::material_composite_models::{
+    electrostatic_model, electrothermal_loss_model, heat_model, thermal_model,
+};
 use crate::{CompositePanelCandidate, HeadlessWorkflowStep, composite_panel_candidates};
 use serde_json::{Value, json};
 
@@ -29,6 +31,7 @@ fn materialized_candidate_step(spec: &Value) -> Result<HeadlessWorkflowStep, Str
         json!({
             "research": materialized_research_metadata(spec, &candidate)?,
             "electrostatic_model": electrostatic_model(&candidate),
+            "electrothermal_loss": electrothermal_loss_model(&candidate),
             "heat_model": heat_model(&candidate),
             "thermal_model": thermal_model(&candidate),
         }),
@@ -62,6 +65,7 @@ fn apply_materialization_strategy(
             candidate.dielectric = "polyimide";
             candidate.dielectric_relative_permittivity =
                 candidate.dielectric_relative_permittivity.max(3.4);
+            candidate.dielectric_loss_tangent = 0.008;
             candidate.dielectric_breakdown_field_v_m =
                 candidate.dielectric_breakdown_field_v_m.max(300.0e6);
             candidate.areal_mass_kg_m2 += 0.18;
@@ -99,7 +103,7 @@ fn materialized_research_metadata(
             "dielectric": candidate.dielectric,
             "substrate": candidate.substrate
         },
-        "coupling": "electrostatic_to_heat_to_thermal_stress",
+        "coupling": "electrostatic_dielectric_loss_to_heat_to_thermal_stress",
         "screening_parameters": screening_parameters(candidate),
         "materialization_status": "prototype_materialized_requires_solver_rerun"
     }))
@@ -112,6 +116,7 @@ fn screening_parameters(candidate: &CompositePanelCandidate) -> Value {
         .fold(0.0, f64::max);
     json!({
         "dielectric_breakdown_field_v_m": candidate.dielectric_breakdown_field_v_m,
+        "dielectric_loss_tangent": candidate.dielectric_loss_tangent,
         "areal_mass_kg_m2": candidate.areal_mass_kg_m2,
         "interface_risk_score": interface_risk_score
     })
