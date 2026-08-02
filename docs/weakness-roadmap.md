@@ -124,6 +124,13 @@ Current progress:
   solved RMS dielectric fields are converted through
   `q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E^2`, volume-weighted onto heat
   nodes, and guarded by an explicit energy-balance gate
+- dielectric permittivity, loss tangent, and each declared thermal-region
+  conductivity now close a relaxed temperature feedback loop around the
+  electrostatic, loss-projection, and heat solvers; all three retained candidates
+  converge in `9-11` iterations with worst final temperature residual
+  `9.79e-8 C`, loss change `1.83e-10`, and conductivity change `3.91e-10`, while
+  the built-in coefficients remain explicitly labeled screening sensitivities
+  rather than qualification-grade material curves
 - the composite thermal-structural subproblem now runs real two-dimensional
   `1/2/4/8` quad refinement for main and materialized candidates, preserving
   the solved heat profile and material parameters; node identity and coordinate

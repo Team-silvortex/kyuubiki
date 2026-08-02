@@ -14,7 +14,7 @@ pub(crate) fn composite_research_metadata(candidate: &CompositePanelCandidate) -
             "dielectric": candidate.dielectric,
             "substrate": candidate.substrate
         },
-        "coupling": "electrostatic_dielectric_loss_to_heat_to_thermal_stress"
+        "coupling": "iterative_temperature_dependent_electrostatic_loss_and_heat_conductivity_feedback_to_thermal_stress"
     })
 }
 
@@ -25,6 +25,36 @@ pub(crate) fn electrothermal_loss_model(candidate: &CompositePanelCandidate) -> 
         "relative_permittivity": candidate.dielectric_relative_permittivity,
         "loss_tangent": candidate.dielectric_loss_tangent,
         "reference_temperature_c": REFERENCE_TEMPERATURE_C
+    })
+}
+
+pub(crate) fn electrothermal_feedback_model() -> Value {
+    json!({
+        "max_iterations": 12,
+        "relaxation_factor": 0.8,
+        "temperature_residual_tolerance_c": 1.0e-7,
+        "loss_relative_change_tolerance": 1.0e-9,
+        "conductivity_relative_change_tolerance": 1.0e-9,
+        "relative_permittivity_temperature_coefficient_1_k": 1.0e-4,
+        "loss_tangent_temperature_coefficient_1_k": 1.0e-3,
+        "thermal_conductivity_models": [
+            {
+                "element_id": "conductor_left",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": -1.0e-3
+            },
+            {
+                "element_id": "dielectric_core",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": -2.0e-3
+            },
+            {
+                "element_id": "substrate_right",
+                "reference_temperature_c": REFERENCE_TEMPERATURE_C,
+                "temperature_coefficient_1_k": -1.2e-3
+            }
+        ],
+        "parameter_source": "screening_sensitivity_not_material_card"
     })
 }
 

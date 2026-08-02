@@ -60,8 +60,18 @@ pub fn composite_electrostatic_cross_validation(
     candidate: &CompositePanelCandidate,
     fem_max_electric_field_v_m: Option<f64>,
 ) -> CompositeElectrostaticCrossValidation {
+    composite_electrostatic_cross_validation_for_dielectric(
+        candidate.dielectric_relative_permittivity,
+        fem_max_electric_field_v_m,
+    )
+}
+
+pub fn composite_electrostatic_cross_validation_for_dielectric(
+    dielectric_relative_permittivity: f64,
+    fem_max_electric_field_v_m: Option<f64>,
+) -> CompositeElectrostaticCrossValidation {
     let relative_permittivities =
-        composite_relative_permittivities(candidate.dielectric_relative_permittivity);
+        composite_relative_permittivities(dielectric_relative_permittivity);
     let layer_widths_m = vec![LAYER_WIDTH_M; relative_permittivities.len()];
     let expected_layer_fields_v_m = expected_layer_fields(&relative_permittivities);
     let expected_max_electric_field_v_m = expected_layer_fields_v_m

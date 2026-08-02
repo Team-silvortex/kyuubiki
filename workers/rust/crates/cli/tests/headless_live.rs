@@ -407,6 +407,7 @@ fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
         "--execute",
         "--executor",
         "service",
+        "--allow-sensitive",
         "--api-base-url",
         &base_url,
     ]);
@@ -528,6 +529,7 @@ fn rust_headless_cli_executes_live_workflow_graph_submit() {
         "--execute",
         "--executor",
         "service",
+        "--allow-sensitive",
         "--api-base-url",
         &base_url,
     ]);

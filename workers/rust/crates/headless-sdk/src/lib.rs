@@ -22,6 +22,7 @@ mod material_composite_candidates;
 mod material_composite_convergence_regime;
 mod material_composite_electrothermal;
 mod material_composite_evidence;
+mod material_composite_feedback;
 mod material_composite_heat_validation;
 mod material_composite_interfaces;
 mod material_composite_materialization;
@@ -138,6 +139,15 @@ pub use material_composite_electrothermal::{
     CompositeHeatToThermalProjection, distribute_composite_dielectric_heat_load,
     project_composite_dielectric_loss_to_heat, project_composite_heat_to_thermal,
 };
+pub use material_composite_feedback::{
+    COMPOSITE_ELECTROTHERMAL_FEEDBACK_SCHEMA_VERSION, CompositeElectrothermalFeedbackConvergence,
+    CompositeElectrothermalFeedbackIteration, CompositeElectrothermalFeedbackSpec,
+    CompositeThermalConductivityFeedbackIteration, CompositeThermalConductivityFeedbackModel,
+    apply_composite_dielectric_permittivity, assess_composite_electrothermal_feedback,
+    composite_dielectric_mean_temperature, composite_feedback_iteration_converged,
+    composite_feedback_relative_change, composite_heat_element_mean_temperature,
+    temperature_adjusted_composite_heat_request, temperature_adjusted_composite_loss_spec,
+};
 pub use material_composite_heat_validation::{
     COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION, COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION,
     COMPOSITE_HEAT_REFINEMENT_LEVELS, CompositeHeatCrossValidation, CompositeHeatMeshConvergence,
@@ -174,7 +184,9 @@ pub use material_composite_validation::{
     COMPOSITE_ELECTROSTATIC_MESH_CONVERGENCE_SCHEMA_VERSION,
     COMPOSITE_ELECTROSTATIC_REFINEMENT_LEVELS, CompositeElectrostaticCrossValidation,
     CompositeElectrostaticMeshConvergence, CompositeElectrostaticMeshConvergenceSample,
-    composite_electrostatic_cross_validation, composite_electrostatic_mesh_convergence,
+    composite_electrostatic_cross_validation,
+    composite_electrostatic_cross_validation_for_dielectric,
+    composite_electrostatic_mesh_convergence,
     composite_electrostatic_mesh_convergence_for_dielectric,
     composite_electrostatic_refinement_requests,
     composite_electrostatic_refinement_requests_for_dielectric,

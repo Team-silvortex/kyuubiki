@@ -71,6 +71,24 @@ fn runs_materialized_candidates_from_materialization_plan_json() {
         Some(0.0)
     );
     assert_eq!(
+        rerun["report"]["candidates"][0]["electrothermal_feedback_convergence"]["status"].as_str(),
+        Some("pass")
+    );
+    assert!(
+        rerun["report"]["reliability"]["quality_gates"]
+            .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.electrothermal_feedback."))
+                        && gate["status"].as_str() == Some("pass")
+                })
+                .count()
+                == 3)
+    );
+    assert_eq!(
         rerun["report"]["candidates"][0]["heat_to_thermal_projection"]["mapped_node_count"]
             .as_u64(),
         Some(8)

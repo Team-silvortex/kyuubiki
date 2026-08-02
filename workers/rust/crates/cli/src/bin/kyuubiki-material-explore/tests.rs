@@ -190,6 +190,44 @@ fn assert_composite_candidate_evidence(row: &Value) {
         "{id}: electrothermal energy balance"
     );
     assert_eq!(
+        row["electrothermal_feedback_convergence"]["status"].as_str(),
+        Some("pass"),
+        "{id}: electrothermal feedback"
+    );
+    assert!(
+        row["electrothermal_feedback_convergence"]["iteration_count"]
+            .as_u64()
+            .is_some_and(|count| (2..=12).contains(&count)),
+        "{id}: electrothermal iteration count"
+    );
+    assert!(
+        row["electrothermal_feedback_convergence"]["final_temperature_residual_c"]
+            .as_f64()
+            .is_some_and(|value| value <= 1.0e-7),
+        "{id}: electrothermal temperature residual"
+    );
+    assert!(
+        row["electrothermal_feedback_convergence"]["final_loss_relative_change"]
+            .as_f64()
+            .is_some_and(|value| value <= 1.0e-9),
+        "{id}: electrothermal loss stability"
+    );
+    assert!(
+        row["electrothermal_feedback_convergence"]["final_max_conductivity_relative_change"]
+            .as_f64()
+            .is_some_and(|value| value <= 1.0e-9),
+        "{id}: electrothermal conductivity stability"
+    );
+    assert_eq!(
+        row["electrothermal_feedback_convergence"]["iterations"]
+            .as_array()
+            .and_then(|iterations| iterations.last())
+            .and_then(|iteration| iteration["thermal_conductivity_updates"].as_array())
+            .map(Vec::len),
+        Some(3),
+        "{id}: thermal conductivity region evidence"
+    );
+    assert_eq!(
         row["heat_cross_validation"]["status"].as_str(),
         Some("pass"),
         "{id}: heat cross-validation"
@@ -346,6 +384,23 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
     assert!(
         exploration["report"]["reliability"]["quality_gates"]
             .as_array()
+            .is_some_and(|gates| gates
+                .iter()
+                .filter(|gate| {
+                    gate["id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with("gate.electrothermal_feedback."))
+                        && gate["status"].as_str() == Some("pass")
+                        && gate["actual_value"]
+                            .as_f64()
+                            .is_some_and(|value| value <= 1.0)
+                })
+                .count()
+                == 3)
+    );
+    assert!(
+        exploration["report"]["reliability"]["quality_gates"]
+            .as_array()
             .is_some_and(|gates| gates.iter().any(|gate| {
                 gate["id"].as_str() == Some("gate.thermal_solver.relative_residual")
                     && gate["status"].as_str() == Some("pass")
@@ -439,6 +494,10 @@ fn explores_composite_panel_with_coupled_local_solver_results() {
         exploration["result_payloads"][0]["electrothermal_loss_projection"]["total_loss_w"]
             .as_f64()
             .is_some_and(|value| value > 0.0)
+    );
+    assert_eq!(
+        exploration["result_payloads"][0]["electrothermal_feedback_convergence"]["status"].as_str(),
+        Some("pass")
     );
     assert!(
         exploration["result_payloads"][0]["electrostatic_mesh_convergence"]["samples"]

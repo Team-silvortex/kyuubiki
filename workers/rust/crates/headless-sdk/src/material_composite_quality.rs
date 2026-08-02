@@ -1,5 +1,91 @@
 use crate::{CompositePanelCandidateReport, MaterialQualityGate, material_quality_gate};
 
+pub(crate) fn composite_coupling_quality_gates(
+    rows: &[CompositePanelCandidateReport],
+) -> Vec<MaterialQualityGate> {
+    vec![
+        material_quality_gate(
+            "gate.electrothermal_loss.energy_balance",
+            "Electrothermal loss projection energy balance",
+            "electrothermal_loss_energy_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrothermal_loss_projection
+                    .as_ref()
+                    .map(|projection| projection.energy_balance_relative_error)
+            })),
+            "Projected dielectric loss must equal the total heat load distributed to heat nodes.",
+        ),
+        material_quality_gate(
+            "gate.electrothermal_feedback.temperature_residual",
+            "Electrothermal feedback temperature residual",
+            "electrothermal_feedback_temperature_residual_ratio",
+            "<=",
+            1.0,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrothermal_feedback_convergence
+                    .as_ref()
+                    .and_then(|convergence| {
+                        convergence
+                            .final_temperature_residual_c
+                            .map(|residual| residual / convergence.temperature_residual_tolerance_c)
+                    })
+            })),
+            "Temperature-dependent dielectric feedback must reach its fixed-point temperature tolerance.",
+        ),
+        material_quality_gate(
+            "gate.electrothermal_feedback.loss_change",
+            "Electrothermal feedback loss stability",
+            "electrothermal_feedback_loss_change_ratio",
+            "<=",
+            1.0,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrothermal_feedback_convergence
+                    .as_ref()
+                    .and_then(|convergence| {
+                        convergence
+                            .final_loss_relative_change
+                            .map(|change| change / convergence.loss_relative_change_tolerance)
+                    })
+            })),
+            "Successive dielectric-loss estimates must stabilize before downstream thermal stress is accepted.",
+        ),
+        material_quality_gate(
+            "gate.electrothermal_feedback.conductivity_change",
+            "Electrothermal feedback conductivity stability",
+            "electrothermal_feedback_conductivity_change_ratio",
+            "<=",
+            1.0,
+            max_optional(rows.iter().filter_map(|row| {
+                row.electrothermal_feedback_convergence
+                    .as_ref()
+                    .and_then(|convergence| {
+                        convergence
+                            .final_max_conductivity_relative_change
+                            .map(|change| {
+                                change / convergence.conductivity_relative_change_tolerance
+                            })
+                    })
+            })),
+            "Every temperature-dependent thermal conductivity must stabilize before downstream thermal stress is accepted.",
+        ),
+        material_quality_gate(
+            "gate.heat_to_thermal.coordinate_alignment",
+            "Heat-to-thermal node coordinate alignment",
+            "heat_to_thermal_maximum_coordinate_error_m",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.heat_to_thermal_projection
+                    .as_ref()
+                    .map(|projection| projection.maximum_coordinate_error_m)
+            })),
+            "Every projected temperature must target a structurally identical node coordinate.",
+        ),
+    ]
+}
+
 pub(crate) fn composite_structural_quality_gates(
     rows: &[CompositePanelCandidateReport],
 ) -> Vec<MaterialQualityGate> {

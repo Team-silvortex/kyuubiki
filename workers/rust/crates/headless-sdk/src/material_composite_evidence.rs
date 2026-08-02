@@ -29,6 +29,14 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "Converts solved RMS dielectric fields into frequency-local volumetric loss and conservatively lumps the power to heat nodes.",
         ),
         material_evidence_ref(
+            "evidence.electrothermal_feedback_convergence",
+            "Temperature-dependent electrothermal feedback convergence",
+            "coupling_fixed_point_convergence",
+            "kyuubiki.composite-electrothermal-feedback-convergence/v1",
+            "active_gate",
+            "Retains every relaxed electrostatic-loss-heat iteration and gates regional temperature residual, successive loss change, and thermal-conductivity stability.",
+        ),
+        material_evidence_ref(
             "evidence.layered_thermal_resistance_closed_form",
             "Layered thermal-resistance closed form",
             "analytic_cross_check",
@@ -106,7 +114,7 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "solver_fixture",
             "kyuubiki.composite_thermo_electric_panel.fixture.v1",
             "prototype",
-            "Three-region quad panel used to validate mixed-material sequential coupling.",
+            "Three-region quad panel used to validate mixed-material partitioned feedback coupling.",
         ),
     ]
 }
@@ -115,9 +123,15 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
     vec![
         material_model_assumption(
             "assumption.sequential_coupling",
-            "Sequential coupling",
-            "electrostatic RMS field -> dielectric loss -> heat -> thermal stress",
-            "Good for workflow validation, but misses strong bidirectional coupling.",
+            "Partitioned electrothermal coupling",
+            "electrostatic RMS field <-> temperature-dependent dielectric loss and regional thermal conductivity -> heat -> thermal stress",
+            "Iterates dielectric parameters and heat to a fixed point, but is not a monolithic multiphysics Jacobian.",
+        ),
+        material_model_assumption(
+            "assumption.screening_temperature_sensitivity",
+            "Screening temperature sensitivity",
+            "linear epsilon_r(T), tan_delta(T), and regional k(T) coefficients",
+            "Built-in coefficients exercise feedback robustness and must be replaced by validated material-card curves for qualification.",
         ),
         material_model_assumption(
             "assumption.harmonic_dielectric_loss",

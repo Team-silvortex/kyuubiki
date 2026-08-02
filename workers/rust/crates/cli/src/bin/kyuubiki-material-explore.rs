@@ -2,6 +2,8 @@ use std::fs;
 
 #[path = "kyuubiki-material-explore/chain.rs"]
 mod chain;
+#[path = "kyuubiki-material-explore/composite_electrothermal.rs"]
+mod composite_electrothermal;
 #[path = "kyuubiki-material-explore/display.rs"]
 mod display;
 #[path = "kyuubiki-material-explore/flags.rs"]
@@ -16,7 +18,8 @@ mod materialization_tests;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    CompositeDielectricLossSpec, CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
+    CompositeDielectricLossSpec, CompositeElectrothermalFeedbackSpec,
+    CompositeThermalAlgebraicSample, HeadlessWorkflowStep,
     build_material_exploration_next_round_execution_plan, build_material_exploration_run,
     build_material_exploration_run_for_iteration, build_material_study_execution_plan,
     composite_electrostatic_mesh_convergence_for_dielectric,
@@ -33,7 +36,7 @@ use kyuubiki_headless_sdk::{
     composite_thermal_regularized_mesh_convergence,
     composite_thermal_regularized_refinement_requests, composite_thermal_stress_recovery,
     describe_material_study, material_exploration_steps, material_study_catalog,
-    project_composite_dielectric_loss_to_heat, project_composite_heat_to_thermal,
+    project_composite_heat_to_thermal,
 };
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
@@ -48,6 +51,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use chain::chain_next_rounds_from_initial;
+use composite_electrothermal::solve_composite_electrothermal_feedback;
 use display::{
     print_catalog_summary, print_chain_summary, print_next_round_plan_summary,
     print_study_plan_summary, print_study_summary, print_summary,
@@ -437,10 +441,21 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     let loss_spec: CompositeDielectricLossSpec =
         serde_json::from_value(required_payload(step, "electrothermal_loss")?)
             .map_err(|error| error.to_string())?;
-    let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request)
-        .map_err(|error| format!("composite electrostatic solve failed: {error}"))?;
+    let feedback_spec: CompositeElectrothermalFeedbackSpec =
+        serde_json::from_value(required_payload(step, "electrothermal_feedback")?)
+            .map_err(|error| error.to_string())?;
+    let coupled = solve_composite_electrothermal_feedback(
+        &electrostatic_request,
+        &heat_seed,
+        &loss_spec,
+        &feedback_spec,
+    )?;
+    let electrostatic = coupled.electrostatic;
+    let heat = coupled.heat;
+    let electrothermal_loss_projection = coupled.loss_projection;
+    let electrothermal_feedback_convergence = coupled.feedback_convergence;
     let dielectric_relative_permittivity =
-        composite_dielectric_relative_permittivity(&electrostatic_request)?;
+        composite_dielectric_relative_permittivity(&electrostatic.input)?;
     let mut mesh_fields = vec![(1, electrostatic.max_electric_field)];
     for (level, request) in
         composite_electrostatic_refinement_requests_for_dielectric(dielectric_relative_permittivity)
@@ -456,11 +471,7 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         dielectric_relative_permittivity,
         &mesh_fields,
     );
-    let (heat_request, electrothermal_loss_projection) =
-        project_composite_dielectric_loss_to_heat(&electrostatic, &heat_seed, &loss_spec)?;
-    let heat = solve_heat_plane_quad_2d(&heat_request)
-        .map_err(|error| format!("composite heat solve failed: {error}"))?;
-    let heat_conductivities = composite_heat_conductivities(&heat_request)?;
+    let heat_conductivities = composite_heat_conductivities(&heat.input)?;
     let total_heat_load_w = electrothermal_loss_projection.total_loss_w;
     let heat_cross_validation = composite_heat_cross_validation_for_distributed_load(
         heat_conductivities,
@@ -602,6 +613,7 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         "electrostatic": electrostatic,
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "electrothermal_loss_projection": electrothermal_loss_projection,
+        "electrothermal_feedback_convergence": electrothermal_feedback_convergence,
         "heat": heat,
         "heat_cross_validation": heat_cross_validation,
         "heat_mesh_convergence": heat_mesh_convergence,

@@ -128,12 +128,21 @@ move from simple comparative fixtures toward research-relevant physics.
 Required work:
 
 - add anisotropic heat conduction for graphite-like heat-spreader studies
-- add temperature-dependent conductivity and expansion coefficients
+- replace screening conductivity sensitivities with validated material-card curves
+- add temperature-dependent expansion coefficients
 - deepen thermo-mechanical coupling with material curves
 - add yield, safety factor, fatigue, and damage-oriented structural metrics
 - improve dielectric studies with breakdown margin, field concentration, and
   loss models that can be traced to material cards
 - define when simplified CFD is acceptable as a screening model
+
+Current partial implementation: the composite panel path now iterates linear
+temperature sensitivities for dielectric permittivity, loss tangent, and every
+declared thermal-region conductivity to a bounded fixed point. The retained
+three candidates converge in 9-11 iterations while passing temperature, loss,
+and conductivity stability gates. Those built-in sensitivities exercise
+coupling robustness; validated material-card curves and temperature-dependent
+expansion remain required for this phase.
 
 Exit criteria:
 
