@@ -20,6 +20,7 @@ mod material_composite;
 mod material_composite_algebraic_validation;
 mod material_composite_candidates;
 mod material_composite_convergence_regime;
+mod material_composite_current;
 mod material_composite_electrothermal;
 mod material_composite_evidence;
 mod material_composite_feedback;
@@ -134,6 +135,12 @@ pub use material_composite_convergence_regime::{
     COMPOSITE_THERMAL_CONVERGENCE_REGIME_SCHEMA_VERSION, CompositeConvergenceMetricAssessment,
     CompositeThermalConvergenceRegimeAssessment, composite_thermal_convergence_regime,
     missing_thermal_convergence_regime,
+};
+pub use material_composite_current::{
+    COMPOSITE_CURRENT_TO_HEAT_PROJECTION_SCHEMA_VERSION, CompositeCurrentConductionFeedbackSpec,
+    CompositeCurrentConductionRegionSpec, CompositeCurrentRegionProjection,
+    CompositeCurrentToHeatProjection, project_composite_solved_current_to_heat,
+    temperature_adjusted_composite_current_request,
 };
 pub use material_composite_electrothermal::{
     COMPOSITE_ELECTROTHERMAL_LOSS_SCHEMA_VERSION, COMPOSITE_HEAT_TO_THERMAL_SCHEMA_VERSION,

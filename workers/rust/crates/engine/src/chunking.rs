@@ -74,6 +74,12 @@ pub fn chunk_result(
         (AnalysisResult::ElectrostaticPlaneQuad2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::ElectricConductionPlaneQuad2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ElectricConductionPlaneQuad2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::HeatPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }

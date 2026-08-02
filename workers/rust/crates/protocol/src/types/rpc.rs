@@ -108,6 +108,8 @@ pub enum RpcMethod {
     SolveElectrostaticPlaneTriangle2d,
     #[serde(rename = "solve_electrostatic_plane_quad_2d")]
     SolveElectrostaticPlaneQuad2d,
+    #[serde(rename = "solve_electric_conduction_plane_quad_2d")]
+    SolveElectricConductionPlaneQuad2d,
     #[serde(rename = "solve_heat_plane_triangle_2d")]
     SolveHeatPlaneTriangle2d,
     #[serde(rename = "solve_heat_plane_quad_2d")]

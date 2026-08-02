@@ -134,21 +134,23 @@ Required work:
 - add yield, safety factor, fatigue, and damage-oriented structural metrics
 - improve dielectric studies with breakdown margin, field concentration, and
   loss models that can be traced to material cards
-- replace prescribed-current bulk conductor paths with solved current density,
-  contact resistance, and terminal-condition models where the study needs them
+- add contact resistance and terminal-condition models where the study needs
+  more than the solved bulk current-density field
 - define when simplified CFD is acceptable as a screening model
 
 Current partial implementation: the composite panel path now iterates linear
-temperature sensitivities for dielectric permittivity, loss tangent, prescribed
-conductor-path resistivity, and every declared thermal-region conductivity to a
-bounded fixed point. Dielectric and `I^2R` losses are projected independently
+temperature sensitivities for dielectric permittivity, loss tangent, solved
+conductor conductivity, and every declared thermal-region conductivity to a
+bounded fixed point. A dedicated two-dimensional steady-current operator solves
+electric potential and current density before dielectric and `sigma|E|^2`
+losses are projected independently
 into their physical regions before the combined heat field drives regional
 thermal expansion and structural stress. Regional closed-form and `1/2/4/8`
 mesh checks preserve both source location and total power. The retained three
 candidates pass temperature, loss, conductivity, dual energy-balance, and
 expansion-coverage gates. These built-in sensitivities exercise coupling
-robustness; validated material-card curves and a solved current-density path
-remain required for this phase.
+robustness; validated material-card curves, nonuniform current-path baselines,
+and contact/terminal models remain required for this phase.
 
 Exit criteria:
 

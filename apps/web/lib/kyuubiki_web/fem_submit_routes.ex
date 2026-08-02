@@ -11,6 +11,8 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/magnetostatic-bar-1d/jobs", :submit_magnetostatic_bar_1d},
     {"/api/v1/fem/electrostatic-plane-triangle-2d/jobs", :submit_electrostatic_plane_triangle_2d},
     {"/api/v1/fem/electrostatic-plane-quad-2d/jobs", :submit_electrostatic_plane_quad_2d},
+    {"/api/v1/fem/electric-conduction-plane-quad-2d/jobs",
+     :submit_electric_conduction_plane_quad_2d},
     {"/api/v1/fem/magnetostatic-plane-triangle-2d/jobs", :submit_magnetostatic_plane_triangle_2d},
     {"/api/v1/fem/magnetostatic-plane-quad-2d/jobs", :submit_magnetostatic_plane_quad_2d},
     {"/api/v1/fem/heat-plane-triangle-2d/jobs", :submit_heat_plane_triangle_2d},

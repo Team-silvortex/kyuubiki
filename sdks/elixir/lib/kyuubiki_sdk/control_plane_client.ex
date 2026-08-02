@@ -35,6 +35,7 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     "heat_plane_quad_2d" => "/api/v1/fem/heat-plane-quad-2d/jobs",
     "thermal_plane_quad_2d" => "/api/v1/fem/thermal-plane-quad-2d/jobs",
     "electrostatic_plane_quad_2d" => "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
+    "electric_conduction_plane_quad_2d" => "/api/v1/fem/electric-conduction-plane-quad-2d/jobs",
     "stokes_flow_triangle_2d" => "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
     "stokes_flow_plane_triangle_2d" => "/api/v1/fem/stokes-flow-plane-triangle-2d/jobs",
     "stokes_flow_quad_2d" => "/api/v1/fem/stokes-flow-plane-quad-2d/jobs",

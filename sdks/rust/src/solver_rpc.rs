@@ -60,6 +60,10 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
         "solve_electrostatic_plane_quad_2d",
     ),
     (
+        "electric_conduction_plane_quad_2d",
+        "solve_electric_conduction_plane_quad_2d",
+    ),
+    (
         "stokes_flow_triangle_2d",
         "solve_stokes_flow_plane_triangle_2d",
     ),

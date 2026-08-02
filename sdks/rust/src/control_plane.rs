@@ -80,6 +80,10 @@ const FEM_JOB_PATHS: &[(&str, &str)] = &[
         "electrostatic_plane_quad_2d",
         "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
     ),
+    (
+        "electric_conduction_plane_quad_2d",
+        "/api/v1/fem/electric-conduction-plane-quad-2d/jobs",
+    ),
     ("truss_3d", "/api/v1/fem/truss-3d/jobs"),
     ("thermal_truss_3d", "/api/v1/fem/thermal-truss-3d/jobs"),
     ("frame_3d", "/api/v1/fem/frame-3d/jobs"),

@@ -38,11 +38,11 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
         ),
         material_evidence_ref(
             "evidence.joule_heating_projection",
-            "Temperature-dependent conductor Joule heating",
+            "Solved temperature-dependent conductor Joule heating",
             "coupling_energy_balance",
-            "kyuubiki.composite-joule-heating-projection/v1",
+            "kyuubiki.composite-current-to-heat-projection/v1",
             "active_gate",
-            "Converts prescribed conductor current and temperature-dependent path resistance into conservative regional heat load.",
+            "Solves conductor potential and current density, then converts local sigma-E-squared loss into conservative regional heat load.",
         ),
         material_evidence_ref(
             "evidence.layered_thermal_resistance_closed_form",
@@ -140,7 +140,7 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
         material_model_assumption(
             "assumption.sequential_coupling",
             "Partitioned electrothermal coupling",
-            "electrostatic RMS field plus prescribed-current conductor loss <-> regional temperature feedback -> heat -> thermal stress",
+            "electrostatic RMS field plus solved steady-current conductor loss <-> regional temperature feedback -> heat -> thermal stress",
             "Iterates dielectric parameters and heat to a fixed point, but is not a monolithic multiphysics Jacobian.",
         ),
         material_model_assumption(
@@ -156,10 +156,10 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
             "Represents dielectric heating at one screening frequency, not broadband dispersion.",
         ),
         material_model_assumption(
-            "assumption.prescribed_current_joule_loss",
-            "Prescribed-current conductor path",
-            "P = I^2*rho(T)*L/A",
-            "Captures temperature-dependent bulk conductor heating, but not solved current crowding, contact resistance, or terminal impedance.",
+            "assumption.voltage_driven_joule_loss",
+            "Voltage-driven steady-current field",
+            "div(sigma(T) grad(V)) = 0 and q = sigma(T)|grad(V)|^2",
+            "Resolves two-dimensional bulk current density; contact resistance and terminal impedance remain separate interface models.",
         ),
         material_model_assumption(
             "assumption.scalar_regions",

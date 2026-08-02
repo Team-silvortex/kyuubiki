@@ -1,33 +1,40 @@
 use kyuubiki_headless_sdk::{
+    CompositeCurrentConductionFeedbackSpec, CompositeCurrentToHeatProjection,
     CompositeDielectricLossSpec, CompositeElectrothermalFeedbackConvergence,
     CompositeElectrothermalFeedbackIteration, CompositeElectrothermalFeedbackSpec,
-    CompositeElectrothermalLossProjection, CompositeJouleHeatingProjection,
-    CompositeJouleHeatingSpec, CompositeThermalConductivityFeedbackIteration,
+    CompositeElectrothermalLossProjection, CompositeThermalConductivityFeedbackIteration,
     apply_composite_dielectric_permittivity, assess_composite_electrothermal_feedback,
     composite_dielectric_mean_temperature, composite_feedback_iteration_converged,
     composite_feedback_relative_change, composite_heat_element_mean_temperature,
-    project_composite_dielectric_loss_to_heat, project_composite_joule_heating_to_heat,
-    temperature_adjusted_composite_heat_request, temperature_adjusted_composite_loss_spec,
+    project_composite_dielectric_loss_to_heat, project_composite_solved_current_to_heat,
+    temperature_adjusted_composite_current_request, temperature_adjusted_composite_heat_request,
+    temperature_adjusted_composite_loss_spec,
 };
 use kyuubiki_protocol::{
+    SolveElectricConductionPlaneQuad2dRequest, SolveElectricConductionPlaneQuad2dResult,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneQuad2dResult,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
 };
-use kyuubiki_solver::{solve_electrostatic_plane_quad_2d, solve_heat_plane_quad_2d};
+use kyuubiki_solver::{
+    solve_electric_conduction_plane_quad_2d, solve_electrostatic_plane_quad_2d,
+    solve_heat_plane_quad_2d,
+};
 
 pub(crate) struct CompositeElectrothermalSolve {
     pub electrostatic: SolveElectrostaticPlaneQuad2dResult,
+    pub electric_conduction: SolveElectricConductionPlaneQuad2dResult,
     pub heat: SolveHeatPlaneQuad2dResult,
     pub loss_projection: CompositeElectrothermalLossProjection,
-    pub joule_heating_projection: CompositeJouleHeatingProjection,
+    pub joule_heating_projection: CompositeCurrentToHeatProjection,
     pub feedback_convergence: CompositeElectrothermalFeedbackConvergence,
 }
 
 pub(crate) fn solve_composite_electrothermal_feedback(
     electrostatic_seed: &SolveElectrostaticPlaneQuad2dRequest,
+    electric_conduction_seed: &SolveElectricConductionPlaneQuad2dRequest,
     heat_seed: &SolveHeatPlaneQuad2dRequest,
     base_loss_spec: &CompositeDielectricLossSpec,
-    joule_heating_spec: &CompositeJouleHeatingSpec,
+    current_feedback_spec: &CompositeCurrentConductionFeedbackSpec,
     feedback_spec: &CompositeElectrothermalFeedbackSpec,
 ) -> Result<CompositeElectrothermalSolve, String> {
     let mut coupling_temperature_c = base_loss_spec.reference_temperature_c;
@@ -61,9 +68,21 @@ pub(crate) fn solve_composite_electrothermal_feedback(
             &adjusted_heat_seed,
             &loss_spec,
         )?;
-        let (heat_request, joule_heating_projection) = project_composite_joule_heating_to_heat(
+        let electric_conduction_request = temperature_adjusted_composite_current_request(
+            electric_conduction_seed,
+            current_feedback_spec,
+            &conductivity_temperatures_c,
+        )?;
+        let electric_conduction = solve_electric_conduction_plane_quad_2d(
+            &electric_conduction_request,
+        )
+        .map_err(|error| {
+            format!("composite electrothermal iteration {iteration} failed current solve: {error}")
+        })?;
+        let (heat_request, joule_heating_projection) = project_composite_solved_current_to_heat(
+            &electric_conduction,
             &heat_request,
-            joule_heating_spec,
+            current_feedback_spec,
             &conductivity_temperatures_c,
         )?;
         let heat = solve_heat_plane_quad_2d(&heat_request).map_err(|error| {
@@ -121,9 +140,10 @@ pub(crate) fn solve_composite_electrothermal_feedback(
                 (dielectric_mean_temperature_c - coupling_temperature_c).abs(),
                 f64::max,
             );
-        let loss_relative_change = previous_loss_w.map(|previous| {
-            composite_feedback_relative_change(loss_projection.total_loss_w, previous)
-        });
+        let total_electrical_loss_w =
+            loss_projection.total_loss_w + joule_heating_projection.total_joule_loss_w;
+        let loss_relative_change = previous_loss_w
+            .map(|previous| composite_feedback_relative_change(total_electrical_loss_w, previous));
         let max_conductivity_relative_change = thermal_conductivity_updates
             .iter()
             .map(|update| update.conductivity_relative_change)
@@ -150,7 +170,7 @@ pub(crate) fn solve_composite_electrothermal_feedback(
             thermal_conductivity_updates: thermal_conductivity_updates.clone(),
             converged,
         });
-        previous_loss_w = Some(loss_projection.total_loss_w);
+        previous_loss_w = Some(total_electrical_loss_w);
         previous_conductivities = Some(
             thermal_conductivity_updates
                 .iter()
@@ -159,6 +179,7 @@ pub(crate) fn solve_composite_electrothermal_feedback(
         );
         final_result = Some((
             electrostatic,
+            electric_conduction,
             heat,
             loss_projection,
             joule_heating_projection,
@@ -179,10 +200,12 @@ pub(crate) fn solve_composite_electrothermal_feedback(
     }
 
     let feedback_convergence = assess_composite_electrothermal_feedback(feedback_spec, iterations)?;
-    let (electrostatic, heat, loss_projection, joule_heating_projection) = final_result
-        .ok_or_else(|| "composite electrothermal feedback produced no iteration".to_string())?;
+    let (electrostatic, electric_conduction, heat, loss_projection, joule_heating_projection) =
+        final_result
+            .ok_or_else(|| "composite electrothermal feedback produced no iteration".to_string())?;
     Ok(CompositeElectrothermalSolve {
         electrostatic,
+        electric_conduction,
         heat,
         loss_projection,
         joule_heating_projection,

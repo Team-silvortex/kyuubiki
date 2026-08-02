@@ -18,8 +18,9 @@ mod materialization_tests;
 mod tests;
 
 use kyuubiki_headless_sdk::{
-    CompositeDielectricLossSpec, CompositeElectrothermalFeedbackSpec, CompositeJouleHeatingSpec,
-    CompositeThermalAlgebraicSample, CompositeThermalExpansionFeedbackSpec, HeadlessWorkflowStep,
+    CompositeCurrentConductionFeedbackSpec, CompositeDielectricLossSpec,
+    CompositeElectrothermalFeedbackSpec, CompositeThermalAlgebraicSample,
+    CompositeThermalExpansionFeedbackSpec, HeadlessWorkflowStep,
     build_material_exploration_next_round_execution_plan, build_material_exploration_run,
     build_material_exploration_run_for_iteration, build_material_study_execution_plan,
     composite_electrostatic_mesh_convergence_for_dielectric,
@@ -39,8 +40,8 @@ use kyuubiki_headless_sdk::{
     project_composite_heat_to_thermal, project_composite_temperature_dependent_expansion,
 };
 use kyuubiki_protocol::{
-    SolveElectrostaticPlaneQuad2dRequest, SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest,
-    SolveThermalPlaneQuad2dRequest,
+    SolveElectricConductionPlaneQuad2dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveHeatPlaneQuad2dRequest, SolvePlaneQuad2dRequest, SolveThermalPlaneQuad2dRequest,
 };
 use kyuubiki_solver::{
     SpdSolveOptions, ThermalPlaneQuadProfile, profile_thermal_plane_quad_2d_with_options,
@@ -432,6 +433,9 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     let electrostatic_request: SolveElectrostaticPlaneQuad2dRequest =
         serde_json::from_value(required_payload(step, "electrostatic_model")?)
             .map_err(|error| error.to_string())?;
+    let electric_conduction_request: SolveElectricConductionPlaneQuad2dRequest =
+        serde_json::from_value(required_payload(step, "electric_conduction_model")?)
+            .map_err(|error| error.to_string())?;
     let heat_seed: SolveHeatPlaneQuad2dRequest =
         serde_json::from_value(required_payload(step, "heat_model")?)
             .map_err(|error| error.to_string())?;
@@ -444,20 +448,22 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
     let feedback_spec: CompositeElectrothermalFeedbackSpec =
         serde_json::from_value(required_payload(step, "electrothermal_feedback")?)
             .map_err(|error| error.to_string())?;
-    let joule_heating_spec: CompositeJouleHeatingSpec =
-        serde_json::from_value(required_payload(step, "joule_heating")?)
+    let current_feedback_spec: CompositeCurrentConductionFeedbackSpec =
+        serde_json::from_value(required_payload(step, "electric_conduction_feedback")?)
             .map_err(|error| error.to_string())?;
     let expansion_spec: CompositeThermalExpansionFeedbackSpec =
         serde_json::from_value(required_payload(step, "thermal_expansion_feedback")?)
             .map_err(|error| error.to_string())?;
     let coupled = solve_composite_electrothermal_feedback(
         &electrostatic_request,
+        &electric_conduction_request,
         &heat_seed,
         &loss_spec,
-        &joule_heating_spec,
+        &current_feedback_spec,
         &feedback_spec,
     )?;
     let electrostatic = coupled.electrostatic;
+    let electric_conduction = coupled.electric_conduction;
     let heat = coupled.heat;
     let electrothermal_loss_projection = coupled.loss_projection;
     let joule_heating_projection = coupled.joule_heating_projection;
@@ -629,6 +635,7 @@ fn run_composite_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String
         "schema_version": "kyuubiki.composite-thermo-electric-panel-result/v1",
         "research": step.payload.get("research").cloned().unwrap_or(Value::Null),
         "electrostatic": electrostatic,
+        "electric_conduction": electric_conduction,
         "electrostatic_mesh_convergence": electrostatic_mesh_convergence,
         "electrothermal_loss_projection": electrothermal_loss_projection,
         "joule_heating_projection": joule_heating_projection,

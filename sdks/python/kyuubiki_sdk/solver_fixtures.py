@@ -112,6 +112,18 @@ _ELECTROSTATIC_PLANE_QUAD_2D = {
     "elements": [{"id": "epq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.05, "permittivity": 2.0}],
 }
 
+_ELECTRIC_CONDUCTION_PLANE_QUAD_2D = {
+    "nodes": [
+        {"id": "n0", "x": 0.0, "y": 0.0, "fix_electric_potential": True, "electric_potential_v": 0.0, "current_source_a": 0.0},
+        {"id": "n1", "x": 0.03, "y": 0.0, "fix_electric_potential": True, "electric_potential_v": 0.0000336, "current_source_a": 0.0},
+        {"id": "n2", "x": 0.03, "y": 0.03, "fix_electric_potential": True, "electric_potential_v": 0.0000336, "current_source_a": 0.0},
+        {"id": "n3", "x": 0.0, "y": 0.03, "fix_electric_potential": True, "electric_potential_v": 0.0, "current_source_a": 0.0},
+    ],
+    "elements": [
+        {"id": "conductor", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.001, "electrical_conductivity_s_m": 59_523_809.52380952}
+    ],
+}
+
 _MAGNETOSTATIC_PLANE_TRIANGLE_2D = {
     "nodes": [
         {"id": "n0", "x": 0.0, "y": 0.0, "fix_vector_potential": True, "vector_potential": 10.0, "current_density": 0.0},
@@ -272,6 +284,7 @@ _PAYLOADS = {
     "magnetostatic_plane_quad_2d": _MAGNETOSTATIC_PLANE_QUAD_2D,
     "electrostatic_plane_triangle_2d": _ELECTROSTATIC_PLANE_TRIANGLE_2D,
     "electrostatic_plane_quad_2d": _ELECTROSTATIC_PLANE_QUAD_2D,
+    "electric_conduction_plane_quad_2d": _ELECTRIC_CONDUCTION_PLANE_QUAD_2D,
     "heat_plane_triangle_2d": _HEAT_PLANE_TRIANGLE_2D,
     "heat_plane_quad_2d": _HEAT_PLANE_QUAD_2D,
     "thermal_truss_2d": _THERMAL_TRUSS_2D,

@@ -11,6 +11,7 @@ mod types {
     pub mod acoustic_results;
     pub mod cohesive_interface;
     pub mod dynamic_results;
+    pub mod electric_conduction;
     pub mod electrostatic_plane_results;
     pub mod field;
     pub mod field_results;
@@ -55,6 +56,7 @@ pub use types::acoustic::*;
 pub use types::acoustic_results::*;
 pub use types::cohesive_interface::*;
 pub use types::dynamic_results::*;
+pub use types::electric_conduction::*;
 pub use types::electrostatic_plane_results::*;
 pub use types::field::*;
 pub use types::field_results::*;

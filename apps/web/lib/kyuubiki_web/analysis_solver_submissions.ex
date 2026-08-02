@@ -70,6 +70,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_electrostatic_plane_quad_2d"
       )
 
+  def submit_electric_conduction_plane_quad_2d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_electric_conduction_plane_quad_2d/1,
+        "solve_electric_conduction_plane_quad_2d"
+      )
+
   def submit_magnetostatic_plane_triangle_2d(params),
     do:
       submit_solver_job(

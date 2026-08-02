@@ -285,6 +285,17 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_electrostatic_plane_quad_2d(_params),
     do: {:error, :invalid_electrostatic_plane_quad_model}
 
+  def normalize_electric_conduction_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  def normalize_electric_conduction_plane_quad_2d(%{nodes: nodes, elements: elements})
+      when is_list(nodes) and is_list(elements),
+      do: {:ok, %{nodes: nodes, elements: elements}}
+
+  def normalize_electric_conduction_plane_quad_2d(_params),
+    do: {:error, :invalid_electric_conduction_plane_quad_model}
+
   def normalize_magnetostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
       when is_list(nodes) and is_list(elements),
       do: {:ok, %{"nodes" => nodes, "elements" => elements}}

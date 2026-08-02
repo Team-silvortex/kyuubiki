@@ -32,6 +32,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveMagnetostaticPlaneQuad2d,
                 RpcMethod::SolveElectrostaticPlaneTriangle2d,
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
+                RpcMethod::SolveElectricConductionPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
                 RpcMethod::SolveHeatPlaneQuad2d,
                 RpcMethod::SolveStokesFlowPlaneTriangle2d,
@@ -139,6 +140,12 @@ impl AgentDescriptor {
                     "electrostatic-plane-quad-2d",
                     RpcMethod::SolveElectrostaticPlaneQuad2d,
                     "electrostatic",
+                    "quad",
+                ),
+                field_capability(
+                    "electric-conduction-plane-quad-2d",
+                    RpcMethod::SolveElectricConductionPlaneQuad2d,
+                    "electric-conduction",
                     "quad",
                 ),
                 capability(

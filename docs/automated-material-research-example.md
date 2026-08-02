@@ -145,8 +145,9 @@ itself it does not qualify the remaining fields or their coupling.
 The heat subproblem now consumes two independently auditable electrical-loss
 paths instead of a fixed screening load. The dielectric element evaluates the
 frequency-local harmonic loss
-`q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2`. The conductor element uses
-the prescribed-current screening path `P = I^2*rho(T)*L/A`. Both powers are
+`q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*E_rms^2`. The conductor uses the
+independent steady-current equation `div(sigma(T) grad(V)) = 0`, then evaluates
+the solved local loss `q = sigma(T)|E|^2`. Both powers are
 conservatively lumped to their own regional heat nodes and carry independent
 energy-balance gates. The thermal-resistance baseline accepts an explicit
 three-region power vector, and real `1/2/4/8` heat-quad refinements preserve the
@@ -155,12 +156,12 @@ bundle emits heat `analytic_closed_form` and `mesh_convergence` baselines.
 
 The electrical and thermal parameters are no longer frozen after the first
 projection. A relaxed fixed-point loop updates scalar `epsilon_r(T)`,
-`tan_delta(T)`, conductor `rho(T)`, and every regional `k(T)`, then reruns the
-combined electrostatic-loss/Joule-heat solve. The retained candidates must
+`tan_delta(T)`, conductor `sigma(T)`, and every regional `k(T)`, then reruns the
+electrostatic, steady-current, and combined heat solves. The retained candidates must
 finish within the visible 12-iteration bound and pass temperature, successive
 dielectric-loss, and conductivity-change gates. Built-in coefficients carry
 machine-readable screening sources; qualification still requires validated
-temperature curves and conductor path data from material cards or geometry.
+temperature curves and electrical boundary data from material cards or geometry.
 
 The thermal-structural subproblem now also runs real two-dimensional
 `1/2/4/8` structured-quad refinement while preserving the solved nodal heat
@@ -244,11 +245,14 @@ thermal-region conductivity. It then projects each solved regional mean
 temperature into the matching structural thermal-expansion coefficient. Report
 gates reject missing Joule or dielectric energy balance, incomplete traces,
 final temperature/loss/conductivity changes above tolerance, or incomplete
-expansion-region coverage. The built-in linear coefficients are screening
-sensitivities used to exercise this path; they are not qualification-grade
-material curves. Solved two-dimensional current crowding, contact resistance,
-terminal impedance, and broadband dielectric dispersion remain explicit future
-work rather than being inferred from the electrostatic field.
+expansion-region coverage. The result also retains electric potential, electric
+field, current density, volumetric Joule heating, and total conductor power. The
+built-in linear coefficients are screening sensitivities used to exercise this
+path; they are not qualification-grade material curves. The retained rectangular
+fixture has a uniform current path, so nonuniform current-crowding geometries
+still need dedicated baselines. Contact resistance, terminal impedance, and
+broadband dielectric dispersion remain explicit future work rather than being
+inferred from the electrostatic field.
 
 To build both retained bundle profiles and a compact index for agents or CI:
 

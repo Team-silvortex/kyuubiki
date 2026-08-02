@@ -445,9 +445,10 @@ Current progress:
 - the composite thermo-electric panel bundle is still correctly classified as
   screening-only until external validation, failed quality gates, and
   low-confidence material cards are addressed
-- conductor bulk `I^2R` loss now participates in the temperature fixed point and
-  regional heat-mesh checks; solved current crowding, contact resistance, and
-  terminal impedance remain the next electrical-physics depth gap
+- a dedicated two-dimensional steady-current operator now feeds solved
+  `sigma|E|^2` bulk loss into the temperature fixed point and regional heat-mesh
+  checks; nonuniform crowding baselines, contact resistance, and terminal
+  impedance remain the next electrical-physics depth gap
 
 Moxi readiness standard:
 

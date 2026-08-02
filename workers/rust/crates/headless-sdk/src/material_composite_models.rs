@@ -58,22 +58,56 @@ pub(crate) fn electrothermal_feedback_model() -> Value {
     })
 }
 
-pub(crate) fn joule_heating_model(candidate: &CompositePanelCandidate) -> Value {
-    let (resistivity, coefficient) = match candidate.conductor {
-        "aluminum" => (2.82e-8, 4.03e-3),
-        _ => (1.68e-8, 3.93e-3),
-    };
+pub(crate) fn electric_conduction_model(candidate: &CompositePanelCandidate) -> Value {
+    let (resistivity, _) = conductor_electrical_properties(candidate);
+    let voltage_v = 2.0 * resistivity * 0.03 / 3.0e-5;
+    json!({
+        "nodes": [
+            current_node("n0", 0.0, 0.0, 0.0),
+            current_node("n1", 0.03, 0.0, voltage_v),
+            current_node("n5", 0.03, 0.03, voltage_v),
+            current_node("n4", 0.0, 0.03, 0.0)
+        ],
+        "elements": [{
+            "id": "conductor_left",
+            "node_i": 0,
+            "node_j": 1,
+            "node_k": 2,
+            "node_l": 3,
+            "thickness": 0.001,
+            "electrical_conductivity_s_m": 1.0 / resistivity
+        }]
+    })
+}
+
+pub(crate) fn electric_conduction_feedback_model(candidate: &CompositePanelCandidate) -> Value {
+    let (resistivity, coefficient) = conductor_electrical_properties(candidate);
     json!({
         "regions": [{
             "element_id": "conductor_left",
-            "current_a": 2.0,
-            "path_length_m": 0.03,
-            "cross_section_area_m2": 3.0e-5,
             "reference_resistivity_ohm_m": resistivity,
             "reference_temperature_c": REFERENCE_TEMPERATURE_C,
             "resistivity_temperature_coefficient_1_k": coefficient
         }],
         "parameter_source": "screening_reference_not_material_card"
+    })
+}
+
+fn conductor_electrical_properties(candidate: &CompositePanelCandidate) -> (f64, f64) {
+    match candidate.conductor {
+        "aluminum" => (2.82e-8, 4.03e-3),
+        _ => (1.68e-8, 3.93e-3),
+    }
+}
+
+fn current_node(id: &str, x: f64, y: f64, electric_potential_v: f64) -> Value {
+    json!({
+        "id": id,
+        "x": x,
+        "y": y,
+        "fix_electric_potential": true,
+        "electric_potential_v": electric_potential_v,
+        "current_source_a": 0.0
     })
 }
 

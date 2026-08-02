@@ -163,6 +163,7 @@ fn solver_contract_ids_are_unique_and_sorted_by_catalog_order() {
         "solve_solid_tetra_3d",
         "solve_thermal_frame_3d",
         "solve_electrostatic_plane_quad_2d",
+        "solve_electric_conduction_plane_quad_2d",
         "solve_magnetostatic_plane_quad_2d",
         "solve_stokes_flow_plane_quad_2d",
     ] {

@@ -15,6 +15,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.magnetostatic_plane_quad_2d",
     "solve.electrostatic_plane_triangle_2d",
     "solve.electrostatic_plane_quad_2d",
+    "solve.electric_conduction_plane_quad_2d",
     "solve.heat_plane_triangle_2d",
     "solve.heat_plane_quad_2d",
     "solve.stokes_flow_triangle_2d",
@@ -189,6 +190,16 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             )?))?,
             |result| match result {
                 AnalysisResult::ElectrostaticPlaneQuad2d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.electric_conduction_plane_quad_2d" => encode_solve_result(
+            solve(EngineSolveRequest::ElectricConductionPlaneQuad2d(decode(
+                payload,
+            )?))?,
+            |result| match result {
+                AnalysisResult::ElectricConductionPlaneQuad2d(result) => Some(result),
                 _ => None,
             },
             operator_id,

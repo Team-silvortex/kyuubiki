@@ -1,7 +1,8 @@
 use crate::material_composite_interfaces::assess_composite_interfaces;
 use crate::material_composite_models::{
-    electrostatic_model, electrothermal_feedback_model, electrothermal_loss_model, heat_model,
-    joule_heating_model, thermal_expansion_feedback_model, thermal_model,
+    electric_conduction_feedback_model, electric_conduction_model, electrostatic_model,
+    electrothermal_feedback_model, electrothermal_loss_model, heat_model,
+    thermal_expansion_feedback_model, thermal_model,
 };
 use crate::{CompositePanelCandidate, HeadlessWorkflowStep, composite_panel_candidates};
 use serde_json::{Value, json};
@@ -34,7 +35,8 @@ fn materialized_candidate_step(spec: &Value) -> Result<HeadlessWorkflowStep, Str
             "electrostatic_model": electrostatic_model(&candidate),
             "electrothermal_loss": electrothermal_loss_model(&candidate),
             "electrothermal_feedback": electrothermal_feedback_model(),
-            "joule_heating": joule_heating_model(&candidate),
+            "electric_conduction_model": electric_conduction_model(&candidate),
+            "electric_conduction_feedback": electric_conduction_feedback_model(&candidate),
             "heat_model": heat_model(&candidate),
             "thermal_model": thermal_model(&candidate),
             "thermal_expansion_feedback": thermal_expansion_feedback_model(),

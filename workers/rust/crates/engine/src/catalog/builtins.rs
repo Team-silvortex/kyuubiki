@@ -153,6 +153,20 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_solver_descriptor(
+            "solve.electric_conduction_plane_quad_2d",
+            "electromagnetic",
+            "electric_conduction_plane_quad_2d",
+            "Solve steady 2D electric conduction and expose potential, current density, and Joule heating.",
+            &[
+                "verified",
+                "electromagnetic",
+                "electric-conduction",
+                "joule-heating",
+                "quad",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
             "solve.heat_plane_triangle_2d",
             "thermal",
             "heat_plane_triangle_2d",

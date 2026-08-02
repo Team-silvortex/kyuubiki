@@ -28,7 +28,7 @@ pub(crate) fn composite_coupling_quality_gates(
                     .as_ref()
                     .map(|projection| projection.energy_balance_relative_error)
             })),
-            "Projected I-squared-R conductor loss must equal its added heat load.",
+            "Solved sigma-E-squared conductor loss must equal its added heat load.",
         ),
         material_quality_gate(
             "gate.electrothermal_feedback.temperature_residual",

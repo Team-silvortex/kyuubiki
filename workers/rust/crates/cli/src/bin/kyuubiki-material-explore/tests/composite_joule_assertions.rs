@@ -9,8 +9,19 @@ pub(super) fn assert_candidate(row: &Value, id: &str) {
     );
     assert_eq!(
         projection["schema_version"].as_str(),
-        Some("kyuubiki.composite-joule-heating-projection/v1"),
+        Some("kyuubiki.composite-current-to-heat-projection/v1"),
         "{id}: Joule schema"
+    );
+    assert_eq!(
+        projection["model"].as_str(),
+        Some("solved_steady_current_density_sigma_e_squared"),
+        "{id}: solved current model"
+    );
+    assert!(
+        projection["max_current_density_a_m2"]
+            .as_f64()
+            .is_some_and(|density| density > 0.0),
+        "{id}: solved current density"
     );
     assert!(
         projection["total_joule_loss_w"]

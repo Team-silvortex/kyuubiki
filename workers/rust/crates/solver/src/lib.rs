@@ -21,6 +21,7 @@ mod cohesive_interface_mesh_2d_plane;
 mod cohesive_interface_mesh_2d_truss;
 mod cohesive_law;
 mod dynamic_spring_1d_validation;
+mod electric_conduction_plane_2d;
 mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_element;
 mod electrostatic_plane_2d_validation;
@@ -122,6 +123,7 @@ pub use buckling_frame_2d::solve_buckling_frame_2d;
 pub use cohesive_interface_1d::solve_cohesive_interface_1d;
 pub use cohesive_interface_2d::solve_cohesive_interface_2d;
 pub use cohesive_interface_mesh_2d::solve_cohesive_interface_mesh_2d;
+pub use electric_conduction_plane_2d::solve_electric_conduction_plane_quad_2d;
 pub use electrostatic_plane_2d::{
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
 };
