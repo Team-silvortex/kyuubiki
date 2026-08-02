@@ -21,8 +21,16 @@ fn engine_and_workflow_operator_execute_electric_conduction() {
         panic!("unexpected engine result")
     };
     assert!((direct.total_joule_power_w - 6.72e-5).abs() < 1.0e-15);
+    assert!(direct.current_balance_relative_error < 1.0e-12);
+    assert!(direct.free_current_residual_relative_error < 1.0e-12);
+    assert!(direct.power_balance_relative_error < 1.0e-12);
     assert!(
         (workflow["total_joule_power_w"].as_f64().unwrap_or_default() - 6.72e-5).abs() < 1.0e-15
+    );
+    assert!(
+        workflow["power_balance_relative_error"]
+            .as_f64()
+            .is_some_and(|error| error < 1.0e-12)
     );
 }
 
@@ -44,6 +52,8 @@ fn request() -> SolveElectricConductionPlaneQuad2dRequest {
             thickness: 0.001,
             electrical_conductivity_s_m: 1.0 / 1.68e-8,
         }],
+        contact_interfaces: vec![],
+        terminals: vec![],
     }
 }
 

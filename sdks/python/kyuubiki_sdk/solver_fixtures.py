@@ -122,6 +122,8 @@ _ELECTRIC_CONDUCTION_PLANE_QUAD_2D = {
     "elements": [
         {"id": "conductor", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.001, "electrical_conductivity_s_m": 59_523_809.52380952}
     ],
+    "contact_interfaces": [],
+    "terminals": [],
 }
 
 _MAGNETOSTATIC_PLANE_TRIANGLE_2D = {

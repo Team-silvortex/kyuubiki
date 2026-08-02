@@ -40,9 +40,9 @@ pub(crate) fn composite_evidence_refs() -> Vec<MaterialEvidenceRef> {
             "evidence.joule_heating_projection",
             "Solved temperature-dependent conductor Joule heating",
             "coupling_energy_balance",
-            "kyuubiki.composite-current-to-heat-projection/v1",
+            "kyuubiki.composite-current-to-heat-projection/v2",
             "active_gate",
-            "Solves conductor potential and current density, then converts local sigma-E-squared loss into conservative regional heat load.",
+            "Solves conductor potential and current density, integrates subcell sigma-E-squared loss, recovers terminal reactions, and converts the conserved power into regional heat load.",
         ),
         material_evidence_ref(
             "evidence.layered_thermal_resistance_closed_form",
@@ -159,7 +159,7 @@ pub(crate) fn composite_model_assumptions() -> Vec<MaterialModelAssumption> {
             "assumption.voltage_driven_joule_loss",
             "Voltage-driven steady-current field",
             "div(sigma(T) grad(V)) = 0 and q = sigma(T)|grad(V)|^2",
-            "Resolves two-dimensional bulk current density; contact resistance and terminal impedance remain separate interface models.",
+            "The operator supports lumped contact resistance and impedance terminals with source-power balance, while this retained fixture activates only the bulk conductor path.",
         ),
         material_model_assumption(
             "assumption.scalar_regions",

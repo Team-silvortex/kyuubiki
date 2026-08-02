@@ -134,8 +134,8 @@ Required work:
 - add yield, safety factor, fatigue, and damage-oriented structural metrics
 - improve dielectric studies with breakdown margin, field concentration, and
   loss models that can be traced to material cards
-- add contact resistance and terminal-condition models where the study needs
-  more than the solved bulk current-density field
+- map the available contact-resistance and impedance-terminal operator losses
+  into explicit study regions where bulk current density is insufficient
 - define when simplified CFD is acceptable as a screening model
 
 Current partial implementation: the composite panel path now iterates linear
@@ -143,14 +143,18 @@ temperature sensitivities for dielectric permittivity, loss tangent, solved
 conductor conductivity, and every declared thermal-region conductivity to a
 bounded fixed point. A dedicated two-dimensional steady-current operator solves
 electric potential and current density before dielectric and `sigma|E|^2`
-losses are projected independently
-into their physical regions before the combined heat field drives regional
+losses are projected independently into their physical regions before the combined heat field drives regional
 thermal expansion and structural stress. Regional closed-form and `1/2/4/8`
 mesh checks preserve both source location and total power. The retained three
-candidates pass temperature, loss, conductivity, dual energy-balance, and
-expansion-coverage gates. These built-in sensitivities exercise coupling
-robustness; validated material-card curves, nonuniform current-path baselines,
-and contact/terminal models remain required for this phase.
+candidates pass temperature, loss, conductivity, terminal-current,
+free-node residual, electrical-input-power, dual projection-energy, and
+expansion-coverage gates.
+A two-material series regression checks free interface potentials and
+nonuniform bulk fields independently. These built-in sensitivities exercise
+coupling robustness; validated material-card curves, geometric current-crowding
+baselines, validated contact parameters, and contact-to-heat mappings remain
+required for this phase. Lumped contact resistance and finite-impedance terminal
+conditions are now available in the electric-conduction operator itself.
 
 Exit criteria:
 

@@ -31,6 +31,58 @@ pub(crate) fn composite_coupling_quality_gates(
             "Solved sigma-E-squared conductor loss must equal its added heat load.",
         ),
         material_quality_gate(
+            "gate.electric_conduction.current_balance",
+            "Electric-conduction terminal current balance",
+            "electric_conduction_current_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.joule_heating_projection
+                    .as_ref()
+                    .map(|projection| projection.current_balance_relative_error)
+            })),
+            "Recovered injected and extracted terminal currents must balance.",
+        ),
+        material_quality_gate(
+            "gate.electric_conduction.power_balance",
+            "Electric-conduction input and Joule power balance",
+            "electric_conduction_power_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.joule_heating_projection
+                    .as_ref()
+                    .map(|projection| projection.electrical_power_balance_relative_error)
+            })),
+            "Recovered terminal VI power must equal the integrated sigma-E-squared loss.",
+        ),
+        material_quality_gate(
+            "gate.electric_conduction.free_node_residual",
+            "Electric-conduction free-node residual",
+            "electric_conduction_free_current_residual_relative_error",
+            "<=",
+            1.0e-10,
+            max_optional(rows.iter().filter_map(|row| {
+                row.joule_heating_projection
+                    .as_ref()
+                    .map(|projection| projection.free_current_residual_relative_error)
+            })),
+            "Every unconstrained potential must satisfy its applied-current equation.",
+        ),
+        material_quality_gate(
+            "gate.electric_conduction.source_power_balance",
+            "Electric-conduction source and total dissipation balance",
+            "electric_conduction_source_power_balance_relative_error",
+            "<=",
+            1.0e-12,
+            max_optional(rows.iter().filter_map(|row| {
+                row.joule_heating_projection
+                    .as_ref()
+                    .map(|projection| projection.source_power_balance_relative_error)
+            })),
+            "Constraint, current-source, and impedance-terminal power must equal all electrical losses.",
+        ),
+        material_quality_gate(
             "gate.electrothermal_feedback.temperature_residual",
             "Electrothermal feedback temperature residual",
             "electrothermal_feedback_temperature_residual_ratio",

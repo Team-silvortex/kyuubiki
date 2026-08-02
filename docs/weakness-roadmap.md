@@ -447,8 +447,9 @@ Current progress:
   low-confidence material cards are addressed
 - a dedicated two-dimensional steady-current operator now feeds solved
   `sigma|E|^2` bulk loss into the temperature fixed point and regional heat-mesh
-  checks; nonuniform crowding baselines, contact resistance, and terminal
-  impedance remain the next electrical-physics depth gap
+  checks; lumped contact resistance and finite-impedance terminals are now
+  solver-supported, while geometric crowding baselines, validated interface
+  parameters, and contact-to-heat mappings remain the electrical-physics gap
 
 Moxi readiness standard:
 

@@ -30,7 +30,7 @@ defmodule KyuubikiWeb.Api.ElectricConductionSolverApiTest do
     assert conn.status == 202
     assert_receive {:fake_agent_request, rpc_request}, 1_000
     assert rpc_request["method"] == "solve_electric_conduction_plane_quad_2d"
-    assert rpc_request["params"]["elements"] == request()["elements"]
+    assert rpc_request["params"] == request()
 
     payload = Jason.decode!(conn.resp_body)
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
@@ -40,9 +40,33 @@ defmodule KyuubikiWeb.Api.ElectricConductionSolverApiTest do
     assert result_payload["job"]["status"] == "completed"
     assert_in_delta result["max_electric_field_v_m"], 0.00112, 1.0e-12
     assert_in_delta result["max_current_density_a_m2"], @current_density_a_m2, 1.0e-8
+    assert_in_delta result["total_injected_current_a"], 2.0, 1.0e-12
+    assert_in_delta result["total_extracted_current_a"], 2.0, 1.0e-12
+    assert result["current_balance_relative_error"] == 0.0
+    assert result["max_free_current_residual_a"] == 0.0
+    assert result["free_current_residual_relative_error"] == 0.0
     assert_in_delta result["total_joule_power_w"], @joule_power_w, 1.0e-15
+    assert_in_delta result["total_electrical_input_power_w"], @joule_power_w, 1.0e-15
+    assert result["power_balance_relative_error"] == 0.0
+    assert result["source_power_balance_relative_error"] == 0.0
     assert_in_delta element["volumetric_joule_heating_w_m3"], 74.66666666666667, 1.0e-12
     assert_in_delta element["joule_power_w"], @joule_power_w, 1.0e-15
+  end
+
+  test "normalizer preserves contact interfaces and impedance terminals" do
+    model =
+      request()
+      |> Map.put("contact_interfaces", [
+        %{"id" => "contact", "node_i" => 0, "node_j" => 1, "contact_resistance_ohm" => 0.1}
+      ])
+      |> Map.put("terminals", [
+        %{"id" => "terminal", "node" => 2, "external_potential_v" => 1.0, "impedance_ohm" => 0.2}
+      ])
+
+    assert {:ok, normalized} =
+             KyuubikiWeb.FemModelNormalizer.normalize_electric_conduction_plane_quad_2d(model)
+
+    assert normalized == model
   end
 
   defp request do
@@ -63,7 +87,9 @@ defmodule KyuubikiWeb.Api.ElectricConductionSolverApiTest do
           "thickness" => 0.001,
           "electrical_conductivity_s_m" => @conductivity_s_m
         }
-      ]
+      ],
+      "contact_interfaces" => [],
+      "terminals" => []
     }
   end
 
@@ -86,17 +112,36 @@ defmodule KyuubikiWeb.Api.ElectricConductionSolverApiTest do
           "electric_field_x_v_m" => -0.00112,
           "electric_field_y_v_m" => 0.0,
           "electric_field_magnitude_v_m" => 0.00112,
+          "rms_electric_field_magnitude_v_m" => 0.00112,
+          "peak_electric_field_magnitude_v_m" => 0.00112,
           "current_density_x_a_m2" => -@current_density_a_m2,
           "current_density_y_a_m2" => 0.0,
           "current_density_magnitude_a_m2" => @current_density_a_m2,
+          "rms_current_density_magnitude_a_m2" => @current_density_a_m2,
+          "peak_current_density_magnitude_a_m2" => @current_density_a_m2,
           "volumetric_joule_heating_w_m3" => 74.66666666666667,
           "joule_power_w" => @joule_power_w
         }
       ],
+      "contact_interfaces" => [],
+      "terminals" => [],
       "max_electric_potential_v" => @voltage_v,
       "max_electric_field_v_m" => 0.00112,
       "max_current_density_a_m2" => @current_density_a_m2,
-      "total_joule_power_w" => @joule_power_w
+      "total_injected_current_a" => 2.0,
+      "total_extracted_current_a" => 2.0,
+      "current_balance_relative_error" => 0.0,
+      "max_free_current_residual_a" => 0.0,
+      "free_current_residual_relative_error" => 0.0,
+      "total_electrical_input_power_w" => @joule_power_w,
+      "total_bulk_joule_power_w" => @joule_power_w,
+      "total_contact_joule_power_w" => 0.0,
+      "total_joule_power_w" => @joule_power_w,
+      "power_balance_relative_error" => 0.0,
+      "total_terminal_impedance_power_w" => 0.0,
+      "total_source_power_w" => @joule_power_w,
+      "total_dissipated_power_w" => @joule_power_w,
+      "source_power_balance_relative_error" => 0.0
     }
   end
 

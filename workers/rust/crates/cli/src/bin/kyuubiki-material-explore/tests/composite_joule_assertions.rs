@@ -9,7 +9,7 @@ pub(super) fn assert_candidate(row: &Value, id: &str) {
     );
     assert_eq!(
         projection["schema_version"].as_str(),
-        Some("kyuubiki.composite-current-to-heat-projection/v1"),
+        Some("kyuubiki.composite-current-to-heat-projection/v2"),
         "{id}: Joule schema"
     );
     assert_eq!(
@@ -35,6 +35,30 @@ pub(super) fn assert_candidate(row: &Value, id: &str) {
             .is_some_and(|error| error <= 1.0e-12),
         "{id}: Joule energy balance"
     );
+    assert!(
+        projection["current_balance_relative_error"]
+            .as_f64()
+            .is_some_and(|error| error <= 1.0e-12),
+        "{id}: terminal current balance"
+    );
+    assert!(
+        projection["free_current_residual_relative_error"]
+            .as_f64()
+            .is_some_and(|error| error <= 1.0e-10),
+        "{id}: free-node current residual"
+    );
+    assert!(
+        projection["electrical_power_balance_relative_error"]
+            .as_f64()
+            .is_some_and(|error| error <= 1.0e-12),
+        "{id}: electrical power balance"
+    );
+    assert!(
+        projection["source_power_balance_relative_error"]
+            .as_f64()
+            .is_some_and(|error| error <= 1.0e-12),
+        "{id}: source power balance"
+    );
     assert_eq!(
         projection["regions"].as_array().map(Vec::len),
         Some(1),
@@ -52,4 +76,19 @@ pub(super) fn assert_quality_gate(report: &Value) {
             })),
         "Joule quality gate must pass"
     );
+    for gate_id in [
+        "gate.electric_conduction.current_balance",
+        "gate.electric_conduction.free_node_residual",
+        "gate.electric_conduction.power_balance",
+        "gate.electric_conduction.source_power_balance",
+    ] {
+        assert!(
+            report["reliability"]["quality_gates"]
+                .as_array()
+                .is_some_and(|gates| gates.iter().any(|gate| {
+                    gate["id"].as_str() == Some(gate_id) && gate["status"].as_str() == Some("pass")
+                })),
+            "{gate_id} must pass"
+        );
+    }
 }

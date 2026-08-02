@@ -76,7 +76,9 @@ pub(crate) fn electric_conduction_model(candidate: &CompositePanelCandidate) -> 
             "node_l": 3,
             "thickness": 0.001,
             "electrical_conductivity_s_m": 1.0 / resistivity
-        }]
+        }],
+        "contact_interfaces": [],
+        "terminals": []
     })
 }
 

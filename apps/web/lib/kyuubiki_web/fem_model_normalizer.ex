@@ -285,15 +285,43 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_electrostatic_plane_quad_2d(_params),
     do: {:error, :invalid_electrostatic_plane_quad_model}
 
-  def normalize_electric_conduction_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+  def normalize_electric_conduction_plane_quad_2d(
+        %{"nodes" => nodes, "elements" => elements} = params
+      )
+      when is_list(nodes) and is_list(elements) do
+    normalize_electric_conduction_interfaces(
+      nodes,
+      elements,
+      Map.get(params, "contact_interfaces", []),
+      Map.get(params, "terminals", [])
+    )
+  end
 
-  def normalize_electric_conduction_plane_quad_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
+  def normalize_electric_conduction_plane_quad_2d(%{nodes: nodes, elements: elements} = params)
+      when is_list(nodes) and is_list(elements) do
+    normalize_electric_conduction_interfaces(
+      nodes,
+      elements,
+      Map.get(params, :contact_interfaces, []),
+      Map.get(params, :terminals, [])
+    )
+  end
 
   def normalize_electric_conduction_plane_quad_2d(_params),
+    do: {:error, :invalid_electric_conduction_plane_quad_model}
+
+  defp normalize_electric_conduction_interfaces(nodes, elements, contacts, terminals)
+       when is_list(contacts) and is_list(terminals),
+       do:
+         {:ok,
+          %{
+            "nodes" => nodes,
+            "elements" => elements,
+            "contact_interfaces" => contacts,
+            "terminals" => terminals
+          }}
+
+  defp normalize_electric_conduction_interfaces(_nodes, _elements, _contacts, _terminals),
     do: {:error, :invalid_electric_conduction_plane_quad_model}
 
   def normalize_magnetostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})

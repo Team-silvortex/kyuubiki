@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub const COMPOSITE_CURRENT_TO_HEAT_PROJECTION_SCHEMA_VERSION: &str =
-    "kyuubiki.composite-current-to-heat-projection/v1";
+    "kyuubiki.composite-current-to-heat-projection/v2";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompositeCurrentConductionFeedbackSpec {
@@ -28,7 +28,11 @@ pub struct CompositeCurrentRegionProjection {
     pub coupling_temperature_c: f64,
     pub electrical_conductivity_s_m: f64,
     pub electric_field_magnitude_v_m: f64,
+    pub rms_electric_field_magnitude_v_m: f64,
+    pub peak_electric_field_magnitude_v_m: f64,
     pub current_density_magnitude_a_m2: f64,
+    pub rms_current_density_magnitude_a_m2: f64,
+    pub peak_current_density_magnitude_a_m2: f64,
     pub volumetric_joule_heating_w_m3: f64,
     pub source_volume_m3: f64,
     pub joule_power_w: f64,
@@ -44,6 +48,16 @@ pub struct CompositeCurrentToHeatProjection {
     pub parameter_source: String,
     pub boundary_voltage_span_v: f64,
     pub max_current_density_a_m2: f64,
+    pub total_injected_current_a: f64,
+    pub total_extracted_current_a: f64,
+    pub current_balance_relative_error: f64,
+    pub max_free_current_residual_a: f64,
+    pub free_current_residual_relative_error: f64,
+    pub total_electrical_input_power_w: f64,
+    pub electrical_power_balance_relative_error: f64,
+    pub total_source_power_w: f64,
+    pub total_dissipated_power_w: f64,
+    pub source_power_balance_relative_error: f64,
     pub total_joule_loss_w: f64,
     pub distributed_total_heat_load_w: f64,
     pub energy_balance_relative_error: f64,
@@ -98,6 +112,12 @@ pub fn project_composite_solved_current_to_heat(
     String,
 > {
     validate_spec(spec)?;
+    if !current.contact_interfaces.is_empty() {
+        return Err(
+            "composite current-to-heat projection requires explicit contact heat mappings"
+                .to_string(),
+        );
+    }
     let before = heat_seed
         .nodes
         .iter()
@@ -144,7 +164,11 @@ pub fn project_composite_solved_current_to_heat(
             )?,
             electrical_conductivity_s_m: input.electrical_conductivity_s_m,
             electric_field_magnitude_v_m: source.electric_field_magnitude_v_m,
+            rms_electric_field_magnitude_v_m: source.rms_electric_field_magnitude_v_m,
+            peak_electric_field_magnitude_v_m: source.peak_electric_field_magnitude_v_m,
             current_density_magnitude_a_m2: source.current_density_magnitude_a_m2,
+            rms_current_density_magnitude_a_m2: source.rms_current_density_magnitude_a_m2,
+            peak_current_density_magnitude_a_m2: source.peak_current_density_magnitude_a_m2,
             volumetric_joule_heating_w_m3: source.volumetric_joule_heating_w_m3,
             source_volume_m3: source.area_m2 * input.thickness,
             joule_power_w: source.joule_power_w,
@@ -179,6 +203,16 @@ pub fn project_composite_solved_current_to_heat(
             parameter_source: spec.parameter_source.clone(),
             boundary_voltage_span_v,
             max_current_density_a_m2: current.max_current_density_a_m2,
+            total_injected_current_a: current.total_injected_current_a,
+            total_extracted_current_a: current.total_extracted_current_a,
+            current_balance_relative_error: current.current_balance_relative_error,
+            max_free_current_residual_a: current.max_free_current_residual_a,
+            free_current_residual_relative_error: current.free_current_residual_relative_error,
+            total_electrical_input_power_w: current.total_electrical_input_power_w,
+            electrical_power_balance_relative_error: current.power_balance_relative_error,
+            total_source_power_w: current.total_source_power_w,
+            total_dissipated_power_w: current.total_dissipated_power_w,
+            source_power_balance_relative_error: current.source_power_balance_relative_error,
             total_joule_loss_w,
             distributed_total_heat_load_w,
             energy_balance_relative_error,
@@ -188,7 +222,11 @@ pub fn project_composite_solved_current_to_heat(
                     .to_string(),
                 "Joule heating uses the solved local sigma times electric-field magnitude squared."
                     .to_string(),
-                "Contact resistance and terminal impedance remain separate interface models."
+                "Element Joule power integrates both triangular subcell fields before thermal projection."
+                    .to_string(),
+                "Recovered terminal currents gate current continuity and electrical input-power balance."
+                    .to_string(),
+                "Contact and terminal impedance models require explicit study-level heat mappings."
                     .to_string(),
             ],
         },

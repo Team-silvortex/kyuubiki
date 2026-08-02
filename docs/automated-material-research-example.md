@@ -243,15 +243,26 @@ The composite profile now retains a partitioned temperature-feedback trace for
 dielectric permittivity, loss tangent, conductor resistance, and every declared
 thermal-region conductivity. It then projects each solved regional mean
 temperature into the matching structural thermal-expansion coefficient. Report
-gates reject missing Joule or dielectric energy balance, incomplete traces,
+gates reject missing Joule or dielectric energy balance, terminal-current or
+electrical input-power imbalance, excessive free-node current residuals,
+incomplete traces,
 final temperature/loss/conductivity changes above tolerance, or incomplete
 expansion-region coverage. The result also retains electric potential, electric
-field, current density, volumetric Joule heating, and total conductor power. The
+field, area-averaged/RMS/peak current density, recovered terminal current,
+volumetric Joule heating, and total conductor power. Quad Joule power integrates
+both triangular subcell fields before thermal projection, so a nonuniform field
+cannot be hidden by squaring only the element-average field. The
 built-in linear coefficients are screening sensitivities used to exercise this
 path; they are not qualification-grade material curves. The retained rectangular
-fixture has a uniform current path, so nonuniform current-crowding geometries
-still need dedicated baselines. Contact resistance, terminal impedance, and
-broadband dielectric dispersion remain explicit future work rather than being
+fixture has a uniform current path; a separate two-material series regression
+now checks nonuniform field magnitude, free interface potential, terminal
+current, and `VI = integral(sigma|E|^2)dV`. Geometric current-crowding fixtures
+still need dedicated baselines. The electric-conduction operator now accepts
+explicit lumped contact resistance and external-potential terminals with finite
+impedance. Their interface and terminal losses are reported separately and the
+full source-power balance is gated at solver level. The retained composite
+fixture does not activate them until contact heat has an explicit target-region
+mapping. Broadband dielectric dispersion remains future work rather than being
 inferred from the electrostatic field.
 
 To build both retained bundle profiles and a compact index for agents or CI:

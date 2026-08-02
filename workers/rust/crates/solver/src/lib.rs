@@ -21,6 +21,7 @@ mod cohesive_interface_mesh_2d_plane;
 mod cohesive_interface_mesh_2d_truss;
 mod cohesive_law;
 mod dynamic_spring_1d_validation;
+mod electric_conduction_interfaces;
 mod electric_conduction_plane_2d;
 mod electrostatic_plane_2d;
 mod electrostatic_plane_2d_element;

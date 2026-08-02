@@ -541,7 +541,7 @@ fn composite_reliability_envelope(
         limitations: vec![
             "Electrothermal coupling uses a relaxed partitioned fixed point; a monolithic coupled Jacobian and mechanical-field feedback are not modeled yet.".to_string(),
             "Material regions use scalar isotropic linear temperature sensitivities for dielectric, conductivity, and expansion parameters; anisotropy, validated nonlinear curves, and delamination propagation are not modeled yet.".to_string(),
-            "Electrical heating projects harmonic dielectric loss from solved RMS fields; built-in temperature coefficients are screening sensitivities until a material card supplies validated curves, while conductor current flow, contact resistance, and broadband dispersion remain outside this model.".to_string(),
+            "Electrical heating projects harmonic dielectric loss and solved conductor Joule loss; built-in temperature coefficients are screening sensitivities until material cards supply validated curves. Contact and terminal impedance operators are available but require explicit fixture mappings, while broadband dispersion remains outside this model.".to_string(),
             "Interface risk is a screening heuristic over CTE mismatch and stiffness contrast, not an adhesive fracture mechanics model.".to_string(),
             "The regularized restraint solve is diagnostic only; persistent strain-energy nonconvergence remains a qualification blocker.".to_string(),
             "Use this prototype for architecture validation and candidate ordering only, not qualification claims.".to_string(),
