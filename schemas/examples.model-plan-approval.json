@@ -1,9 +1,10 @@
 {
   "$schema": "../schemas/model-plan-approval.schema.json",
-  "schema_version": "kyuubiki.model-plan-approval/v1",
+  "schema_version": "kyuubiki.model-plan-approval/v2",
   "approval_id": "approval.material-screening.example",
   "session_id": "session.material-screening.001",
-  "workflow_id": "workflow.material-screening.001",
+  "workflow_id": "workflow.material-study-envelope-ranking-json",
+  "plan_digest": "sha256:22e040653a1fc2274201a86f3ffaff67e896cedb5754e6fee01fb0528704d18d",
   "authority": "caller:research-reviewer",
   "issued_at": "2026-08-01T00:01:00Z",
   "approved_steps": [

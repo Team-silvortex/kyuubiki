@@ -55,19 +55,24 @@ not gain Operator SDK authority or bypass PWDT and GUI ownership rules.
 5. Call `normalize_model_response()` on the complete provider response.
 6. Call `compile_model_proposal()` before considering execution.
 7. Reject compilations whose `ok` field is false.
-8. Present every confirmation in the compiled Headless plan to the controlling
-   policy or human operator.
-9. Dispatch only through an existing Headless executor after those gates pass.
+8. Build the read-only approval request and present its digest-bound gated
+   steps to the controlling policy or human operator.
+9. Accept only caller approval whose `plan_digest` matches the complete plan.
+10. Dispatch only through an existing Headless executor after those gates pass.
 
 Model output is never executable authority. Tool calls are untrusted input.
 
 All three official SDKs provide bounded execution bridges over their existing
-Headless Session clients. Every gated step must match an exact caller-issued
-`kyuubiki.model-plan-approval/v1` before any network access, and a caller-owned
-verifier must authenticate that approval independently of model output.
-Execution returns a
-`kyuubiki.model-research-execution-receipt/v1`; a failed receipt preserves
+Headless Session clients. `kyuubiki.model-plan-approval-request/v1` exposes
+only the canonical SHA-256 plan digest and gated-step review data; it grants no
+execution authority. Every gated step must then match an exact caller-issued
+`kyuubiki.model-plan-approval/v2`, including that digest, before any network
+access. A caller-owned verifier authenticates the approval independently of
+model output. Execution returns a
+`kyuubiki.model-research-execution-receipt/v2`; a failed receipt preserves
 completed steps and the failing step without claiming workflow completion.
+Changing any nested payload after approval invalidates the digest and rejects
+the whole plan before dispatch.
 
 Cross-turn research uses `kyuubiki.model-research-frontier/v1`. A caller-owned
 receipt verifier must authenticate each execution receipt before the frontier
@@ -149,6 +154,7 @@ The official integration surface lives in `sdks/rust` and exports:
 
 - `rust_headless_model_tools()`
 - `inspect_model_research_bootstrap()`
+- `build_bootstrapped_model_headless_plan()`
 - `build_model_collaboration_request()`
 - `project_model_tools()`
 - `normalize_model_response()`
@@ -185,6 +191,7 @@ code-generation pipeline implements and packages the Rust operator. See
 The Python SDK exports dictionary-first equivalents:
 
 - `inspect_model_research_bootstrap()`
+- `build_bootstrapped_model_headless_plan()`
 - `headless_model_tools()`
 - `build_model_collaboration_request()`
 - `normalize_model_response()`
@@ -196,7 +203,9 @@ The Elixir SDK exposes the same flow through
 `normalize_response/3`, `build_plan/2`, and `sanitize_context/1`. Its public
 root module also provides concise delegates for the request, normalization, and
 plan operations. `KyuubikiSdk.ModelResearchBootstrap.inspect/3` provides the
-same fail-closed readiness report used by Rust and Python.
+same fail-closed readiness report used by Rust and Python, while
+`build_plan/3` converts only a valid Elixir-bound report and matching workflow
+session into the ordinary Headless plan.
 
 Both adapters consume the same repository session/proposal fixtures and retain
 the Rust policy defaults. Dynamic-language type errors are converted into

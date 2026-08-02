@@ -12,7 +12,21 @@ defmodule KyuubikiSdk.ModelResearchBootstrapTest do
       |> File.read!()
       |> Jason.decode!()
 
-    %{root: root, bootstrap: bootstrap}
+    first = bootstrap["first_research"]
+
+    session =
+      root
+      |> Path.join(first["session_fixture"])
+      |> File.read!()
+      |> Jason.decode!()
+
+    proposal =
+      root
+      |> Path.join(first["proposal_fixture"])
+      |> File.read!()
+      |> Jason.decode!()
+
+    %{root: root, bootstrap: bootstrap, session: session, proposal: proposal}
   end
 
   test "repository bootstrap is ready for all official SDKs", context do
@@ -92,5 +106,48 @@ defmodule KyuubikiSdk.ModelResearchBootstrapTest do
 
     refute report["ready_for_planning"]
     assert "selected SDK surface is missing: elixir" in report["blockers"]
+  end
+
+  test "bootstrapped readiness builds first Headless plan", context do
+    assert {:ok, readiness} =
+             ModelResearchBootstrap.inspect(
+               context.bootstrap,
+               :elixir,
+               &File.regular?(Path.join(context.root, &1))
+             )
+
+    assert {:ok, plan} =
+             ModelResearchBootstrap.build_plan(readiness, context.session, context.proposal)
+
+    assert plan["ok"]
+    refute plan["ready_without_confirmation"]
+    assert plan["workflow_id"] == readiness["workflow_id"]
+  end
+
+  test "blocked or mismatched readiness never builds a plan", context do
+    assert {:ok, readiness} =
+             ModelResearchBootstrap.inspect(
+               context.bootstrap,
+               :elixir,
+               &File.regular?(Path.join(context.root, &1))
+             )
+
+    assert {:error, blocked} =
+             ModelResearchBootstrap.build_plan(
+               Map.put(readiness, "ready_for_planning", false),
+               context.session,
+               context.proposal
+             )
+
+    assert blocked.message =~ "not valid for Elixir planning"
+
+    assert {:error, mismatch} =
+             ModelResearchBootstrap.build_plan(
+               readiness,
+               Map.put(context.session, "workflow_id", "workflow.other"),
+               context.proposal
+             )
+
+    assert mismatch.message =~ "workflow_id does not match"
   end
 end

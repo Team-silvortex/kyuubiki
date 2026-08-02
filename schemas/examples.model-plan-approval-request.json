@@ -1,0 +1,19 @@
+{
+  "$schema": "../schemas/model-plan-approval-request.schema.json",
+  "schema_version": "kyuubiki.model-plan-approval-request/v1",
+  "plan_schema_version": "kyuubiki.model-headless-plan/v1",
+  "plan_digest": "sha256:22e040653a1fc2274201a86f3ffaff67e896cedb5754e6fee01fb0528704d18d",
+  "session_id": "session.material-screening.001",
+  "workflow_id": "workflow.material-study-envelope-ranking-json",
+  "status": "approval_required",
+  "execution_authority": "none_approval_request_only",
+  "approval_schema_version": "kyuubiki.model-plan-approval/v2",
+  "required_steps": [
+    {
+      "index": 2,
+      "action": "workflow_submit_catalog",
+      "risk": "sensitive",
+      "confirmation_reason": "sensitive Headless action requires explicit approval before dispatch"
+    }
+  ]
+}

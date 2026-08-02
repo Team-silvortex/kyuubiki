@@ -5,7 +5,11 @@ import json
 import unittest
 from pathlib import Path
 
-from kyuubiki_sdk import inspect_model_research_bootstrap
+from kyuubiki_sdk import (
+    ModelResearchBootstrapError,
+    build_bootstrapped_model_headless_plan,
+    inspect_model_research_bootstrap,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
@@ -15,6 +19,13 @@ class ModelResearchBootstrapTests(unittest.TestCase):
     def setUp(self) -> None:
         self.bootstrap = json.loads(
             (ROOT_DIR / "docs/model-research-bootstrap.json").read_text(encoding="utf-8")
+        )
+        first = self.bootstrap["first_research"]
+        self.session = json.loads(
+            (ROOT_DIR / first["session_fixture"]).read_text(encoding="utf-8")
+        )
+        self.proposal = json.loads(
+            (ROOT_DIR / first["proposal_fixture"]).read_text(encoding="utf-8")
         )
 
     def test_repository_bootstrap_is_ready_for_all_official_sdks(self) -> None:
@@ -68,6 +79,33 @@ class ModelResearchBootstrapTests(unittest.TestCase):
         self.assertTrue(
             any("none_preflight_only" in item for item in authority["blockers"])
         )
+
+    def test_bootstrapped_readiness_builds_first_headless_plan(self) -> None:
+        readiness = inspect_model_research_bootstrap(
+            self.bootstrap, "python", lambda path: (ROOT_DIR / path).is_file()
+        )
+        plan = build_bootstrapped_model_headless_plan(
+            readiness, self.session, self.proposal
+        )
+        self.assertTrue(plan["ok"])
+        self.assertFalse(plan["ready_without_confirmation"])
+        self.assertEqual(plan["workflow_id"], readiness["workflow_id"])
+
+    def test_blocked_or_mismatched_readiness_never_builds_plan(self) -> None:
+        readiness = inspect_model_research_bootstrap(
+            self.bootstrap, "python", lambda path: (ROOT_DIR / path).is_file()
+        )
+        readiness["ready_for_planning"] = False
+        with self.assertRaises(ModelResearchBootstrapError):
+            build_bootstrapped_model_headless_plan(
+                readiness, self.session, self.proposal
+            )
+
+        readiness["ready_for_planning"] = True
+        session = copy.deepcopy(self.session)
+        session["workflow_id"] = "workflow.other"
+        with self.assertRaisesRegex(ModelResearchBootstrapError, "workflow_id does not match"):
+            build_bootstrapped_model_headless_plan(readiness, session, self.proposal)
 
 
 if __name__ == "__main__":

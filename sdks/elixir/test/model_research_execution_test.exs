@@ -3,6 +3,7 @@ defmodule KyuubikiSdk.ModelResearchExecutionTest do
 
   alias KyuubikiSdk.ControlPlaneClient
   alias KyuubikiSdk.ModelCollaboration
+  alias KyuubikiSdk.ModelPlanApproval
   alias KyuubikiSdk.ModelResearchExecution
   alias KyuubikiSdk.Session
 
@@ -35,6 +36,29 @@ defmodule KyuubikiSdk.ModelResearchExecutionTest do
     refute_received {:dispatched, _}
   end
 
+  test "rejects payload changed after approval before any dispatch" do
+    {:ok, plan} = ModelCollaboration.build_plan(session(), proposal())
+    approval = approval(plan)
+
+    changed =
+      put_in(
+        plan,
+        ["steps", Access.at(1), "payload", "input_artifacts", "material_rows", "rows"],
+        [
+          %{"case_id" => "injected-after-approval"}
+        ]
+      )
+
+    parent = self()
+    dispatcher = fn action, _payload -> send(parent, {:dispatched, action}) end
+
+    assert {:error, error} =
+             ModelResearchExecution.execute(dispatcher, changed, approval, fn _, _ -> true end)
+
+    assert error.message =~ "plan_digest does not match"
+    refute_received {:dispatched, _}
+  end
+
   test "executes approved plan and retains authority" do
     {:ok, plan} = ModelCollaboration.build_plan(session(), proposal())
     dispatcher = fake_dispatcher()
@@ -49,6 +73,7 @@ defmodule KyuubikiSdk.ModelResearchExecutionTest do
 
     assert receipt["status"] == "completed"
     assert receipt["completed_steps"] == 2
+    assert receipt["plan_digest"] == approval(plan)["plan_digest"]
     assert Enum.at(receipt["records"], 1)["authority"] == "test-dispatcher"
   end
 
@@ -247,11 +272,14 @@ defmodule KyuubikiSdk.ModelResearchExecutionTest do
   end
 
   defp approval(plan) do
+    {:ok, plan_digest} = ModelPlanApproval.compute_digest(plan)
+
     %{
       "schema_version" => ModelResearchExecution.approval_schema_version(),
       "approval_id" => "approval-elixir-test",
       "session_id" => plan["session_id"],
       "workflow_id" => plan["workflow_id"],
+      "plan_digest" => plan_digest,
       "authority" => "elixir-integration-test",
       "issued_at" => "2026-08-01T00:01:00Z",
       "approved_steps" => [%{"index" => 2, "action" => "workflow_submit_catalog"}]

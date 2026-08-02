@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.model-collaboration/v1",
   "session_id": "session.material-screening.001",
-  "workflow_id": "workflow.material-screening.001",
+  "workflow_id": "workflow.material-study-envelope-ranking-json",
   "objective": "Check the control plane and start the bounded material envelope screening workflow.",
   "language": "en",
   "created_at": "2026-08-01T00:00:00Z",

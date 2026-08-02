@@ -12,6 +12,7 @@ defmodule KyuubikiSdk do
   alias KyuubikiSdk.AdvancedSolverWorkflows
   alias KyuubikiSdk.ModelCollaboration
   alias KyuubikiSdk.ModelResearchExecution
+  alias KyuubikiSdk.ModelPlanApproval
   alias KyuubikiSdk.ModelResearchBootstrap
   alias KyuubikiSdk.ModelResearchFrontier
   alias KyuubikiSdk.ModelResearchValidation
@@ -37,6 +38,12 @@ defmodule KyuubikiSdk do
 
   def inspect_model_research_bootstrap(bootstrap, sdk, resource_exists),
     do: ModelResearchBootstrap.inspect(bootstrap, sdk, resource_exists)
+
+  def bootstrapped_model_headless_plan(readiness, session, proposal),
+    do: ModelResearchBootstrap.build_plan(readiness, session, proposal)
+
+  def model_plan_digest(plan), do: ModelPlanApproval.compute_digest(plan)
+  def model_plan_approval_request(plan), do: ModelPlanApproval.build_request(plan)
 
   def execute_model_headless_plan(dispatcher, plan, approval, approval_verifier),
     do: ModelResearchExecution.execute(dispatcher, plan, approval, approval_verifier)

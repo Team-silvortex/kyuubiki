@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol
 
 from .errors import ModelResearchExecutionError
 from .model_collaboration import MODEL_HEADLESS_PLAN_SCHEMA_VERSION
+from .model_plan_approval import (
+    MODEL_PLAN_APPROVAL_SCHEMA_VERSION,
+    compute_model_headless_plan_digest,
+)
 from .session import KyuubikiSession
 
 
-MODEL_PLAN_APPROVAL_SCHEMA_VERSION = "kyuubiki.model-plan-approval/v1"
-MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION = "kyuubiki.model-research-execution-receipt/v1"
+MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION = "kyuubiki.model-research-execution-receipt/v2"
 ApprovalVerifier = Callable[[Mapping[str, Any], Mapping[str, Any]], bool]
 
 
@@ -113,12 +117,15 @@ def execute_model_headless_plan(
     approval: Mapping[str, Any] | None,
     approval_verifier: ApprovalVerifier,
 ) -> dict[str, Any]:
-    _validate_execution_request(plan, approval)
+    plan_digest = _validate_execution_request(plan, approval)
     if approval is not None and not approval_verifier(plan, approval):
         _fail("caller approval verifier rejected approval")
+    execution_plan = copy.deepcopy(plan)
+    if compute_model_headless_plan_digest(execution_plan) != plan_digest:
+        _fail("model plan changed after approval verification")
 
     records: list[dict[str, Any]] = []
-    for step in plan["steps"]:
+    for step in execution_plan["steps"]:
         job_id = _action_job_id(step["action"], step["payload"])
         try:
             dispatched = dispatcher.dispatch_model_action(step["action"], step["payload"])
@@ -143,8 +150,10 @@ def execute_model_headless_plan(
                     "error": _bounded_error(error),
                 }
             )
-            return _receipt(plan, approval, "failed", step["index"], records)
-    return _receipt(plan, approval, "completed", None, records)
+            return _receipt(
+                execution_plan, plan_digest, approval, "failed", step["index"], records
+            )
+    return _receipt(execution_plan, plan_digest, approval, "completed", None, records)
 
 
 def _action_job_id(action: str, payload: Mapping[str, Any]) -> str | None:
@@ -156,7 +165,7 @@ def _action_job_id(action: str, payload: Mapping[str, Any]) -> str | None:
 
 def _validate_execution_request(
     plan: Mapping[str, Any], approval: Mapping[str, Any] | None
-) -> None:
+) -> str:
     errors: list[str] = []
     if not isinstance(plan, Mapping):
         _fail("model plan must be a JSON object")
@@ -174,20 +183,25 @@ def _validate_execution_request(
     ):
         errors.append("model plan step indexes must be contiguous and one-based")
 
+    plan_digest = compute_model_headless_plan_digest(plan)
     gated = {
         (step["index"], step["action"])
         for step in steps
         if isinstance(step, Mapping) and step.get("requires_confirmation")
     }
-    approved = _validate_approval(plan, approval, gated, errors) if approval else set()
+    approved = (
+        _validate_approval(plan, plan_digest, approval, gated, errors) if approval else set()
+    )
     for index, action in gated - approved:
         errors.append(f"step {index} ({action}) requires an exact caller-issued approval")
     if errors:
         raise ModelResearchExecutionError(sorted(set(errors)))
+    return plan_digest
 
 
 def _validate_approval(
     plan: Mapping[str, Any],
+    plan_digest: str,
     approval: Mapping[str, Any],
     gated: set[tuple[int, str]],
     errors: list[str],
@@ -204,6 +218,8 @@ def _validate_approval(
         or approval.get("workflow_id") != plan.get("workflow_id")
     ):
         errors.append("model approval does not match plan session and workflow")
+    if approval.get("plan_digest") != plan_digest:
+        errors.append("model approval plan_digest does not match the complete plan")
     for key in ("approval_id", "authority", "issued_at"):
         if not isinstance(approval.get(key), str) or not approval[key].strip():
             errors.append(f"model approval {key} is required")
@@ -235,6 +251,7 @@ def _validate_approval(
 
 def _receipt(
     plan: Mapping[str, Any],
+    plan_digest: str,
     approval: Mapping[str, Any] | None,
     status: str,
     failed_step: int | None,
@@ -245,6 +262,7 @@ def _receipt(
         "plan_schema_version": plan["schema_version"],
         "session_id": plan["session_id"],
         "workflow_id": plan["workflow_id"],
+        "plan_digest": plan_digest,
         "status": status,
         "execution_authority": "kyuubiki-headless-sdk",
         "approval_id": approval.get("approval_id") if approval else None,

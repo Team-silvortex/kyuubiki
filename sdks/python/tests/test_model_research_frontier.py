@@ -176,10 +176,11 @@ def receipt(
     error: str | None = None,
 ) -> dict[str, object]:
     return {
-        "schema_version": "kyuubiki.model-research-execution-receipt/v1",
+        "schema_version": "kyuubiki.model-research-execution-receipt/v2",
         "plan_schema_version": "kyuubiki.model-headless-plan/v1",
         "session_id": "research-session",
         "workflow_id": "workflow.material",
+        "plan_digest": "sha256:" + "0" * 64,
         "status": status,
         "execution_authority": "kyuubiki-headless-sdk",
         "approval_id": "approval-test",

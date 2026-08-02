@@ -51,6 +51,8 @@
     }
   },
   "execution_contract": {
+    "approval_request_schema": "schemas/model-plan-approval-request.schema.json",
+    "approval_request_fixture": "schemas/examples.model-plan-approval-request.json",
     "approval_schema": "schemas/model-plan-approval.schema.json",
     "approval_fixture": "schemas/examples.model-plan-approval.json",
     "receipt_schema": "schemas/model-research-execution-receipt.schema.json",
@@ -62,11 +64,14 @@
     "surfaces": {
       "rust": {
         "path": "sdks/rust/src/model_research_execution.rs",
+        "approval_path": "sdks/rust/src/model_plan_approval.rs",
         "frontier_path": "sdks/rust/src/model_research_frontier.rs",
         "validation_path": "sdks/rust/src/model_research_validation.rs",
         "executor": "execute_model_headless_plan",
         "dispatcher": "SessionModelActionDispatcher",
         "approval_verifier": "ModelApprovalVerifier",
+        "plan_digest": "compute_model_headless_plan_digest",
+        "approval_request": "build_model_plan_approval_request",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
         "result_validator": "validate_model_research_frontier_result",
@@ -75,11 +80,14 @@
       },
       "python": {
         "path": "sdks/python/kyuubiki_sdk/model_research_execution.py",
+        "approval_path": "sdks/python/kyuubiki_sdk/model_plan_approval.py",
         "frontier_path": "sdks/python/kyuubiki_sdk/model_research_frontier.py",
         "validation_path": "sdks/python/kyuubiki_sdk/model_research_validation.py",
         "executor": "execute_model_headless_plan",
         "dispatcher": "SessionModelActionDispatcher",
         "approval_verifier": "ApprovalVerifier",
+        "plan_digest": "compute_model_headless_plan_digest",
+        "approval_request": "build_model_plan_approval_request",
         "frontier_start": "start_model_research_frontier",
         "frontier_advance": "advance_model_research_frontier",
         "result_validator": "validate_model_research_frontier_result",
@@ -88,11 +96,14 @@
       },
       "elixir": {
         "path": "sdks/elixir/lib/kyuubiki_sdk/model_research_execution.ex",
+        "approval_path": "sdks/elixir/lib/kyuubiki_sdk/model_plan_approval.ex",
         "frontier_path": "sdks/elixir/lib/kyuubiki_sdk/model_research_frontier.ex",
         "validation_path": "sdks/elixir/lib/kyuubiki_sdk/model_research_validation.ex",
         "executor": "ModelResearchExecution.execute/4",
         "dispatcher": "ModelResearchExecution.session_dispatcher/2",
         "approval_verifier": "caller-owned two-argument function",
+        "plan_digest": "ModelPlanApproval.compute_digest/1",
+        "approval_request": "ModelPlanApproval.build_request/1",
         "frontier_start": "ModelResearchFrontier.start/2",
         "frontier_advance": "ModelResearchFrontier.advance/4",
         "result_validator": "ModelResearchValidation.validate/6",
@@ -108,15 +119,18 @@
     "surfaces": {
       "rust": {
         "path": "sdks/rust/src/model_research_bootstrap.rs",
-        "inspect": "inspect_model_research_bootstrap"
+        "inspect": "inspect_model_research_bootstrap",
+        "build_plan": "build_bootstrapped_model_headless_plan"
       },
       "python": {
         "path": "sdks/python/kyuubiki_sdk/model_research_bootstrap.py",
-        "inspect": "inspect_model_research_bootstrap"
+        "inspect": "inspect_model_research_bootstrap",
+        "build_plan": "build_bootstrapped_model_headless_plan"
       },
       "elixir": {
         "path": "sdks/elixir/lib/kyuubiki_sdk/model_research_bootstrap.ex",
-        "inspect": "KyuubikiSdk.ModelResearchBootstrap.inspect/3"
+        "inspect": "KyuubikiSdk.ModelResearchBootstrap.inspect/3",
+        "build_plan": "KyuubikiSdk.ModelResearchBootstrap.build_plan/3"
       }
     }
   },
@@ -135,7 +149,7 @@
     {
       "id": "plan",
       "objective": "Create one narrow collaboration session and normalize one dependency frontier at a time.",
-      "outputs": ["model_collaboration_session", "model_workflow_proposal", "model_headless_plan"]
+      "outputs": ["model_collaboration_session", "model_workflow_proposal", "model_headless_plan", "model_plan_approval_request"]
     },
     {
       "id": "submit",
@@ -172,7 +186,8 @@
     "Never expose credentials, authorization headers, private keys, or full secret-bearing configuration to a model provider.",
     "Use only tools projected by the active SDK policy and never invent action names.",
     "Normalize provider output and build a Headless plan before dispatching any action.",
-    "Request explicit approval for every confirmation-gated step before dispatch.",
+    "Generate a digest-bound approval request and obtain explicit approval for every confirmation-gated step before dispatch.",
+    "Reject an approval whenever its plan_digest differs from the complete plan presented for dispatch.",
     "A model response can request approval but can never issue, infer, verify, or self-authorize a caller approval.",
     "Advance cross-turn research only from a caller-verified execution receipt and its bound real job identifier.",
     "Process one known dependency frontier per model turn and never invent future job identifiers.",

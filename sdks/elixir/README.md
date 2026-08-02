@@ -16,6 +16,9 @@ preflight through a caller-owned resource resolver. It returns the selected SDK
 entrypoints, missing project-relative resources, active hard rules, and stop
 conditions. A passing report is still `none_preflight_only` and cannot approve
 or dispatch work.
+`KyuubikiSdk.ModelResearchBootstrap.build_plan/3` closes the next local step:
+it accepts only an Elixir-bound readiness report and matching workflow session,
+then returns the ordinary confirmation-aware plan without network access.
 
 `KyuubikiSdk.ModelCollaboration` provides BEAM-native access to the shared
 model session and proposal contracts. `build_request/3` projects constrained
@@ -29,10 +32,12 @@ Every entry point returns `{:ok, value}` or a structured
 client, model credentials, billing, or execution authority.
 
 `KyuubikiSdk.ModelResearchExecution` closes the approved execution path. Its
-`execute/4` function requires an exact plan-bound approval and a caller-owned
-two-argument verifier before dispatching through `session_dispatcher/2`. The
-result uses the same completed/failed receipt contract as Rust and Python and
-retains partial failure evidence.
+`execute/4` function requires an exact digest-bound approval and a caller-owned
+two-argument verifier before dispatching through `session_dispatcher/2`.
+`KyuubikiSdk.ModelPlanApproval.build_request/1` provides the non-authoritative
+review surface, while `compute_digest/1` binds the complete plan. The result
+uses the same v2 completed/failed receipt contract as Rust and Python and
+retains both the digest and partial failure evidence.
 
 ```elixir
 auth = KyuubikiSdk.Auth.access_token("dev-token")

@@ -13,7 +13,7 @@ defmodule KyuubikiSdk.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :inets, :ssl, :public_key]
+      extra_applications: [:logger, :inets, :ssl, :public_key, :crypto]
     ]
   end
 

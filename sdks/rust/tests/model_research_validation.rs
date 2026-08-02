@@ -166,6 +166,7 @@ fn receipt(output: Value, job_id: &str) -> ModelResearchExecutionReceipt {
         plan_schema_version: MODEL_HEADLESS_PLAN_SCHEMA_VERSION.to_string(),
         session_id: "research-session".to_string(),
         workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
+        plan_digest: format!("sha256:{}", "0".repeat(64)),
         status: ModelResearchExecutionStatus::Completed,
         execution_authority: "kyuubiki-headless-sdk".to_string(),
         approval_id: Some("approval-test".to_string()),

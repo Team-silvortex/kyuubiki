@@ -16,6 +16,9 @@ before tools are projected. A caller-owned resolver checks every required
 project-relative resource; missing or unsafe paths return blockers and
 `ready_for_planning: false`. The report always carries
 `execution_authority: none_preflight_only`.
+`build_bootstrapped_model_headless_plan(...)` binds that report to a matching
+session and proposal, rejects invalid generated plans, and remains entirely
+side-effect free.
 
 `kyuubiki_sdk.model_collaboration` exposes the same provider-neutral planning
 contract as the Rust and Elixir SDKs. Use
@@ -31,10 +34,13 @@ confirmation-gated. The caller owns model HTTP clients, credentials, retries,
 billing, and final Headless execution.
 
 `execute_model_headless_plan(...)` now provides that bounded execution bridge
-through `SessionModelActionDispatcher`. It requires an exact plan-bound
-approval plus a caller-owned verifier callback before network access and emits
-the shared `kyuubiki.model-research-execution-receipt/v1`, including partial
-failure evidence.
+through `SessionModelActionDispatcher`. Before review,
+`build_model_plan_approval_request(...)` exposes only gated steps and the
+canonical digest from `compute_model_headless_plan_digest(...)`. Execution
+requires an exact digest-bound approval plus a caller-owned verifier callback
+before network access and emits the shared
+`kyuubiki.model-research-execution-receipt/v2`, including partial failure
+evidence and the same plan digest.
 
 ```python
 from kyuubiki_sdk import (

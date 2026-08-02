@@ -40,13 +40,17 @@ model enough contract knowledge to prepare safe, inspectable work.
 7. Create the shared collaboration session fixture or a narrower derivative.
 8. Project tools for the selected provider and request one dependency frontier.
 9. Normalize the provider response and build a Headless plan.
-10. Reject an invalid plan; request approval for every confirmation-gated step.
-11. Have the caller issue a plan-bound approval using
+   Integrations may use the selected SDK's bootstrapped-plan helper to bind the
+   passing readiness report, collaboration session, and proposal in one call.
+10. Reject an invalid plan; build the SDK-native
+    `kyuubiki.model-plan-approval-request/v1` for every confirmation-gated step.
+11. Have the caller issue a digest-bound approval using
     `schemas/model-plan-approval.schema.json`. The model may request this
-    approval but may not create or infer it.
+    approval but may not create or infer it. Recompute and compare `plan_digest`
+    immediately before dispatch.
 12. Use the selected SDK execution surface and its Session dispatcher to route
     through the ordinary Headless client and retain a
-    `kyuubiki.model-research-execution-receipt/v1` receipt.
+    `kyuubiki.model-research-execution-receipt/v2` receipt.
 13. Verify that receipt independently, then create or advance
     `kyuubiki.model-research-frontier/v1`. Its generated proposal binds the
     exact returned `job_id`; the model does not supply that binding.
@@ -82,6 +86,10 @@ Start from:
 - `schemas/examples.model-collaboration-session.json`
 - `schemas/examples.model-workflow-proposal.json`
 - `schemas/examples.material-envelope-catalog-request.json`
+
+The collaboration session, proposal payload, approval, execution receipt, and
+research frontier must all retain this exact catalog workflow identity. A
+generic study label is not a substitute for the executable workflow binding.
 
 The initial proposal checks service health and submits the bounded catalog
 workflow. `workflow_submit_catalog` is confirmation-gated. After dispatch, use

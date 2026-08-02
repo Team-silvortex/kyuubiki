@@ -1,5 +1,6 @@
 use kyuubiki_headless_sdk::{
-    MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION, ModelResearchSdk,
+    MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION, ModelCollaborationSession, ModelResearchSdk,
+    ModelWorkflowProposal, build_bootstrapped_model_headless_plan,
     inspect_model_research_bootstrap,
 };
 use serde_json::Value;
@@ -13,6 +14,24 @@ fn repository_bootstrap() -> (std::path::PathBuf, Value) {
     )
     .expect("bootstrap JSON");
     (root, bootstrap)
+}
+
+fn first_research_fixtures(
+    root: &Path,
+    bootstrap: &Value,
+) -> (ModelCollaborationSession, ModelWorkflowProposal) {
+    let first = &bootstrap["first_research"];
+    let session = serde_json::from_str(
+        &fs::read_to_string(root.join(first["session_fixture"].as_str().unwrap()))
+            .expect("session fixture"),
+    )
+    .expect("session JSON");
+    let proposal = serde_json::from_str(
+        &fs::read_to_string(root.join(first["proposal_fixture"].as_str().unwrap()))
+            .expect("proposal fixture"),
+    )
+    .expect("proposal JSON");
+    (session, proposal)
 }
 
 #[test]
@@ -94,4 +113,37 @@ fn missing_or_unsafe_resources_block_planning_without_execution_authority() {
             .iter()
             .any(|blocker| blocker.contains("none_preflight_only"))
     );
+}
+
+#[test]
+fn bootstrapped_readiness_builds_first_headless_plan() {
+    let (root, bootstrap) = repository_bootstrap();
+    let readiness = inspect_model_research_bootstrap(&bootstrap, ModelResearchSdk::Rust, |path| {
+        root.join(path).is_file()
+    });
+    let (session, proposal) = first_research_fixtures(&root, &bootstrap);
+    let plan = build_bootstrapped_model_headless_plan(&readiness, &session, &proposal)
+        .expect("bootstrapped plan");
+
+    assert!(plan.ok);
+    assert!(!plan.ready_without_confirmation);
+    assert_eq!(plan.workflow_id, readiness.workflow_id);
+}
+
+#[test]
+fn blocked_or_mismatched_readiness_never_builds_plan() {
+    let (root, bootstrap) = repository_bootstrap();
+    let mut readiness =
+        inspect_model_research_bootstrap(&bootstrap, ModelResearchSdk::Rust, |path| {
+            root.join(path).is_file()
+        });
+    let (mut session, proposal) = first_research_fixtures(&root, &bootstrap);
+    readiness.ready_for_planning = false;
+    assert!(build_bootstrapped_model_headless_plan(&readiness, &session, &proposal).is_err());
+
+    readiness.ready_for_planning = true;
+    session.workflow_id = "workflow.other".into();
+    let error = build_bootstrapped_model_headless_plan(&readiness, &session, &proposal)
+        .expect_err("workflow mismatch");
+    assert!(error.to_string().contains("workflow_id does not match"));
 }

@@ -2,7 +2,7 @@
   "$schema": "../schemas/model-research-frontier.schema.json",
   "schema_version": "kyuubiki.model-research-frontier/v1",
   "session_id": "session.material-screening.001",
-  "workflow_id": "workflow.material-screening.001",
+  "workflow_id": "workflow.material-study-envelope-ranking-json",
   "stage": "waiting_for_job",
   "job_id": "job-material-envelope-001",
   "next_action": "job_wait",

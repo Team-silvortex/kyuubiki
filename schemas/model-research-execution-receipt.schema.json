@@ -9,6 +9,7 @@
     "plan_schema_version",
     "session_id",
     "workflow_id",
+    "plan_digest",
     "status",
     "execution_authority",
     "approval_id",
@@ -21,7 +22,7 @@
       "const": "../schemas/model-research-execution-receipt.schema.json"
     },
     "schema_version": {
-      "const": "kyuubiki.model-research-execution-receipt/v1"
+      "const": "kyuubiki.model-research-execution-receipt/v2"
     },
     "plan_schema_version": {
       "const": "kyuubiki.model-headless-plan/v1"
@@ -33,6 +34,10 @@
     "workflow_id": {
       "type": "string",
       "minLength": 1
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "status": {
       "enum": ["completed", "failed"]

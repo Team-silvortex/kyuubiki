@@ -31,7 +31,7 @@
           <li>Verify service health and protocol compatibility.</li>
           <li>Project only policy-allowed tools for the selected provider.</li>
           <li>Normalize one dependency frontier into a portable proposal.</li>
-          <li>Build the Headless plan and obtain exact caller approval.</li>
+          <li>Build the readiness-bound Headless plan and its digest-bound approval request.</li>
           <li>Dispatch through the selected SDK bridge and retain its execution receipt.</li>
           <li>Verify the receipt and advance the bound cross-turn research frontier.</li>
           <li>Observe and fetch the bound result, then produce the verified validation report.</li>
@@ -58,7 +58,9 @@
           <h2>First workflow</h2>
           <p class="docs-copy">
             Start with <code>workflow.material-study-envelope-ranking-json</code>
-            and the shared session, proposal, and catalog-request fixtures.
+            and the shared session, proposal, and catalog-request fixtures. The
+            session, approval, receipt, and frontier must keep that exact
+            executable workflow identity.
           </p>
         </article>
         <article class="docs-card docs-section">
@@ -73,9 +75,11 @@
       <section class="docs-card docs-section">
         <h2>Native execution bridge</h2>
         <p class="docs-copy">
-          Rust, Python, and Elixir reject missing or mismatched caller approvals
-          before network access. A caller-owned verifier authenticates approval
-          independently of model output, and the receipt distinguishes
+          Rust, Python, and Elixir generate the same canonical plan digest and
+          reject missing, stale, or payload-mismatched caller approvals before
+          network access. The approval request has no execution authority. A
+          caller-owned verifier authenticates approval independently of model
+          output, and the v2 receipt retains the digest and distinguishes
           completed execution from partial failure. A separate caller-owned
           receipt verifier gates frontier advancement and preserves the real
           job binding across later turns. A frontier verifier separately
@@ -87,6 +91,7 @@
         <div class="docs-links">
           <a class="docs-link" href="../sdks/rust/examples/execute_model_research_plan.rs">Reference runner</a>
           <a class="docs-link" href="../schemas/examples.model-plan-approval.json">Bounded approval example</a>
+          <a class="docs-link" href="../schemas/examples.model-plan-approval-request.json">Approval request example</a>
         </div>
       </section>
 
@@ -100,6 +105,7 @@
         </p>
         <div class="docs-links">
           <a class="docs-link" href="../schemas/model-plan-approval.schema.json">Approval contract</a>
+          <a class="docs-link" href="../schemas/model-plan-approval-request.schema.json">Approval request contract</a>
           <a class="docs-link" href="../schemas/model-research-execution-receipt.schema.json">Execution receipt</a>
           <a class="docs-link" href="../schemas/model-research-frontier.schema.json">Research frontier</a>
           <a class="docs-link" href="../schemas/model-research-validation-report.schema.json">Validation report</a>

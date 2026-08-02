@@ -4,7 +4,7 @@ use kyuubiki_headless_sdk::{
     ModelActionDispatch, ModelActionDispatcher, ModelApprovalVerifier, ModelCollaborationPolicy,
     ModelCollaborationSession, ModelPlanApproval, ModelResearchExecutionStatus, ModelToolCall,
     ModelWorkflowProposal, SessionModelActionDispatcher, build_model_headless_plan,
-    execute_model_headless_plan,
+    compute_model_headless_plan_digest, execute_model_headless_plan,
 };
 use serde_json::{Value, json};
 use std::io::{Read, Write};
@@ -99,6 +99,7 @@ fn executes_exactly_approved_plan_and_retains_authority() {
     assert_eq!(receipt.status, ModelResearchExecutionStatus::Completed);
     assert_eq!(receipt.completed_steps, 2);
     assert_eq!(receipt.approval_id.as_deref(), Some("approval-test-001"));
+    assert_eq!(receipt.plan_digest, approval.plan_digest);
     assert_eq!(
         receipt.records[1].authority.as_deref(),
         Some("test-dispatcher")
@@ -120,6 +121,22 @@ fn rejects_unverified_approval_before_any_dispatch() {
     let error = execute_model_headless_plan(&dispatcher, &plan, Some(&approval), &verifier)
         .expect_err("verifier gate");
     assert!(error.to_string().contains("verifier rejected approval"));
+    assert!(dispatcher.seen.lock().expect("seen lock").is_empty());
+}
+
+#[test]
+fn rejects_plan_payload_changed_after_approval_before_any_dispatch() {
+    let session = collaboration_session();
+    let mut plan = build_model_headless_plan(&session, &first_proposal()).expect("plan");
+    let approval = approval_for(&plan, 2, "workflow_submit_catalog");
+    plan.steps[1].payload["input_artifacts"]["material_rows"]["rows"] =
+        json!([{ "case_id": "injected-after-approval" }]);
+    let dispatcher = FakeDispatcher::new(None);
+    let verifier = TestApprovalVerifier { allow: true };
+
+    let error = execute_model_headless_plan(&dispatcher, &plan, Some(&approval), &verifier)
+        .expect_err("digest gate");
+    assert!(error.to_string().contains("plan_digest does not match"));
     assert!(dispatcher.seen.lock().expect("seen lock").is_empty());
 }
 
@@ -326,6 +343,7 @@ fn approval_for(
         approval_id: "approval-test-001".to_string(),
         session_id: plan.session_id.clone(),
         workflow_id: plan.workflow_id.clone(),
+        plan_digest: compute_model_headless_plan_digest(plan).expect("plan digest"),
         authority: "integration-test".to_string(),
         issued_at: "2026-08-01T00:01:00Z".to_string(),
         approved_steps: vec![ApprovedModelPlanStep {

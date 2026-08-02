@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from .errors import ModelResearchBootstrapError
+from .model_collaboration import build_model_headless_plan
 
 
 MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION = "kyuubiki.model-research-bootstrap/v1"
@@ -89,6 +90,50 @@ def inspect_model_research_bootstrap(
     }
 
 
+def build_bootstrapped_model_headless_plan(
+    readiness: Mapping[str, Any],
+    session: Mapping[str, Any],
+    proposal: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build the first plan only after a Python-bound bootstrap preflight."""
+    _validate_readiness_for_plan(readiness)
+    if not isinstance(session, Mapping) or session.get("workflow_id") != readiness.get(
+        "workflow_id"
+    ):
+        _fail("collaboration session workflow_id does not match readiness report")
+    plan = build_model_headless_plan(session, proposal)
+    if not plan["ok"]:
+        _fail(*(f"bootstrapped plan: {issue}" for issue in plan["issues"]))
+    return plan
+
+
+def _validate_readiness_for_plan(readiness: Mapping[str, Any]) -> None:
+    if not isinstance(readiness, Mapping):
+        _fail("readiness report must be a JSON object")
+    surface = _mapping(readiness.get("selected_surface"))
+    valid_surface = surface is not None and (
+        surface.get("preflight_path")
+        == "sdks/python/kyuubiki_sdk/model_research_bootstrap.py"
+        and surface.get("inspect") == "inspect_model_research_bootstrap"
+        and surface.get("bootstrap_plan")
+        == "build_bootstrapped_model_headless_plan"
+    )
+    if (
+        readiness.get("schema_version")
+        != MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION
+        or readiness.get("selected_sdk") != "python"
+        or readiness.get("ready_for_planning") is not True
+        or readiness.get("execution_authority") != "none_preflight_only"
+        or readiness.get("missing_resources") != []
+        or readiness.get("blockers") != []
+        or len(_string_list(readiness.get("hard_rules"))) < 8
+        or len(_string_list(readiness.get("stop_conditions"))) < 4
+        or not isinstance(readiness.get("completion_contract"), Mapping)
+        or not valid_surface
+    ):
+        _fail("readiness report is not valid for Python planning")
+
+
 def _selected_surface(
     bootstrap: Mapping[str, Any],
     sdk: str,
@@ -114,6 +159,11 @@ def _selected_surface(
             "path",
             f"execution_contract.surfaces.{sdk}.path",
         ),
+        "approval_path": (
+            execution,
+            "approval_path",
+            f"execution_contract.surfaces.{sdk}.approval_path",
+        ),
         "frontier_path": (
             execution,
             "frontier_path",
@@ -126,11 +176,18 @@ def _selected_surface(
         ),
         "request": (collaboration, "request", f"sdk_surfaces.{sdk}.request"),
         "inspect": (preflight, "inspect", f"preflight.surfaces.{sdk}.inspect"),
+        "bootstrap_plan": (
+            preflight,
+            "build_plan",
+            f"preflight.surfaces.{sdk}.build_plan",
+        ),
         "normalize": (collaboration, "normalize", f"sdk_surfaces.{sdk}.normalize"),
         "plan": (collaboration, "plan", f"sdk_surfaces.{sdk}.plan"),
         "executor": (execution, "executor", f"execution_contract.surfaces.{sdk}.executor"),
         "dispatcher": (execution, "dispatcher", f"execution_contract.surfaces.{sdk}.dispatcher"),
         "approval_verifier": (execution, "approval_verifier", f"execution_contract.surfaces.{sdk}.approval_verifier"),
+        "plan_digest": (execution, "plan_digest", f"execution_contract.surfaces.{sdk}.plan_digest"),
+        "approval_request": (execution, "approval_request", f"execution_contract.surfaces.{sdk}.approval_request"),
         "frontier_start": (execution, "frontier_start", f"execution_contract.surfaces.{sdk}.frontier_start"),
         "frontier_advance": (execution, "frontier_advance", f"execution_contract.surfaces.{sdk}.frontier_advance"),
         "result_validator": (execution, "result_validator", f"execution_contract.surfaces.{sdk}.result_validator"),
@@ -149,6 +206,7 @@ def _selected_surface(
         "collaboration_path",
         "preflight_path",
         "execution_path",
+        "approval_path",
         "frontier_path",
         "validation_path",
     ):
@@ -178,6 +236,8 @@ def _add_execution_resources(
         blockers.append("execution_contract must be a JSON object")
         return
     for key in (
+        "approval_request_schema",
+        "approval_request_fixture",
         "approval_schema",
         "approval_fixture",
         "receipt_schema",
@@ -287,3 +347,7 @@ def _empty_report(sdk: str, blocker: str) -> dict[str, Any]:
         "stop_conditions": [],
         "completion_contract": None,
     }
+
+
+def _fail(*messages: str) -> None:
+    raise ModelResearchBootstrapError(list(messages))

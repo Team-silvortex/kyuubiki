@@ -6,6 +6,7 @@ mod material_research_bundle;
 mod material_research_bundle_validation;
 mod material_workflows;
 mod model_collaboration;
+mod model_plan_approval;
 mod model_provider_adapters;
 mod model_research_bootstrap;
 mod model_research_execution;
@@ -43,13 +44,18 @@ pub use model_collaboration::{
     ModelHeadlessPlan, ModelHeadlessPlanStep, ModelProvider, ModelToolCall, ModelWorkflowProposal,
     build_model_collaboration_request, build_model_headless_plan, rust_headless_model_tools,
 };
+pub use model_plan_approval::{
+    MODEL_PLAN_APPROVAL_REQUEST_SCHEMA_VERSION, ModelPlanApprovalRequest,
+    ModelPlanApprovalRequestStep, build_model_plan_approval_request,
+    compute_model_headless_plan_digest,
+};
 pub use model_provider_adapters::{
     normalize_model_response, project_model_tools, sanitize_model_context,
 };
 pub use model_research_bootstrap::{
     MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION, MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION,
     ModelResearchReadinessReport, ModelResearchSdk, ModelResearchSelectedSurface,
-    inspect_model_research_bootstrap,
+    build_bootstrapped_model_headless_plan, inspect_model_research_bootstrap,
 };
 pub use model_research_execution::{
     ApprovedModelPlanStep, MODEL_PLAN_APPROVAL_SCHEMA_VERSION,

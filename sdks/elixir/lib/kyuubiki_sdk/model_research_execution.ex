@@ -4,10 +4,11 @@ defmodule KyuubikiSdk.ModelResearchExecution do
   alias KyuubikiSdk.ControlPlaneClient
   alias KyuubikiSdk.Error
   alias KyuubikiSdk.ModelCollaboration
+  alias KyuubikiSdk.ModelPlanApproval
   alias KyuubikiSdk.Session
 
-  @approval_schema "kyuubiki.model-plan-approval/v1"
-  @receipt_schema "kyuubiki.model-research-execution-receipt/v1"
+  @approval_schema "kyuubiki.model-plan-approval/v2"
+  @receipt_schema "kyuubiki.model-research-execution-receipt/v2"
 
   def approval_schema_version, do: @approval_schema
   def receipt_schema_version, do: @receipt_schema
@@ -18,9 +19,11 @@ defmodule KyuubikiSdk.ModelResearchExecution do
 
   def execute(dispatcher, plan, approval, approval_verifier)
       when is_function(dispatcher, 2) and is_function(approval_verifier, 2) do
-    with :ok <- validate_execution_request(plan, approval),
-         :ok <- verify_approval(plan, approval, approval_verifier) do
-      execute_steps(dispatcher, plan, approval)
+    with {:ok, plan_digest} <- validate_execution_request(plan, approval),
+         :ok <- verify_approval(plan, approval, approval_verifier),
+         {:ok, verified_digest} <- ModelPlanApproval.compute_digest(plan),
+         :ok <- ensure_digest_unchanged(plan_digest, verified_digest) do
+      execute_steps(dispatcher, plan, plan_digest, approval)
     end
   end
 
@@ -199,7 +202,7 @@ defmodule KyuubikiSdk.ModelResearchExecution do
   defp dispatch_control_plane(_session, _client, action, _payload, _poll, _timeout),
     do: validation_error("unsupported model action: #{action}")
 
-  defp execute_steps(dispatcher, plan, approval) do
+  defp execute_steps(dispatcher, plan, plan_digest, approval) do
     {status, failed_step, records} =
       Enum.reduce_while(plan["steps"], {:completed, nil, []}, fn step,
                                                                  {_status, _failed, records} ->
@@ -250,6 +253,7 @@ defmodule KyuubikiSdk.ModelResearchExecution do
        "plan_schema_version" => plan["schema_version"],
        "session_id" => plan["session_id"],
        "workflow_id" => plan["workflow_id"],
+       "plan_digest" => plan_digest,
        "status" => Atom.to_string(status),
        "execution_authority" => "kyuubiki-headless-sdk",
        "approval_id" => if(approval, do: approval["approval_id"], else: nil),
@@ -285,29 +289,32 @@ defmodule KyuubikiSdk.ModelResearchExecution do
         "model plan step indexes must be contiguous and one-based"
       )
 
-    gated =
-      steps
-      |> Enum.filter(&(&1["requires_confirmation"] == true))
-      |> MapSet.new(&{&1["index"], &1["action"]})
+    with {:ok, plan_digest} <- ModelPlanApproval.compute_digest(plan) do
+      gated =
+        steps
+        |> Enum.filter(&(&1["requires_confirmation"] == true))
+        |> MapSet.new(&{&1["index"], &1["action"]})
 
-    {approved, errors} = validate_approval(plan, approval, gated, errors)
+      {approved, errors} = validate_approval(plan, plan_digest, approval, gated, errors)
 
-    errors =
-      Enum.reduce(MapSet.difference(gated, approved), errors, fn {index, action}, current ->
-        ["step #{index} (#{action}) requires an exact caller-issued approval" | current]
-      end)
+      errors =
+        Enum.reduce(MapSet.difference(gated, approved), errors, fn {index, action}, current ->
+          ["step #{index} (#{action}) requires an exact caller-issued approval" | current]
+        end)
 
-    if errors == [],
-      do: :ok,
-      else: {:error, Error.model_research_execution(errors |> Enum.uniq() |> Enum.sort())}
+      if errors == [],
+        do: {:ok, plan_digest},
+        else: {:error, Error.model_research_execution(errors |> Enum.uniq() |> Enum.sort())}
+    end
   end
 
   defp validate_execution_request(_plan, _approval),
     do: validation_error("model plan must be a JSON object")
 
-  defp validate_approval(_plan, nil, _gated, errors), do: {MapSet.new(), errors}
+  defp validate_approval(_plan, _plan_digest, nil, _gated, errors),
+    do: {MapSet.new(), errors}
 
-  defp validate_approval(plan, approval, gated, errors) when is_map(approval) do
+  defp validate_approval(plan, plan_digest, approval, gated, errors) when is_map(approval) do
     errors =
       errors
       |> add_issue(
@@ -318,6 +325,10 @@ defmodule KyuubikiSdk.ModelResearchExecution do
         approval["session_id"] != plan["session_id"] or
           approval["workflow_id"] != plan["workflow_id"],
         "model approval does not match plan session and workflow"
+      )
+      |> add_issue(
+        approval["plan_digest"] != plan_digest,
+        "model approval plan_digest does not match the complete plan"
       )
       |> require_approval_string(approval, "approval_id")
       |> require_approval_string(approval, "authority")
@@ -334,7 +345,7 @@ defmodule KyuubikiSdk.ModelResearchExecution do
     end
   end
 
-  defp validate_approval(_plan, _approval, _gated, errors),
+  defp validate_approval(_plan, _plan_digest, _approval, _gated, errors),
     do: {MapSet.new(), ["model approval must be a JSON object" | errors]}
 
   defp validate_approved_step(step, gated, approved, errors) when is_map(step) do
@@ -382,6 +393,11 @@ defmodule KyuubikiSdk.ModelResearchExecution do
         validation_error("caller approval verifier rejected approval")
     end
   end
+
+  defp ensure_digest_unchanged(digest, digest), do: :ok
+
+  defp ensure_digest_unchanged(_expected, _actual),
+    do: validation_error("model plan changed after approval verification")
 
   defp control_plane(%Session{control_plane: nil}),
     do: {:error, Error.transport("control plane client is not configured")}

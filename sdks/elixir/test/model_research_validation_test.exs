@@ -122,10 +122,11 @@ defmodule KyuubikiSdk.ModelResearchValidationTest do
 
   defp receipt(output, job_id \\ "job-validation-001") do
     %{
-      "schema_version" => "kyuubiki.model-research-execution-receipt/v1",
+      "schema_version" => "kyuubiki.model-research-execution-receipt/v2",
       "plan_schema_version" => "kyuubiki.model-headless-plan/v1",
       "session_id" => "research-session",
       "workflow_id" => "workflow.heat-to-thermo-quad-2d",
+      "plan_digest" => "sha256:" <> String.duplicate("0", 64),
       "status" => "completed",
       "execution_authority" => "kyuubiki-headless-sdk",
       "approval_id" => "approval-test",

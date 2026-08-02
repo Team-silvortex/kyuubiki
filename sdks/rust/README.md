@@ -16,6 +16,9 @@ machine bootstrap through a caller-owned resource resolver. The report exposes
 the selected SDK entrypoints, missing project-relative resources, hard rules,
 stop conditions, and completion contract. `ready_for_planning` never grants
 execution authority; every report is fixed to `none_preflight_only`.
+`build_bootstrapped_model_headless_plan(...)` then accepts only a Rust-bound,
+blocker-free report whose workflow matches the collaboration session. It
+returns the ordinary confirmation-aware plan and performs no dispatch.
 
 The official Rust Headless SDK can expose a policy-filtered action catalog to
 OpenAI Responses, OpenAI-compatible Chat, Anthropic, Gemini, or a canonical
@@ -51,12 +54,14 @@ execution authority. See [Model Collaboration SDK](../../docs/model-collaboratio
 
 After caller review, `execute_model_headless_plan(...)` and
 `SessionModelActionDispatcher` provide the bounded bridge into the existing
-Headless session. Every gated step must match an exact caller-issued
-`ModelPlanApproval`; missing or mismatched approval rejects the entire plan
+Headless session. `build_model_plan_approval_request(...)` creates a read-only
+review surface and `compute_model_headless_plan_digest(...)` binds the complete
+plan. Every gated step must match an exact caller-issued `ModelPlanApproval` v2
+with that digest; missing, stale, or mismatched approval rejects the entire plan
 before network access. A caller-owned `ModelApprovalVerifier` must authenticate
 that approval independently of model output. `ModelResearchExecutionReceipt`
-retains per-step authority, output, and bounded failures so partial attempts
-cannot masquerade as completed research.
+retains the same digest, per-step authority, output, and bounded failures so
+partial attempts cannot masquerade as completed research.
 
 The native reference entry is
 `examples/execute_model_research_plan.rs`. It reads a collaboration session,

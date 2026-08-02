@@ -2,6 +2,7 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
   @moduledoc "Fail-closed document-to-research planning preflight."
 
   alias KyuubikiSdk.Error
+  alias KyuubikiSdk.ModelCollaboration
 
   @bootstrap_schema_version "kyuubiki.model-research-bootstrap/v1"
   @report_schema_version "kyuubiki.model-research-readiness-report/v1"
@@ -18,6 +19,58 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
 
   def inspect(_bootstrap, _sdk, _resource_exists),
     do: {:error, Error.model_research_bootstrap(["resource_exists must be callable"])}
+
+  def build_plan(readiness, session, proposal) do
+    with :ok <- validate_readiness_for_plan(readiness),
+         :ok <- validate_workflow_binding(readiness, session),
+         {:ok, plan} <- ModelCollaboration.build_plan(session, proposal) do
+      if plan["ok"] do
+        {:ok, plan}
+      else
+        validation_error(Enum.map(plan["issues"], &"bootstrapped plan: #{&1}"))
+      end
+    end
+  end
+
+  defp validate_readiness_for_plan(%{} = readiness) do
+    surface = object(readiness["selected_surface"])
+
+    valid =
+      readiness["schema_version"] == @report_schema_version and
+        readiness["selected_sdk"] == "elixir" and
+        readiness["ready_for_planning"] == true and
+        readiness["execution_authority"] == "none_preflight_only" and
+        readiness["missing_resources"] == [] and readiness["blockers"] == [] and
+        length(string_list(readiness["hard_rules"])) >= 8 and
+        length(string_list(readiness["stop_conditions"])) >= 4 and
+        is_map(readiness["completion_contract"]) and is_map(surface) and
+        surface["preflight_path"] ==
+          "sdks/elixir/lib/kyuubiki_sdk/model_research_bootstrap.ex" and
+        surface["inspect"] == "KyuubikiSdk.ModelResearchBootstrap.inspect/3" and
+        surface["bootstrap_plan"] == "KyuubikiSdk.ModelResearchBootstrap.build_plan/3"
+
+    if valid,
+      do: :ok,
+      else: validation_error(["readiness report is not valid for Elixir planning"])
+  end
+
+  defp validate_readiness_for_plan(_readiness),
+    do: validation_error(["readiness report must be a JSON object"])
+
+  defp validate_workflow_binding(readiness, %{} = session) do
+    if session["workflow_id"] == readiness["workflow_id"],
+      do: :ok,
+      else:
+        validation_error([
+          "collaboration session workflow_id does not match readiness report"
+        ])
+  end
+
+  defp validate_workflow_binding(_readiness, _session),
+    do:
+      validation_error([
+        "collaboration session workflow_id does not match readiness report"
+      ])
 
   defp build_report(bootstrap, sdk, _resolver) when not is_map(bootstrap),
     do: empty_report(sdk, "bootstrap must be a JSON object")
@@ -116,12 +169,16 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
         {"collaboration_path", collaboration, "path", "sdk_surfaces.#{sdk}.path", true},
         {"preflight_path", preflight, "path", "preflight.surfaces.#{sdk}.path", true},
         {"execution_path", execution, "path", "execution_contract.surfaces.#{sdk}.path", true},
+        {"approval_path", execution, "approval_path",
+         "execution_contract.surfaces.#{sdk}.approval_path", true},
         {"frontier_path", execution, "frontier_path",
          "execution_contract.surfaces.#{sdk}.frontier_path", true},
         {"validation_path", execution, "validation_path",
          "execution_contract.surfaces.#{sdk}.validation_path", true},
         {"request", collaboration, "request", "sdk_surfaces.#{sdk}.request", false},
         {"inspect", preflight, "inspect", "preflight.surfaces.#{sdk}.inspect", false},
+        {"bootstrap_plan", preflight, "build_plan", "preflight.surfaces.#{sdk}.build_plan",
+         false},
         {"normalize", collaboration, "normalize", "sdk_surfaces.#{sdk}.normalize", false},
         {"plan", collaboration, "plan", "sdk_surfaces.#{sdk}.plan", false},
         {"executor", execution, "executor", "execution_contract.surfaces.#{sdk}.executor", false},
@@ -129,6 +186,10 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
          false},
         {"approval_verifier", execution, "approval_verifier",
          "execution_contract.surfaces.#{sdk}.approval_verifier", false},
+        {"plan_digest", execution, "plan_digest",
+         "execution_contract.surfaces.#{sdk}.plan_digest", false},
+        {"approval_request", execution, "approval_request",
+         "execution_contract.surfaces.#{sdk}.approval_request", false},
         {"frontier_start", execution, "frontier_start",
          "execution_contract.surfaces.#{sdk}.frontier_start", false},
         {"frontier_advance", execution, "frontier_advance",
@@ -194,7 +255,7 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
 
       execution ->
         Enum.reduce(
-          ~w(approval_schema approval_fixture receipt_schema frontier_schema frontier_fixture validation_report_schema validation_report_fixture),
+          ~w(approval_request_schema approval_request_fixture approval_schema approval_fixture receipt_schema frontier_schema frontier_fixture validation_report_schema validation_report_fixture),
           {resources, blockers},
           fn key, {resources, blockers} ->
             add_path(resources, blockers, text(execution, key) || "", "execution_contract.#{key}")
@@ -339,4 +400,6 @@ defmodule KyuubikiSdk.ModelResearchBootstrap do
       "completion_contract" => nil
     }
   end
+
+  defp validation_error(errors), do: {:error, Error.model_research_bootstrap(errors)}
 end

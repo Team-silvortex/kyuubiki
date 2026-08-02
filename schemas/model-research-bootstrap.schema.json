@@ -49,6 +49,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "approval_request_schema",
+        "approval_request_fixture",
         "approval_schema",
         "approval_fixture",
         "receipt_schema",
@@ -60,6 +62,8 @@
         "surfaces"
       ],
       "properties": {
+        "approval_request_schema": { "$ref": "#/$defs/repoPath" },
+        "approval_request_fixture": { "$ref": "#/$defs/repoPath" },
         "approval_schema": { "$ref": "#/$defs/repoPath" },
         "approval_fixture": { "$ref": "#/$defs/repoPath" },
         "receipt_schema": { "$ref": "#/$defs/repoPath" },
@@ -180,11 +184,14 @@
       "additionalProperties": false,
       "required": [
         "path",
+        "approval_path",
         "frontier_path",
         "validation_path",
         "executor",
         "dispatcher",
         "approval_verifier",
+        "plan_digest",
+        "approval_request",
         "frontier_start",
         "frontier_advance",
         "result_validator",
@@ -193,11 +200,14 @@
       ],
       "properties": {
         "path": { "$ref": "#/$defs/repoPath" },
+        "approval_path": { "$ref": "#/$defs/repoPath" },
         "frontier_path": { "$ref": "#/$defs/repoPath" },
         "validation_path": { "$ref": "#/$defs/repoPath" },
         "executor": { "type": "string", "minLength": 1 },
         "dispatcher": { "type": "string", "minLength": 1 },
         "approval_verifier": { "type": "string", "minLength": 1 },
+        "plan_digest": { "type": "string", "minLength": 1 },
+        "approval_request": { "type": "string", "minLength": 1 },
         "frontier_start": { "type": "string", "minLength": 1 },
         "frontier_advance": { "type": "string", "minLength": 1 },
         "result_validator": { "type": "string", "minLength": 1 },
@@ -208,10 +218,11 @@
     "preflightSurface": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "inspect"],
+      "required": ["path", "inspect", "build_plan"],
       "properties": {
         "path": { "$ref": "#/$defs/repoPath" },
-        "inspect": { "type": "string", "minLength": 1 }
+        "inspect": { "type": "string", "minLength": 1 },
+        "build_plan": { "type": "string", "minLength": 1 }
       }
     },
     "stage": {

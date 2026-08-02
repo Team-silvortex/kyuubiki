@@ -35,15 +35,19 @@ README.
   rules, stop conditions, and retained-evidence completion requirements.
 - `model-research-readiness-report.schema.json` defines the cross-SDK,
   resource-resolver-backed preflight that checks the selected planning surface
-  and required project-relative resources without granting execution authority.
+  and required project-relative resources without granting execution authority;
+  it also advertises the SDK-native helper that binds a passing report to the
+  first ordinary Headless plan.
 - `examples.model-research-readiness-report.json` is the blocker-free Rust
   fixture shared by preflight conformance tests; its authority is permanently
   `none_preflight_only`.
-- `model-plan-approval.schema.json` binds caller-issued approval to exact plan
-  steps; model output cannot satisfy this authority boundary.
+- `model-plan-approval-request.schema.json` defines the read-only, zero-authority
+  review projection of gated steps and the canonical complete-plan digest.
+- `model-plan-approval.schema.json` binds caller-issued approval to that digest
+  and exact plan steps; model output cannot satisfy this authority boundary.
 - `model-research-execution-receipt.schema.json` retains completed or partially
-  failed model-driven Headless execution without upgrading an attempt into a
-  completion claim.
+  failed model-driven Headless execution with the same plan digest, without
+  upgrading an attempt into a completion claim.
 - `model-research-frontier.schema.json` defines the small persistent cross-turn
   state that binds follow-up proposals to a verified real `job_id` instead of
   allowing a model or caller to invent future task identifiers.
@@ -54,8 +58,21 @@ README.
   claims from this automated path.
 - `examples.model-plan-approval.json` demonstrates the approval shape for the
   first bounded workflow but is never itself execution authority.
+- `examples.model-plan-approval-request.json` is the cross-SDK digest parity
+  fixture and remains fixed to `none_approval_request_only` authority.
 - `examples.model-research-validation-report.json` is the portable workflow-only
   handoff fixture before a material research bundle has been attached.
+
+### Model plan digest canonicalization
+
+The approval request, caller approval, and execution receipt use one identical
+`plan_digest`. Encode the complete model Headless plan as UTF-8 canonical JSON:
+sort object keys lexicographically at every depth, retain array order, encode
+strings/booleans/null as ordinary compact JSON, encode integers in decimal, and
+encode finite floats with 15 fixed decimal places before trimming trailing
+zeros while retaining one digit after a remaining decimal point. Hash those
+bytes with SHA-256 and prefix the lowercase hexadecimal digest with `sha256:`.
+The shared approval-request fixture is the parity vector for all SDKs.
 - `operator-model-draft.schema.json` defines the non-executable Rust Operator
   SDK authoring draft: descriptor, JSON schemas, handler shape, and bounded
   algorithm outline. Host package admission and dynamic loading remain outside

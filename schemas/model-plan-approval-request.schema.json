@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/model-plan-approval-request.schema.json",
+  "title": "Kyuubiki Model Plan Approval Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_schema_version",
+    "plan_digest",
+    "session_id",
+    "workflow_id",
+    "status",
+    "execution_authority",
+    "approval_schema_version",
+    "required_steps"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/model-plan-approval-request.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.model-plan-approval-request/v1"
+    },
+    "plan_schema_version": {
+      "const": "kyuubiki.model-headless-plan/v1"
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 over the complete UTF-8 Kyuubiki canonical JSON model Headless plan."
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["approval_required", "not_required"]
+    },
+    "execution_authority": {
+      "const": "none_approval_request_only"
+    },
+    "approval_schema_version": {
+      "const": "kyuubiki.model-plan-approval/v2"
+    },
+    "required_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "action", "risk", "confirmation_reason"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "risk": { "enum": ["sensitive", "destructive"] },
+          "confirmation_reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "approval_required" } } },
+      "then": { "properties": { "required_steps": { "minItems": 1 } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "not_required" } } },
+      "then": { "properties": { "required_steps": { "maxItems": 0 } } }
+    }
+  ]
+}

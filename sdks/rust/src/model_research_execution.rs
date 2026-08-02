@@ -1,15 +1,15 @@
 use crate::{
     ControlPlaneClient, KyuubikiSession, MODEL_HEADLESS_PLAN_SCHEMA_VERSION, ModelHeadlessPlan,
-    SdkError, SdkResult,
+    SdkError, SdkResult, compute_model_headless_plan_digest,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::time::Duration;
 
-pub const MODEL_PLAN_APPROVAL_SCHEMA_VERSION: &str = "kyuubiki.model-plan-approval/v1";
+pub const MODEL_PLAN_APPROVAL_SCHEMA_VERSION: &str = "kyuubiki.model-plan-approval/v2";
 pub const MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION: &str =
-    "kyuubiki.model-research-execution-receipt/v1";
+    "kyuubiki.model-research-execution-receipt/v2";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApprovedModelPlanStep {
@@ -23,6 +23,7 @@ pub struct ModelPlanApproval {
     pub approval_id: String,
     pub session_id: String,
     pub workflow_id: String,
+    pub plan_digest: String,
     pub authority: String,
     pub issued_at: String,
     pub approved_steps: Vec<ApprovedModelPlanStep>,
@@ -74,6 +75,7 @@ pub struct ModelResearchExecutionReceipt {
     pub plan_schema_version: String,
     pub session_id: String,
     pub workflow_id: String,
+    pub plan_digest: String,
     pub status: ModelResearchExecutionStatus,
     pub execution_authority: String,
     pub approval_id: Option<String>,
@@ -88,13 +90,17 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
     approval: Option<&ModelPlanApproval>,
     approval_verifier: &V,
 ) -> SdkResult<ModelResearchExecutionReceipt> {
-    validate_execution_request(plan, approval)?;
+    let plan_digest = validate_execution_request(plan, approval)?;
     if let Some(approval) = approval {
         approval_verifier.verify_model_approval(plan, approval)?;
     }
-    let mut records = Vec::with_capacity(plan.steps.len());
+    let execution_plan = plan.clone();
+    if compute_model_headless_plan_digest(&execution_plan)? != plan_digest {
+        return validation_error("model plan changed after approval verification");
+    }
+    let mut records = Vec::with_capacity(execution_plan.steps.len());
 
-    for step in &plan.steps {
+    for step in &execution_plan.steps {
         let job_id = action_job_id(&step.action, &step.payload);
         match dispatcher.dispatch_model_action(&step.action, &step.payload) {
             Ok(dispatched) => records.push(ModelResearchExecutionRecord {
@@ -115,7 +121,8 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
                     error: Some(bounded_error(&error)),
                 });
                 return Ok(build_receipt(
-                    plan,
+                    &execution_plan,
+                    &plan_digest,
                     approval,
                     ModelResearchExecutionStatus::Failed,
                     Some(step.index),
@@ -126,7 +133,8 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
     }
 
     Ok(build_receipt(
-        plan,
+        &execution_plan,
+        &plan_digest,
         approval,
         ModelResearchExecutionStatus::Completed,
         None,
@@ -293,7 +301,7 @@ impl ModelActionDispatcher for SessionModelActionDispatcher<'_> {
 fn validate_execution_request(
     plan: &ModelHeadlessPlan,
     approval: Option<&ModelPlanApproval>,
-) -> SdkResult<()> {
+) -> SdkResult<String> {
     let mut errors = Vec::new();
     if plan.schema_version != MODEL_HEADLESS_PLAN_SCHEMA_VERSION {
         errors.push(format!(
@@ -314,6 +322,7 @@ fn validate_execution_request(
         }
     }
 
+    let plan_digest = compute_model_headless_plan_digest(plan)?;
     let gated = plan
         .steps
         .iter()
@@ -321,7 +330,7 @@ fn validate_execution_request(
         .map(|step| (step.index, step.action.clone()))
         .collect::<HashSet<_>>();
     let approved = match approval {
-        Some(approval) => validate_approval(plan, approval, &gated, &mut errors),
+        Some(approval) => validate_approval(plan, &plan_digest, approval, &gated, &mut errors),
         None => HashSet::new(),
     };
     for (index, action) in &gated {
@@ -335,7 +344,7 @@ fn validate_execution_request(
     errors.sort();
     errors.dedup();
     if errors.is_empty() {
-        Ok(())
+        Ok(plan_digest)
     } else {
         Err(SdkError::Validation { errors })
     }
@@ -343,6 +352,7 @@ fn validate_execution_request(
 
 fn validate_approval(
     plan: &ModelHeadlessPlan,
+    plan_digest: &str,
     approval: &ModelPlanApproval,
     gated: &HashSet<(usize, String)>,
     errors: &mut Vec<String>,
@@ -355,6 +365,9 @@ fn validate_approval(
     }
     if approval.session_id != plan.session_id || approval.workflow_id != plan.workflow_id {
         errors.push("model approval does not match plan session and workflow".to_string());
+    }
+    if approval.plan_digest != plan_digest {
+        errors.push("model approval plan_digest does not match the complete plan".to_string());
     }
     for (name, value) in [
         ("approval_id", approval.approval_id.as_str()),
@@ -387,6 +400,7 @@ fn validate_approval(
 
 fn build_receipt(
     plan: &ModelHeadlessPlan,
+    plan_digest: &str,
     approval: Option<&ModelPlanApproval>,
     status: ModelResearchExecutionStatus,
     failed_step: Option<usize>,
@@ -401,6 +415,7 @@ fn build_receipt(
         plan_schema_version: plan.schema_version.clone(),
         session_id: plan.session_id.clone(),
         workflow_id: plan.workflow_id.clone(),
+        plan_digest: plan_digest.to_string(),
         status,
         execution_authority: "kyuubiki-headless-sdk".to_string(),
         approval_id: approval.map(|approval| approval.approval_id.clone()),

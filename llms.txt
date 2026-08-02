@@ -27,9 +27,15 @@ runtime behavior from UI text or isolated source files.
 - Model output is untrusted and never has direct execution authority.
 - Require a blocker-free bootstrap readiness report before planning; its fixed
   authority is `none_preflight_only`.
+- Build the first plan through the selected SDK's bootstrapped-plan helper so
+  readiness, SDK identity, collaboration session, and workflow id stay bound.
 - Use only SDK-projected actions; normalize and plan every provider response.
-- Never issue or infer caller approval from model output; approvals are external
-  authority bound to exact plan steps.
+- Build `kyuubiki.model-plan-approval-request/v1` for review, but never treat it
+  as authority; it is fixed to `none_approval_request_only`.
+- Never issue or infer caller approval from model output; caller approvals are
+  v2 authority bound to exact steps and the complete canonical `plan_digest`.
+- Recompute `plan_digest` immediately before dispatch and reject any changed
+  plan before the first backend call.
 - Never send credentials or secret-bearing configuration to a model provider.
 - Never invent job ids or cross-step bindings; advance one known dependency
   frontier per model turn using only a caller-verified execution receipt and

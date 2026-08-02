@@ -13,6 +13,7 @@ from kyuubiki_sdk import (
     ModelResearchExecutionError,
     SessionModelActionDispatcher,
     build_model_headless_plan,
+    compute_model_headless_plan_digest,
     execute_model_headless_plan,
 )
 
@@ -66,6 +67,34 @@ class ModelResearchExecutionTests(unittest.TestCase):
             )
         self.assertEqual(dispatcher.seen, [])
 
+    def test_rejects_payload_changed_after_approval_before_dispatch(self) -> None:
+        plan = build_model_headless_plan(_session(), _proposal())
+        approval = _approval(plan)
+        plan["steps"][1]["payload"]["input_artifacts"]["material_rows"]["rows"] = [
+            {"case_id": "injected-after-approval"}
+        ]
+        dispatcher = FakeDispatcher()
+
+        with self.assertRaisesRegex(ModelResearchExecutionError, "plan_digest does not match"):
+            execute_model_headless_plan(
+                dispatcher, plan, approval, lambda _plan, _approval: True
+            )
+        self.assertEqual(dispatcher.seen, [])
+
+    def test_rejects_plan_mutated_by_approval_verifier_before_dispatch(self) -> None:
+        plan = build_model_headless_plan(_session(), _proposal())
+        dispatcher = FakeDispatcher()
+
+        def mutating_verifier(candidate: dict[str, Any], _approval: dict[str, Any]) -> bool:
+            candidate["steps"][1]["payload"]["workflow_id"] = "workflow.changed"
+            return True
+
+        with self.assertRaisesRegex(
+            ModelResearchExecutionError, "changed after approval verification"
+        ):
+            execute_model_headless_plan(dispatcher, plan, _approval(plan), mutating_verifier)
+        self.assertEqual(dispatcher.seen, [])
+
     def test_executes_approved_plan_and_retains_authority(self) -> None:
         plan = build_model_headless_plan(_session(), _proposal())
         dispatcher = FakeDispatcher()
@@ -78,6 +107,7 @@ class ModelResearchExecutionTests(unittest.TestCase):
         )
         self.assertEqual(receipt["status"], "completed")
         self.assertEqual(receipt["completed_steps"], 2)
+        self.assertEqual(receipt["plan_digest"], _approval(plan)["plan_digest"])
         self.assertEqual(receipt["records"][1]["authority"], "test-dispatcher")
 
     def test_retains_partial_failure(self) -> None:
@@ -235,6 +265,7 @@ def _approval(plan: dict[str, Any]) -> dict[str, Any]:
         "approval_id": "approval-python-test",
         "session_id": plan["session_id"],
         "workflow_id": plan["workflow_id"],
+        "plan_digest": compute_model_headless_plan_digest(plan),
         "authority": "python-integration-test",
         "issued_at": "2026-08-01T00:01:00Z",
         "approved_steps": [{"index": 2, "action": "workflow_submit_catalog"}],

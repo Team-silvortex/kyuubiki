@@ -2,6 +2,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
+use crate::{
+    ModelCollaborationSession, ModelHeadlessPlan, ModelWorkflowProposal, SdkError, SdkResult,
+    build_model_headless_plan,
+};
+
 pub const MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION: &str = "kyuubiki.model-research-bootstrap/v1";
 pub const MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION: &str =
     "kyuubiki.model-research-readiness-report/v1";
@@ -29,15 +34,19 @@ pub struct ModelResearchSelectedSurface {
     pub collaboration_path: String,
     pub preflight_path: String,
     pub execution_path: String,
+    pub approval_path: String,
     pub frontier_path: String,
     pub validation_path: String,
     pub request: String,
     pub inspect: String,
+    pub bootstrap_plan: String,
     pub normalize: String,
     pub plan: String,
     pub executor: String,
     pub dispatcher: String,
     pub approval_verifier: String,
+    pub plan_digest: String,
+    pub approval_request: String,
     pub frontier_start: String,
     pub frontier_advance: String,
     pub result_validator: String,
@@ -153,6 +162,58 @@ where
     }
 }
 
+pub fn build_bootstrapped_model_headless_plan(
+    readiness: &ModelResearchReadinessReport,
+    session: &ModelCollaborationSession,
+    proposal: &ModelWorkflowProposal,
+) -> SdkResult<ModelHeadlessPlan> {
+    validate_readiness_for_plan(readiness)?;
+    if session.workflow_id != readiness.workflow_id {
+        return bootstrap_error(
+            "collaboration session workflow_id does not match readiness report",
+        );
+    }
+    let plan = build_model_headless_plan(session, proposal)?;
+    if !plan.ok {
+        return Err(SdkError::Validation {
+            errors: plan
+                .issues
+                .iter()
+                .map(|issue| format!("bootstrapped plan: {issue}"))
+                .collect(),
+        });
+    }
+    Ok(plan)
+}
+
+fn validate_readiness_for_plan(readiness: &ModelResearchReadinessReport) -> SdkResult<()> {
+    let surface_valid = readiness.selected_surface.as_ref().is_some_and(|surface| {
+        surface.preflight_path == "sdks/rust/src/model_research_bootstrap.rs"
+            && surface.inspect == "inspect_model_research_bootstrap"
+            && surface.bootstrap_plan == "build_bootstrapped_model_headless_plan"
+    });
+    if readiness.schema_version != MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION
+        || readiness.selected_sdk != ModelResearchSdk::Rust
+        || !readiness.ready_for_planning
+        || readiness.execution_authority != "none_preflight_only"
+        || !readiness.missing_resources.is_empty()
+        || !readiness.blockers.is_empty()
+        || readiness.hard_rules.len() < 8
+        || readiness.stop_conditions.len() < 4
+        || readiness.completion_contract.is_none()
+        || !surface_valid
+    {
+        return bootstrap_error("readiness report is not valid for Rust planning");
+    }
+    Ok(())
+}
+
+fn bootstrap_error<T>(message: impl Into<String>) -> SdkResult<T> {
+    Err(SdkError::Validation {
+        errors: vec![message.into()],
+    })
+}
+
 fn build_selected_surface(
     root: &Map<String, Value>,
     sdk: ModelResearchSdk,
@@ -213,6 +274,12 @@ fn build_selected_surface(
         ),
         field(
             execution,
+            "approval_path",
+            &format!("execution_contract.surfaces.{key}.approval_path"),
+            blockers,
+        ),
+        field(
+            execution,
             "frontier_path",
             &format!("execution_contract.surfaces.{key}.frontier_path"),
             blockers,
@@ -233,6 +300,12 @@ fn build_selected_surface(
             preflight,
             "inspect",
             &format!("preflight.surfaces.{key}.inspect"),
+            blockers,
+        ),
+        field(
+            preflight,
+            "build_plan",
+            &format!("preflight.surfaces.{key}.build_plan"),
             blockers,
         ),
         field(
@@ -267,6 +340,18 @@ fn build_selected_surface(
         ),
         field(
             execution,
+            "plan_digest",
+            &format!("execution_contract.surfaces.{key}.plan_digest"),
+            blockers,
+        ),
+        field(
+            execution,
+            "approval_request",
+            &format!("execution_contract.surfaces.{key}.approval_request"),
+            blockers,
+        ),
+        field(
+            execution,
             "frontier_start",
             &format!("execution_contract.surfaces.{key}.frontier_start"),
             blockers,
@@ -297,7 +382,7 @@ fn build_selected_surface(
         ),
     ];
     let values = fields.into_iter().collect::<Option<Vec<_>>>()?;
-    for (index, path) in values.iter().take(5).enumerate() {
+    for (index, path) in values.iter().take(6).enumerate() {
         add_path(
             path,
             &format!("selected_surface.path[{index}]"),
@@ -309,20 +394,24 @@ fn build_selected_surface(
         collaboration_path: values[0].clone(),
         preflight_path: values[1].clone(),
         execution_path: values[2].clone(),
-        frontier_path: values[3].clone(),
-        validation_path: values[4].clone(),
-        request: values[5].clone(),
-        inspect: values[6].clone(),
-        normalize: values[7].clone(),
-        plan: values[8].clone(),
-        executor: values[9].clone(),
-        dispatcher: values[10].clone(),
-        approval_verifier: values[11].clone(),
-        frontier_start: values[12].clone(),
-        frontier_advance: values[13].clone(),
-        result_validator: values[14].clone(),
-        receipt_verifier: values[15].clone(),
-        frontier_verifier: values[16].clone(),
+        approval_path: values[3].clone(),
+        frontier_path: values[4].clone(),
+        validation_path: values[5].clone(),
+        request: values[6].clone(),
+        inspect: values[7].clone(),
+        bootstrap_plan: values[8].clone(),
+        normalize: values[9].clone(),
+        plan: values[10].clone(),
+        executor: values[11].clone(),
+        dispatcher: values[12].clone(),
+        approval_verifier: values[13].clone(),
+        plan_digest: values[14].clone(),
+        approval_request: values[15].clone(),
+        frontier_start: values[16].clone(),
+        frontier_advance: values[17].clone(),
+        result_validator: values[18].clone(),
+        receipt_verifier: values[19].clone(),
+        frontier_verifier: values[20].clone(),
     })
 }
 
@@ -359,6 +448,8 @@ fn add_execution_resources(
         return;
     };
     for key in [
+        "approval_request_schema",
+        "approval_request_fixture",
         "approval_schema",
         "approval_fixture",
         "receipt_schema",

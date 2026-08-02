@@ -49,6 +49,8 @@ pub(crate) fn validate_model_research_bootstrap(
     {
         paths.extend(
             [
+                "approval_request_schema",
+                "approval_request_fixture",
                 "approval_schema",
                 "approval_fixture",
                 "receipt_schema",
@@ -69,6 +71,11 @@ pub(crate) fn validate_model_research_bootstrap(
             paths.extend(
                 surfaces
                     .values()
+                    .filter_map(|surface| surface.get("approval_path").and_then(Value::as_str)),
+            );
+            paths.extend(
+                surfaces
+                    .values()
                     .filter_map(|surface| surface.get("frontier_path").and_then(Value::as_str)),
             );
             paths.extend(
@@ -81,6 +88,7 @@ pub(crate) fn validate_model_research_bootstrap(
                 "{bootstrap_path}: missing execution_contract.surfaces"
             ));
         }
+        validate_model_plan_approval_contract(root, bootstrap_path, execution, issues);
         validate_research_validation_report(root, bootstrap_path, execution, issues);
     } else {
         issues.push(format!("{bootstrap_path}: missing execution_contract"));
@@ -136,6 +144,85 @@ pub(crate) fn validate_model_research_bootstrap(
     }
 }
 
+fn validate_model_plan_approval_contract(
+    root: &Path,
+    bootstrap_path: &str,
+    execution: &serde_json::Map<String, Value>,
+    issues: &mut Vec<String>,
+) {
+    let resources = [
+        (
+            "approval_request_schema",
+            "kyuubiki.model-plan-approval-request/v1",
+        ),
+        ("approval_schema", "kyuubiki.model-plan-approval/v2"),
+        (
+            "receipt_schema",
+            "kyuubiki.model-research-execution-receipt/v2",
+        ),
+    ];
+    for (key, expected) in resources {
+        let Some(path) = execution.get(key).and_then(Value::as_str) else {
+            issues.push(format!("{bootstrap_path}: missing {key}"));
+            continue;
+        };
+        let Some(schema) = read_json(root, path, issues) else {
+            continue;
+        };
+        if schema
+            .pointer("/properties/schema_version/const")
+            .and_then(Value::as_str)
+            != Some(expected)
+        {
+            issues.push(format!("{path}: approval chain schema_version is invalid"));
+        }
+        let requires_digest = schema
+            .get("required")
+            .and_then(Value::as_array)
+            .is_some_and(|required| required.iter().any(|item| item == "plan_digest"));
+        if !requires_digest {
+            issues.push(format!("{path}: approval chain must require plan_digest"));
+        }
+    }
+
+    let Some(request_path) = execution
+        .get("approval_request_fixture")
+        .and_then(Value::as_str)
+    else {
+        issues.push(format!(
+            "{bootstrap_path}: missing approval_request_fixture"
+        ));
+        return;
+    };
+    let Some(approval_path) = execution.get("approval_fixture").and_then(Value::as_str) else {
+        issues.push(format!("{bootstrap_path}: missing approval_fixture"));
+        return;
+    };
+    let (Some(request), Some(approval)) = (
+        read_json(root, request_path, issues),
+        read_json(root, approval_path, issues),
+    ) else {
+        return;
+    };
+    let digest = request.get("plan_digest").and_then(Value::as_str);
+    let valid_digest = digest.is_some_and(|value| {
+        value.len() == 71
+            && value.starts_with("sha256:")
+            && value[7..]
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    });
+    if request.get("execution_authority").and_then(Value::as_str)
+        != Some("none_approval_request_only")
+        || !valid_digest
+        || approval.get("plan_digest").and_then(Value::as_str) != digest
+    {
+        issues.push(format!(
+            "{request_path}: digest-bound approval request trust boundary is invalid"
+        ));
+    }
+}
+
 fn validate_research_readiness_report(
     root: &Path,
     bootstrap_path: &str,
@@ -175,6 +262,10 @@ fn validate_research_readiness_report(
         && fixture
             .get("selected_surface")
             .is_some_and(Value::is_object)
+        && fixture
+            .pointer("/selected_surface/bootstrap_plan")
+            .and_then(Value::as_str)
+            .is_some_and(|entry| !entry.is_empty())
         && fixture
             .get("missing_resources")
             .and_then(Value::as_array)

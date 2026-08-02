@@ -9,6 +9,7 @@
     "approval_id",
     "session_id",
     "workflow_id",
+    "plan_digest",
     "authority",
     "issued_at",
     "approved_steps"
@@ -18,7 +19,7 @@
       "const": "../schemas/model-plan-approval.schema.json"
     },
     "schema_version": {
-      "const": "kyuubiki.model-plan-approval/v1"
+      "const": "kyuubiki.model-plan-approval/v2"
     },
     "approval_id": {
       "type": "string",
@@ -31,6 +32,11 @@
     "workflow_id": {
       "type": "string",
       "minLength": 1
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Digest of the complete canonical model Headless plan approved by the caller."
     },
     "authority": {
       "type": "string",

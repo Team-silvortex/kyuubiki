@@ -93,6 +93,11 @@ from .model_research_execution import (
     SessionModelActionDispatcher,
     execute_model_headless_plan,
 )
+from .model_plan_approval import (
+    MODEL_PLAN_APPROVAL_REQUEST_SCHEMA_VERSION,
+    build_model_plan_approval_request,
+    compute_model_headless_plan_digest,
+)
 from .model_research_frontier import (
     MODEL_RESEARCH_FRONTIER_SCHEMA_VERSION,
     FrontierVerifier,
@@ -108,6 +113,7 @@ from .model_research_validation import (
 from .model_research_bootstrap import (
     MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION,
     MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION,
+    build_bootstrapped_model_headless_plan,
     inspect_model_research_bootstrap,
 )
 
@@ -159,6 +165,7 @@ __all__ = [
     "validate_model_research_frontier_result",
     "MODEL_RESEARCH_BOOTSTRAP_SCHEMA_VERSION",
     "MODEL_RESEARCH_READINESS_REPORT_SCHEMA_VERSION",
+    "build_bootstrapped_model_headless_plan",
     "inspect_model_research_bootstrap",
     "classify_error",
     "build_workflow_axis",
@@ -194,7 +201,10 @@ __all__ = [
     "project_model_tools",
     "sanitize_model_context",
     "MODEL_PLAN_APPROVAL_SCHEMA_VERSION",
+    "MODEL_PLAN_APPROVAL_REQUEST_SCHEMA_VERSION",
     "MODEL_RESEARCH_RECEIPT_SCHEMA_VERSION",
+    "build_model_plan_approval_request",
+    "compute_model_headless_plan_digest",
     "SessionModelActionDispatcher",
     "execute_model_headless_plan",
 ]
