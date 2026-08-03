@@ -574,22 +574,33 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
         .nth(1)
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(0);
-    let payload = if body.trim().is_empty() {
-        Value::Null
-    } else {
-        serde_json::from_str(body).map_err(|error| HeadlessExecutorError {
-            message: format!("failed to parse JSON response for {path}: {error}"),
-        })?
-    };
     if !(200..300).contains(&status_code) {
+        let payload = parse_error_payload(body);
         return Err(HeadlessExecutorError {
             message: service_error_message(status_code, path, &payload),
         });
     }
-    Ok(payload)
+    if body.trim().is_empty() {
+        return Ok(Value::Null);
+    }
+    serde_json::from_str(body).map_err(|error| HeadlessExecutorError {
+        message: format!("failed to parse JSON response for {path}: {error}"),
+    })
+}
+
+fn parse_error_payload(body: &str) -> Value {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_str(trimmed).unwrap_or_else(|_| Value::String(trimmed.to_string()))
+    }
 }
 
 fn service_error_message(status_code: u16, path: &str, payload: &Value) -> String {
+    if status_code == 404 {
+        return format!("service action endpoint not deployed (404): {path}: {payload}");
+    }
     let Some(error_code) = payload.get("error_code").and_then(Value::as_str) else {
         return format!("service request failed {status_code}: {path}: {payload}");
     };

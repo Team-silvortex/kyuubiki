@@ -570,6 +570,27 @@ fn non_success_response_includes_json_error_payload() {
 }
 
 #[test]
+fn non_success_plain_text_response_preserves_http_root_cause() {
+    let response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nnot found";
+    let error = parse_json_response(response, "/api/v1/fem/composite-thermo-electric-panel/jobs")
+        .expect_err("404 should be an error");
+
+    assert!(error.message.contains("404"));
+    assert!(error.message.contains("not found"));
+    assert!(
+        error
+            .message
+            .contains("service action endpoint not deployed")
+    );
+    assert!(
+        error
+            .message
+            .contains("/api/v1/fem/composite-thermo-electric-panel/jobs")
+    );
+    assert!(!error.message.contains("failed to parse JSON"));
+}
+
+#[test]
 fn non_success_response_promotes_operator_task_error_code() {
     let response = "HTTP/1.1 422 Unprocessable Entity\r\nContent-Type: application/json\r\n\r\n{\"error\":\"{:operator_task_mirror_mismatch, %{}}\",\"error_code\":\"operator_task_mirror_mismatch\"}";
     let error = parse_json_response(response, "/api/v1/operator-tasks/prepare")
