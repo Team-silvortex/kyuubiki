@@ -297,12 +297,13 @@
     {
       "id": "contracts",
       "layer": "contract",
-      "summary": "Shared schemas, manifests, native project-bundle contracts, architecture docs, language packs, and machine-readable policy.",
+      "summary": "Shared schemas, manifests, native project and kcore exchange contracts, architecture docs, language packs, and machine-readable policy.",
       "owned_paths": [
         "schemas",
         "config",
         "docs",
-        "workers/rust/crates/project-bundle"
+        "workers/rust/crates/project-bundle",
+        "workers/rust/crates/kcore"
       ],
       "depends_on": [],
       "benchmark_lanes": [

@@ -356,6 +356,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyuubiki-kcore"
+version = "2.7.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "zip",
+]
+
+[[package]]
 name = "kyuubiki-operator-sdk"
 version = "2.7.0"
 dependencies = [
@@ -405,6 +415,7 @@ version = "2.7.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
+ "kyuubiki-kcore",
  "kyuubiki-project-automation",
  "kyuubiki-project-bundle",
  "serde",

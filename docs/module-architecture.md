@@ -398,6 +398,7 @@ Owned paths:
 - `config/operator-qualification*.json`
 - `language-packs`
 - `workers/rust/crates/project-bundle`
+- `workers/rust/crates/kcore`
 - `apps/web/lib/kyuubiki_web/central_store.ex`
 - `apps/web/lib/kyuubiki_web/central_store_router.ex`
 
@@ -411,6 +412,8 @@ Responsibilities:
 - language-pack contract
 - native `.kyuubiki` container creation, validation, and lossless archive
   transformation shared by Hub and command tools
+- native `.kcore` export, inspection, content verification, and safe extraction
+  for frozen simulation and research exchange artifacts
 - central-store catalog, session-policy, database-policy, and database-status contract
 - central-server JSON schemas
 - central readiness report schema and retained evidence check
@@ -545,6 +548,9 @@ When adding a capability:
 - Shared JSON contracts go to `schemas`.
 - Shared native project-container behavior goes to
   `workers/rust/crates/project-bundle`.
+- Frozen cross-system computation exchange behavior goes to
+  `workers/rust/crates/kcore`; `.kyuubiki` project state must not leak into the
+  `.kcore` manifest.
 - Project-stored automation lookup, standalone macro validation, rendering,
   risk planning, and execution adaptation goes to
   `workers/rust/crates/project-automation`.

@@ -39,6 +39,7 @@ mod gui_runtime_capability_contract;
 mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;
+mod kcore_cli;
 mod lab;
 mod language_packs;
 mod line_field_baseline;
@@ -292,6 +293,7 @@ fn run() -> RunnerResult<u8> {
             run_installer(&paths, "stage-release", prepend(platform, rest))
         }
         "project" => project_cli::run_project_command(rest),
+        "kcore" => kcore_cli::run_kcore_command(rest),
         "macro" => macro_cli::run_macro_command(rest),
         "headless" => run_command(
             &paths.rust,

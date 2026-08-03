@@ -135,6 +135,9 @@ Important contract families:
 - JSON schemas under `schemas/`
 - the native `.kyuubiki` project container implementation under
   `workers/rust/crates/project-bundle`, shared by Hub and native command tools
+- the native `.kcore` frozen computation exchange implementation under
+  `workers/rust/crates/kcore`, shared by native commands, SDK adapters, stores,
+  and third-party readers without exposing editable project state
 - the native project automation adapter under
   `workers/rust/crates/project-automation`, which compiles stored presets and
   standalone macro files into Rust headless SDK plans and fail-closed execution

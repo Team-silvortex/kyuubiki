@@ -1,0 +1,74 @@
+{
+  "schema_version": "kyuubiki.kcore-export/v1",
+  "core_id": "coupled-thermal-reference",
+  "title": "Coupled thermal workflow reference",
+  "kind": "workflow-result",
+  "producer": {
+    "name": "kyuubiki",
+    "version": "2.9.0",
+    "runtime": "rust-native"
+  },
+  "artifacts": [
+    {
+      "id": "workflow-graph",
+      "role": "workflow.graph",
+      "media_type": "application/json",
+      "source": "examples.workflow-graph.json",
+      "schema_ref": {
+        "schema": "kyuubiki.workflow-graph",
+        "version": "v1"
+      },
+      "encoding": "json"
+    },
+    {
+      "id": "dataset-contract",
+      "role": "workflow.dataset-contract",
+      "media_type": "application/json",
+      "source": "examples.workflow-dataset.json",
+      "schema_ref": {
+        "schema": "kyuubiki.workflow-dataset",
+        "version": "v1"
+      },
+      "encoding": "json"
+    },
+    {
+      "id": "task-ir",
+      "role": "operator.task-ir",
+      "media_type": "application/json",
+      "source": "examples.operator-task-ir.json",
+      "schema_ref": {
+        "schema": "kyuubiki.operator-task-ir",
+        "version": "v1"
+      },
+      "encoding": "json"
+    }
+  ],
+  "contracts": [
+    {
+      "name": "workflow-graph",
+      "schema_version": "kyuubiki.workflow-graph/v1",
+      "artifact_id": "workflow-graph",
+      "purpose": "language-neutral execution topology"
+    },
+    {
+      "name": "workflow-dataset",
+      "schema_version": "kyuubiki.workflow-dataset/v1",
+      "artifact_id": "dataset-contract",
+      "purpose": "cross-operator data contract"
+    },
+    {
+      "name": "operator-task-ir",
+      "schema_version": "kyuubiki.operator-task-ir/v1",
+      "artifact_id": "task-ir",
+      "purpose": "agent engine execution contract"
+    }
+  ],
+  "entrypoints": ["workflow-graph"],
+  "provenance": {
+    "posture": "reference-example",
+    "execution_claim": "contract-only"
+  },
+  "metadata": {
+    "domain": "coupled-thermal"
+  }
+}

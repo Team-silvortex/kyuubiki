@@ -7,6 +7,7 @@ members = [
   "crates/engine",
   "crates/headless-sdk",
   "crates/installer",
+  "crates/kcore",
   "crates/operator-sdk",
   "crates/platform",
   "crates/project-automation",

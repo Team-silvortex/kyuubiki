@@ -406,6 +406,34 @@
           "create-release-snapshot",
           "check-install-update-disk-hygiene"
         ]
+      },
+      {
+        "id": "kcore-exchange-contract",
+        "modules": [
+          "contracts",
+          "verification-evidence"
+        ],
+        "files": [
+          "schemas/kcore-manifest.schema.json",
+          "schemas/kcore-export.schema.json",
+          "schemas/examples.kcore-export.json",
+          "docs/kcore-exchange-format.md",
+          "workers/rust/crates/kcore/src/model.rs",
+          "workers/rust/crates/kcore/src/archive.rs",
+          "workers/rust/crates/kcore/src/export.rs",
+          "workers/rust/crates/kcore/tests/exchange_roundtrip.rs",
+          "workers/rust/crates/script-runner/src/kcore_cli.rs"
+        ],
+        "required_text": [
+          "kyuubiki.kcore/v1",
+          "kyuubiki.kcore-export/v1",
+          "application/vnd.kyuubiki.kcore",
+          "core_digest_sha256",
+          "content-addressed",
+          "host-absolute",
+          "unreferenced kcore entry",
+          "kcore export|inspect|verify|extract"
+        ]
       }
     ],
     "deployment_update": [
@@ -702,6 +730,35 @@
       "required_text": [
         "keep journal for retry",
         "retry_safe_step_contract"
+      ]
+    },
+    {
+      "id": "kcore-exchange-integrity",
+      "status": "proven",
+      "modules": [
+        "contracts",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "persistence_provenance"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security"
+      ],
+      "files": [
+        "schemas/kcore-manifest.schema.json",
+        "schemas/kcore-export.schema.json",
+        "workers/rust/crates/kcore/src/archive.rs",
+        "workers/rust/crates/kcore/src/model.rs",
+        "workers/rust/crates/kcore/tests/exchange_roundtrip.rs"
+      ],
+      "required_text": [
+        "kyuubiki.kcore/v1",
+        "verify_with_limits",
+        "rejects_tampered_and_unreferenced_objects",
+        "rejects_host_absolute_paths_before_writing_output"
       ]
     }
   ]

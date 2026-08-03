@@ -82,6 +82,9 @@ repeatable workflow control:
   unpacking, and diffing now share one native Rust implementation between Hub
   and the top-level command surface; the project journey executes a real
   temporary `.kyuubiki` round trip
+- frozen simulation and research exchange now has the path-independent `.kcore`
+  v1 contract, native streaming export, inspection, SHA-256 verification, and
+  safe extraction surface; `.kyuubiki` remains the editable project format
 - project automation preset listing, template rendering, risk planning, dry
   runs, and service-backed live execution now use the shared Rust headless SDK;
   the top-level `project automation-*` path no longer invokes Node
@@ -132,7 +135,8 @@ Read by job:
 - Runtime authority: [docs/agent-orchestrator-boundary.md](docs/agent-orchestrator-boundary.md),
   [docs/headless-agent-contract.md](docs/headless-agent-contract.md)
 - Workflows: [docs/workflow-graph.md](docs/workflow-graph.md),
-  [docs/workflow-dataset.md](docs/workflow-dataset.md)
+  [docs/workflow-dataset.md](docs/workflow-dataset.md),
+  [docs/kcore-exchange-format.html](docs/kcore-exchange-format.html)
 - Operators: [docs/operator-sdk.md](docs/operator-sdk.md),
   [docs/operator-task-ir-digest.md](docs/operator-task-ir-digest.md)
 - Material research:

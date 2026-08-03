@@ -26,6 +26,7 @@ operator-package-dynamic-smoke\n  \
   check-operator-qualification-review-decision\n  \
 project create|inspect|validate|normalize|unpack|pack|diff\n  \
 project automation-presets|automation-render|automation-run\n  \
+kcore export|inspect|verify|extract\n  \
 macro actions|inspect|validate|normalize|render|run\n  \
 headless templates|suggest|init|inspect|validate|render|plan|run\n  \
 build-frontend build-orchestrator build-agent\n  \

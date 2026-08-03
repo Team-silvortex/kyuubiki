@@ -193,6 +193,10 @@ Then branch by intent:
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`
   ONNX-like cross-operator data contract for workflow-carried values.
+- `kcore-exchange-format.html`
+  Visual entry for the frozen `.kcore` simulation and research exchange layer.
+- `kcore-exchange-format.md`
+  Normative container, manifest, integrity, role, and evolution contract.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
   control-surface note for the active `moxi 2.x` line.
@@ -282,6 +286,9 @@ Then branch by intent:
 - `workflow-dataset.md`
   Portable dataset/value contract shared across workflow nodes, ports, and
   operator schemas.
+- `kcore-exchange-format.md`
+  Portable frozen result envelope carrying those workflow, TaskIR, model,
+  result, evidence, and preview contracts together.
 - `installer-remote-control.md`
   Installer-side remote deployment and runtime-control contract for the
   operator-facing remote node surface.

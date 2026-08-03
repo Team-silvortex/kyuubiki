@@ -15,6 +15,13 @@ README.
 - `project.schema.json` is for portable `.kyuubiki.json` project bundles and
   standardized `.kyuubiki` archive manifests, including asset catalogs and meta
   sidecars plus guid reference graphs
+- `kcore-manifest.schema.json` defines the path-independent frozen `.kcore`
+  exchange manifest for workflow, TaskIR, model, result, evidence, and preview
+  artifacts with content-addressed payloads and a canonical core digest
+- `kcore-export.schema.json` defines the build-time source mapping consumed by
+  the native streaming exporter; source paths are discarded from the result
+- `examples.kcore-export.json` binds the existing workflow graph, workflow
+  dataset, and TaskIR examples into one exchange-format conformance fixture
 - `agent-manifest.schema.json` is for local/distributed solver node manifests
 - `language-pack.schema.json` is for Workbench-local and future remotely
   downloadable UI language packs

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kcore Exchange Format v1</title>
+    <style>
+      :root { color-scheme: dark; --bg: #101318; --panel: #1b2129; --line: #344252; --ink: #edf4fa; --muted: #aebdca; --accent: #63c7e8; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 16px/1.65 Georgia, serif; color: var(--ink); background: radial-gradient(circle at 85% 0, #173849 0, transparent 32rem), var(--bg); }
+      main { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0 80px; }
+      header, section { border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, transparent); box-shadow: 0 22px 70px #0006; }
+      header { padding: clamp(28px, 6vw, 64px); }
+      section { margin-top: 18px; padding: 28px; }
+      h1, h2 { font-family: "Avenir Next", "Trebuchet MS", sans-serif; line-height: 1.12; }
+      h1 { max-width: 12ch; margin: 8px 0 18px; font-size: clamp(42px, 9vw, 88px); }
+      h2 { color: var(--accent); }
+      .eyebrow { letter-spacing: .18em; text-transform: uppercase; color: var(--accent); font: 700 12px "Avenir Next", sans-serif; }
+      .lede { max-width: 720px; color: var(--muted); font-size: 20px; }
+      .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+      pre, code { font-family: "SFMono-Regular", Consolas, monospace; }
+      pre { overflow: auto; padding: 18px; background: #0b0e12; border-left: 3px solid var(--accent); }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { color: var(--accent); }
+      a { color: var(--accent); }
+      @media (max-width: 720px) { .split { grid-template-columns: 1fr; } main { width: min(100% - 20px, 1040px); padding-top: 20px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Kyuubiki contract / moxi 2.7.x</div>
+        <h1>Kcore Exchange Format</h1>
+        <p class="lede">A frozen, path-independent, content-addressed exchange layer for simulation models, operator graphs, results, evidence, and previews.</p>
+      </header>
+      <section class="split">
+        <div><h2>.kyuubiki</h2><p>Editable project source, workspace state, version history, jobs, and authoring configuration.</p></div>
+        <div><h2>.kcore</h2><p>Portable computation output for SDKs, runtimes, stores, archives, and third-party research tools.</p></div>
+      </section>
+      <section>
+        <h2>Container</h2>
+        <pre>mimetype
+manifest.json
+objects/&lt;sha256-prefix&gt;/&lt;sha256&gt;</pre>
+        <p>Every payload is streamed, content-addressed, deduplicated, and bound by the manifest core digest. Host paths, symlinks, undeclared files, duplicate entries, and traversal are rejected.</p>
+      </section>
+      <section>
+        <h2>Portable semantics</h2>
+        <table>
+          <tr><th>Role family</th><th>Examples</th></tr>
+          <tr><td>Model</td><td><code>model.geometry</code>, <code>model.mesh</code>, <code>material.catalog</code></td></tr>
+          <tr><td>Execution</td><td><code>operator.task-ir</code>, <code>workflow.graph</code>, <code>workflow.dataset-contract</code></td></tr>
+          <tr><td>Results</td><td><code>result.field</code>, <code>result.table</code>, <code>result.report</code></td></tr>
+          <tr><td>Trust</td><td><code>evidence.validation</code>, <code>evidence.provenance</code></td></tr>
+          <tr><td>Presentation</td><td><code>preview.image</code>, <code>preview.scene</code></td></tr>
+        </table>
+      </section>
+      <section>
+        <h2>Native workflow</h2>
+        <pre>kyuubiki kcore export export.json --out result.kcore
+kyuubiki kcore inspect result.kcore
+kyuubiki kcore verify result.kcore
+kyuubiki kcore extract result.kcore --out restored-core</pre>
+        <p>The Rust library and standalone <code>kyuubiki-kcore</code> binary own the implementation. GUI and headless SDK surfaces should bind it instead of reimplementing the format.</p>
+      </section>
+      <section>
+        <h2>Normative sources</h2>
+        <p><a href="./kcore-exchange-format.md">Full normative specification</a></p>
+        <p><a href="../schemas/kcore-manifest.schema.json">Manifest schema</a> and <a href="../schemas/kcore-export.schema.json">export schema</a></p>
+      </section>
+    </main>
+  </body>
+</html>
