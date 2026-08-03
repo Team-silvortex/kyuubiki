@@ -78,6 +78,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_electric_conduction_plane_quad_2d"
       )
 
+  def submit_composite_thermo_electric_panel(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_composite_thermo_electric_panel/1,
+        "solve_composite_thermo_electric_panel"
+      )
+
   def submit_magnetostatic_plane_triangle_2d(params),
     do:
       submit_solver_job(

@@ -33,6 +33,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveElectrostaticPlaneTriangle2d,
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveElectricConductionPlaneQuad2d,
+                RpcMethod::SolveCompositeThermoElectricPanel,
                 RpcMethod::SolveHeatPlaneTriangle2d,
                 RpcMethod::SolveHeatPlaneQuad2d,
                 RpcMethod::SolveStokesFlowPlaneTriangle2d,
@@ -147,6 +148,20 @@ impl AgentDescriptor {
                     RpcMethod::SolveElectricConductionPlaneQuad2d,
                     "electric-conduction",
                     "quad",
+                ),
+                capability(
+                    "composite-thermo-electric-panel",
+                    RpcMethod::SolveCompositeThermoElectricPanel,
+                    &[
+                        "multiphysics",
+                        "material",
+                        "electrostatic",
+                        "electric-conduction",
+                        "heat",
+                        "thermal-stress",
+                        "coupled",
+                        "cpu",
+                    ],
                 ),
                 capability(
                     "heat-plane-triangle-2d",

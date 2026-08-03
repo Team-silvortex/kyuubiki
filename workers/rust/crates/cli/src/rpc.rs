@@ -4,11 +4,13 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use kyuubiki_cli::solve_composite_thermo_electric_panel;
 use kyuubiki_protocol::{
     CancelJobRequest, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse, SolveAcousticBar1dRequest,
     SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
     SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest,
-    SolveCohesiveInterface2dRequest, SolveCohesiveInterfaceMesh2dRequest, SolveContactGap1dRequest,
+    SolveCohesiveInterface2dRequest, SolveCohesiveInterfaceMesh2dRequest,
+    SolveCompositeThermoElectricPanelRequest, SolveContactGap1dRequest,
     SolveElectricConductionPlaneQuad2dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
     SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
@@ -368,6 +370,16 @@ pub(crate) fn handle_request(
                 "electric conduction plane quad result",
                 |params| params.nodes.len(),
                 solve_electric_conduction_plane_quad_2d,
+            )
+        }
+        RpcMethod::SolveCompositeThermoElectricPanel => {
+            run_solver::<SolveCompositeThermoElectricPanelRequest, _, _, _>(
+                request,
+                writer,
+                "composite thermo-electric panel",
+                "composite thermo-electric panel result",
+                SolveCompositeThermoElectricPanelRequest::estimated_node_count,
+                solve_composite_thermo_electric_panel,
             )
         }
         RpcMethod::SolveHeatPlaneQuad2d => run_solver::<SolveHeatPlaneQuad2dRequest, _, _, _>(

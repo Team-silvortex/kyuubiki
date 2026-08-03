@@ -533,6 +533,23 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         output_keys: &["job_id", "status", "progress", "job"],
     },
     HeadlessActionContract {
+        id: "solve_composite_thermo_electric_panel",
+        engine: HeadlessEngine::Service,
+        category: "material_solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &[
+            "electrostatic_model",
+            "electric_conduction_model",
+            "heat_model",
+            "thermal_model",
+            "electrothermal_loss",
+            "electrothermal_feedback",
+            "electric_conduction_feedback",
+            "thermal_expansion_feedback",
+        ],
+        output_keys: &["job_id", "status", "progress", "job"],
+    },
+    HeadlessActionContract {
         id: "open_page",
         engine: HeadlessEngine::Browser,
         category: "navigation",

@@ -90,6 +90,8 @@ pub struct HeadlessExecutionBatch {
     pub exported_at: String,
     pub language: String,
     pub workflow_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<String>,
     pub steps: Vec<HeadlessExecutionBatchStep>,
     #[serde(default)]
     pub warnings: Vec<String>,
@@ -99,6 +101,8 @@ pub struct HeadlessExecutionBatch {
 pub struct HeadlessBatchSummary {
     pub schema_version: String,
     pub workflow_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<String>,
     pub exported_at: String,
     pub language: String,
     pub step_count: usize,
@@ -162,6 +166,10 @@ pub fn normalize_workflow_document(
         exported_at: document.exported_at.clone(),
         language: document.language.clone(),
         workflow_id: document.workflow.id.clone(),
+        template_id: document
+            .template
+            .as_ref()
+            .map(|template| template.id.clone()),
         steps,
         warnings,
     })
@@ -171,6 +179,7 @@ pub fn summarize_batch(batch: &HeadlessExecutionBatch) -> HeadlessBatchSummary {
     HeadlessBatchSummary {
         schema_version: batch.schema_version.clone(),
         workflow_id: batch.workflow_id.clone(),
+        template_id: batch.template_id.clone(),
         exported_at: batch.exported_at.clone(),
         language: batch.language.clone(),
         step_count: batch.steps.len(),
@@ -536,6 +545,7 @@ mod tests {
             exported_at: "2026-07-12T00:00:00Z".to_string(),
             language: "en".to_string(),
             workflow_id: "dataset-preflight-fixture".to_string(),
+            template_id: None,
             steps: vec![HeadlessExecutionBatchStep {
                 index: 1,
                 action: "workflow_submit_graph".to_string(),

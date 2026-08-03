@@ -35,6 +35,31 @@ fn run(args: &[&str]) -> Output {
         .expect("run headless CLI")
 }
 
+fn unique_path(label: &str) -> PathBuf {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    std::env::temp_dir().join(format!("kyuubiki-headless-{label}-{unique}.json"))
+}
+
+fn init_template(template: &str) -> PathBuf {
+    let path = unique_path(template);
+    let output = run(&[
+        "init",
+        "--template",
+        template,
+        "--out",
+        path.to_str().expect("template path"),
+    ]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    path
+}
+
 #[test]
 fn execute_rejects_implicit_mock_executor() {
     let path = workflow_path();
@@ -204,5 +229,136 @@ fn missing_material_output_fails_before_service_connection() {
         "stderr: {stderr}"
     );
     assert!(!stderr.contains("failed to connect"), "stderr: {stderr}");
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn material_report_rejects_incompatible_template_before_execution() {
+    let path = init_template("direct_plane_quad");
+    let material_path = unique_path("incompatible-material-report");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "dielectric-screening",
+        "--material-report-out",
+        material_path.to_str().expect("material path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
+    assert_eq!(error["schema_version"], "kyuubiki.headless-cli-error/v1");
+    assert_eq!(error["ok"], false);
+    assert_eq!(error["error"]["code"], "material_report_template_mismatch");
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("direct_plane_quad"))
+    );
+    assert!(!material_path.exists());
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn material_report_accepts_matching_template() {
+    let path = init_template("material_dielectric_screening");
+    let material_path = unique_path("matching-material-report");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "dielectric-screening",
+        "--material-report-out",
+        material_path.to_str().expect("material path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("run report");
+    assert_eq!(report["status"], "ok");
+    let material_report: Value = serde_json::from_slice(
+        &fs::read(&material_path).expect("matching material report should be written"),
+    )
+    .expect("material report json");
+    assert_eq!(
+        material_report["schema_version"],
+        "kyuubiki.dielectric-material-report/v1"
+    );
+    let _ = fs::remove_file(path);
+    let _ = fs::remove_file(material_path);
+}
+
+#[test]
+fn composite_material_report_accepts_matching_template() {
+    let path = init_template("material_composite_thermo_electric_panel_screening");
+    let material_path = unique_path("matching-composite-material-report");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "composite-thermo-electric-panel",
+        "--material-report-out",
+        material_path.to_str().expect("material path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("run report");
+    assert_eq!(report["status"], "ok");
+    let material_report: Value = serde_json::from_slice(
+        &fs::read(&material_path).expect("composite material report should be written"),
+    )
+    .expect("material report json");
+    assert_eq!(
+        material_report["schema_version"],
+        "kyuubiki.composite-panel-report/v1"
+    );
+    let _ = fs::remove_file(path);
+    let _ = fs::remove_file(material_path);
+}
+
+#[test]
+fn material_report_rejects_workflow_without_template_provenance() {
+    let path = workflow_path();
+    let material_path = unique_path("missing-template-provenance");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "dielectric-screening",
+        "--material-report-out",
+        material_path.to_str().expect("material path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(!output.status.success());
+    let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
+    assert_eq!(
+        error["error"]["code"],
+        "material_report_template_provenance_missing"
+    );
+    assert!(!material_path.exists());
     let _ = fs::remove_file(path);
 }

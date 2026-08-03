@@ -42,7 +42,9 @@ pub(super) fn build_template_workflow(
         "material_dielectric_screening" => crate::build_dielectric_screening_steps(),
         "material_thermo_shield_screening" => crate::build_thermo_shield_screening_steps(),
         "material_structural_panel_screening" => crate::build_structural_panel_screening_steps(),
-        "material_composite_thermo_electric_panel" => crate::build_composite_panel_steps(),
+        "material_composite_thermo_electric_panel_screening" => {
+            expand_job_followups(crate::build_composite_panel_steps())
+        }
         "material_study_envelope_ranking" => vec![
             HeadlessWorkflowStep::new(
                 "workflow_submit_graph",
@@ -442,4 +444,22 @@ pub(super) fn build_template_workflow(
         id: workflow_id.to_string(),
         steps,
     }
+}
+
+fn expand_job_followups(solve_steps: Vec<HeadlessWorkflowStep>) -> Vec<HeadlessWorkflowStep> {
+    let mut expanded = Vec::with_capacity(solve_steps.len() * 3);
+    for solve_step in solve_steps {
+        let solve_index = expanded.len() + 1;
+        let job_id = format!("{{{{steps.{solve_index}.result.job_id}}}}");
+        expanded.push(solve_step);
+        expanded.push(HeadlessWorkflowStep::new(
+            "job_wait",
+            json!({ "job_id": job_id.clone(), "interval_ms": 1000, "timeout_ms": 120000 }),
+        ));
+        expanded.push(HeadlessWorkflowStep::new(
+            "result_fetch",
+            json!({ "job_id": job_id }),
+        ));
+    }
+    expanded
 }

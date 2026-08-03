@@ -280,6 +280,7 @@ pub fn compile_model_proposal(
         exported_at: session.created_at.clone(),
         language: session.language.clone(),
         workflow_id: session.workflow_id.clone(),
+        template_id: None,
         steps,
         warnings: Vec::new(),
     };

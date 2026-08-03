@@ -1,6 +1,17 @@
 defmodule KyuubikiWeb.FemModelNormalizer do
   @moduledoc false
 
+  @composite_payload_keys [
+    {"electrostatic_model", :electrostatic_model},
+    {"electric_conduction_model", :electric_conduction_model},
+    {"heat_model", :heat_model},
+    {"thermal_model", :thermal_model},
+    {"electrothermal_loss", :electrothermal_loss},
+    {"electrothermal_feedback", :electrothermal_feedback},
+    {"electric_conduction_feedback", :electric_conduction_feedback},
+    {"thermal_expansion_feedback", :thermal_expansion_feedback}
+  ]
+
   def normalize_axial_bar(params) when is_map(params) do
     with {:ok, length} <- fetch_number(params, ["length", :length]),
          {:ok, area} <- fetch_number(params, ["area", :area]),
@@ -309,6 +320,29 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_electric_conduction_plane_quad_2d(_params),
     do: {:error, :invalid_electric_conduction_plane_quad_model}
+
+  def normalize_composite_thermo_electric_panel(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_composite_payload_maps(params) do
+      research = Map.get(params, "research", Map.get(params, :research))
+      {:ok, if(is_nil(research), do: normalized, else: Map.put(normalized, "research", research))}
+    end
+  end
+
+  def normalize_composite_thermo_electric_panel(_params),
+    do: {:error, :invalid_composite_thermo_electric_panel_model}
+
+  defp normalize_composite_payload_maps(params) do
+    Enum.reduce_while(@composite_payload_keys, {:ok, %{}}, fn {string_key, atom_key},
+                                                              {:ok, normalized} ->
+      case Map.get(params, string_key, Map.get(params, atom_key)) do
+        value when is_map(value) ->
+          {:cont, {:ok, Map.put(normalized, string_key, value)}}
+
+        _ ->
+          {:halt, {:error, :invalid_composite_thermo_electric_panel_model}}
+      end
+    end)
+  end
 
   defp normalize_electric_conduction_interfaces(nodes, elements, contacts, terminals)
        when is_list(contacts) and is_list(terminals),

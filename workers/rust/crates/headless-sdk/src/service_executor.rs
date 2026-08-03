@@ -72,6 +72,7 @@ pub fn service_executor_supports_action(action: &str) -> bool {
             | "job_fetch"
             | "job_wait"
             | "result_fetch"
+            | "solve_composite_thermo_electric_panel"
     ) || direct_fem_submit_route(action).is_some()
 }
 
@@ -110,6 +111,9 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             }
             "model_version_create" => {
                 execute_model_version_create(&self.base_url, self.api_token.as_deref(), payload)
+            }
+            "solve_composite_thermo_electric_panel" => {
+                execute_composite_panel_submit(&self.base_url, self.api_token.as_deref(), payload)
             }
             direct_fem_action if direct_fem_submit_route(direct_fem_action).is_some() => {
                 execute_direct_fem_submit(
@@ -212,6 +216,24 @@ fn execute_direct_fem_submit(
         .cloned()
         .unwrap_or_else(|| payload.clone());
     let result = request_json(base_url, api_token, "POST", route, Some(request_body))?;
+    Ok(HeadlessExecutorOutcome {
+        status: "executed".to_string(),
+        result: normalize_job_submission_result(result),
+    })
+}
+
+fn execute_composite_panel_submit(
+    base_url: &str,
+    api_token: Option<&str>,
+    payload: &Value,
+) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let result = request_json(
+        base_url,
+        api_token,
+        "POST",
+        "/api/v1/fem/composite-thermo-electric-panel/jobs",
+        Some(payload.clone()),
+    )?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
         result: normalize_job_submission_result(result),

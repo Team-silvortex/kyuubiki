@@ -247,6 +247,7 @@ pub use material_reports::{
     build_material_report_from_run, build_material_report_with_optimization,
     describe_material_study, extract_material_result_payloads, extract_result_payloads_from_run,
     find_material_study, material_study_catalog, material_study_descriptors,
+    supported_material_report_study_ids, validate_material_report_compatibility,
 };
 pub use material_research::{
     MaterialCardReference, MaterialResearchCandidateReport, MaterialResearchMetricSpec,

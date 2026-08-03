@@ -36,6 +36,7 @@ use kyuubiki_protocol::{
 mod advanced_rpc;
 mod agent_mesh_descriptor_rpc;
 mod cohesive_mesh_rpc;
+mod composite_rpc;
 mod config_and_transport;
 mod core_field_rpc;
 mod electric_conduction_rpc;

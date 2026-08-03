@@ -56,8 +56,13 @@ pub(crate) fn solve_composite_electrothermal_feedback(
         )?;
         let electrostatic_request =
             apply_composite_dielectric_permittivity(electrostatic_seed, &loss_spec)?;
-        let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request)
-            .map_err(|error| format!("composite electrothermal iteration {iteration} failed electrostatic solve: {error}"))?;
+        let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request).map_err(
+            |error| {
+                format!(
+                    "composite electrothermal iteration {iteration} failed electrostatic solve: {error}"
+                )
+            },
+        )?;
         let adjusted_heat_seed = temperature_adjusted_composite_heat_request(
             heat_seed,
             feedback_spec,

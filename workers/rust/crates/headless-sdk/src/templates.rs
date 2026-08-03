@@ -64,6 +64,20 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "mechanical", "screening", "stiffness"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_composite_thermo_electric_panel_screening",
+        title: "Composite Thermo-Electric Panel",
+        description: "Screen coupled dielectric, current-conduction, heat, and thermal-stress panel candidates through the service runtime.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &[
+            "material",
+            "multiphysics",
+            "electrothermal",
+            "composite",
+            "screening",
+        ],
+    },
+    HeadlessTemplateDescriptor {
         id: "material_study_envelope_ranking",
         title: "Material Envelope Ranking",
         description: "Submit a material-study envelope workflow graph that ranks candidates and extracts a Pareto frontier.",

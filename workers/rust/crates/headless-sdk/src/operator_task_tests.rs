@@ -104,6 +104,7 @@ fn operator_task_prepare_runs_as_headless_dry_step() {
         exported_at: "1970-01-01T00:00:00.000Z".to_string(),
         language: "en".to_string(),
         workflow_id: "operator-task-fixture".to_string(),
+        template_id: None,
         steps: vec![HeadlessExecutionBatchStep {
             index: 1,
             action: "operator_task_prepare".to_string(),
@@ -261,6 +262,7 @@ fn operator_task_execute_runs_as_headless_dry_step_with_readiness() {
         exported_at: "1970-01-01T00:00:00.000Z".to_string(),
         language: "en".to_string(),
         workflow_id: "operator-task-fixture".to_string(),
+        template_id: None,
         steps: vec![HeadlessExecutionBatchStep {
             index: 1,
             action: "operator_task_execute".to_string(),
@@ -289,6 +291,7 @@ fn operator_task_batch(task: Value) -> HeadlessExecutionBatch {
         exported_at: "1970-01-01T00:00:00.000Z".to_string(),
         language: "en".to_string(),
         workflow_id: "operator-task-fixture".to_string(),
+        template_id: None,
         steps: vec![HeadlessExecutionBatchStep {
             index: 1,
             action: "operator_task_prepare".to_string(),
@@ -305,6 +308,7 @@ fn operator_task_batch_without_task() -> HeadlessExecutionBatch {
         exported_at: "1970-01-01T00:00:00.000Z".to_string(),
         language: "en".to_string(),
         workflow_id: "operator-task-fixture".to_string(),
+        template_id: None,
         steps: vec![HeadlessExecutionBatchStep {
             index: 1,
             action: "operator_task_prepare".to_string(),

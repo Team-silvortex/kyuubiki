@@ -45,6 +45,20 @@ fn native_headless_cli_closes_template_to_dry_run_journey() {
     let templates = successful(&["templates", "--runtime", "service_only", "--json"]);
     let templates: Value = serde_json::from_slice(&templates.stdout).expect("template JSON");
     assert!(templates["template_count"].as_u64().unwrap_or_default() > 0);
+    let template_entries = templates["templates"].as_array().expect("template entries");
+    let dielectric = template_entries
+        .iter()
+        .find(|template| template["id"] == "material_dielectric_screening")
+        .expect("dielectric template");
+    assert_eq!(
+        dielectric["material_report_studies"],
+        serde_json::json!(["material_dielectric_screening"])
+    );
+    let direct = template_entries
+        .iter()
+        .find(|template| template["id"] == "direct_plane_quad")
+        .expect("direct template");
+    assert_eq!(direct["material_report_studies"], serde_json::json!([]));
 
     successful(&[
         "init",

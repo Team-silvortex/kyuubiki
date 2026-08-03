@@ -431,6 +431,7 @@ mod tests {
             exported_at: "1970-01-01T00:00:00.000Z".to_string(),
             language: "en".to_string(),
             workflow_id: "risk-stop-fixture".to_string(),
+            template_id: None,
             steps: vec![
                 HeadlessExecutionBatchStep {
                     index: 1,
@@ -468,6 +469,7 @@ mod tests {
             exported_at: "1970-01-01T00:00:00.000Z".to_string(),
             language: "en".to_string(),
             workflow_id: "operator-task-fixture".to_string(),
+            template_id: None,
             steps: vec![HeadlessExecutionBatchStep {
                 index: 1,
                 action: "operator_task_prepare".to_string(),

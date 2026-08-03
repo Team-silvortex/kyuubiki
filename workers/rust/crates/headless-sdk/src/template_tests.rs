@@ -46,6 +46,11 @@ fn template_document_accepts_custom_workflow_id_override() {
     let document = build_template_document("workflow_submit_monitor", Some("custom.workflow"))
         .expect("workflow_submit_monitor template should build");
     assert_eq!(document.workflow.id, "custom.workflow");
+    let batch = normalize_workflow_document(&document).expect("custom workflow should normalize");
+    assert_eq!(
+        batch.template_id.as_deref(),
+        Some("workflow_submit_monitor")
+    );
 }
 
 #[test]
@@ -194,7 +199,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
-        ("materials", 6),
+        ("materials", 7),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
@@ -327,6 +332,37 @@ fn structural_material_template_expands_candidate_solve_chains() {
     assert!(plan.ok);
     assert!(plan.compatibility.service_only_ok);
     assert_eq!(plan.steps.len(), 9);
+}
+
+#[test]
+fn composite_material_template_expands_coupled_candidate_chains() {
+    let document =
+        build_template_document("material_composite_thermo_electric_panel_screening", None)
+            .expect("composite material template should build");
+    let steps = &document.workflow.steps;
+    assert_eq!(steps.len(), 9);
+
+    for candidate_index in 0..3 {
+        let base = candidate_index * 3;
+        let solve_step_number = base + 1;
+        assert_eq!(steps[base].action, "solve_composite_thermo_electric_panel");
+        assert_eq!(steps[base + 1].action, "job_wait");
+        assert_eq!(steps[base + 2].action, "result_fetch");
+        assert!(steps[base].payload["electrostatic_model"].is_object());
+        assert!(steps[base].payload["electric_conduction_model"].is_object());
+        assert!(steps[base].payload["heat_model"].is_object());
+        assert!(steps[base].payload["thermal_model"].is_object());
+        assert_eq!(
+            steps[base + 1].payload["job_id"],
+            format!("{{{{steps.{solve_step_number}.result.job_id}}}}")
+        );
+    }
+
+    let batch =
+        normalize_workflow_document(&document).expect("composite template should normalize");
+    let plan = build_execution_plan(&batch);
+    assert!(plan.ok);
+    assert!(plan.compatibility.service_only_ok);
 }
 
 #[test]

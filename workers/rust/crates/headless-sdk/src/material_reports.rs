@@ -1,6 +1,6 @@
 use crate::{
-    HeadlessRunReport, MaterialOptimizationProfile, MaterialResearchMetricSpec,
-    build_composite_panel_report, build_dielectric_screening_report,
+    HeadlessExecutionBatch, HeadlessRunReport, MaterialOptimizationProfile,
+    MaterialResearchMetricSpec, build_composite_panel_report, build_dielectric_screening_report,
     build_dielectric_screening_report_with_optimization, build_heat_spreader_screening_report,
     build_heat_spreader_screening_report_with_optimization,
     build_structural_panel_screening_report,
@@ -115,7 +115,7 @@ const MATERIAL_STUDIES: &[MaterialStudyDescriptor] = &[
             "material.composite_thermo_electric_panel.v1",
         ],
         schema_version: "kyuubiki.composite-panel-report/v1",
-        template_id: "material_composite_thermo_electric_panel",
+        template_id: "material_composite_thermo_electric_panel_screening",
         material_card_contract_required: true,
         material_card_schema_version: "kyuubiki.material-card/v1",
         material_card_ref_count: 3,
@@ -146,6 +146,44 @@ pub fn material_study_catalog() -> Vec<MaterialStudyCatalogEntry> {
 
 pub fn describe_material_study(study: &str) -> Option<MaterialStudyCatalogEntry> {
     find_material_study(study).map(MaterialStudyCatalogEntry::from_descriptor)
+}
+
+pub fn supported_material_report_study_ids(template_id: &str) -> Vec<&'static str> {
+    MATERIAL_STUDIES
+        .iter()
+        .filter(|study| study.template_id == template_id)
+        .map(|study| study.id)
+        .collect()
+}
+
+pub fn validate_material_report_compatibility(
+    study: &str,
+    batch: &HeadlessExecutionBatch,
+) -> Result<(), String> {
+    let descriptor = find_material_study(study)
+        .ok_or_else(|| format!("unsupported material report study: {study}"))?;
+    let template_id = batch
+        .template_id
+        .as_deref()
+        .or_else(|| batch.workflow_id.strip_prefix("template."))
+        .ok_or_else(|| {
+            format!(
+                "material-report study {} requires template provenance; workflow {} does not declare template_id",
+                descriptor.id, batch.workflow_id
+            )
+        })?;
+    if template_id == descriptor.template_id {
+        return Ok(());
+    }
+    let supported = MATERIAL_STUDIES
+        .iter()
+        .find(|candidate| candidate.template_id == template_id)
+        .map(|candidate| candidate.id)
+        .unwrap_or("none");
+    Err(format!(
+        "material-report study {} is not supported by template {}; supported material-report study: {}",
+        descriptor.id, template_id, supported
+    ))
 }
 
 pub fn build_material_report(study: &str, result_payloads: &[Value]) -> Result<Value, String> {
@@ -432,6 +470,63 @@ mod tests {
                 .iter()
                 .any(|metric| metric.id == "yield_safety_factor")
         );
+    }
+
+    #[test]
+    fn material_report_compatibility_uses_template_provenance() {
+        let dielectric = crate::build_template_document("material_dielectric_screening", None)
+            .and_then(|document| crate::normalize_workflow_document(&document).ok())
+            .expect("dielectric batch");
+        let direct = crate::build_template_document("direct_plane_quad", None)
+            .and_then(|document| crate::normalize_workflow_document(&document).ok())
+            .expect("direct batch");
+
+        validate_material_report_compatibility("dielectric-screening", &dielectric)
+            .expect("matching template should support the report");
+        let error = validate_material_report_compatibility("dielectric-screening", &direct)
+            .expect_err("direct template must reject dielectric report");
+        assert!(error.contains("not supported by template direct_plane_quad"));
+        assert!(error.contains("supported material-report study: none"));
+    }
+
+    #[test]
+    fn material_report_compatibility_accepts_legacy_template_workflow_id() {
+        let mut batch = crate::build_template_document("material_dielectric_screening", None)
+            .and_then(|document| crate::normalize_workflow_document(&document).ok())
+            .expect("dielectric batch");
+        batch.template_id = None;
+
+        validate_material_report_compatibility("dielectric-screening", &batch)
+            .expect("legacy template workflow id should remain compatible");
+    }
+
+    #[test]
+    fn material_report_compatibility_covers_every_template_and_study() {
+        for template in crate::list_templates() {
+            let batch = crate::build_template_document(template.id, None)
+                .and_then(|document| crate::normalize_workflow_document(&document).ok())
+                .unwrap_or_else(|| panic!("template {} should normalize", template.id));
+            for study in MATERIAL_STUDIES {
+                let result = validate_material_report_compatibility(study.id, &batch);
+                assert_eq!(
+                    result.is_ok(),
+                    template.id == study.template_id,
+                    "template {} and study {} returned {:?}",
+                    template.id,
+                    study.id,
+                    result
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn material_report_capability_lookup_is_explicit() {
+        assert_eq!(
+            supported_material_report_study_ids("material_dielectric_screening"),
+            vec!["material_dielectric_screening"]
+        );
+        assert!(supported_material_report_study_ids("direct_plane_quad").is_empty());
     }
 
     #[test]

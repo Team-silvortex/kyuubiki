@@ -8,7 +8,8 @@ use kyuubiki_headless_sdk::{
     MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
     build_template_document, collect_executor_compatibility_issues, describe_material_study,
     execute_batch_with_executor, normalize_workflow_document, run_batch_dry, search_templates,
-    suggest_template_details, suggest_templates, summarize_batch, validate_batch,
+    suggest_template_details, suggest_templates, summarize_batch,
+    supported_material_report_study_ids, validate_batch, validate_material_report_compatibility,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -23,7 +24,7 @@ mod kyuubiki_headless_usage;
 use kyuubiki_headless_flags::Flags;
 fn main() {
     if let Err(error) = run() {
-        eprintln!("{error}");
+        print_cli_error(&error);
         std::process::exit(1);
     }
 }
@@ -207,6 +208,9 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     validate_material_report_flags(&flags)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
+    if let Some(study) = flags.material_report.as_deref() {
+        validate_material_report_compatibility(study, &batch)?;
+    }
     let selected_executor = flags.selected_executor()?;
     let report = if flags.execute {
         let executor_name = selected_executor
@@ -313,6 +317,41 @@ fn validate_material_report_flags(flags: &Flags) -> Result<(), String> {
         return Err(format!("unsupported material report study: {study}"));
     }
     Ok(())
+}
+
+fn print_cli_error(error: &str) {
+    if !env::args().any(|argument| argument == "--json") {
+        eprintln!("{error}");
+        return;
+    }
+    let output = CliErrorOutput {
+        schema_version: "kyuubiki.headless-cli-error/v1",
+        ok: false,
+        error: CliErrorView {
+            code: classify_cli_error(error),
+            message: error,
+        },
+    };
+    match serde_json::to_string(&output) {
+        Ok(payload) => eprintln!("{payload}"),
+        Err(_) => eprintln!("{error}"),
+    }
+}
+
+fn classify_cli_error(error: &str) -> &'static str {
+    if error.contains("not supported by template") {
+        "material_report_template_mismatch"
+    } else if error.contains("requires template provenance") {
+        "material_report_template_provenance_missing"
+    } else if error.starts_with("unsupported material report study") {
+        "material_report_study_unsupported"
+    } else if error.contains("--material-report with --json requires --material-report-out") {
+        "material_report_output_required"
+    } else if error.starts_with("headless execution failed") {
+        "headless_execution_failed"
+    } else {
+        "headless_command_failed"
+    }
 }
 
 fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
@@ -529,6 +568,19 @@ struct TemplateListOutput {
 }
 
 #[derive(Debug, Serialize)]
+struct CliErrorOutput<'a> {
+    schema_version: &'static str,
+    ok: bool,
+    error: CliErrorView<'a>,
+}
+
+#[derive(Debug, Serialize)]
+struct CliErrorView<'a> {
+    code: &'static str,
+    message: &'a str,
+}
+
+#[derive(Debug, Serialize)]
 struct TemplateView {
     id: String,
     title: String,
@@ -538,6 +590,7 @@ struct TemplateView {
     tags: Vec<String>,
     step_count: usize,
     actions: Vec<String>,
+    material_report_studies: Vec<String>,
 }
 
 impl TemplateView {
@@ -551,6 +604,10 @@ impl TemplateView {
             tags: template.tags.iter().map(|tag| (*tag).to_string()).collect(),
             step_count: template_actions(template.id).len(),
             actions: template_actions(template.id),
+            material_report_studies: supported_material_report_study_ids(template.id)
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
         }
     }
 }

@@ -265,6 +265,7 @@ fn batch_from_steps(id: &str, steps: &[AutomationPlanStep]) -> HeadlessExecution
         exported_at: now(),
         language: "en".to_string(),
         workflow_id: id.to_string(),
+        template_id: None,
         steps: steps
             .iter()
             .map(|step| HeadlessExecutionBatchStep {
