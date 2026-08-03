@@ -344,6 +344,9 @@ review applicability from an empty draft list. It also carries
 `search_space_progress` with deterministic source and planned input
 fingerprints. Replaying the built-in candidates is reported as
 `builtin_candidate_replay`; it is runnable, but it is not convergence evidence.
+Exporting a review template remains safe for either review state: plans without
+drafts return `status: not_applicable`, an empty draft list, and a successful
+exit. Approval of that no-op result remains blocked.
 
 The next-round plan also carries `optimization_objectives`, which records the
 optimization mode, incumbent winner, primary metric IDs, and violated quality

@@ -182,8 +182,11 @@ so agents can report an audit gate instead of misclassifying the batch as a
 solver failure. `allowed_review_actions` exposes approve, request-changes, and
 reject transitions, each requiring reviewer identity and a reason.
 Every next-round execution plan also carries `review_policy` and
-`search_space_progress`. Callers branch on `review_policy.required` before
-requesting a review template. `search_space_progress.candidate_inputs_changed`
+`search_space_progress`. Callers can branch on `review_policy.required` before
+requesting a review template. The CLI is idempotent at this boundary: a valid
+plan without drafts returns a `material-review-template-export/v1` payload with
+`status: not_applicable`, empty `draft_ids`, and exit code zero.
+`search_space_progress.candidate_inputs_changed`
 is true only when a candidate is added or its actual solver model input changes;
 focused reruns and built-in candidate replays do not count as design-space
 progress.

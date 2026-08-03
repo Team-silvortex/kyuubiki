@@ -13,6 +13,7 @@ pub(crate) fn approve_review_template(
     decided_at: &str,
 ) -> Result<Value, String> {
     let template = read_review_template(template_path)?;
+    ensure_review_template_applicable(&template)?;
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.material-candidate-review-decision/v1",
         "batch_draft_ids": template
@@ -37,6 +38,31 @@ pub(crate) fn approve_review_template(
 
 pub(crate) fn review_decision_template(plan_path: &str) -> Result<Value, String> {
     let execution_plan = read_next_round_execution_plan(plan_path)?;
+    let review_policy = execution_plan
+        .get("review_policy")
+        .cloned()
+        .unwrap_or(Value::Null);
+    if review_policy.get("required").and_then(Value::as_bool) == Some(false) {
+        return Ok(serde_json::json!({
+            "schema_version": "kyuubiki.material-review-template-export/v1",
+            "source_schema_version": execution_plan
+                .get("schema_version")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown"),
+            "status": "not_applicable",
+            "review_policy": review_policy,
+            "batch_id": Value::Null,
+            "draft_ids": [],
+            "review_checklist": [],
+            "review_status": Value::Null,
+            "review_decision_template": Value::Null,
+            "review_decision_contract": Value::Null,
+            "notes": [
+                "this plan does not require candidate review or materialization",
+                "continue with the built-in next-round execution path"
+            ]
+        }));
+    }
     let batch = first_review_batch(&execution_plan)?;
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.material-review-template-export/v1",
@@ -44,6 +70,8 @@ pub(crate) fn review_decision_template(plan_path: &str) -> Result<Value, String>
             .get("schema_version")
             .and_then(Value::as_str)
             .unwrap_or("unknown"),
+        "status": "ready_for_review",
+        "review_policy": review_policy,
         "batch_id": batch.get("batch_id").cloned().unwrap_or(Value::Null),
         "draft_ids": batch.get("draft_ids").cloned().unwrap_or_else(|| serde_json::json!([])),
         "review_checklist": batch
@@ -167,8 +195,11 @@ pub(crate) fn materialized_rerun_summary_lines(payload: &Value) -> Vec<String> {
 pub(crate) fn print_review_template_summary(payload: &Value) {
     println!(
         "Review template: {}",
-        payload["batch_id"].as_str().unwrap_or("unknown")
+        payload["status"].as_str().unwrap_or("unknown")
     );
+    if let Some(batch_id) = payload["batch_id"].as_str() {
+        println!("Batch: {batch_id}");
+    }
     println!(
         "Drafts: {}",
         payload["draft_ids"].as_array().map(Vec::len).unwrap_or(0)
@@ -351,6 +382,19 @@ fn completed_review_item_ids(template: &Value) -> Value {
                 .cloned()
         })
         .unwrap_or_else(|| serde_json::json!([]))
+}
+
+fn ensure_review_template_applicable(template: &Value) -> Result<(), String> {
+    if template.get("status").and_then(Value::as_str) == Some("not_applicable")
+        || template
+            .get("review_policy")
+            .and_then(|policy| policy.get("required"))
+            .and_then(Value::as_bool)
+            == Some(false)
+    {
+        return Err("review approval is not applicable to this next-round plan".to_string());
+    }
+    Ok(())
 }
 
 fn select_review_batch<'a>(plan: &'a Value, decision: &Value) -> Result<&'a Value, String> {

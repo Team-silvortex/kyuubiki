@@ -433,6 +433,7 @@ fn exports_review_decision_template_from_next_round_plan() {
         template["schema_version"].as_str(),
         Some("kyuubiki.material-review-template-export/v1")
     );
+    assert_eq!(template["status"].as_str(), Some("ready_for_review"));
     assert!(
         template["draft_ids"]
             .as_array()
@@ -448,6 +449,56 @@ fn exports_review_decision_template_from_next_round_plan() {
             .is_some_and(|items| !items.is_empty())
     );
     let _ = fs::remove_file(plan_path);
+}
+
+#[test]
+fn exports_not_applicable_review_result_without_failing() {
+    let plan_path = temp_path("kyuubiki-review-not-applicable-plan");
+    let plan = serde_json::json!({
+        "schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
+        "review_policy": {
+            "schema_version": "kyuubiki.material-review-policy/v1",
+            "required": false,
+            "state": "not_applicable",
+            "reason": "next-round plan contains no candidate draft execution batches"
+        },
+        "draft_execution_batches": []
+    });
+    fs::write(&plan_path, serde_json::to_vec(&plan).expect("json")).expect("write plan");
+
+    let template =
+        review_decision_template(plan_path.to_str().expect("utf8 path")).expect("review result");
+
+    assert_eq!(template["status"].as_str(), Some("not_applicable"));
+    assert_eq!(template["review_policy"]["required"].as_bool(), Some(false));
+    assert_eq!(template["draft_ids"].as_array().map(Vec::len), Some(0));
+    assert!(template["review_decision_template"].is_null());
+    let _ = fs::remove_file(plan_path);
+}
+
+#[test]
+fn approval_rejects_not_applicable_review_result() {
+    let template_path = temp_path("kyuubiki-review-not-applicable-template");
+    let template = serde_json::json!({
+        "schema_version": "kyuubiki.material-review-template-export/v1",
+        "status": "not_applicable",
+        "review_policy": { "required": false },
+        "draft_ids": []
+    });
+    fs::write(&template_path, serde_json::to_vec(&template).expect("json"))
+        .expect("write template");
+
+    let error = approve_review_template(
+        template_path.to_str().expect("utf8 path"),
+        "reviewer-1",
+        "Reviewer One",
+        "approval should not be accepted",
+        "2026-08-03T00:00:00Z",
+    )
+    .expect_err("not-applicable review must fail approval");
+
+    assert!(error.contains("not applicable"));
+    let _ = fs::remove_file(template_path);
 }
 
 #[test]
