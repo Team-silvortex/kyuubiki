@@ -39,6 +39,14 @@ fn canonical_json_encodes_floats_without_exponent_notation() {
 }
 
 #[test]
+fn canonical_json_sha256_is_order_independent() {
+    assert_eq!(
+        crate::canonical_json_sha256(&json!({"b": 2, "a": 1})),
+        crate::canonical_json_sha256(&json!({"a": 1, "b": 2}))
+    );
+}
+
+#[test]
 fn operator_task_digest_matches_elixir_golden_fixture() {
     let task = golden_task_fixture(None);
 

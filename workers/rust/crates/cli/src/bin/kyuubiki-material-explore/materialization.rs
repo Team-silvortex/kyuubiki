@@ -367,6 +367,19 @@ fn select_review_batch<'a>(plan: &'a Value, decision: &Value) -> Result<&'a Valu
 }
 
 fn first_review_batch(plan: &Value) -> Result<&Value, String> {
+    if plan
+        .get("review_policy")
+        .and_then(|policy| policy.get("required"))
+        .and_then(Value::as_bool)
+        == Some(false)
+    {
+        let reason = plan
+            .get("review_policy")
+            .and_then(|policy| policy.get("reason"))
+            .and_then(Value::as_str)
+            .unwrap_or("next-round plan has no candidate drafts");
+        return Err(format!("review is not applicable: {reason}"));
+    }
     plan.get("draft_execution_batches")
         .and_then(Value::as_array)
         .into_iter()

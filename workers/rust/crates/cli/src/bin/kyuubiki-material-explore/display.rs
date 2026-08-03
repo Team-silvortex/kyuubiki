@@ -187,6 +187,21 @@ pub(crate) fn print_next_round_plan_summary(plan: &Value) {
             .and_then(Value::as_u64)
             .unwrap_or(0)
     );
+    if let Some(policy) = plan.get("review_policy") {
+        println!(
+            "Review: {}",
+            policy.get("state").and_then(Value::as_str).unwrap_or("--")
+        );
+    }
+    if let Some(progress) = plan.get("search_space_progress") {
+        println!(
+            "Candidate inputs: {}",
+            progress
+                .get("state")
+                .and_then(Value::as_str)
+                .unwrap_or("--")
+        );
+    }
     if let Some(focus) = plan.get("focus_candidate_ids").and_then(Value::as_array) {
         let focus_list = focus
             .iter()
@@ -255,6 +270,15 @@ pub(crate) fn print_chain_summary(chain: &Value) {
             "Recommendation: {}",
             assessment
                 .get("recommendation")
+                .and_then(Value::as_str)
+                .unwrap_or("--")
+        );
+    }
+    if let Some(progress) = chain.get("search_space_progress") {
+        println!(
+            "Search progress: {}",
+            progress
+                .get("state")
                 .and_then(Value::as_str)
                 .unwrap_or("--")
         );

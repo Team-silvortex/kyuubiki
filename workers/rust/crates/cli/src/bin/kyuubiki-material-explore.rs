@@ -14,6 +14,9 @@ mod materialization;
 #[path = "kyuubiki-material-explore/materialization_tests.rs"]
 mod materialization_tests;
 #[cfg(test)]
+#[path = "kyuubiki-material-explore/ordering_tests.rs"]
+mod ordering_tests;
+#[cfg(test)]
 #[path = "kyuubiki-material-explore/tests.rs"]
 mod tests;
 
@@ -287,10 +290,10 @@ fn chain_next_rounds(path: &str, rounds: usize) -> Result<Value, String> {
 }
 
 fn run_next_round_from_exploration(previous: &Value) -> Result<Value, String> {
-    let plan = build_material_exploration_next_round_execution_plan(&previous)?;
+    let plan = build_material_exploration_next_round_execution_plan(previous)?;
     let study = plan.study.clone();
     let iteration = plan.iteration;
-    let mut result_payloads = previous_result_payloads(&previous)?;
+    let mut result_payloads = previous_result_payloads(previous)?;
 
     for step in &plan.steps {
         if !step.action.starts_with("solve_") {
@@ -298,7 +301,7 @@ fn run_next_round_from_exploration(previous: &Value) -> Result<Value, String> {
         }
         let result = run_solve_step(step)?;
         if let Some(candidate_id) = candidate_id_for_step(step) {
-            if let Some(index) = candidate_index(&previous, candidate_id) {
+            if let Some(index) = candidate_index(previous, candidate_id) {
                 if index < result_payloads.len() {
                     result_payloads[index] = result;
                     continue;
@@ -348,14 +351,24 @@ fn previous_result_payloads(exploration: &Value) -> Result<Vec<Value>, String> {
 }
 
 fn candidate_index(exploration: &Value, candidate_id: &str) -> Option<usize> {
-    exploration
-        .get("report")
-        .and_then(|report| report.get("candidates"))
-        .and_then(Value::as_array)?
-        .iter()
-        .position(|candidate| {
-            candidate.get("candidate_id").and_then(Value::as_str) == Some(candidate_id)
+    if let Some(index) = exploration
+        .get("candidate_input_manifest")
+        .and_then(|manifest| manifest.get("entries"))
+        .and_then(Value::as_array)
+        .and_then(|entries| {
+            entries.iter().position(|entry| {
+                entry.get("candidate_id").and_then(Value::as_str) == Some(candidate_id)
+            })
         })
+    {
+        return Some(index);
+    }
+    let study = exploration.get("study").and_then(Value::as_str)?;
+    material_exploration_steps(study)
+        .ok()?
+        .iter()
+        .filter(|step| step.action.starts_with("solve_"))
+        .position(|step| candidate_id_for_step(step) == Some(candidate_id))
 }
 
 fn candidate_id_for_step(step: &HeadlessWorkflowStep) -> Option<&str> {
@@ -366,14 +379,16 @@ fn candidate_id_for_step(step: &HeadlessWorkflowStep) -> Option<&str> {
 }
 
 fn attach_next_round_lineage(payload: &mut Value, previous: &Value, plan: &Value) {
+    let source_winner_candidate_id = previous
+        .get("report")
+        .and_then(|report| report.get("winner_candidate_id"))
+        .and_then(Value::as_str);
     let lineage = serde_json::json!({
         "schema_version": "kyuubiki.material-next-round-lineage/v1",
         "source_schema_version": previous.get("schema_version").and_then(Value::as_str),
         "source_iteration": previous.get("iteration").and_then(Value::as_u64),
-        "source_winner_candidate_id": previous
-            .get("report")
-            .and_then(|report| report.get("winner_candidate_id"))
-            .and_then(Value::as_str),
+        "source_winner_candidate_id": source_winner_candidate_id,
+        "source_winner_score": exploration_winner_score(previous, source_winner_candidate_id),
         "plan_schema_version": plan.get("schema_version").and_then(Value::as_str),
         "planned_iteration": plan.get("iteration").and_then(Value::as_u64),
         "decision": plan.get("decision").and_then(Value::as_str),
@@ -390,14 +405,33 @@ fn attach_next_round_lineage(payload: &mut Value, previous: &Value, plan: &Value
             .get("optimization_objectives")
             .cloned()
             .unwrap_or(Value::Null),
+        "review_policy": plan.get("review_policy").cloned().unwrap_or(Value::Null),
+        "search_space_progress": plan
+            .get("search_space_progress")
+            .cloned()
+            .unwrap_or(Value::Null),
         "runnable_step_count": plan.get("runnable_step_count").and_then(Value::as_u64),
     });
     payload["lineage"] = lineage;
 }
 
+fn exploration_winner_score(exploration: &Value, winner: Option<&str>) -> Option<f64> {
+    let winner = winner?;
+    exploration
+        .get("report")
+        .and_then(|report| report.get("candidates"))
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|candidate| candidate.get("candidate_id").and_then(Value::as_str) == Some(winner))?
+        .get("score")
+        .and_then(Value::as_f64)
+}
+
 pub(crate) fn run_solve_step(step: &HeadlessWorkflowStep) -> Result<Value, String> {
     if step.action == "solve_composite_thermo_electric_panel" {
-        return run_composite_solve_step(step);
+        let mut result = run_composite_solve_step(step)?;
+        result["input"] = step.payload.clone();
+        return Ok(result);
     }
     let model = step
         .payload

@@ -32,14 +32,17 @@ pub(crate) fn chain_next_rounds_from_initial(
     let decision_counts = decision_counts(&summaries);
     let repair_summary = repair_summary(&runs);
     let repair_plan = repair_plan(&repair_summary);
-    let convergence_assessment = convergence_assessment(&summaries, &repair_summary);
+    let search_space_progress = chain_search_space_progress(&summaries);
+    let convergence_assessment =
+        convergence_assessment(&summaries, &repair_summary, &search_space_progress);
     Ok(json!({
         "schema_version": MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION,
         "source_schema_version": source_schema_version,
         "round_count": runs.len(),
-        "stop_reason": chain_stop_reason(&summaries, rounds),
+        "stop_reason": chain_stop_reason(&summaries, rounds, &search_space_progress),
         "all_winners_stable": all_winners_stable(&summaries),
         "convergence_assessment": convergence_assessment,
+        "search_space_progress": search_space_progress,
         "decision_counts": decision_counts,
         "optimization_trace": optimization_trace(&summaries),
         "repair_summary": repair_summary,
@@ -54,15 +57,26 @@ pub(crate) fn chain_next_rounds_from_initial(
     }))
 }
 
-fn chain_stop_reason(summaries: &[Value], requested_rounds: usize) -> &'static str {
+fn chain_stop_reason(
+    summaries: &[Value],
+    requested_rounds: usize,
+    search_space_progress: &Value,
+) -> &'static str {
     if summaries.iter().any(|summary| {
-        summary.get("next_round_decision").and_then(Value::as_str) == Some("repair_or_rerun")
+        matches!(
+            summary.get("next_round_decision").and_then(Value::as_str),
+            Some("repair_or_rerun" | "repair_validation")
+        )
     }) {
         "repair_required"
     } else if summaries.iter().any(|summary| {
         summary.get("next_round_decision").and_then(Value::as_str) == Some("mitigate_design_risk")
     }) {
         "risk_mitigation_required"
+    } else if search_space_progress.get("state").and_then(Value::as_str)
+        == Some("no_search_space_progress")
+    {
+        "no_search_space_progress"
     } else if summaries.len() >= requested_rounds {
         "round_budget_exhausted"
     } else {
@@ -84,16 +98,33 @@ fn decision_counts(summaries: &[Value]) -> Value {
 }
 
 fn all_winners_stable(summaries: &[Value]) -> bool {
-    let mut winners = summaries
-        .iter()
-        .filter_map(|summary| summary.get("winner_candidate_id").and_then(Value::as_str));
-    let Some(first) = winners.next() else {
+    let Some(first) = summaries
+        .first()
+        .and_then(|summary| summary.get("source_winner_candidate_id"))
+        .and_then(Value::as_str)
+        .or_else(|| {
+            summaries
+                .first()
+                .and_then(|summary| summary.get("winner_candidate_id"))
+                .and_then(Value::as_str)
+        })
+    else {
         return false;
     };
-    winners.all(|winner| winner == first)
+    summaries.iter().all(|summary| {
+        summary.get("winner_candidate_id").and_then(Value::as_str) == Some(first)
+            && summary
+                .get("source_winner_candidate_id")
+                .and_then(Value::as_str)
+                .is_none_or(|winner| winner == first)
+    })
 }
 
-fn convergence_assessment(summaries: &[Value], repair_summary: &Value) -> Value {
+fn convergence_assessment(
+    summaries: &[Value],
+    repair_summary: &Value,
+    search_space_progress: &Value,
+) -> Value {
     let score_delta = winner_score_delta(summaries);
     let winners_stable = all_winners_stable(summaries);
     let repair_required = repair_summary
@@ -101,8 +132,21 @@ fn convergence_assessment(summaries: &[Value], repair_summary: &Value) -> Value 
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let score_stable = score_delta.is_some_and(|delta| delta <= 0.001);
+    let changed_round_count = search_space_progress
+        .get("changed_round_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let observed_transition_count = search_space_progress
+        .get("observed_transition_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let convergence_eligible = changed_round_count > 0 && observed_transition_count >= 2;
     let state = if repair_required {
         "blocked_by_quality_gates"
+    } else if changed_round_count == 0 && observed_transition_count > 0 {
+        "no_search_space_progress"
+    } else if !convergence_eligible {
+        "insufficient_search_progress_evidence"
     } else if winners_stable && score_stable {
         "stable_candidate"
     } else if winners_stable {
@@ -117,6 +161,10 @@ fn convergence_assessment(summaries: &[Value], repair_summary: &Value) -> Value 
         "winner_score_delta": score_delta,
         "score_stable_threshold": 0.001,
         "repair_required": repair_required,
+        "search_space_changed": changed_round_count > 0,
+        "changed_round_count": changed_round_count,
+        "observed_transition_count": observed_transition_count,
+        "convergence_eligible": convergence_eligible,
         "recommendation": convergence_recommendation(state),
     })
 }
@@ -126,7 +174,12 @@ fn winner_score_delta(summaries: &[Value]) -> Option<f64> {
         .iter()
         .filter_map(|summary| summary.get("winner_score").and_then(Value::as_f64))
         .collect::<Vec<_>>();
-    let (Some(first), Some(last)) = (scores.first(), scores.last()) else {
+    let first = summaries
+        .first()
+        .and_then(|summary| summary.get("source_winner_score"))
+        .and_then(Value::as_f64)
+        .or_else(|| scores.first().copied());
+    let (Some(first), Some(last)) = (first, scores.last()) else {
         return None;
     };
     Some((last - first).abs())
@@ -138,11 +191,52 @@ fn convergence_recommendation(state: &str) -> &'static str {
             "repair or mitigate quality gates before declaring convergence"
         }
         "stable_candidate" => "candidate is stable enough for a higher-fidelity validation pass",
+        "no_search_space_progress" => {
+            "change candidate inputs before using repeated scores as convergence evidence"
+        }
+        "insufficient_search_progress_evidence" => {
+            "run at least two comparable transitions including a candidate input change"
+        }
         "winner_stable_score_moving" => {
             "keep iterating or raise fidelity until winner score stabilizes"
         }
         _ => "continue exploration because the incumbent winner changed",
     }
+}
+
+fn chain_search_space_progress(summaries: &[Value]) -> Value {
+    let observed_transition_count = summaries
+        .iter()
+        .filter(|summary| {
+            summary
+                .get("candidate_inputs_changed")
+                .and_then(Value::as_bool)
+                .is_some()
+        })
+        .count();
+    let changed_round_count = summaries
+        .iter()
+        .filter(|summary| {
+            summary
+                .get("candidate_inputs_changed")
+                .and_then(Value::as_bool)
+                == Some(true)
+        })
+        .count();
+    let state = if observed_transition_count == 0 {
+        "insufficient_evidence"
+    } else if changed_round_count == 0 {
+        "no_search_space_progress"
+    } else {
+        "candidate_space_changed"
+    };
+    json!({
+        "schema_version": "kyuubiki.material-chain-search-space-progress/v1",
+        "state": state,
+        "observed_transition_count": observed_transition_count,
+        "changed_round_count": changed_round_count,
+        "unchanged_round_count": observed_transition_count.saturating_sub(changed_round_count),
+    })
 }
 
 fn repair_summary(runs: &[Value]) -> Value {
@@ -330,6 +424,32 @@ fn exploration_summary(exploration: &Value) -> Result<Value, String> {
             .get("lineage")
             .and_then(|lineage| lineage.get("source_iteration"))
             .and_then(Value::as_u64),
+        "source_winner_candidate_id": exploration
+            .get("lineage")
+            .and_then(|lineage| lineage.get("source_winner_candidate_id"))
+            .and_then(Value::as_str),
+        "source_winner_score": exploration
+            .get("lineage")
+            .and_then(|lineage| lineage.get("source_winner_score"))
+            .and_then(Value::as_f64),
+        "candidate_input_fingerprint": exploration
+            .get("candidate_input_fingerprint")
+            .and_then(Value::as_str),
+        "candidate_inputs_changed": exploration
+            .get("lineage")
+            .and_then(|lineage| lineage.get("search_space_progress"))
+            .and_then(|progress| progress.get("candidate_inputs_changed"))
+            .and_then(Value::as_bool),
+        "search_space_progress": exploration
+            .get("lineage")
+            .and_then(|lineage| lineage.get("search_space_progress"))
+            .cloned()
+            .unwrap_or(Value::Null),
+        "review_policy": exploration
+            .get("lineage")
+            .and_then(|lineage| lineage.get("review_policy"))
+            .cloned()
+            .unwrap_or(Value::Null),
         "material_card_refs": material_card_refs(exploration),
         "next_round_iteration": exploration
             .get("next_round")
@@ -372,4 +492,47 @@ fn winner_score(exploration: &Value, winner: Option<&str>) -> Option<f64> {
         .find(|candidate| candidate.get("candidate_id").and_then(Value::as_str) == Some(winner))?
         .get("score")
         .and_then(Value::as_f64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{chain_search_space_progress, chain_stop_reason, convergence_assessment};
+    use serde_json::json;
+
+    #[test]
+    fn identical_candidate_inputs_cannot_claim_convergence() {
+        let summaries = vec![summary(false, 0.8, 0.8), summary(false, 0.8, 0.8)];
+        let progress = chain_search_space_progress(&summaries);
+        let assessment = convergence_assessment(&summaries, &json!({"required": false}), &progress);
+
+        assert_eq!(progress["state"], "no_search_space_progress");
+        assert_eq!(assessment["state"], "no_search_space_progress");
+        assert_eq!(assessment["convergence_eligible"], false);
+        assert_eq!(
+            chain_stop_reason(&summaries, 2, &progress),
+            "no_search_space_progress"
+        );
+    }
+
+    #[test]
+    fn changed_candidate_inputs_can_support_stable_convergence() {
+        let summaries = vec![summary(true, 0.8, 0.81), summary(false, 0.81, 0.8)];
+        let progress = chain_search_space_progress(&summaries);
+        let assessment = convergence_assessment(&summaries, &json!({"required": false}), &progress);
+
+        assert_eq!(progress["state"], "candidate_space_changed");
+        assert_eq!(assessment["state"], "stable_candidate");
+        assert_eq!(assessment["convergence_eligible"], true);
+    }
+
+    fn summary(changed: bool, source_score: f64, winner_score: f64) -> serde_json::Value {
+        json!({
+            "source_winner_candidate_id": "candidate-a",
+            "source_winner_score": source_score,
+            "winner_candidate_id": "candidate-a",
+            "winner_score": winner_score,
+            "candidate_inputs_changed": changed,
+            "next_round_decision": "expand_around_winner",
+        })
+    }
 }

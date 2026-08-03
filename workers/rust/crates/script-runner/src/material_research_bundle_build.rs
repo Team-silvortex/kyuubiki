@@ -397,11 +397,7 @@ fn research_evidence(initial: &Value, plan: &Value, chain: &Value) -> Value {
     let objectives = plan.get("optimization_objectives").unwrap_or(&Value::Null);
     let ranked_candidate_ids = array_strings(report.pointer("/candidates"), "candidate_id");
     let primary_metric_ids = array_values(objectives.get("primary_metric_ids"));
-    let metric_objective_count = objectives
-        .get("metric_objectives")
-        .and_then(Value::as_array)
-        .map(Vec::len)
-        .unwrap_or(0);
+    let metric_objective_count = primary_metric_ids.len();
     let violated_quality_gate_ids = array_values(objectives.get("violated_quality_gate_ids"));
     let focus_candidate_ids = array_values(objectives.get("focus_candidate_ids"));
     let trace_round_count = chain

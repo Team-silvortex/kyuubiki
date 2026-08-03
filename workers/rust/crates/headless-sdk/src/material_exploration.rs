@@ -10,8 +10,9 @@ use crate::{
     build_structural_panel_screening_steps, build_thermo_shield_screening_steps,
     describe_material_study,
 };
+use kyuubiki_protocol::canonical_json_sha256;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 pub const MATERIAL_EXPLORATION_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-run/v1";
 pub const MATERIAL_EXPLORATION_NEXT_ROUND_SCHEMA_VERSION: &str =
@@ -30,6 +31,10 @@ pub struct MaterialExplorationRun {
     pub study: String,
     pub template_id: String,
     pub candidate_count: usize,
+    #[serde(default)]
+    pub candidate_input_fingerprint: String,
+    #[serde(default)]
+    pub candidate_input_manifest: Value,
     pub material_card_refs: Vec<Value>,
     pub result_payloads: Vec<Value>,
     pub report: Value,
@@ -63,7 +68,27 @@ pub struct MaterialExplorationNextRoundExecutionPlan {
     pub candidate_drafts: Vec<Value>,
     pub candidate_draft_summary: Value,
     pub draft_execution_batches: Vec<Value>,
+    pub review_policy: MaterialExplorationReviewPolicy,
+    pub search_space_progress: MaterialExplorationSearchSpaceProgress,
     pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialExplorationReviewPolicy {
+    pub schema_version: String,
+    pub required: bool,
+    pub state: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaterialExplorationSearchSpaceProgress {
+    pub schema_version: String,
+    pub state: String,
+    pub source_candidate_input_fingerprint: String,
+    pub planned_candidate_input_fingerprint: String,
+    pub candidate_inputs_changed: bool,
+    pub convergence_eligible: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -98,6 +123,9 @@ pub fn build_material_exploration_run_for_iteration(
     let description = describe_material_study(study)
         .ok_or_else(|| format!("unsupported material study: {study}"))?;
     let report = build_material_report(&description.id, &result_payloads)?;
+    let candidate_input_manifest =
+        candidate_input_manifest_from_results(&description.id, &result_payloads);
+    let candidate_input_fingerprint = candidate_input_fingerprint(&candidate_input_manifest);
     let material_card_refs = material_card_refs_from_report(&report);
     let next_round = build_material_exploration_next_round_plan(&report, iteration);
     Ok(MaterialExplorationRun {
@@ -108,6 +136,8 @@ pub fn build_material_exploration_run_for_iteration(
         study: description.id,
         template_id: description.template_id,
         candidate_count: result_payloads.len(),
+        candidate_input_fingerprint,
+        candidate_input_manifest,
         material_card_refs,
         result_payloads,
         report,
@@ -242,6 +272,14 @@ pub fn build_material_exploration_next_round_execution_plan(
         material_candidate_drafts(&decision, study, &report, &focus_candidate_ids);
     let candidate_draft_summary = material_candidate_draft_summary(&decision, &candidate_drafts);
     let draft_execution_batches = material_candidate_draft_batches(&candidate_drafts);
+    let review_policy = review_policy(&draft_execution_batches);
+    let search_space_progress = search_space_progress(
+        exploration,
+        study,
+        &decision,
+        &steps,
+        &draft_execution_batches,
+    );
 
     Ok(MaterialExplorationNextRoundExecutionPlan {
         schema_version: MATERIAL_EXPLORATION_NEXT_ROUND_EXECUTION_SCHEMA_VERSION.to_string(),
@@ -263,8 +301,232 @@ pub fn build_material_exploration_next_round_execution_plan(
         candidate_drafts,
         candidate_draft_summary,
         draft_execution_batches,
+        review_policy,
+        search_space_progress,
         notes: execution_plan_notes(&decision),
     })
+}
+
+fn review_policy(draft_execution_batches: &[Value]) -> MaterialExplorationReviewPolicy {
+    let required = !draft_execution_batches.is_empty();
+    MaterialExplorationReviewPolicy {
+        schema_version: "kyuubiki.material-review-policy/v1".to_string(),
+        required,
+        state: if required {
+            "required_before_materialization"
+        } else {
+            "not_applicable"
+        }
+        .to_string(),
+        reason: if required {
+            "candidate drafts must be reviewed before materialization"
+        } else {
+            "next-round plan contains no candidate draft execution batches"
+        }
+        .to_string(),
+    }
+}
+
+fn search_space_progress(
+    exploration: &Value,
+    study: &str,
+    decision: &str,
+    steps: &[HeadlessWorkflowStep],
+    draft_execution_batches: &[Value],
+) -> MaterialExplorationSearchSpaceProgress {
+    let source = candidate_input_fingerprint_from_exploration(exploration, study);
+    let planned = planned_candidate_input_fingerprint(exploration, study, steps);
+    let input_comparison = planned_candidate_inputs_changed(exploration, steps);
+    let changed = input_comparison == Some(true);
+    let state = if input_comparison.is_none() {
+        "source_fingerprint_unavailable"
+    } else if changed {
+        "candidate_inputs_changed"
+    } else if !draft_execution_batches.is_empty() {
+        "candidate_drafts_pending_review"
+    } else if decision == "expand_around_winner" {
+        "builtin_candidate_replay"
+    } else {
+        "focused_candidate_rerun"
+    };
+    MaterialExplorationSearchSpaceProgress {
+        schema_version: "kyuubiki.material-search-space-progress/v1".to_string(),
+        state: state.to_string(),
+        source_candidate_input_fingerprint: source,
+        planned_candidate_input_fingerprint: planned,
+        candidate_inputs_changed: changed,
+        convergence_eligible: changed,
+    }
+}
+
+fn planned_candidate_inputs_changed(
+    exploration: &Value,
+    steps: &[HeadlessWorkflowStep],
+) -> Option<bool> {
+    let source_models = candidate_model_fingerprints_from_exploration(exploration)?;
+    let mut compared = false;
+    for step in steps
+        .iter()
+        .filter(|step| step.action.starts_with("solve_"))
+    {
+        let candidate_id = candidate_id_for_step(step)?;
+        let planned_model = candidate_model_for_step(step);
+        compared = true;
+        let Some(source_model_fingerprint) = source_models.get(candidate_id) else {
+            return Some(true);
+        };
+        if source_model_fingerprint != &canonical_json_sha256(planned_model) {
+            return Some(true);
+        }
+    }
+    compared.then_some(false)
+}
+
+fn candidate_model_fingerprints_from_exploration(
+    exploration: &Value,
+) -> Option<std::collections::BTreeMap<String, String>> {
+    let study = exploration.get("study")?.as_str()?;
+    let manifest = candidate_input_manifest_from_exploration(exploration, study)?;
+    let mut models = std::collections::BTreeMap::new();
+    for entry in manifest.get("entries")?.as_array()? {
+        models.insert(
+            entry.get("candidate_id")?.as_str()?.to_string(),
+            entry.get("model_fingerprint")?.as_str()?.to_string(),
+        );
+    }
+    (!models.is_empty()).then_some(models)
+}
+
+fn candidate_input_fingerprint_from_exploration(exploration: &Value, study: &str) -> String {
+    if let Some(fingerprint) = exploration
+        .get("candidate_input_fingerprint")
+        .and_then(Value::as_str)
+        .filter(|fingerprint| !fingerprint.is_empty())
+    {
+        return fingerprint.to_string();
+    }
+    let manifest =
+        candidate_input_manifest_from_exploration(exploration, study).unwrap_or(Value::Null);
+    candidate_input_fingerprint(&manifest)
+}
+
+fn candidate_input_manifest_from_exploration(exploration: &Value, study: &str) -> Option<Value> {
+    exploration
+        .get("candidate_input_manifest")
+        .filter(|manifest| manifest.get("entries").and_then(Value::as_array).is_some())
+        .cloned()
+        .or_else(|| {
+            exploration
+                .get("result_payloads")
+                .and_then(Value::as_array)
+                .map(|results| candidate_input_manifest_from_results(study, results))
+        })
+        .filter(|manifest| manifest != &Value::Null)
+}
+
+fn candidate_input_manifest_from_results(study: &str, results: &[Value]) -> Value {
+    if results.is_empty()
+        || results.iter().any(|result| {
+            result
+                .get("input")
+                .or_else(|| result.get("model"))
+                .is_none()
+        })
+    {
+        return Value::Null;
+    }
+    let Ok(steps) = material_exploration_steps_by_id(study) else {
+        return Value::Null;
+    };
+    let candidate_ids = steps
+        .iter()
+        .filter(|step| step.action.starts_with("solve_"))
+        .filter_map(candidate_id_for_step)
+        .collect::<Vec<_>>();
+    if candidate_ids.len() != results.len() {
+        return Value::Null;
+    }
+    let entries = candidate_ids
+        .into_iter()
+        .zip(results)
+        .map(|(candidate_id, result)| {
+            let model = result
+                .get("input")
+                .or_else(|| result.get("model"))
+                .expect("validated model input");
+            json!({
+                "candidate_id": candidate_id,
+                "model_fingerprint": canonical_json_sha256(model),
+            })
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "schema_version": "kyuubiki.material-candidate-input-manifest/v1",
+        "study": study,
+        "entries": entries,
+    })
+}
+
+fn planned_candidate_input_fingerprint(
+    exploration: &Value,
+    study: &str,
+    steps: &[HeadlessWorkflowStep],
+) -> String {
+    let planned_entries = steps
+        .iter()
+        .filter(|step| step.action.starts_with("solve_"))
+        .map(|step| {
+            (
+                candidate_id_for_step(step).unwrap_or("unknown").to_string(),
+                canonical_json_sha256(candidate_model_for_step(step)),
+            )
+        })
+        .collect::<Vec<_>>();
+    let mut entries = candidate_input_manifest_from_exploration(exploration, study)
+        .and_then(|manifest| manifest.get("entries").and_then(Value::as_array).cloned())
+        .unwrap_or_default();
+    for entry in &mut entries {
+        let Some(candidate_id) = entry.get("candidate_id").and_then(Value::as_str) else {
+            continue;
+        };
+        if let Some((_, fingerprint)) = planned_entries
+            .iter()
+            .find(|(planned_id, _)| planned_id == candidate_id)
+        {
+            entry["model_fingerprint"] = Value::from(fingerprint.clone());
+        }
+    }
+    for (candidate_id, fingerprint) in planned_entries {
+        if !entries.iter().any(|entry| {
+            entry.get("candidate_id").and_then(Value::as_str) == Some(candidate_id.as_str())
+        }) {
+            entries.push(json!({
+                "candidate_id": candidate_id,
+                "model_fingerprint": fingerprint,
+            }));
+        }
+    }
+    candidate_input_fingerprint(&json!({
+        "schema_version": "kyuubiki.material-candidate-input-manifest/v1",
+        "study": study,
+        "entries": entries,
+    }))
+}
+
+fn candidate_model_for_step(step: &HeadlessWorkflowStep) -> &Value {
+    step.payload.get("model").unwrap_or(&step.payload)
+}
+
+fn candidate_input_fingerprint(manifest: &Value) -> String {
+    if manifest
+        .get("entries")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        String::new()
+    } else {
+        canonical_json_sha256(manifest)
+    }
 }
 
 fn material_card_refs_from_report(report: &Value) -> Vec<Value> {

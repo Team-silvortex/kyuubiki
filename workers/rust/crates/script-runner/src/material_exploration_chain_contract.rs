@@ -12,6 +12,7 @@ const SDK_README_PATH: &str = "sdks/README.md";
 
 const CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
 const CONVERGENCE_SCHEMA_VERSION: &str = "kyuubiki.material-chain-convergence-assessment/v1";
+const SEARCH_PROGRESS_SCHEMA_VERSION: &str = "kyuubiki.material-chain-search-space-progress/v1";
 const OBJECTIVES_SCHEMA_VERSION: &str = "kyuubiki.material-next-round-optimization-objectives/v1";
 
 pub(crate) fn run_check_material_exploration_chain_contract(
@@ -69,6 +70,15 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         ));
     }
     if schema
+        .pointer("/$defs/chainSearchSpaceProgress/properties/schema_version/const")
+        .and_then(Value::as_str)
+        != Some(SEARCH_PROGRESS_SCHEMA_VERSION)
+    {
+        issues.push(format!(
+            "{SCHEMA_PATH}: search progress schema_version const must be {SEARCH_PROGRESS_SCHEMA_VERSION}"
+        ));
+    }
+    if schema
         .pointer("/$defs/convergenceAssessment/properties/schema_version/const")
         .and_then(Value::as_str)
         != Some(CONVERGENCE_SCHEMA_VERSION)
@@ -97,6 +107,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
     }
     for field in [
         "convergence_assessment",
+        "search_space_progress",
         "optimization_trace",
         "summaries",
         "runs",
@@ -123,6 +134,15 @@ fn check_example(example: &Value, issues: &mut Vec<String>) {
     {
         issues.push(format!(
             "{EXAMPLE_PATH}: convergence schema_version must be {CONVERGENCE_SCHEMA_VERSION}"
+        ));
+    }
+    if example
+        .pointer("/search_space_progress/schema_version")
+        .and_then(Value::as_str)
+        != Some(SEARCH_PROGRESS_SCHEMA_VERSION)
+    {
+        issues.push(format!(
+            "{EXAMPLE_PATH}: search progress schema_version must be {SEARCH_PROGRESS_SCHEMA_VERSION}"
         ));
     }
     let optimization_trace = non_empty_array(example, "optimization_trace", EXAMPLE_PATH, issues);
@@ -169,6 +189,27 @@ fn check_example(example: &Value, issues: &mut Vec<String>) {
             .is_some_and(f64::is_finite)
         {
             issues.push(format!("{context}: winner_score must be finite"));
+        }
+        require_string(
+            summary.get("source_winner_candidate_id"),
+            "source_winner_candidate_id",
+            &context,
+            issues,
+        );
+        require_string(
+            summary.get("candidate_input_fingerprint"),
+            "candidate_input_fingerprint",
+            &context,
+            issues,
+        );
+        if summary
+            .get("candidate_inputs_changed")
+            .and_then(Value::as_bool)
+            .is_none()
+        {
+            issues.push(format!(
+                "{context}: candidate_inputs_changed must be boolean"
+            ));
         }
         if summary
             .pointer("/optimization_objectives/schema_version")
@@ -284,7 +325,10 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use super::{CHAIN_SCHEMA_VERSION, CONVERGENCE_SCHEMA_VERSION, OBJECTIVES_SCHEMA_VERSION};
+    use super::{
+        CHAIN_SCHEMA_VERSION, CONVERGENCE_SCHEMA_VERSION, OBJECTIVES_SCHEMA_VERSION,
+        SEARCH_PROGRESS_SCHEMA_VERSION,
+    };
 
     #[test]
     fn schema_versions_are_stable() {
@@ -299,6 +343,10 @@ mod tests {
         assert_eq!(
             OBJECTIVES_SCHEMA_VERSION,
             "kyuubiki.material-next-round-optimization-objectives/v1"
+        );
+        assert_eq!(
+            SEARCH_PROGRESS_SCHEMA_VERSION,
+            "kyuubiki.material-chain-search-space-progress/v1"
         );
     }
 }

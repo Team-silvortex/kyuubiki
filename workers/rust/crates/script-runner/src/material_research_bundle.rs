@@ -404,14 +404,18 @@ fn validate_research_evidence(bundle: &Value) -> RunnerResult<()> {
             ));
         }
     }
-    non_empty_string_array(evidence, "primary_metric_ids")?;
-    if evidence
+    let primary_metric_ids = non_empty_string_array(evidence, "primary_metric_ids")?;
+    let metric_objective_count = evidence
         .get("metric_objective_count")
         .and_then(Value::as_u64)
-        .unwrap_or(0)
-        == 0
-    {
+        .unwrap_or(0);
+    if metric_objective_count == 0 {
         return Err("research_evidence.metric_objective_count must be positive".to_string());
+    }
+    if metric_objective_count != primary_metric_ids.len() as u64 {
+        return Err(
+            "research_evidence.metric_objective_count must match primary_metric_ids".to_string(),
+        );
     }
     if let Some(trace) = bundle
         .pointer("/chain/optimization_trace")

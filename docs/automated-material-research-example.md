@@ -339,6 +339,12 @@ emits the built-in study candidate generator as the next executable batch
 shape; future iterations can replace that generator with DOE or Bayesian
 neighbor generation.
 
+The plan exposes `review_policy.required` rather than forcing callers to infer
+review applicability from an empty draft list. It also carries
+`search_space_progress` with deterministic source and planned input
+fingerprints. Replaying the built-in candidates is reported as
+`builtin_candidate_replay`; it is runnable, but it is not convergence evidence.
+
 The next-round plan also carries `optimization_objectives`, which records the
 optimization mode, incumbent winner, primary metric IDs, and violated quality
 gates. This lets a headless harness decide whether it is repairing data,
@@ -377,7 +383,10 @@ next-round `optimization_objectives`, while `optimization_trace` lifts the
 per-round mode, primary metrics, winner, and violated gates into a compact
 lineage view. `convergence_assessment` compares winner stability, winner score
 drift, and repair state so a stable but gate-blocked candidate is not mistaken
-for validation. When repair is required, `repair_plan` lists concrete actions
+for validation. Convergence additionally requires observed candidate-input
+changes. Identical model inputs produce `no_search_space_progress`, so a
+repeated fixture cannot masquerade as an optimization result. When repair is
+required, `repair_plan` lists concrete actions
 such as inspecting failed gates, rerunning focused candidates, resolving
 warnings, and rebuilding the report before expansion. This is intentionally
 still small: it gives agents and CI a stable lineage envelope before a heavier

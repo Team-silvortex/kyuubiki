@@ -88,6 +88,81 @@ fn heat_spreader_exploration_run_promotes_material_card_refs() {
         .and_then(|value| build_material_exploration_next_round_execution_plan(&value).ok())
         .expect("next execution plan");
     assert_eq!(plan.material_card_refs.len(), 3);
+    assert!(plan.review_policy.required);
+    assert_eq!(plan.review_policy.state, "required_before_materialization");
+}
+
+#[test]
+fn builtin_replay_exposes_no_review_and_no_search_progress() {
+    let steps = material_exploration_steps("dielectric-screening").expect("steps");
+    let mut results = sample_material_result_payloads("dielectric-screening");
+    for (result, step) in results.iter_mut().zip(
+        steps
+            .iter()
+            .filter(|step| step.action.starts_with("solve_")),
+    ) {
+        result["input"] = step.payload["model"].clone();
+    }
+    let run = build_material_exploration_run("dielectric-screening", "unit-test", results)
+        .expect("exploration run");
+    let plan = build_material_exploration_next_round_execution_plan(
+        &serde_json::to_value(&run).expect("run value"),
+    )
+    .expect("next execution plan");
+
+    assert_eq!(run.candidate_input_fingerprint.len(), 64);
+    assert!(!plan.review_policy.required);
+    assert_eq!(plan.review_policy.state, "not_applicable");
+    assert_eq!(plan.search_space_progress.state, "builtin_candidate_replay");
+    assert!(!plan.search_space_progress.candidate_inputs_changed);
+    assert!(!plan.search_space_progress.convergence_eligible);
+    assert_eq!(
+        plan.search_space_progress
+            .source_candidate_input_fingerprint,
+        plan.search_space_progress
+            .planned_candidate_input_fingerprint
+    );
+}
+
+#[test]
+fn focused_rerun_fingerprint_preserves_untouched_candidates() {
+    let steps = material_exploration_steps("dielectric-screening").expect("steps");
+    let mut results = sample_material_result_payloads("dielectric-screening");
+    for (result, step) in results.iter_mut().zip(
+        steps
+            .iter()
+            .filter(|step| step.action.starts_with("solve_")),
+    ) {
+        result["input"] = step.payload["model"].clone();
+    }
+    let run = build_material_exploration_run("dielectric-screening", "unit-test", results)
+        .expect("exploration run");
+    let mut exploration = serde_json::to_value(&run).expect("run value");
+    let focus_candidate = exploration["candidate_input_manifest"]["entries"][0]["candidate_id"]
+        .as_str()
+        .expect("candidate id")
+        .to_string();
+    exploration["next_round"] = json!({
+        "iteration": 2,
+        "decision": "mitigate_design_risk",
+        "focus_candidate_ids": [focus_candidate],
+        "actions": ["rerun_focused_quality_batch"],
+    });
+
+    let plan = build_material_exploration_next_round_execution_plan(&exploration)
+        .expect("next execution plan");
+
+    assert_eq!(
+        plan.search_space_progress.state,
+        "candidate_drafts_pending_review"
+    );
+    assert!(!plan.search_space_progress.candidate_inputs_changed);
+    assert_eq!(
+        plan.search_space_progress
+            .source_candidate_input_fingerprint,
+        plan.search_space_progress
+            .planned_candidate_input_fingerprint
+    );
 }
 
 #[test]

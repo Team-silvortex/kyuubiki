@@ -33,6 +33,10 @@ pub fn canonical_json(value: &Value) -> String {
     }
 }
 
+pub fn canonical_json_sha256(value: &Value) -> String {
+    sha256_hex(canonical_json(value).as_bytes())
+}
+
 pub fn compute_operator_task_digest(task: &Value) -> Result<String, String> {
     let object = task
         .as_object()

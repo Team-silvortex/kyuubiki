@@ -12,7 +12,18 @@
     "winner_score_delta": 0.0,
     "score_stable_threshold": 0.001,
     "repair_required": true,
+    "search_space_changed": false,
+    "changed_round_count": 0,
+    "observed_transition_count": 1,
+    "convergence_eligible": false,
     "recommendation": "repair or mitigate quality gates before declaring convergence"
+  },
+  "search_space_progress": {
+    "schema_version": "kyuubiki.material-chain-search-space-progress/v1",
+    "state": "no_search_space_progress",
+    "observed_transition_count": 1,
+    "changed_round_count": 0,
+    "unchanged_round_count": 1
   },
   "decision_counts": {
     "mitigate_design_risk": 1
@@ -75,6 +86,24 @@
       "mode": "local_solver_next_round",
       "winner_candidate_id": "pyrolytic_graphite_in_plane",
       "winner_score": 0.872,
+      "source_winner_candidate_id": "pyrolytic_graphite_in_plane",
+      "source_winner_score": 0.872,
+      "candidate_input_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+      "candidate_inputs_changed": false,
+      "search_space_progress": {
+        "schema_version": "kyuubiki.material-search-space-progress/v1",
+        "state": "candidate_drafts_pending_review",
+        "source_candidate_input_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+        "planned_candidate_input_fingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+        "candidate_inputs_changed": false,
+        "convergence_eligible": false
+      },
+      "review_policy": {
+        "schema_version": "kyuubiki.material-review-policy/v1",
+        "required": true,
+        "state": "required_before_materialization",
+        "reason": "candidate drafts must be reviewed before materialization"
+      },
       "lineage_schema_version": "kyuubiki.material-next-round-lineage/v1",
       "source_iteration": 1,
       "material_card_refs": [

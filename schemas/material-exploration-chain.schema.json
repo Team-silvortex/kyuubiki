@@ -10,6 +10,7 @@
     "stop_reason",
     "all_winners_stable",
     "convergence_assessment",
+    "search_space_progress",
     "decision_counts",
     "optimization_trace",
     "repair_summary",
@@ -34,6 +35,7 @@
       "enum": [
         "repair_required",
         "risk_mitigation_required",
+        "no_search_space_progress",
         "round_budget_exhausted",
         "chain_incomplete"
       ]
@@ -43,6 +45,9 @@
     },
     "convergence_assessment": {
       "$ref": "#/$defs/convergenceAssessment"
+    },
+    "search_space_progress": {
+      "$ref": "#/$defs/chainSearchSpaceProgress"
     },
     "decision_counts": {
       "type": "object",
@@ -101,6 +106,10 @@
         "winner_score_delta",
         "score_stable_threshold",
         "repair_required",
+        "search_space_changed",
+        "changed_round_count",
+        "observed_transition_count",
+        "convergence_eligible",
         "recommendation"
       ],
       "properties": {
@@ -110,6 +119,8 @@
         "state": {
           "enum": [
             "blocked_by_quality_gates",
+            "no_search_space_progress",
+            "insufficient_search_progress_evidence",
             "stable_candidate",
             "winner_stable_score_moving",
             "winner_changed"
@@ -129,9 +140,58 @@
         "repair_required": {
           "type": "boolean"
         },
+        "search_space_changed": {
+          "type": "boolean"
+        },
+        "changed_round_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observed_transition_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "convergence_eligible": {
+          "type": "boolean"
+        },
         "recommendation": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "chainSearchSpaceProgress": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "state",
+        "observed_transition_count",
+        "changed_round_count",
+        "unchanged_round_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.material-chain-search-space-progress/v1"
+        },
+        "state": {
+          "enum": [
+            "insufficient_evidence",
+            "no_search_space_progress",
+            "candidate_space_changed"
+          ]
+        },
+        "observed_transition_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changed_round_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unchanged_round_count": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -186,6 +246,12 @@
         "iteration",
         "winner_candidate_id",
         "winner_score",
+        "source_winner_candidate_id",
+        "source_winner_score",
+        "candidate_input_fingerprint",
+        "candidate_inputs_changed",
+        "search_space_progress",
+        "review_policy",
         "material_card_refs",
         "next_round_iteration",
         "next_round_decision",
@@ -202,6 +268,26 @@
         },
         "winner_score": {
           "type": "number"
+        },
+        "source_winner_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_winner_score": {
+          "type": "number"
+        },
+        "candidate_input_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "candidate_inputs_changed": {
+          "type": "boolean"
+        },
+        "search_space_progress": {
+          "type": "object"
+        },
+        "review_policy": {
+          "type": "object"
         },
         "material_card_refs": {
           "type": "array",

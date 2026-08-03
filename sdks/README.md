@@ -181,6 +181,12 @@ rerun quality gates. `review_status` starts as `pending_review` and `blocking`
 so agents can report an audit gate instead of misclassifying the batch as a
 solver failure. `allowed_review_actions` exposes approve, request-changes, and
 reject transitions, each requiring reviewer identity and a reason.
+Every next-round execution plan also carries `review_policy` and
+`search_space_progress`. Callers branch on `review_policy.required` before
+requesting a review template. `search_space_progress.candidate_inputs_changed`
+is true only when a candidate is added or its actual solver model input changes;
+focused reruns and built-in candidate replays do not count as design-space
+progress.
 `review_decision_template` gives UI and headless clients the standard payload
 shape for submitting that decision. `review_decision_contract` lists required
 fields, allowed actions, approval checklist requirements, and timestamp format
@@ -207,6 +213,9 @@ Repeated next-round runs use
 to pin convergence assessment, optimization trace, repair planning, compact
 summaries, and retained run artifacts. A compact fixture lives at
 [schemas/examples.material-exploration-chain.json](../schemas/examples.material-exploration-chain.json).
+The chain records deterministic candidate-input fingerprints. A repeated batch
+with unchanged inputs ends as `no_search_space_progress` and is never promoted
+to `stable_candidate`, even when the winner and score remain identical.
 The retained research bundle wraps the initial exploration, next-round
 execution plan, rerun, chain, checksums, and reproduction commands under
 [schemas/material-research-bundle.schema.json](../schemas/material-research-bundle.schema.json),
@@ -238,7 +247,8 @@ kyuubiki-material-explore --plan-next exploration.json --out next-round.json --j
 The generated `kyuubiki.material-exploration-next-round-execution/v1` payload is
 intended for agents, CI, and future orchestra runners.
 
-Export a review decision template from the pending draft batch:
+When `review_policy.required` is true, export a review decision template from
+the pending draft batch:
 
 ```bash
 kyuubiki-material-explore --review-template next-round.json --out decision-template.json --json

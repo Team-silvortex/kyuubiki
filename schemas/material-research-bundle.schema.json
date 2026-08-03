@@ -95,6 +95,63 @@
         "runnable_step_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "review_policy": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "required",
+            "state",
+            "reason"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "kyuubiki.material-review-policy/v1"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": ["required_before_materialization", "not_applicable"]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "search_space_progress": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "state",
+            "source_candidate_input_fingerprint",
+            "planned_candidate_input_fingerprint",
+            "candidate_inputs_changed",
+            "convergence_eligible"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "kyuubiki.material-search-space-progress/v1"
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_candidate_input_fingerprint": {
+              "type": "string"
+            },
+            "planned_candidate_input_fingerprint": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "candidate_inputs_changed": {
+              "type": "boolean"
+            },
+            "convergence_eligible": {
+              "type": "boolean"
+            }
+          }
         }
       }
     },
