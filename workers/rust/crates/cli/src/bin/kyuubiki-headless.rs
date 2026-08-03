@@ -3,12 +3,12 @@ use std::fs;
 use std::path::PathBuf;
 
 use kyuubiki_headless_sdk::{
-    HeadlessExecutionBatch, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
+    HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
     HeadlessValidationReport, HeadlessWorkflowDocument, HybridHeadlessExecutor,
     MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
-    build_template_document, collect_executor_compatibility_issues, execute_batch_with_executor,
-    normalize_workflow_document, run_batch_dry, search_templates, suggest_template_details,
-    suggest_templates, summarize_batch, validate_batch,
+    build_template_document, collect_executor_compatibility_issues, describe_material_study,
+    execute_batch_with_executor, normalize_workflow_document, run_batch_dry, search_templates,
+    suggest_template_details, suggest_templates, summarize_batch, validate_batch,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -204,6 +204,7 @@ fn handle_render(args: &[String]) -> Result<(), String> {
 
 fn handle_run(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
+    validate_material_report_flags(&flags)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
     let selected_executor = flags.selected_executor()?;
@@ -228,21 +229,14 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                 )
             }
             "service" => {
-                let mut executor = ServiceHeadlessExecutor::new(
+                let mut executor = ServiceHeadlessExecutor::try_with_token(
                     flags
                         .api_base_url
                         .as_deref()
                         .unwrap_or("http://127.0.0.1:3000"),
-                );
-                if let Some(token) = flags.api_token.as_deref() {
-                    executor = ServiceHeadlessExecutor::with_token(
-                        flags
-                            .api_base_url
-                            .as_deref()
-                            .unwrap_or("http://127.0.0.1:3000"),
-                        Some(token),
-                    );
-                }
+                    flags.api_token.as_deref(),
+                )
+                .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;
                 execute_batch_with_executor(
                     &batch,
                     &mut executor,
@@ -251,13 +245,14 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                 )
             }
             "hybrid" => {
-                let mut executor = HybridHeadlessExecutor::with_token(
+                let mut executor = HybridHeadlessExecutor::try_with_token(
                     flags
                         .api_base_url
                         .as_deref()
                         .unwrap_or("http://127.0.0.1:3000"),
                     flags.api_token.as_deref(),
-                );
+                )
+                .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;
                 execute_batch_with_executor(
                     &batch,
                     &mut executor,
@@ -278,14 +273,19 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     if let Some(report_out) = &flags.report_out {
         write_json_file(report_out, &report)?;
     }
+    if let Some(error) = run_report_failure(&report) {
+        if flags.json {
+            print_json(&report)?;
+        } else {
+            kyuubiki_headless_run_report::print_run_report(&report);
+        }
+        return Err(error);
+    }
     let material_report = flags
         .material_report
         .as_deref()
         .map(|study| build_material_report_from_run(study, &report))
         .transpose()?;
-    if flags.json && material_report.is_some() && flags.material_report_out.is_none() {
-        return Err("--material-report with --json requires --material-report-out".to_string());
-    }
     if let Some(material_report) = &material_report {
         if let Some(output_path) = &flags.material_report_out {
             write_json_file(output_path, material_report)?;
@@ -293,21 +293,49 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     }
     if flags.json {
         print_json(&report)?;
-        return if report.validation.ok {
-            Ok(())
-        } else {
-            Err("run report generated from invalid batch".to_string())
-        };
+        return Ok(());
     }
     kyuubiki_headless_run_report::print_run_report(&report);
     if let Some(material_report) = &material_report {
         kyuubiki_headless_run_report::print_material_report_summary(material_report);
     }
-    if report.validation.ok {
-        Ok(())
-    } else {
-        Err("run report generated from invalid batch".to_string())
+    Ok(())
+}
+
+fn validate_material_report_flags(flags: &Flags) -> Result<(), String> {
+    let Some(study) = flags.material_report.as_deref() else {
+        return Ok(());
+    };
+    if flags.json && flags.material_report_out.is_none() {
+        return Err("--material-report with --json requires --material-report-out".to_string());
     }
+    if describe_material_study(study).is_none() {
+        return Err(format!("unsupported material report study: {study}"));
+    }
+    Ok(())
+}
+
+fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
+    if !report.validation.ok {
+        return Some("run report generated from invalid batch".to_string());
+    }
+    if report.status != "failed" {
+        return None;
+    }
+    let failed_step = report.steps.iter().find(|step| step.status == "failed");
+    Some(match failed_step {
+        Some(step) => match step.result_preview.get("error").and_then(Value::as_str) {
+            Some(error) => format!(
+                "headless execution failed at step {} ({}): {error}",
+                step.index, step.action
+            ),
+            None => format!(
+                "headless execution failed at step {} ({})",
+                step.index, step.action
+            ),
+        },
+        None => "headless execution failed without a failed step report".to_string(),
+    })
 }
 
 fn write_json_file<T: Serialize>(path: &str, value: &T) -> Result<PathBuf, String> {

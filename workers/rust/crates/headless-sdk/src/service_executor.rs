@@ -29,6 +29,10 @@ impl ServiceHeadlessExecutor {
         Self::with_token(base_url, None)
     }
 
+    pub fn try_new(base_url: &str) -> Result<Self, HeadlessExecutorError> {
+        Self::try_with_token(base_url, None)
+    }
+
     pub fn with_token(base_url: &str, api_token: Option<&str>) -> Self {
         Self {
             base_url: normalize_base_url(base_url),
@@ -37,6 +41,15 @@ impl ServiceHeadlessExecutor {
                 .filter(|token| !token.is_empty())
                 .map(ToString::to_string),
         }
+    }
+
+    pub fn try_with_token(
+        base_url: &str,
+        api_token: Option<&str>,
+    ) -> Result<Self, HeadlessExecutorError> {
+        let executor = Self::with_token(base_url, api_token);
+        parse_http_url(&executor.base_url)?;
+        Ok(executor)
     }
 }
 
@@ -607,12 +620,38 @@ struct ParsedHttpUrl {
 }
 
 fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessExecutorError> {
+    if base_url.is_empty() {
+        return Err(HeadlessExecutorError {
+            message: "service base URL must not be empty".to_string(),
+        });
+    }
+    if base_url
+        .chars()
+        .any(|ch| ch.is_ascii_control() || ch.is_whitespace())
+    {
+        return Err(HeadlessExecutorError {
+            message: "service base URL contains unsupported whitespace or control characters"
+                .to_string(),
+        });
+    }
     let raw = base_url
         .strip_prefix("http://")
         .ok_or_else(|| HeadlessExecutorError {
             message: format!("unsupported base url {base_url}; only http:// is supported"),
         })?;
-    let authority = raw.split('/').next().unwrap_or_default();
+    if raw.contains(['/', '?', '#']) {
+        return Err(HeadlessExecutorError {
+            message: format!(
+                "service base URL must contain only scheme and authority; paths, queries, and fragments are not supported: {base_url}"
+            ),
+        });
+    }
+    if raw.contains('@') {
+        return Err(HeadlessExecutorError {
+            message: "service base URL must not contain user information".to_string(),
+        });
+    }
+    let authority = raw;
     let (host, port) = match authority.split_once(':') {
         Some((host, port_text)) => {
             let port = port_text
@@ -627,6 +666,11 @@ fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessExecutorError
     if host.trim().is_empty() {
         return Err(HeadlessExecutorError {
             message: format!("invalid host in {base_url}"),
+        });
+    }
+    if port == 0 {
+        return Err(HeadlessExecutorError {
+            message: format!("invalid port in {base_url}: port must be greater than zero"),
         });
     }
     Ok(ParsedHttpUrl { host, port })

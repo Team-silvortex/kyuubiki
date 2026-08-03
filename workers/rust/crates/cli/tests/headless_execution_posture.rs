@@ -1,5 +1,6 @@
 use serde_json::{Value, json};
 use std::fs;
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -85,5 +86,123 @@ fn research_posture_rejects_mock_and_preview_accepts_explicit_mock() {
     );
     let report: Value = serde_json::from_slice(&preview.stdout).expect("run report");
     assert_eq!(report["mode"], "execute:mock");
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn service_executor_rejects_base_url_paths_before_execution() {
+    let path = workflow_path();
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        "http://127.0.0.1:3000/not-api",
+    ]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("invalid --api-base-url"),
+        "stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("paths, queries, and fragments"),
+        "stderr: {stderr}"
+    );
+    assert!(output.stdout.is_empty());
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn service_execution_failure_returns_nonzero_with_root_cause() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("reserve local port");
+    let port = listener.local_addr().expect("local address").port();
+    drop(listener);
+    let path = workflow_path();
+    let base_url = format!("http://127.0.0.1:{port}");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        &base_url,
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("failed run report");
+    assert_eq!(report["status"], "failed");
+    assert_eq!(report["steps"][0]["status"], "failed");
+    assert!(
+        report["steps"][0]["result_preview"]["error"]
+            .as_str()
+            .is_some_and(|error| error.contains("failed to connect"))
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("headless execution failed at step 1 (service_health)"),
+        "stderr: {stderr}"
+    );
+    assert!(stderr.contains("failed to connect"), "stderr: {stderr}");
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn unknown_material_study_fails_before_service_connection() {
+    let path = workflow_path();
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "unknown-study",
+        "--material-report-out",
+        "/tmp/kyuubiki-unknown-study.json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        "http://127.0.0.1:19999",
+    ]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unsupported material report study: unknown-study"),
+        "stderr: {stderr}"
+    );
+    assert!(!stderr.contains("failed to connect"), "stderr: {stderr}");
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn missing_material_output_fails_before_service_connection() {
+    let path = workflow_path();
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "dielectric-screening",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        "http://127.0.0.1:19999",
+    ]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("--material-report with --json requires --material-report-out"),
+        "stderr: {stderr}"
+    );
+    assert!(!stderr.contains("failed to connect"), "stderr: {stderr}");
     let _ = fs::remove_file(path);
 }

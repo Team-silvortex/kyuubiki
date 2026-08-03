@@ -58,6 +58,29 @@ fn rejects_non_http_base_url() {
 }
 
 #[test]
+fn strict_constructor_rejects_ambiguous_base_urls() {
+    for base_url in [
+        "http://127.0.0.1:3000/not-api",
+        "http://127.0.0.1:3000?mode=test",
+        "http://127.0.0.1:3000#fragment",
+        "http://user@127.0.0.1:3000",
+        "http://127.0.0.1:0",
+        "",
+    ] {
+        assert!(
+            ServiceHeadlessExecutor::try_new(base_url).is_err(),
+            "base URL should fail: {base_url}"
+        );
+    }
+}
+
+#[test]
+fn strict_constructor_accepts_plain_authority_with_trailing_slash() {
+    ServiceHeadlessExecutor::try_new("http://127.0.0.1:3000/")
+        .expect("one trailing slash should normalize safely");
+}
+
+#[test]
 fn picks_string_and_u64_values() {
     let payload = json!({
         "job_id": "job_123",

@@ -16,11 +16,25 @@ impl HybridHeadlessExecutor {
         Self::with_token(service_base_url, None)
     }
 
+    pub fn try_new(service_base_url: &str) -> Result<Self, HeadlessExecutorError> {
+        Self::try_with_token(service_base_url, None)
+    }
+
     pub fn with_token(service_base_url: &str, api_token: Option<&str>) -> Self {
         Self {
             service: ServiceHeadlessExecutor::with_token(service_base_url, api_token),
             browser: MockHeadlessExecutor,
         }
+    }
+
+    pub fn try_with_token(
+        service_base_url: &str,
+        api_token: Option<&str>,
+    ) -> Result<Self, HeadlessExecutorError> {
+        Ok(Self {
+            service: ServiceHeadlessExecutor::try_with_token(service_base_url, api_token)?,
+            browser: MockHeadlessExecutor,
+        })
     }
 }
 
@@ -67,5 +81,13 @@ mod tests {
             .expect("browser action should route");
         assert_eq!(outcome.status, "executed_mock_browser");
         assert_eq!(outcome.result["url"].as_str(), Some("https://example.com"));
+    }
+
+    #[test]
+    fn strict_constructor_rejects_service_base_url_paths() {
+        let error = HybridHeadlessExecutor::try_new("http://127.0.0.1:3000/not-api")
+            .expect_err("base URL path should fail");
+
+        assert!(error.message.contains("paths, queries, and fragments"));
     }
 }

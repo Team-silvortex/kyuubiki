@@ -236,7 +236,7 @@ pub fn extract_result_payloads_from_run(report: &HeadlessRunReport) -> Result<Ve
                 .or_else(|| Some(step.result_preview.clone()))
         })
         .collect::<Vec<_>>();
-    require_non_empty_results(results)
+    require_non_empty_results(results, typed_run_failure_context(report))
 }
 
 fn extract_result_payloads_from_run_value(payload: &Value) -> Result<Vec<Value>, String> {
@@ -258,17 +258,67 @@ fn extract_result_payloads_from_run_value(payload: &Value) -> Result<Vec<Value>,
                 .or_else(|| Some(preview.clone()))
         })
         .collect::<Vec<_>>();
-    require_non_empty_results(results)
+    require_non_empty_results(results, value_run_failure_context(payload))
 }
 
-fn require_non_empty_results(results: Vec<Value>) -> Result<Vec<Value>, String> {
+fn require_non_empty_results(
+    results: Vec<Value>,
+    failure_context: Option<String>,
+) -> Result<Vec<Value>, String> {
     if results.is_empty() {
-        return Err(
-            "headless execution run report does not contain successful result_fetch payloads"
-                .to_string(),
-        );
+        let message =
+            "headless execution run report does not contain successful result_fetch payloads";
+        return Err(match failure_context {
+            Some(context) => format!("{message}; {context}"),
+            None => message.to_string(),
+        });
     }
     Ok(results)
+}
+
+fn typed_run_failure_context(report: &HeadlessRunReport) -> Option<String> {
+    if report.status != "failed" {
+        return None;
+    }
+    report
+        .steps
+        .iter()
+        .find(|step| step.status == "failed")
+        .map(|step| format_failed_step(step.index, &step.action, &step.result_preview))
+        .or_else(|| Some("run status=failed without a failed step report".to_string()))
+}
+
+fn value_run_failure_context(report: &Value) -> Option<String> {
+    if report.get("status").and_then(Value::as_str) != Some("failed") {
+        return None;
+    }
+    report
+        .get("steps")
+        .and_then(Value::as_array)
+        .and_then(|steps| {
+            steps
+                .iter()
+                .find(|step| step.get("status").and_then(Value::as_str) == Some("failed"))
+        })
+        .map(|step| {
+            format_failed_step(
+                step.get("index")
+                    .and_then(Value::as_u64)
+                    .unwrap_or_default() as usize,
+                step.get("action")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown"),
+                step.get("result_preview").unwrap_or(&Value::Null),
+            )
+        })
+        .or_else(|| Some("run status=failed without a failed step report".to_string()))
+}
+
+fn format_failed_step(index: usize, action: &str, result_preview: &Value) -> String {
+    match result_preview.get("error").and_then(Value::as_str) {
+        Some(error) => format!("run failed at step {index} ({action}): {error}"),
+        None => format!("run failed at step {index} ({action})"),
+    }
 }
 
 fn to_value<T: Serialize>(report: Result<T, String>) -> Result<Value, String> {
@@ -417,5 +467,43 @@ mod tests {
         let payloads = extract_result_payloads_from_run(&run).expect("payloads");
         assert_eq!(payloads.len(), 1);
         assert_eq!(payloads[0]["max_electric_field"].as_f64(), Some(42.0e6));
+    }
+
+    #[test]
+    fn material_report_preserves_failed_execution_context() {
+        let run = HeadlessRunReport {
+            schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+            workflow_id: "workflow.failed-service".to_string(),
+            mode: "execute:service".to_string(),
+            status: "failed".to_string(),
+            executed_step_count: 0,
+            warning_count: 0,
+            blocked_by_confirmation: None,
+            validation: crate::HeadlessValidationReport {
+                ok: true,
+                issue_count: 0,
+                issues: vec![],
+                warning_count: 0,
+                warnings: vec![],
+                summary: None,
+                policy: None,
+            },
+            steps: vec![HeadlessExecutionStepReport {
+                index: 1,
+                action: "service_health".to_string(),
+                risk: HeadlessRisk::Normal,
+                status: "failed".to_string(),
+                payload: json!({}),
+                result_preview: json!({
+                    "error": "failed to connect to 127.0.0.1:19999: connection refused"
+                }),
+                requires_confirmation: false,
+            }],
+        };
+
+        let error = extract_result_payloads_from_run(&run)
+            .expect_err("failed execution should not produce material payloads");
+        assert!(error.contains("step 1 (service_health)"));
+        assert!(error.contains("failed to connect"));
     }
 }
