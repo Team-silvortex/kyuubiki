@@ -22,6 +22,9 @@ mod kyuubiki_headless_run_report;
 #[path = "kyuubiki-headless/usage.rs"]
 mod kyuubiki_headless_usage;
 use kyuubiki_headless_flags::Flags;
+
+const DEFAULT_SERVICE_BASE_URL: &str = "http://127.0.0.1:4000";
+
 fn main() {
     if let Err(error) = run() {
         print_cli_error(&error);
@@ -237,7 +240,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                     flags
                         .api_base_url
                         .as_deref()
-                        .unwrap_or("http://127.0.0.1:3000"),
+                        .unwrap_or(DEFAULT_SERVICE_BASE_URL),
                     flags.api_token.as_deref(),
                 )
                 .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;
@@ -253,7 +256,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                     flags
                         .api_base_url
                         .as_deref()
-                        .unwrap_or("http://127.0.0.1:3000"),
+                        .unwrap_or(DEFAULT_SERVICE_BASE_URL),
                     flags.api_token.as_deref(),
                 )
                 .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;

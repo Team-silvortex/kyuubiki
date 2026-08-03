@@ -274,27 +274,11 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_thermal_frame_3d(params),
     do: normalize_graph_model(params, :invalid_thermal_frame_3d_model)
 
-  def normalize_electrostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+  def normalize_electrostatic_plane_triangle_2d(params),
+    do: normalize_graph_model(params, :invalid_electrostatic_plane_triangle_model)
 
-  def normalize_electrostatic_plane_triangle_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
-
-  def normalize_electrostatic_plane_triangle_2d(_params),
-    do: {:error, :invalid_electrostatic_plane_triangle_model}
-
-  def normalize_electrostatic_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_electrostatic_plane_quad_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
-
-  def normalize_electrostatic_plane_quad_2d(_params),
-    do: {:error, :invalid_electrostatic_plane_quad_model}
+  def normalize_electrostatic_plane_quad_2d(params),
+    do: normalize_graph_model(params, :invalid_electrostatic_plane_quad_model)
 
   def normalize_electric_conduction_plane_quad_2d(
         %{"nodes" => nodes, "elements" => elements} = params
@@ -358,74 +342,30 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   defp normalize_electric_conduction_interfaces(_nodes, _elements, _contacts, _terminals),
     do: {:error, :invalid_electric_conduction_plane_quad_model}
 
-  def normalize_magnetostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+  def normalize_magnetostatic_plane_triangle_2d(params),
+    do: normalize_graph_model(params, :invalid_magnetostatic_plane_triangle_model)
 
-  def normalize_magnetostatic_plane_triangle_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
+  def normalize_magnetostatic_plane_quad_2d(params),
+    do: normalize_graph_model(params, :invalid_magnetostatic_plane_quad_model)
 
-  def normalize_magnetostatic_plane_triangle_2d(_params),
-    do: {:error, :invalid_magnetostatic_plane_triangle_model}
+  def normalize_heat_plane_triangle_2d(params),
+    do: normalize_graph_model(params, :invalid_heat_plane_triangle_model)
 
-  def normalize_magnetostatic_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+  def normalize_heat_plane_quad_2d(params),
+    do: normalize_graph_model(params, :invalid_heat_plane_quad_model)
 
-  def normalize_magnetostatic_plane_quad_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
+  def normalize_stokes_flow_plane_quad_2d(params),
+    do: normalize_graph_model(params, :invalid_stokes_flow_plane_quad_model)
 
-  def normalize_magnetostatic_plane_quad_2d(_params),
-    do: {:error, :invalid_magnetostatic_plane_quad_model}
-
-  def normalize_heat_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_heat_plane_triangle_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
-
-  def normalize_heat_plane_triangle_2d(_params),
-    do: {:error, :invalid_heat_plane_triangle_model}
-
-  def normalize_heat_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_heat_plane_quad_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{nodes: nodes, elements: elements}}
-
-  def normalize_heat_plane_quad_2d(_params), do: {:error, :invalid_heat_plane_quad_model}
-
-  def normalize_stokes_flow_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_stokes_flow_plane_quad_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_stokes_flow_plane_quad_2d(_params),
-    do: {:error, :invalid_stokes_flow_plane_quad_model}
-
-  def normalize_stokes_flow_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_stokes_flow_plane_triangle_2d(%{nodes: nodes, elements: elements})
-      when is_list(nodes) and is_list(elements),
-      do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  def normalize_stokes_flow_plane_triangle_2d(_params),
-    do: {:error, :invalid_stokes_flow_plane_triangle_model}
+  def normalize_stokes_flow_plane_triangle_2d(params),
+    do: normalize_graph_model(params, :invalid_stokes_flow_plane_triangle_model)
 
   defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements} = params, _error)
        when is_list(nodes) and is_list(elements) do
-    {:ok, params}
+    {:ok,
+     params
+     |> Map.put("nodes", ensure_entity_ids(nodes, "n"))
+     |> Map.put("elements", ensure_entity_ids(elements, "e"))}
   end
 
   defp normalize_graph_model(%{nodes: nodes, elements: elements} = params, _error)
@@ -434,11 +374,26 @@ defmodule KyuubikiWeb.FemModelNormalizer do
      params
      |> Map.delete(:nodes)
      |> Map.delete(:elements)
-     |> Map.put("nodes", nodes)
-     |> Map.put("elements", elements)}
+     |> Map.put("nodes", ensure_entity_ids(nodes, "n"))
+     |> Map.put("elements", ensure_entity_ids(elements, "e"))}
   end
 
   defp normalize_graph_model(_params, error), do: {:error, error}
+
+  defp ensure_entity_ids(entities, prefix) do
+    entities
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {entity, index} when is_map(entity) ->
+        case Map.get(entity, "id", Map.get(entity, :id)) do
+          id when is_binary(id) and byte_size(id) > 0 -> entity
+          _ -> entity |> Map.delete(:id) |> Map.put("id", "#{prefix}#{index}")
+        end
+
+      {entity, _index} ->
+        entity
+    end)
+  end
 
   defp fetch_number(params, [key | rest]) do
     case Map.fetch(params, key) do

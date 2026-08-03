@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.FemModelNormalizer
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Playground.AgentClient
 
   def submit_axial_bar(params),
@@ -347,14 +348,15 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   defp submit_solver_job(params, normalizer, method)
        when is_map(params) and is_function(normalizer, 1) and is_binary(method) do
-    with {:ok, normalized} <- normalizer.(params),
-         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
+    with {:ok, resolved_params} <- ModelArtifactStore.resolve_model_params(params),
+         {:ok, normalized} <- normalizer.(resolved_params),
+         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(resolved_params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
       start_background_job(
         job.job_id,
         method,
         normalized,
-        orchestration_context_from_params(params)
+        orchestration_context_from_params(resolved_params)
       )
 
       {:ok, AnalysisJobSupport.serialize_payload(job)}
@@ -393,9 +395,19 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         unless cancelled?(job_id), do: fail_job(job_id, inspect(reason))
 
       nil ->
+        request_agent_cancel(job_id)
+
         unless cancelled?(job_id),
           do: fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
     end
+  end
+
+  defp request_agent_cancel(job_id) do
+    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+      _ = AgentClient.cancel_job(job_id)
+    end)
+
+    :ok
   end
 
   defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do

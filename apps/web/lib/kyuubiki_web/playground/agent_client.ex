@@ -252,8 +252,8 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end, opts \\ [])
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
     request_id = request_id()
-    request = build_request(request_id, method, params)
     opts = put_execution_lease(opts, request_id, method)
+    request = build_request(request_id, method, params) |> put_rpc_job_id(method, opts)
     endpoints = AgentPool.checkout_endpoints(method, opts)
 
     case endpoints do
@@ -433,14 +433,28 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp maybe_put_lease_value(lease, _key, _value), do: lease
 
+  defp put_rpc_job_id(request, "solve_" <> _method, opts)
+       when is_map(request) and is_list(opts) do
+    job_id = Keyword.get(opts, :job_id)
+
+    if is_binary(job_id) and job_id != "",
+      do: Map.put(request, "job_id", job_id),
+      else: request
+  end
+
+  defp put_rpc_job_id(request, _method, _opts), do: request
+
   defp request_once(endpoint, request_id, request, on_progress) do
-    with {:ok, socket} <- connect(endpoint),
-         :ok <- send_request(socket, request),
-         {:ok, response_payload} <- recv_response(socket, request_id, on_progress),
-         :ok <- :gen_tcp.close(socket) do
-      decode_response(response_payload, request_id)
-    else
-      {:error, reason} -> {:error, reason}
+    with {:ok, socket} <- connect(endpoint) do
+      try do
+        with :ok <- send_request(socket, request),
+             {:ok, response_payload} <-
+               recv_response(socket, request_id, on_progress, request_deadline_ms()) do
+          decode_response(response_payload, request_id)
+        end
+      after
+        :gen_tcp.close(socket)
+      end
     end
   end
 
@@ -472,14 +486,24 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     :gen_tcp.send(socket, payload)
   end
 
-  defp recv_response(socket, request_id, on_progress) do
-    case :gen_tcp.recv(socket, 0, recv_timeout_ms()) do
+  defp recv_response(socket, request_id, on_progress, deadline_ms) do
+    case remaining_recv_timeout_ms(deadline_ms) do
+      0 ->
+        {:error, :request_timeout}
+
+      timeout_ms ->
+        recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms)
+    end
+  end
+
+  defp recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms) do
+    case :gen_tcp.recv(socket, 0, timeout_ms) do
       {:ok, payload} ->
         case Jason.decode(payload) do
           {:ok, %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
           when event in ["progress", "heartbeat"] ->
-            _ = on_progress.(frame["progress"])
-            recv_response(socket, request_id, on_progress)
+            maybe_emit_progress(on_progress, frame["progress"])
+            recv_response(socket, request_id, on_progress, deadline_ms)
 
           {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id}} ->
             {:ok, payload}
@@ -495,6 +519,13 @@ defmodule KyuubikiWeb.Playground.AgentClient do
         {:error, reason}
     end
   end
+
+  defp maybe_emit_progress(on_progress, progress) when is_map(progress) do
+    _ = on_progress.(progress)
+    :ok
+  end
+
+  defp maybe_emit_progress(_on_progress, _progress), do: :ok
 
   defp decode_response(raw_response, request_id) do
     case Jason.decode(raw_response) do
@@ -535,5 +566,22 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp recv_timeout_ms do
     Application.get_env(:kyuubiki_web, __MODULE__, [])
     |> Keyword.get(:recv_timeout_ms, 15_000)
+  end
+
+  defp request_timeout_ms do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:request_timeout_ms, 120_000)
+  end
+
+  defp request_deadline_ms do
+    System.monotonic_time(:millisecond) + request_timeout_ms()
+  end
+
+  defp remaining_recv_timeout_ms(deadline_ms) do
+    remaining_ms = deadline_ms - System.monotonic_time(:millisecond)
+
+    if remaining_ms <= 0,
+      do: 0,
+      else: min(recv_timeout_ms(), remaining_ms)
   end
 end

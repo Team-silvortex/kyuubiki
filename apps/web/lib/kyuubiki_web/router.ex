@@ -6,13 +6,23 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.Analysis
   alias KyuubikiWeb.AssetStore
   alias KyuubikiWeb.Library
+  alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.Security
   alias KyuubikiWeb.Workloads
   import KyuubikiWeb.RouterSupport
 
   plug(Plug.Logger)
-  plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
+  plug(KyuubikiWeb.RequestSizeGuard)
+  plug(KyuubikiWeb.ModelArtifactStore)
+
+  plug(Plug.Parsers,
+    parsers: [:json],
+    pass: ["application/json", KyuubikiWeb.ModelArtifactStore.media_type()],
+    json_decoder: Jason,
+    length: KyuubikiWeb.RequestSizeGuard.max_inline_json_bytes()
+  )
+
   plug(:match)
   plug(:dispatch)
 
@@ -38,6 +48,8 @@ defmodule KyuubikiWeb.Router do
         "watchdog" => KyuubikiWeb.Jobs.Watchdog.status_snapshot(),
         "transport" => %{
           "http" => 4000,
+          "model_artifacts" => ModelArtifactStore.descriptor(),
+          "request_body" => KyuubikiWeb.RequestSizeGuard.descriptor(),
           "solver_agent_tcp" => (List.first(agent_endpoints) || %{})[:port] || 5001,
           "solver_agents" => agent_endpoints
         },
@@ -63,6 +75,24 @@ defmodule KyuubikiWeb.Router do
   get "/api/v1/protocol/agents" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, %{"agents" => Protocol.describe_agents()})
+    end)
+  end
+
+  post "/api/v1/model-artifacts" do
+    with_auth(conn, :write, fn conn ->
+      case ModelArtifactStore.put_conn(conn) do
+        {:ok, conn, artifact} -> respond_json(conn, 201, %{"artifact" => artifact})
+        {:error, conn, status, payload} -> respond_json(conn, status, payload)
+      end
+    end)
+  end
+
+  get "/api/v1/model-artifacts/:artifact_id" do
+    with_auth(conn, :read, fn conn ->
+      case ModelArtifactStore.metadata(artifact_id) do
+        {:ok, artifact} -> respond_json(conn, 200, %{"artifact" => artifact})
+        :error -> respond_json(conn, 404, %{"error" => "model_artifact_not_found"})
+      end
     end)
   end
 

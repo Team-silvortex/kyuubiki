@@ -244,6 +244,33 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert_receive {:progress, %{"message" => "agent heartbeat: solver still active"}}
   end
 
+  test "puts the orchestration job id into solver rpc params" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(), [%{"ok" => true, "result" => %{"accepted" => true}}]}
+      )
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "job-aware-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    assert {:ok, %{"accepted" => true}, _endpoint} =
+             AgentClient.request_with_agent(
+               "solve_heat_plane_quad_2d",
+               %{"nodes" => [], "elements" => []},
+               fn _progress -> :ok end,
+               job_id: "analysis-job-42"
+             )
+
+    assert_receive {:fake_agent_request, request}
+    assert request["job_id"] == "analysis-job-42"
+    assert request["params"] == %{"nodes" => [], "elements" => []}
+  end
+
   test "describes an agent over the rpc protocol" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

@@ -51,4 +51,15 @@ defmodule KyuubikiWeb.FemModelNormalizerTest do
     assert normalized["tolerance"] == 1.0e-9
     assert normalized["max_step_cutbacks"] == 6
   end
+
+  test "assigns stable node and element ids when a compact mesh omits them" do
+    params = %{
+      "nodes" => [%{"x" => 0.0, "y" => 0.0}, %{"id" => "hot", "x" => 1.0, "y" => 0.0}],
+      "elements" => [%{"node_i" => 0, "node_j" => 1, "node_k" => 1, "node_l" => 0}]
+    }
+
+    assert {:ok, normalized} = FemModelNormalizer.normalize_heat_plane_quad_2d(params)
+    assert Enum.map(normalized["nodes"], & &1["id"]) == ["n0", "hot"]
+    assert Enum.map(normalized["elements"], & &1["id"]) == ["e0"]
+  end
 end

@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn decodes_top_level_job_metadata_without_changing_the_public_rpc_shape() {
+    let request = decode_rpc_request(
+        br#"{
+            "rpc_version": 1,
+            "id": "request-1",
+            "method": "solve_bar_1d",
+            "job_id": "analysis-job-42",
+            "params": {"length": 1.0}
+        }"#,
+    )
+    .expect("rpc envelope should decode");
+
+    assert_eq!(request.params["length"], 1.0);
+    assert_eq!(request.params["job_id"], "analysis-job-42");
+}
+
+#[test]
 fn formats_events_for_machine_consumption() {
     let mut event = ProgressEvent::new("job-1", JobStatus::Solving, 0.5);
     event.iteration = Some(2);

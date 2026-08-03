@@ -105,7 +105,9 @@ config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool,
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentClient,
   connect_timeout_ms:
     String.to_integer(System.get_env("KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS", "1500")),
-  recv_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_RECV_TIMEOUT_MS", "15000"))
+  recv_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_RECV_TIMEOUT_MS", "15000")),
+  request_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_AGENT_REQUEST_TIMEOUT_MS", "120000"))
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentRegistry,
   stale_after_ms:

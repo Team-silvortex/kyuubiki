@@ -1,7 +1,9 @@
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
+use serde::Deserialize;
 
 mod agent_deployment;
 mod agent_headless_bridge;
@@ -37,6 +39,14 @@ use rpc::handle_request;
 use transport::{AgentReply, FrameReadError, read_frame, write_agent_reply};
 use worker::run_worker;
 
+#[derive(Deserialize)]
+struct RpcRequestEnvelope {
+    #[serde(flatten)]
+    request: RpcRequest,
+    #[serde(default)]
+    job_id: Option<String>,
+}
+
 fn main() {
     match Command::from_env() {
         Command::Worker(config) => run_worker(config),
@@ -60,7 +70,14 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
 
     for stream in listener.incoming() {
         let stream = stream.map_err(|error| format!("failed to accept connection: {error}"))?;
-        handle_connection(stream)?;
+        thread::Builder::new()
+            .name("kyuubiki-agent-rpc".to_string())
+            .spawn(move || {
+                if let Err(error) = handle_connection(stream) {
+                    eprintln!("agent connection error: {error}");
+                }
+            })
+            .map_err(|error| format!("failed to spawn agent connection handler: {error}"))?;
     }
 
     if let Some(registration) = registration {
@@ -90,7 +107,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
                 .map_err(|error| format!("failed to clone stream: {error}"))?,
         ));
 
-        let response = match serde_json::from_slice::<RpcRequest>(&payload) {
+        let response = match decode_rpc_request(&payload) {
             Ok(request) => handle_request(request, Some(writer.clone())),
             Err(error) => AgentReply::Stream(
                 Vec::new(),
@@ -106,7 +123,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
 
 #[cfg(test)]
 fn handle_request_bytes(payload: &[u8]) -> AgentReply {
-    let request = match serde_json::from_slice::<RpcRequest>(payload) {
+    let request = match decode_rpc_request(payload) {
         Ok(request) => request,
         Err(error) => {
             return AgentReply::Stream(
@@ -117,6 +134,19 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
     };
 
     handle_request(request, None)
+}
+
+fn decode_rpc_request(payload: &[u8]) -> Result<RpcRequest, serde_json::Error> {
+    let mut envelope = serde_json::from_slice::<RpcRequestEnvelope>(payload)?;
+
+    if let (Some(job_id), Some(params)) = (envelope.job_id, envelope.request.params.as_object_mut())
+    {
+        params
+            .entry("job_id".to_string())
+            .or_insert(serde_json::Value::String(job_id));
+    }
+
+    Ok(envelope.request)
 }
 
 #[cfg(test)]

@@ -7,6 +7,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::service_executor_artifact::prepare_direct_fem_request_body;
 use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
@@ -17,6 +18,7 @@ use crate::service_executor_solve::{
 };
 
 const TERMINAL_JOB_STATUSES: &[&str] = &["completed", "failed", "cancelled"];
+pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceHeadlessExecutor {
@@ -215,6 +217,7 @@ fn execute_direct_fem_submit(
         .get("model")
         .cloned()
         .unwrap_or_else(|| payload.clone());
+    let request_body = prepare_direct_fem_request_body(base_url, api_token, &request_body)?;
     let result = request_json(base_url, api_token, "POST", route, Some(request_body))?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
@@ -330,6 +333,7 @@ pub(crate) fn execute_job_wait(
             .and_then(Value::as_str)
             .is_some_and(|status| TERMINAL_JOB_STATUSES.contains(&status));
         if terminal {
+            reject_unsuccessful_terminal_job(job_id, &normalized)?;
             return Ok(HeadlessExecutorOutcome {
                 status: "executed".to_string(),
                 result: normalized,
@@ -342,6 +346,27 @@ pub(crate) fn execute_job_wait(
         }
         thread::sleep(Duration::from_millis(interval_ms));
     }
+}
+
+fn reject_unsuccessful_terminal_job(
+    job_id: &str,
+    job: &Value,
+) -> Result<(), HeadlessExecutorError> {
+    let status = job
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    if status == "completed" {
+        return Ok(());
+    }
+    let detail = job
+        .get("job")
+        .and_then(|value| value.get("message"))
+        .and_then(Value::as_str)
+        .unwrap_or("service job did not complete successfully");
+    Err(HeadlessExecutorError {
+        message: format!("service job {job_id} reached terminal status {status}: {detail}"),
+    })
 }
 
 pub(crate) fn execute_result_fetch(
@@ -438,6 +463,7 @@ pub(crate) fn request_json(
         .map_err(|error| HeadlessExecutorError {
             message: error.to_string(),
         })?;
+    validate_inline_json_size(&request_path, body_text.as_deref().map_or(0, str::len))?;
     let mut stream =
         TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
             HeadlessExecutorError {
@@ -466,6 +492,63 @@ pub(crate) fn request_json(
             message: format!("failed to read response: {error}"),
         })?;
     parse_json_response(&response, path)
+}
+
+pub(crate) fn request_bytes(
+    base_url: &str,
+    api_token: Option<&str>,
+    method: &str,
+    path: &str,
+    content_type: &str,
+    body: &[u8],
+) -> Result<Value, HeadlessExecutorError> {
+    let endpoint = parse_http_url(base_url)?;
+    let request_path = sanitize_request_path(path)?;
+    let api_token = sanitize_header_value(api_token, "api token")?;
+    let content_type = sanitize_header_value(Some(content_type), "content type")?
+        .expect("content type is present");
+    let mut stream =
+        TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
+            HeadlessExecutorError {
+                message: format!(
+                    "failed to connect to {}:{}: {error}",
+                    endpoint.host, endpoint.port
+                ),
+            }
+        })?;
+    let mut head = format!(
+        "{method} {request_path} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n",
+        endpoint.host,
+        body.len()
+    );
+    if let Some(token) = api_token {
+        head.push_str(&format!("Authorization: Bearer {token}\r\n"));
+    }
+    head.push_str("\r\n");
+    stream
+        .write_all(head.as_bytes())
+        .and_then(|_| stream.write_all(body))
+        .map_err(|error| HeadlessExecutorError {
+            message: format!("failed to upload model artifact: {error}"),
+        })?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|error| HeadlessExecutorError {
+            message: format!("failed to read model artifact response: {error}"),
+        })?;
+    parse_json_response(&response, path)
+}
+
+fn validate_inline_json_size(path: &str, size_bytes: usize) -> Result<(), HeadlessExecutorError> {
+    if size_bytes <= MAX_INLINE_JSON_BYTES {
+        return Ok(());
+    }
+    Err(HeadlessExecutorError {
+        message: format!(
+            "service payload exceeds inline JSON transport limit: path={path} size_bytes={size_bytes} limit_bytes={MAX_INLINE_JSON_BYTES}; use a persisted model or artifact reference for large meshes"
+        ),
+    })
 }
 
 fn build_request(

@@ -24,6 +24,20 @@ fn builds_post_request_with_json_body() {
 }
 
 #[test]
+fn rejects_oversized_inline_json_before_socket_submission() {
+    let error = validate_inline_json_size(
+        "/api/v1/fem/heat-plane-quad-2d/jobs",
+        MAX_INLINE_JSON_BYTES + 1,
+    )
+    .expect_err("oversized inline JSON must use a reference transport");
+
+    assert!(error.message.contains("inline JSON transport limit"));
+    assert!(error.message.contains("size_bytes=8000001"));
+    assert!(error.message.contains("limit_bytes=8000000"));
+    assert!(error.message.contains("model or artifact reference"));
+}
+
+#[test]
 fn rejects_path_and_header_injection_inputs() {
     assert!(sanitize_request_path("/api/health").is_ok());
     assert!(sanitize_request_path("/api/v1/jobs/../secrets").is_err());
@@ -121,6 +135,22 @@ fn normalizes_job_state_for_bindings() {
 }
 
 #[test]
+fn rejects_failed_terminal_jobs_with_the_service_failure_reason() {
+    let failed = json!({
+        "status": "failed",
+        "job": {"message": "missing field id"}
+    });
+    let error = reject_unsuccessful_terminal_job("job-failed", &failed)
+        .expect_err("failed job must fail the headless run");
+    assert!(error.message.contains("terminal status failed"));
+    assert!(error.message.contains("missing field id"));
+
+    assert!(
+        reject_unsuccessful_terminal_job("job-complete", &json!({"status": "completed"})).is_ok()
+    );
+}
+
+#[test]
 fn direct_fem_submit_uses_model_payload_when_present() {
     let payload = json!({
         "model": {
@@ -183,6 +213,55 @@ fn direct_fem_submit_sends_solid_tetra_model_to_route() {
     assert_eq!(outcome.status, "executed");
     assert_eq!(outcome.result["job_id"].as_str(), Some("solid_job"));
     assert_eq!(outcome.result["status"].as_str(), Some("queued"));
+}
+
+#[test]
+fn large_direct_fem_submit_uploads_a_model_artifact_then_sends_its_reference() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut upload, _) = listener.accept().expect("accept artifact upload");
+        let upload_request = read_complete_http_request(&mut upload);
+        let upload_text = String::from_utf8_lossy(&upload_request);
+        assert!(upload_text.starts_with("POST /api/v1/model-artifacts HTTP/1.1\r\n"));
+        assert!(upload_text.contains("Content-Type: application/vnd.kyuubiki.model+json\r\n"));
+        assert!(upload_request.len() > MAX_INLINE_JSON_BYTES);
+        let artifact_id = "a".repeat(64);
+        write_test_response(
+            &mut upload,
+            "201 Created",
+            &format!(
+                r#"{{"artifact":{{"artifact_id":"{artifact_id}","sha256":"{artifact_id}"}}}}"#
+            ),
+        );
+        drop(upload);
+
+        let (mut submit, _) = listener.accept().expect("accept solve submission");
+        let submit_request = read_complete_http_request(&mut submit);
+        let submit_text = String::from_utf8_lossy(&submit_request);
+        assert!(submit_text.starts_with("POST /api/v1/fem/heat-plane-quad-2d/jobs HTTP/1.1\r\n"));
+        assert!(submit_text.contains("\"model_artifact_ref\""));
+        assert!(submit_text.contains(&artifact_id));
+        assert!(!submit_text.contains("large-model-padding"));
+        write_test_response(
+            &mut submit,
+            "202 Accepted",
+            r#"{"job":{"job_id":"artifact-job","status":"queued","progress":0.0}}"#,
+        );
+    });
+
+    let model = json!({
+        "nodes": [],
+        "elements": [],
+        "large-model-padding": "x".repeat(MAX_INLINE_JSON_BYTES)
+    });
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step("solve_heat_plane_quad_2d", 1, &json!({"model": model}))
+        .expect("large FEM request should use artifact transport");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.result["job_id"], "artifact-job");
 }
 
 #[test]
@@ -394,6 +473,31 @@ fn write_test_response(stream: &mut impl Write, status: &str, body: &str) {
     stream
         .write_all(response.as_bytes())
         .expect("write response");
+}
+
+fn read_complete_http_request(stream: &mut impl Read) -> Vec<u8> {
+    let mut request = Vec::new();
+    let mut buffer = [0_u8; 65_536];
+    let mut expected_len = None;
+    loop {
+        let bytes_read = stream.read(&mut buffer).expect("read HTTP request");
+        assert!(bytes_read > 0, "request ended before declared body length");
+        request.extend_from_slice(&buffer[..bytes_read]);
+        if expected_len.is_none() {
+            if let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") {
+                let head = String::from_utf8_lossy(&request[..header_end]);
+                let content_length = head
+                    .lines()
+                    .find_map(|line| line.strip_prefix("Content-Length: "))
+                    .and_then(|value| value.parse::<usize>().ok())
+                    .unwrap_or(0);
+                expected_len = Some(header_end + 4 + content_length);
+            }
+        }
+        if expected_len.is_some_and(|length| request.len() >= length) {
+            return request;
+        }
+    }
 }
 
 #[test]

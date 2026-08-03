@@ -7,6 +7,8 @@ use std::time::Duration;
 
 use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcProgress, RpcResponse};
 
+use crate::agent_state::register_cancel;
+
 pub(crate) enum FrameReadError {
     ConnectionClosed,
     Io(std::io::Error),
@@ -118,6 +120,7 @@ impl HeartbeatHandle {
                 );
 
                 if write_json_frame(&writer, &heartbeat).is_err() {
+                    register_cancel(job_id.clone());
                     break;
                 }
             }
