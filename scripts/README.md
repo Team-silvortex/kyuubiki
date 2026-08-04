@@ -192,9 +192,12 @@ This directory contains host-native operational entry points.
   render/run bind payload and state. Live execution remains service-only, while
   browser actions can be checked safely in dry-run mode without a hidden Node
   fallback.
-- `./scripts/kyuubiki headless templates|suggest|init|inspect|validate|render|plan|run`
+- `cargo kyuubiki headless templates|suggest|init|inspect|validate|render|plan|run`
   Enter the official Rust `kyuubiki-headless` binary from the shared project
-  launcher. The native journey covers template discovery through dry-run and
+  launcher. `./scripts/kyuubiki` remains a compatibility shim for existing
+  automation, but both routes enter the same runner. A fresh sibling Headless
+  binary is reused directly; stale or missing development binaries are rebuilt
+  through Cargo. The native journey covers template discovery through dry-run and
   service-backed execution, including normalized batch rendering and explicit
   preview/research execution posture. The former frontend Node CLI has been
   removed rather than retained as a second production implementation.

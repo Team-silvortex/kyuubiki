@@ -1,0 +1,2 @@
+[alias]
+kyuubiki = "run --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner --"

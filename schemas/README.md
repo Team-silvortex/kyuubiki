@@ -5,6 +5,11 @@ README.
 
 - `job.schema.json` is for durable job state
 - `progress-event.schema.json` is for streamed runtime updates
+- `headless-execution-summary.schema.json` defines the run-level projection
+  that folds submit, wait, and result-fetch observations into one latest
+  timeline per job without copying full solver payloads
+- `headless-failure-receipt.schema.json` defines stable Headless failure codes,
+  stages, retry posture, and recovery guidance shared by all language SDKs
 - `model.schema.json` is for versioned browser model import/export payloads
 - `material-library.schema.json` is for reusable material library import/export payloads
 - `material-card.schema.json` is for first-class material cards with

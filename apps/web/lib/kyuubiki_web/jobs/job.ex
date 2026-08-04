@@ -222,6 +222,9 @@ defmodule KyuubikiWeb.Jobs.Job do
 
     %{
       "phase" => if(queued?, do: "queue", else: "execution"),
+      "queue_wait_ms" => elapsed_ms(job.created_at, job.execution_started_at || job.updated_at),
+      "execution_elapsed_ms" => elapsed_ms(job.execution_started_at, job.updated_at),
+      "total_elapsed_ms" => elapsed_ms(job.created_at, job.updated_at),
       "queue_timeout_ms" => job.queue_timeout_ms,
       "execution_timeout_ms" => job.execution_timeout_ms,
       "effective_timeout_ms" => effective_timeout_ms,
@@ -237,6 +240,12 @@ defmodule KyuubikiWeb.Jobs.Job do
   end
 
   defp deadline(_origin, _timeout_ms), do: nil
+
+  defp elapsed_ms(%DateTime{} = started_at, %DateTime{} = ended_at) do
+    max(DateTime.diff(ended_at, started_at, :millisecond), 0)
+  end
+
+  defp elapsed_ms(_started_at, _ended_at), do: nil
 
   defp fetch_status(attrs, key, default) do
     status =

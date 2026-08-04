@@ -7,6 +7,7 @@ mod coupled_workflows;
 mod direct_fem;
 mod engine_solver_bridge;
 mod execution_authority;
+mod execution_observability;
 mod executor;
 mod hybrid_executor;
 mod material_candidate_drafts;
@@ -116,6 +117,10 @@ pub use engine_solver_bridge::{
 };
 pub use execution_authority::{
     EXECUTION_AUTHORITY_SCHEMA_VERSION, ExecutionAuthority, validate_execution_authority,
+};
+pub use execution_observability::{
+    HEADLESS_EXECUTION_SUMMARY_SCHEMA_VERSION, HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION,
+    HeadlessExecutionSummary, HeadlessFailureReceipt, HeadlessJobTimeline,
 };
 pub use executor::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, MockHeadlessExecutor,

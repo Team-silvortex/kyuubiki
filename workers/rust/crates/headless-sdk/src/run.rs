@@ -1,6 +1,7 @@
+use crate::execution_observability::summarize_execution;
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::{
-    HeadlessExecutionBatch, HeadlessRisk, HeadlessValidationReport,
+    HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessRisk, HeadlessValidationReport,
     is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
     prepare_operator_task_payload, preview_operator_task_execute_payload, validate_batch,
 };
@@ -40,6 +41,7 @@ pub struct HeadlessRunReport {
     pub warning_count: usize,
     pub blocked_by_confirmation: Option<HeadlessBlockedConfirmation>,
     pub validation: HeadlessValidationReport,
+    pub execution_summary: HeadlessExecutionSummary,
     pub steps: Vec<HeadlessExecutionStepReport>,
 }
 
@@ -129,6 +131,8 @@ pub fn run_batch_dry(
         });
     }
 
+    let execution_summary = summarize_execution(&steps);
+
     HeadlessRunReport {
         schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
         workflow_id: batch.workflow_id.clone(),
@@ -138,6 +142,7 @@ pub fn run_batch_dry(
         warning_count: batch.warnings.len(),
         blocked_by_confirmation,
         validation,
+        execution_summary,
         steps,
     }
 }

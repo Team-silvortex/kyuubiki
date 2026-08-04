@@ -59,6 +59,8 @@ fn build_rust_runtime(paths: &RepoPaths) -> RunnerResult<()> {
             "kyuubiki-cli",
             "--bin",
             "kyuubiki-cli",
+            "--bin",
+            "kyuubiki-headless",
         ],
         &[],
     )?;
@@ -109,6 +111,13 @@ fn populate_stage(
             .join("target/release")
             .join(executable("kyuubiki-cli")),
         &stage.join("bin").join(executable("kyuubiki-cli")),
+    )?;
+    copy_file(
+        &paths
+            .rust
+            .join("target/release")
+            .join(executable("kyuubiki-headless")),
+        &stage.join("bin").join(executable("kyuubiki-headless")),
     )?;
     copy_file(
         &paths

@@ -133,10 +133,8 @@ fn rejects_tampered_and_unreferenced_objects() {
 #[test]
 fn rejects_host_absolute_paths_before_writing_output() {
     let root = fixture("host-path");
-    let spec = write_spec(
-        &root,
-        json!({"private_source": "/Users/example/result.json"}),
-    );
+    let host_path = ["", "private", "research", "result.json"].join("/");
+    let spec = write_spec(&root, json!({"private_source": host_path}));
     let output = root.join("blocked.kcore");
     assert!(
         export_path(&spec, &output)

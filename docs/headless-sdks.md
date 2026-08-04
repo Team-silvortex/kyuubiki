@@ -55,6 +55,21 @@ The stable headless surface is the contract set: task and workflow envelopes,
 operator descriptors, result bundles, report schemas, review records,
 materialization plans, lineage metadata, and execution status semantics.
 
+Repository development and research automation should enter that surface from
+one command family:
+
+```bash
+cargo kyuubiki headless templates
+cargo kyuubiki headless init --template direct_heat_bar --out workflow.json
+cargo kyuubiki headless run workflow.json --json
+```
+
+Run these commands from the repository root. The repository-local Cargo alias
+and `scripts/kyuubiki` compatibility shim both enter the same native Rust
+runner. Do not assemble a `cargo run -p ... --bin ...` command in automation:
+that leaks workspace layout into research projects and can select the wrong
+binary or working directory.
+
 The Rust CLI keeps preview and research execution distinct. `--execute` always
 requires an explicit `--executor`; it never silently selects `mock`.
 `--execution-posture research` accepts only the `service` executor because
@@ -215,6 +230,15 @@ queue instead of opening unbounded solver connections. `job_wait.timeout_ms` is
 only the SDK polling budget and never silently overrides either server budget.
 Inspect `job.status_detail.timing` for `effective_timeout_ms`,
 `job_submission_deadline`, `execution_started_at`, and `effective_deadline`.
+The timing object also exposes `queue_wait_ms`, `execution_elapsed_ms`, and
+`total_elapsed_ms`; SDK callers must not recover these values from log text.
+
+Every Headless run report exposes `execution_summary`. It folds repeated
+submit, wait, and fetch observations into one latest timeline per `job_id`.
+Failed execution steps emit a `kyuubiki.headless-failure-receipt/v1` record
+with a stable error code, failure stage, retryability, retry strategy, and
+recommended recovery action. SDKs should branch on those fields instead of
+matching human-readable error messages.
 
 Development source launches use debug Agents by default. Qualification runs
 must set `KYUUBIKI_AGENT_BUILD_PROFILE=release`; installed runtime payloads are

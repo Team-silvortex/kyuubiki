@@ -87,6 +87,9 @@ defmodule KyuubikiWeb.Jobs.JobTest do
 
     assert %{
              "phase" => "queue",
+             "queue_wait_ms" => 0,
+             "execution_elapsed_ms" => nil,
+             "total_elapsed_ms" => 0,
              "effective_timeout_ms" => 120_000,
              "job_submission_deadline" => "2026-08-04T12:02:00.000000Z"
            } = Job.status_detail(job)["timing"]
@@ -105,6 +108,9 @@ defmodule KyuubikiWeb.Jobs.JobTest do
 
     assert %{
              "phase" => "execution",
+             "queue_wait_ms" => 60_000,
+             "execution_elapsed_ms" => 0,
+             "total_elapsed_ms" => 60_000,
              "effective_timeout_ms" => 600_000,
              "effective_deadline" => "2026-08-04T12:11:00.000000Z"
            } = Job.status_detail(running)["timing"]

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/headless-execution-summary.schema.json",
+  "title": "Kyuubiki Headless Execution Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_count",
+    "job_ids",
+    "jobs",
+    "failure"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-execution-summary/v1"
+    },
+    "job_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "job_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/job_timeline"
+      }
+    },
+    "failure": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "headless-failure-receipt.schema.json" }
+      ]
+    }
+  },
+  "$defs": {
+    "nullable_string": {
+      "type": ["string", "null"]
+    },
+    "nullable_milliseconds": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "job_timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "status",
+        "worker_id",
+        "phase",
+        "created_at",
+        "execution_started_at",
+        "updated_at",
+        "queue_wait_ms",
+        "execution_elapsed_ms",
+        "total_elapsed_ms",
+        "effective_timeout_ms",
+        "effective_deadline"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": ["string", "null"],
+          "enum": [
+            "queued",
+            "preprocessing",
+            "partitioning",
+            "solving",
+            "postprocessing",
+            "completed",
+            "failed",
+            "cancelled",
+            null
+          ]
+        },
+        "worker_id": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "phase": {
+          "type": ["string", "null"],
+          "enum": ["queue", "execution", null]
+        },
+        "created_at": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "execution_started_at": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "queue_wait_ms": {
+          "$ref": "#/$defs/nullable_milliseconds"
+        },
+        "execution_elapsed_ms": {
+          "$ref": "#/$defs/nullable_milliseconds"
+        },
+        "total_elapsed_ms": {
+          "$ref": "#/$defs/nullable_milliseconds"
+        },
+        "effective_timeout_ms": {
+          "$ref": "#/$defs/nullable_milliseconds"
+        },
+        "effective_deadline": {
+          "$ref": "#/$defs/nullable_string"
+        }
+      }
+    }
+  }
+}

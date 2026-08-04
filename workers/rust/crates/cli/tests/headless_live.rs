@@ -415,6 +415,15 @@ fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
     let workflow_payload = parse_json_output(&workflow_output);
     assert_eq!(workflow_payload["status"], "ok");
     assert_eq!(workflow_payload["executed_step_count"], 3);
+    assert_eq!(
+        workflow_payload["execution_summary"]["schema_version"],
+        "kyuubiki.headless-execution-summary/v1"
+    );
+    assert_eq!(workflow_payload["execution_summary"]["job_count"], 1);
+    assert_eq!(
+        workflow_payload["execution_summary"]["jobs"][0]["status"],
+        "completed"
+    );
     assert!(
         workflow_payload["steps"][0]["result_preview"]["job_id"]
             .as_str()

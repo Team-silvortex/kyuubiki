@@ -339,17 +339,53 @@ fn print_cli_error(error: &str) {
         eprintln!("{error}");
         return;
     }
+    let code = classify_cli_error(error);
     let output = CliErrorOutput {
         schema_version: "kyuubiki.headless-cli-error/v1",
         ok: false,
         error: CliErrorView {
-            code: classify_cli_error(error),
+            code,
             message: error,
+            stage: cli_error_stage(code),
+            retryable: false,
+            recommended_action: cli_error_recovery(code),
         },
     };
     match serde_json::to_string(&output) {
         Ok(payload) => eprintln!("{payload}"),
         Err(_) => eprintln!("{error}"),
+    }
+}
+
+fn cli_error_stage(code: &str) -> &'static str {
+    match code {
+        "headless_execution_failed" => "execution",
+        "material_report_template_mismatch"
+        | "material_report_template_provenance_missing"
+        | "material_report_study_unsupported"
+        | "material_report_output_required" => "material_report_validation",
+        _ => "command_validation",
+    }
+}
+
+fn cli_error_recovery(code: &str) -> &'static str {
+    match code {
+        "headless_execution_failed" => {
+            "Inspect execution_summary.failure in the run report before retrying."
+        }
+        "material_report_template_mismatch" => {
+            "Choose a study listed by the selected template's material_report_studies field."
+        }
+        "material_report_template_provenance_missing" => {
+            "Regenerate the batch through headless init so template provenance is retained."
+        }
+        "material_report_study_unsupported" => {
+            "Use headless templates --json to select a supported material report study."
+        }
+        "material_report_output_required" => {
+            "Provide --material-report-out when requesting a JSON material report."
+        }
+        _ => "Repair the command arguments using kyuubiki headless help before retrying.",
     }
 }
 
@@ -593,6 +629,9 @@ struct CliErrorOutput<'a> {
 struct CliErrorView<'a> {
     code: &'static str,
     message: &'a str,
+    stage: &'static str,
+    retryable: bool,
+    recommended_action: &'static str,
 }
 
 #[derive(Debug, Serialize)]

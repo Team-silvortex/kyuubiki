@@ -1,3 +1,4 @@
+use crate::execution_observability::{failure_preview, summarize_execution};
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::run::{compact_report_value, resolve_step_payload};
 use crate::{
@@ -197,16 +198,15 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     risk: step.risk,
                     status: "failed".to_string(),
                     payload: compact_report_value(&payload),
-                    result_preview: Value::Object(Map::from_iter([(
-                        "error".to_string(),
-                        Value::from(error.message),
-                    )])),
+                    result_preview: failure_preview(step.index, &step.action, error.message),
                     requires_confirmation,
                 });
                 break;
             }
         }
     }
+
+    let execution_summary = summarize_execution(&steps);
 
     HeadlessRunReport {
         schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
@@ -217,6 +217,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         warning_count: batch.warnings.len(),
         blocked_by_confirmation,
         validation,
+        execution_summary,
         steps,
     }
 }
@@ -415,10 +416,60 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
 
 #[cfg(test)]
 mod tests {
-    use super::{MockHeadlessExecutor, execute_batch_with_executor};
+    use super::{
+        HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, MockHeadlessExecutor,
+        execute_batch_with_executor,
+    };
     use crate::{HeadlessExecutionBatch, HeadlessExecutionBatchStep, HeadlessRisk};
     use kyuubiki_protocol::compute_operator_task_digest;
     use serde_json::{Value, json};
+
+    struct TimeoutExecutor;
+
+    impl HeadlessExecutor for TimeoutExecutor {
+        fn name(&self) -> &'static str {
+            "service"
+        }
+
+        fn execute_step(
+            &mut self,
+            _action: &str,
+            _step_index: usize,
+            _payload: &Value,
+        ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+            Err(HeadlessExecutorError {
+                message: "timed out waiting for job job-timeout".to_string(),
+            })
+        }
+    }
+
+    #[test]
+    fn failed_execution_promotes_failure_receipt_to_run_summary() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "timeout-fixture".to_string(),
+            template_id: None,
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "job_wait".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: json!({ "job_id": "job-timeout" }),
+            }],
+            warnings: vec![],
+        };
+
+        let report = execute_batch_with_executor(&batch, &mut TimeoutExecutor, false, false);
+
+        let failure = report.execution_summary.failure.expect("failure receipt");
+        assert_eq!(failure.error_code, "kyuubiki.headless.job_wait_timeout");
+        assert!(failure.retryable);
+        assert_eq!(
+            report.steps[0].result_preview["error_code"],
+            failure.error_code
+        );
+    }
 
     #[test]
     fn destructive_block_halts_before_later_side_effects() {

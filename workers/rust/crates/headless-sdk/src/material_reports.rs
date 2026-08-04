@@ -548,6 +548,7 @@ mod tests {
                 summary: None,
                 policy: None,
             },
+            execution_summary: crate::HeadlessExecutionSummary::default(),
             steps: vec![HeadlessExecutionStepReport {
                 index: 3,
                 action: "result_fetch".to_string(),
@@ -583,6 +584,7 @@ mod tests {
                 summary: None,
                 policy: None,
             },
+            execution_summary: crate::HeadlessExecutionSummary::default(),
             steps: vec![HeadlessExecutionStepReport {
                 index: 1,
                 action: "service_health".to_string(),

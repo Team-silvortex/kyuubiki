@@ -118,9 +118,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert payload["job"]["execution_timeout_ms"] > 0
     assert payload["job"]["status_detail"]["timing"]["phase"] == "queue"
     assert payload["job"]["status_detail"]["timing"]["effective_timeout_ms"] > 0
+    assert payload["job"]["status_detail"]["timing"]["queue_wait_ms"] >= 0
+    assert payload["job"]["status_detail"]["timing"]["total_elapsed_ms"] >= 0
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
 
     assert result_payload["job"]["status"] == "completed"
+    assert result_payload["job"]["status_detail"]["timing"]["execution_elapsed_ms"] >= 0
     assert result_payload["result"]["max_stress"] > 0
     assert length(result_payload["result"]["elements"]) == 1
   end

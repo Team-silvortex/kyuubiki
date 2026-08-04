@@ -255,6 +255,9 @@ fn material_report_rejects_incompatible_template_before_execution() {
     assert_eq!(error["schema_version"], "kyuubiki.headless-cli-error/v1");
     assert_eq!(error["ok"], false);
     assert_eq!(error["error"]["code"], "material_report_template_mismatch");
+    assert_eq!(error["error"]["stage"], "material_report_validation");
+    assert_eq!(error["error"]["retryable"], false);
+    assert!(error["error"]["recommended_action"].is_string());
     assert!(
         error["error"]["message"]
             .as_str()

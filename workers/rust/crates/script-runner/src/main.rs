@@ -1,7 +1,9 @@
 use std::env;
 use std::ffi::OsString;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use std::time::SystemTime;
 
 mod agent_registry_sync;
 mod beam_frame_release_evidence;
@@ -295,11 +297,7 @@ fn run() -> RunnerResult<u8> {
         "project" => project_cli::run_project_command(rest),
         "kcore" => kcore_cli::run_kcore_command(rest),
         "macro" => macro_cli::run_macro_command(rest),
-        "headless" => run_command(
-            &paths.rust,
-            "cargo",
-            cargo_run_bin("kyuubiki-cli", "kyuubiki-headless", rest),
-        ),
+        "headless" => run_native_headless(&paths, rest),
         "build-frontend" => run_command(
             &paths.frontend,
             "npm",
@@ -520,6 +518,63 @@ fn run_installer(paths: &RepoPaths, subcommand: &str, rest: Vec<OsString>) -> Ru
         "cargo",
         cargo_run("kyuubiki-installer", prepend(subcommand, rest)),
     )
+}
+
+fn run_native_headless(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
+    if let Some(binary) = fresh_sibling_binary("kyuubiki-headless", &paths.rust) {
+        let program = binary.to_string_lossy().to_string();
+        return run_command(&paths.root, &program, rest);
+    }
+    run_command(
+        &paths.rust,
+        "cargo",
+        cargo_run_bin("kyuubiki-cli", "kyuubiki-headless", rest),
+    )
+}
+
+fn fresh_sibling_binary(name: &str, rust_root: &Path) -> Option<PathBuf> {
+    let binary = env::current_exe()
+        .ok()?
+        .parent()?
+        .join(format!("{name}{}", env::consts::EXE_SUFFIX));
+    let built_at = fs::metadata(&binary).ok()?.modified().ok()?;
+    let source_roots = [
+        rust_root.join("Cargo.toml"),
+        rust_root.join("Cargo.lock"),
+        rust_root.join("crates/cli"),
+        rust_root.join("crates/headless-sdk"),
+        rust_root.join("crates/protocol"),
+        rust_root.join("crates/solver"),
+    ];
+    if source_roots
+        .iter()
+        .any(|path| path_contains_newer_source(path, built_at))
+    {
+        None
+    } else {
+        Some(binary)
+    }
+}
+
+fn path_contains_newer_source(path: &Path, built_at: SystemTime) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return true;
+    };
+    if metadata.is_file() {
+        return metadata
+            .modified()
+            .is_ok_and(|modified| modified > built_at);
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return true;
+    };
+    entries.filter_map(Result::ok).any(|entry| {
+        let path = entry.path();
+        if path.file_name().is_some_and(|name| name == "target") {
+            return false;
+        }
+        path_contains_newer_source(&path, built_at)
+    })
 }
 
 fn run_python_script(root: &Path, script: &str, rest: Vec<OsString>) -> RunnerResult<u8> {

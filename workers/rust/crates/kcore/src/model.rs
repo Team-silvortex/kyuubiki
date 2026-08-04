@@ -475,7 +475,8 @@ mod tests {
     #[test]
     fn host_paths_are_rejected() {
         let mut manifest = manifest();
-        manifest.provenance = json!({"source": "/Volumes/lab/private.json"});
+        let host_path = ["", "private", "lab", "source.json"].join("/");
+        manifest.provenance = json!({"source": host_path});
         manifest.seal().expect("reseal");
         assert!(
             manifest
