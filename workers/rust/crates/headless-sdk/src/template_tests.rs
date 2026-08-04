@@ -54,6 +54,45 @@ fn template_document_accepts_custom_workflow_id_override() {
 }
 
 #[test]
+fn persisted_model_template_bootstraps_real_resource_bindings() {
+    let document = build_template_document("solve_wait_result", None).unwrap();
+    let steps = &document.workflow.steps;
+
+    assert_eq!(steps.len(), 4);
+    assert_eq!(steps[0].action, "service_health");
+    assert_eq!(steps[1].action, "project_create");
+    assert_eq!(
+        steps[2].payload["project_id"],
+        "{{steps.2.result.project_id}}"
+    );
+    assert_eq!(
+        steps[3].payload["model_version_id"],
+        "{{steps.3.result.latest_version_id}}"
+    );
+    assert_eq!(
+        steps[3].payload["endpoints"],
+        "{{steps.1.result.solver_endpoints}}"
+    );
+    assert!(
+        !serde_json::to_string(&document)
+            .unwrap()
+            .contains("ver_123")
+    );
+}
+
+#[test]
+fn workflow_submit_template_uses_a_real_catalog_entry() {
+    let document = build_template_document("workflow_submit_monitor", None).unwrap();
+    assert_eq!(
+        document.workflow.steps[0].payload["workflow_id"],
+        "workflow.material-study-envelope-ranking-json"
+    );
+    assert!(
+        document.workflow.steps[0].payload["input_artifacts"]["material_rows"]["rows"].is_array()
+    );
+}
+
+#[test]
 fn template_category_index_is_sorted_and_unique() {
     assert_eq!(
         list_template_categories(),

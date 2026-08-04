@@ -56,6 +56,21 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert envelope["material_envelope_critical_metric"] == "thermal.temperature"
   end
 
+  test "treats an omitted transform config as an empty config object" do
+    assert {:ok, envelope} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_material_study_envelope",
+               %{
+                 "candidate_id" => "default_config",
+                 "summaries" => %{"thermal" => %{"max_temperature" => 90.0}}
+               },
+               nil
+             )
+
+    assert envelope["material_envelope_candidate_id"] == "default_config"
+    assert envelope["material_envelope_status"] == "pass"
+  end
+
   test "composes material envelope batch for ranking and Pareto operators" do
     assert {:ok, batch} =
              WorkflowOperatorRuntime.run_transform_operator(

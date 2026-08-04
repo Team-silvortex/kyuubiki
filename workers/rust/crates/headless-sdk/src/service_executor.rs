@@ -8,6 +8,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
+use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
@@ -200,11 +201,11 @@ fn execute_service_health(
     let result = request_json(base_url, api_token, "GET", &request_path, None)?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result,
+        result: with_discovered_solver_endpoints(result),
     })
 }
 
-fn execute_direct_fem_submit(
+pub(crate) fn execute_direct_fem_submit(
     base_url: &str,
     api_token: Option<&str>,
     action: &str,

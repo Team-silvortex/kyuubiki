@@ -7,7 +7,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "service",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &[],
-        output_keys: &["service", "status"],
+        output_keys: &["service", "status", "solver_endpoints"],
     },
     HeadlessActionContract {
         id: "project_create",
@@ -39,7 +39,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "model",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["project_id", "name", "kind", "payload"],
-        output_keys: &["model_id", "kind"],
+        output_keys: &["model_id", "kind", "latest_version_id"],
     },
     HeadlessActionContract {
         id: "model_version_create",
@@ -129,7 +129,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         engine: HeadlessEngine::Service,
         category: "solve",
         risk: HeadlessRisk::Normal,
-        required_payload_keys: &["endpoints"],
+        required_payload_keys: &[],
         output_keys: &["job_id", "status", "endpoint"],
     },
     HeadlessActionContract {

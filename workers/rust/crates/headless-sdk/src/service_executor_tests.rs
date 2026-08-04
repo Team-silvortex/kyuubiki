@@ -352,6 +352,43 @@ fn direct_mesh_solve_posts_normalized_study_request() {
 }
 
 #[test]
+fn direct_mesh_solve_uses_native_fem_route_without_explicit_endpoints() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept request");
+        let mut buffer = [0_u8; 8192];
+        let bytes_read = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("POST /api/v1/fem/axial-bar/jobs HTTP/1.1\r\n"));
+        assert!(request.contains("\"nodes\":[{\"id\":\"n0\"}]"));
+        write_test_response(
+            &mut stream,
+            "200 OK",
+            r#"{"job":{"job_id":"native-job","status":"queued","progress":0.0}}"#,
+        );
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step(
+            "direct_mesh_solve",
+            1,
+            &json!({
+                "study_kind": "axial_bar_1d",
+                "input": {
+                    "nodes": [{ "id": "n0" }],
+                    "elements": [{ "id": "e0" }]
+                }
+            }),
+        )
+        .expect("native direct mesh request should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(outcome.result["job_id"], "native-job");
+}
+
+#[test]
 fn direct_mesh_solve_resolves_model_and_version_references() {
     assert_direct_mesh_reference(
         "model_id",
@@ -419,8 +456,8 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
                 r#"{"version":{"version_id":"ver_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
             ),
             (
-                "POST /api/direct-mesh/solve HTTP/1.1",
-                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0},"direct_mesh":{"endpoint":"127.0.0.1:7001"}}"#,
+                "POST /api/v1/fem/heat-bar-1d/jobs HTTP/1.1",
+                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0}}"#,
             ),
             (
                 "GET /api/v1/jobs/job-native HTTP/1.1",
@@ -459,7 +496,7 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
     assert_eq!(outcome.result["job_id"], "job-native");
     assert_eq!(outcome.result["status"], "completed");
     assert_eq!(outcome.result["model_version_id"], "ver_native");
-    assert_eq!(outcome.result["endpoint"], "127.0.0.1:7001");
+    assert!(outcome.result["endpoint"].is_null());
     assert_eq!(outcome.result["solve"]["model_version_id"], "ver_native");
     assert_eq!(outcome.result["result"]["result"]["field"], "ready");
 }
@@ -616,6 +653,35 @@ fn project_create_round_trips_against_local_http_server() {
     assert_eq!(outcome.status, "executed");
     assert_eq!(outcome.result["project_id"], "project-native");
     assert_eq!(outcome.result["project"]["project_id"], "project-native");
+}
+
+#[test]
+fn service_health_exposes_discovered_solver_endpoints_for_bindings() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind local test server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept request");
+        let mut buffer = [0_u8; 4096];
+        let bytes_read = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        assert!(request.starts_with("GET /api/health HTTP/1.1\r\n"));
+        write_test_response(
+            &mut stream,
+            "200 OK",
+            r#"{"service":"kyuubiki-orchestrator","status":"ok","solver_agents":[{"host":"127.0.0.1","port":5001},{"host":"::1","port":5002}]}"#,
+        );
+    });
+
+    let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
+    let outcome = executor
+        .execute_step("service_health", 1, &json!({}))
+        .expect("service health should succeed");
+
+    handle.join().expect("server thread should finish");
+    assert_eq!(
+        outcome.result["solver_endpoints"],
+        json!(["127.0.0.1:5001", "[::1]:5002"])
+    );
 }
 
 #[test]

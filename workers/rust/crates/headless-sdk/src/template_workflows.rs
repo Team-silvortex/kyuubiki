@@ -6,14 +6,41 @@ pub(super) fn build_template_workflow(
     workflow_id: &str,
 ) -> HeadlessWorkflowDraft {
     let steps = match template_id {
-        "solve_wait_result" => vec![HeadlessWorkflowStep::new(
-            "solve_and_wait_from_model_version",
-            json!({ "model_version_id": "ver_123", "endpoints": ["http://127.0.0.1:7001"], "timeout_ms": 60000 }),
-        )],
+        "solve_wait_result" => vec![
+            HeadlessWorkflowStep::new("service_health", json!({})),
+            HeadlessWorkflowStep::new(
+                "project_create",
+                json!({
+                    "name": "Headless persisted-model study",
+                    "description": "Created by the solve_wait_result template"
+                }),
+            ),
+            HeadlessWorkflowStep::new(
+                "model_create",
+                json!({
+                    "project_id": "{{steps.2.result.project_id}}",
+                    "name": "Axial bar baseline",
+                    "kind": "axial_bar_1d",
+                    "model_schema_version": "kyuubiki.model/v1",
+                    "payload": axial_bar_model_payload()
+                }),
+            ),
+            HeadlessWorkflowStep::new(
+                "solve_and_wait_from_model_version",
+                json!({
+                    "model_version_id": "{{steps.3.result.latest_version_id}}",
+                    "endpoints": "{{steps.1.result.solver_endpoints}}",
+                    "timeout_ms": 60000
+                }),
+            ),
+        ],
         "workflow_submit_monitor" => vec![
             HeadlessWorkflowStep::new(
                 "workflow_submit_catalog",
-                json!({ "workflow_id": "wf_demo", "input_artifacts": {} }),
+                json!({
+                    "workflow_id": "workflow.material-study-envelope-ranking-json",
+                    "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
+                }),
             ),
             HeadlessWorkflowStep::new(
                 "job_wait",
@@ -27,7 +54,10 @@ pub(super) fn build_template_workflow(
         "direct_mesh_pipeline" => vec![
             HeadlessWorkflowStep::new(
                 "direct_mesh_solve",
-                json!({ "study_kind": "truss_3d", "input": { "nodes": [], "elements": [] }, "endpoints": ["http://127.0.0.1:7001"] }),
+                json!({
+                    "study_kind": "axial_bar_1d",
+                    "input": axial_bar_model_payload()
+                }),
             ),
             HeadlessWorkflowStep::new(
                 "job_wait",
@@ -433,10 +463,20 @@ pub(super) fn build_template_workflow(
             ),
             HeadlessWorkflowStep::new("click", json!({ "selector": "[data-run-job]" })),
             HeadlessWorkflowStep::new(
-                "job_wait",
-                json!({ "job_id": "job_123", "interval_ms": 1000, "timeout_ms": 60000 }),
+                "workflow_submit_catalog",
+                json!({
+                    "workflow_id": "workflow.material-study-envelope-ranking-json",
+                    "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
+                }),
             ),
-            HeadlessWorkflowStep::new("result_fetch", json!({ "job_id": "job_123" })),
+            HeadlessWorkflowStep::new(
+                "job_wait",
+                json!({ "job_id": "{{steps.3.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
+            ),
+            HeadlessWorkflowStep::new(
+                "result_fetch",
+                json!({ "job_id": "{{steps.3.result.job_id}}" }),
+            ),
         ],
         _ => vec![],
     };
@@ -462,4 +502,16 @@ fn expand_job_followups(solve_steps: Vec<HeadlessWorkflowStep>) -> Vec<HeadlessW
         ));
     }
     expanded
+}
+
+fn axial_bar_model_payload() -> serde_json::Value {
+    json!({
+        "kind": "axial_bar_1d",
+        "model_schema_version": "kyuubiki.model/v1",
+        "length": 1.0,
+        "area": 0.01,
+        "youngs_modulus_gpa": 210.0,
+        "elements": 4,
+        "tip_force": 1200.0
+    })
 }

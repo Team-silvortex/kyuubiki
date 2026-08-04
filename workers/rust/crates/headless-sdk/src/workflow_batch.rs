@@ -412,7 +412,6 @@ fn missing_required_keys(action: &str, payload: &Value) -> Vec<&'static str> {
             [
                 (!has_study).then_some("study_kind|model_id|model_version_id"),
                 (!has_source).then_some("input|model_payload|model_id|model_version_id"),
-                (!has_present_value(payload, "endpoints")).then_some("endpoints"),
             ]
             .into_iter()
             .flatten()

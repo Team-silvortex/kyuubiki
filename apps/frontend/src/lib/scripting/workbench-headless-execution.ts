@@ -105,7 +105,13 @@ async function runExecutionAction(
   const { headlessResultsClient, projectClient, runtimeClient } = clients;
   if (action === "service_health") {
     const response = await runtimeClient.fetchHealth();
-    return { service: response.service, status: response.status };
+    return {
+      service: response.service,
+      status: response.status,
+      solver_endpoints: (response.solver_agents ?? []).map(
+        (agent) => `${agent.host}:${agent.port}`,
+      ),
+    };
   }
   if (action === "project_create") {
     const response = await projectClient.createProject({
@@ -122,7 +128,11 @@ async function runExecutionAction(
       ...(typeof payload.material === "string" ? { material: payload.material } : {}),
       ...(typeof payload.model_schema_version === "string" ? { model_schema_version: payload.model_schema_version } : {}),
     });
-    return { model_id: response.model.model_id, kind: response.model.kind };
+    return {
+      model_id: response.model.model_id,
+      kind: response.model.kind,
+      latest_version_id: response.model.latest_version_id,
+    };
   }
   if (action === "model_version_create") {
     const response = await projectClient.createModelVersion(String(payload.model_id ?? ""), {

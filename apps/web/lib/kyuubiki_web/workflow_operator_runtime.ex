@@ -143,6 +143,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   def run_transform_operator("transform.first_available", payload, _config), do: {:ok, payload}
 
+  def run_transform_operator(operator_id, payload, nil) when is_map(payload),
+    do: run_transform_operator(operator_id, payload, %{})
+
   def run_transform_operator(operator_id, payload, config) when is_map(payload) do
     case operator_id do
       "transform.merge_summary_pair" ->

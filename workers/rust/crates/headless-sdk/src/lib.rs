@@ -79,6 +79,7 @@ mod plan;
 mod run;
 mod service_executor;
 mod service_executor_artifact;
+mod service_executor_health;
 mod service_executor_library;
 mod service_executor_solve;
 mod surface;

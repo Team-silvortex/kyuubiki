@@ -176,6 +176,35 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
     map.insert("step_index".to_string(), Value::from(step_index as u64));
     map.insert("action".to_string(), Value::from(action.to_string()));
     match action {
+        "service_health" => {
+            map.insert("status".to_string(), Value::from("ok"));
+            map.insert(
+                "solver_endpoints".to_string(),
+                Value::Array(vec![Value::from("127.0.0.1:5001")]),
+            );
+        }
+        "project_create" => {
+            map.insert(
+                "project_id".to_string(),
+                Value::from(format!("project_{step_index:03}")),
+            );
+        }
+        "model_create" => {
+            map.insert(
+                "model_id".to_string(),
+                Value::from(format!("model_{step_index:03}")),
+            );
+            map.insert(
+                "latest_version_id".to_string(),
+                Value::from(format!("version_{step_index:03}")),
+            );
+        }
+        "model_version_create" => {
+            map.insert(
+                "model_version_id".to_string(),
+                Value::from(format!("version_{step_index:03}")),
+            );
+        }
         "workflow_submit_catalog"
         | "workflow_submit_graph"
         | "direct_mesh_solve"

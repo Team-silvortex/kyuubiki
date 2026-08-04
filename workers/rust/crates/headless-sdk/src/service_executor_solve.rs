@@ -1,8 +1,8 @@
 use crate::service_executor::{
-    execute_job_wait, execute_result_fetch, normalize_job_submission_result, request_json,
-    required_path_segment,
+    execute_direct_fem_submit, execute_job_wait, execute_result_fetch,
+    normalize_job_submission_result, request_json, required_path_segment,
 };
-use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
+use crate::{HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 
@@ -12,6 +12,17 @@ pub(crate) fn execute_direct_mesh_solve(
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     let resolved_payload = resolve_direct_mesh_source(base_url, api_token, payload)?;
+    if !has_explicit_solver_endpoints(&resolved_payload)
+        && let Some(action) =
+            find_study_kind(&resolved_payload).and_then(direct_fem_action_for_study_kind)
+    {
+        let model = resolved_payload
+            .get("input")
+            .or_else(|| resolved_payload.get("model_payload"))
+            .cloned()
+            .ok_or_else(|| error("direct_mesh_solve requires input or model_payload"))?;
+        return execute_direct_fem_submit(base_url, api_token, &action, &json!({ "model": model }));
+    }
     let body = direct_mesh_request(&resolved_payload)?;
     let result = request_json(
         base_url,
@@ -33,6 +44,13 @@ pub(crate) fn execute_direct_mesh_solve(
             .insert("endpoint".to_string(), endpoint);
     }
     Ok(outcome(normalized))
+}
+
+fn has_explicit_solver_endpoints(payload: &Value) -> bool {
+    payload
+        .get("endpoints")
+        .and_then(Value::as_array)
+        .is_some_and(|values| !values.is_empty())
 }
 
 fn resolve_direct_mesh_source(
@@ -119,6 +137,24 @@ pub(crate) fn execute_solve_from_model_version(
         .get("version")
         .and_then(Value::as_object)
         .ok_or_else(|| error(format!("could not load model version {model_version_id}")))?;
+    if let Some(action) = version
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(direct_fem_action_for_study_kind)
+    {
+        let model = version.get("payload").cloned().unwrap_or(Value::Null);
+        let mut outcome =
+            execute_direct_fem_submit(base_url, api_token, &action, &json!({ "model": model }))?;
+        outcome
+            .result
+            .as_object_mut()
+            .ok_or_else(|| error("model-version solve returned a non-object result"))?
+            .insert(
+                "model_version_id".to_string(),
+                Value::String(model_version_id.to_string()),
+            );
+        return Ok(outcome);
+    }
     let mut resolved = payload.as_object().cloned().unwrap_or_default();
     resolved.insert(
         "model_version_id".to_string(),
@@ -140,6 +176,14 @@ pub(crate) fn execute_solve_from_model_version(
             Value::String(model_version_id.to_string()),
         );
     Ok(outcome)
+}
+
+fn direct_fem_action_for_study_kind(study_kind: &str) -> Option<String> {
+    let action = match study_kind {
+        "axial_bar_1d" => "solve_bar_1d".to_string(),
+        other => format!("solve_{other}"),
+    };
+    direct_fem_submit_route(&action).is_some().then_some(action)
 }
 
 pub(crate) fn execute_solve_and_wait_from_model_version(

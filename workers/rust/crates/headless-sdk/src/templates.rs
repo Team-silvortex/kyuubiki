@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
     HeadlessTemplateDescriptor {
         id: "solve_wait_result",
-        title: "Solve From Version",
-        description: "Start from a saved model version and go straight to final result.",
+        title: "Persisted Model Solve",
+        description: "Create a persisted axial-bar model version, solve it, and fetch the final result without external fixture IDs.",
         runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
         category: "solver",
         tags: &["solve", "result", "version"],
@@ -18,7 +18,7 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
     HeadlessTemplateDescriptor {
         id: "workflow_submit_monitor",
         title: "Workflow Submit",
-        description: "Submit a workflow job and keep follow-up polling and result fetch explicit.",
+        description: "Submit a built-in catalog workflow and keep follow-up polling and result fetch explicit.",
         runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
         category: "orchestration",
         tags: &["workflow", "job", "polling"],

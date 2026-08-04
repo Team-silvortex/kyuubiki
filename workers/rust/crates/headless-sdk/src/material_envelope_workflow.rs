@@ -43,7 +43,7 @@ pub(crate) fn material_study_envelope_graph_payload() -> Value {
                 "transform.compose_material_study_envelope",
                 ["rows"],
                 ["envelopes"],
-                Value::Null
+                json!({})
             ),
             transform_node(
                 "rank_envelopes",

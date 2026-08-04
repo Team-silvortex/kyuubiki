@@ -117,6 +117,7 @@ fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
             println!("  {}", view.title);
             println!("  {}", view.description);
             println!("  runtime: {}", runtime_style_label(view.runtime_style));
+            println!("  executors: {}", view.compatible_executors.join(", "));
             println!("  tags: {}", view.tags.join(", "));
             println!("  actions: {}", view.actions.join(", "));
         }
@@ -589,6 +590,7 @@ struct TemplateView {
     title: String,
     description: String,
     runtime_style: HeadlessRuntimeStyle,
+    compatible_executors: Vec<String>,
     category: String,
     tags: Vec<String>,
     step_count: usize,
@@ -598,15 +600,25 @@ struct TemplateView {
 
 impl TemplateView {
     fn from_descriptor(template: &HeadlessTemplateDescriptor) -> Self {
+        let actions = template_actions(template.id);
         Self {
             id: template.id.to_string(),
             title: template.title.to_string(),
             description: template.description.to_string(),
             runtime_style: template.runtime_style,
+            compatible_executors: ["mock", "service", "hybrid"]
+                .into_iter()
+                .filter(|executor| {
+                    actions.iter().all(|action| {
+                        kyuubiki_headless_sdk::executor_supports_action(executor, action)
+                    })
+                })
+                .map(str::to_string)
+                .collect(),
             category: template.category.to_string(),
             tags: template.tags.iter().map(|tag| (*tag).to_string()).collect(),
-            step_count: template_actions(template.id).len(),
-            actions: template_actions(template.id),
+            step_count: actions.len(),
+            actions,
             material_report_studies: supported_material_report_study_ids(template.id)
                 .into_iter()
                 .map(str::to_string)

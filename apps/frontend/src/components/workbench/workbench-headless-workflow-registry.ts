@@ -133,11 +133,17 @@ const SERVICE_SUMMARY_OVERRIDES: Record<string, Record<string, string>> = {
 };
 
 const SERVICE_SCHEMA_OVERRIDES: Record<string, Pick<HeadlessActionContract, "inputSchema" | "outputSchema">> = {
-  service_health: { inputSchema: [], outputSchema: [{ key: "status", label: "status" }] },
+  service_health: {
+    inputSchema: [],
+    outputSchema: [
+      { key: "status", label: "status" },
+      { key: "solver_endpoints", label: "solver_endpoints" },
+    ],
+  },
   project_create: { inputSchema: [{ key: "name", label: "name", required: true }, { key: "description", label: "description" }], outputSchema: [{ key: "project_id", label: "project_id" }] },
   project_update: { inputSchema: [{ key: "project_id", label: "project_id", required: true, bindable: true }, { key: "name", label: "name" }, { key: "description", label: "description" }], outputSchema: [{ key: "project_id", label: "project_id" }] },
   project_delete: { inputSchema: [{ key: "project_id", label: "project_id", required: true, bindable: true }], outputSchema: [{ key: "project_id", label: "project_id" }] },
-  model_create: { inputSchema: [{ key: "project_id", label: "project_id", required: true, bindable: true }, { key: "name", label: "name", required: true }, { key: "kind", label: "kind", required: true }, { key: "payload", label: "payload", required: true }], outputSchema: [{ key: "model_id", label: "model_id" }] },
+  model_create: { inputSchema: [{ key: "project_id", label: "project_id", required: true, bindable: true }, { key: "name", label: "name", required: true }, { key: "kind", label: "kind", required: true }, { key: "payload", label: "payload", required: true }], outputSchema: [{ key: "model_id", label: "model_id" }, { key: "latest_version_id", label: "latest_version_id" }] },
   model_version_create: { inputSchema: [{ key: "model_id", label: "model_id", required: true, bindable: true }, { key: "name", label: "name" }, { key: "payload", label: "payload", required: true }], outputSchema: [{ key: "model_version_id", label: "model_version_id" }] },
   workflow_submit_catalog: { inputSchema: [{ key: "workflow_id", label: "workflow_id", required: true }, { key: "input_artifacts", label: "input_artifacts" }], outputSchema: [{ key: "job_id", label: "job_id" }] },
   workflow_submit_graph: { inputSchema: [{ key: "graph", label: "graph", required: true }, { key: "input_artifacts", label: "input_artifacts" }], outputSchema: [{ key: "job_id", label: "job_id" }] },
@@ -202,17 +208,83 @@ export const HEADLESS_ACTIONS: HeadlessActionContract[] = SERVICE_HEADLESS_ACTIO
   },
 ]);
 
+function axialBarModelPayload(): PayloadObject {
+  return {
+    kind: "axial_bar_1d",
+    model_schema_version: "kyuubiki.model/v1",
+    length: 1,
+    area: 0.01,
+    youngs_modulus_gpa: 210,
+    elements: 4,
+    tip_force: 1200,
+  };
+}
+
+function buildPersistedAxialBarSolveSteps(): HeadlessWorkflowTemplate["steps"] {
+  return [
+    { action: "service_health", payload: {} },
+    {
+      action: "project_create",
+      payload: {
+        name: "Headless persisted-model study",
+        description: "Created by the persisted model solve template",
+      },
+    },
+    {
+      action: "model_create",
+      payload: {
+        project_id: "{{steps.2.result.project_id}}",
+        name: "Axial bar baseline",
+        kind: "axial_bar_1d",
+        model_schema_version: "kyuubiki.model/v1",
+        payload: axialBarModelPayload(),
+      },
+    },
+    {
+      action: "solve_and_wait_from_model_version",
+      payload: {
+        model_version_id: "{{steps.3.result.latest_version_id}}",
+        endpoints: "{{steps.1.result.solver_endpoints}}",
+        timeout_ms: 60000,
+      },
+    },
+  ];
+}
+
+function materialEnvelopeInputArtifacts(): PayloadObject {
+  return {
+    material_rows: {
+      rows: [
+        {
+          case_id: "cool_stiff",
+          summaries: {
+            thermal: { max_temperature: 82 },
+            structural: { max_stress: 100 },
+          },
+        },
+        {
+          case_id: "warm_safe",
+          summaries: {
+            thermal: { max_temperature: 90 },
+            structural: { max_stress: 120 },
+          },
+        },
+      ],
+    },
+  };
+}
+
 export const HEADLESS_WORKFLOW_TEMPLATES: HeadlessWorkflowTemplate[] = [
   {
     id: "solve_wait_result",
-    title: { en: "Solve From Version", zh: "版本直解链", ja: "バージョン直解析", es: "Resolver desde version" },
+    title: { en: "Persisted Model Solve", zh: "持久化模型求解", ja: "永続モデル解析", es: "Resolver modelo persistido" },
     description: {
-      en: "Start from a saved model version and go straight to final result.",
-      zh: "从已保存模型版本直接跑到最终结果。",
-      ja: "保存済みモデルバージョンから最終結果まで一直線に進めます。",
-      es: "Parte de una version guardada del modelo y llega al resultado final.",
+      en: "Create a persisted axial-bar version and run it through to the final result.",
+      zh: "创建持久化轴向杆模型版本，并完整运行到最终结果。",
+      ja: "永続化した軸棒モデルのバージョンを作成し、最終結果まで実行します。",
+      es: "Crea una version persistida de una barra axial y ejecutala hasta el resultado final.",
     },
-    steps: [{ action: "solve_and_wait_from_model_version", payload: { model_version_id: "ver_123", endpoints: ["http://127.0.0.1:7001"], timeout_ms: 60000 } }],
+    steps: buildPersistedAxialBarSolveSteps(),
   },
   {
     id: "project_model_solve",
@@ -223,12 +295,7 @@ export const HEADLESS_WORKFLOW_TEMPLATES: HeadlessWorkflowTemplate[] = [
       ja: "プロジェクト/モデル記録を作成し、その保存バージョンから解析します。",
       es: "Crea proyecto/modelo y despues resuelve desde la version guardada.",
     },
-    steps: [
-      { action: "project_create", payload: { name: "Headless Project", description: "service workflow draft" } },
-      { action: "model_create", payload: { project_id: "proj_123", name: "truss-demo", kind: "truss_3d", payload: { nodes: [], elements: [] } } },
-      { action: "model_version_create", payload: { model_id: "model_123", name: "baseline", payload: { nodes: [], elements: [] } } },
-      { action: "solve_and_wait_from_model_version", payload: { model_version_id: "ver_123", endpoints: ["http://127.0.0.1:7001"], timeout_ms: 60000 } },
-    ],
+    steps: buildPersistedAxialBarSolveSteps(),
   },
   {
     id: "workflow_submit_monitor",
@@ -240,24 +307,15 @@ export const HEADLESS_WORKFLOW_TEMPLATES: HeadlessWorkflowTemplate[] = [
       es: "Envia un workflow y deja explicitos los pasos de seguimiento y resultado.",
     },
     steps: [
-      { action: "workflow_submit_catalog", payload: { workflow_id: "wf_demo", input_artifacts: {} } },
-      { action: "job_wait", payload: { job_id: "{{payload.job_id}}", interval_ms: 1000, timeout_ms: 60000 } },
-      { action: "result_fetch", payload: { job_id: "{{payload.job_id}}" } },
-    ],
-  },
-  {
-    id: "graph_submit_monitor",
-    title: { en: "Graph Submit", zh: "图工作流提交链", ja: "グラフ投入チェーン", es: "Cadena de grafo" },
-    description: {
-      en: "Submit an ad hoc graph and keep follow-up polling and result fetch explicit.",
-      zh: "提交临时图工作流，并显式保留轮询和结果抓取步骤。",
-      ja: "アドホックグラフを投入し、その後の待機と結果取得を明示します。",
-      es: "Envia un grafo ad hoc y deja explicitos el sondeo y la captura del resultado.",
-    },
-    steps: [
-      { action: "workflow_submit_graph", payload: { graph: { nodes: [], edges: [] }, input_artifacts: {} } },
-      { action: "job_wait", payload: { job_id: "{{payload.job_id}}", interval_ms: 1000, timeout_ms: 60000 } },
-      { action: "result_fetch", payload: { job_id: "{{payload.job_id}}" } },
+      {
+        action: "workflow_submit_catalog",
+        payload: {
+          workflow_id: "workflow.material-study-envelope-ranking-json",
+          input_artifacts: materialEnvelopeInputArtifacts(),
+        },
+      },
+      { action: "job_wait", payload: { job_id: "{{steps.1.result.job_id}}", interval_ms: 1000, timeout_ms: 60000 } },
+      { action: "result_fetch", payload: { job_id: "{{steps.1.result.job_id}}" } },
     ],
   },
   {
@@ -270,9 +328,17 @@ export const HEADLESS_WORKFLOW_TEMPLATES: HeadlessWorkflowTemplate[] = [
       es: "Parte del payload mesh y mantiene explicito el seguimiento del trabajo.",
     },
     steps: [
-      { action: "direct_mesh_solve", payload: { study_kind: "truss_3d", input: { nodes: [], elements: [] }, endpoints: ["http://127.0.0.1:7001"] } },
-      { action: "job_wait", payload: { job_id: "{{payload.job_id}}", interval_ms: 1000, timeout_ms: 60000 } },
-      { action: "result_fetch", payload: { job_id: "{{payload.job_id}}" } },
+      { action: "service_health", payload: {} },
+      {
+        action: "direct_mesh_solve",
+        payload: {
+          study_kind: "axial_bar_1d",
+          input: axialBarModelPayload(),
+          endpoints: "{{steps.1.result.solver_endpoints}}",
+        },
+      },
+      { action: "job_wait", payload: { job_id: "{{steps.2.result.job_id}}", interval_ms: 1000, timeout_ms: 60000 } },
+      { action: "result_fetch", payload: { job_id: "{{steps.2.result.job_id}}" } },
     ],
   },
 ];
