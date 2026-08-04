@@ -197,6 +197,157 @@ pub fn build_heat_spreader_screening_report_with_optimization(
     })
 }
 
+pub fn build_heat_spreader_materialized_candidate_steps(
+    plan: &Value,
+) -> Result<Vec<HeadlessWorkflowStep>, String> {
+    materialized_heat_spreader_candidates(plan)?
+        .into_iter()
+        .map(|entry| {
+            let mut research = build_heat_spreader_research_metadata(&entry.candidate);
+            research["candidate_id"] = json!(entry.candidate_id.clone());
+            research["candidate_label"] = json!(entry.candidate_label.clone());
+            research["source_candidate_id"] = json!(entry.source_candidate_id.clone());
+            research["source_draft_id"] = json!(entry.source_draft_id.clone());
+            research["strategy"] = json!(entry.strategy.clone());
+            research["materialization_delta"] = json!({
+                "thermal_conductivity_scale": 1.05,
+                "qualification_claim_allowed": false
+            });
+            let mut model = heat_spreader_quad_model(&entry.candidate);
+            model["elements"][0]["id"] = json!(format!("spread_{}", entry.candidate_id));
+            Ok(HeadlessWorkflowStep::new(
+                "solve_heat_plane_quad_2d",
+                json!({ "research": research, "model": model }),
+            ))
+        })
+        .collect()
+}
+
+pub fn build_heat_spreader_materialized_candidate_report(
+    plan: &Value,
+    result_payloads: &[Value],
+) -> Result<MaterialResearchReport, String> {
+    let entries = materialized_heat_spreader_candidates(plan)?;
+    if entries.len() != result_payloads.len() {
+        return Err(format!(
+            "materialized heat spreader report expects {} result payloads, received {}",
+            entries.len(),
+            result_payloads.len()
+        ));
+    }
+    let mut rows = entries
+        .iter()
+        .zip(result_payloads)
+        .map(|(entry, payload)| {
+            let mut row = build_candidate_report(&entry.candidate, payload);
+            row.candidate_id = entry.candidate_id.clone();
+            row.candidate_label = entry.candidate_label.clone();
+            row
+        })
+        .collect::<Vec<_>>();
+    let optimization = heat_spreader_optimization_profile();
+    apply_screening_scores(&mut rows, &optimization);
+    rows.sort_by(|left, right| {
+        right
+            .score
+            .partial_cmp(&left.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    for (index, row) in rows.iter_mut().enumerate() {
+        row.rank = index + 1;
+    }
+    let warnings = rows
+        .iter()
+        .flat_map(|row| {
+            row.missing_metrics
+                .iter()
+                .map(|metric| format!("{} is missing {metric}", row.candidate_id))
+        })
+        .collect();
+    let material_card_refs = entries
+        .iter()
+        .map(|entry| {
+            let mut reference = material_card_ref(&entry.candidate);
+            reference.candidate_id = entry.candidate_id.clone();
+            reference
+        })
+        .collect();
+    Ok(MaterialResearchReport {
+        schema_version: "kyuubiki.materialized-heat-spreader-report/v1".to_string(),
+        study: "material.heat_spreader_screening.v1".to_string(),
+        objective: "rank reviewed heat-spreader neighbor candidates after solver rerun".to_string(),
+        optimization,
+        reliability: build_heat_spreader_reliability_envelope(&rows),
+        metric_specs: heat_spreader_screening_metric_specs(),
+        material_card_refs,
+        winner_candidate_id: rows.first().map(|row| row.candidate_id.clone()),
+        candidates: rows,
+        warnings,
+    })
+}
+
+struct MaterializedHeatSpreaderCandidate {
+    candidate_id: String,
+    candidate_label: String,
+    source_candidate_id: String,
+    source_draft_id: String,
+    strategy: String,
+    candidate: MaterialResearchCandidate,
+}
+
+fn materialized_heat_spreader_candidates(
+    plan: &Value,
+) -> Result<Vec<MaterializedHeatSpreaderCandidate>, String> {
+    let specs = plan
+        .get("materialized_candidates")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "materialization plan is missing materialized_candidates".to_string())?;
+    specs
+        .iter()
+        .map(|spec| {
+            let status = materialized_str(spec, "status")?;
+            if status != "requires_solver_rerun" {
+                return Err(format!(
+                    "materialized heat spreader candidate has incompatible status: {status}"
+                ));
+            }
+            let study = materialized_str(spec, "study")?;
+            if study != "material_heat_spreader_screening" {
+                return Err(format!("materialized candidate has incompatible study: {study}"));
+            }
+            let source_candidate_id = materialized_str(spec, "source_candidate_id")?;
+            let mut candidate = heat_spreader_screening_candidates()
+                .into_iter()
+                .find(|candidate| candidate.id == source_candidate_id)
+                .ok_or_else(|| {
+                    format!("materialized heat spreader references unknown source: {source_candidate_id}")
+                })?;
+            let strategy = materialized_str(spec, "strategy")?;
+            if strategy != "generate_conservative_neighbor" {
+                return Err(format!("unsupported heat spreader materialization strategy: {strategy}"));
+            }
+            candidate.thermal_conductivity_w_mk *= 1.05;
+            let candidate_id = materialized_str(spec, "candidate_id")?.to_string();
+            Ok(MaterializedHeatSpreaderCandidate {
+                candidate_label: format!("{} / conservative conductivity neighbor", candidate.label),
+                candidate_id,
+                source_candidate_id: source_candidate_id.to_string(),
+                source_draft_id: materialized_str(spec, "source_draft_id")?.to_string(),
+                strategy: strategy.to_string(),
+                candidate,
+            })
+        })
+        .collect()
+}
+
+fn materialized_str<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|text| !text.trim().is_empty())
+        .ok_or_else(|| format!("materialized heat spreader candidate is missing {key}"))
+}
+
 fn build_heat_spreader_research_metadata(candidate: &MaterialResearchCandidate) -> Value {
     json!({
         "study": "material.heat_spreader_screening.v1",

@@ -1,7 +1,9 @@
 use kyuubiki_headless_sdk::{
-    apply_material_candidate_review_decision, build_composite_materialized_candidate_report,
-    build_composite_materialized_candidate_steps, build_material_candidate_materialization_plan,
+    MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION, apply_material_candidate_review_decision,
+    build_material_candidate_materialization_plan,
     build_material_candidate_materialization_request, build_material_exploration_next_round_plan,
+    build_materialized_candidate_report, build_materialized_candidate_steps,
+    materialized_candidate_study,
 };
 use serde_json::Value;
 
@@ -38,30 +40,35 @@ pub(crate) fn approve_review_template(
 
 pub(crate) fn review_decision_template(plan_path: &str) -> Result<Value, String> {
     let execution_plan = read_next_round_execution_plan(plan_path)?;
+    let source_schema_version = execution_plan
+        .get("schema_version")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    if source_schema_version == MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION {
+        let review_policy = serde_json::json!({
+            "schema_version": "kyuubiki.material-review-policy/v1",
+            "required": false,
+            "state": "not_applicable",
+            "reason": "chain-next output is an execution summary, not a next-round execution plan"
+        });
+        return Ok(not_applicable_review_template(
+            source_schema_version,
+            review_policy,
+            "run --plan-next on the final exploration artifact before requesting a review template",
+            "plan_next",
+        ));
+    }
     let review_policy = execution_plan
         .get("review_policy")
         .cloned()
         .unwrap_or(Value::Null);
     if review_policy.get("required").and_then(Value::as_bool) == Some(false) {
-        return Ok(serde_json::json!({
-            "schema_version": "kyuubiki.material-review-template-export/v1",
-            "source_schema_version": execution_plan
-                .get("schema_version")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown"),
-            "status": "not_applicable",
-            "review_policy": review_policy,
-            "batch_id": Value::Null,
-            "draft_ids": [],
-            "review_checklist": [],
-            "review_status": Value::Null,
-            "review_decision_template": Value::Null,
-            "review_decision_contract": Value::Null,
-            "notes": [
-                "this plan does not require candidate review or materialization",
-                "continue with the built-in next-round execution path"
-            ]
-        }));
+        return Ok(not_applicable_review_template(
+            source_schema_version,
+            review_policy,
+            "continue with the built-in next-round execution path",
+            "run_next",
+        ));
     }
     let batch = first_review_batch(&execution_plan)?;
     Ok(serde_json::json!({
@@ -92,6 +99,32 @@ pub(crate) fn review_decision_template(plan_path: &str) -> Result<Value, String>
             "this export does not approve or materialize candidates by itself"
         ]
     }))
+}
+
+fn not_applicable_review_template(
+    source_schema_version: &str,
+    review_policy: Value,
+    note: &str,
+    next_action: &str,
+) -> Value {
+    serde_json::json!({
+        "schema_version": "kyuubiki.material-review-template-export/v1",
+        "source_schema_version": source_schema_version,
+        "status": "not_applicable",
+        "terminal": true,
+        "review_policy": review_policy,
+        "batch_id": Value::Null,
+        "draft_ids": [],
+        "review_checklist": [],
+        "review_status": Value::Null,
+        "review_decision_template": Value::Null,
+        "review_decision_contract": Value::Null,
+        "next_action": next_action,
+        "notes": [
+            "this artifact does not require candidate review or materialization",
+            note
+        ]
+    })
 }
 
 pub(crate) fn materialize_reviewed_candidates(
@@ -126,12 +159,13 @@ pub(crate) fn run_materialized_candidates(path: &str) -> Result<Value, String> {
     ensure_materialization_schema(&plan)?;
     ensure_materialization_ready(&plan)?;
     ensure_materialized_candidates(&plan)?;
-    let steps = build_composite_materialized_candidate_steps(&plan)?;
+    let study = materialized_candidate_study(&plan)?.to_string();
+    let steps = build_materialized_candidate_steps(&plan)?;
     let result_payloads = steps
         .iter()
         .map(crate::run_solve_step)
         .collect::<Result<Vec<_>, _>>()?;
-    let report = build_composite_materialized_candidate_report(&result_payloads)?;
+    let report = build_materialized_candidate_report(&plan, &result_payloads)?;
     let next_round = build_material_exploration_next_round_plan(&report, 1);
     Ok(serde_json::json!({
         "schema_version": "kyuubiki.materialized-candidate-rerun/v1",
@@ -144,7 +178,7 @@ pub(crate) fn run_materialized_candidates(path: &str) -> Result<Value, String> {
             .and_then(Value::as_str)
             .unwrap_or("unknown"),
         "mode": "local_solver_materialized_rerun",
-        "study": "material_composite_thermo_electric_panel",
+        "study": study,
         "step_count": steps.len(),
         "materialized_candidate_ids": materialized_candidate_ids(&plan),
         "result_payloads": result_payloads,

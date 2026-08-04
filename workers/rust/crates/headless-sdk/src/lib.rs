@@ -13,6 +13,9 @@ mod material_candidate_drafts;
 mod material_candidate_materialization;
 #[cfg(test)]
 mod material_candidate_materialization_tests;
+mod material_candidate_rerun;
+#[cfg(test)]
+mod material_candidate_rerun_tests;
 mod material_candidate_review;
 mod material_candidate_review_batches;
 mod material_card_refs;
@@ -119,6 +122,10 @@ pub use executor::{
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
 pub use material_candidate_materialization::build_material_candidate_materialization_plan;
+pub use material_candidate_rerun::{
+    build_materialized_candidate_report, build_materialized_candidate_steps,
+    materialized_candidate_study,
+};
 pub use material_candidate_review::{
     apply_material_candidate_review_decision, build_material_candidate_materialization_request,
 };
@@ -253,7 +260,8 @@ pub use material_reports::{
 };
 pub use material_research::{
     MaterialCardReference, MaterialResearchCandidateReport, MaterialResearchMetricSpec,
-    MaterialResearchReport, build_heat_spreader_screening_report,
+    MaterialResearchReport, build_heat_spreader_materialized_candidate_report,
+    build_heat_spreader_materialized_candidate_steps, build_heat_spreader_screening_report,
     build_heat_spreader_screening_report_with_optimization, build_heat_spreader_screening_steps,
     heat_spreader_screening_metric_specs,
 };

@@ -9,6 +9,9 @@ mod flags;
 #[path = "kyuubiki-material-explore/materialization.rs"]
 mod materialization;
 #[cfg(test)]
+#[path = "kyuubiki-material-explore/materialization_boundary_tests.rs"]
+mod materialization_boundary_tests;
+#[cfg(test)]
 #[path = "kyuubiki-material-explore/materialization_tests.rs"]
 mod materialization_tests;
 #[cfg(test)]

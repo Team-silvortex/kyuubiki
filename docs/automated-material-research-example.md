@@ -346,7 +346,15 @@ fingerprints. Replaying the built-in candidates is reported as
 `builtin_candidate_replay`; it is runnable, but it is not convergence evidence.
 Exporting a review template remains safe for either review state: plans without
 drafts return `status: not_applicable`, an empty draft list, and a successful
-exit. Approval of that no-op result remains blocked.
+exit. This is a legal terminal state for the review branch, not an execution
+failure. Approval of that no-op result remains blocked.
+
+`--review-template` accepts the next-round execution plan produced by
+`--plan-next`; it does not consume the summary produced by `--chain-next`.
+Passing a chain artifact returns a successful `status: not_applicable` envelope
+with `terminal: true` and `next_action: plan_next`. To continue from a chain,
+extract its final `runs[-1]` exploration, run `--plan-next` for that artifact,
+and then request the review template from the resulting execution plan.
 
 The next-round plan also carries `optimization_objectives`, which records the
 optimization mode, incumbent winner, primary metric IDs, and violated quality
