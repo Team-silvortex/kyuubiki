@@ -104,6 +104,16 @@ impl Flags {
             "--execute requires an explicit --executor; use mock only for previews or service for real execution"
                 .to_string()
         })?;
+        if !matches!(executor, "mock" | "service" | "hybrid") {
+            return Err(if executor == "direct-mesh" {
+                "unsupported executor \"direct-mesh\"; direct_mesh_solve is a service action, so use --executor service (or hybrid for workflows that also contain browser actions)"
+                    .to_string()
+            } else {
+                format!(
+                    "unsupported executor \"{executor}\"; available executors: mock, service, hybrid"
+                )
+            });
+        }
         let posture = self.execution_posture.as_deref().unwrap_or("preview");
         match posture {
             "preview" => {}
@@ -199,5 +209,16 @@ mod tests {
         ]);
 
         assert_eq!(preview.selected_executor().expect("preview"), Some("mock"));
+    }
+
+    #[test]
+    fn direct_mesh_is_reported_as_a_service_route_not_an_executor() {
+        let direct_mesh = flags(&["workflow.json", "--execute", "--executor", "direct-mesh"]);
+
+        let error = direct_mesh
+            .selected_executor()
+            .expect_err("direct-mesh executor alias should fail");
+        assert!(error.contains("direct_mesh_solve is a service action"));
+        assert!(error.contains("--executor service"));
     }
 }

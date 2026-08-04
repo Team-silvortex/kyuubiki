@@ -3,12 +3,14 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
 use crate::service_executor_health::with_discovered_solver_endpoints;
+use crate::service_executor_http::{
+    ARTIFACT_IO_TIMEOUT, REQUEST_IO_TIMEOUT, connect_service_stream, decode_http_response_body,
+};
 use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
@@ -214,11 +216,8 @@ pub(crate) fn execute_direct_fem_submit(
     let route = direct_fem_submit_route(action).ok_or_else(|| HeadlessExecutorError {
         message: format!("unsupported FEM solve action: {action}"),
     })?;
-    let request_body = payload
-        .get("model")
-        .cloned()
-        .unwrap_or_else(|| payload.clone());
-    let request_body = prepare_direct_fem_request_body(base_url, api_token, &request_body)?;
+    let model = payload.get("model").unwrap_or(payload);
+    let request_body = prepare_direct_fem_request_body(base_url, api_token, model)?;
     let result = request_json(base_url, api_token, "POST", route, Some(request_body))?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
@@ -465,15 +464,12 @@ pub(crate) fn request_json(
             message: error.to_string(),
         })?;
     validate_inline_json_size(&request_path, body_text.as_deref().map_or(0, str::len))?;
-    let mut stream =
-        TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
-            HeadlessExecutorError {
-                message: format!(
-                    "failed to connect to {}:{}: {error}",
-                    endpoint.host, endpoint.port
-                ),
-            }
-        })?;
+    let mut stream = connect_service_stream(
+        &endpoint.host,
+        endpoint.port,
+        REQUEST_IO_TIMEOUT,
+        "service request",
+    )?;
     let request = build_request(
         method,
         &endpoint.host,
@@ -484,13 +480,13 @@ pub(crate) fn request_json(
     stream
         .write_all(request.as_bytes())
         .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to write request: {error}"),
+            message: format!("failed to write service request within timeout: {error}"),
         })?;
     let mut response = String::new();
     stream
         .read_to_string(&mut response)
         .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to read response: {error}"),
+            message: format!("failed to read service response within timeout: {error}"),
         })?;
     parse_json_response(&response, path)
 }
@@ -508,15 +504,12 @@ pub(crate) fn request_bytes(
     let api_token = sanitize_header_value(api_token, "api token")?;
     let content_type = sanitize_header_value(Some(content_type), "content type")?
         .expect("content type is present");
-    let mut stream =
-        TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
-            HeadlessExecutorError {
-                message: format!(
-                    "failed to connect to {}:{}: {error}",
-                    endpoint.host, endpoint.port
-                ),
-            }
-        })?;
+    let mut stream = connect_service_stream(
+        &endpoint.host,
+        endpoint.port,
+        ARTIFACT_IO_TIMEOUT,
+        "model artifact upload",
+    )?;
     let mut head = format!(
         "{method} {request_path} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n",
         endpoint.host,
@@ -652,6 +645,7 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
         .ok_or_else(|| HeadlessExecutorError {
             message: format!("invalid HTTP response for {path}"),
         })?;
+    let body = decode_http_response_body(head, body, path)?;
     let status_line = head.lines().next().unwrap_or_default();
     let status_code = status_line
         .split_whitespace()
@@ -659,7 +653,7 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(0);
     if !(200..300).contains(&status_code) {
-        let payload = parse_error_payload(body);
+        let payload = parse_error_payload(&body);
         return Err(HeadlessExecutorError {
             message: service_error_message(status_code, path, &payload),
         });
@@ -667,7 +661,7 @@ fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExec
     if body.trim().is_empty() {
         return Ok(Value::Null);
     }
-    serde_json::from_str(body).map_err(|error| HeadlessExecutorError {
+    serde_json::from_str(&body).map_err(|error| HeadlessExecutorError {
         message: format!("failed to parse JSON response for {path}: {error}"),
     })
 }
@@ -682,6 +676,11 @@ fn parse_error_payload(body: &str) -> Value {
 }
 
 fn service_error_message(status_code: u16, path: &str, payload: &Value) -> String {
+    if path == "/api/v1/model-artifacts" {
+        return format!(
+            "model artifact upload failed {status_code}: {payload}; connect headless directly to the runtime control-plane endpoint (default http://127.0.0.1:4000), not a frontend proxy with a smaller body limit"
+        );
+    }
     if status_code == 404 {
         return format!("service action endpoint not deployed (404): {path}: {payload}");
     }

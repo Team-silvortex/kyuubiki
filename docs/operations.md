@@ -98,13 +98,17 @@ The orchestrator watchdog protects long-running jobs.
 The main knobs cover:
 
 - scan interval
-- stale-job timeout
-- hard job timeout
+- stale active-job heartbeat timeout
+- queued dispatch timeout
+- hard active-job timeout
 - agent connect timeout
 - agent receive timeout
 
-The concrete variable names remain the `KYUUBIKI_WATCHDOG_*` and
-`KYUUBIKI_AGENT_*` controls already used by the runtime.
+The concrete watchdog variables are `KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS`,
+`KYUUBIKI_WATCHDOG_STALE_JOB_MS`, `KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS`, and
+`KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS`. Queued jobs are not judged by the active
+heartbeat budget. Active jobs remain live while the Agent sends heartbeats,
+including long result serialization and artifact upload phases.
 
 ## Security controls
 

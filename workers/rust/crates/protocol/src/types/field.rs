@@ -161,6 +161,7 @@ pub struct SolveAdvectionDiffusionBar1dRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub y: f64,
@@ -173,6 +174,7 @@ pub struct HeatPlaneNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneTriangleElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -279,6 +281,7 @@ pub struct SolveMagnetostaticPlaneQuad2dRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneQuadElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,

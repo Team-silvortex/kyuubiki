@@ -180,6 +180,38 @@ All three SDKs expose the same conceptual split:
 - `solve_plane_triangle_2d`
 - `cancel_job`
 
+### Large model and result artifacts
+
+Large service submissions do not expand a complete FEM model into the Elixir
+process or one solver RPC frame. The control plane streams the model into its
+SHA-256 store and sends a `kyuubiki.model-artifact-ref/v1` reference to the
+selected Rust Agent. The Agent verifies the declared byte length and digest
+before decoding it.
+
+When a solve was sourced from a model artifact, its result follows the same
+bounded transport rule. The Agent serializes directly to a temporary file,
+uploads `application/vnd.kyuubiki.result+json`, and returns a compact
+`kyuubiki.solver-result-reference/v1`. Job storage and `result_fetch` retain
+that reference instead of copying a potentially multi-gigabyte result into
+RPC, SQL JSON, or the Headless run report. Consumers can inspect metadata or
+download immutable content through:
+
+- `POST /api/v1/model-artifacts`
+- `GET /api/v1/model-artifacts/:artifact_id`
+- `GET /api/v1/model-artifacts/:artifact_id/content` for an authenticated Agent
+- `POST /api/v1/result-artifacts` for an authenticated Agent
+- `GET /api/v1/result-artifacts/:artifact_id`
+- `GET /api/v1/result-artifacts/:artifact_id/content`
+
+The active limits and storage namespaces are published by `GET /api/health`.
+`KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES`, `KYUUBIKI_RESULT_ARTIFACT_MAX_BYTES`, and
+`KYUUBIKI_ARTIFACT_TEMP_RETENTION_SECONDS` keep the disk policy explicit.
+
+Development source launches use debug Agents by default. Qualification runs
+must set `KYUUBIKI_AGENT_BUILD_PROFILE=release`; installed runtime payloads are
+already release binaries. This distinction is material at million-node scale
+and must be recorded with benchmark evidence.
+
 ## Intended AI use
 
 For AI agents, the recommended flow is:

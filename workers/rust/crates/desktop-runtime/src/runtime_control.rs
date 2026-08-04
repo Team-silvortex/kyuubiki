@@ -279,6 +279,8 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
             });
     }
     apply_mode_env(&mut env, &mode)?;
+    env.entry("KYUUBIKI_ORCHESTRATOR_URL".to_string())
+        .or_insert_with(|| "http://127.0.0.1:4000".to_string());
     let endpoints = agent_endpoints(&env);
     env.insert("KYUUBIKI_AGENT_ENDPOINTS".to_string(), endpoints.clone());
     env.entry("KYUUBIKI_AGENT_DISCOVERY".to_string())
@@ -311,17 +313,7 @@ fn start_agent(
     let (command, args, cwd) = if paths.is_development() {
         (
             resolve_development_command(&paths.root, "cargo")?,
-            vec![
-                "run".into(),
-                "-p".into(),
-                "kyuubiki-cli".into(),
-                "--bin".into(),
-                "kyuubiki-cli".into(),
-                "--".into(),
-                "agent".into(),
-                "--port".into(),
-                port.to_string(),
-            ],
+            development_agent_args(port, env),
             paths.root.join("workers/rust"),
         )
     } else {
@@ -340,6 +332,26 @@ fn start_agent(
     };
     spawn_managed(process, Duration::from_secs(60))?;
     Ok(format!("started Rust FEM agent at tcp://127.0.0.1:{port}"))
+}
+
+fn development_agent_args(port: u16, env: &HashMap<String, String>) -> Vec<String> {
+    let mut args = vec!["run".into()];
+    if env.get("KYUUBIKI_AGENT_BUILD_PROFILE").map(String::as_str) == Some("release") {
+        args.push("--release".into());
+    }
+    args.extend([
+        "-p".into(),
+        "kyuubiki-cli".into(),
+        "--bin".into(),
+        "kyuubiki-cli".into(),
+    ]);
+    args.extend([
+        "--".into(),
+        "agent".into(),
+        "--port".into(),
+        port.to_string(),
+    ]);
+    args
 }
 
 fn start_orchestrator(

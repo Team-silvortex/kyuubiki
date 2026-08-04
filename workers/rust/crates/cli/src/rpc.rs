@@ -46,6 +46,7 @@ use kyuubiki_solver::{
     solve_truss_3d,
 };
 
+use crate::agent_artifact::decode_solver_params;
 use crate::agent_state::{
     agent_descriptor_payload, build_progress_frames, extract_job_id, register_cancel,
     take_cancelled,
@@ -589,7 +590,7 @@ fn run_solver<Request, ResultValue, NodeCount, Solver>(
     solver: Solver,
 ) -> AgentReply
 where
-    Request: DeserializeOwned,
+    Request: DeserializeOwned + 'static,
     ResultValue: Serialize,
     NodeCount: FnOnce(&Request) -> usize,
     Solver: FnOnce(&Request) -> Result<ResultValue, String>,
@@ -597,11 +598,20 @@ where
     let request_id = request.id;
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = agent_watchdog::begin_execution(request_id.clone(), maybe_job_id.clone(), method);
+    let externalize_result = request.params.get("model_artifact_ref").is_some();
+    let guard =
+        agent_watchdog::begin_execution(request_id.clone(), maybe_job_id.clone(), method.clone());
 
-    let params = match serde_json::from_value::<Request>(request.params) {
+    let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+        writer.clone().map(|shared_writer| {
+            HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
+        })
+    });
+
+    let params = match decode_solver_params::<Request>(request.params) {
         Ok(params) => params,
         Err(error) => {
+            stop_heartbeat(heartbeat);
             let report = agent_watchdog::fail_execution(guard, "invalid_params", error.to_string());
             return AgentReply::Stream(
                 Vec::new(),
@@ -614,12 +624,6 @@ where
             );
         }
     };
-
-    let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
-        writer.clone().map(|shared_writer| {
-            HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
-        })
-    });
 
     match solver(&params) {
         Ok(result) => {
@@ -640,17 +644,36 @@ where
                 }
             }
 
+            let encoded_result = if externalize_result {
+                crate::agent_result_artifact::upload(&method, &result)
+            } else {
+                serde_json::to_value(result)
+                    .map_err(|error| format!("failed to serialize {serialize_label}: {error}"))
+            };
+            let encoded_result = match encoded_result {
+                Ok(result) => result,
+                Err(error) => {
+                    stop_heartbeat(heartbeat);
+                    let report =
+                        agent_watchdog::fail_execution(guard, "result_transport_failed", error);
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error_with_details(
+                            request_id,
+                            "result_transport_failed",
+                            report.message.clone(),
+                            serde_json::to_value(report).expect("failure report should serialize"),
+                        ),
+                    );
+                }
+            };
             let progress_frames =
                 build_progress_frames(model_name, &request_id, node_count(&params));
             stop_heartbeat(heartbeat);
             agent_watchdog::complete_execution(guard);
             AgentReply::Stream(
                 progress_frames,
-                RpcResponse::success(
-                    request_id,
-                    serde_json::to_value(result)
-                        .unwrap_or_else(|_| panic!("{serialize_label} should serialize")),
-                ),
+                RpcResponse::success(request_id, encoded_result),
             )
         }
         Err(error) => {

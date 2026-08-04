@@ -35,6 +35,20 @@ defmodule KyuubikiWeb.Api.ModelArtifactTransportTest do
     assert metadata.status == 200
     assert Jason.decode!(metadata.resp_body)["artifact"]["artifact_id"] == artifact_id
 
+    content =
+      :get
+      |> conn("/api/v1/model-artifacts/#{artifact_id}/content")
+      |> put_req_header("x-kyuubiki-cluster-ts", System.system_time(:millisecond) |> to_string())
+      |> put_req_header("x-kyuubiki-cluster-nonce", "artifact-content-test")
+      |> Router.call(@opts)
+
+    assert content.status == 200
+    assert content.resp_body == encoded_model
+    assert get_resp_header(content, "x-kyuubiki-sha256") == [artifact_id]
+
+    assert {:ok, %{"model_artifact_ref" => ^artifact}} =
+             ModelArtifactStore.prepare_agent_params(%{"model_artifact_ref" => artifact})
+
     assert {:ok, resolved} =
              ModelArtifactStore.resolve_model_params(%{
                "model_artifact_ref" => artifact,

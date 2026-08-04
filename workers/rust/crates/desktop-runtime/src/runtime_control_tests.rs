@@ -1,5 +1,6 @@
 use super::{
-    agent_ports, apply_mode_env, runtime_env, service_start, service_status, service_stop,
+    agent_ports, apply_mode_env, development_agent_args, runtime_env, service_start,
+    service_status, service_stop,
 };
 use crate::runtime_layout::resolve_development_command;
 use crate::{ServiceMode, workspace_root};
@@ -27,6 +28,18 @@ fn parses_default_agent_endpoints() {
     let root = workspace_root();
     let env = runtime_env(&root);
     assert!(!agent_ports(&root, &env).is_empty());
+}
+
+#[test]
+fn release_agent_profile_is_explicit() {
+    let env = [(
+        "KYUUBIKI_AGENT_BUILD_PROFILE".to_string(),
+        "release".to_string(),
+    )]
+    .into();
+    let args = development_agent_args(5002, &env);
+    assert!(args.iter().any(|arg| arg == "--release"));
+    assert_eq!(args.last().map(String::as_str), Some("5002"));
 }
 
 #[test]

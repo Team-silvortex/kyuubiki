@@ -221,9 +221,20 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             .ok_or_else(|| "internal error: execution selected without an executor".to_string())?;
         let compatibility_issues = collect_executor_compatibility_issues(&batch, executor_name);
         if !compatibility_issues.is_empty() {
+            let compatible = ["mock", "service", "hybrid"]
+                .into_iter()
+                .filter(|candidate| {
+                    collect_executor_compatibility_issues(&batch, candidate).is_empty()
+                })
+                .collect::<Vec<_>>();
             return Err(format!(
-                "executor compatibility check failed:\n{}",
-                compatibility_issues.join("\n")
+                "executor compatibility check failed:\n{}\ncompatible executors: {}",
+                compatibility_issues.join("\n"),
+                if compatible.is_empty() {
+                    "none".to_string()
+                } else {
+                    compatible.join(", ")
+                }
             ));
         }
         match executor_name {

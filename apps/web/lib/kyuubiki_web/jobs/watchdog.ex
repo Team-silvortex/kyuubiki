@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   alias KyuubikiWeb.Playground.AgentRegistry
 
   @active_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
+  @stale_statuses [:preprocessing, :partitioning, :solving, :postprocessing]
   @state_rank %{"unknown" => 0, "healthy" => 1, "watch" => 2, "critical" => 3}
 
   def start_link(_opts) do
@@ -31,6 +32,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     %{
       scan_interval_ms: state.scan_interval_ms,
       stale_job_ms: state.stale_job_ms,
+      queue_timeout_ms: state.queue_timeout_ms,
       job_timeout_ms: state.job_timeout_ms,
       active_jobs: Enum.count(jobs, &(&1.status in @active_statuses)),
       stalled_jobs:
@@ -77,7 +79,8 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     %{
       scan_interval_ms: Keyword.get(env, :scan_interval_ms, 5_000),
       stale_job_ms: Keyword.get(env, :stale_job_ms, 30_000),
-      job_timeout_ms: Keyword.get(env, :job_timeout_ms, 120_000),
+      queue_timeout_ms: Keyword.get(env, :queue_timeout_ms, 120_000),
+      job_timeout_ms: Keyword.get(env, :job_timeout_ms, 600_000),
       orchestra_warn_active_jobs: Keyword.get(env, :orchestra_warn_active_jobs, 25),
       orchestra_critical_active_jobs: Keyword.get(env, :orchestra_critical_active_jobs, 100),
       operator_warn_active_jobs: Keyword.get(env, :operator_warn_active_jobs, 8),
@@ -100,11 +103,16 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
         job.status not in @active_statuses ->
           acc
 
-        older_than?(job.created_at, now, state.job_timeout_ms) ->
+        job.status == :queued and older_than?(job.created_at, now, state.queue_timeout_ms) ->
+          mark_failed(job, timeout_message(state.queue_timeout_ms))
+          %{acc | timed_out: acc.timed_out + 1}
+
+        job.status != :queued and older_than?(job.created_at, now, state.job_timeout_ms) ->
           mark_failed(job, timeout_message(state.job_timeout_ms))
           %{acc | timed_out: acc.timed_out + 1}
 
-        older_than?(job.updated_at, now, state.stale_job_ms) ->
+        job.status in @stale_statuses and
+            older_than?(job.updated_at, now, state.stale_job_ms) ->
           mark_failed(job, stall_message(state.stale_job_ms))
           %{acc | stalled: acc.stalled + 1}
 
@@ -133,6 +141,12 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
 
   defp older_than?(_, _, _), do: false
 
+  defp job_timed_out?(%{status: :queued, created_at: created_at}, now, state),
+    do: older_than?(created_at, now, state.queue_timeout_ms)
+
+  defp job_timed_out?(%{created_at: created_at}, now, state),
+    do: older_than?(created_at, now, state.job_timeout_ms)
+
   defp summarize_orchestra_load(jobs, state) do
     now = DateTime.utc_now()
     active_jobs = Enum.filter(jobs, &(&1.status in @active_statuses))
@@ -140,8 +154,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     stale_active_jobs =
       Enum.count(active_jobs, &older_than?(&1.updated_at, now, state.stale_job_ms))
 
-    timed_out_active_jobs =
-      Enum.count(active_jobs, &older_than?(&1.created_at, now, state.job_timeout_ms))
+    timed_out_active_jobs = Enum.count(active_jobs, &job_timed_out?(&1, now, state))
 
     status =
       cond do

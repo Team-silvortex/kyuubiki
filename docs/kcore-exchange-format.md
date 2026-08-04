@@ -209,3 +209,10 @@ entries, or trust behavior require `kyuubiki.kcore/v2` and a new format version.
 
 `.kcore` does not replace workflow datasets, TaskIR, or research bundles. It is
 the exchange envelope that carries those contracts and their payloads together.
+
+The Orchestra model/result artifact stores are live transport and retention
+facilities, not another exchange format. Their SHA-256 references can be bound
+directly to `.kcore` export artifacts: export resolves the immutable bytes,
+verifies the declared digest and length, then embeds them under `objects/`.
+This keeps million-node execution bounded during research while `.kcore`
+remains the portable, self-contained handoff artifact.

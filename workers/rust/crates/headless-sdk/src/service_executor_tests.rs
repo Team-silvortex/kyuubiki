@@ -38,6 +38,14 @@ fn rejects_oversized_inline_json_before_socket_submission() {
 }
 
 #[test]
+fn large_artifact_errors_point_away_from_frontend_proxies() {
+    let message = service_error_message(500, "/api/v1/model-artifacts", &json!("truncated"));
+
+    assert!(message.contains("runtime control-plane endpoint"));
+    assert!(message.contains("not a frontend proxy"));
+}
+
+#[test]
 fn rejects_path_and_header_injection_inputs() {
     assert!(sanitize_request_path("/api/health").is_ok());
     assert!(sanitize_request_path("/api/v1/jobs/../secrets").is_err());

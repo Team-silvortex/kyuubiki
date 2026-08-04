@@ -48,4 +48,26 @@ defmodule KyuubikiWeb.Jobs.JobTest do
     assert updated.iteration == 3
     assert updated.residual == 0.25
   end
+
+  test "does not revive a terminal job with a late agent heartbeat" do
+    {:ok, job} =
+      Job.new(%{
+        job_id: "job-terminal",
+        project_id: "project-1",
+        simulation_case_id: "case-1",
+        status: :failed,
+        progress: 0.4,
+        message: "watchdog marked job stalled"
+      })
+
+    {:ok, heartbeat} =
+      ProgressEvent.new(%{
+        job_id: "job-terminal",
+        stage: "solving",
+        progress: 0.7,
+        message: "agent heartbeat: solver still active"
+      })
+
+    assert Job.apply_progress(job, heartbeat) == job
+  end
 end

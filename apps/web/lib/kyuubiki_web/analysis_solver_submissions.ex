@@ -8,6 +8,8 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Playground.AgentClient
 
+  @large_model_job_timeout_ms 600_000
+
   def submit_axial_bar(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
 
@@ -348,18 +350,25 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   defp submit_solver_job(params, normalizer, method)
        when is_map(params) and is_function(normalizer, 1) and is_binary(method) do
-    with {:ok, resolved_params} <- ModelArtifactStore.resolve_model_params(params),
-         {:ok, normalized} <- normalizer.(resolved_params),
-         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(resolved_params),
+    with {:ok, normalized} <- prepare_solver_params(params, normalizer),
+         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
       start_background_job(
         job.job_id,
         method,
         normalized,
-        orchestration_context_from_params(resolved_params)
+        orchestration_context_from_params(params)
       )
 
       {:ok, AnalysisJobSupport.serialize_payload(job)}
+    end
+  end
+
+  defp prepare_solver_params(params, normalizer) do
+    case ModelArtifactStore.prepare_agent_params(params) do
+      {:ok, artifact_params} -> {:ok, artifact_params}
+      {:inline, inline_params} -> normalizer.(inline_params)
+      {:error, _reason} = error -> error
     end
   end
 
@@ -370,20 +379,21 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   end
 
   defp execute_background_job(job_id, method, params, orchestration_context) do
-    timeout_ms = watchdog_job_timeout_ms()
+    timeout_ms = solver_job_timeout_ms(params)
 
     task =
       Task.async(fn ->
         AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1),
           orchestration: orchestration_context,
-          job_id: job_id
+          job_id: job_id,
+          request_timeout_ms: timeout_ms
         )
       end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, result, endpoint}} ->
-        unless cancelled?(job_id) do
-          {:ok, _job} = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
+        unless terminal?(job_id) do
+          _ = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
           :ok = AnalysisResultStore.put(job_id, result)
           _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
         end
@@ -392,12 +402,12 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         cancel_job_with_message(job_id, message)
 
       {:ok, {:error, reason}} ->
-        unless cancelled?(job_id), do: fail_job(job_id, inspect(reason))
+        unless terminal?(job_id), do: fail_job(job_id, inspect(reason))
 
       nil ->
         request_agent_cancel(job_id)
 
-        unless cancelled?(job_id),
+        unless terminal?(job_id),
           do: fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
     end
   end
@@ -412,7 +422,7 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
     case Store.get(job_id) do
-      {:ok, %{status: :cancelled}} -> :ok
+      {:ok, %{status: status}} when status in [:completed, :failed, :cancelled] -> :ok
       {:ok, _job} -> apply_running_progress(job_id, progress)
       :error -> :ok
     end
@@ -458,10 +468,20 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     :ok
   end
 
-  defp cancelled?(job_id), do: match?({:ok, %{status: :cancelled}}, Store.get(job_id))
+  defp terminal?(job_id) do
+    match?(
+      {:ok, %{status: status}} when status in [:completed, :failed, :cancelled],
+      Store.get(job_id)
+    )
+  end
 
-  defp watchdog_job_timeout_ms do
+  defp solver_job_timeout_ms(%{"model_artifact_ref" => _reference}) do
     Application.get_env(:kyuubiki_web, KyuubikiWeb.Jobs.Watchdog, [])
-    |> Keyword.get(:job_timeout_ms, 120_000)
+    |> Keyword.get(:job_timeout_ms, @large_model_job_timeout_ms)
+  end
+
+  defp solver_job_timeout_ms(_params) do
+    Application.get_env(:kyuubiki_web, AgentClient, [])
+    |> Keyword.get(:request_timeout_ms, 120_000)
   end
 end

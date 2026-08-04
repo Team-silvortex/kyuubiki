@@ -280,7 +280,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request = build_request(request_id, method, params)
     normalized = normalize_endpoint(endpoint)
 
-    case request_once(normalized, request_id, request, fn _ -> :ok end) do
+    case request_once(normalized, request_id, request, fn _ -> :ok end, []) do
       {:ok, result} ->
         :ok = AgentPool.report_success(normalized)
         {:ok, result}
@@ -301,7 +301,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp attempt_request([endpoint | rest], request_id, request, on_progress, opts, failures) do
     with_claimed_endpoint(endpoint, opts, fn ->
-      case request_once(endpoint, request_id, request, on_progress) do
+      case request_once(endpoint, request_id, request, on_progress, opts) do
         {:ok, result} ->
           :ok = AgentPool.report_success(endpoint)
           {:ok, result, endpoint}
@@ -444,12 +444,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp put_rpc_job_id(request, _method, _opts), do: request
 
-  defp request_once(endpoint, request_id, request, on_progress) do
+  defp request_once(endpoint, request_id, request, on_progress, opts) do
     with {:ok, socket} <- connect(endpoint) do
       try do
         with :ok <- send_request(socket, request),
              {:ok, response_payload} <-
-               recv_response(socket, request_id, on_progress, request_deadline_ms()) do
+               recv_response(socket, request_id, on_progress, request_deadline_ms(opts)) do
           decode_response(response_payload, request_id)
         end
       after
@@ -573,8 +573,14 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     |> Keyword.get(:request_timeout_ms, 120_000)
   end
 
-  defp request_deadline_ms do
-    System.monotonic_time(:millisecond) + request_timeout_ms()
+  defp request_deadline_ms(opts) do
+    timeout_ms =
+      case Keyword.get(opts, :request_timeout_ms) do
+        value when is_integer(value) and value > 0 -> value
+        _ -> request_timeout_ms()
+      end
+
+    System.monotonic_time(:millisecond) + timeout_ms
   end
 
   defp remaining_recv_timeout_ms(deadline_ms) do

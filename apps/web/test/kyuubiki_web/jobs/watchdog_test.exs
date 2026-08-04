@@ -73,6 +73,29 @@ defmodule KyuubikiWeb.Jobs.WatchdogTest do
     assert updated_job.message =~ "timed out"
   end
 
+  test "lets queued jobs use the total timeout while a large payload is being dispatched" do
+    now = DateTime.utc_now()
+
+    {:ok, _job} =
+      Store.create(%{
+        job_id: "dispatching-job",
+        project_id: "project-dispatch",
+        simulation_case_id: "case-dispatch",
+        status: :queued,
+        created_at: DateTime.add(now, -20, :second),
+        updated_at: DateTime.add(now, -10, :second)
+      })
+
+    Application.put_env(:kyuubiki_web, Watchdog,
+      scan_interval_ms: 60_000,
+      stale_job_ms: 5_000,
+      job_timeout_ms: 60_000
+    )
+
+    assert %{stalled: 0, timed_out: 0} = Watchdog.scan_now()
+    assert {:ok, %{status: :queued}} = Store.get("dispatching-job")
+  end
+
   test "summarizes orchestra agent and operator load posture" do
     now = DateTime.utc_now()
 

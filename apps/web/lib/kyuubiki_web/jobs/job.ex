@@ -93,6 +93,10 @@ defmodule KyuubikiWeb.Jobs.Job do
   end
 
   @spec apply_progress(t(), KyuubikiWeb.Jobs.ProgressEvent.t()) :: t()
+  def apply_progress(%__MODULE__{status: status} = job, %KyuubikiWeb.Jobs.ProgressEvent{})
+      when status in [:completed, :failed, :cancelled],
+      do: job
+
   def apply_progress(%__MODULE__{} = job, %KyuubikiWeb.Jobs.ProgressEvent{} = event) do
     %__MODULE__{
       job

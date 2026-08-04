@@ -151,6 +151,20 @@ pub(super) fn build_template_workflow(
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
             ),
         ],
+        "direct_acoustic_bar_1d" => vec![
+            HeadlessWorkflowStep::new(
+                "solve_acoustic_bar_1d",
+                json!({ "model": { "frequency_hz": 440.0, "nodes": [{ "id": "a0", "x": 0.0, "fix_pressure": true, "pressure": 1.0, "volume_velocity_source": 0.0 }, { "id": "a1", "x": 1.0, "fix_pressure": false, "pressure": 0.0, "volume_velocity_source": 0.003 }], "elements": [{ "id": "ae0", "node_i": 0, "node_j": 1, "area": 0.08, "density": 1.225, "bulk_modulus": 142000.0, "damping_ratio": 0.02 }] } }),
+            ),
+            HeadlessWorkflowStep::new(
+                "job_wait",
+                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
+            ),
+            HeadlessWorkflowStep::new(
+                "result_fetch",
+                json!({ "job_id": "{{steps.1.result.job_id}}" }),
+            ),
+        ],
         "direct_truss_3d" => vec![
             HeadlessWorkflowStep::new(
                 "solve_truss_3d",

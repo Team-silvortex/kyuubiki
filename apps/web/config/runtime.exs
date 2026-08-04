@@ -127,7 +127,9 @@ config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
   scan_interval_ms:
     String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS", "5000")),
   stale_job_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_STALE_JOB_MS", "30000")),
-  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "120000"))
+  queue_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS", "120000")),
+  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "600000"))
 
 config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,

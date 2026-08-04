@@ -1,4 +1,5 @@
 use crate::operator_task::operator_task_prepare_preview_or_error;
+use crate::run::{compact_report_value, resolve_step_payload};
 use crate::{
     HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
     HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport, find_action_contract,
@@ -120,7 +121,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         );
         let blocked = (step.risk == HeadlessRisk::Sensitive && !allow_sensitive)
             || (step.risk == HeadlessRisk::Destructive && !allow_destructive);
-        let payload = resolve_value(&step.payload, &results);
+        let payload = resolve_step_payload(&step.payload, &results);
         if blocked {
             if blocked_by_confirmation.is_none() {
                 blocked_by_confirmation = Some(HeadlessBlockedConfirmation {
@@ -134,7 +135,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                 action: step.action.clone(),
                 risk: step.risk,
                 status: "blocked".to_string(),
-                payload,
+                payload: compact_report_value(&payload),
                 result_preview: build_result_preview(&step.action, step.index, &step.payload),
                 requires_confirmation,
             });
@@ -151,7 +152,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "executed".to_string(),
-                        payload,
+                        payload: compact_report_value(&payload),
                         result_preview: preview,
                         requires_confirmation,
                     });
@@ -164,7 +165,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "failed".to_string(),
-                        payload,
+                        payload: compact_report_value(&payload),
                         result_preview,
                         requires_confirmation,
                     });
@@ -183,7 +184,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     action: step.action.clone(),
                     risk: step.risk,
                     status: outcome.status,
-                    payload,
+                    payload: compact_report_value(&payload),
                     result_preview: outcome.result,
                     requires_confirmation,
                 });
@@ -195,7 +196,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     action: step.action.clone(),
                     risk: step.risk,
                     status: "failed".to_string(),
-                    payload,
+                    payload: compact_report_value(&payload),
                     result_preview: Value::Object(Map::from_iter([(
                         "error".to_string(),
                         Value::from(error.message),
@@ -218,40 +219,6 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         validation,
         steps,
     }
-}
-
-fn resolve_value(value: &Value, results: &HashMap<usize, Value>) -> Value {
-    match value {
-        Value::String(text) => parse_binding(text)
-            .and_then(|(step, output)| {
-                results
-                    .get(&step)
-                    .and_then(|result| result.get(&output))
-                    .cloned()
-            })
-            .unwrap_or_else(|| value.clone()),
-        Value::Array(items) => Value::Array(
-            items
-                .iter()
-                .map(|item| resolve_value(item, results))
-                .collect(),
-        ),
-        Value::Object(fields) => Value::Object(
-            fields
-                .iter()
-                .map(|(key, value)| (key.clone(), resolve_value(value, results)))
-                .collect::<Map<String, Value>>(),
-        ),
-        _ => value.clone(),
-    }
-}
-
-fn parse_binding(text: &str) -> Option<(usize, String)> {
-    let trimmed = text.trim();
-    let inner = trimmed.strip_prefix("{{")?.strip_suffix("}}")?.trim();
-    let rest = inner.strip_prefix("steps.")?;
-    let (step_text, output_path) = rest.split_once(".result.")?;
-    Some((step_text.parse().ok()?, output_path.trim().to_string()))
 }
 
 fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Value {

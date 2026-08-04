@@ -6,7 +6,12 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::borrow::Cow;
 use std::collections::HashMap;
+
+const MAX_REPORT_ARRAY_ITEMS: usize = 128;
+const REPORT_ARRAY_SAMPLE_ITEMS: usize = 3;
+const MAX_REPORT_STRING_BYTES: usize = 4_096;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HeadlessBlockedConfirmation {
@@ -57,7 +62,7 @@ pub fn run_batch_dry(
         );
         let blocked = (step.risk == HeadlessRisk::Sensitive && !allow_sensitive)
             || (step.risk == HeadlessRisk::Destructive && !allow_destructive);
-        let payload = resolve_value(&step.payload, &results);
+        let payload = resolve_step_payload(&step.payload, &results);
         if !blocked
             && (is_operator_task_prepare_action(&step.action)
                 || is_operator_task_execute_action(&step.action))
@@ -77,7 +82,7 @@ pub fn run_batch_dry(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "dry_run".to_string(),
-                        payload,
+                        payload: compact_report_value(&payload),
                         result_preview: preview,
                         requires_confirmation,
                     });
@@ -90,7 +95,7 @@ pub fn run_batch_dry(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "failed".to_string(),
-                        payload,
+                        payload: compact_report_value(&payload),
                         result_preview,
                         requires_confirmation,
                     });
@@ -118,7 +123,7 @@ pub fn run_batch_dry(
             action: step.action.clone(),
             risk: step.risk,
             status: step_status,
-            payload,
+            payload: compact_report_value(&payload),
             result_preview,
             requires_confirmation,
         });
@@ -134,6 +139,17 @@ pub fn run_batch_dry(
         blocked_by_confirmation,
         validation,
         steps,
+    }
+}
+
+pub(crate) fn resolve_step_payload<'a>(
+    value: &'a Value,
+    results: &HashMap<usize, Value>,
+) -> Cow<'a, Value> {
+    if results.is_empty() {
+        Cow::Borrowed(value)
+    } else {
+        Cow::Owned(resolve_value(value, results))
     }
 }
 
@@ -159,6 +175,51 @@ fn resolve_value(value: &Value, results: &HashMap<usize, Value>) -> Value {
                 .map(|(key, value)| (key.clone(), resolve_value(value, results)))
                 .collect::<Map<String, Value>>(),
         ),
+        _ => value.clone(),
+    }
+}
+
+pub(crate) fn compact_report_value(value: &Value) -> Value {
+    match value {
+        Value::Array(items) if items.len() > MAX_REPORT_ARRAY_ITEMS => {
+            let sample = items
+                .iter()
+                .take(REPORT_ARRAY_SAMPLE_ITEMS)
+                .map(compact_report_value)
+                .collect::<Vec<_>>();
+            Value::Object(Map::from_iter([
+                (
+                    "$kyuubiki_report_summary".to_string(),
+                    Value::String("array".to_string()),
+                ),
+                ("item_count".to_string(), Value::from(items.len() as u64)),
+                ("sample".to_string(), Value::Array(sample)),
+                (
+                    "omitted_item_count".to_string(),
+                    Value::from((items.len() - REPORT_ARRAY_SAMPLE_ITEMS) as u64),
+                ),
+            ]))
+        }
+        Value::Array(items) => Value::Array(items.iter().map(compact_report_value).collect()),
+        Value::Object(fields) => Value::Object(
+            fields
+                .iter()
+                .map(|(key, value)| (key.clone(), compact_report_value(value)))
+                .collect(),
+        ),
+        Value::String(text) if text.len() > MAX_REPORT_STRING_BYTES => {
+            Value::Object(Map::from_iter([
+                (
+                    "$kyuubiki_report_summary".to_string(),
+                    Value::String("string".to_string()),
+                ),
+                ("byte_count".to_string(), Value::from(text.len() as u64)),
+                (
+                    "prefix".to_string(),
+                    Value::String(text.chars().take(256).collect()),
+                ),
+            ]))
+        }
         _ => value.clone(),
     }
 }
@@ -361,4 +422,39 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
         _ => {}
     }
     Value::Object(map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_batch_dry;
+    use crate::{HeadlessExecutionBatch, HeadlessExecutionBatchStep, HeadlessRisk};
+    use serde_json::{Value, json};
+
+    #[test]
+    fn dry_run_summarizes_large_mesh_arrays_instead_of_echoing_them() {
+        let nodes = (0..1_000)
+            .map(|index| json!({ "x": index, "temperature": 20.0 }))
+            .collect::<Vec<Value>>();
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "large-report-fixture".to_string(),
+            template_id: None,
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "solve_heat_plane_quad_2d".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: json!({ "model": { "nodes": nodes, "elements": [] } }),
+            }],
+            warnings: vec![],
+        };
+
+        let report = run_batch_dry(&batch, false, false);
+        let summary = &report.steps[0].payload["model"]["nodes"];
+        assert_eq!(summary["$kyuubiki_report_summary"], "array");
+        assert_eq!(summary["item_count"], 1_000);
+        assert_eq!(summary["sample"].as_array().map(Vec::len), Some(3));
+        assert!(serde_json::to_vec(&report).unwrap().len() < 20_000);
+    }
 }

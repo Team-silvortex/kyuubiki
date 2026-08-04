@@ -8,17 +8,22 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Protocol
+  alias KyuubikiWeb.ResultArtifactStore
   alias KyuubikiWeb.Security
   alias KyuubikiWeb.Workloads
   import KyuubikiWeb.RouterSupport
 
   plug(Plug.Logger)
   plug(KyuubikiWeb.RequestSizeGuard)
-  plug(KyuubikiWeb.ModelArtifactStore)
+  plug(KyuubikiWeb.ContentArtifactStore)
 
   plug(Plug.Parsers,
     parsers: [:json],
-    pass: ["application/json", KyuubikiWeb.ModelArtifactStore.media_type()],
+    pass: [
+      "application/json",
+      KyuubikiWeb.ModelArtifactStore.media_type(),
+      KyuubikiWeb.ResultArtifactStore.media_type()
+    ],
     json_decoder: Jason,
     length: KyuubikiWeb.RequestSizeGuard.max_inline_json_bytes()
   )
@@ -49,6 +54,7 @@ defmodule KyuubikiWeb.Router do
         "transport" => %{
           "http" => 4000,
           "model_artifacts" => ModelArtifactStore.descriptor(),
+          "result_artifacts" => ResultArtifactStore.descriptor(),
           "request_body" => KyuubikiWeb.RequestSizeGuard.descriptor(),
           "solver_agent_tcp" => (List.first(agent_endpoints) || %{})[:port] || 5001,
           "solver_agents" => agent_endpoints
@@ -92,6 +98,42 @@ defmodule KyuubikiWeb.Router do
       case ModelArtifactStore.metadata(artifact_id) do
         {:ok, artifact} -> respond_json(conn, 200, %{"artifact" => artifact})
         :error -> respond_json(conn, 404, %{"error" => "model_artifact_not_found"})
+      end
+    end)
+  end
+
+  get "/api/v1/model-artifacts/:artifact_id/content" do
+    with_auth(conn, :cluster, fn conn ->
+      case ModelArtifactStore.send_content(conn, artifact_id) do
+        {:ok, conn} -> conn
+        :error -> respond_json(conn, 404, %{"error" => "model_artifact_not_found"})
+      end
+    end)
+  end
+
+  post "/api/v1/result-artifacts" do
+    with_auth(conn, :cluster, fn conn ->
+      case ResultArtifactStore.put_conn(conn) do
+        {:ok, conn, artifact} -> respond_json(conn, 201, %{"artifact" => artifact})
+        {:error, conn, status, payload} -> respond_json(conn, status, payload)
+      end
+    end)
+  end
+
+  get "/api/v1/result-artifacts/:artifact_id" do
+    with_auth(conn, :read, fn conn ->
+      case ResultArtifactStore.metadata(artifact_id) do
+        {:ok, artifact} -> respond_json(conn, 200, %{"artifact" => artifact})
+        :error -> respond_json(conn, 404, %{"error" => "result_artifact_not_found"})
+      end
+    end)
+  end
+
+  get "/api/v1/result-artifacts/:artifact_id/content" do
+    with_auth(conn, :read, fn conn ->
+      case ResultArtifactStore.send_content(conn, artifact_id) do
+        {:ok, conn} -> conn
+        :error -> respond_json(conn, 404, %{"error" => "result_artifact_not_found"})
       end
     end)
   end

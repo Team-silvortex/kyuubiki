@@ -5,10 +5,12 @@ use std::thread;
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 use serde::Deserialize;
 
+mod agent_artifact;
 mod agent_deployment;
 mod agent_headless_bridge;
 mod agent_http;
 mod agent_mesh;
+mod agent_result_artifact;
 mod agent_state;
 mod agent_watchdog;
 mod config;
@@ -60,6 +62,7 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    agent_artifact::configure(config);
     store_runtime_descriptor(build_agent_descriptor(config));
     store_deployment_readiness(build_agent_deployment_readiness_for_config(config));
     store_operator_package_runtime_binding(operator_package_runtime_binding_from_config(config));

@@ -97,6 +97,7 @@ fn template_category_index_is_sorted_and_unique() {
     assert_eq!(
         list_template_categories(),
         vec![
+            "acoustic",
             "browser",
             "electromagnetic",
             "hybrid",
@@ -235,6 +236,7 @@ fn template_category_distribution_matches_current_catalog() {
                 counts
             });
     let expected = BTreeMap::from([
+        ("acoustic", 1usize),
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
@@ -532,6 +534,20 @@ fn direct_service_templates_keep_job_follow_up_chain() {
             template.id
         );
     }
+}
+
+#[test]
+fn acoustic_solver_is_discoverable_as_an_executable_template() {
+    let matches = search_templates(None, None, None, Some("acoustic sound"));
+    assert!(
+        matches
+            .iter()
+            .any(|template| template.id == "direct_acoustic_bar_1d")
+    );
+
+    let document = build_template_document("direct_acoustic_bar_1d", None).unwrap();
+    assert_eq!(document.workflow.steps[0].action, "solve_acoustic_bar_1d");
+    assert_eq!(document.workflow.steps.len(), 3);
 }
 
 #[test]

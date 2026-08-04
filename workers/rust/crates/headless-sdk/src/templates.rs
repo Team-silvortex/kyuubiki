@@ -118,6 +118,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["direct", "mechanical", "bar", "1d"],
     },
     HeadlessTemplateDescriptor {
+        id: "direct_acoustic_bar_1d",
+        title: "Direct Acoustic Bar 1D",
+        description: "Submit an acoustic duct frequency-response solve and fetch pressure and intensity results.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "acoustic",
+        tags: &["direct", "acoustic", "sound", "duct", "1d"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_truss_3d",
         title: "Direct Truss 3D",
         description: "Submit a truss 3D structural solve directly and fetch the final result.",
