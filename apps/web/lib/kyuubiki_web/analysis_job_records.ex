@@ -191,6 +191,9 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
       "progress" => job.progress,
       "residual" => job.residual,
       "iteration" => job.iteration,
+      "queue_timeout_ms" => job.queue_timeout_ms,
+      "execution_timeout_ms" => job.execution_timeout_ms,
+      "execution_started_at" => format_datetime(job.execution_started_at),
       "created_at" => DateTime.to_iso8601(job.created_at),
       "updated_at" => DateTime.to_iso8601(job.updated_at)
     }
@@ -199,4 +202,7 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   defp put_has_result(payload, value) do
     update_in(payload, ["job"], &Map.put(&1, "has_result", value))
   end
+
+  defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp format_datetime(_value), do: nil
 end

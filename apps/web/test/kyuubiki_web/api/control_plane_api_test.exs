@@ -18,6 +18,8 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["deployment"]["mode"] == "local"
     assert payload["deployment"]["discovery"] == "static"
     assert payload["remote_solver_registry"]["active_agents"] == 0
+    assert payload["agent_execution_gate"]["active_lease_count"] == 0
+    assert payload["agent_execution_gate"]["queued_request_count"] == 0
     assert payload["transport"]["http"] == 4000
     assert is_integer(payload["transport"]["solver_agent_tcp"])
     assert payload["transport"]["solver_agent_tcp"] > 0

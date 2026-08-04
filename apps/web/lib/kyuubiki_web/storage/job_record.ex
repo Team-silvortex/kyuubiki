@@ -14,6 +14,9 @@ defmodule KyuubikiWeb.Storage.JobRecord do
     field(:progress, :float)
     field(:residual, :float)
     field(:iteration, :integer)
+    field(:queue_timeout_ms, :integer)
+    field(:execution_timeout_ms, :integer)
+    field(:execution_started_at, :utc_datetime_usec)
     field(:created_at, :utc_datetime_usec)
     field(:updated_at, :utc_datetime_usec)
   end

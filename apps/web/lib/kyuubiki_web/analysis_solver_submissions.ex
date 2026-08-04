@@ -8,7 +8,8 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Playground.AgentClient
 
-  @large_model_job_timeout_ms 600_000
+  @large_model_execution_timeout_ms 1_800_000
+  @default_queue_timeout_ms 1_800_000
 
   def submit_axial_bar(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
@@ -352,12 +353,15 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
        when is_map(params) and is_function(normalizer, 1) and is_binary(method) do
     with {:ok, normalized} <- prepare_solver_params(params, normalizer),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
-         {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
+         timeout_policy = solver_timeout_policy(normalized),
+         {:ok, job} <-
+           AnalysisJobSupport.create_job(Map.merge(job_context, timeout_policy)) do
       start_background_job(
         job.job_id,
         method,
         normalized,
-        orchestration_context_from_params(params)
+        orchestration_context_from_params(params),
+        timeout_policy
       )
 
       {:ok, AnalysisJobSupport.serialize_payload(job)}
@@ -372,25 +376,29 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     end
   end
 
-  defp start_background_job(job_id, method, params, orchestration_context) do
+  defp start_background_job(job_id, method, params, orchestration_context, timeout_policy) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      execute_background_job(job_id, method, params, orchestration_context)
+      execute_background_job(job_id, method, params, orchestration_context, timeout_policy)
     end)
   end
 
-  defp execute_background_job(job_id, method, params, orchestration_context) do
-    timeout_ms = solver_job_timeout_ms(params)
+  defp execute_background_job(job_id, method, params, orchestration_context, timeout_policy) do
+    queue_timeout_ms = timeout_policy.queue_timeout_ms
+    execution_timeout_ms = timeout_policy.execution_timeout_ms
+    total_timeout_ms = queue_timeout_ms + execution_timeout_ms
 
     task =
       Task.async(fn ->
         AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1),
           orchestration: orchestration_context,
           job_id: job_id,
-          request_timeout_ms: timeout_ms
+          before_dispatch: fn -> dispatch_guard(job_id) end,
+          queue_timeout_ms: queue_timeout_ms,
+          request_timeout_ms: execution_timeout_ms
         )
       end)
 
-    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
+    case Task.yield(task, total_timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, result, endpoint}} ->
         unless terminal?(job_id) do
           _ = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
@@ -408,7 +416,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         request_agent_cancel(job_id)
 
         unless terminal?(job_id),
-          do: fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
+          do:
+            fail_job(
+              job_id,
+              "job dispatch exceeded total server budget; " <>
+                "queue_timeout_ms=#{queue_timeout_ms}; " <>
+                "execution_timeout_ms=#{execution_timeout_ms}; " <>
+                "total_timeout_ms=#{total_timeout_ms}"
+            )
     end
   end
 
@@ -475,13 +490,31 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     )
   end
 
-  defp solver_job_timeout_ms(%{"model_artifact_ref" => _reference}) do
-    Application.get_env(:kyuubiki_web, KyuubikiWeb.Jobs.Watchdog, [])
-    |> Keyword.get(:job_timeout_ms, @large_model_job_timeout_ms)
+  defp dispatch_guard(job_id) do
+    if terminal?(job_id),
+      do: {:error, {:rpc_error, "cancelled", "job became terminal before agent dispatch"}},
+      else: :ok
   end
 
-  defp solver_job_timeout_ms(_params) do
+  defp solver_timeout_policy(params) do
+    %{
+      queue_timeout_ms: queue_timeout_ms(),
+      execution_timeout_ms: solver_execution_timeout_ms(params)
+    }
+  end
+
+  defp solver_execution_timeout_ms(%{"model_artifact_ref" => _reference}) do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:artifact_execution_timeout_ms, @large_model_execution_timeout_ms)
+  end
+
+  defp solver_execution_timeout_ms(_params) do
     Application.get_env(:kyuubiki_web, AgentClient, [])
     |> Keyword.get(:request_timeout_ms, 120_000)
+  end
+
+  defp queue_timeout_ms do
+    Application.get_env(:kyuubiki_web, AgentClient, [])
+    |> Keyword.get(:queue_timeout_ms, @default_queue_timeout_ms)
   end
 end

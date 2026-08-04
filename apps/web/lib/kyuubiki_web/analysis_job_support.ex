@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
   """
 
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Library
 
   @spec create_job(map()) :: {:ok, term()} | {:error, term()}
@@ -12,7 +13,9 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
       job_id: random_id(),
       project_id: Map.get(attrs, :project_id, random_id()),
       model_version_id: Map.get(attrs, :model_version_id),
-      simulation_case_id: Map.get(attrs, :simulation_case_id, random_id())
+      simulation_case_id: Map.get(attrs, :simulation_case_id, random_id()),
+      queue_timeout_ms: Map.get(attrs, :queue_timeout_ms),
+      execution_timeout_ms: Map.get(attrs, :execution_timeout_ms)
     })
   end
 
@@ -55,9 +58,13 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
         "worker_id" => job.worker_id,
         "message" => job.message,
         "status" => Atom.to_string(job.status),
+        "status_detail" => Job.status_detail(job),
         "progress" => job.progress,
         "residual" => job.residual,
         "iteration" => job.iteration,
+        "queue_timeout_ms" => job.queue_timeout_ms,
+        "execution_timeout_ms" => job.execution_timeout_ms,
+        "execution_started_at" => format_datetime(job.execution_started_at),
         "created_at" => DateTime.to_iso8601(job.created_at),
         "updated_at" => DateTime.to_iso8601(job.updated_at),
         "has_result" => false
@@ -75,6 +82,9 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
   end
 
   def stringify_keys(value), do: value
+
+  defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp format_datetime(_value), do: nil
 
   defp random_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)

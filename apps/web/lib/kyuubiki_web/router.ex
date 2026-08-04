@@ -50,6 +50,8 @@ defmodule KyuubikiWeb.Router do
         "security" => Security.descriptor(),
         "deployment" => KyuubikiWeb.Playground.AgentPool.deployment_info(),
         "remote_solver_registry" => KyuubikiWeb.Playground.AgentRegistry.status_snapshot(),
+        "agent_execution_gate" =>
+          KyuubikiWeb.Playground.AgentExecutionGate.snapshot(agent_endpoints),
         "watchdog" => KyuubikiWeb.Jobs.Watchdog.status_snapshot(),
         "transport" => %{
           "http" => 4000,

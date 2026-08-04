@@ -96,6 +96,44 @@ defmodule KyuubikiWeb.Jobs.WatchdogTest do
     assert {:ok, %{status: :queued}} = Store.get("dispatching-job")
   end
 
+  test "uses per-job queue and execution budgets from their own phase origins" do
+    now = DateTime.utc_now()
+
+    {:ok, _queued} =
+      Store.create(%{
+        job_id: "budgeted-queue",
+        project_id: "project-budget",
+        simulation_case_id: "case-queue",
+        status: :queued,
+        queue_timeout_ms: 60_000,
+        created_at: DateTime.add(now, -20, :second),
+        updated_at: DateTime.add(now, -20, :second)
+      })
+
+    {:ok, _running} =
+      Store.create(%{
+        job_id: "budgeted-execution",
+        project_id: "project-budget",
+        simulation_case_id: "case-execution",
+        status: :solving,
+        execution_timeout_ms: 60_000,
+        execution_started_at: DateTime.add(now, -10, :second),
+        created_at: DateTime.add(now, -120, :second),
+        updated_at: DateTime.add(now, -1, :second)
+      })
+
+    Application.put_env(:kyuubiki_web, Watchdog,
+      scan_interval_ms: 60_000,
+      stale_job_ms: 30_000,
+      queue_timeout_ms: 5_000,
+      job_timeout_ms: 5_000
+    )
+
+    assert %{stalled: 0, timed_out: 0} = Watchdog.scan_now()
+    assert {:ok, %{status: :queued}} = Store.get("budgeted-queue")
+    assert {:ok, %{status: :solving}} = Store.get("budgeted-execution")
+  end
+
   test "summarizes orchestra agent and operator load posture" do
     now = DateTime.utc_now()
 

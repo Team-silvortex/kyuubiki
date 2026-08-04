@@ -114,6 +114,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert conn.status == 202
 
     payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["queue_timeout_ms"] > 0
+    assert payload["job"]["execution_timeout_ms"] > 0
+    assert payload["job"]["status_detail"]["timing"]["phase"] == "queue"
+    assert payload["job"]["status_detail"]["timing"]["effective_timeout_ms"] > 0
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
 
     assert result_payload["job"]["status"] == "completed"

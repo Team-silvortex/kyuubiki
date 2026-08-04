@@ -7,6 +7,8 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   use GenServer
 
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Playground.AgentExecutionGate
+  alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
 
   @active_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
@@ -79,8 +81,8 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     %{
       scan_interval_ms: Keyword.get(env, :scan_interval_ms, 5_000),
       stale_job_ms: Keyword.get(env, :stale_job_ms, 30_000),
-      queue_timeout_ms: Keyword.get(env, :queue_timeout_ms, 120_000),
-      job_timeout_ms: Keyword.get(env, :job_timeout_ms, 600_000),
+      queue_timeout_ms: Keyword.get(env, :queue_timeout_ms, 1_800_000),
+      job_timeout_ms: Keyword.get(env, :job_timeout_ms, 1_800_000),
       orchestra_warn_active_jobs: Keyword.get(env, :orchestra_warn_active_jobs, 25),
       orchestra_critical_active_jobs: Keyword.get(env, :orchestra_critical_active_jobs, 100),
       operator_warn_active_jobs: Keyword.get(env, :operator_warn_active_jobs, 8),
@@ -103,12 +105,16 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
         job.status not in @active_statuses ->
           acc
 
-        job.status == :queued and older_than?(job.created_at, now, state.queue_timeout_ms) ->
-          mark_failed(job, timeout_message(state.queue_timeout_ms))
+        job.status == :queued and
+            older_than?(job.created_at, now, queue_timeout_ms(job, state)) ->
+          timeout_ms = queue_timeout_ms(job, state)
+          mark_failed(job, timeout_message("queue", timeout_ms, job.created_at))
           %{acc | timed_out: acc.timed_out + 1}
 
-        job.status != :queued and older_than?(job.created_at, now, state.job_timeout_ms) ->
-          mark_failed(job, timeout_message(state.job_timeout_ms))
+        job.status != :queued and
+            older_than?(execution_started_at(job), now, execution_timeout_ms(job, state)) ->
+          timeout_ms = execution_timeout_ms(job, state)
+          mark_failed(job, timeout_message("execution", timeout_ms, execution_started_at(job)))
           %{acc | timed_out: acc.timed_out + 1}
 
         job.status in @stale_statuses and
@@ -141,11 +147,11 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
 
   defp older_than?(_, _, _), do: false
 
-  defp job_timed_out?(%{status: :queued, created_at: created_at}, now, state),
-    do: older_than?(created_at, now, state.queue_timeout_ms)
+  defp job_timed_out?(%{status: :queued, created_at: created_at} = job, now, state),
+    do: older_than?(created_at, now, queue_timeout_ms(job, state))
 
-  defp job_timed_out?(%{created_at: created_at}, now, state),
-    do: older_than?(created_at, now, state.job_timeout_ms)
+  defp job_timed_out?(job, now, state),
+    do: older_than?(execution_started_at(job), now, execution_timeout_ms(job, state))
 
   defp summarize_orchestra_load(jobs, state) do
     now = DateTime.utc_now()
@@ -196,14 +202,21 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     }
   end
 
-  defp summarize_agent_load(%{snapshot: snapshot, agents: agents}, state) do
-    capacity_slots =
+  defp summarize_agent_load(%{snapshot: snapshot, agents: agents, gate: gate}, state) do
+    registry_capacity_slots =
       agents
       |> Enum.filter(&(&1["execution_state"] != "lease_stale"))
       |> Enum.map(&agent_capacity/1)
       |> Enum.sum()
 
-    leased_slots = Map.get(snapshot, :active_execution_lease_count, 0)
+    capacity_slots = max(Map.get(gate, :capacity_slots, 0), registry_capacity_slots)
+
+    leased_slots =
+      max(
+        Map.get(gate, :active_lease_count, 0),
+        Map.get(snapshot, :active_execution_lease_count, 0)
+      )
+
     stale_leases = Map.get(snapshot, :stale_execution_lease_count, 0)
     utilization = utilization(leased_slots, capacity_slots)
 
@@ -222,12 +235,16 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
     %{
       state: status,
       available: true,
-      total_agents: Map.get(snapshot, :total_agents, 0),
-      active_agents: Map.get(snapshot, :active_agents, 0),
+      total_agents:
+        max(Map.get(snapshot, :total_agents, 0), Map.get(gate, :known_endpoint_count, 0)),
+      active_agents:
+        max(Map.get(snapshot, :active_agents, 0), Map.get(gate, :known_endpoint_count, 0)),
       stale_agents: Map.get(snapshot, :stale_agents, 0),
       stale_after_ms: Map.get(snapshot, :stale_after_ms),
       capacity_slots: capacity_slots,
       leased_slots: leased_slots,
+      queued_requests: Map.get(gate, :queued_request_count, 0),
+      active_by_endpoint: Map.get(gate, :active_by_endpoint, %{}),
       utilization: utilization,
       stale_execution_lease_count: stale_leases,
       control_modes: Map.get(snapshot, :control_modes, %{}),
@@ -277,10 +294,13 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
 
   defp safe_agent_runtime do
     if Process.whereis(AgentRegistry) do
+      endpoints = AgentPool.endpoints()
+
       %{
         available: true,
         snapshot: AgentRegistry.status_snapshot(),
-        agents: AgentRegistry.public_agents()
+        agents: AgentRegistry.public_agents(),
+        gate: AgentExecutionGate.snapshot(endpoints)
       }
     else
       %{available: false, reason: "agent_registry_unavailable"}
@@ -332,8 +352,33 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   defp clamp_progress(progress) when is_integer(progress), do: clamp_progress(progress * 1.0)
   defp clamp_progress(_), do: 0.0
 
-  defp timeout_message(limit_ms) do
-    "watchdog timed out job after #{limit_ms} ms"
+  defp queue_timeout_ms(job, state) do
+    positive_timeout(Map.get(job, :queue_timeout_ms), state.queue_timeout_ms)
+  end
+
+  defp execution_timeout_ms(job, state) do
+    positive_timeout(Map.get(job, :execution_timeout_ms), state.job_timeout_ms)
+  end
+
+  defp positive_timeout(value, _fallback) when is_integer(value) and value > 0, do: value
+  defp positive_timeout(_value, fallback), do: fallback
+
+  defp execution_started_at(job) do
+    Map.get(job, :execution_started_at) || Map.get(job, :created_at)
+  end
+
+  defp timeout_message(phase, limit_ms, started_at) do
+    deadline =
+      case started_at do
+        %DateTime{} = value ->
+          value |> DateTime.add(limit_ms, :millisecond) |> DateTime.to_iso8601()
+
+        _ ->
+          "unknown"
+      end
+
+    "watchdog timed out job; phase=#{phase}; effective_timeout_ms=#{limit_ms}; " <>
+      "effective_deadline=#{deadline}"
   end
 
   defp stall_message(limit_ms) do

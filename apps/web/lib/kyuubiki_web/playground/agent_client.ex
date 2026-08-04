@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
+  alias KyuubikiWeb.Playground.AgentExecutionGate
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
 
@@ -299,34 +300,84 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     {:error, {:all_agents_failed, Enum.reverse(failures)}}
   end
 
-  defp attempt_request([endpoint | rest], request_id, request, on_progress, opts, failures) do
-    with_claimed_endpoint(endpoint, opts, fn ->
-      case request_once(endpoint, request_id, request, on_progress, opts) do
-        {:ok, result} ->
-          :ok = AgentPool.report_success(endpoint)
-          {:ok, result, endpoint}
+  defp attempt_request(endpoints, request_id, request, on_progress, opts, failures) do
+    emit_queue_progress(on_progress, opts, endpoints)
 
-        {:error, {:rpc_error, _code, _message} = reason} ->
-          :ok = AgentPool.report_success(endpoint)
-          {:error, reason}
+    case AgentExecutionGate.acquire(endpoints, request_id, queue_timeout_ms(opts)) do
+      {:ok, endpoint, queue_metadata} ->
+        emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata)
+        remaining = Enum.reject(endpoints, &(&1.id == endpoint.id))
 
-        {:error, reason} ->
-          :ok = AgentPool.report_failure(endpoint, reason)
+        endpoint_result =
+          try do
+            with :ok <- authorize_dispatch(opts) do
+              with_claimed_endpoint(endpoint, opts, fn ->
+                request_once(endpoint, request_id, request, on_progress, opts)
+              end)
+            end
+          after
+            AgentExecutionGate.release(request_id)
+          end
 
-          attempt_request(rest, request_id, request, on_progress, opts, [
-            %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
-          ])
-      end
-    end)
-    |> case do
-      {:error, {:agent_execution_conflict, _conflict} = reason} ->
-        attempt_request(rest, request_id, request, on_progress, opts, [
-          %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
-        ])
+        handle_endpoint_result(
+          endpoint_result,
+          endpoint,
+          remaining,
+          request_id,
+          request,
+          on_progress,
+          opts,
+          failures
+        )
 
-      other ->
-        other
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp handle_endpoint_result(
+         {:ok, result},
+         endpoint,
+         _remaining,
+         _request_id,
+         _request,
+         _on_progress,
+         _opts,
+         _failures
+       ) do
+    :ok = AgentPool.report_success(endpoint)
+    {:ok, result, endpoint}
+  end
+
+  defp handle_endpoint_result(
+         {:error, {:rpc_error, _code, _message} = reason},
+         endpoint,
+         _remaining,
+         _request_id,
+         _request,
+         _on_progress,
+         _opts,
+         _failures
+       ) do
+    :ok = AgentPool.report_success(endpoint)
+    {:error, reason}
+  end
+
+  defp handle_endpoint_result(
+         {:error, reason},
+         endpoint,
+         remaining,
+         request_id,
+         request,
+         on_progress,
+         opts,
+         failures
+       ) do
+    :ok = AgentPool.report_failure(endpoint, reason)
+
+    attempt_request(remaining, request_id, request, on_progress, opts, [
+      %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
+    ])
   end
 
   defp no_matching_agent_error(method, opts) do
@@ -573,14 +624,61 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     |> Keyword.get(:request_timeout_ms, 120_000)
   end
 
-  defp request_deadline_ms(opts) do
-    timeout_ms =
-      case Keyword.get(opts, :request_timeout_ms) do
-        value when is_integer(value) and value > 0 -> value
-        _ -> request_timeout_ms()
-      end
+  defp queue_timeout_ms(opts) do
+    case Keyword.get(opts, :queue_timeout_ms) do
+      value when is_integer(value) and value > 0 -> value
+      _ -> configured_queue_timeout_ms()
+    end
+  end
 
-    System.monotonic_time(:millisecond) + timeout_ms
+  defp configured_queue_timeout_ms do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:queue_timeout_ms, 120_000)
+  end
+
+  defp emit_queue_progress(on_progress, opts, endpoints) do
+    if Keyword.get(opts, :job_id) do
+      snapshot = AgentExecutionGate.snapshot()
+
+      on_progress.(%{
+        "stage" => "queued",
+        "progress" => 0.0,
+        "message" =>
+          "waiting for agent capacity; queue_depth=#{snapshot.queued_request_count}; " <>
+            "candidate_agents=#{length(endpoints)}; queue_timeout_ms=#{queue_timeout_ms(opts)}"
+      })
+    end
+  end
+
+  defp emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata) do
+    if Keyword.get(opts, :job_id) do
+      on_progress.(%{
+        "stage" => "preprocessing",
+        "progress" => 0.01,
+        "message" =>
+          "agent capacity acquired; agent_id=#{endpoint.id}; " <>
+            "queue_wait_ms=#{queue_metadata.waited_ms}; " <>
+            "execution_timeout_ms=#{request_timeout_value(opts)}"
+      })
+    end
+  end
+
+  defp request_timeout_value(opts) do
+    case Keyword.get(opts, :request_timeout_ms) do
+      value when is_integer(value) and value > 0 -> value
+      _ -> request_timeout_ms()
+    end
+  end
+
+  defp authorize_dispatch(opts) do
+    case Keyword.get(opts, :before_dispatch) do
+      callback when is_function(callback, 0) -> callback.()
+      _ -> :ok
+    end
+  end
+
+  defp request_deadline_ms(opts) do
+    System.monotonic_time(:millisecond) + request_timeout_value(opts)
   end
 
   defp remaining_recv_timeout_ms(deadline_ms) do

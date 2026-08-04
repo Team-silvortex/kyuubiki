@@ -70,4 +70,43 @@ defmodule KyuubikiWeb.Jobs.JobTest do
 
     assert Job.apply_progress(job, heartbeat) == job
   end
+
+  test "records separate queue and execution deadlines" do
+    created_at = ~U[2026-08-04 12:00:00.000000Z]
+
+    {:ok, job} =
+      Job.new(%{
+        job_id: "job-timing",
+        project_id: "project-1",
+        simulation_case_id: "case-1",
+        queue_timeout_ms: 120_000,
+        execution_timeout_ms: 600_000,
+        created_at: created_at,
+        updated_at: created_at
+      })
+
+    assert %{
+             "phase" => "queue",
+             "effective_timeout_ms" => 120_000,
+             "job_submission_deadline" => "2026-08-04T12:02:00.000000Z"
+           } = Job.status_detail(job)["timing"]
+
+    {:ok, event} =
+      ProgressEvent.new(%{
+        job_id: "job-timing",
+        stage: "preprocessing",
+        progress: 0.01,
+        emitted_at: ~U[2026-08-04 12:01:00.000000Z]
+      })
+
+    running = Job.apply_progress(job, event)
+
+    assert running.execution_started_at == ~U[2026-08-04 12:01:00.000000Z]
+
+    assert %{
+             "phase" => "execution",
+             "effective_timeout_ms" => 600_000,
+             "effective_deadline" => "2026-08-04T12:11:00.000000Z"
+           } = Job.status_detail(running)["timing"]
+  end
 end

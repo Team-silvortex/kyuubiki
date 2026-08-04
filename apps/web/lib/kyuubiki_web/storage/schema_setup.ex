@@ -44,6 +44,8 @@ defmodule KyuubikiWeb.Storage.SchemaSetup do
       []
     )
 
+    ensure_job_contract_columns!(repo)
+
     if Storage.postgres?() do
       SQL.query!(
         repo,
@@ -133,6 +135,9 @@ defmodule KyuubikiWeb.Storage.SchemaSetup do
         progress #{float_type()} NOT NULL,
         residual #{float_type()},
         iteration #{integer_type()},
+        queue_timeout_ms #{integer_type()},
+        execution_timeout_ms #{integer_type()},
+        execution_started_at #{timestamp_type()},
         created_at #{timestamp_type()} NOT NULL,
         updated_at #{timestamp_type()} NOT NULL
       )
@@ -148,6 +153,33 @@ defmodule KyuubikiWeb.Storage.SchemaSetup do
         updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
       )
     """
+  end
+
+  defp ensure_job_contract_columns!(repo) do
+    columns = [
+      {"queue_timeout_ms", integer_type()},
+      {"execution_timeout_ms", integer_type()},
+      {"execution_started_at", timestamp_type()}
+    ]
+
+    if Storage.postgres?() do
+      Enum.each(columns, fn {name, type} ->
+        SQL.query!(repo, "ALTER TABLE kyuubiki_jobs ADD COLUMN IF NOT EXISTS #{name} #{type}", [])
+      end)
+    else
+      existing =
+        repo
+        |> SQL.query!("PRAGMA table_info(kyuubiki_jobs)", [])
+        |> Map.fetch!(:rows)
+        |> Enum.map(&Enum.at(&1, 1))
+        |> MapSet.new()
+
+      Enum.each(columns, fn {name, type} ->
+        unless MapSet.member?(existing, name) do
+          SQL.query!(repo, "ALTER TABLE kyuubiki_jobs ADD COLUMN #{name} #{type}", [])
+        end
+      end)
+    end
   end
 
   defp create_security_events_sql do

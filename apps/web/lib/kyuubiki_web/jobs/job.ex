@@ -22,6 +22,9 @@ defmodule KyuubikiWeb.Jobs.Job do
     :simulation_case_id,
     :worker_id,
     :message,
+    :queue_timeout_ms,
+    :execution_timeout_ms,
+    :execution_started_at,
     status: :queued,
     progress: 0.0,
     residual: nil,
@@ -39,6 +42,9 @@ defmodule KyuubikiWeb.Jobs.Job do
           simulation_case_id: String.t(),
           worker_id: String.t() | nil,
           message: String.t() | nil,
+          queue_timeout_ms: pos_integer() | nil,
+          execution_timeout_ms: pos_integer() | nil,
+          execution_started_at: DateTime.t() | nil,
           status: status(),
           progress: float(),
           residual: float() | nil,
@@ -61,7 +67,8 @@ defmodule KyuubikiWeb.Jobs.Job do
       "active" => active,
       "terminal" => terminal,
       "failure_class" => failure_class,
-      "recoverable" => recoverable_failure_class?(failure_class)
+      "recoverable" => recoverable_failure_class?(failure_class),
+      "timing" => timing_detail(job)
     }
   end
 
@@ -82,6 +89,9 @@ defmodule KyuubikiWeb.Jobs.Job do
          simulation_case_id: simulation_case_id,
          worker_id: fetch_optional_string(attrs, :worker_id),
          message: fetch_optional_string(attrs, :message),
+         queue_timeout_ms: fetch_optional_positive_integer(attrs, :queue_timeout_ms),
+         execution_timeout_ms: fetch_optional_positive_integer(attrs, :execution_timeout_ms),
+         execution_started_at: fetch_optional_datetime(attrs, :execution_started_at),
          status: status,
          progress: progress,
          residual: fetch_optional_number(attrs, :residual),
@@ -98,6 +108,8 @@ defmodule KyuubikiWeb.Jobs.Job do
       do: job
 
   def apply_progress(%__MODULE__{} = job, %KyuubikiWeb.Jobs.ProgressEvent{} = event) do
+    emitted_at = event.emitted_at || DateTime.utc_now()
+
     %__MODULE__{
       job
       | status: event.stage,
@@ -105,7 +117,8 @@ defmodule KyuubikiWeb.Jobs.Job do
         message: event.message || job.message,
         residual: event.residual || job.residual,
         iteration: event.iteration || job.iteration,
-        updated_at: event.emitted_at || DateTime.utc_now()
+        execution_started_at: execution_started_at(job, event.stage, emitted_at),
+        updated_at: emitted_at
     }
   end
 
@@ -118,6 +131,9 @@ defmodule KyuubikiWeb.Jobs.Job do
       "simulation_case_id" => job.simulation_case_id,
       "worker_id" => job.worker_id,
       "message" => job.message,
+      "queue_timeout_ms" => job.queue_timeout_ms,
+      "execution_timeout_ms" => job.execution_timeout_ms,
+      "execution_started_at" => format_datetime(job.execution_started_at),
       "status" => Atom.to_string(job.status),
       "progress" => job.progress,
       "residual" => job.residual,
@@ -138,6 +154,9 @@ defmodule KyuubikiWeb.Jobs.Job do
         simulation_case_id: Map.get(attrs, "simulation_case_id"),
         worker_id: Map.get(attrs, "worker_id"),
         message: Map.get(attrs, "message"),
+        queue_timeout_ms: Map.get(attrs, "queue_timeout_ms"),
+        execution_timeout_ms: Map.get(attrs, "execution_timeout_ms"),
+        execution_started_at: parse_optional_datetime(Map.get(attrs, "execution_started_at")),
         status: Map.get(attrs, "status"),
         progress: Map.get(attrs, "progress"),
         residual: Map.get(attrs, "residual"),
@@ -176,6 +195,48 @@ defmodule KyuubikiWeb.Jobs.Job do
       _ -> nil
     end
   end
+
+  defp fetch_optional_positive_integer(attrs, key) do
+    case Map.get(attrs, key) do
+      value when is_integer(value) and value > 0 -> value
+      _ -> nil
+    end
+  end
+
+  defp fetch_optional_datetime(attrs, key) do
+    case Map.get(attrs, key) do
+      %DateTime{} = value -> value
+      _ -> nil
+    end
+  end
+
+  defp execution_started_at(job, :queued, _emitted_at), do: job.execution_started_at
+
+  defp execution_started_at(%{execution_started_at: nil}, _stage, emitted_at), do: emitted_at
+  defp execution_started_at(job, _stage, _emitted_at), do: job.execution_started_at
+
+  defp timing_detail(job) do
+    queued? = job.status == :queued
+    effective_timeout_ms = if queued?, do: job.queue_timeout_ms, else: job.execution_timeout_ms
+    deadline_origin = if queued?, do: job.created_at, else: job.execution_started_at
+
+    %{
+      "phase" => if(queued?, do: "queue", else: "execution"),
+      "queue_timeout_ms" => job.queue_timeout_ms,
+      "execution_timeout_ms" => job.execution_timeout_ms,
+      "effective_timeout_ms" => effective_timeout_ms,
+      "job_submission_deadline" => deadline(job.created_at, job.queue_timeout_ms),
+      "execution_started_at" => format_datetime(job.execution_started_at),
+      "effective_deadline" => deadline(deadline_origin, effective_timeout_ms)
+    }
+  end
+
+  defp deadline(%DateTime{} = origin, timeout_ms)
+       when is_integer(timeout_ms) and timeout_ms > 0 do
+    origin |> DateTime.add(timeout_ms, :millisecond) |> DateTime.to_iso8601()
+  end
+
+  defp deadline(_origin, _timeout_ms), do: nil
 
   defp fetch_status(attrs, key, default) do
     status =
@@ -246,4 +307,15 @@ defmodule KyuubikiWeb.Jobs.Job do
       _ -> {:error, :invalid_datetime}
     end
   end
+
+  defp parse_optional_datetime(nil), do: nil
+
+  defp parse_optional_datetime(value) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> datetime
+      _ -> nil
+    end
+  end
+
+  defp parse_optional_datetime(_value), do: nil
 end

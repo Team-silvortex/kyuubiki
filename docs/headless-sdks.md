@@ -207,6 +207,15 @@ The active limits and storage namespaces are published by `GET /api/health`.
 `KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES`, `KYUUBIKI_RESULT_ARTIFACT_MAX_BYTES`, and
 `KYUUBIKI_ARTIFACT_TEMP_RETENTION_SECONDS` keep the disk policy explicit.
 
+Large solves also use two separate server-side timing contracts. Agent capacity
+waits are governed by `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS`; artifact-backed execution
+is governed by `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS`. Static endpoints pass
+through the same capacity gate as registered endpoints, so concurrent 1M jobs
+queue instead of opening unbounded solver connections. `job_wait.timeout_ms` is
+only the SDK polling budget and never silently overrides either server budget.
+Inspect `job.status_detail.timing` for `effective_timeout_ms`,
+`job_submission_deadline`, `execution_started_at`, and `effective_deadline`.
+
 Development source launches use debug Agents by default. Qualification runs
 must set `KYUUBIKI_AGENT_BUILD_PROFILE=release`; installed runtime payloads are
 already release binaries. This distinction is material at million-node scale

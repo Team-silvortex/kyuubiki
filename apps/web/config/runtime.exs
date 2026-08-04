@@ -106,8 +106,14 @@ config :kyuubiki_web, KyuubikiWeb.Playground.AgentClient,
   connect_timeout_ms:
     String.to_integer(System.get_env("KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS", "1500")),
   recv_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_RECV_TIMEOUT_MS", "15000")),
+  queue_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS", "1800000")),
   request_timeout_ms:
     String.to_integer(System.get_env("KYUUBIKI_AGENT_REQUEST_TIMEOUT_MS", "120000"))
+
+config :kyuubiki_web, KyuubikiWeb.AnalysisSolverSubmissions,
+  artifact_execution_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS", "1800000"))
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentRegistry,
   stale_after_ms:
@@ -128,8 +134,8 @@ config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
     String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS", "5000")),
   stale_job_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_STALE_JOB_MS", "30000")),
   queue_timeout_ms:
-    String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS", "120000")),
-  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "600000"))
+    String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS", "1800000")),
+  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000"))
 
 config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,

@@ -110,6 +110,16 @@ The concrete watchdog variables are `KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS`,
 heartbeat budget. Active jobs remain live while the Agent sends heartbeats,
 including long result serialization and artifact upload phases.
 
+Agent admission is capacity-gated for static, manifest, and registry discovery.
+`KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS` bounds the Orchestra-side capacity queue;
+`KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS` independently bounds large artifact-backed
+solver execution. The default qualification posture gives each phase 30 minutes.
+Do not use a Headless `job_wait.timeout_ms` value as a server execution policy:
+it only controls how long that client polls. Every job response publishes
+`status_detail.timing`, including the effective phase timeout, submission
+deadline, execution start, and execution deadline. `/api/health` publishes the
+current `agent_execution_gate` capacity and queue counts.
+
 ## Security controls
 
 Security controls currently group into:

@@ -9,6 +9,7 @@ defmodule KyuubikiWeb.Application do
       [
         KyuubikiWeb.Playground.AgentRegistry,
         KyuubikiWeb.Playground.AgentPool,
+        KyuubikiWeb.Playground.AgentExecutionGate,
         {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
         KyuubikiWeb.Jobs.Watchdog
       ] ++ storage_children() ++ maybe_http_server()

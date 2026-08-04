@@ -115,14 +115,19 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   defp update_record(%Job{} = job) do
-    JobRecord
-    |> repo_get!(job.job_id)
-    |> Ecto.Changeset.change(
-      job
-      |> Job.to_persisted_map()
-      |> persisted_map_to_repo_attrs()
-    )
-    |> repo_update()
+    case repo_get(JobRecord, job.job_id) do
+      %JobRecord{} = record ->
+        record
+        |> Ecto.Changeset.change(
+          job
+          |> Job.to_persisted_map()
+          |> persisted_map_to_repo_attrs()
+        )
+        |> repo_update()
+
+      nil ->
+        {:error, {:job_not_found, job.job_id}}
+    end
   end
 
   defp persisted_map_to_repo_attrs(attrs) do
@@ -137,6 +142,9 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
       progress: Map.fetch!(attrs, "progress"),
       residual: Map.get(attrs, "residual"),
       iteration: Map.get(attrs, "iteration"),
+      queue_timeout_ms: Map.get(attrs, "queue_timeout_ms"),
+      execution_timeout_ms: Map.get(attrs, "execution_timeout_ms"),
+      execution_started_at: parse_optional_datetime(Map.get(attrs, "execution_started_at")),
       created_at: parse_datetime!(Map.fetch!(attrs, "created_at")),
       updated_at: parse_datetime!(Map.fetch!(attrs, "updated_at"))
     }
@@ -159,6 +167,9 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
       "progress" => record.progress,
       "residual" => record.residual,
       "iteration" => record.iteration,
+      "queue_timeout_ms" => record.queue_timeout_ms,
+      "execution_timeout_ms" => record.execution_timeout_ms,
+      "execution_started_at" => format_datetime(record.execution_started_at),
       "created_at" => DateTime.to_iso8601(record.created_at),
       "updated_at" => DateTime.to_iso8601(record.updated_at)
     })
@@ -169,11 +180,16 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   defp repo_get(schema, id), do: apply(repo(), :get, [schema, id])
-  defp repo_get!(schema, id), do: apply(repo(), :get!, [schema, id])
   defp repo_all(queryable), do: apply(repo(), :all, [queryable])
   defp repo_insert(changeset), do: apply(repo(), :insert, [changeset])
   defp repo_update(changeset), do: apply(repo(), :update, [changeset])
   defp repo_update!(changeset), do: apply(repo(), :update!, [changeset])
   defp repo_delete!(struct), do: apply(repo(), :delete!, [struct])
   defp repo_delete_all(queryable), do: apply(repo(), :delete_all, [queryable])
+
+  defp parse_optional_datetime(nil), do: nil
+  defp parse_optional_datetime(value), do: parse_datetime!(value)
+
+  defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp format_datetime(_value), do: nil
 end
