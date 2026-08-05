@@ -3,14 +3,15 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::io::{Read, Write};
-use std::thread;
-use std::time::{Duration, Instant};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
 use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_http::{
     ARTIFACT_IO_TIMEOUT, REQUEST_IO_TIMEOUT, connect_service_stream, decode_http_response_body,
 };
+use crate::service_executor_job_wait::execute_job_wait;
+#[cfg(test)]
+use crate::service_executor_job_wait::reject_unsuccessful_terminal_job;
 use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
@@ -20,7 +21,6 @@ use crate::service_executor_solve::{
     execute_solve_from_model_version,
 };
 
-const TERMINAL_JOB_STATUSES: &[&str] = &["completed", "failed", "cancelled"];
 pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -310,65 +310,6 @@ fn execute_job_fetch(
     })
 }
 
-pub(crate) fn execute_job_wait(
-    base_url: &str,
-    api_token: Option<&str>,
-    payload: &Value,
-) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
-    let interval_ms = pick_u64(payload, &["interval_ms", "intervalMs"]).unwrap_or(1000);
-    let timeout_ms = pick_u64(payload, &["timeout_ms", "timeoutMs"]).unwrap_or(60000);
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-    loop {
-        let result = request_json(
-            base_url,
-            api_token,
-            "GET",
-            &format!("/api/v1/jobs/{job_id}"),
-            None,
-        )?;
-        let normalized = normalize_job_state_result(result);
-        let terminal = normalized
-            .get("status")
-            .and_then(Value::as_str)
-            .is_some_and(|status| TERMINAL_JOB_STATUSES.contains(&status));
-        if terminal {
-            reject_unsuccessful_terminal_job(job_id, &normalized)?;
-            return Ok(HeadlessExecutorOutcome {
-                status: "executed".to_string(),
-                result: normalized,
-            });
-        }
-        if Instant::now() >= deadline {
-            return Err(HeadlessExecutorError {
-                message: format!("timed out waiting for job {job_id}"),
-            });
-        }
-        thread::sleep(Duration::from_millis(interval_ms));
-    }
-}
-
-fn reject_unsuccessful_terminal_job(
-    job_id: &str,
-    job: &Value,
-) -> Result<(), HeadlessExecutorError> {
-    let status = job
-        .get("status")
-        .and_then(Value::as_str)
-        .unwrap_or("unknown");
-    if status == "completed" {
-        return Ok(());
-    }
-    let detail = job
-        .get("job")
-        .and_then(|value| value.get("message"))
-        .and_then(Value::as_str)
-        .unwrap_or("service job did not complete successfully");
-    Err(HeadlessExecutorError {
-        message: format!("service job {job_id} reached terminal status {status}: {detail}"),
-    })
-}
-
 pub(crate) fn execute_result_fetch(
     base_url: &str,
     api_token: Option<&str>,
@@ -380,18 +321,25 @@ pub(crate) fn execute_result_fetch(
         .and_then(Value::as_bool)
         .unwrap_or(true);
     if prefer_job_result {
-        let envelope = request_json(
+        let mut envelope = request_json(
             base_url,
             api_token,
             "GET",
             &format!("/api/v1/jobs/{job_id}"),
             None,
         )?;
-        let normalized = normalize_job_state_result(envelope);
-        if normalized.get("result").is_some() {
+        let result = envelope
+            .as_object_mut()
+            .and_then(|object| object.remove("result"));
+        if let Some(result) = result {
             return Ok(HeadlessExecutorOutcome {
                 status: "executed".to_string(),
-                result: normalized,
+                result: json!({
+                    "job_id": job_id,
+                    "status": envelope.pointer("/job/status").cloned().unwrap_or(Value::Null),
+                    "job": envelope.get("job").cloned().unwrap_or(Value::Null),
+                    "result": result,
+                }),
             });
         }
     }
@@ -421,7 +369,7 @@ pub(crate) fn normalize_job_submission_result(result: Value) -> Value {
     })
 }
 
-fn normalize_job_state_result(result: Value) -> Value {
+pub(crate) fn normalize_job_state_result(result: Value) -> Value {
     let Some(job) = result.get("job").and_then(Value::as_object) else {
         return result;
     };
@@ -436,10 +384,15 @@ fn normalize_job_state_result(result: Value) -> Value {
 }
 
 fn normalize_result_fetch_result(job_id: &str, result: Value) -> Value {
+    let result = match result {
+        Value::Object(mut envelope) => envelope
+            .remove("result")
+            .unwrap_or_else(|| Value::Object(envelope)),
+        value => value,
+    };
     json!({
         "job_id": job_id,
         "result": result,
-        "raw": result,
     })
 }
 
@@ -720,7 +673,7 @@ fn pick_string<'a>(payload: &'a Value, keys: &[&str]) -> Option<&'a str> {
     })
 }
 
-fn pick_u64(payload: &Value, keys: &[&str]) -> Option<u64> {
+pub(crate) fn pick_u64(payload: &Value, keys: &[&str]) -> Option<u64> {
     keys.iter().find_map(|key| {
         payload.get(*key).and_then(|value| {
             value.as_u64().or_else(|| {

@@ -27,6 +27,18 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
     end
   end
 
+  @spec fetch_job_status(String.t()) :: {:ok, map()} | {:error, term()}
+  def fetch_job_status(job_id) when is_binary(job_id) do
+    case Store.get(job_id) do
+      {:ok, job} ->
+        payload = serialize_payload(job)
+        {:ok, update_in(payload, ["job"], &Map.delete(&1, "has_result"))}
+
+      :error ->
+        {:error, {:job_not_found, job_id}}
+    end
+  end
+
   @spec list_jobs() :: map()
   def list_jobs do
     jobs =

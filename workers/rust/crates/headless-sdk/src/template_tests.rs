@@ -431,6 +431,21 @@ fn material_envelope_template_submits_graph_with_default_candidates() {
 }
 
 #[test]
+fn direct_mesh_pipeline_uses_bounded_server_deadline_resume() {
+    let document =
+        build_template_document("direct_mesh_pipeline", None).expect("direct mesh template");
+    let wait = &document.workflow.steps[1];
+    assert_eq!(wait.action, "job_wait");
+    assert_eq!(wait.payload["timeout_ms"], 60_000);
+    assert_eq!(wait.payload["resume_policy"], "server_deadline");
+    assert_eq!(wait.payload["max_total_timeout_ms"], 3_600_000);
+    assert_eq!(
+        document.workflow.steps[2].payload["prefer_job_result"],
+        false
+    );
+}
+
+#[test]
 fn material_envelope_catalog_template_submits_orchestra_catalog_workflow() {
     let document = build_template_document("material_study_envelope_catalog", None)
         .expect("material envelope catalog template should build");

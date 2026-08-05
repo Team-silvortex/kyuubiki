@@ -61,11 +61,17 @@ pub(super) fn build_template_workflow(
             ),
             HeadlessWorkflowStep::new(
                 "job_wait",
-                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
+                json!({
+                    "job_id": "{{steps.1.result.job_id}}",
+                    "interval_ms": 1000,
+                    "timeout_ms": 60000,
+                    "resume_policy": "server_deadline",
+                    "max_total_timeout_ms": 3600000
+                }),
             ),
             HeadlessWorkflowStep::new(
                 "result_fetch",
-                json!({ "job_id": "{{steps.1.result.job_id}}" }),
+                json!({ "job_id": "{{steps.1.result.job_id}}", "prefer_job_result": false }),
             ),
         ],
         "material_heat_spreader_screening" => crate::build_heat_spreader_screening_steps(),

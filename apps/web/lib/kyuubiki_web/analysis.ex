@@ -162,6 +162,10 @@ defmodule KyuubikiWeb.Analysis do
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
   def fetch_job(job_id) when is_binary(job_id), do: AnalysisJobRecords.fetch_job(job_id)
 
+  @spec fetch_job_status(String.t()) :: {:ok, map()} | {:error, term()}
+  def fetch_job_status(job_id) when is_binary(job_id),
+    do: AnalysisJobRecords.fetch_job_status(job_id)
+
   @spec list_jobs() :: map()
   def list_jobs, do: AnalysisJobRecords.list_jobs()
 

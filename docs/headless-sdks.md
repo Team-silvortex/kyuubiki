@@ -242,6 +242,17 @@ is governed by `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS`. Static endpoints pass
 through the same capacity gate as registered endpoints, so concurrent 1M jobs
 queue instead of opening unbounded solver connections. `job_wait.timeout_ms` is
 only the SDK polling budget and never silently overrides either server budget.
+With the explicit `resume_policy: "server_deadline"`, it becomes one observation
+window: the SDK keeps polling the same `job_id` while the server timing contract
+is active, without resubmitting work. `max_total_timeout_ms` remains a mandatory
+client-side ceiling for that policy; `direct_mesh_pipeline` uses 60-second
+windows and a one-hour total ceiling. Successful waits expose `wait.policy`,
+`poll_attempts`, `resume_count`, and `elapsed_ms` for automation and benchmarks.
+Polling uses `/api/v1/jobs/:job_id/status`, which never embeds solver results;
+`result_fetch` retrieves the result once and does not retain a duplicate `raw`
+mirror. Full values remain available for downstream step bindings, while run
+reports summarize oversized arrays. This prevents report size from scaling with
+repeated copies of a solver result.
 Inspect `job.status_detail.timing` for `effective_timeout_ms`,
 `job_submission_deadline`, `execution_started_at`, and `effective_deadline`.
 The timing object also exposes `queue_wait_ms`, `execution_elapsed_ms`, and

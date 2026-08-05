@@ -1,7 +1,8 @@
 use crate::service_executor::{
-    execute_direct_fem_submit, execute_job_wait, execute_result_fetch,
-    normalize_job_submission_result, request_json, required_path_segment,
+    execute_direct_fem_submit, execute_result_fetch, normalize_job_submission_result, request_json,
+    required_path_segment,
 };
+use crate::service_executor_job_wait::execute_job_wait;
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
@@ -202,7 +203,16 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
         .ok_or_else(|| error("solve response did not contain a job_id"))?;
     let mut wait_payload =
         Map::from_iter([("job_id".to_string(), Value::String(job_id.to_string()))]);
-    copy_selected(payload, &mut wait_payload, &["interval_ms", "timeout_ms"]);
+    copy_selected(
+        payload,
+        &mut wait_payload,
+        &[
+            "interval_ms",
+            "timeout_ms",
+            "resume_policy",
+            "max_total_timeout_ms",
+        ],
+    );
     let waited = execute_job_wait(base_url, api_token, &Value::Object(wait_payload))?;
     let mut result_payload =
         Map::from_iter([("job_id".to_string(), Value::String(job_id.to_string()))]);

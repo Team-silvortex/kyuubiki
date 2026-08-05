@@ -62,6 +62,39 @@ defmodule KyuubikiWeb.Api.JobAuditApiTest do
     assert is_binary(Enum.at(jobs, 1)["created_at"])
   end
 
+  test "fetches lightweight job status without cloning the result" do
+    {:ok, _job} =
+      Store.create(%{
+        job_id: "job-status-only",
+        project_id: "project-status",
+        simulation_case_id: "case-status"
+      })
+
+    :ok =
+      AnalysisResultStore.put("job-status-only", %{
+        "nodes" => [%{"value" => 1.0}],
+        "elements" => [%{"value" => 2.0}]
+      })
+
+    status_conn =
+      :get
+      |> conn("/api/v1/jobs/job-status-only/status")
+      |> Router.call(@opts)
+
+    assert status_conn.status == 200
+    status_payload = Jason.decode!(status_conn.resp_body)
+    refute Map.has_key?(status_payload, "result")
+    refute Map.has_key?(status_payload["job"], "has_result")
+    assert status_payload["job"]["status_detail"]["timing"]["phase"] == "queue"
+
+    full_conn =
+      :get
+      |> conn("/api/v1/jobs/job-status-only")
+      |> Router.call(@opts)
+
+    assert Jason.decode!(full_conn.resp_body)["result"]["elements"] == [%{"value" => 2.0}]
+  end
+
   test "supports CRUD and export for persisted jobs and results" do
     {:ok, _job} =
       Store.create(%{

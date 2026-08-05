@@ -3,13 +3,13 @@ use std::fs;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Command, Output};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
 fn workflow_path() -> PathBuf {
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("clock")
-        .as_nanos();
+    let unique = unique_suffix();
     let path = std::env::temp_dir().join(format!("kyuubiki-headless-posture-{unique}.json"));
     let workflow = json!({
         "schema_version": "kyuubiki.headless-workflow/v1",
@@ -36,11 +36,19 @@ fn run(args: &[&str]) -> Output {
 }
 
 fn unique_path(label: &str) -> PathBuf {
+    std::env::temp_dir().join(format!(
+        "kyuubiki-headless-{label}-{}.json",
+        unique_suffix()
+    ))
+}
+
+fn unique_suffix() -> String {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    std::env::temp_dir().join(format!("kyuubiki-headless-{label}-{unique}.json"))
+    let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    format!("{}-{unique}-{sequence}", std::process::id())
 }
 
 fn init_template(template: &str) -> PathBuf {

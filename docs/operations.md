@@ -120,6 +120,12 @@ it only controls how long that client polls. Every job response publishes
 deadline, execution start, and execution deadline. `/api/health` publishes the
 current `agent_execution_gate` capacity and queue counts.
 
+Long-running Headless templates may opt into `resume_policy=server_deadline`.
+That policy reuses the original `job_id` across bounded polling windows and
+stops at the earlier of the server deadline or `max_total_timeout_ms`; it never
+re-submits a solve. Missing server timing fails closed instead of creating an
+unbounded wait.
+
 ## Security controls
 
 Security controls currently group into:

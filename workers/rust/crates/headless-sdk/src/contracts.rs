@@ -106,7 +106,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "job",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["job_id"],
-        output_keys: &["job_id", "status", "progress"],
+        output_keys: &["job_id", "status", "progress", "wait"],
     },
     HeadlessActionContract {
         id: "job_fetch",

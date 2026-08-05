@@ -347,7 +347,7 @@ fn print_cli_error(error: &str) {
             code,
             message: error,
             stage: cli_error_stage(code),
-            retryable: false,
+            retryable: cli_error_retryable(code),
             recommended_action: cli_error_recovery(code),
         },
     };
@@ -360,6 +360,7 @@ fn print_cli_error(error: &str) {
 fn cli_error_stage(code: &str) -> &'static str {
     match code {
         "frontend_proxy_artifact_limit" => "artifact_upload",
+        "job_wait_timeout" => "job_wait",
         "headless_execution_failed" => "execution",
         "material_report_template_mismatch"
         | "material_report_template_provenance_missing"
@@ -373,6 +374,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
     match code {
         "frontend_proxy_artifact_limit" => {
             "Use the runtime control-plane endpoint for Headless execution instead of the GUI frontend."
+        }
+        "job_wait_timeout" => {
+            "Inspect the job timing receipt, then resume the same job_id while its server deadline remains active."
         }
         "headless_execution_failed" => {
             "Inspect execution_summary.failure in the run report before retrying."
@@ -396,6 +400,8 @@ fn cli_error_recovery(code: &str) -> &'static str {
 fn classify_cli_error(error: &str) -> &'static str {
     if error.contains("frontend_proxy_artifact_limit") {
         "frontend_proxy_artifact_limit"
+    } else if error.contains("timed out waiting for job") {
+        "job_wait_timeout"
     } else if error.contains("not supported by template") {
         "material_report_template_mismatch"
     } else if error.contains("requires template provenance") {
@@ -409,6 +415,10 @@ fn classify_cli_error(error: &str) -> &'static str {
     } else {
         "headless_command_failed"
     }
+}
+
+fn cli_error_retryable(code: &str) -> bool {
+    code == "job_wait_timeout"
 }
 
 fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
@@ -685,7 +695,7 @@ impl TemplateView {
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_cli_error, cli_error_recovery, cli_error_stage};
+    use super::{classify_cli_error, cli_error_recovery, cli_error_retryable, cli_error_stage};
 
     #[test]
     fn classifies_frontend_proxy_artifact_limit_for_automation() {
@@ -695,5 +705,16 @@ mod tests {
         assert_eq!(code, "frontend_proxy_artifact_limit");
         assert_eq!(cli_error_stage(code), "artifact_upload");
         assert!(cli_error_recovery(code).contains("control-plane endpoint"));
+    }
+
+    #[test]
+    fn classifies_job_wait_timeout_as_retryable() {
+        let code = classify_cli_error(
+            "headless execution failed at step 2 (job_wait): timed out waiting for job job-long",
+        );
+        assert_eq!(code, "job_wait_timeout");
+        assert_eq!(cli_error_stage(code), "job_wait");
+        assert!(cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("same job_id"));
     }
 }

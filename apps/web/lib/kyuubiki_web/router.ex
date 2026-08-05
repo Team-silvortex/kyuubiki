@@ -345,6 +345,12 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/jobs/:job_id/status" do
+    with_auth(conn, :read, fn conn ->
+      conn |> run_analysis(:fetch_job_status, [job_id]) |> respond_success(200)
+    end)
+  end
+
   patch "/api/v1/jobs/:job_id" do
     with_auth(conn, :write, fn conn ->
       case Analysis.update_job(job_id, conn.body_params) do

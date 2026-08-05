@@ -147,6 +147,16 @@ fn normalizes_job_state_for_bindings() {
 }
 
 #[test]
+fn result_fetch_removes_the_raw_result_mirror() {
+    let normalized = normalize_result_fetch_result(
+        "job-large",
+        json!({"job_id": "job-large", "result": {"elements": [1, 2, 3]}}),
+    );
+    assert_eq!(normalized["result"]["elements"], json!([1, 2, 3]));
+    assert!(normalized.get("raw").is_none());
+}
+
+#[test]
 fn rejects_failed_terminal_jobs_with_the_service_failure_reason() {
     let failed = json!({
         "status": "failed",
@@ -472,7 +482,7 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
                 r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0}}"#,
             ),
             (
-                "GET /api/v1/jobs/job-native HTTP/1.1",
+                "GET /api/v1/jobs/job-native/status HTTP/1.1",
                 r#"{"job":{"job_id":"job-native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
             ),
             (

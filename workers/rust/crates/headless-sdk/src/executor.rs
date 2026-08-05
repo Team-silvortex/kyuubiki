@@ -179,14 +179,15 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         match executor.execute_step(&step.action, step.index, &payload) {
             Ok(outcome) => {
                 executed_step_count += 1;
-                results.insert(step.index, outcome.result.clone());
+                let result_preview = compact_report_value(&outcome.result);
+                results.insert(step.index, outcome.result);
                 steps.push(HeadlessExecutionStepReport {
                     index: step.index,
                     action: step.action.clone(),
                     risk: step.risk,
                     status: outcome.status,
                     payload: compact_report_value(&payload),
-                    result_preview: outcome.result,
+                    result_preview,
                     requires_confirmation,
                 });
             }
@@ -441,6 +442,73 @@ mod tests {
                 message: "timed out waiting for job job-timeout".to_string(),
             })
         }
+    }
+
+    #[derive(Default)]
+    struct LargeResultExecutor {
+        calls: usize,
+    }
+
+    impl HeadlessExecutor for LargeResultExecutor {
+        fn name(&self) -> &'static str {
+            "service"
+        }
+
+        fn execute_step(
+            &mut self,
+            _action: &str,
+            _step_index: usize,
+            payload: &Value,
+        ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+            self.calls += 1;
+            if self.calls == 1 {
+                return Ok(HeadlessExecutorOutcome {
+                    status: "executed".to_string(),
+                    result: json!({"solver_endpoints": (0..256).collect::<Vec<_>>() }),
+                });
+            }
+            assert_eq!(payload["forwarded"].as_array().map(Vec::len), Some(256));
+            Ok(HeadlessExecutorOutcome {
+                status: "executed".to_string(),
+                result: json!({"status": "bound"}),
+            })
+        }
+    }
+
+    #[test]
+    fn execution_reports_compact_results_without_breaking_bindings() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "large-result-fixture".to_string(),
+            template_id: None,
+            steps: vec![
+                HeadlessExecutionBatchStep {
+                    index: 1,
+                    action: "service_health".to_string(),
+                    risk: HeadlessRisk::Normal,
+                    payload: json!({}),
+                },
+                HeadlessExecutionBatchStep {
+                    index: 2,
+                    action: "service_health".to_string(),
+                    risk: HeadlessRisk::Normal,
+                    payload: json!({
+                        "forwarded": "{{steps.1.result.solver_endpoints}}"
+                    }),
+                },
+            ],
+            warnings: vec![],
+        };
+
+        let report =
+            execute_batch_with_executor(&batch, &mut LargeResultExecutor::default(), false, false);
+        assert_eq!(report.status, "ok");
+        assert_eq!(
+            report.steps[0].result_preview["solver_endpoints"]["item_count"],
+            256
+        );
     }
 
     #[test]

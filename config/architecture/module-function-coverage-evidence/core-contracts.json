@@ -333,11 +333,14 @@
           "apps/frontend/src/lib/scripting/headless-service-action-contracts.json",
           "apps/frontend/src/components/workbench/workbench-headless-workflow-contract.ts",
           "apps/frontend/package.json",
+          "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+          "apps/web/lib/kyuubiki_web/router.ex",
           "workers/rust/crates/headless-sdk/src/workflow_batch.rs",
           "workers/rust/crates/headless-sdk/src/templates.rs",
           "workers/rust/crates/headless-sdk/src/plan.rs",
           "workers/rust/crates/headless-sdk/src/executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
           "workers/rust/crates/headless-sdk/src/execution_observability.rs",
@@ -375,6 +378,8 @@
           "fill_model_ids",
           "restores_graph_ids_for_inline_electrostatic_models",
           "frontend_proxy_artifact_limit",
+          "server_deadline_policy_resumes_same_job_until_completion",
+          "fetch_job_status",
           "invalid_solver_params",
           "agent_decode"
         ]
