@@ -9,7 +9,10 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use kyuubiki_protocol::{SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest};
+use kyuubiki_protocol::{
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+};
 
 use crate::agent_http::{cluster_auth_headers, get_to_writer, normalize_base_url};
 use crate::config::AgentConfig;
@@ -149,13 +152,17 @@ fn fetch_verify_and_decode<T: DeserializeOwned + 'static>(
 fn normalize_compatibility_ids<T: 'static>(request: &mut T) {
     let request = request as &mut dyn Any;
     if let Some(model) = request.downcast_mut::<SolveHeatPlaneQuad2dRequest>() {
-        fill_heat_ids(&mut model.nodes, &mut model.elements);
+        fill_model_ids(&mut model.nodes, &mut model.elements);
     } else if let Some(model) = request.downcast_mut::<SolveHeatPlaneTriangle2dRequest>() {
-        fill_heat_ids(&mut model.nodes, &mut model.elements);
+        fill_model_ids(&mut model.nodes, &mut model.elements);
+    } else if let Some(model) = request.downcast_mut::<SolveElectrostaticPlaneQuad2dRequest>() {
+        fill_model_ids(&mut model.nodes, &mut model.elements);
+    } else if let Some(model) = request.downcast_mut::<SolveElectrostaticPlaneTriangle2dRequest>() {
+        fill_model_ids(&mut model.nodes, &mut model.elements);
     }
 }
 
-fn fill_heat_ids<Node, Element>(nodes: &mut [Node], elements: &mut [Element])
+fn fill_model_ids<Node, Element>(nodes: &mut [Node], elements: &mut [Element])
 where
     Node: EntityWithId,
     Element: EntityWithId,
@@ -194,6 +201,9 @@ macro_rules! entity_with_id {
 entity_with_id!(kyuubiki_protocol::HeatPlaneNodeInput);
 entity_with_id!(kyuubiki_protocol::HeatPlaneQuadElementInput);
 entity_with_id!(kyuubiki_protocol::HeatPlaneTriangleElementInput);
+entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneNodeInput);
+entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneQuadElementInput);
+entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneTriangleElementInput);
 
 fn required_digest(reference: &Value, field: &str) -> Result<String, String> {
     let value = reference
@@ -259,8 +269,11 @@ impl<W: Write> Write for DigestWriter<W> {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_compatibility_ids, required_digest};
-    use kyuubiki_protocol::SolveHeatPlaneQuad2dRequest;
+    use super::{decode_solver_params, normalize_compatibility_ids, required_digest};
+    use kyuubiki_protocol::{
+        SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+        SolveHeatPlaneQuad2dRequest,
+    };
     use serde_json::json;
 
     #[test]
@@ -292,5 +305,38 @@ mod tests {
         assert_eq!(request.nodes[0].id, "n0");
         assert_eq!(request.nodes[1].id, "kept");
         assert_eq!(request.elements[0].id, "e0");
+    }
+
+    #[test]
+    fn restores_graph_ids_for_inline_electrostatic_models() {
+        let quad: SolveElectrostaticPlaneQuad2dRequest = decode_solver_params(json!({
+            "nodes": [
+                {"x": 0.0, "y": 0.0, "fix_potential": true},
+                {"id": "kept", "x": 1.0, "y": 0.0, "fix_potential": false}
+            ],
+            "elements": [{
+                "node_i": 0, "node_j": 1, "node_k": 1, "node_l": 0,
+                "thickness": 1.0, "permittivity": 1.0
+            }]
+        }))
+        .unwrap();
+        let triangle: SolveElectrostaticPlaneTriangle2dRequest = decode_solver_params(json!({
+            "nodes": [
+                {"x": 0.0, "y": 0.0, "fix_potential": true},
+                {"x": 1.0, "y": 0.0, "fix_potential": false},
+                {"x": 0.0, "y": 1.0, "fix_potential": false}
+            ],
+            "elements": [{
+                "node_i": 0, "node_j": 1, "node_k": 2,
+                "thickness": 1.0, "permittivity": 1.0
+            }]
+        }))
+        .unwrap();
+
+        assert_eq!(quad.nodes[0].id, "n0");
+        assert_eq!(quad.nodes[1].id, "kept");
+        assert_eq!(quad.elements[0].id, "e0");
+        assert_eq!(triangle.nodes[2].id, "n2");
+        assert_eq!(triangle.elements[0].id, "e0");
     }
 }

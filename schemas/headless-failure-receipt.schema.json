@@ -33,6 +33,7 @@
         "transport_failure",
         "result_fetch_failure",
         "job_cancelled",
+        "invalid_solver_params",
         "contract_failure",
         "runtime_failure"
       ]
@@ -45,6 +46,7 @@
         "routing",
         "transport",
         "result_fetch",
+        "agent_decode",
         "validation",
         "execution"
       ]

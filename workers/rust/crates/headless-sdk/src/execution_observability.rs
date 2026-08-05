@@ -172,6 +172,17 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Inspect the cancellation actor and reason before creating a replacement job.",
         )
+    } else if normalized.contains("invalid_params")
+        || normalized.contains("failed to decode model artifact")
+        || normalized.contains("missing field")
+    {
+        (
+            "invalid_solver_params",
+            "agent_decode",
+            false,
+            "none",
+            "Validate the solver model fields and repair the request before retrying.",
+        )
     } else if normalized.contains("missing required")
         || normalized.contains("not compatible")
         || normalized.contains("unsupported")
@@ -339,6 +350,37 @@ mod tests {
                 .is_some_and(
                     |categories| categories.contains(&preview["failure_receipt"]["category"])
                 )
+        );
+    }
+
+    #[test]
+    fn invalid_solver_params_identify_agent_decode_failure() {
+        let preview = failure_preview(
+            2,
+            "job_wait",
+            "service job failed: invalid_params: failed to decode model artifact: missing field material".to_string(),
+        );
+
+        assert_eq!(
+            preview["error_code"],
+            "kyuubiki.headless.invalid_solver_params"
+        );
+        assert_eq!(preview["failure_receipt"]["stage"], "agent_decode");
+        assert_eq!(preview["failure_receipt"]["retryable"], false);
+
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../../../schemas/headless-failure-receipt.schema.json"
+        ))
+        .expect("failure receipt schema");
+        assert!(
+            schema["properties"]["category"]["enum"]
+                .as_array()
+                .is_some_and(|values| values.contains(&preview["failure_receipt"]["category"]))
+        );
+        assert!(
+            schema["properties"]["stage"]["enum"]
+                .as_array()
+                .is_some_and(|values| values.contains(&preview["failure_receipt"]["stage"]))
         );
     }
 }

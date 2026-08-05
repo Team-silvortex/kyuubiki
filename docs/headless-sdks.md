@@ -222,6 +222,13 @@ The active limits and storage namespaces are published by `GET /api/health`.
 `KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES`, `KYUUBIKI_RESULT_ARTIFACT_MAX_BYTES`, and
 `KYUUBIKI_ARTIFACT_TEMP_RETENTION_SECONDS` keep the disk policy explicit.
 
+Large heat and electrostatic plane models may omit node and element `id`
+fields. The Agent assigns stable index-derived IDs (`n0`, `n1`, `e0`, `e1`,
+...) after decoding either inline JSON or an immutable model artifact, while
+preserving every non-empty caller-supplied ID. Other missing solver fields fail
+closed as `invalid_solver_params` at the `agent_decode` stage, so automation
+can repair the model instead of retrying an invalid request.
+
 Large solves also use two separate server-side timing contracts. Agent capacity
 waits are governed by `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS`; artifact-backed execution
 is governed by `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS`. Static endpoints pass

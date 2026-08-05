@@ -339,6 +339,10 @@
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
+          "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+          "schemas/headless-failure-receipt.schema.json",
+          "workers/rust/crates/protocol/src/types/field.rs",
+          "workers/rust/crates/cli/src/agent_artifact.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless/flags.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless/plan.rs",
@@ -366,7 +370,11 @@
           "cargo_run_bin",
           "kyuubiki.headless-workflow/v1",
           "kyuubiki.workflow-graph/v1",
-          "kyuubiki.workflow-dataset/v1"
+          "kyuubiki.workflow-dataset/v1",
+          "fill_model_ids",
+          "restores_graph_ids_for_inline_electrostatic_models",
+          "invalid_solver_params",
+          "agent_decode"
         ]
       }
     ],

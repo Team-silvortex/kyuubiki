@@ -191,6 +191,7 @@ pub struct SolveHeatPlaneTriangle2dRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticPlaneNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub y: f64,
@@ -203,6 +204,7 @@ pub struct ElectrostaticPlaneNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticPlaneTriangleElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -219,6 +221,7 @@ pub struct SolveElectrostaticPlaneTriangle2dRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticPlaneQuadElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
